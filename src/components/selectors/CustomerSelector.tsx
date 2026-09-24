@@ -9,11 +9,17 @@ import { Badge } from '../ui/badge';
 interface CustomerSelectorProps {
   onSelect: (customer: Customer) => void;
   selectedCustomerId?: string;
+  assignedRepId?: string;
 }
 
-export function CustomerSelector({ onSelect, selectedCustomerId }: CustomerSelectorProps) {
+export function CustomerSelector({ onSelect, selectedCustomerId, assignedRepId }: CustomerSelectorProps) {
   const [searchTerm, setSearchTerm] = useState('');
-  const { customers, loading } = useCustomers({ search: searchTerm, page: 1, pageSize: 20 });
+  const { customers, loading } = useCustomers({
+    search: searchTerm,
+    assignedRepId,
+    page: 1,
+    pageSize: 20,
+  });
 
   return (
     <div className="space-y-3 rounded-lg border border-slate-200 bg-white p-3 shadow-xs">

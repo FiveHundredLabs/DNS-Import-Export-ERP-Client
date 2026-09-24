@@ -45,6 +45,7 @@ export function TabsList({
 }) {
   return (
     <div
+      role="tablist"
       className={cn(
         'inline-flex h-10 items-center justify-center rounded-lg bg-slate-100 p-1 text-slate-500',
         className
@@ -72,6 +73,8 @@ export function TabsTrigger({
   return (
     <button
       type="button"
+      role="tab"
+      aria-selected={isActive}
       onClick={() => ctx.setActiveTab(value)}
       className={cn(
         'inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-xs font-medium ring-offset-white transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500',
@@ -100,5 +103,5 @@ export function TabsContent({
 
   if (ctx.activeTab !== value) return null;
 
-  return <div className={cn('mt-4 focus-visible:outline-none', className)}>{children}</div>;
+  return <div role="tabpanel" className={cn('mt-4 focus-visible:outline-none', className)}>{children}</div>;
 }

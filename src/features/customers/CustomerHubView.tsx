@@ -265,7 +265,7 @@ export function CustomerHubView({ customer }: { customer: Customer }) {
           <TabsTrigger value="overview">Overview & Terms</TabsTrigger>
           <TabsTrigger value="invoices">Invoices ({mockInvoices.length})</TabsTrigger>
           <TabsTrigger value="orders">Orders ({mockOrders.length})</TabsTrigger>
-          <TabsTrigger value="quotations">Quotations ({mockQuotations.length})</TabsTrigger>
+          <TabsTrigger value="quotations">Quotations ({customerQuotations.length})</TabsTrigger>
           <TabsTrigger value="payments">Payments ({mockPayments.length})</TabsTrigger>
           <TabsTrigger value="warranty">Warranty ({customer.warrantyNotesExpected})</TabsTrigger>
           <TabsTrigger value="activity">Field Activity</TabsTrigger>

@@ -445,5 +445,128 @@ describe('Phase 4 — Quotation Domain & Sales Foundation', () => {
         quotationSvc.convertToSalesOrder(draft.id, mockSalesRepUser)
       ).rejects.toThrow("Quotation status is 'DRAFT', must be 'APPROVED'");
     });
+
+    it('rejects conversion of already converted quotation (idempotency & state lock)', async () => {
+      const quotation = await quotationSvc.createQuotation(
+        {
+          customerId: 'cust-001',
+          salesRepId: mockSalesRepUser.id,
+          items: [{ productId: 'prod-001', quantity: 5, requestedDiscountPercentage: 2 }],
+        },
+        mockSalesRepUser
+      );
+
+      // First conversion succeeds
+      await quotationSvc.convertToSalesOrder(quotation.id, mockSalesRepUser);
+
+      // Second conversion must be rejected
+      await expect(
+        quotationSvc.convertToSalesOrder(quotation.id, mockSalesRepUser)
+      ).rejects.toThrow("Quotation status is 'CONVERTED', must be 'APPROVED'");
+    });
+
+    it('rejects conversion of expired approved quotation and marks it EXPIRED', async () => {
+      const quotation = await quotationSvc.createQuotation(
+        {
+          customerId: 'cust-001',
+          salesRepId: mockSalesRepUser.id,
+          items: [{ productId: 'prod-001', quantity: 5, requestedDiscountPercentage: 2 }],
+          validUntil: '2020-01-01', // Expired
+        },
+        mockSalesRepUser
+      );
+
+      await expect(
+        quotationSvc.convertToSalesOrder(quotation.id, mockSalesRepUser)
+      ).rejects.toThrow('Quotation expired on 2020-01-01');
+
+      // Verify repo status was updated to EXPIRED
+      const updated = await quotationSvc.getQuotationById(quotation.id);
+      expect(updated?.status).toBe('EXPIRED');
+    });
+
+    it('prevents sales rep from converting quotations outside their assigned territory', async () => {
+      // Created by Kasun (usr-106)
+      const quotation = await quotationSvc.createQuotation(
+        {
+          customerId: 'cust-001',
+          salesRepId: mockSalesRepUser.id,
+          items: [{ productId: 'prod-001', quantity: 2, requestedDiscountPercentage: 3 }],
+        },
+        mockSalesRepUser
+      );
+
+      const otherRep: User = {
+        id: 'usr-108',
+        name: 'Nuwan Pradeep',
+        email: 'nuwan@dnserp.com',
+        role: 'SALES_REP',
+        isActive: true,
+      };
+
+      await expect(
+        quotationSvc.convertToSalesOrder(quotation.id, otherRep)
+      ).rejects.toThrow('Permission Denied: You can only convert quotations assigned to your territory.');
+    });
+
+    it('marks entire quotation PENDING_APPROVAL when only one item out of several has excess discount', async () => {
+      const quotation = await quotationSvc.createQuotation(
+        {
+          customerId: 'cust-001',
+          salesRepId: mockSalesRepUser.id,
+          items: [
+            { productId: 'prod-001', quantity: 10, requestedDiscountPercentage: 2 }, // Standard (<= 5%)
+            { productId: 'prod-004', quantity: 5, requestedDiscountPercentage: 8 },  // Excess (> 5%)
+            { productId: 'prod-003', quantity: 20, requestedDiscountPercentage: 0 }, // None
+          ],
+        },
+        mockSalesRepUser
+      );
+
+      expect(quotation.status).toBe('PENDING_APPROVAL');
+      expect(quotation.requiresApproval).toBe(true);
+      expect(quotation.items[0].requiresApproval).toBe(false);
+      expect(quotation.items[1].requiresApproval).toBe(true);
+      expect(quotation.items[2].requiresApproval).toBe(false);
+      expect(quotation.approvalRequestId).toBeDefined();
+    });
+
+    it('allows sales rep to directly issue a standard draft quotation via issueQuotation', async () => {
+      const draft = await quotationSvc.createQuotation(
+        {
+          customerId: 'cust-001',
+          salesRepId: mockSalesRepUser.id,
+          items: [{ productId: 'prod-001', quantity: 4, requestedDiscountPercentage: 3 }],
+          saveAsDraft: true,
+        },
+        mockSalesRepUser
+      );
+
+      expect(draft.status).toBe('DRAFT');
+      expect(draft.requiresApproval).toBe(false);
+
+      const issued = await quotationSvc.issueQuotation(draft.id, mockSalesRepUser);
+      expect(issued.status).toBe('APPROVED');
+      expect(issued.approvedById).toBe(mockSalesRepUser.id);
+    });
+
+    it('blocks sales rep from directly issuing a draft quotation that requires special approval', async () => {
+      const draft = await quotationSvc.createQuotation(
+        {
+          customerId: 'cust-001',
+          salesRepId: mockSalesRepUser.id,
+          items: [{ productId: 'prod-001', quantity: 4, requestedDiscountPercentage: 9 }],
+          saveAsDraft: true,
+        },
+        mockSalesRepUser
+      );
+
+      expect(draft.status).toBe('DRAFT');
+      expect(draft.requiresApproval).toBe(true);
+
+      await expect(
+        quotationSvc.issueQuotation(draft.id, mockSalesRepUser)
+      ).rejects.toThrow('Manager approval is required');
+    });
   });
 });

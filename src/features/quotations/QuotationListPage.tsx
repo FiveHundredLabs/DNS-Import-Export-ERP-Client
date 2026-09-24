@@ -1,8 +1,10 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuotations } from '../../hooks/useQuotations';
 import { useAuth } from '../../hooks/useAuth';
 import { Quotation, QuotationStatus } from '../../types/quotation';
+import { Customer } from '../../types/customer';
+import { customerService } from '../../services/CustomerService';
 import { QuotationStatusBadge } from './QuotationStatusBadge';
 import { QuotationConvertModal } from './QuotationConvertModal';
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/card';
@@ -26,6 +28,7 @@ import {
   DollarSign,
   UserCheck,
   Filter,
+  Building2,
 } from 'lucide-react';
 
 const STATUS_FILTERS: Array<{ label: string; value: QuotationStatus | 'ALL' }> = [
@@ -40,7 +43,10 @@ const STATUS_FILTERS: Array<{ label: string; value: QuotationStatus | 'ALL' }> =
 
 export function QuotationListPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { currentUser } = useAuth();
+  const initialCustomerId = searchParams.get('customerId') || undefined;
+
   const {
     quotations,
     loading,
@@ -49,12 +55,37 @@ export function QuotationListPage() {
     setFilters,
     total,
     convertToSalesOrder,
-  } = useQuotations();
+  } = useQuotations(
+    initialCustomerId
+      ? { page: 1, pageSize: 15, status: 'ALL', sortByDate: 'desc', customerId: initialCustomerId }
+      : undefined
+  );
 
+  const [customers, setCustomers] = useState<Customer[]>([]);
   const [convertingQuotation, setConvertingQuotation] = useState<Quotation | null>(null);
+
+  useEffect(() => {
+    async function loadCustomers() {
+      try {
+        const res = await customerService.listCustomers(
+          currentUser.role === 'SALES_REP'
+            ? { assignedRepId: currentUser.id, pageSize: 100 }
+            : { pageSize: 100 }
+        );
+        setCustomers(res.data);
+      } catch (err) {
+        console.error('Failed to load customers for filter', err);
+      }
+    }
+    loadCustomers();
+  }, [currentUser]);
 
   const handleSearchChange = (value: string) => {
     setFilters({ ...filters, search: value, page: 1 });
+  };
+
+  const handleCustomerFilter = (custId: string) => {
+    setFilters({ ...filters, customerId: custId ? custId : undefined, page: 1 });
   };
 
   const handleStatusFilter = (status: QuotationStatus | 'ALL') => {
@@ -188,15 +219,33 @@ export function QuotationListPage() {
               />
             </div>
 
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleToggleSort}
-              className="text-xs h-9 gap-1.5 shrink-0"
-            >
-              <ArrowUpDown className="h-3.5 w-3.5 text-slate-500" />
-              Date: {filters.sortByDate === 'asc' ? 'Oldest First' : 'Newest First'}
-            </Button>
+            <div className="flex flex-wrap sm:flex-nowrap gap-2 shrink-0">
+              <div className="relative min-w-48">
+                <select
+                  aria-label="Filter by Customer"
+                  value={filters.customerId || ''}
+                  onChange={(e) => handleCustomerFilter(e.target.value)}
+                  className="w-full h-9 rounded-md border border-slate-200 bg-white px-3 py-1 text-xs text-slate-700 focus:outline-hidden focus:ring-1 focus:ring-indigo-500"
+                >
+                  <option value="">All Customers / Dealers</option>
+                  {customers.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name} ({c.code})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleToggleSort}
+                className="text-xs h-9 gap-1.5 shrink-0"
+              >
+                <ArrowUpDown className="h-3.5 w-3.5 text-slate-500" />
+                Date: {filters.sortByDate === 'asc' ? 'Oldest First' : 'Newest First'}
+              </Button>
+            </div>
           </div>
 
           {/* Status Pill Filters */}

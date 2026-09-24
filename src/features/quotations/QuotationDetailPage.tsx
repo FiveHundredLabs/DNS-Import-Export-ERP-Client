@@ -36,7 +36,13 @@ export function QuotationDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { currentUser } = useAuth();
-  const { approveQuotation, rejectQuotation, submitForApproval, convertToSalesOrder } = useQuotations();
+  const {
+    approveQuotation,
+    rejectQuotation,
+    submitForApproval,
+    issueQuotation,
+    convertToSalesOrder,
+  } = useQuotations();
 
   const [quotation, setQuotation] = useState<Quotation | null>(null);
   const [loading, setLoading] = useState(true);
@@ -101,6 +107,19 @@ export function QuotationDetailPage() {
       await fetchQuotation();
     } catch (err: unknown) {
       alert(err instanceof Error ? err.message : 'Submission failed.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleIssueQuotation = async () => {
+    if (!quotation) return;
+    try {
+      setLoading(true);
+      await issueQuotation(quotation.id);
+      await fetchQuotation();
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'Issuing quotation failed.');
     } finally {
       setLoading(false);
     }
@@ -182,6 +201,18 @@ export function QuotationDetailPage() {
             </Button>
           )}
 
+          {/* Issue Quotation (if DRAFT and standard authority) */}
+          {quotation.status === 'DRAFT' && !quotation.requiresApproval && (
+            <Button
+              size="sm"
+              onClick={handleIssueQuotation}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs gap-1.5"
+            >
+              <CheckCircle className="h-3.5 w-3.5" />
+              Issue Quotation
+            </Button>
+          )}
+
           {/* Submit for Approval (if DRAFT) */}
           {quotation.status === 'DRAFT' && quotation.requiresApproval && (
             <Button
@@ -217,7 +248,7 @@ export function QuotationDetailPage() {
             </>
           )}
 
-          {/* Convert to Sales Order (if APPROVED) */}
+          {/* Convert to Sales Order (if APPROVED and not expired) */}
           {quotation.status === 'APPROVED' && (
             <Button
               size="sm"

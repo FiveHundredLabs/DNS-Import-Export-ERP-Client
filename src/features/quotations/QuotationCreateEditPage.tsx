@@ -370,6 +370,7 @@ export function QuotationCreateEditPage() {
                   <CustomerSelector
                     onSelect={handleCustomerSelect}
                     selectedCustomerId={selectedCustomer?.id}
+                    assignedRepId={currentUser.role === 'SALES_REP' ? currentUser.id : undefined}
                   />
                 </div>
               )}
