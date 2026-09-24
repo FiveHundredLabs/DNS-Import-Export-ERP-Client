@@ -13,6 +13,15 @@ import { OrderListPage } from './features/orders/OrderListPage';
 import { OrderCreateEditPage } from './features/orders/OrderCreateEditPage';
 import { OrderDetailPage } from './features/orders/OrderDetailPage';
 import { OrderTrackingPage } from './features/orders/OrderTrackingPage';
+import { InventoryDashboardPage } from './features/inventory/InventoryDashboardPage';
+import { GRNListPage } from './features/inventory/GRNListPage';
+import { GRNCreateEditPage } from './features/inventory/GRNCreateEditPage';
+import { GRNDetailPage } from './features/inventory/GRNDetailPage';
+import { StockBalancePage } from './features/inventory/StockBalancePage';
+import { StockMovementsPage } from './features/inventory/StockMovementsPage';
+import { OrderPickingPage } from './features/inventory/OrderPickingPage';
+import { DispatchPage } from './features/inventory/DispatchPage';
+import { TransferListPage } from './features/inventory/TransferListPage';
 import { ModulePlaceholder } from './components/common/ModulePlaceholder';
 import { ProtectedRoute } from './components/common/ProtectedRoute';
 import { FileSpreadsheet, ShoppingCart, Boxes, Store, DollarSign, ShieldCheck, BarChart3 } from 'lucide-react';
@@ -144,22 +153,76 @@ export function App() {
           }
         />
 
+        {/* Phase 6: Warehouse & Inventory */}
         <Route
           path="inventory"
           element={
             <ProtectedRoute>
-              <ModulePlaceholder
-                title="Warehouse & Inventory Management"
-                modulePhase="Phase 6"
-                description="GRN receiving, barcode restocking, stock balance by location, and dispatch/delivery flows."
-                icon={Boxes}
-                features={[
-                  'Multi-warehouse: Central Colombo Warehouse vs Showroom Store',
-                  'GRN receipt and Manager approval workflow',
-                  'Reuses existing barcodes without duplicating product identities',
-                  'Damaged and returned stock isolated from sellable inventory',
-                ]}
-              />
+              <InventoryDashboardPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="inventory/grn"
+          element={
+            <ProtectedRoute>
+              <GRNListPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="inventory/grn/new"
+          element={
+            <ProtectedRoute>
+              <GRNCreateEditPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="inventory/grn/:id"
+          element={
+            <ProtectedRoute>
+              <GRNDetailPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="inventory/stock"
+          element={
+            <ProtectedRoute>
+              <StockBalancePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="inventory/movements"
+          element={
+            <ProtectedRoute>
+              <StockMovementsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="inventory/picking"
+          element={
+            <ProtectedRoute>
+              <OrderPickingPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="inventory/dispatch"
+          element={
+            <ProtectedRoute>
+              <DispatchPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="inventory/transfers"
+          element={
+            <ProtectedRoute>
+              <TransferListPage />
             </ProtectedRoute>
           }
         />
