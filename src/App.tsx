@@ -32,6 +32,7 @@ import { POSTransactionHistoryPage } from './features/pos/POSTransactionHistoryP
 import { POSSessionsPage } from './features/pos/POSSessionsPage';
 import { WarrantyHubPage } from './features/warranty/WarrantyHubPage';
 import { CommissionHubPage } from './features/commissions/CommissionHubPage';
+import { ReportsPage } from './features/reports/ReportsPage';
 import { ModulePlaceholder } from './components/common/ModulePlaceholder';
 import { ProtectedRoute } from './components/common/ProtectedRoute';
 import { FileSpreadsheet, ShoppingCart, Boxes, Store, DollarSign, ShieldCheck, BarChart3 } from 'lucide-react';
@@ -348,18 +349,7 @@ export function App() {
           path="reports"
           element={
             <ProtectedRoute>
-              <ModulePlaceholder
-                title="Enterprise Analytics & Reports"
-                modulePhase="Phase 11"
-                description="Role-aware reporting across sales performance, inventory movements, and financial health."
-                icon={BarChart3}
-                features={[
-                  'Area Manager restricted to regional team performance',
-                  'Director global consolidated financial and revenue statements',
-                  'Stock movement ledgers and fast/slow-moving SKU analytics',
-                  'CSV and PDF export readiness',
-                ]}
-              />
+              <ReportsPage />
             </ProtectedRoute>
           }
         />

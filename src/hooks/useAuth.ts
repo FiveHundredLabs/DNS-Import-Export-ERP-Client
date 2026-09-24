@@ -31,6 +31,7 @@ export function useAuth() {
 
   return {
     currentUser,
+    user: currentUser,
     role: currentUser.role,
     switchRole,
     hasPermission: checkPermission,
