@@ -10,6 +10,7 @@ interface ModulePlaceholderProps {
   description: string;
   icon: LucideIcon;
   features: string[];
+  isUnderDevelopment?: boolean;
 }
 
 export function ModulePlaceholder({
@@ -18,6 +19,7 @@ export function ModulePlaceholder({
   description,
   icon: Icon,
   features,
+  isUnderDevelopment,
 }: ModulePlaceholderProps) {
   return (
     <div className="space-y-6">
@@ -26,10 +28,29 @@ export function ModulePlaceholder({
           <div className="flex items-center gap-2">
             <h1 className="text-xl font-bold tracking-tight text-slate-900">{title}</h1>
             <Badge variant="info">{modulePhase}</Badge>
+            {isUnderDevelopment && (
+              <Badge variant="warning" className="uppercase font-bold tracking-wide">
+                Under Development
+              </Badge>
+            )}
           </div>
           <p className="text-xs text-slate-500 mt-0.5">{description}</p>
         </div>
       </div>
+
+      {isUnderDevelopment && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50/70 p-4 flex items-start gap-3 shadow-xs">
+          <div className="p-2 rounded-lg bg-amber-100 text-amber-700 shrink-0 mt-0.5">
+            <Icon className="h-5 w-5" />
+          </div>
+          <div className="space-y-1">
+            <h3 className="text-sm font-bold text-amber-900">Module Currently Under Development</h3>
+            <p className="text-xs text-amber-700 leading-relaxed">
+              The {title} domain specifications and backend contracts are being structured. Core financial receivables, invoice balances, payment approvals, and customer ledger interactions are actively managed in the Invoices and Payments modules.
+            </p>
+          </div>
+        </div>
+      )}
 
       <Card className="border-slate-200">
         <CardHeader>

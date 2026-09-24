@@ -60,6 +60,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'inventory:grn_approve',
     'invoices:view',
     'payments:view',
+    'pos:operate',
     'finance:expenses',
     'finance:petty_cash',
     'finance:reports',

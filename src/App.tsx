@@ -27,6 +27,9 @@ import { InvoiceDetailPage } from './features/invoices/InvoiceDetailPage';
 import { PaymentListPage } from './features/payments/PaymentListPage';
 import { PaymentCollectionPage } from './features/payments/PaymentCollectionPage';
 import { PaymentDetailPage } from './features/payments/PaymentDetailPage';
+import { ShowroomPOSTerminal } from './features/pos/ShowroomPOSTerminal';
+import { POSTransactionHistoryPage } from './features/pos/POSTransactionHistoryPage';
+import { POSSessionsPage } from './features/pos/POSSessionsPage';
 import { ModulePlaceholder } from './components/common/ModulePlaceholder';
 import { ProtectedRoute } from './components/common/ProtectedRoute';
 import { FileSpreadsheet, ShoppingCart, Boxes, Store, DollarSign, ShieldCheck, BarChart3 } from 'lucide-react';
@@ -274,22 +277,28 @@ export function App() {
           }
         />
 
+        {/* Phase 8: Showroom Point of Sale (POS) */}
         <Route
           path="pos"
           element={
             <ProtectedRoute>
-              <ModulePlaceholder
-                title="Showroom Point of Sale (POS)"
-                modulePhase="Phase 8"
-                description="High-speed barcode checkout, showroom stock deduction, and cashier shift cash management."
-                icon={Store}
-                features={[
-                  'Consumes canonical Product Master with live showroom inventory',
-                  'Cashier session opening float, Cash In / Out, and shift reconciliation',
-                  'Thermal 80mm ESC/POS hardware receipt printer abstraction',
-                  'Cash and Cheque payment collection',
-                ]}
-              />
+              <ShowroomPOSTerminal />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="pos/transactions"
+          element={
+            <ProtectedRoute>
+              <POSTransactionHistoryPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="pos/sessions"
+          element={
+            <ProtectedRoute>
+              <POSSessionsPage />
             </ProtectedRoute>
           }
         />
@@ -299,15 +308,16 @@ export function App() {
           element={
             <ProtectedRoute>
               <ModulePlaceholder
-                title="Finance, Payments & Ledger"
-                modulePhase="Phase 7 & 9"
-                description="Payment verification, petty cash running balance, and categorized expense workflows."
+                title="Finance & Ledger (Expenses & Petty Cash)"
+                modulePhase="Phase 9"
+                isUnderDevelopment={true}
+                description="Financial accounting, categorized expense claims, petty cash running balances, and revenue reporting."
                 icon={DollarSign}
                 features={[
-                  'Multi-tier payment approval: Rep Recorded -> Finance Approved -> Balance updated',
-                  'Running petty cash ledger: Opening + Cash Added - Expenses = Balance',
-                  'Customer account statements and outstanding aging',
-                  'Categorized expense claims with manager approvals',
+                  'Categorized expense claims with managerial and director approval',
+                  'Petty cash running ledger: Opening Float + Replenishments - Expenses = Current Balance',
+                  'Operating expense vs COGS and gross profit calculations',
+                  'Cheque deposit tracking and financial audit reconciliation',
                 ]}
               />
             </ProtectedRoute>

@@ -1,6 +1,7 @@
 import { Quotation } from '../types/quotation';
 import { Invoice } from '../types/invoice';
 import { Payment } from '../types/payment';
+import { POSTransaction } from '../types/pos';
 
 export interface ThermalReceiptData {
   title: string;
@@ -18,6 +19,7 @@ export interface ThermalReceiptData {
 
 export interface IPrinterService {
   printThermalReceipt(data: ThermalReceiptData): Promise<boolean>;
+  printPOSTransactionReceipt(tx: POSTransaction): Promise<boolean>;
   printQuotation(quotation: Quotation): Promise<boolean>;
   printInvoice(invoice: Invoice): Promise<boolean>;
   printPaymentReceipt(payment: Payment, remainingBalance?: number): Promise<boolean>;
@@ -30,87 +32,92 @@ export class ThermalPrinterService implements IPrinterService {
   }
 
   async printThermalReceipt(data: ThermalReceiptData): Promise<boolean> {
-    const printWindow = window.open('', '_blank', 'width=350,height=600');
-    if (!printWindow) return false;
+    if (typeof window === 'undefined' || !window.open) return false;
+    try {
+      const printWindow = window.open('', '_blank', 'width=350,height=600');
+      if (!printWindow || !printWindow.document) return false;
 
-    const allocHtml =
-      data.invoiceAllocations && data.invoiceAllocations.length > 0
-        ? `
-        <div class="divider"></div>
-        <div class="bold" style="font-size: 11px;">INVOICE SETTLEMENTS:</div>
-        ${data.invoiceAllocations
-          .map(
-            (a) =>
-              `<div class="row" style="font-size: 11px;"><span>${a.invoiceNumber}</span><span>LKR ${a.allocatedAmount.toLocaleString()}</span></div>`
-          )
-          .join('')}
-      `
-        : '';
+      const allocHtml =
+        data.invoiceAllocations && data.invoiceAllocations.length > 0
+          ? `
+          <div class="divider"></div>
+          <div class="bold" style="font-size: 11px;">INVOICE SETTLEMENTS:</div>
+          ${data.invoiceAllocations
+            .map(
+              (a) =>
+                `<div class="row" style="font-size: 11px;"><span>${a.invoiceNumber}</span><span>LKR ${a.allocatedAmount.toLocaleString()}</span></div>`
+            )
+            .join('')}
+        `
+          : '';
 
-    const receiptHtml = `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>Receipt - ${data.receiptNumber}</title>
-          <style>
-            @page { margin: 0; size: 80mm auto; }
-            body {
-              font-family: 'Courier New', Courier, monospace;
-              width: 280px;
-              margin: 0 auto;
-              padding: 10px;
-              font-size: 12px;
-              color: #000;
-            }
-            .center { text-align: center; }
-            .divider { border-top: 1px dashed #000; margin: 8px 0; }
-            .row { display: flex; justify-content: space-between; margin: 3px 0; }
-            .bold { font-weight: bold; }
-          </style>
-        </head>
-        <body>
-          <div class="center bold" style="font-size: 14px;">DNS DISTRIBUTION (PVT) LTD</div>
-          <div class="center">Colombo 11, Sri Lanka</div>
-          <div class="center">Tel: +94 11 234 5678</div>
-          <div class="center" style="font-size: 10px;">VAT Reg: 109847291-7000</div>
-          <div class="divider"></div>
-          <div class="center bold">${data.title}</div>
-          <div class="row"><span>Rcpt No:</span><span>${data.receiptNumber}</span></div>
-          <div class="row"><span>Date:</span><span>${data.dateTime}</span></div>
-          <div class="row"><span>Customer:</span><span>${data.customerName}</span></div>
-          <div class="row"><span>Officer:</span><span>${data.cashierOrRepName}</span></div>
-          <div class="divider"></div>
-          <div class="row bold"><span>Payment Method:</span><span>${data.paymentMethod}</span></div>
-          ${data.chequeNumber ? `<div class="row"><span>Cheque No:</span><span>${data.chequeNumber}</span></div>` : ''}
-          ${data.bankName ? `<div class="row"><span>Bank:</span><span>${data.bankName}</span></div>` : ''}
-          <div class="row bold" style="font-size: 14px; margin-top: 6px;">
-            <span>AMOUNT PAID:</span>
-            <span>LKR ${data.amountPaid.toLocaleString()}</span>
-          </div>
-          ${allocHtml}
-          ${
-            data.balanceDueRemaining !== undefined
-              ? `
+      const receiptHtml = `
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>Receipt - ${data.receiptNumber}</title>
+            <style>
+              @page { margin: 0; size: 80mm auto; }
+              body {
+                font-family: 'Courier New', Courier, monospace;
+                width: 280px;
+                margin: 0 auto;
+                padding: 10px;
+                font-size: 12px;
+                color: #000;
+              }
+              .center { text-align: center; }
+              .divider { border-top: 1px dashed #000; margin: 8px 0; }
+              .row { display: flex; justify-content: space-between; margin: 3px 0; }
+              .bold { font-weight: bold; }
+            </style>
+          </head>
+          <body>
+            <div class="center bold" style="font-size: 14px;">DNS DISTRIBUTION (PVT) LTD</div>
+            <div class="center">Colombo 11, Sri Lanka</div>
+            <div class="center">Tel: +94 11 234 5678</div>
+            <div class="center" style="font-size: 10px;">VAT Reg: 109847291-7000</div>
             <div class="divider"></div>
-            <div class="row bold"><span>Remaining Balance:</span><span>LKR ${data.balanceDueRemaining.toLocaleString()}</span></div>
-          `
-              : ''
-          }
-          <div class="divider"></div>
-          <div class="center" style="font-size: 10px;">Subject to Realization / Finance Approval</div>
-          <div class="center" style="font-size: 10px; margin-top: 4px;">Thank you for your business!</div>
-          <script>
-            window.onload = function() {
-              window.print();
-            };
-          </script>
-        </body>
-      </html>
-    `;
+            <div class="center bold">${data.title}</div>
+            <div class="row"><span>Rcpt No:</span><span>${data.receiptNumber}</span></div>
+            <div class="row"><span>Date:</span><span>${data.dateTime}</span></div>
+            <div class="row"><span>Customer:</span><span>${data.customerName}</span></div>
+            <div class="row"><span>Officer:</span><span>${data.cashierOrRepName}</span></div>
+            <div class="divider"></div>
+            <div class="row bold"><span>Payment Method:</span><span>${data.paymentMethod}</span></div>
+            ${data.chequeNumber ? `<div class="row"><span>Cheque No:</span><span>${data.chequeNumber}</span></div>` : ''}
+            ${data.bankName ? `<div class="row"><span>Bank:</span><span>${data.bankName}</span></div>` : ''}
+            <div class="row bold" style="font-size: 14px; margin-top: 6px;">
+              <span>AMOUNT PAID:</span>
+              <span>LKR ${data.amountPaid.toLocaleString()}</span>
+            </div>
+            ${allocHtml}
+            ${
+              data.balanceDueRemaining !== undefined
+                ? `
+              <div class="divider"></div>
+              <div class="row bold"><span>Remaining Balance:</span><span>LKR ${data.balanceDueRemaining.toLocaleString()}</span></div>
+            `
+                : ''
+            }
+            <div class="divider"></div>
+            <div class="center" style="font-size: 10px;">Subject to Realization / Finance Approval</div>
+            <div class="center" style="font-size: 10px; margin-top: 4px;">Thank you for your business!</div>
+            <script>
+              window.onload = function() {
+                window.print();
+              };
+            </script>
+          </body>
+        </html>
+      `;
 
-    printWindow.document.write(receiptHtml);
-    printWindow.document.close();
-    return true;
+      printWindow.document.write(receiptHtml);
+      printWindow.document.close();
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   async printPaymentReceipt(payment: Payment, remainingBalance?: number): Promise<boolean> {
@@ -129,9 +136,102 @@ export class ThermalPrinterService implements IPrinterService {
     });
   }
 
+  async printPOSTransactionReceipt(tx: POSTransaction): Promise<boolean> {
+    if (typeof window === 'undefined' || !window.open) return false;
+    try {
+      const printWindow = window.open('', '_blank', 'width=350,height=600');
+      if (!printWindow || !printWindow.document) return false;
+
+      const itemRows = tx.items
+        .map(
+          (it) => `
+          <div style="margin-bottom: 4px;">
+            <div class="row bold">
+              <span>${it.productNameSnapshot}</span>
+            </div>
+            <div class="row" style="font-size: 11px; color: #333;">
+              <span>${it.quantity} x LKR ${it.unitPriceSnapshot.toLocaleString()}${it.discountPercentage > 0 ? ` (-${it.discountPercentage}%)` : ''}</span>
+              <span>LKR ${it.lineTotal.toLocaleString()}</span>
+            </div>
+          </div>
+        `
+        )
+        .join('');
+
+      const receiptHtml = `
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>POS Receipt - ${tx.receiptNumber}</title>
+            <style>
+              @page { margin: 0; size: 80mm auto; }
+              body {
+                font-family: 'Courier New', Courier, monospace;
+                width: 280px;
+                margin: 0 auto;
+                padding: 10px;
+                font-size: 12px;
+                color: #000;
+              }
+              .center { text-align: center; }
+              .divider { border-top: 1px dashed #000; margin: 8px 0; }
+              .row { display: flex; justify-content: space-between; margin: 3px 0; }
+              .bold { font-weight: bold; }
+            </style>
+          </head>
+          <body>
+            <div class="center bold" style="font-size: 14px;">DNS DISTRIBUTION (PVT) LTD</div>
+            <div class="center">Showroom Sales Outlet</div>
+            <div class="center">142 First Cross Street, Colombo 11</div>
+            <div class="center">Tel: +94 11 234 5678</div>
+            <div class="center" style="font-size: 10px;">VAT Reg: 109847291-7000</div>
+            <div class="divider"></div>
+            <div class="center bold">SHOWROOM SALES RECEIPT</div>
+            <div class="row"><span>Receipt No:</span><span>${tx.receiptNumber}</span></div>
+            <div class="row"><span>Date:</span><span>${new Date(tx.createdAt).toLocaleString()}</span></div>
+            <div class="row"><span>Cashier:</span><span>${tx.cashierName}</span></div>
+            <div class="row"><span>Customer:</span><span>${tx.customerName || 'Walk-in Retail Customer'}</span></div>
+            <div class="divider"></div>
+            <div class="bold" style="margin-bottom: 4px;">ITEMS:</div>
+            ${itemRows}
+            <div class="divider"></div>
+            <div class="row"><span>Subtotal:</span><span>LKR ${tx.subtotal.toLocaleString()}</span></div>
+            ${tx.discountTotal > 0 ? `<div class="row"><span>Discount:</span><span>- LKR ${tx.discountTotal.toLocaleString()}</span></div>` : ''}
+            ${tx.taxTotal > 0 ? `<div class="row"><span>VAT (18%):</span><span>LKR ${tx.taxTotal.toLocaleString()}</span></div>` : ''}
+            <div class="row bold" style="font-size: 14px; margin-top: 4px;">
+              <span>TOTAL:</span>
+              <span>LKR ${tx.totalAmount.toLocaleString()}</span>
+            </div>
+            <div class="divider"></div>
+            <div class="row"><span>Payment Method:</span><span class="bold">${tx.paymentMethod}</span></div>
+            ${tx.cashTendered !== undefined ? `<div class="row"><span>Cash Tendered:</span><span>LKR ${tx.cashTendered.toLocaleString()}</span></div>` : ''}
+            ${tx.changeGiven !== undefined ? `<div class="row bold"><span>Change Given:</span><span>LKR ${tx.changeGiven.toLocaleString()}</span></div>` : ''}
+            ${tx.chequeDetails ? `<div class="row"><span>Cheque No:</span><span>${tx.chequeDetails.chequeNumber} (${tx.chequeDetails.bankName})</span></div>` : ''}
+            <div class="divider"></div>
+            <div class="center" style="font-size: 11px;">Warranty valid with this receipt.</div>
+            <div class="center" style="font-size: 11px; margin-top: 2px;">Thank you for shopping at DNS!</div>
+            <script>
+              window.onload = function() {
+                window.print();
+              };
+            </script>
+          </body>
+        </html>
+      `;
+
+      printWindow.document.write(receiptHtml);
+      printWindow.document.close();
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   async printQuotation(quotation: Quotation): Promise<boolean> {
-    const printWindow = window.open('', '_blank', 'width=850,height=1100');
-    if (!printWindow) return false;
+    if (typeof window === 'undefined' || !window.open) return false;
+    try {
+      const printWindow = window.open('', '_blank', 'width=850,height=1100');
+      if (!printWindow || !printWindow.document) return false;
 
     const itemRows = quotation.items
       .map(
@@ -263,11 +363,16 @@ export class ThermalPrinterService implements IPrinterService {
     printWindow.document.write(quotationHtml);
     printWindow.document.close();
     return true;
+  } catch {
+    return false;
   }
+}
 
   async printInvoice(invoice: Invoice): Promise<boolean> {
-    const printWindow = window.open('', '_blank', 'width=850,height=1100');
-    if (!printWindow) return false;
+    if (typeof window === 'undefined' || !window.open) return false;
+    try {
+      const printWindow = window.open('', '_blank', 'width=850,height=1100');
+      if (!printWindow || !printWindow.document) return false;
 
     const itemRows = invoice.items
       .map(
@@ -414,7 +519,10 @@ export class ThermalPrinterService implements IPrinterService {
     printWindow.document.write(invoiceHtml);
     printWindow.document.close();
     return true;
+  } catch {
+    return false;
   }
+}
 }
 
 export const printerService = new ThermalPrinterService();
