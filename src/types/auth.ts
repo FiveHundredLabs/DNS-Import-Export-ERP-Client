@@ -1,0 +1,67 @@
+export type UserRole =
+  | 'DIRECTOR'
+  | 'MANAGER'
+  | 'SALES_MANAGER'
+  | 'FINANCE_MANAGER'
+  | 'AREA_MANAGER'
+  | 'SALES_REP'
+  | 'STOCK_KEEPER'
+  | 'CASHIER';
+
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  role: UserRole;
+  phone: string;
+  areaId?: string;
+  areaName?: string;
+  assignedCustomersCount?: number;
+  avatarUrl?: string;
+  isActive: boolean;
+}
+
+export type Permission =
+  | 'view:director_dashboard'
+  | 'view:manager_dashboard'
+  | 'view:sales_manager_dashboard'
+  | 'view:finance_dashboard'
+  | 'view:area_manager_dashboard'
+  | 'view:sales_rep_dashboard'
+  | 'view:stock_keeper_dashboard'
+  | 'view:cashier_dashboard'
+  | 'products:view'
+  | 'products:create'
+  | 'products:edit'
+  | 'products:price_approval'
+  | 'customers:view'
+  | 'customers:create'
+  | 'customers:edit'
+  | 'customers:commercial_approval'
+  | 'customers:director_approval'
+  | 'quotations:view'
+  | 'quotations:create'
+  | 'quotations:approve'
+  | 'orders:view'
+  | 'orders:create'
+  | 'orders:approve_standard'
+  | 'orders:approve_special'
+  | 'orders:escalate'
+  | 'inventory:view'
+  | 'inventory:grn_create'
+  | 'inventory:grn_approve'
+  | 'inventory:pick_issue'
+  | 'invoices:view'
+  | 'invoices:create'
+  | 'payments:view'
+  | 'payments:create'
+  | 'payments:approve'
+  | 'pos:operate'
+  | 'finance:expenses'
+  | 'finance:petty_cash'
+  | 'finance:reports'
+  | 'warranty:view'
+  | 'warranty:claims'
+  | 'reports:all'
+  | 'reports:area_only'
+  | 'audit:view';
