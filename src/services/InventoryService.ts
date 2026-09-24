@@ -115,6 +115,36 @@ export class InventoryService {
       timestamp: new Date().toISOString()
     });
   }
+
+  async executeSalesIssue(
+    productId: string,
+    locationId: string,
+    quantity: number,
+    referenceDocumentId: string,
+    user: { id: string; name: string }
+  ): Promise<void> {
+    const balance = await this.repo.getBalance(productId, locationId);
+    if (!balance || !canIssueFromStock(productId, locationId, quantity, balance)) {
+      throw new Error(`Insufficient stock to issue for product ${productId} at location ${locationId}`);
+    }
+
+    balance.availableQuantity -= quantity;
+    balance.lastUpdated = new Date().toISOString();
+    await this.repo.saveBalance(balance);
+
+    await this.repo.addMovement({
+      id: Math.random().toString(),
+      productId,
+      sourceLocation: locationId,
+      quantity,
+      movementType: 'SALES_ISSUE',
+      referenceDocumentType: 'SALES_ORDER',
+      referenceDocumentId,
+      performedById: user.id,
+      performedByName: user.name,
+      timestamp: new Date().toISOString(),
+    });
+  }
 }
 
 import { MockInventoryRepository } from '../repositories/mock/MockInventoryRepository';

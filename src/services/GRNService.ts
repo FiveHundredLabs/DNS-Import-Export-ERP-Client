@@ -13,7 +13,10 @@ export class GRNService {
     await this.grnRepo.save(grn);
   }
 
-  async approveGRN(grnId: string, managerId: string, managerName: string) {
+  async approveGRN(grnId: string, managerId: string, managerName: string, role?: string) {
+    if (role && role !== 'MANAGER' && role !== 'DIRECTOR') {
+      throw new Error(`Role ${role} is not authorized to approve GRNs.`);
+    }
     const grn = await this.grnRepo.getById(grnId);
     if (!grn) throw new Error("GRN not found");
     grn.status = 'APPROVED';
@@ -62,7 +65,10 @@ export class GRNService {
     return this.grnRepo.getAll();
   }
 
-  async rejectGRN(grnId: string, reason: string, rejectedById: string, rejectedByName: string): Promise<void> {
+  async rejectGRN(grnId: string, reason: string, rejectedById: string, rejectedByName: string, role?: string): Promise<void> {
+    if (role && role !== 'MANAGER' && role !== 'DIRECTOR') {
+      throw new Error(`Role ${role} is not authorized to reject GRNs.`);
+    }
     const grn = await this.grnRepo.getById(grnId);
     if (!grn) throw new Error("GRN not found");
     grn.status = 'REJECTED';

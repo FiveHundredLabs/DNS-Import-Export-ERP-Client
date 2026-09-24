@@ -3,6 +3,8 @@ import { MockCustomerRepository } from '../repositories/mock/MockCustomerReposit
 import { Customer, CommercialTerms, CustomerApprovalStage } from '../types/customer';
 import { PaginatedResult } from '../types/common';
 import { determineCustomerApprovalRoute } from '../rules/approvalRules';
+import { hasPermission } from '../rules/permissions';
+import { User } from '../types/auth';
 import { approvalService } from './ApprovalService';
 
 export class CustomerService {
@@ -73,8 +75,13 @@ export class CustomerService {
 
   async setCommercialTerms(
     customerId: string,
-    terms: CommercialTerms
+    terms: CommercialTerms,
+    user?: User
   ): Promise<{ customer: Customer; targetApprovalRole: 'MANAGER' | 'DIRECTOR'; isExceptional: boolean }> {
+    if (user && !hasPermission(user.role, 'customers:commercial_approval')) {
+      throw new Error(`Role ${user.role} is not authorized to configure commercial terms.`);
+    }
+
     const route = determineCustomerApprovalRoute(terms.creditDays, terms.creditLimit);
     const nextStage: CustomerApprovalStage =
       route.targetRole === 'DIRECTOR'

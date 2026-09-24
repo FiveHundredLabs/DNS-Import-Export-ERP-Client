@@ -171,6 +171,18 @@ export class CommissionService {
 
     return summaries.sort((a, b) => b.achievementPercentage - a.achievementPercentage);
   }
+
+  async recordAchievement(salesRepId: string, amount: number): Promise<SalesTarget | null> {
+    const target = await this.repo.getTargetByRep(salesRepId);
+    if (!target) return null;
+    const newAchieved = target.achievedAmount + amount;
+    const rules = await this.repo.getRules();
+    const calc = calculateCommission(target.targetAmount, newAchieved, rules);
+    return this.repo.updateTarget(target.id, {
+      achievedAmount: newAchieved,
+      achievementPercentage: calc.achievementPercentage,
+    });
+  }
 }
 
 export const commissionService = new CommissionService();
