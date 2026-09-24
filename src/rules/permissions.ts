@@ -94,7 +94,9 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'view:finance_dashboard',
     'customers:view',
     'invoices:view',
+    'invoices:create',
     'payments:view',
+    'payments:create',
     'payments:approve',
     'finance:expenses',
     'finance:petty_cash',
@@ -109,6 +111,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'customers:create',
     'quotations:view',
     'orders:view',
+    'invoices:view',
     'payments:view',
     'warranty:view',
     'reports:area_only',
@@ -121,6 +124,8 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'quotations:create',
     'orders:view',
     'orders:create',
+    'invoices:view',
+    'payments:view',
     'payments:create',
     'warranty:view',
   ],
@@ -136,6 +141,8 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'products:view',
     'customers:view',
     'pos:operate',
+    'invoices:view',
+    'payments:view',
     'payments:create',
   ],
 };
@@ -177,13 +184,21 @@ export function canAccessRoute(role: UserRole, path: string): boolean {
   if (path.startsWith('/pos')) {
     return hasPermission(role, 'pos:operate');
   }
-  if (path.startsWith('/finance') || path.startsWith('/payments')) {
+  if (path.startsWith('/invoices')) {
+    return hasPermission(role, 'invoices:view');
+  }
+  if (path.startsWith('/payments')) {
+    return (
+      hasPermission(role, 'payments:view') ||
+      hasPermission(role, 'payments:create') ||
+      hasPermission(role, 'payments:approve')
+    );
+  }
+  if (path.startsWith('/finance')) {
     return (
       hasPermission(role, 'finance:expenses') ||
       hasPermission(role, 'finance:petty_cash') ||
-      hasPermission(role, 'finance:reports') ||
-      hasPermission(role, 'payments:view') ||
-      hasPermission(role, 'payments:approve')
+      hasPermission(role, 'finance:reports')
     );
   }
   if (path.startsWith('/warranty')) {

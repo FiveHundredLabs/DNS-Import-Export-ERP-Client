@@ -147,6 +147,10 @@ export class OrderService {
     return order;
   }
 
+  async getOrder(id: string, userContext?: OrderUserContext): Promise<SalesOrder | null> {
+    return this.getOrderById(id, userContext);
+  }
+
   /**
    * Helper to build immutable line item snapshots from Product Master.
    * Product changes in the future will not retroactively alter these snapshots.

@@ -22,6 +22,11 @@ import { StockMovementsPage } from './features/inventory/StockMovementsPage';
 import { OrderPickingPage } from './features/inventory/OrderPickingPage';
 import { DispatchPage } from './features/inventory/DispatchPage';
 import { TransferListPage } from './features/inventory/TransferListPage';
+import { InvoiceListPage } from './features/invoices/InvoiceListPage';
+import { InvoiceDetailPage } from './features/invoices/InvoiceDetailPage';
+import { PaymentListPage } from './features/payments/PaymentListPage';
+import { PaymentCollectionPage } from './features/payments/PaymentCollectionPage';
+import { PaymentDetailPage } from './features/payments/PaymentDetailPage';
 import { ModulePlaceholder } from './components/common/ModulePlaceholder';
 import { ProtectedRoute } from './components/common/ProtectedRoute';
 import { FileSpreadsheet, ShoppingCart, Boxes, Store, DollarSign, ShieldCheck, BarChart3 } from 'lucide-react';
@@ -223,6 +228,48 @@ export function App() {
           element={
             <ProtectedRoute>
               <TransferListPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Phase 7: Invoice & Payments Management */}
+        <Route
+          path="invoices"
+          element={
+            <ProtectedRoute>
+              <InvoiceListPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="invoices/:id"
+          element={
+            <ProtectedRoute>
+              <InvoiceDetailPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="payments"
+          element={
+            <ProtectedRoute>
+              <PaymentListPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="payments/new"
+          element={
+            <ProtectedRoute>
+              <PaymentCollectionPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="payments/:id"
+          element={
+            <ProtectedRoute>
+              <PaymentDetailPage />
             </ProtectedRoute>
           }
         />

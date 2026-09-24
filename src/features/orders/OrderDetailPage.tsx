@@ -2,7 +2,9 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { orderService } from '../../services/OrderService';
+import { invoiceService } from '../../services/InvoiceService';
 import { SalesOrder, OrderStatus } from '../../types/order';
+import { Invoice } from '../../types/invoice';
 import { OrderStatusBadge } from './OrderStatusBadge';
 import { ApprovalTimeline } from '../../components/approval/ApprovalTimeline';
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/card';
@@ -52,6 +54,7 @@ export function OrderDetailPage() {
   const [order, setOrder] = useState<SalesOrder | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [orderInvoice, setOrderInvoice] = useState<Invoice | null>(null);
 
   // Dialog state
   const [actionType, setActionType] = useState<
@@ -74,6 +77,14 @@ export function OrderDetailPage() {
         setError('Sales Order not found.');
       } else {
         setOrder(data);
+        // Check if an invoice exists for this order
+        try {
+          const invs = await invoiceService.getInvoices({ search: data.orderNumber });
+          const matching = invs.data.find((i) => i.orderId === data.id);
+          if (matching) setOrderInvoice(matching);
+        } catch {
+          // ignore
+        }
       }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to load order.');
@@ -85,6 +96,19 @@ export function OrderDetailPage() {
   useEffect(() => {
     fetchOrder();
   }, [id, currentUser]);
+
+  const handleGenerateInvoice = async () => {
+    if (!order) return;
+    try {
+      setLoading(true);
+      const invoice = await invoiceService.createInvoiceFromOrder(order.id, currentUser);
+      navigate(`/invoices/${invoice.id}`);
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'Invoice generation failed.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handlePrint = () => {
     window.print();
@@ -325,7 +349,7 @@ export function OrderDetailPage() {
               </Button>
               <Button
                 size="sm"
-                onClick={() => handleFulfillmentAdvance('INVOICED')}
+                onClick={handleGenerateInvoice}
                 className="bg-purple-600 hover:bg-purple-700 text-white text-xs gap-1.5"
               >
                 <FileText className="h-3.5 w-3.5" />
@@ -337,23 +361,40 @@ export function OrderDetailPage() {
           {order.status === 'ISSUED' && (
             <Button
               size="sm"
-              onClick={() => handleFulfillmentAdvance('INVOICED')}
-              className="bg-purple-600 hover:bg-purple-700 text-white text-xs gap-1.5"
+              onClick={handleGenerateInvoice}
+              className="bg-purple-600 hover:bg-purple-700 text-white text-xs gap-1.5 shadow-sm"
             >
               <FileText className="h-3.5 w-3.5" />
-              Generate Invoice
+              Generate Tax Invoice
             </Button>
           )}
 
           {order.status === 'INVOICED' && (
-            <Button
-              size="sm"
-              onClick={() => handleFulfillmentAdvance('DISPATCHED')}
-              className="bg-teal-600 hover:bg-teal-700 text-white text-xs gap-1.5"
-            >
-              <Truck className="h-3.5 w-3.5" />
-              Dispatch Order
-            </Button>
+            <>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  if (orderInvoice) {
+                    navigate(`/invoices/${orderInvoice.id}`);
+                  } else {
+                    navigate(`/invoices?search=${encodeURIComponent(order.orderNumber)}`);
+                  }
+                }}
+                className="border-indigo-300 text-indigo-700 hover:bg-indigo-50 text-xs gap-1.5 font-semibold"
+              >
+                <FileText className="h-3.5 w-3.5" />
+                View Tax Invoice
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => handleFulfillmentAdvance('DISPATCHED')}
+                className="bg-teal-600 hover:bg-teal-700 text-white text-xs gap-1.5"
+              >
+                <Truck className="h-3.5 w-3.5" />
+                Dispatch Order
+              </Button>
+            </>
           )}
 
           {order.status === 'DISPATCHED' && (

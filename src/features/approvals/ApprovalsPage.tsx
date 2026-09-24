@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useApprovals } from '../../hooks/useApprovals';
 import { useAuth } from '../../hooks/useAuth';
 import { ApprovalRequest, ApprovalActionType } from '../../types/approval';
@@ -11,7 +12,7 @@ import { Button } from '../../components/ui/button';
 import { TableLoadingSkeleton } from '../../components/common/LoadingSkeleton';
 import { EmptyState } from '../../components/common/EmptyState';
 import { ErrorState } from '../../components/common/ErrorState';
-import { CheckCircle, Clock, AlertTriangle, ShieldCheck, RefreshCw } from 'lucide-react';
+import { CheckCircle, Clock, AlertTriangle, ShieldCheck, RefreshCw, ExternalLink } from 'lucide-react';
 import { formatDateTime } from '../../utils/formatters';
 
 export function ApprovalsPage() {
@@ -24,6 +25,13 @@ export function ApprovalsPage() {
     if (app.status !== 'PENDING') return false;
     if (role === 'DIRECTOR') return true;
     return app.currentApproverRole === role;
+  };
+
+  const getDocumentLink = (app: ApprovalRequest): string | null => {
+    if (app.documentType === 'PAYMENT_RECEIPT') return `/payments/${app.documentId}`;
+    if (app.documentType === 'SPECIAL_SALES_ORDER') return `/orders/${app.documentId}`;
+    if (app.documentType === 'QUOTATION_DISCOUNT') return `/quotations/${app.documentId}`;
+    return null;
   };
 
   return (
@@ -60,9 +68,19 @@ export function ApprovalsPage() {
                 <CardHeader className="bg-slate-50/50 p-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
-                      <span className="font-mono font-bold text-xs text-indigo-600">
-                        {app.documentReferenceNumber}
-                      </span>
+                      {getDocumentLink(app) ? (
+                        <Link
+                          to={getDocumentLink(app)!}
+                          className="font-mono font-bold text-xs text-indigo-600 hover:underline flex items-center gap-1"
+                        >
+                          {app.documentReferenceNumber}
+                          <ExternalLink className="h-3 w-3" />
+                        </Link>
+                      ) : (
+                        <span className="font-mono font-bold text-xs text-indigo-600">
+                          {app.documentReferenceNumber}
+                        </span>
+                      )}
                       <ApprovalBadge status={app.status} />
                       {app.isSpecialScenario && (
                         <span className="flex items-center gap-1 text-[11px] font-bold text-amber-700 bg-amber-100/80 px-2 py-0.5 rounded">

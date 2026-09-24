@@ -11,6 +11,8 @@ import {
   DollarSign,
   ShieldCheck,
   BarChart3,
+  Receipt,
+  CreditCard,
   X,
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
@@ -31,6 +33,8 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     { name: 'Approvals Engine', path: '/approvals', icon: CheckCircle },
     { name: 'Quotations', path: '/quotations', icon: FileSpreadsheet },
     { name: 'Sales Orders', path: '/orders', icon: ShoppingCart },
+    { name: 'Invoices', path: '/invoices', icon: Receipt },
+    { name: 'Payments', path: '/payments', icon: CreditCard },
     { name: 'Inventory & GRN', path: '/inventory', icon: Boxes },
     { name: 'Showroom POS', path: '/pos', icon: Store },
     { name: 'Finance & Ledger', path: '/finance', icon: DollarSign },
