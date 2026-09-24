@@ -91,6 +91,7 @@ export class MockApprovalRepository implements IApprovalRepository {
       ...app,
       status: newStatus === 'ESCALATED' ? 'PENDING' : newStatus,
       currentApproverRole: newCurrentApprover,
+      targetApproverRole: action === 'ESCALATE' ? newCurrentApprover : app.targetApproverRole,
       history: [...app.history, newHistoryEntry],
       updatedAt: new Date().toISOString(),
     };

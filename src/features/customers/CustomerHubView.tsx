@@ -4,6 +4,9 @@ import { Customer } from '../../types/customer';
 import { Quotation } from '../../types/quotation';
 import { quotationService } from '../../services/QuotationService';
 import { QuotationStatusBadge } from '../quotations/QuotationStatusBadge';
+import { SalesOrder } from '../../types/order';
+import { orderService } from '../../services/OrderService';
+import { OrderStatusBadge } from '../orders/OrderStatusBadge';
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
@@ -26,6 +29,7 @@ import {
   FileText,
   UserCheck,
   PlusCircle,
+  Eye,
 } from 'lucide-react';
 import { whatsAppService } from '../../services/WhatsAppService';
 
@@ -33,6 +37,8 @@ export function CustomerHubView({ customer }: { customer: Customer }) {
   const navigate = useNavigate();
   const [customerQuotations, setCustomerQuotations] = useState<Quotation[]>([]);
   const [quotationsLoading, setQuotationsLoading] = useState(true);
+  const [customerOrders, setCustomerOrders] = useState<SalesOrder[]>([]);
+  const [ordersLoading, setOrdersLoading] = useState(true);
   const [invoiceFilter, setInvoiceFilter] = useState<'ALL' | 'OVERDUE' | 'NEAR_DUE' | 'PENDING' | 'PAID'>('ALL');
   const isCreditOverdue = customer.financials.overdue > 0;
 
@@ -49,6 +55,21 @@ export function CustomerHubView({ customer }: { customer: Customer }) {
       }
     }
     loadQuotations();
+  }, [customer.id]);
+
+  useEffect(() => {
+    async function loadOrders() {
+      try {
+        setOrdersLoading(true);
+        const res = await orderService.listOrders({ customerId: customer.id, pageSize: 50 });
+        setCustomerOrders(res.data);
+      } catch (err) {
+        console.error('Failed to load customer orders', err);
+      } finally {
+        setOrdersLoading(false);
+      }
+    }
+    loadOrders();
   }, [customer.id]);
 
   const handleShareBalanceViaWhatsApp = () => {
@@ -264,7 +285,7 @@ export function CustomerHubView({ customer }: { customer: Customer }) {
         <TabsList className="bg-slate-100 p-1 flex-wrap">
           <TabsTrigger value="overview">Overview & Terms</TabsTrigger>
           <TabsTrigger value="invoices">Invoices ({mockInvoices.length})</TabsTrigger>
-          <TabsTrigger value="orders">Orders ({mockOrders.length})</TabsTrigger>
+          <TabsTrigger value="orders">Orders ({customerOrders.length})</TabsTrigger>
           <TabsTrigger value="quotations">Quotations ({customerQuotations.length})</TabsTrigger>
           <TabsTrigger value="payments">Payments ({mockPayments.length})</TabsTrigger>
           <TabsTrigger value="warranty">Warranty ({customer.warrantyNotesExpected})</TabsTrigger>
@@ -421,42 +442,87 @@ export function CustomerHubView({ customer }: { customer: Customer }) {
         {/* 3. Sales Orders Tab */}
         <TabsContent value="orders">
           <Card>
-            <CardHeader>
-              <CardTitle className="text-sm">Sales Order History</CardTitle>
+            <CardHeader className="flex flex-row items-center justify-between pb-3">
+              <div>
+                <CardTitle className="text-sm">Sales Order History</CardTitle>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Official sales orders placed for {customer.name}
+                </p>
+              </div>
+              <Button
+                size="sm"
+                onClick={() => navigate(`/orders/new?customerId=${customer.id}`)}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs h-8 gap-1.5"
+              >
+                <PlusCircle className="h-3.5 w-3.5" />
+                New Sales Order
+              </Button>
             </CardHeader>
             <CardContent>
-              <div className="rounded-lg border border-slate-200 overflow-hidden">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Order #</TableHead>
-                      <TableHead>Date</TableHead>
-                      <TableHead className="text-center">Items</TableHead>
-                      <TableHead className="text-right">Order Amount</TableHead>
-                      <TableHead className="text-center">Order Status</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {mockOrders.map((ord) => (
-                      <TableRow key={ord.id}>
-                        <TableCell className="font-mono text-xs font-semibold text-slate-900">
-                          {ord.orderNumber}
-                        </TableCell>
-                        <TableCell className="text-xs text-slate-600">{formatDate(ord.date)}</TableCell>
-                        <TableCell className="text-center text-xs text-slate-600">{ord.itemsCount} Items</TableCell>
-                        <TableCell className="text-right font-mono text-xs font-bold text-slate-900">
-                          {formatCurrency(ord.totalAmount)}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <Badge variant={ord.status === 'DELIVERED' ? 'success' : 'warning'}>
-                            {ord.status}
-                          </Badge>
-                        </TableCell>
+              {ordersLoading ? (
+                <div className="py-8 text-center text-xs text-slate-400">Loading customer orders...</div>
+              ) : customerOrders.length === 0 ? (
+                <div className="py-8 text-center space-y-2">
+                  <ShoppingCart className="h-8 w-8 text-slate-300 mx-auto" />
+                  <p className="text-xs text-slate-500">No sales orders found for this customer.</p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => navigate(`/orders/new?customerId=${customer.id}`)}
+                    className="text-xs"
+                  >
+                    Create First Sales Order
+                  </Button>
+                </div>
+              ) : (
+                <div className="rounded-lg border border-slate-200 overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Order #</TableHead>
+                        <TableHead>Date</TableHead>
+                        <TableHead className="text-center">Items</TableHead>
+                        <TableHead className="text-right">Order Amount</TableHead>
+                        <TableHead className="text-center">Status / Approval</TableHead>
+                        <TableHead className="text-right w-[80px]">Action</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+                    </TableHeader>
+                    <TableBody>
+                      {customerOrders.map((ord) => (
+                        <TableRow key={ord.id}>
+                          <TableCell className="font-mono text-xs font-semibold text-slate-900">
+                            <button
+                              onClick={() => navigate(`/orders/${ord.id}`)}
+                              className="text-indigo-600 hover:underline text-left font-mono"
+                            >
+                              {ord.orderNumber}
+                            </button>
+                          </TableCell>
+                          <TableCell className="text-xs text-slate-600">{formatDate(ord.createdAt)}</TableCell>
+                          <TableCell className="text-center text-xs text-slate-600">{ord.items.length} Items</TableCell>
+                          <TableCell className="text-right font-mono text-xs font-bold text-slate-900">
+                            {formatCurrency(ord.totalAmount)}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <OrderStatusBadge status={ord.status} isSpecialApproval={ord.isSpecialApproval} />
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => navigate(`/orders/${ord.id}`)}
+                              className="h-7 w-7 p-0 text-slate-500 hover:text-slate-900"
+                              title="View Order"
+                            >
+                              <Eye className="h-3.5 w-3.5" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

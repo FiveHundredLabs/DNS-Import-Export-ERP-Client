@@ -291,6 +291,16 @@ export function QuotationDetailPage() {
               <span className="font-mono font-bold">{quotation.convertedOrderNumber}</span> on{' '}
               {quotation.convertedAt ? formatDate(quotation.convertedAt) : 'recently'}. Historical price snapshots are locked.
             </p>
+            {quotation.convertedToOrderId && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigate(`/orders/${quotation.convertedToOrderId}`)}
+                className="mt-2 text-xs border-blue-300 text-blue-800 hover:bg-blue-100"
+              >
+                View Sales Order
+              </Button>
+            )}
           </div>
         </div>
       )}

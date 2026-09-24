@@ -9,6 +9,10 @@ import { ApprovalsPage } from './features/approvals/ApprovalsPage';
 import { QuotationListPage } from './features/quotations/QuotationListPage';
 import { QuotationCreateEditPage } from './features/quotations/QuotationCreateEditPage';
 import { QuotationDetailPage } from './features/quotations/QuotationDetailPage';
+import { OrderListPage } from './features/orders/OrderListPage';
+import { OrderCreateEditPage } from './features/orders/OrderCreateEditPage';
+import { OrderDetailPage } from './features/orders/OrderDetailPage';
+import { OrderTrackingPage } from './features/orders/OrderTrackingPage';
 import { ModulePlaceholder } from './components/common/ModulePlaceholder';
 import { ProtectedRoute } from './components/common/ProtectedRoute';
 import { FileSpreadsheet, ShoppingCart, Boxes, Store, DollarSign, ShieldCheck, BarChart3 } from 'lucide-react';
@@ -98,22 +102,44 @@ export function App() {
           }
         />
 
+        {/* Phase 5: Sales Order & Fulfillment Pipeline */}
         <Route
           path="orders"
           element={
             <ProtectedRoute>
-              <ModulePlaceholder
-                title="Sales Orders & Picking"
-                modulePhase="Phase 5"
-                description="Standard vs Special Sales Orders, credit limit validation, and fulfillment state machine."
-                icon={ShoppingCart}
-                features={[
-                  'Flags Special Approval Required for discount or credit day breaches',
-                  'Hierarchical escalation: Sales Rep -> Sales Mgr -> Manager/Director',
-                  'Warehouse picking and quantity issue tracking',
-                  'Immutable pricing snapshot at time of order creation',
-                ]}
-              />
+              <OrderListPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="orders/new"
+          element={
+            <ProtectedRoute>
+              <OrderCreateEditPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="orders/tracking"
+          element={
+            <ProtectedRoute>
+              <OrderTrackingPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="orders/:id"
+          element={
+            <ProtectedRoute>
+              <OrderDetailPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="orders/:id/edit"
+          element={
+            <ProtectedRoute>
+              <OrderCreateEditPage />
             </ProtectedRoute>
           }
         />
