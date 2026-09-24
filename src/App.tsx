@@ -30,6 +30,8 @@ import { PaymentDetailPage } from './features/payments/PaymentDetailPage';
 import { ShowroomPOSTerminal } from './features/pos/ShowroomPOSTerminal';
 import { POSTransactionHistoryPage } from './features/pos/POSTransactionHistoryPage';
 import { POSSessionsPage } from './features/pos/POSSessionsPage';
+import { WarrantyHubPage } from './features/warranty/WarrantyHubPage';
+import { CommissionHubPage } from './features/commissions/CommissionHubPage';
 import { ModulePlaceholder } from './components/common/ModulePlaceholder';
 import { ProtectedRoute } from './components/common/ProtectedRoute';
 import { FileSpreadsheet, ShoppingCart, Boxes, Store, DollarSign, ShieldCheck, BarChart3 } from 'lucide-react';
@@ -324,22 +326,20 @@ export function App() {
           }
         />
 
+        {/* Phase 10: Warranty, Loyalty & Commissions */}
         <Route
           path="warranty"
           element={
             <ProtectedRoute>
-              <ModulePlaceholder
-                title="Warranty & Claims Hub"
-                modulePhase="Phase 10"
-                description="Sold product tracking, dealer warranty note reconciliation, and claim resolution."
-                icon={ShieldCheck}
-                features={[
-                  'Reconciles expected warranty notes vs received notes per dealer',
-                  'Links warranty records to original customer invoice and product SKU',
-                  'Warranty claim lifecycle from defect intake to replacement/repair',
-                  'Dealer vs showroom warranty activation date handling',
-                ]}
-              />
+              <WarrantyHubPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="commissions"
+          element={
+            <ProtectedRoute>
+              <CommissionHubPage />
             </ProtectedRoute>
           }
         />

@@ -13,6 +13,10 @@ import { Payment } from '../../types/payment';
 import { paymentService } from '../../services/PaymentService';
 import { InvoiceStatusBadge } from '../invoices/InvoiceStatusBadge';
 import { PaymentStatusBadge } from '../payments/PaymentStatusBadge';
+import { WarrantyRecord, WarrantyClaim } from '../../types/warranty';
+import { warrantyService } from '../../services/WarrantyService';
+import { WarrantyStatusBadge, ClaimStatusBadge } from '../warranty/WarrantyStatusBadge';
+import { calculatePendingWarrantyNotes } from '../../rules/warrantyRules';
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
@@ -50,6 +54,10 @@ export function CustomerHubView({ customer }: { customer: Customer }) {
   const [invoicesLoading, setInvoicesLoading] = useState(true);
   const [customerPayments, setCustomerPayments] = useState<Payment[]>([]);
   const [paymentsLoading, setPaymentsLoading] = useState(true);
+  const [customerWarranties, setCustomerWarranties] = useState<WarrantyRecord[]>([]);
+  const [warrantiesLoading, setWarrantiesLoading] = useState(true);
+  const [customerClaims, setCustomerClaims] = useState<WarrantyClaim[]>([]);
+  const [claimsLoading, setClaimsLoading] = useState(true);
   const [invoiceFilter, setInvoiceFilter] = useState<'ALL' | 'OVERDUE' | 'NEAR_DUE' | 'PENDING' | 'PAID'>('ALL');
   const isCreditOverdue = customer.financials.overdue > 0;
 
@@ -111,6 +119,27 @@ export function CustomerHubView({ customer }: { customer: Customer }) {
       }
     }
     loadPayments();
+  }, [customer.id]);
+
+  useEffect(() => {
+    async function loadWarrantiesAndClaims() {
+      try {
+        setWarrantiesLoading(true);
+        setClaimsLoading(true);
+        const [warrs, clms] = await Promise.all([
+          warrantyService.getWarrantiesByCustomerId(customer.id),
+          warrantyService.getClaimsByCustomerId(customer.id),
+        ]);
+        setCustomerWarranties(warrs);
+        setCustomerClaims(clms);
+      } catch (err) {
+        console.error('Failed to load customer warranty details', err);
+      } finally {
+        setWarrantiesLoading(false);
+        setClaimsLoading(false);
+      }
+    }
+    loadWarrantiesAndClaims();
   }, [customer.id]);
 
   const handleShareBalanceViaWhatsApp = () => {
@@ -711,40 +740,184 @@ export function CustomerHubView({ customer }: { customer: Customer }) {
         </TabsContent>
 
         {/* 6. Warranty Tab */}
-        <TabsContent value="warranty">
+        <TabsContent value="warranty" className="space-y-4">
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-sm">Dealer Warranty Notes Follow-up</CardTitle>
-              <span className="text-xs text-slate-500 font-medium">Reconciliation Ledger</span>
+            <CardHeader className="flex flex-row items-center justify-between pb-3">
+              <div>
+                <CardTitle className="text-sm font-semibold text-slate-900">
+                  Dealer Warranty Card Reconciliation
+                </CardTitle>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Physical warranty note registration status for equipment sold through {customer.name}
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigate('/warranty')}
+                className="text-xs h-8 gap-1.5"
+              >
+                <ShieldCheck className="h-3.5 w-3.5 text-indigo-600" />
+                Warranty Hub
+              </Button>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
                 <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
-                  <span className="text-slate-400 block text-[10px] uppercase">Products Sold by Shop</span>
-                  <span className="text-xl font-bold text-slate-900">{customer.warrantyNotesExpected} Units</span>
+                  <span className="text-slate-400 block text-[10px] uppercase font-semibold">
+                    Products Sold by Shop
+                  </span>
+                  <span className="text-xl font-bold text-slate-900">
+                    {customer.warrantyNotesExpected} Units
+                  </span>
                 </div>
                 <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
-                  <span className="text-slate-400 block text-[10px] uppercase">Warranty Notes Received</span>
-                  <span className="text-xl font-bold text-emerald-700">{customer.warrantyNotesReceived} Notes</span>
+                  <span className="text-slate-400 block text-[10px] uppercase font-semibold">
+                    Warranty Notes Received
+                  </span>
+                  <span className="text-xl font-bold text-emerald-700">
+                    {customer.warrantyNotesReceived} Notes
+                  </span>
                 </div>
                 <div className="p-3 bg-amber-50/50 rounded-lg border border-amber-200">
-                  <span className="text-amber-700 block text-[10px] uppercase font-semibold">Missing Pending Notes</span>
+                  <span className="text-amber-700 block text-[10px] uppercase font-semibold">
+                    Missing Pending Notes
+                  </span>
                   <span className="text-xl font-bold text-amber-900">
-                    {Math.max(0, customer.warrantyNotesExpected - customer.warrantyNotesReceived)} Pending Notes
+                    {calculatePendingWarrantyNotes(
+                      customer.warrantyNotesExpected,
+                      customer.warrantyNotesReceived
+                    )}{' '}
+                    Pending Notes
                   </span>
                 </div>
               </div>
+            </CardContent>
+          </Card>
 
-              <div className="p-4 bg-slate-50 rounded-lg border border-slate-200 text-xs space-y-2">
-                <h4 className="font-semibold text-slate-800 flex items-center gap-1.5">
-                  <ShieldCheck className="h-4 w-4 text-indigo-600" /> Representative Action Protocol
-                </h4>
-                <p className="text-slate-600">
-                  During on-site shop visits, verify whether physical warranty registration cards have been completed
-                  by retail customers and handed to the shopkeeper. Missing warranty notes can be scanned and submitted
-                  to the Warranty Claims department.
-                </p>
-              </div>
+          {/* Customer Registered Warranties */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-semibold text-slate-900">
+                Registered Warranties ({customerWarranties.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {warrantiesLoading ? (
+                <div className="py-6 text-center text-xs text-slate-400">Loading warranties...</div>
+              ) : customerWarranties.length === 0 ? (
+                <div className="py-6 text-center text-xs text-slate-500">
+                  No registered warranty records found for this customer.
+                </div>
+              ) : (
+                <div className="rounded-lg border border-slate-200 overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Product / SKU</TableHead>
+                        <TableHead>Serial Number</TableHead>
+                        <TableHead>Invoice #</TableHead>
+                        <TableHead>Sale Type</TableHead>
+                        <TableHead>Expiry Date</TableHead>
+                        <TableHead className="text-center">Status</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {customerWarranties.map((w) => (
+                        <TableRow key={w.id}>
+                          <TableCell className="font-semibold text-slate-900 text-xs">
+                            {w.productName}
+                            <span className="block text-[11px] text-slate-400 font-normal">
+                              {w.sku}
+                            </span>
+                          </TableCell>
+                          <TableCell className="font-mono text-xs text-slate-600">
+                            {w.serialNumber || 'N/A'}
+                          </TableCell>
+                          <TableCell className="font-mono text-xs text-indigo-600">
+                            {w.invoiceNumber}
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              variant={w.saleType === 'SHOWROOM' ? 'info' : 'secondary'}
+                              className="text-[10px]"
+                            >
+                              {w.saleType}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-xs text-slate-700">
+                            {formatDate(w.warrantyExpiryDate)}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <WarrantyStatusBadge status={w.status} />
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Customer Filed Claims */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-semibold text-slate-900">
+                Filed Claims History ({customerClaims.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {claimsLoading ? (
+                <div className="py-6 text-center text-xs text-slate-400">Loading claims...</div>
+              ) : customerClaims.length === 0 ? (
+                <div className="py-6 text-center text-xs text-slate-500">
+                  No warranty claims filed by this customer.
+                </div>
+              ) : (
+                <div className="rounded-lg border border-slate-200 overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Claim #</TableHead>
+                        <TableHead>Product</TableHead>
+                        <TableHead>Complaint Date</TableHead>
+                        <TableHead>Reason</TableHead>
+                        <TableHead className="text-center">Status</TableHead>
+                        <TableHead>Resolution</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {customerClaims.map((c) => (
+                        <TableRow key={c.id}>
+                          <TableCell className="font-mono text-xs font-bold text-slate-900">
+                            {c.claimNumber}
+                          </TableCell>
+                          <TableCell className="text-xs text-slate-800">
+                            {c.productName}
+                          </TableCell>
+                          <TableCell className="text-xs text-slate-600">
+                            {formatDate(c.complaintDate)}
+                          </TableCell>
+                          <TableCell className="text-xs text-slate-600 max-w-[200px] truncate" title={c.complaintReason}>
+                            {c.complaintReason}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <ClaimStatusBadge status={c.status} />
+                          </TableCell>
+                          <TableCell className="text-xs text-slate-600">
+                            {c.resolutionType ? (
+                              <span className="font-semibold text-slate-800">{c.resolutionType}</span>
+                            ) : (
+                              'Pending'
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

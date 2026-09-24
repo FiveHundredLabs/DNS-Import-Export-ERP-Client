@@ -35,6 +35,8 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'finance:reports',
     'warranty:view',
     'warranty:claims',
+    'commissions:view',
+    'commissions:manage',
     'reports:all',
     'reports:area_only',
     'audit:view',
@@ -65,6 +67,9 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'finance:petty_cash',
     'finance:reports',
     'warranty:view',
+    'warranty:claims',
+    'commissions:view',
+    'commissions:manage',
     'reports:all',
     'reports:area_only',
     'audit:view',
@@ -88,6 +93,8 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'payments:view',
     'warranty:view',
     'warranty:claims',
+    'commissions:view',
+    'commissions:manage',
     'reports:all',
     'reports:area_only',
   ],
@@ -115,6 +122,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'invoices:view',
     'payments:view',
     'warranty:view',
+    'commissions:view',
     'reports:area_only',
   ],
   SALES_REP: [
@@ -129,6 +137,8 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'payments:view',
     'payments:create',
     'warranty:view',
+    'warranty:claims',
+    'commissions:view',
   ],
   STOCK_KEEPER: [
     'view:stock_keeper_dashboard',
@@ -204,6 +214,9 @@ export function canAccessRoute(role: UserRole, path: string): boolean {
   }
   if (path.startsWith('/warranty')) {
     return hasPermission(role, 'warranty:view');
+  }
+  if (path.startsWith('/commissions')) {
+    return hasPermission(role, 'commissions:view');
   }
   if (path.startsWith('/reports')) {
     return (

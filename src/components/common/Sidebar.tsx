@@ -13,6 +13,7 @@ import {
   BarChart3,
   Receipt,
   CreditCard,
+  Award,
   X,
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
@@ -39,6 +40,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     { name: 'Showroom POS', path: '/pos', icon: Store },
     { name: 'Finance & Ledger', path: '/finance', icon: DollarSign },
     { name: 'Warranty Hub', path: '/warranty', icon: ShieldCheck },
+    { name: 'Sales Commission', path: '/commissions', icon: Award },
     { name: 'Enterprise Reports', path: '/reports', icon: BarChart3 },
   ].filter((item) => canAccessRoute(item.path));
 

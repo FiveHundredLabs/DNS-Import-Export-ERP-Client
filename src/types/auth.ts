@@ -62,6 +62,8 @@ export type Permission =
   | 'finance:reports'
   | 'warranty:view'
   | 'warranty:claims'
+  | 'commissions:view'
+  | 'commissions:manage'
   | 'reports:all'
   | 'reports:area_only'
   | 'audit:view';
