@@ -52,9 +52,9 @@ const PRODUCT_TRENDS_DATA = [
 // Daily settlement payment mix for Donut chart
 const SETTLEMENT_MIX = [
   { name: 'Cheque (PDC)', value: 42, color: '#10B981', amount: 'LKR 734.8k' },
-  { name: 'Bank Transfer', value: 31, color: '#0EA5E9', amount: 'LKR 542.4k' },
+  { name: 'Bank Transfer', value: 31, color: 'var(--primary-color)', amount: 'LKR 542.4k' },
   { name: 'Showroom Cash', value: 18, color: '#F59E0B', amount: 'LKR 315.0k' },
-  { name: 'Credit Card', value: 9, color: '#0284C7', amount: 'LKR 157.4k' },
+  { name: 'Credit Card', value: 9, color: 'var(--primary-hover)', amount: 'LKR 157.4k' },
 ];
 
 // Average Order Value 7-Month progression
@@ -259,10 +259,10 @@ export function DirectorDashboard() {
                   <Line
                     type="monotone"
                     dataKey="switchgear"
-                    stroke="#0EA5E9"
+                    stroke="var(--primary-color)"
                     strokeWidth={2.5}
-                    dot={{ r: 3, fill: '#0EA5E9' }}
-                    activeDot={{ r: 6, fill: '#0EA5E9', stroke: '#fff', strokeWidth: 2 }}
+                    dot={{ r: 3, fill: 'var(--primary-color)' }}
+                    activeDot={{ r: 6, fill: 'var(--primary-color)', stroke: '#fff', strokeWidth: 2 }}
                   />
                   <Line
                     type="monotone"
@@ -367,8 +367,8 @@ export function DirectorDashboard() {
               </div>
 
               {[
-                { name: 'B2B Dealer Hub', pct: '39.4%', total: '1,080', icon: Building, color: 'text-indigo-600 bg-indigo-50' },
-                { name: 'Showroom Direct', pct: '28.9%', total: '756', icon: Store, color: 'text-primary-text bg-primary-light' },
+                { name: 'B2B Dealer Hub', pct: '39.4%', total: '1,080', icon: Building, color: 'text-primary bg-primary-light' },
+                { name: 'Showroom Direct', pct: '28.9%', total: '756', icon: Store, color: 'text-primary bg-primary-light' },
                 { name: 'Field Sales Reps', pct: '25.3%', total: '616', icon: Users, color: 'text-emerald-600 bg-emerald-50' },
                 { name: 'Corporate Tender', pct: '6.4%', total: '189', icon: CreditCard, color: 'text-amber-600 bg-amber-50' },
               ].map((ch) => {

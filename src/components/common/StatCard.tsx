@@ -28,7 +28,7 @@ export function StatCard({
   className,
 }: StatCardProps) {
   const iconBg = {
-    default: 'bg-sky-50 text-sky-600 border-sky-100',
+    default: 'bg-primary-light text-primary border-primary-border',
     success: 'bg-emerald-50 text-emerald-600 border-emerald-100',
     warning: 'bg-amber-50 text-amber-600 border-amber-100',
     danger: 'bg-rose-50 text-rose-600 border-rose-100',

@@ -150,8 +150,8 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                     cn(
                       'flex items-center gap-2 rounded-xl px-3 py-1.5 text-[11px] font-semibold transition-colors',
                       isActive && !location.search.includes('tab=settings')
-                        ? 'text-primary-text bg-primary-light font-bold'
-                        : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
+                        ? 'text-primary bg-primary-light font-bold border-r-2 border-primary'
+                        : 'text-slate-500 hover:text-primary hover:bg-primary-light/40'
                     )
                   }
                 >
@@ -166,8 +166,8 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                     onClick={onClose}
                     className={
                       location.search.includes('tab=settings')
-                        ? 'flex items-center gap-2 rounded-xl px-3 py-1.5 text-[11px] font-bold text-primary-text bg-primary-light transition-colors'
-                        : 'flex items-center gap-2 rounded-xl px-3 py-1.5 text-[11px] font-semibold text-slate-500 hover:text-slate-900 hover:bg-slate-50 transition-colors'
+                        ? 'flex items-center gap-2 rounded-xl px-3 py-1.5 text-[11px] font-bold text-primary bg-primary-light border-r-2 border-primary transition-colors'
+                        : 'flex items-center gap-2 rounded-xl px-3 py-1.5 text-[11px] font-semibold text-slate-500 hover:text-primary hover:bg-primary-light/40 transition-colors'
                     }
                   >
                     <Settings className="h-3 w-3 shrink-0" />
@@ -182,8 +182,8 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                     cn(
                       'flex items-center gap-2 rounded-xl px-3 py-1.5 text-[11px] font-semibold transition-colors',
                       isActive
-                        ? 'text-primary-text bg-primary-light font-bold'
-                        : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
+                        ? 'text-primary bg-primary-light font-bold border-r-2 border-primary'
+                        : 'text-slate-500 hover:text-primary hover:bg-primary-light/40'
                     )
                   }
                 >
@@ -198,8 +198,8 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                     cn(
                       'flex items-center gap-2 rounded-xl px-3 py-1.5 text-[11px] font-semibold transition-colors',
                       isActive
-                        ? 'text-primary-text bg-primary-light font-bold'
-                        : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
+                        ? 'text-primary bg-primary-light font-bold border-r-2 border-primary'
+                        : 'text-slate-500 hover:text-primary hover:bg-primary-light/40'
                     )
                   }
                 >
@@ -225,15 +225,17 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                     onClick={onClose}
                     className={({ isActive }) =>
                       cn(
-                        'flex items-center gap-3 rounded-xl px-3.5 py-2 text-xs font-semibold transition-colors',
+                        'group flex items-center justify-between rounded-xl px-3.5 py-2 text-xs font-semibold transition-all',
                         isActive
-                          ? 'bg-primary-light text-primary-text font-bold shadow-2xs'
-                          : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                          ? 'bg-primary-light text-primary font-bold shadow-xs border-r-4 border-primary'
+                          : 'text-slate-600 hover:bg-primary-light/40 hover:text-primary'
                       )
                     }
                   >
-                    <Icon className="h-4 w-4 shrink-0" />
-                    <span>{item.name}</span>
+                    <div className="flex items-center gap-3">
+                      <Icon className="h-4 w-4 shrink-0 transition-colors" />
+                      <span>{item.name}</span>
+                    </div>
                   </NavLink>
                 );
               })}
@@ -256,15 +258,17 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                       onClick={onClose}
                       className={({ isActive }) =>
                         cn(
-                          'flex items-center gap-3 rounded-xl px-3.5 py-2 text-xs font-semibold transition-colors',
+                          'group flex items-center justify-between rounded-xl px-3.5 py-2 text-xs font-semibold transition-all',
                           isActive
-                            ? 'bg-primary-light text-primary-text font-bold shadow-2xs'
-                            : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                            ? 'bg-primary-light text-primary font-bold shadow-xs border-r-4 border-primary'
+                            : 'text-slate-600 hover:bg-primary-light/40 hover:text-primary'
                         )
                       }
                     >
-                      <Icon className="h-4 w-4 shrink-0" />
-                      <span>{item.name}</span>
+                      <div className="flex items-center gap-3">
+                        <Icon className="h-4 w-4 shrink-0 transition-colors" />
+                        <span>{item.name}</span>
+                      </div>
                     </NavLink>
                   );
                 })}
@@ -283,15 +287,17 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                 onClick={onClose}
                 className={({ isActive }) =>
                   cn(
-                    'flex items-center gap-3 rounded-xl px-3.5 py-2 text-xs font-semibold transition-colors',
+                    'group flex items-center justify-between rounded-xl px-3.5 py-2 text-xs font-semibold transition-all',
                     isActive
-                      ? 'bg-primary-light text-primary-text font-bold shadow-2xs'
-                      : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                      ? 'bg-primary-light text-primary font-bold shadow-xs border-r-4 border-primary'
+                      : 'text-slate-600 hover:bg-primary-light/40 hover:text-primary'
                   )
                 }
               >
-                <Users className="h-4 w-4 shrink-0" />
-                <span>Role Switcher Portal</span>
+                <div className="flex items-center gap-3">
+                  <Users className="h-4 w-4 shrink-0 transition-colors" />
+                  <span>Role Switcher Portal</span>
+                </div>
               </NavLink>
             </div>
           </div>

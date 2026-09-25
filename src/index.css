@@ -104,4 +104,27 @@ input[type="range"] {
   color: var(--primary-text);
 }
 
+/* Dynamic primary focus & interactive form highlights */
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  border-color: var(--primary-color);
+  outline: none;
+}
+
+/* Dynamic Primary Accent for Progress and Range Bars */
+progress::-webkit-progress-value {
+  background-color: var(--primary-color);
+}
+progress::-moz-progress-bar {
+  background-color: var(--primary-color);
+}
+
+/* Stepper and interactive toggle switches */
+[data-state="checked"],
+[aria-checked="true"] {
+  background-color: var(--primary-color);
+  border-color: var(--primary-color);
+}
+
 
