@@ -93,10 +93,10 @@ export function Header({ onToggleSidebar }: HeaderProps) {
             </div>
             <div className="min-w-0">
               <h1 className="text-base sm:text-lg md:text-xl font-black text-slate-800 tracking-tight truncate leading-tight">
-                DNS ERP
+                LabsCore ERP
               </h1>
               <span className="text-[10px] text-sky-600 font-bold block uppercase tracking-wider -mt-0.5">
-                Enterprise
+                DNS Import & Exports (Pvt) Ltd
               </span>
             </div>
           </Link>
