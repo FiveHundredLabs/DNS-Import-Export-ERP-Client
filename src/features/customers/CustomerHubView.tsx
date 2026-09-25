@@ -4,6 +4,19 @@ import { Customer } from '../../types/customer';
 import { Quotation } from '../../types/quotation';
 import { quotationService } from '../../services/QuotationService';
 import { QuotationStatusBadge } from '../quotations/QuotationStatusBadge';
+import { SalesOrder } from '../../types/order';
+import { orderService } from '../../services/OrderService';
+import { OrderStatusBadge } from '../orders/OrderStatusBadge';
+import { Invoice } from '../../types/invoice';
+import { invoiceService } from '../../services/InvoiceService';
+import { Payment } from '../../types/payment';
+import { paymentService } from '../../services/PaymentService';
+import { InvoiceStatusBadge } from '../invoices/InvoiceStatusBadge';
+import { PaymentStatusBadge } from '../payments/PaymentStatusBadge';
+import { WarrantyRecord, WarrantyClaim } from '../../types/warranty';
+import { warrantyService } from '../../services/WarrantyService';
+import { WarrantyStatusBadge, ClaimStatusBadge } from '../warranty/WarrantyStatusBadge';
+import { calculatePendingWarrantyNotes } from '../../rules/warrantyRules';
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
@@ -26,6 +39,8 @@ import {
   FileText,
   UserCheck,
   PlusCircle,
+  Eye,
+  CreditCard,
 } from 'lucide-react';
 import { whatsAppService } from '../../services/WhatsAppService';
 
@@ -33,6 +48,16 @@ export function CustomerHubView({ customer }: { customer: Customer }) {
   const navigate = useNavigate();
   const [customerQuotations, setCustomerQuotations] = useState<Quotation[]>([]);
   const [quotationsLoading, setQuotationsLoading] = useState(true);
+  const [customerOrders, setCustomerOrders] = useState<SalesOrder[]>([]);
+  const [ordersLoading, setOrdersLoading] = useState(true);
+  const [customerInvoices, setCustomerInvoices] = useState<Invoice[]>([]);
+  const [invoicesLoading, setInvoicesLoading] = useState(true);
+  const [customerPayments, setCustomerPayments] = useState<Payment[]>([]);
+  const [paymentsLoading, setPaymentsLoading] = useState(true);
+  const [customerWarranties, setCustomerWarranties] = useState<WarrantyRecord[]>([]);
+  const [warrantiesLoading, setWarrantiesLoading] = useState(true);
+  const [customerClaims, setCustomerClaims] = useState<WarrantyClaim[]>([]);
+  const [claimsLoading, setClaimsLoading] = useState(true);
   const [invoiceFilter, setInvoiceFilter] = useState<'ALL' | 'OVERDUE' | 'NEAR_DUE' | 'PENDING' | 'PAID'>('ALL');
   const isCreditOverdue = customer.financials.overdue > 0;
 
@@ -51,6 +76,72 @@ export function CustomerHubView({ customer }: { customer: Customer }) {
     loadQuotations();
   }, [customer.id]);
 
+  useEffect(() => {
+    async function loadOrders() {
+      try {
+        setOrdersLoading(true);
+        const res = await orderService.listOrders({ customerId: customer.id, pageSize: 50 });
+        setCustomerOrders(res.data);
+      } catch (err) {
+        console.error('Failed to load customer orders', err);
+      } finally {
+        setOrdersLoading(false);
+      }
+    }
+    loadOrders();
+  }, [customer.id]);
+
+  useEffect(() => {
+    async function loadInvoices() {
+      try {
+        setInvoicesLoading(true);
+        const res = await invoiceService.getInvoices({ customerId: customer.id, pageSize: 50 });
+        setCustomerInvoices(res.data);
+      } catch (err) {
+        console.error('Failed to load customer invoices', err);
+      } finally {
+        setInvoicesLoading(false);
+      }
+    }
+    loadInvoices();
+  }, [customer.id]);
+
+  useEffect(() => {
+    async function loadPayments() {
+      try {
+        setPaymentsLoading(true);
+        const res = await paymentService.getPayments({ customerId: customer.id, pageSize: 50 });
+        setCustomerPayments(res.data);
+      } catch (err) {
+        console.error('Failed to load customer payments', err);
+      } finally {
+        setPaymentsLoading(false);
+      }
+    }
+    loadPayments();
+  }, [customer.id]);
+
+  useEffect(() => {
+    async function loadWarrantiesAndClaims() {
+      try {
+        setWarrantiesLoading(true);
+        setClaimsLoading(true);
+        const [warrs, clms] = await Promise.all([
+          warrantyService.getWarrantiesByCustomerId(customer.id),
+          warrantyService.getClaimsByCustomerId(customer.id),
+        ]);
+        setCustomerWarranties(warrs);
+        setCustomerClaims(clms);
+      } catch (err) {
+        console.error('Failed to load customer warranty details', err);
+      } finally {
+        setWarrantiesLoading(false);
+        setClaimsLoading(false);
+      }
+    }
+    loadWarrantiesAndClaims();
+  }, [customer.id]);
+
   const handleShareBalanceViaWhatsApp = () => {
     whatsAppService.shareDocument({
       phoneNumber: customer.phone,
@@ -62,91 +153,19 @@ export function CustomerHubView({ customer }: { customer: Customer }) {
     });
   };
 
-  // Mock domain transaction history anchored to this Customer Master record
-  const mockInvoices = [
-    {
-      id: 'inv-101',
-      invoiceNumber: `INV-${customer.code}-101`,
-      date: '2025-01-10',
-      dueDate: '2025-02-10',
-      amount: 450000,
-      balance: customer.financials.overdue > 0 ? customer.financials.overdue : 0,
-      status: customer.financials.overdue > 0 ? 'OVERDUE' : 'PAID',
-    },
-    {
-      id: 'inv-102',
-      invoiceNumber: `INV-${customer.code}-102`,
-      date: '2025-02-01',
-      dueDate: '2025-03-01',
-      amount: 620000,
-      balance: customer.financials.nearDue > 0 ? customer.financials.nearDue : 320000,
-      status: customer.financials.nearDue > 0 ? 'NEAR_DUE' : 'PENDING',
-    },
-    {
-      id: 'inv-103',
-      invoiceNumber: `INV-${customer.code}-103`,
-      date: '2025-02-15',
-      dueDate: '2025-03-15',
-      amount: 280000,
-      balance: 280000,
-      status: 'PENDING',
-    },
-    {
-      id: 'inv-098',
-      invoiceNumber: `INV-${customer.code}-098`,
-      date: '2024-12-12',
-      dueDate: '2025-01-12',
-      amount: 350000,
-      balance: 0,
-      status: 'PAID',
-    },
-  ];
-
-  const filteredInvoices = mockInvoices.filter((inv) => {
+  const filteredInvoices = customerInvoices.filter((inv) => {
     if (invoiceFilter === 'ALL') return true;
-    return inv.status === invoiceFilter;
+    if (invoiceFilter === 'OVERDUE') return inv.status === 'OVERDUE';
+    if (invoiceFilter === 'PAID') return inv.status === 'PAID';
+    if (invoiceFilter === 'PENDING') return inv.status === 'ISSUED' || inv.status === 'PARTIALLY_PAID';
+    if (invoiceFilter === 'NEAR_DUE') {
+      const now = new Date();
+      const sevenDays = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+      const due = new Date(inv.dueDate);
+      return inv.balanceAmount > 0 && due >= now && due <= sevenDays;
+    }
+    return true;
   });
-
-  const mockOrders = [
-    {
-      id: 'so-201',
-      orderNumber: `SO-${customer.code}-201`,
-      date: '2025-02-18',
-      itemsCount: 4,
-      totalAmount: 385000,
-      status: 'PENDING_APPROVAL',
-      isSpecial: false,
-    },
-    {
-      id: 'so-194',
-      orderNumber: `SO-${customer.code}-194`,
-      date: '2025-02-02',
-      itemsCount: 8,
-      totalAmount: 720000,
-      status: 'DELIVERED',
-      isSpecial: true,
-    },
-  ];
-
-  const mockPayments = [
-    {
-      id: 'pay-301',
-      receiptNumber: `REC-${customer.code}-301`,
-      date: '2025-02-12',
-      method: 'CHEQUE',
-      chequeNumber: 'CHQ-890211',
-      amount: 350000,
-      status: 'APPROVED_BY_FINANCE',
-    },
-    {
-      id: 'pay-295',
-      receiptNumber: `REC-${customer.code}-295`,
-      date: '2025-01-25',
-      method: 'CASH',
-      amount: 200000,
-      status: 'APPROVED_BY_FINANCE',
-    },
-  ];
 
   const mockActivities = [
     {
@@ -199,7 +218,7 @@ export function CustomerHubView({ customer }: { customer: Customer }) {
               <MapPin className="h-3.5 w-3.5 text-slate-400" /> {customer.address}
             </span>
             <span className="flex items-center gap-1 text-slate-600 font-medium">
-              <UserCheck className="h-3.5 w-3.5 text-indigo-500" /> Rep: {customer.assignedRepName}
+              <UserCheck className="h-3.5 w-3.5 text-primary" /> Rep: {customer.assignedRepName}
             </span>
           </div>
         </div>
@@ -263,10 +282,10 @@ export function CustomerHubView({ customer }: { customer: Customer }) {
       <Tabs defaultValue="overview">
         <TabsList className="bg-slate-100 p-1 flex-wrap">
           <TabsTrigger value="overview">Overview & Terms</TabsTrigger>
-          <TabsTrigger value="invoices">Invoices ({mockInvoices.length})</TabsTrigger>
-          <TabsTrigger value="orders">Orders ({mockOrders.length})</TabsTrigger>
-          <TabsTrigger value="quotations">Quotations ({mockQuotations.length})</TabsTrigger>
-          <TabsTrigger value="payments">Payments ({mockPayments.length})</TabsTrigger>
+          <TabsTrigger value="invoices">Invoices ({customerInvoices.length})</TabsTrigger>
+          <TabsTrigger value="orders">Orders ({customerOrders.length})</TabsTrigger>
+          <TabsTrigger value="quotations">Quotations ({customerQuotations.length})</TabsTrigger>
+          <TabsTrigger value="payments">Payments ({customerPayments.length})</TabsTrigger>
           <TabsTrigger value="warranty">Warranty ({customer.warrantyNotesExpected})</TabsTrigger>
           <TabsTrigger value="activity">Field Activity</TabsTrigger>
         </TabsList>
@@ -368,52 +387,84 @@ export function CustomerHubView({ customer }: { customer: Customer }) {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="rounded-lg border border-slate-200 overflow-hidden">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Invoice #</TableHead>
-                      <TableHead>Invoice Date</TableHead>
-                      <TableHead>Due Date</TableHead>
-                      <TableHead className="text-right">Total (LKR)</TableHead>
-                      <TableHead className="text-right">Outstanding (LKR)</TableHead>
-                      <TableHead className="text-center">Status</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredInvoices.map((inv) => (
-                      <TableRow key={inv.id}>
-                        <TableCell className="font-mono text-xs font-semibold text-indigo-600">
-                          {inv.invoiceNumber}
-                        </TableCell>
-                        <TableCell className="text-xs text-slate-600">{formatDate(inv.date)}</TableCell>
-                        <TableCell className="text-xs text-slate-600">{formatDate(inv.dueDate)}</TableCell>
-                        <TableCell className="text-right font-mono text-xs text-slate-700">
-                          {formatCurrency(inv.amount)}
-                        </TableCell>
-                        <TableCell className="text-right font-mono text-xs font-bold text-slate-900">
-                          {formatCurrency(inv.balance)}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <Badge
-                            variant={
-                              inv.status === 'PAID'
-                                ? 'success'
-                                : inv.status === 'OVERDUE'
-                                ? 'destructive'
-                                : inv.status === 'NEAR_DUE'
-                                ? 'warning'
-                                : 'secondary'
-                            }
-                          >
-                            {inv.status}
-                          </Badge>
-                        </TableCell>
+              {invoicesLoading ? (
+                <div className="py-6 text-center text-xs text-slate-400">Loading customer invoices...</div>
+              ) : filteredInvoices.length === 0 ? (
+                <div className="py-8 text-center border rounded-lg border-dashed border-slate-200">
+                  <Receipt className="h-8 w-8 text-slate-300 mx-auto mb-2" />
+                  <p className="text-xs text-slate-600 font-medium">No invoices found for this filter criteria.</p>
+                </div>
+              ) : (
+                <div className="rounded-lg border border-slate-200 overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Invoice #</TableHead>
+                        <TableHead>Issue Date</TableHead>
+                        <TableHead>Due Date</TableHead>
+                        <TableHead className="text-right">Total (LKR)</TableHead>
+                        <TableHead className="text-right">Balance Due (LKR)</TableHead>
+                        <TableHead className="text-center">Status</TableHead>
+                        <TableHead className="text-right">Action</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredInvoices.map((inv) => (
+                        <TableRow key={inv.id}>
+                          <TableCell className="font-mono text-xs font-semibold text-primary">
+                            <button
+                              onClick={() => navigate(`/invoices/${inv.id}`)}
+                              className="hover:underline"
+                            >
+                              {inv.invoiceNumber}
+                            </button>
+                          </TableCell>
+                          <TableCell className="text-xs text-slate-600">{formatDate(inv.issueDate)}</TableCell>
+                          <TableCell className="text-xs text-slate-600">
+                            <span className={inv.status === 'OVERDUE' ? 'text-rose-600 font-bold' : ''}>
+                              {formatDate(inv.dueDate)}
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-xs text-slate-700">
+                            {formatCurrency(inv.totalAmount)}
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-xs font-bold text-slate-900">
+                            {formatCurrency(inv.balanceAmount)}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <InvoiceStatusBadge status={inv.status} />
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex items-center justify-end gap-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => navigate(`/invoices/${inv.id}`)}
+                                className="text-xs h-7 px-2 text-primary hover:text-primary-text"
+                              >
+                                View
+                              </Button>
+                              {inv.balanceAmount > 0 && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() =>
+                                    navigate(`/payments/new?customerId=${customer.id}&invoiceId=${inv.id}`)
+                                  }
+                                  className="text-xs h-7 px-2 text-emerald-600 hover:text-emerald-800"
+                                  title="Pay Invoice"
+                                >
+                                  Pay
+                                </Button>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -421,42 +472,87 @@ export function CustomerHubView({ customer }: { customer: Customer }) {
         {/* 3. Sales Orders Tab */}
         <TabsContent value="orders">
           <Card>
-            <CardHeader>
-              <CardTitle className="text-sm">Sales Order History</CardTitle>
+            <CardHeader className="flex flex-row items-center justify-between pb-3">
+              <div>
+                <CardTitle className="text-sm">Sales Order History</CardTitle>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Official sales orders placed for {customer.name}
+                </p>
+              </div>
+              <Button
+                size="sm"
+                onClick={() => navigate(`/orders/new?customerId=${customer.id}`)}
+                className="bg-primary hover:bg-primary-hover text-primary-foreground text-xs h-8 gap-1.5"
+              >
+                <PlusCircle className="h-3.5 w-3.5" />
+                New Sales Order
+              </Button>
             </CardHeader>
             <CardContent>
-              <div className="rounded-lg border border-slate-200 overflow-hidden">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Order #</TableHead>
-                      <TableHead>Date</TableHead>
-                      <TableHead className="text-center">Items</TableHead>
-                      <TableHead className="text-right">Order Amount</TableHead>
-                      <TableHead className="text-center">Order Status</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {mockOrders.map((ord) => (
-                      <TableRow key={ord.id}>
-                        <TableCell className="font-mono text-xs font-semibold text-slate-900">
-                          {ord.orderNumber}
-                        </TableCell>
-                        <TableCell className="text-xs text-slate-600">{formatDate(ord.date)}</TableCell>
-                        <TableCell className="text-center text-xs text-slate-600">{ord.itemsCount} Items</TableCell>
-                        <TableCell className="text-right font-mono text-xs font-bold text-slate-900">
-                          {formatCurrency(ord.totalAmount)}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <Badge variant={ord.status === 'DELIVERED' ? 'success' : 'warning'}>
-                            {ord.status}
-                          </Badge>
-                        </TableCell>
+              {ordersLoading ? (
+                <div className="py-8 text-center text-xs text-slate-400">Loading customer orders...</div>
+              ) : customerOrders.length === 0 ? (
+                <div className="py-8 text-center space-y-2">
+                  <ShoppingCart className="h-8 w-8 text-slate-300 mx-auto" />
+                  <p className="text-xs text-slate-500">No sales orders found for this customer.</p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => navigate(`/orders/new?customerId=${customer.id}`)}
+                    className="text-xs"
+                  >
+                    Create First Sales Order
+                  </Button>
+                </div>
+              ) : (
+                <div className="rounded-lg border border-slate-200 overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Order #</TableHead>
+                        <TableHead>Date</TableHead>
+                        <TableHead className="text-center">Items</TableHead>
+                        <TableHead className="text-right">Order Amount</TableHead>
+                        <TableHead className="text-center">Status / Approval</TableHead>
+                        <TableHead className="text-right w-[80px]">Action</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+                    </TableHeader>
+                    <TableBody>
+                      {customerOrders.map((ord) => (
+                        <TableRow key={ord.id}>
+                          <TableCell className="font-mono text-xs font-semibold text-slate-900">
+                            <button
+                              onClick={() => navigate(`/orders/${ord.id}`)}
+                              className="text-primary hover:underline text-left font-mono"
+                            >
+                              {ord.orderNumber}
+                            </button>
+                          </TableCell>
+                          <TableCell className="text-xs text-slate-600">{formatDate(ord.createdAt)}</TableCell>
+                          <TableCell className="text-center text-xs text-slate-600">{ord.items.length} Items</TableCell>
+                          <TableCell className="text-right font-mono text-xs font-bold text-slate-900">
+                            {formatCurrency(ord.totalAmount)}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <OrderStatusBadge status={ord.status} isSpecialApproval={ord.isSpecialApproval} />
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => navigate(`/orders/${ord.id}`)}
+                              className="h-7 w-7 p-0 text-slate-500 hover:text-slate-900"
+                              title="View Order"
+                            >
+                              <Eye className="h-3.5 w-3.5" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -474,7 +570,7 @@ export function CustomerHubView({ customer }: { customer: Customer }) {
               <Button
                 size="sm"
                 onClick={() => navigate(`/quotations/new?customerId=${customer.id}`)}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs h-8 gap-1.5"
+                className="bg-primary hover:bg-primary-hover text-primary-foreground text-xs h-8 gap-1.5"
               >
                 <PlusCircle className="h-3.5 w-3.5" />
                 New Quotation
@@ -514,7 +610,7 @@ export function CustomerHubView({ customer }: { customer: Customer }) {
                     <TableBody>
                       {customerQuotations.map((qt) => (
                         <TableRow key={qt.id}>
-                          <TableCell className="font-mono text-xs font-semibold text-indigo-600">
+                          <TableCell className="font-mono text-xs font-semibold text-primary">
                             <button
                               onClick={() => navigate(`/quotations/${qt.id}`)}
                               className="hover:underline"
@@ -539,7 +635,7 @@ export function CustomerHubView({ customer }: { customer: Customer }) {
                               variant="ghost"
                               size="sm"
                               onClick={() => navigate(`/quotations/${qt.id}`)}
-                              className="text-xs h-7 px-2 text-indigo-600 hover:text-indigo-800"
+                              className="text-xs h-7 px-2 text-primary hover:text-primary-text"
                             >
                               View
                             </Button>
@@ -557,81 +653,271 @@ export function CustomerHubView({ customer }: { customer: Customer }) {
         {/* 5. Payments Tab */}
         <TabsContent value="payments">
           <Card>
-            <CardHeader>
-              <CardTitle className="text-sm">Payment Collections Ledger</CardTitle>
+            <CardHeader className="flex flex-row items-center justify-between pb-3">
+              <div>
+                <CardTitle className="text-sm">Payment Collections Ledger</CardTitle>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Official collection receipts issued for {customer.name}
+                </p>
+              </div>
+              <Button
+                size="sm"
+                onClick={() => navigate(`/payments/new?customerId=${customer.id}`)}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs h-8 gap-1.5"
+              >
+                <PlusCircle className="h-3.5 w-3.5" />
+                Record Payment
+              </Button>
             </CardHeader>
             <CardContent>
-              <div className="rounded-lg border border-slate-200 overflow-hidden">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Receipt #</TableHead>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Method</TableHead>
-                      <TableHead className="text-right">Collected Amount</TableHead>
-                      <TableHead className="text-center">Finance Status</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {mockPayments.map((pay) => (
-                      <TableRow key={pay.id}>
-                        <TableCell className="font-mono text-xs font-semibold text-slate-900">
-                          {pay.receiptNumber}
-                        </TableCell>
-                        <TableCell className="text-xs text-slate-600">{formatDate(pay.date)}</TableCell>
-                        <TableCell className="text-xs text-slate-600">
-                          {pay.method} {pay.chequeNumber && `(${pay.chequeNumber})`}
-                        </TableCell>
-                        <TableCell className="text-right font-mono text-xs font-bold text-emerald-800">
-                          {formatCurrency(pay.amount)}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <Badge variant="success">Finance Approved</Badge>
-                        </TableCell>
+              {paymentsLoading ? (
+                <div className="py-6 text-center text-xs text-slate-400">Loading payment collections...</div>
+              ) : customerPayments.length === 0 ? (
+                <div className="py-8 text-center border rounded-lg border-dashed border-slate-200">
+                  <CreditCard className="h-8 w-8 text-slate-300 mx-auto mb-2" />
+                  <p className="text-xs text-slate-600 font-medium">No payments recorded for this customer yet.</p>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => navigate(`/payments/new?customerId=${customer.id}`)}
+                    className="mt-3 text-xs"
+                  >
+                    Record First Payment
+                  </Button>
+                </div>
+              ) : (
+                <div className="rounded-lg border border-slate-200 overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Receipt #</TableHead>
+                        <TableHead>Collected Date</TableHead>
+                        <TableHead>Method</TableHead>
+                        <TableHead className="text-right">Collected Amount</TableHead>
+                        <TableHead className="text-center">Status</TableHead>
+                        <TableHead className="text-right">Action</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+                    </TableHeader>
+                    <TableBody>
+                      {customerPayments.map((pay) => (
+                        <TableRow key={pay.id}>
+                          <TableCell className="font-mono text-xs font-semibold text-slate-900">
+                            <button
+                              onClick={() => navigate(`/payments/${pay.id}`)}
+                              className="text-primary hover:underline font-mono"
+                            >
+                              {pay.receiptNumber}
+                            </button>
+                          </TableCell>
+                          <TableCell className="text-xs text-slate-600">{formatDate(pay.collectedAt)}</TableCell>
+                          <TableCell className="text-xs text-slate-600">
+                            {pay.paymentMethod} {pay.chequeNumber && `(${pay.chequeNumber})`}
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-xs font-bold text-slate-900">
+                            {formatCurrency(pay.amount)}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <PaymentStatusBadge status={pay.status} />
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => navigate(`/payments/${pay.id}`)}
+                              className="text-xs h-7 px-2 text-primary hover:text-primary-text"
+                            >
+                              View
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
 
         {/* 6. Warranty Tab */}
-        <TabsContent value="warranty">
+        <TabsContent value="warranty" className="space-y-4">
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-sm">Dealer Warranty Notes Follow-up</CardTitle>
-              <span className="text-xs text-slate-500 font-medium">Reconciliation Ledger</span>
+            <CardHeader className="flex flex-row items-center justify-between pb-3">
+              <div>
+                <CardTitle className="text-sm font-semibold text-slate-900">
+                  Dealer Warranty Card Reconciliation
+                </CardTitle>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Physical warranty note registration status for equipment sold through {customer.name}
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigate('/warranty')}
+                className="text-xs h-8 gap-1.5"
+              >
+                <ShieldCheck className="h-3.5 w-3.5 text-primary" />
+                Warranty Hub
+              </Button>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
                 <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
-                  <span className="text-slate-400 block text-[10px] uppercase">Products Sold by Shop</span>
-                  <span className="text-xl font-bold text-slate-900">{customer.warrantyNotesExpected} Units</span>
+                  <span className="text-slate-400 block text-[10px] uppercase font-semibold">
+                    Products Sold by Shop
+                  </span>
+                  <span className="text-xl font-bold text-slate-900">
+                    {customer.warrantyNotesExpected} Units
+                  </span>
                 </div>
                 <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
-                  <span className="text-slate-400 block text-[10px] uppercase">Warranty Notes Received</span>
-                  <span className="text-xl font-bold text-emerald-700">{customer.warrantyNotesReceived} Notes</span>
+                  <span className="text-slate-400 block text-[10px] uppercase font-semibold">
+                    Warranty Notes Received
+                  </span>
+                  <span className="text-xl font-bold text-emerald-700">
+                    {customer.warrantyNotesReceived} Notes
+                  </span>
                 </div>
                 <div className="p-3 bg-amber-50/50 rounded-lg border border-amber-200">
-                  <span className="text-amber-700 block text-[10px] uppercase font-semibold">Missing Pending Notes</span>
+                  <span className="text-amber-700 block text-[10px] uppercase font-semibold">
+                    Missing Pending Notes
+                  </span>
                   <span className="text-xl font-bold text-amber-900">
-                    {Math.max(0, customer.warrantyNotesExpected - customer.warrantyNotesReceived)} Pending Notes
+                    {calculatePendingWarrantyNotes(
+                      customer.warrantyNotesExpected,
+                      customer.warrantyNotesReceived
+                    )}{' '}
+                    Pending Notes
                   </span>
                 </div>
               </div>
+            </CardContent>
+          </Card>
 
-              <div className="p-4 bg-slate-50 rounded-lg border border-slate-200 text-xs space-y-2">
-                <h4 className="font-semibold text-slate-800 flex items-center gap-1.5">
-                  <ShieldCheck className="h-4 w-4 text-indigo-600" /> Representative Action Protocol
-                </h4>
-                <p className="text-slate-600">
-                  During on-site shop visits, verify whether physical warranty registration cards have been completed
-                  by retail customers and handed to the shopkeeper. Missing warranty notes can be scanned and submitted
-                  to the Warranty Claims department.
-                </p>
-              </div>
+          {/* Customer Registered Warranties */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-semibold text-slate-900">
+                Registered Warranties ({customerWarranties.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {warrantiesLoading ? (
+                <div className="py-6 text-center text-xs text-slate-400">Loading warranties...</div>
+              ) : customerWarranties.length === 0 ? (
+                <div className="py-6 text-center text-xs text-slate-500">
+                  No registered warranty records found for this customer.
+                </div>
+              ) : (
+                <div className="rounded-lg border border-slate-200 overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Product / SKU</TableHead>
+                        <TableHead>Serial Number</TableHead>
+                        <TableHead>Invoice #</TableHead>
+                        <TableHead>Sale Type</TableHead>
+                        <TableHead>Expiry Date</TableHead>
+                        <TableHead className="text-center">Status</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {customerWarranties.map((w) => (
+                        <TableRow key={w.id}>
+                          <TableCell className="font-semibold text-slate-900 text-xs">
+                            {w.productName}
+                            <span className="block text-[11px] text-slate-400 font-normal">
+                              {w.sku}
+                            </span>
+                          </TableCell>
+                          <TableCell className="font-mono text-xs text-slate-600">
+                            {w.serialNumber || 'N/A'}
+                          </TableCell>
+                          <TableCell className="font-mono text-xs text-primary">
+                            {w.invoiceNumber}
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              variant={w.saleType === 'SHOWROOM' ? 'info' : 'secondary'}
+                              className="text-[10px]"
+                            >
+                              {w.saleType}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-xs text-slate-700">
+                            {formatDate(w.warrantyExpiryDate)}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <WarrantyStatusBadge status={w.status} />
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Customer Filed Claims */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-semibold text-slate-900">
+                Filed Claims History ({customerClaims.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {claimsLoading ? (
+                <div className="py-6 text-center text-xs text-slate-400">Loading claims...</div>
+              ) : customerClaims.length === 0 ? (
+                <div className="py-6 text-center text-xs text-slate-500">
+                  No warranty claims filed by this customer.
+                </div>
+              ) : (
+                <div className="rounded-lg border border-slate-200 overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Claim #</TableHead>
+                        <TableHead>Product</TableHead>
+                        <TableHead>Complaint Date</TableHead>
+                        <TableHead>Reason</TableHead>
+                        <TableHead className="text-center">Status</TableHead>
+                        <TableHead>Resolution</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {customerClaims.map((c) => (
+                        <TableRow key={c.id}>
+                          <TableCell className="font-mono text-xs font-bold text-slate-900">
+                            {c.claimNumber}
+                          </TableCell>
+                          <TableCell className="text-xs text-slate-800">
+                            {c.productName}
+                          </TableCell>
+                          <TableCell className="text-xs text-slate-600">
+                            {formatDate(c.complaintDate)}
+                          </TableCell>
+                          <TableCell className="text-xs text-slate-600 max-w-[200px] truncate" title={c.complaintReason}>
+                            {c.complaintReason}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <ClaimStatusBadge status={c.status} />
+                          </TableCell>
+                          <TableCell className="text-xs text-slate-600">
+                            {c.resolutionType ? (
+                              <span className="font-semibold text-slate-800">{c.resolutionType}</span>
+                            ) : (
+                              'Pending'
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -649,7 +935,7 @@ export function CustomerHubView({ customer }: { customer: Customer }) {
                     key={act.id}
                     className="p-3 bg-white rounded-lg border border-slate-200 text-xs flex items-start gap-3"
                   >
-                    <div className="p-2 rounded-md bg-indigo-50 text-indigo-600 mt-0.5">
+                    <div className="p-2 rounded-md bg-primary-light text-primary mt-0.5">
                       <Clock className="h-4 w-4" />
                     </div>
                     <div className="flex-1 space-y-1">

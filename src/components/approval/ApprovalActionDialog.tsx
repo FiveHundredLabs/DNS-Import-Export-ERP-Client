@@ -98,7 +98,7 @@ export function ApprovalActionDialog({
               onClick={() => setAction('ESCALATE')}
               className={`py-2 px-3 text-xs font-semibold rounded-lg border text-center transition-all ${
                 action === 'ESCALATE'
-                  ? 'border-sky-600 bg-sky-50 text-sky-700 ring-2 ring-sky-500'
+                  ? 'border-sky-600 bg-primary-light text-sky-700 ring-2 ring-sky-500'
                   : 'border-slate-200 text-slate-600 hover:bg-slate-50'
               }`}
             >
@@ -136,7 +136,7 @@ export function ApprovalActionDialog({
             value={comment}
             onChange={(e) => setComment(e.target.value)}
             placeholder="Explain the rationale for this approval decision..."
-            className="w-full rounded-md border border-slate-300 p-2 text-xs shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            className="w-full rounded-md border border-slate-300 p-2 text-xs shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
           />
           {error && <p className="mt-1 text-xs text-rose-600">{error}</p>}
         </div>

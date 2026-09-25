@@ -9,11 +9,17 @@ import { Badge } from '../ui/badge';
 interface CustomerSelectorProps {
   onSelect: (customer: Customer) => void;
   selectedCustomerId?: string;
+  assignedRepId?: string;
 }
 
-export function CustomerSelector({ onSelect, selectedCustomerId }: CustomerSelectorProps) {
+export function CustomerSelector({ onSelect, selectedCustomerId, assignedRepId }: CustomerSelectorProps) {
   const [searchTerm, setSearchTerm] = useState('');
-  const { customers, loading } = useCustomers({ search: searchTerm, page: 1, pageSize: 20 });
+  const { customers, loading } = useCustomers({
+    search: searchTerm,
+    assignedRepId,
+    page: 1,
+    pageSize: 20,
+  });
 
   return (
     <div className="space-y-3 rounded-lg border border-slate-200 bg-white p-3 shadow-xs">
@@ -40,7 +46,7 @@ export function CustomerSelector({ onSelect, selectedCustomerId }: CustomerSelec
                 key={c.id}
                 onClick={() => onSelect(c)}
                 className={`flex items-center justify-between p-2.5 text-xs cursor-pointer transition-colors ${
-                  isSelected ? 'bg-indigo-50/80 border-l-2 border-indigo-600' : 'hover:bg-slate-50'
+                  isSelected ? 'bg-primary-light/80 border-l-2 border-primary' : 'hover:bg-slate-50'
                 }`}
               >
                 <div>

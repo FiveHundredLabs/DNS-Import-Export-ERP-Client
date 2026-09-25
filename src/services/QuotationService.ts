@@ -150,7 +150,7 @@ export class QuotationService {
     }
 
     // 2. Role-based scoping check: Sales Rep can only quote for assigned customers
-    if (currentUser.role === 'SALES_REP' && customer.assignedRepId && customer.assignedRepId !== currentUser.id) {
+    if (currentUser.role === 'SALES_REP' && customer.assignedRepId !== currentUser.id) {
       throw new Error(
         `Permission Denied: Customer ${customer.name} (${customer.code}) is not assigned to your territory.`
       );
@@ -407,6 +407,10 @@ export class QuotationService {
       throw new Error(`Quotation is not in DRAFT status (current: ${quotation.status})`);
     }
 
+    if (currentUser.role === 'SALES_REP' && quotation.salesRepId !== currentUser.id) {
+      throw new Error('Permission Denied: You can only submit your own draft quotations for approval.');
+    }
+
     const approvalReq = await this.approvalSvc.createApprovalRequest({
       documentType: 'QUOTATION_DISCOUNT',
       documentId: quotation.id,
@@ -427,6 +431,35 @@ export class QuotationService {
       status: 'PENDING_APPROVAL',
       approvalRequestId: approvalReq.id,
       approvalReason: reason || quotation.approvalReason,
+    });
+  }
+
+  /**
+   * Finalizes and issues a draft quotation directly when within standard sales rep authority.
+   */
+  async issueQuotation(id: string, currentUser: User): Promise<Quotation> {
+    const quotation = await this.repo.getById(id);
+    if (!quotation) {
+      throw new Error(`Quotation not found: ${id}`);
+    }
+
+    if (quotation.status !== 'DRAFT') {
+      throw new Error(`Only DRAFT quotations can be issued. Current status is ${quotation.status}`);
+    }
+
+    if (currentUser.role === 'SALES_REP' && quotation.salesRepId !== currentUser.id) {
+      throw new Error('Permission Denied: You can only issue your own draft quotations.');
+    }
+
+    if (quotation.requiresApproval) {
+      throw new Error('Cannot directly issue quotation: Requested discounts exceed authority limit. Manager approval is required.');
+    }
+
+    return this.repo.update(id, {
+      status: 'APPROVED',
+      approvedById: currentUser.id,
+      approvedByName: currentUser.name,
+      approvedAt: new Date().toISOString(),
     });
   }
 
@@ -538,6 +571,20 @@ export class QuotationService {
     if (quotation.status !== 'APPROVED') {
       throw new Error(
         `Cannot convert quotation to Sales Order: Quotation status is '${quotation.status}', must be 'APPROVED'.`
+      );
+    }
+
+    // Role check: Sales Rep can only convert quotations assigned to their territory
+    if (currentUser.role === 'SALES_REP' && quotation.salesRepId !== currentUser.id) {
+      throw new Error('Permission Denied: You can only convert quotations assigned to your territory.');
+    }
+
+    // Check expiration date
+    const today = new Date().toISOString().split('T')[0];
+    if (quotation.validUntil && quotation.validUntil < today) {
+      await this.repo.update(id, { status: 'EXPIRED' });
+      throw new Error(
+        `Cannot convert quotation to Sales Order: Quotation expired on ${quotation.validUntil}.`
       );
     }
 

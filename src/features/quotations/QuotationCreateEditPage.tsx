@@ -293,7 +293,7 @@ export function QuotationCreateEditPage() {
             Back to Quotations
           </button>
           <h1 className="text-2xl font-bold tracking-tight text-slate-900 flex items-center gap-2">
-            <FileSpreadsheet className="h-6 w-6 text-indigo-600" />
+            <FileSpreadsheet className="h-6 w-6 text-primary" />
             {isEdit ? 'Edit Draft Quotation' : 'Create New Quotation'}
           </h1>
           <p className="text-xs text-slate-500">
@@ -316,7 +316,7 @@ export function QuotationCreateEditPage() {
           <Card className="shadow-xs">
             <CardHeader className="pb-3 flex flex-row items-center justify-between">
               <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                <Building2 className="h-4 w-4 text-indigo-600" />
+                <Building2 className="h-4 w-4 text-primary" />
                 Customer & Commercial Terms
               </CardTitle>
               {selectedCustomer && (
@@ -370,6 +370,7 @@ export function QuotationCreateEditPage() {
                   <CustomerSelector
                     onSelect={handleCustomerSelect}
                     selectedCustomerId={selectedCustomer?.id}
+                    assignedRepId={currentUser.role === 'SALES_REP' ? currentUser.id : undefined}
                   />
                 </div>
               )}
@@ -380,13 +381,13 @@ export function QuotationCreateEditPage() {
           <Card className="shadow-xs">
             <CardHeader className="pb-3 flex flex-row items-center justify-between">
               <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                <Package className="h-4 w-4 text-indigo-600" />
+                <Package className="h-4 w-4 text-primary" />
                 Product Line Items ({items.length})
               </CardTitle>
               <Button
                 size="sm"
                 onClick={() => setIsProductSelectorOpen(!isProductSelectorOpen)}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs h-8 gap-1.5"
+                className="bg-primary hover:bg-primary-hover text-primary-foreground text-xs h-8 gap-1.5"
               >
                 <Plus className="h-3.5 w-3.5" />
                 Add Product
@@ -395,7 +396,7 @@ export function QuotationCreateEditPage() {
             <CardContent className="space-y-4">
               {/* Product Selector Dropdown / Search Modal */}
               {isProductSelectorOpen && (
-                <div className="rounded-lg border-2 border-indigo-200 bg-indigo-50/40 p-3 mb-4">
+                <div className="rounded-lg border-2 border-primary-border bg-primary-light/40 p-3 mb-4">
                   <div className="flex justify-between items-center mb-2">
                     <span className="text-xs font-bold text-indigo-900">Select Item from Product Master:</span>
                     <Button
@@ -543,7 +544,7 @@ export function QuotationCreateEditPage() {
           <Card className="shadow-xs">
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-indigo-600" />
+                <Calendar className="h-4 w-4 text-primary" />
                 Document Validity & Remarks
               </CardTitle>
             </CardHeader>
@@ -569,7 +570,7 @@ export function QuotationCreateEditPage() {
                   onChange={(e) => setNotes(e.target.value)}
                   placeholder="Notes regarding delivery schedule, site requirements..."
                   rows={2}
-                  className="w-full rounded-md border border-slate-200 p-2 text-xs focus:outline-hidden focus:ring-1 focus:ring-indigo-500"
+                  className="w-full rounded-md border border-slate-200 p-2 text-xs focus:outline-hidden focus:ring-1 focus:ring-primary"
                 />
               </div>
 
@@ -581,7 +582,7 @@ export function QuotationCreateEditPage() {
                   value={terms}
                   onChange={(e) => setTerms(e.target.value)}
                   rows={3}
-                  className="w-full rounded-md border border-slate-200 p-2 text-xs focus:outline-hidden focus:ring-1 focus:ring-indigo-500 font-sans"
+                  className="w-full rounded-md border border-slate-200 p-2 text-xs focus:outline-hidden focus:ring-1 focus:ring-primary font-sans"
                 />
               </div>
             </CardContent>
@@ -611,7 +612,7 @@ export function QuotationCreateEditPage() {
 
                 <div className="border-t border-slate-200 pt-2 flex justify-between font-bold text-sm text-slate-900">
                   <span>Grand Total (LKR):</span>
-                  <span className="text-indigo-600 font-mono">{formatCurrency(totals.grandTotal)}</span>
+                  <span className="text-primary font-mono">{formatCurrency(totals.grandTotal)}</span>
                 </div>
               </div>
 
@@ -644,7 +645,7 @@ export function QuotationCreateEditPage() {
                 <Button
                   onClick={() => handleSubmit(false)}
                   disabled={isSubmitting || !selectedCustomer || items.length === 0}
-                  className="w-full bg-indigo-600 hover:bg-indigo-700 text-white gap-2"
+                  className="w-full bg-primary hover:bg-primary-hover text-primary-foreground gap-2"
                 >
                   <Send className="h-4 w-4" />
                   {isSubmitting

@@ -85,6 +85,12 @@ export function useQuotations(initialFilters?: QuotationFilters) {
     return orderPayload;
   };
 
+  const issueQuotation = async (id: string): Promise<Quotation> => {
+    const issued = await quotationService.issueQuotation(id, currentUser);
+    await fetchQuotations();
+    return issued;
+  };
+
   return {
     quotations,
     loading,
@@ -97,6 +103,7 @@ export function useQuotations(initialFilters?: QuotationFilters) {
     createQuotation,
     updateQuotation,
     submitForApproval,
+    issueQuotation,
     approveQuotation,
     rejectQuotation,
     convertToSalesOrder,

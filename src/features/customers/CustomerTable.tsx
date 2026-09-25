@@ -24,8 +24,9 @@ export function CustomerTable({
     role === 'SALES_MANAGER' || role === 'MANAGER' || role === 'DIRECTOR';
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white shadow-xs overflow-hidden">
+    <div className="rounded-2xl border border-slate-200/80 bg-white shadow-sm overflow-hidden">
       <Table>
+
         <TableHeader>
           <TableRow>
             <TableHead>Customer / Code</TableHead>
@@ -107,7 +108,7 @@ export function CustomerTable({
                         onClick={() => onReviewCommercials(c)}
                         title="Review Commercial Terms"
                       >
-                        <CheckCircle2 className="h-4 w-4 text-indigo-600" />
+                        <CheckCircle2 className="h-4 w-4 text-primary" />
                       </Button>
                     )}
                     {onEdit && (

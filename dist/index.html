@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DNS Distribution ERP</title>
+    <script>
+      (function() {
+        try {
+          var THEME_MAP = {
+            '#FA8223': { hover: '#E66E10', active: '#CC5D05', light: '#FFF6EE', border: '#FED7AA', text: '#C25304', fg: '#FFFFFF', ring: 'rgba(250, 130, 35, 0.35)' },
+            '#263183': { hover: '#1D2667', active: '#161D4F', light: '#EEF1F9', border: '#C5CBEC', text: '#263183', fg: '#FFFFFF', ring: 'rgba(38, 49, 131, 0.35)' },
+            '#EC1B27': { hover: '#D40F1B', active: '#B60A14', light: '#FEF2F2', border: '#FECACA', text: '#BE121C', fg: '#FFFFFF', ring: 'rgba(236, 27, 39, 0.35)' },
+            '#6AAED3': { hover: '#559EC7', active: '#468CB3', light: '#F0F7FB', border: '#BEE0F0', text: '#24658B', fg: '#FFFFFF', ring: 'rgba(106, 174, 211, 0.35)' },
+            '#161511': { hover: '#282723', active: '#0D0C0A', light: '#F4F4F3', border: '#D5D4D2', text: '#161511', fg: '#FFFFFF', ring: 'rgba(22, 21, 17, 0.35)' }
+          };
+          var saved = localStorage.getItem('erp-primary-color');
+          if (!saved) {
+            var legacy = localStorage.getItem('dns_erp_company_settings');
+            if (legacy) {
+              try { saved = JSON.parse(legacy).primaryColor; } catch(e){}
+            }
+          }
+          var normalized = (saved || '#6AAED3').trim().toUpperCase();
+          var matchKey = Object.keys(THEME_MAP).find(function(k) { return k.toUpperCase() === normalized; }) || '#6AAED3';
+          var t = THEME_MAP[matchKey];
+          var root = document.documentElement;
+          root.style.setProperty('--primary', matchKey);
+          root.style.setProperty('--primary-hover', t.hover);
+          root.style.setProperty('--primary-active', t.active);
+          root.style.setProperty('--primary-foreground', t.fg);
+          root.style.setProperty('--primary-light', t.light);
+          root.style.setProperty('--primary-border', t.border);
+          root.style.setProperty('--primary-color', matchKey);
+          root.style.setProperty('--primary-text', t.text);
+          root.style.setProperty('--primary-ring', t.ring);
+        } catch (e) {
+          console.warn('Early theme initialization error:', e);
+        }
+      })();
+    </script>
+    <script type="module" crossorigin src="/assets/index-DVmX0G1a.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-CP72-IDl.css">
+  </head>
+  <body class="bg-slate-50 text-slate-900 antialiased">
+    <div id="root"></div>
+  </body>
+</html>

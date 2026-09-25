@@ -35,6 +35,8 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'finance:reports',
     'warranty:view',
     'warranty:claims',
+    'commissions:view',
+    'commissions:manage',
     'reports:all',
     'reports:area_only',
     'audit:view',
@@ -60,10 +62,14 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'inventory:grn_approve',
     'invoices:view',
     'payments:view',
+    'pos:operate',
     'finance:expenses',
     'finance:petty_cash',
     'finance:reports',
     'warranty:view',
+    'warranty:claims',
+    'commissions:view',
+    'commissions:manage',
     'reports:all',
     'reports:area_only',
     'audit:view',
@@ -87,6 +93,8 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'payments:view',
     'warranty:view',
     'warranty:claims',
+    'commissions:view',
+    'commissions:manage',
     'reports:all',
     'reports:area_only',
   ],
@@ -94,7 +102,9 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'view:finance_dashboard',
     'customers:view',
     'invoices:view',
+    'invoices:create',
     'payments:view',
+    'payments:create',
     'payments:approve',
     'finance:expenses',
     'finance:petty_cash',
@@ -109,8 +119,10 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'customers:create',
     'quotations:view',
     'orders:view',
+    'invoices:view',
     'payments:view',
     'warranty:view',
+    'commissions:view',
     'reports:area_only',
   ],
   SALES_REP: [
@@ -121,8 +133,12 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'quotations:create',
     'orders:view',
     'orders:create',
+    'invoices:view',
+    'payments:view',
     'payments:create',
     'warranty:view',
+    'warranty:claims',
+    'commissions:view',
   ],
   STOCK_KEEPER: [
     'view:stock_keeper_dashboard',
@@ -136,6 +152,8 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'products:view',
     'customers:view',
     'pos:operate',
+    'invoices:view',
+    'payments:view',
     'payments:create',
   ],
 };
@@ -177,17 +195,28 @@ export function canAccessRoute(role: UserRole, path: string): boolean {
   if (path.startsWith('/pos')) {
     return hasPermission(role, 'pos:operate');
   }
-  if (path.startsWith('/finance') || path.startsWith('/payments')) {
+  if (path.startsWith('/invoices')) {
+    return hasPermission(role, 'invoices:view');
+  }
+  if (path.startsWith('/payments')) {
+    return (
+      hasPermission(role, 'payments:view') ||
+      hasPermission(role, 'payments:create') ||
+      hasPermission(role, 'payments:approve')
+    );
+  }
+  if (path.startsWith('/finance')) {
     return (
       hasPermission(role, 'finance:expenses') ||
       hasPermission(role, 'finance:petty_cash') ||
-      hasPermission(role, 'finance:reports') ||
-      hasPermission(role, 'payments:view') ||
-      hasPermission(role, 'payments:approve')
+      hasPermission(role, 'finance:reports')
     );
   }
   if (path.startsWith('/warranty')) {
     return hasPermission(role, 'warranty:view');
+  }
+  if (path.startsWith('/commissions')) {
+    return hasPermission(role, 'commissions:view');
   }
   if (path.startsWith('/reports')) {
     return (

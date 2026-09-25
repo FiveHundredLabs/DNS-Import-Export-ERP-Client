@@ -73,7 +73,7 @@ export function CustomerListPage() {
           <div className="flex items-center gap-2">
             <h1 className="text-xl font-bold tracking-tight text-slate-900">Customer Master</h1>
             {role === 'SALES_REP' && (
-              <span className="flex items-center gap-1 text-[11px] font-semibold text-indigo-700 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded">
+              <span className="flex items-center gap-1 text-[11px] font-semibold text-primary-text bg-primary-light border border-primary-border px-2 py-0.5 rounded">
                 <ShieldCheck className="h-3 w-3" /> Assigned Territory
               </span>
             )}
@@ -104,8 +104,9 @@ export function CustomerListPage() {
       </div>
 
       {/* Filter toolbar */}
-      <div className="flex flex-col sm:flex-row gap-3 bg-white p-3 rounded-xl border border-slate-200">
+      <div className="flex flex-col sm:flex-row gap-3 bg-white p-3.5 rounded-2xl border border-slate-200/80 shadow-sm">
         <div className="relative flex-1">
+
           <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
           <Input
             placeholder="Search by code, customer name, contact person, or phone..."

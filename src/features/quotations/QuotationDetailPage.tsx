@@ -36,7 +36,13 @@ export function QuotationDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { currentUser } = useAuth();
-  const { approveQuotation, rejectQuotation, submitForApproval, convertToSalesOrder } = useQuotations();
+  const {
+    approveQuotation,
+    rejectQuotation,
+    submitForApproval,
+    issueQuotation,
+    convertToSalesOrder,
+  } = useQuotations();
 
   const [quotation, setQuotation] = useState<Quotation | null>(null);
   const [loading, setLoading] = useState(true);
@@ -106,6 +112,19 @@ export function QuotationDetailPage() {
     }
   };
 
+  const handleIssueQuotation = async () => {
+    if (!quotation) return;
+    try {
+      setLoading(true);
+      await issueQuotation(quotation.id);
+      await fetchQuotation();
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'Issuing quotation failed.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (loading) {
     return <div className="p-12 text-center text-xs text-slate-500">Loading quotation document...</div>;
   }
@@ -124,7 +143,7 @@ export function QuotationDetailPage() {
   }
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto">
+    <div className="space-y-6 w-full">
       {/* Top Navigation & Action Toolbar */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <button
@@ -182,6 +201,18 @@ export function QuotationDetailPage() {
             </Button>
           )}
 
+          {/* Issue Quotation (if DRAFT and standard authority) */}
+          {quotation.status === 'DRAFT' && !quotation.requiresApproval && (
+            <Button
+              size="sm"
+              onClick={handleIssueQuotation}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs gap-1.5"
+            >
+              <CheckCircle className="h-3.5 w-3.5" />
+              Issue Quotation
+            </Button>
+          )}
+
           {/* Submit for Approval (if DRAFT) */}
           {quotation.status === 'DRAFT' && quotation.requiresApproval && (
             <Button
@@ -217,12 +248,12 @@ export function QuotationDetailPage() {
             </>
           )}
 
-          {/* Convert to Sales Order (if APPROVED) */}
+          {/* Convert to Sales Order (if APPROVED and not expired) */}
           {quotation.status === 'APPROVED' && (
             <Button
               size="sm"
               onClick={() => setIsConvertModalOpen(true)}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs gap-1.5 shadow-xs"
+              className="bg-primary hover:bg-primary-hover text-primary-foreground text-xs gap-1.5 shadow-xs"
             >
               <ShoppingCart className="h-3.5 w-3.5" />
               Convert to Sales Order
@@ -251,8 +282,8 @@ export function QuotationDetailPage() {
       )}
 
       {quotation.status === 'CONVERTED' && (
-        <div className="rounded-lg bg-blue-50 border border-blue-200 p-4 text-xs text-blue-900 flex items-start gap-3">
-          <CheckCircle className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
+        <div className="rounded-lg bg-primary-light border border-primary-border p-4 text-xs text-blue-900 flex items-start gap-3">
+          <CheckCircle className="h-5 w-5 text-primary shrink-0 mt-0.5" />
           <div>
             <h4 className="font-bold text-blue-900">Converted to Sales Order</h4>
             <p className="text-blue-800 mt-0.5">
@@ -260,6 +291,16 @@ export function QuotationDetailPage() {
               <span className="font-mono font-bold">{quotation.convertedOrderNumber}</span> on{' '}
               {quotation.convertedAt ? formatDate(quotation.convertedAt) : 'recently'}. Historical price snapshots are locked.
             </p>
+            {quotation.convertedToOrderId && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigate(`/orders/${quotation.convertedToOrderId}`)}
+                className="mt-2 text-xs border-blue-300 text-blue-800 hover:bg-blue-100"
+              >
+                View Sales Order
+              </Button>
+            )}
           </div>
         </div>
       )}
@@ -296,7 +337,7 @@ export function QuotationDetailPage() {
               <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
                 Official Commercial Document
               </span>
-              <div className="text-xl font-bold font-mono text-indigo-600">
+              <div className="text-xl font-bold font-mono text-primary">
                 {quotation.quotationNumber}
               </div>
               <div className="pt-1">
@@ -317,7 +358,7 @@ export function QuotationDetailPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 rounded-lg bg-slate-50/80 border border-slate-200 p-4 text-xs">
             <div>
               <div className="flex items-center gap-1.5 font-bold uppercase tracking-wider text-[10px] text-slate-500 mb-1">
-                <Building2 className="h-3.5 w-3.5 text-indigo-600" />
+                <Building2 className="h-3.5 w-3.5 text-primary" />
                 Quoted Customer / Dealer
               </div>
               <h4 className="font-bold text-slate-900 text-sm">{quotation.customerNameSnapshot}</h4>
@@ -330,7 +371,7 @@ export function QuotationDetailPage() {
 
             <div className="sm:text-right">
               <div className="flex items-center gap-1.5 font-bold uppercase tracking-wider text-[10px] text-slate-500 mb-1 sm:justify-end">
-                <User className="h-3.5 w-3.5 text-indigo-600" />
+                <User className="h-3.5 w-3.5 text-primary" />
                 Sales Representative
               </div>
               <h4 className="font-bold text-slate-900 text-sm">{quotation.salesRepNameSnapshot}</h4>
@@ -422,7 +463,7 @@ export function QuotationDetailPage() {
 
               <div className="border-t-2 border-indigo-900 pt-2 flex justify-between font-bold text-base text-slate-900">
                 <span>Grand Total:</span>
-                <span className="text-indigo-700 font-mono">{formatCurrency(quotation.totalAmount)}</span>
+                <span className="text-primary-text font-mono">{formatCurrency(quotation.totalAmount)}</span>
               </div>
             </div>
           </div>
@@ -478,7 +519,7 @@ export function QuotationDetailPage() {
                     : 'e.g. Requested 12% discount exceeds commercial margin limit.'
                 }
                 rows={3}
-                className="w-full rounded-md border border-slate-200 p-2 text-xs focus:ring-1 focus:ring-indigo-500"
+                className="w-full rounded-md border border-slate-200 p-2 text-xs focus:ring-1 focus:ring-primary"
               />
             </div>
 

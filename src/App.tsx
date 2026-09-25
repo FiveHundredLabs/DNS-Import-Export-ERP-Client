@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AppLayout } from './layouts/AppLayout';
+import { StandardLayout } from './layouts/StandardLayout';
 import { DashboardPage } from './features/dashboard/DashboardPage';
 import { ProductListPage } from './features/products/ProductListPage';
 import { ProductDetailPage } from './features/products/ProductDetailPage';
@@ -9,26 +10,69 @@ import { ApprovalsPage } from './features/approvals/ApprovalsPage';
 import { QuotationListPage } from './features/quotations/QuotationListPage';
 import { QuotationCreateEditPage } from './features/quotations/QuotationCreateEditPage';
 import { QuotationDetailPage } from './features/quotations/QuotationDetailPage';
-import { ModulePlaceholder } from './components/common/ModulePlaceholder';
+import { OrderListPage } from './features/orders/OrderListPage';
+import { OrderCreateEditPage } from './features/orders/OrderCreateEditPage';
+import { OrderDetailPage } from './features/orders/OrderDetailPage';
+import { OrderTrackingPage } from './features/orders/OrderTrackingPage';
+import { InventoryDashboardPage } from './features/inventory/InventoryDashboardPage';
+import { GRNListPage } from './features/inventory/GRNListPage';
+import { GRNCreateEditPage } from './features/inventory/GRNCreateEditPage';
+import { GRNDetailPage } from './features/inventory/GRNDetailPage';
+import { StockBalancePage } from './features/inventory/StockBalancePage';
+import { StockMovementsPage } from './features/inventory/StockMovementsPage';
+import { OrderPickingPage } from './features/inventory/OrderPickingPage';
+import { DispatchPage } from './features/inventory/DispatchPage';
+import { TransferListPage } from './features/inventory/TransferListPage';
+import { InvoiceListPage } from './features/invoices/InvoiceListPage';
+import { InvoiceDetailPage } from './features/invoices/InvoiceDetailPage';
+import { PaymentListPage } from './features/payments/PaymentListPage';
+import { PaymentCollectionPage } from './features/payments/PaymentCollectionPage';
+import { PaymentDetailPage } from './features/payments/PaymentDetailPage';
+import { ShowroomPOSTerminal } from './features/pos/ShowroomPOSTerminal';
+import { POSTransactionHistoryPage } from './features/pos/POSTransactionHistoryPage';
+import { POSSessionsPage } from './features/pos/POSSessionsPage';
+import { WarrantyHubPage } from './features/warranty/WarrantyHubPage';
+import { CommissionHubPage } from './features/commissions/CommissionHubPage';
+import { FinanceLayout } from './features/finance/FinanceLayout';
+import { FinanceDashboardPage } from './features/finance/pages/FinanceDashboardPage';
+import { ChartOfAccountsPage } from './features/finance/pages/ChartOfAccountsPage';
+import { SuppliersPage } from './features/finance/pages/SuppliersPage';
+import { PaymentApprovalPage } from './features/finance/pages/PaymentApprovalPage';
+import { FinanceCommissionsPage } from './features/finance/pages/FinanceCommissionsPage';
+import { FinanceDeskPage } from './features/finance/pages/FinanceDeskPage';
+import { FinanceReportsHubPage } from './features/finance/pages/reports/FinanceReportsHubPage';
+import { ProfitLossPage } from './features/finance/pages/reports/ProfitLossPage';
+import { BalanceSheetPage } from './features/finance/pages/reports/BalanceSheetPage';
+import { TrialBalancePage } from './features/finance/pages/reports/TrialBalancePage';
+import { GeneralLedgerPage } from './features/finance/pages/reports/GeneralLedgerPage';
+import { VatSummaryPage } from './features/finance/pages/reports/VatSummaryPage';
+import { ReportsPage } from './features/reports/ReportsPage';
 import { ProtectedRoute } from './components/common/ProtectedRoute';
-import { FileSpreadsheet, ShoppingCart, Boxes, Store, DollarSign, ShieldCheck, BarChart3 } from 'lucide-react';
+import { LoginPage } from './features/auth/LoginPage';
+import { Toaster } from 'sonner';
 
 export function App() {
   return (
-    <Routes>
+    <>
+      <Toaster richColors position="top-right" />
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
       <Route path="/" element={<AppLayout />}>
-        {/* Core Operational Routes */}
-        <Route index element={<DashboardPage />} />
+        {/* Standard Single-Column Content Pages */}
+        <Route element={<StandardLayout />}>
+          {/* Core Operational Routes */}
+          <Route index element={<DashboardPage />} />
 
-        {/* Phase 3: Master Data */}
-        <Route
-          path="products"
-          element={
-            <ProtectedRoute>
-              <ProductListPage />
-            </ProtectedRoute>
-          }
-        />
+
+          {/* Phase 3: Master Data */}
+          <Route
+            path="products"
+            element={
+              <ProtectedRoute>
+                <ProductListPage />
+              </ProtectedRoute>
+            }
+          />
         <Route
           path="products/:id"
           element={
@@ -98,102 +142,204 @@ export function App() {
           }
         />
 
+        {/* Phase 5: Sales Order & Fulfillment Pipeline */}
         <Route
           path="orders"
           element={
             <ProtectedRoute>
-              <ModulePlaceholder
-                title="Sales Orders & Picking"
-                modulePhase="Phase 5"
-                description="Standard vs Special Sales Orders, credit limit validation, and fulfillment state machine."
-                icon={ShoppingCart}
-                features={[
-                  'Flags Special Approval Required for discount or credit day breaches',
-                  'Hierarchical escalation: Sales Rep -> Sales Mgr -> Manager/Director',
-                  'Warehouse picking and quantity issue tracking',
-                  'Immutable pricing snapshot at time of order creation',
-                ]}
-              />
+              <OrderListPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="orders/new"
+          element={
+            <ProtectedRoute>
+              <OrderCreateEditPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="orders/tracking"
+          element={
+            <ProtectedRoute>
+              <OrderTrackingPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="orders/:id"
+          element={
+            <ProtectedRoute>
+              <OrderDetailPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="orders/:id/edit"
+          element={
+            <ProtectedRoute>
+              <OrderCreateEditPage />
             </ProtectedRoute>
           }
         />
 
+        {/* Phase 6: Warehouse & Inventory */}
         <Route
           path="inventory"
           element={
             <ProtectedRoute>
-              <ModulePlaceholder
-                title="Warehouse & Inventory Management"
-                modulePhase="Phase 6"
-                description="GRN receiving, barcode restocking, stock balance by location, and dispatch/delivery flows."
-                icon={Boxes}
-                features={[
-                  'Multi-warehouse: Central Colombo Warehouse vs Showroom Store',
-                  'GRN receipt and Manager approval workflow',
-                  'Reuses existing barcodes without duplicating product identities',
-                  'Damaged and returned stock isolated from sellable inventory',
-                ]}
-              />
+              <InventoryDashboardPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="inventory/grn"
+          element={
+            <ProtectedRoute>
+              <GRNListPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="inventory/grn/new"
+          element={
+            <ProtectedRoute>
+              <GRNCreateEditPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="inventory/grn/:id"
+          element={
+            <ProtectedRoute>
+              <GRNDetailPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="inventory/stock"
+          element={
+            <ProtectedRoute>
+              <StockBalancePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="inventory/movements"
+          element={
+            <ProtectedRoute>
+              <StockMovementsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="inventory/picking"
+          element={
+            <ProtectedRoute>
+              <OrderPickingPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="inventory/dispatch"
+          element={
+            <ProtectedRoute>
+              <DispatchPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="inventory/transfers"
+          element={
+            <ProtectedRoute>
+              <TransferListPage />
             </ProtectedRoute>
           }
         />
 
+        {/* Phase 7: Invoice & Payments Management */}
+        <Route
+          path="invoices"
+          element={
+            <ProtectedRoute>
+              <InvoiceListPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="invoices/:id"
+          element={
+            <ProtectedRoute>
+              <InvoiceDetailPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="payments"
+          element={
+            <ProtectedRoute>
+              <PaymentListPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="payments/new"
+          element={
+            <ProtectedRoute>
+              <PaymentCollectionPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="payments/:id"
+          element={
+            <ProtectedRoute>
+              <PaymentDetailPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Phase 8: Showroom Point of Sale (POS) */}
         <Route
           path="pos"
           element={
             <ProtectedRoute>
-              <ModulePlaceholder
-                title="Showroom Point of Sale (POS)"
-                modulePhase="Phase 8"
-                description="High-speed barcode checkout, showroom stock deduction, and cashier shift cash management."
-                icon={Store}
-                features={[
-                  'Consumes canonical Product Master with live showroom inventory',
-                  'Cashier session opening float, Cash In / Out, and shift reconciliation',
-                  'Thermal 80mm ESC/POS hardware receipt printer abstraction',
-                  'Cash and Cheque payment collection',
-                ]}
-              />
+              <ShowroomPOSTerminal />
             </ProtectedRoute>
           }
         />
-
         <Route
-          path="finance"
+          path="pos/transactions"
           element={
             <ProtectedRoute>
-              <ModulePlaceholder
-                title="Finance, Payments & Ledger"
-                modulePhase="Phase 7 & 9"
-                description="Payment verification, petty cash running balance, and categorized expense workflows."
-                icon={DollarSign}
-                features={[
-                  'Multi-tier payment approval: Rep Recorded -> Finance Approved -> Balance updated',
-                  'Running petty cash ledger: Opening + Cash Added - Expenses = Balance',
-                  'Customer account statements and outstanding aging',
-                  'Categorized expense claims with manager approvals',
-                ]}
-              />
+              <POSTransactionHistoryPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="pos/sessions"
+          element={
+            <ProtectedRoute>
+              <POSSessionsPage />
             </ProtectedRoute>
           }
         />
 
+        {/* Phase 10: Warranty, Loyalty & Commissions */}
         <Route
           path="warranty"
           element={
             <ProtectedRoute>
-              <ModulePlaceholder
-                title="Warranty & Claims Hub"
-                modulePhase="Phase 10"
-                description="Sold product tracking, dealer warranty note reconciliation, and claim resolution."
-                icon={ShieldCheck}
-                features={[
-                  'Reconciles expected warranty notes vs received notes per dealer',
-                  'Links warranty records to original customer invoice and product SKU',
-                  'Warranty claim lifecycle from defect intake to replacement/repair',
-                  'Dealer vs showroom warranty activation date handling',
-                ]}
-              />
+              <WarrantyHubPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="commissions"
+          element={
+            <ProtectedRoute>
+              <CommissionHubPage />
             </ProtectedRoute>
           }
         />
@@ -202,25 +348,43 @@ export function App() {
           path="reports"
           element={
             <ProtectedRoute>
-              <ModulePlaceholder
-                title="Enterprise Analytics & Reports"
-                modulePhase="Phase 11"
-                description="Role-aware reporting across sales performance, inventory movements, and financial health."
-                icon={BarChart3}
-                features={[
-                  'Area Manager restricted to regional team performance',
-                  'Director global consolidated financial and revenue statements',
-                  'Stock movement ledgers and fast/slow-moving SKU analytics',
-                  'CSV and PDF export readiness',
-                ]}
-              />
+              <ReportsPage />
             </ProtectedRoute>
           }
         />
+        </Route>
+
+        {/* Phase 9: Finance & Accounting Module with Direct Extended Navigation */}
+        <Route
+          path="finance"
+          element={
+            <ProtectedRoute>
+              <FinanceLayout />
+            </ProtectedRoute>
+          }
+        >
+          {/* Initial Screen: 1 - Journal Entry (The Finance Desk) */}
+          <Route index element={<FinanceDeskPage />} />
+          <Route path="desk" element={<FinanceDeskPage />} />
+          <Route path="accounts" element={<ChartOfAccountsPage />} />
+          <Route path="payment-approvals" element={<PaymentApprovalPage />} />
+          <Route path="suppliers" element={<SuppliersPage />} />
+          <Route path="commissions" element={<FinanceCommissionsPage />} />
+          <Route path="dashboard" element={<FinanceDashboardPage />} />
+
+          {/* 5 - Reports and sub-reports with easy backward navigation */}
+          <Route path="reports" element={<FinanceReportsHubPage />} />
+          <Route path="reports/pnl" element={<ProfitLossPage />} />
+          <Route path="reports/balance-sheet" element={<BalanceSheetPage />} />
+          <Route path="reports/trial-balance" element={<TrialBalancePage />} />
+          <Route path="reports/general-ledger" element={<GeneralLedgerPage />} />
+          <Route path="reports/vat" element={<VatSummaryPage />} />
+        </Route>
 
         {/* Fallback */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>
+    </>
   );
 }

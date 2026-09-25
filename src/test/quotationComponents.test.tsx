@@ -1,12 +1,15 @@
 import { describe, it, expect } from 'vitest';
 import React from 'react';
 import '@testing-library/jest-dom';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QuotationStatusBadge } from '../features/quotations/QuotationStatusBadge';
 import { QuotationConvertModal } from '../features/quotations/QuotationConvertModal';
 import { QuotationListPage } from '../features/quotations/QuotationListPage';
+import { CustomerHubView } from '../features/customers/CustomerHubView';
+import { CustomerSelector } from '../components/selectors/CustomerSelector';
 import { MOCK_QUOTATIONS } from '../mock/mockQuotations';
+import { MOCK_CUSTOMERS } from '../mock/mockCustomers';
 
 describe('Quotation UI Components & Type Checking', () => {
   it('renders QuotationStatusBadge with correct variants', () => {
@@ -29,7 +32,7 @@ describe('Quotation UI Components & Type Checking', () => {
     expect(screen.getByText('Expired')).toBeInTheDocument();
   });
 
-  it('renders QuotationListPage without crash', async () => {
+  it('renders QuotationListPage with customer filter without crash', async () => {
     render(
       <MemoryRouter>
         <QuotationListPage />
@@ -38,6 +41,7 @@ describe('Quotation UI Components & Type Checking', () => {
 
     expect(screen.getByText('Quotation Management')).toBeInTheDocument();
     expect(screen.getByText('New Quotation')).toBeInTheDocument();
+    expect(screen.getByLabelText('Filter by Customer')).toBeInTheDocument();
   });
 
   it('renders QuotationConvertModal when open', () => {
@@ -53,5 +57,37 @@ describe('Quotation UI Components & Type Checking', () => {
 
     expect(screen.getByText('Convert Quotation to Sales Order')).toBeInTheDocument();
     expect(screen.getByText('Confirm Conversion')).toBeInTheDocument();
+  });
+
+  it('renders CustomerHubView Quotations tab without reference error', async () => {
+    const mockCustomer = MOCK_CUSTOMERS[0];
+    render(
+      <MemoryRouter>
+        <CustomerHubView customer={mockCustomer} />
+      </MemoryRouter>
+    );
+
+    // Verify Customer details render
+    expect(screen.getByText(mockCustomer.name)).toBeInTheDocument();
+
+    // Verify Quotations tab trigger renders without crashing on mockQuotations
+    await waitFor(() => {
+      expect(screen.getByRole('tab', { name: /Quotations/i })).toBeInTheDocument();
+    });
+  });
+
+  it('renders CustomerSelector with assignedRepId scoping', async () => {
+    render(
+      <CustomerSelector
+        onSelect={() => {}}
+        assignedRepId="usr-106"
+      />
+    );
+
+    expect(screen.getByPlaceholderText(/Search Customer Master/i)).toBeInTheDocument();
+    // usr-106 is assigned to Lanka Electrical (cust-001)
+    await waitFor(() => {
+      expect(screen.getByText('Lanka Electrical & Hardware Superstore')).toBeInTheDocument();
+    });
   });
 });

@@ -19,31 +19,32 @@ import { Link } from 'react-router-dom';
 
 export function SalesRepDashboard() {
   return (
-    <div className="space-y-5 pb-16 md:pb-0">
+    <div className="space-y-6 pb-16 md:pb-0">
       {/* Mobile-first Header Banner */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-gradient-to-r from-indigo-700 to-indigo-900 text-white p-5 rounded-xl shadow-sm">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white p-6 rounded-2xl border border-slate-800 shadow-md">
         <div>
-          <span className="text-[11px] font-semibold tracking-wider uppercase text-indigo-200">
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-wider uppercase bg-primary/20 text-white border border-primary/30 mb-2">
             Field Representative Hub
           </span>
-          <h1 className="text-xl font-bold">Good Day, Kasun</h1>
-          <p className="text-xs text-indigo-100">
-            Colombo Central Territory • 14 Assigned Dealers
+          <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white">Good Day, Kasun</h1>
+          <p className="text-xs text-slate-300 mt-0.5">
+            Colombo Central Territory • 14 Assigned Dealers • Active Cycle
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2.5 shrink-0">
           <Link to="/customers">
-            <Button size="sm" variant="secondary" className="gap-1.5 text-xs">
-              <Users className="h-3.5 w-3.5" /> Customer Hub
+            <Button size="sm" variant="secondary" className="gap-1.5 text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700">
+              <Users className="h-3.5 w-3.5 text-primary" /> Customer Hub
             </Button>
           </Link>
           <Link to="/orders">
-            <Button size="sm" className="gap-1.5 text-xs bg-white text-indigo-900 hover:bg-slate-100">
+            <Button size="sm" className="gap-1.5 text-xs bg-primary hover:bg-primary-hover text-primary-foreground font-bold shadow-md">
               <PlusCircle className="h-3.5 w-3.5" /> New Order
             </Button>
           </Link>
         </div>
       </div>
+
 
       {/* KPI Metrics */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
@@ -145,7 +146,7 @@ export function SalesRepDashboard() {
             <div className="space-y-4">
               <div className="p-3 rounded-lg border border-slate-200 bg-white">
                 <div className="flex items-center justify-between mb-1.5">
-                  <span className="font-mono font-bold text-xs text-indigo-600">SO-1045</span>
+                  <span className="font-mono font-bold text-xs text-primary">SO-1045</span>
                   <Badge variant="warning">Special Approval</Badge>
                 </div>
                 <div className="text-xs text-slate-600">Muthurajawela Eng.</div>
@@ -158,14 +159,14 @@ export function SalesRepDashboard() {
 
               <div className="p-3 rounded-lg border border-slate-200 bg-white">
                 <div className="flex items-center justify-between mb-1.5">
-                  <span className="font-mono font-bold text-xs text-indigo-600">SO-1044</span>
+                  <span className="font-mono font-bold text-xs text-primary">SO-1044</span>
                   <Badge variant="success">Dispatched</Badge>
                 </div>
                 <div className="text-xs text-slate-600">Lanka Electrical Superstore</div>
                 <div className="text-[11px] text-slate-400 mt-2 space-y-1">
                   <div className="flex items-center gap-1.5 text-emerald-600 font-medium">✓ Order Approved</div>
                   <div className="flex items-center gap-1.5 text-emerald-600 font-medium">✓ Invoiced (INV-2041)</div>
-                  <div className="flex items-center gap-1.5 text-sky-600 font-medium">● En route for delivery</div>
+                  <div className="flex items-center gap-1.5 text-primary font-medium">● En route for delivery</div>
                 </div>
               </div>
             </div>

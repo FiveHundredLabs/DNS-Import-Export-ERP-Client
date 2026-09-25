@@ -55,11 +55,21 @@ export class MockApprovalRepository implements IApprovalRepository {
       throw new Error(`Cannot execute action on approval request ${id} with status ${app.status}.`);
     }
 
+    const authorizedApprovers: UserRole[] = ['DIRECTOR', 'MANAGER', 'SALES_MANAGER', 'FINANCE_MANAGER'];
+    if (actorRole && !authorizedApprovers.includes(actorRole)) {
+      throw new Error(`Role '${actorRole}' is not authorized to act on approval requests.`);
+    }
+
     const fromStatus = app.status;
     let newStatus = app.status;
     let newCurrentApprover = app.currentApproverRole;
 
     if (action === 'APPROVE') {
+      if (actorRole && actorRole !== 'DIRECTOR' && actorRole !== app.currentApproverRole) {
+        throw new Error(
+          `Role '${actorRole}' is not authorized to approve this request. Required role is '${app.currentApproverRole}'.`
+        );
+      }
       newStatus = 'APPROVED';
     } else if (action === 'REJECT') {
       newStatus = 'REJECTED';
@@ -91,6 +101,7 @@ export class MockApprovalRepository implements IApprovalRepository {
       ...app,
       status: newStatus === 'ESCALATED' ? 'PENDING' : newStatus,
       currentApproverRole: newCurrentApprover,
+      targetApproverRole: action === 'ESCALATE' ? newCurrentApprover : app.targetApproverRole,
       history: [...app.history, newHistoryEntry],
       updatedAt: new Date().toISOString(),
     };

@@ -4,42 +4,122 @@
 
 @layer base {
   :root {
-    --background: 210 40% 98%;
-    --foreground: 222.2 84% 4.9%;
+    /* One Centralized Global Primary Color & Derived Theme Variables */
+    --primary: #6AAED3;
+    --primary-hover: #559EC7;
+    --primary-active: #468CB3;
+    --primary-foreground: #FFFFFF;
+    --primary-light: #F0F7FB;
+    --primary-border: #BEE0F0;
+    --primary-color: var(--primary);
+    --primary-text: #24658B;
+    --primary-ring: rgba(106, 174, 211, 0.35);
 
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --background: 204 27% 97%; /* #F4F7F9 */
+    --foreground: 222.2 47.4% 11.2%; /* #1E293B */
+
+    --card: 0 0% 100%; /* #FFFFFF */
+    --card-foreground: 222.2 47.4% 11.2%; /* #1E293B */
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-
-    --primary: 238.7 83.5% 58.6%;
-    --primary-foreground: 210 40% 98%;
+    --popover-foreground: 222.2 47.4% 11.2%;
 
     --secondary: 210 40% 96.1%;
     --secondary-foreground: 222.2 47.4% 11.2%;
 
     --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted-foreground: 215.4 16.3% 46.9%; /* #64748B */
 
-    --accent: 210 40% 96.1%;
+    --accent: 204 27% 97%;
     --accent-foreground: 222.2 47.4% 11.2%;
 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 214.3 31.8% 91.4%;
+    --border: 214.3 31.8% 91.4%; /* #E2E8F0 */
     --input: 214.3 31.8% 91.4%;
-    --ring: 238.7 83.5% 58.6%;
+    --ring: var(--primary-ring);
 
-    --radius: 0.5rem;
+    --radius: 1rem;
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --card: 222.2 84% 6.5%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 84% 6.5%;
+    --popover-foreground: 210 40% 98%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
   }
 }
 
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue',
+  background-color: #F4F7F9;
+  color: #1E293B;
+  font-family: -apple-system, BlinkMacSystemFont, 'Plus Jakarta Sans', 'Inter', 'Segoe UI', Roboto, 'Helvetica Neue',
     Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
+
+/* Cross-browser scrollbar hiding while preserving scroll functionality */
+html,
+body,
+* {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* Legacy Edge */
+}
+
+::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+  width: 0px;
+  height: 0px;
+}
+
+/* Form control accents with dynamic primary color */
+input[type="checkbox"],
+input[type="radio"],
+input[type="range"] {
+  accent-color: var(--primary-color);
+}
+
+::selection {
+  background-color: var(--primary-light);
+  color: var(--primary-text);
+}
+
+/* Dynamic primary focus & interactive form highlights */
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  border-color: var(--primary-color);
+  outline: none;
+}
+
+/* Dynamic Primary Accent for Progress and Range Bars */
+progress::-webkit-progress-value {
+  background-color: var(--primary-color);
+}
+progress::-moz-progress-bar {
+  background-color: var(--primary-color);
+}
+
+/* Stepper and interactive toggle switches */
+[data-state="checked"],
+[aria-checked="true"] {
+  background-color: var(--primary-color);
+  border-color: var(--primary-color);
+}
+
+
