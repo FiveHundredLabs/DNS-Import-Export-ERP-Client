@@ -1,4 +1,7 @@
 import { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { useAuth } from '../../hooks/useAuth';
+import { AppearanceSettings } from './AppearanceSettings';
 import { StatCard } from '../../components/common/StatCard';
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
@@ -17,6 +20,9 @@ import {
   ArrowUpRight,
   MapPin,
   Sparkles,
+  LayoutDashboard,
+  Settings,
+  Palette,
 } from 'lucide-react';
 import { formatCurrency } from '../../utils/formatters';
 import {
@@ -64,6 +70,19 @@ const AOV_TREND_DATA = [
 
 export function DirectorDashboard() {
   const [selectedRegion, setSelectedRegion] = useState('All Provinces');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const { role } = useAuth();
+  const isDirector = role === 'DIRECTOR';
+
+  const activeTab = searchParams.get('tab') === 'settings' && isDirector ? 'settings' : 'overview';
+
+  const handleTabChange = (tab: 'overview' | 'settings') => {
+    if (tab === 'settings' && isDirector) {
+      setSearchParams({ tab: 'settings' });
+    } else {
+      setSearchParams({});
+    }
+  };
 
   // Custom Tooltip matching reference screenshot floating pill
   const CustomLineTooltip = ({ active, payload, label }: any) => {
@@ -79,8 +98,60 @@ export function DirectorDashboard() {
     return null;
   };
 
+  if (activeTab === 'settings' && isDirector) {
+    return (
+      <div className="space-y-6">
+        {/* Top Header & Tab Controls */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl w-fit">
+            <button
+              onClick={() => handleTabChange('overview')}
+              className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 transition-all"
+            >
+              <LayoutDashboard className="h-3.5 w-3.5" />
+              <span>Overview</span>
+            </button>
+
+            <button
+              onClick={() => handleTabChange('settings')}
+              className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold bg-white text-primary shadow-xs transition-all"
+            >
+              <Palette className="h-3.5 w-3.5 text-primary" />
+              <span>Settings &gt; Appearance</span>
+            </button>
+          </div>
+        </div>
+
+        <AppearanceSettings />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
+      {/* Top Header & Tab Controls for Director */}
+      {isDirector && (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl w-fit">
+            <button
+              onClick={() => handleTabChange('overview')}
+              className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold bg-white text-slate-900 shadow-xs transition-all"
+            >
+              <LayoutDashboard className="h-3.5 w-3.5 text-primary" />
+              <span>Overview</span>
+            </button>
+
+            <button
+              onClick={() => handleTabChange('settings')}
+              className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 transition-all"
+            >
+              <Palette className="h-3.5 w-3.5 text-slate-500" />
+              <span>Settings &gt; Appearance</span>
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Top 4 KPI Cards (Directly matching reference screenshot style) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
@@ -234,7 +305,7 @@ export function DirectorDashboard() {
               {[
                 { name: 'Western Province (Colombo)', share: 76, color: 'bg-rose-500', barBg: '#F43F5E', target: 'LKR 24.8M' },
                 { name: 'Central Province (Kandy)', share: 18, color: 'bg-amber-500', barBg: '#F59E0B', target: 'LKR 14.2M' },
-                { name: 'Southern Province (Galle)', share: 6, color: 'bg-sky-500', barBg: '#0EA5E9', target: 'LKR 9.5M' },
+                { name: 'Southern Province (Galle)', share: 6, color: 'bg-primary', barBg: 'var(--primary-color)', target: 'LKR 9.5M' },
               ].map((prov) => (
                 <div key={prov.name} className="space-y-1.5">
                   <div className="flex items-center justify-between text-xs">
@@ -297,7 +368,7 @@ export function DirectorDashboard() {
 
               {[
                 { name: 'B2B Dealer Hub', pct: '39.4%', total: '1,080', icon: Building, color: 'text-indigo-600 bg-indigo-50' },
-                { name: 'Showroom Direct', pct: '28.9%', total: '756', icon: Store, color: 'text-sky-600 bg-sky-50' },
+                { name: 'Showroom Direct', pct: '28.9%', total: '756', icon: Store, color: 'text-primary-text bg-primary-light' },
                 { name: 'Field Sales Reps', pct: '25.3%', total: '616', icon: Users, color: 'text-emerald-600 bg-emerald-50' },
                 { name: 'Corporate Tender', pct: '6.4%', total: '189', icon: CreditCard, color: 'text-amber-600 bg-amber-50' },
               ].map((ch) => {
@@ -398,8 +469,8 @@ export function DirectorDashboard() {
                 <AreaChart data={AOV_TREND_DATA} margin={{ top: 5, right: 0, left: -25, bottom: 0 }}>
                   <defs>
                     <linearGradient id="aovGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#0EA5E9" stopOpacity={0.35} />
-                      <stop offset="95%" stopColor="#0EA5E9" stopOpacity={0.0} />
+                      <stop offset="5%" stopColor="var(--primary-color)" stopOpacity={0.35} />
+                      <stop offset="95%" stopColor="var(--primary-color)" stopOpacity={0.0} />
                     </linearGradient>
                   </defs>
                   <XAxis
@@ -429,7 +500,7 @@ export function DirectorDashboard() {
                   <Area
                     type="monotone"
                     dataKey="aov"
-                    stroke="#0EA5E9"
+                    stroke="var(--primary-color)"
                     strokeWidth={2.5}
                     fillOpacity={1}
                     fill="url(#aovGradient)"
@@ -441,7 +512,7 @@ export function DirectorDashboard() {
 
           <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
             <span>Fiscal trend analysis</span>
-            <span className="font-semibold text-sky-600">Highest in Q3</span>
+            <span className="font-semibold text-primary">Highest in Q3</span>
           </div>
         </Card>
       </div>

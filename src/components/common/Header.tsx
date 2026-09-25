@@ -80,7 +80,7 @@ export function Header({ onToggleSidebar }: HeaderProps) {
       <div className="flex items-center gap-3 sm:gap-4 min-w-0">
         <button
           onClick={onToggleSidebar}
-          className="rounded-xl p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-900 transition-colors focus:outline-none focus:ring-2 focus:ring-sky-500 md:hidden"
+          className="rounded-xl p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-900 transition-colors focus:outline-none focus:ring-2 focus:ring-primary md:hidden"
           aria-label="Toggle navigation menu"
         >
           <Menu className="h-5 w-5" />
@@ -88,14 +88,14 @@ export function Header({ onToggleSidebar }: HeaderProps) {
 
         {location.pathname === '/' ? (
           <Link to="/" className="flex items-center gap-2.5 shrink-0 group">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-sky-500 text-white font-black text-sm shadow-md shadow-sky-500/25 group-hover:bg-sky-600 transition-colors">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-primary-foreground font-black text-sm shadow-md group-hover:bg-primary-hover transition-colors">
               <Layers className="h-5 w-5" />
             </div>
             <div className="min-w-0">
               <h1 className="text-base sm:text-lg md:text-xl font-black text-slate-800 tracking-tight truncate leading-tight">
                 LabsCore ERP
               </h1>
-              <span className="text-[10px] text-sky-600 font-bold block uppercase tracking-wider -mt-0.5">
+              <span className="text-[10px] text-primary font-bold block uppercase tracking-wider -mt-0.5">
                 DNS Import & Exports (Pvt) Ltd
               </span>
             </div>
@@ -103,7 +103,7 @@ export function Header({ onToggleSidebar }: HeaderProps) {
         ) : (
           <div className="flex items-center gap-2.5 min-w-0">
             <Link to="/" className="flex items-center gap-2 shrink-0 group" title="DNS ERP Dashboard">
-              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-sky-500 text-white font-black text-xs shadow-md shadow-sky-500/25 group-hover:bg-sky-600 transition-colors">
+              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary text-primary-foreground font-black text-xs shadow-md group-hover:bg-primary-hover transition-colors">
                 <Layers className="h-4 w-4" />
               </div>
               <span className="font-black text-slate-800 tracking-tight text-base hidden sm:inline">
@@ -127,7 +127,7 @@ export function Header({ onToggleSidebar }: HeaderProps) {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search orders, products, dealers..."
-            className="w-full pl-9 pr-4 py-2 bg-slate-50/80 hover:bg-slate-50 focus:bg-white border border-slate-200/90 rounded-full text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all shadow-[0_1px_2px_rgba(0,0,0,0.02)]"
+            className="w-full pl-9 pr-4 py-2 bg-slate-50/80 hover:bg-slate-50 focus:bg-white border border-slate-200/90 rounded-full text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all shadow-[0_1px_2px_rgba(0,0,0,0.02)]"
           />
         </div>
       </div>
@@ -137,10 +137,10 @@ export function Header({ onToggleSidebar }: HeaderProps) {
         {/* Switch Role Quick Button */}
         <Link
           to="/login"
-          className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-slate-200/90 bg-slate-50 hover:bg-sky-50 hover:border-sky-200 text-slate-700 hover:text-sky-700 text-xs font-semibold transition-all shadow-2xs"
+          className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-slate-200/90 bg-slate-50 hover:bg-primary-light hover:border-primary-border text-slate-700 hover:text-primary-text text-xs font-semibold transition-all shadow-2xs"
           title="Switch User Role or Log In as another user"
         >
-          <Users className="h-3.5 w-3.5 text-sky-600" />
+          <Users className="h-3.5 w-3.5 text-primary" />
           <span>Switch Role</span>
         </Link>
 
@@ -150,12 +150,12 @@ export function Header({ onToggleSidebar }: HeaderProps) {
         <div className="relative" ref={profileRef}>
           <button
             onClick={() => setProfileOpen((prev) => !prev)}
-            className="flex items-center gap-2.5 p-1 rounded-full sm:rounded-xl hover:bg-slate-50 transition-colors focus:outline-none focus:ring-2 focus:ring-sky-500"
+            className="flex items-center gap-2.5 p-1 rounded-full sm:rounded-xl hover:bg-slate-50 transition-colors focus:outline-none focus:ring-2 focus:ring-primary"
             aria-expanded={profileOpen}
             aria-label="User profile menu"
           >
             {/* Avatar Circle */}
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-tr from-sky-500 to-sky-400 text-white font-bold text-xs shadow-sm ring-2 ring-white">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground font-bold text-xs shadow-sm ring-2 ring-white">
               {currentUser.name
                 .split(' ')
                 .map((n) => n[0])
@@ -174,7 +174,7 @@ export function Header({ onToggleSidebar }: HeaderProps) {
 
             <ChevronDown
               className={`h-3.5 w-3.5 text-slate-400 hidden sm:block transition-transform duration-200 ${
-                profileOpen ? 'rotate-180 text-sky-500' : ''
+                profileOpen ? 'rotate-180 text-primary' : ''
               }`}
             />
           </button>
@@ -185,8 +185,8 @@ export function Header({ onToggleSidebar }: HeaderProps) {
               <div className="p-3 border-b border-slate-100">
                 <div className="text-xs font-bold text-slate-900">{currentUser.name}</div>
                 <div className="text-[11px] text-slate-500 font-mono mt-0.5">{currentUser.email}</div>
-                <div className="mt-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-sky-50 text-sky-700 border border-sky-200">
-                  <ShieldCheck className="h-3 w-3 text-sky-500" />
+                <div className="mt-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-primary-light text-primary-text border border-primary-border">
+                  <ShieldCheck className="h-3 w-3 text-primary" />
                   {formatRole(currentUser.role)}
                 </div>
               </div>
@@ -195,9 +195,9 @@ export function Header({ onToggleSidebar }: HeaderProps) {
                 <Link
                   to="/login"
                   onClick={() => setProfileOpen(false)}
-                  className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:bg-sky-50 hover:text-sky-700 transition-colors"
+                  className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:bg-primary-light hover:text-primary-text transition-colors"
                 >
-                  <Users className="h-3.5 w-3.5 text-sky-500" />
+                  <Users className="h-3.5 w-3.5 text-primary" />
                   <span>Switch Role / User</span>
                 </Link>
 

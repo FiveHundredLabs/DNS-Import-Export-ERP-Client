@@ -79,7 +79,7 @@ export function DashboardPage() {
         <CardHeader className="p-0 pb-4">
           <CardTitle className="text-base font-bold text-slate-800 flex items-center justify-between">
             <span>Role Workflow Summary</span>
-            <span className="text-xs font-semibold text-sky-600 bg-sky-50 px-2.5 py-1 rounded-full border border-sky-200">
+            <span className="text-xs font-semibold text-primary-text bg-primary-light px-2.5 py-1 rounded-full border border-primary-border">
               Active Authorization Level
             </span>
           </CardTitle>

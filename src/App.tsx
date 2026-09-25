@@ -49,11 +49,14 @@ import { VatSummaryPage } from './features/finance/pages/reports/VatSummaryPage'
 import { ReportsPage } from './features/reports/ReportsPage';
 import { ProtectedRoute } from './components/common/ProtectedRoute';
 import { LoginPage } from './features/auth/LoginPage';
+import { Toaster } from 'sonner';
 
 export function App() {
   return (
-    <Routes>
-      <Route path="/login" element={<LoginPage />} />
+    <>
+      <Toaster richColors position="top-right" />
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
       <Route path="/" element={<AppLayout />}>
         {/* Standard Single-Column Content Pages */}
         <Route element={<StandardLayout />}>
@@ -382,5 +385,6 @@ export function App() {
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>
+    </>
   );
 }

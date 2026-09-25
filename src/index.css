@@ -4,6 +4,16 @@
 
 @layer base {
   :root {
+    /* Dynamic ERP Primary Color System (Default: Light Blue #6AAED3) */
+    --primary-color: #6AAED3;
+    --primary-hover: #559EC7;
+    --primary-active: #468CB3;
+    --primary-light: #F0F7FB;
+    --primary-border: #BEE0F0;
+    --primary-text: #24658B;
+    --primary-foreground: #FFFFFF;
+    --primary-ring: rgba(106, 174, 211, 0.35);
+
     --background: 204 27% 97%; /* #F4F7F9 */
     --foreground: 222.2 47.4% 11.2%; /* #1E293B */
 
@@ -13,8 +23,8 @@
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 47.4% 11.2%;
 
-    --primary: 199 89% 48%; /* #0EA5E9 Sky-500 */
-    --primary-foreground: 0 0% 100%;
+    --primary: var(--primary-color);
+    --primary-foreground: var(--primary-foreground);
 
     --secondary: 210 40% 96.1%;
     --secondary-foreground: 222.2 47.4% 11.2%;
@@ -30,7 +40,7 @@
 
     --border: 214.3 31.8% 91.4%; /* #E2E8F0 */
     --input: 214.3 31.8% 91.4%;
-    --ring: 199 89% 48%; /* #0EA5E9 */
+    --ring: var(--primary-ring);
 
     --radius: 1rem;
   }
@@ -81,4 +91,17 @@ body,
   width: 0px;
   height: 0px;
 }
+
+/* Form control accents with dynamic primary color */
+input[type="checkbox"],
+input[type="radio"],
+input[type="range"] {
+  accent-color: var(--primary-color);
+}
+
+::selection {
+  background-color: var(--primary-light);
+  color: var(--primary-text);
+}
+
 

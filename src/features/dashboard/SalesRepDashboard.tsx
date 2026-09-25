@@ -23,7 +23,7 @@ export function SalesRepDashboard() {
       {/* Mobile-first Header Banner */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white p-6 rounded-2xl border border-slate-800 shadow-md">
         <div>
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-wider uppercase bg-sky-500/20 text-sky-300 border border-sky-500/30 mb-2">
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-wider uppercase bg-primary/20 text-white border border-primary/30 mb-2">
             Field Representative Hub
           </span>
           <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white">Good Day, Kasun</h1>
@@ -34,11 +34,11 @@ export function SalesRepDashboard() {
         <div className="flex items-center gap-2.5 shrink-0">
           <Link to="/customers">
             <Button size="sm" variant="secondary" className="gap-1.5 text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700">
-              <Users className="h-3.5 w-3.5 text-sky-400" /> Customer Hub
+              <Users className="h-3.5 w-3.5 text-primary" /> Customer Hub
             </Button>
           </Link>
           <Link to="/orders">
-            <Button size="sm" className="gap-1.5 text-xs bg-sky-500 hover:bg-sky-600 text-white font-bold shadow-md shadow-sky-500/25">
+            <Button size="sm" className="gap-1.5 text-xs bg-primary hover:bg-primary-hover text-primary-foreground font-bold shadow-md">
               <PlusCircle className="h-3.5 w-3.5" /> New Order
             </Button>
           </Link>
@@ -166,7 +166,7 @@ export function SalesRepDashboard() {
                 <div className="text-[11px] text-slate-400 mt-2 space-y-1">
                   <div className="flex items-center gap-1.5 text-emerald-600 font-medium">✓ Order Approved</div>
                   <div className="flex items-center gap-1.5 text-emerald-600 font-medium">✓ Invoiced (INV-2041)</div>
-                  <div className="flex items-center gap-1.5 text-sky-600 font-medium">● En route for delivery</div>
+                  <div className="flex items-center gap-1.5 text-primary font-medium">● En route for delivery</div>
                 </div>
               </div>
             </div>

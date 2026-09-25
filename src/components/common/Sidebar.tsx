@@ -24,6 +24,7 @@ import {
   Sparkles,
   Activity,
   Lightbulb,
+  Settings,
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { cn } from '../../utils/cn';
@@ -103,8 +104,8 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
               onClick={() => setDashboardExpanded(!dashboardExpanded)}
               className={cn(
                 'flex items-center justify-between rounded-2xl px-4 py-3 text-xs font-bold transition-all cursor-pointer shadow-sm',
-                isDashboardActive
-                  ? 'bg-sky-500 text-white shadow-sky-500/25'
+                isDashboardActive && !location.search.includes('tab=settings')
+                  ? 'bg-primary text-primary-foreground shadow-md'
                   : 'text-slate-700 hover:bg-slate-50'
               )}
             >
@@ -138,7 +139,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
               </button>
             </div>
 
-            {/* Dashboard Sub-Items (Matching reference: Performance Snap, Recent Activity Feed, Insights) */}
+            {/* Dashboard Sub-Items (Performance Snap, Approvals, Insights, and Director Theme Settings) */}
             {dashboardExpanded && (
               <div className="mt-2 ml-4 pl-3 border-l-2 border-slate-100 space-y-1">
                 <NavLink
@@ -148,8 +149,8 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                   className={({ isActive }) =>
                     cn(
                       'flex items-center gap-2 rounded-xl px-3 py-1.5 text-[11px] font-semibold transition-colors',
-                      isActive
-                        ? 'text-sky-600 bg-sky-50 font-bold'
+                      isActive && !location.search.includes('tab=settings')
+                        ? 'text-primary-text bg-primary-light font-bold'
                         : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
                     )
                   }
@@ -158,6 +159,22 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                   <span>Performance Snap</span>
                 </NavLink>
 
+                {/* Director Exclusive Theme & Appearance Link */}
+                {currentUser.role === 'DIRECTOR' && (
+                  <NavLink
+                    to="/?tab=settings"
+                    onClick={onClose}
+                    className={
+                      location.search.includes('tab=settings')
+                        ? 'flex items-center gap-2 rounded-xl px-3 py-1.5 text-[11px] font-bold text-primary-text bg-primary-light transition-colors'
+                        : 'flex items-center gap-2 rounded-xl px-3 py-1.5 text-[11px] font-semibold text-slate-500 hover:text-slate-900 hover:bg-slate-50 transition-colors'
+                    }
+                  >
+                    <Settings className="h-3 w-3 shrink-0" />
+                    <span>Theme & Appearance</span>
+                  </NavLink>
+                )}
+
                 <NavLink
                   to="/approvals"
                   onClick={onClose}
@@ -165,7 +182,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                     cn(
                       'flex items-center gap-2 rounded-xl px-3 py-1.5 text-[11px] font-semibold transition-colors',
                       isActive
-                        ? 'text-sky-600 bg-sky-50 font-bold'
+                        ? 'text-primary-text bg-primary-light font-bold'
                         : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
                     )
                   }
@@ -181,7 +198,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                     cn(
                       'flex items-center gap-2 rounded-xl px-3 py-1.5 text-[11px] font-semibold transition-colors',
                       isActive
-                        ? 'text-sky-600 bg-sky-50 font-bold'
+                        ? 'text-primary-text bg-primary-light font-bold'
                         : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
                     )
                   }
@@ -210,7 +227,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                       cn(
                         'flex items-center gap-3 rounded-xl px-3.5 py-2 text-xs font-semibold transition-colors',
                         isActive
-                          ? 'bg-sky-50 text-sky-600 font-bold shadow-2xs'
+                          ? 'bg-primary-light text-primary-text font-bold shadow-2xs'
                           : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
                       )
                     }
@@ -241,7 +258,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                         cn(
                           'flex items-center gap-3 rounded-xl px-3.5 py-2 text-xs font-semibold transition-colors',
                           isActive
-                            ? 'bg-sky-50 text-sky-600 font-bold shadow-2xs'
+                            ? 'bg-primary-light text-primary-text font-bold shadow-2xs'
                             : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
                         )
                       }
@@ -268,7 +285,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                   cn(
                     'flex items-center gap-3 rounded-xl px-3.5 py-2 text-xs font-semibold transition-colors',
                     isActive
-                      ? 'bg-sky-50 text-sky-600 font-bold shadow-2xs'
+                      ? 'bg-primary-light text-primary-text font-bold shadow-2xs'
                       : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
                   )
                 }
@@ -286,11 +303,11 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
           <NavLink
             to="/login"
             onClick={onClose}
-            className="flex items-center justify-between gap-2.5 rounded-2xl bg-slate-50/80 hover:bg-sky-50/80 border border-slate-200/80 hover:border-sky-200 p-2.5 text-xs transition-colors group"
+            className="flex items-center justify-between gap-2.5 rounded-2xl bg-slate-50/80 hover:bg-primary-light/80 border border-slate-200/80 hover:border-primary-border p-2.5 text-xs transition-colors group"
             title="Switch User Role or View Example Users"
           >
             <div className="flex items-center gap-2.5 min-w-0">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-sky-100 text-sky-700 font-black text-xs shadow-2xs">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-primary-light text-primary-text font-black text-xs shadow-2xs">
                 {currentUser.name
                   .split(' ')
                   .map((n) => n[0])
@@ -303,7 +320,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                 </div>
               </div>
             </div>
-            <span className="text-[10px] font-bold text-sky-600 bg-white border border-slate-200 rounded-lg px-2 py-1 group-hover:bg-sky-500 group-hover:text-white group-hover:border-sky-500 transition-all shrink-0 shadow-2xs">
+            <span className="text-[10px] font-bold text-primary-text bg-white border border-slate-200 rounded-lg px-2 py-1 group-hover:bg-primary group-hover:text-primary-foreground group-hover:border-primary transition-all shrink-0 shadow-2xs">
               Switch
             </span>
           </NavLink>
