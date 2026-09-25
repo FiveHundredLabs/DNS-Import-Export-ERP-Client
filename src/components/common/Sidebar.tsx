@@ -21,7 +21,6 @@ import {
   HelpCircle,
   Users,
   Compass,
-  Layers,
   Sparkles,
   Activity,
   Lightbulb,
@@ -84,25 +83,12 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
           isOpen ? 'translate-x-0' : '-translate-x-full'
         )}
       >
-        {/* Top Logo / Brand (Reference screenshot "Platelink" mark) */}
-        <div className="flex h-16 items-center justify-between px-6 border-b border-slate-100">
-          <NavLink to="/" onClick={onClose} className="flex items-center gap-2.5 group">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-sky-500 text-white font-black text-sm shadow-md shadow-sky-500/25 group-hover:bg-sky-600 transition-colors">
-              <Layers className="h-5 w-5" />
-            </div>
-            <div>
-              <span className="font-extrabold text-slate-900 tracking-tight text-base">
-                DNS ERP
-              </span>
-              <span className="text-[10px] text-sky-600 font-bold block uppercase tracking-wider -mt-0.5">
-                Enterprise
-              </span>
-            </div>
-          </NavLink>
-
+        {/* Mobile close bar (Desktop sidebar header removed; branding is in main header) */}
+        <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 md:hidden">
+          <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Navigation</span>
           <button
             onClick={onClose}
-            className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700 md:hidden"
+            className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
             aria-label="Close navigation"
           >
             <X className="h-5 w-5" />

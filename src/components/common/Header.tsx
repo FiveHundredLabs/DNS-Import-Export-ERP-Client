@@ -7,6 +7,7 @@ import {
   LogOut,
   Search,
   ChevronDown,
+  Layers,
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 
@@ -16,7 +17,7 @@ interface HeaderProps {
 }
 
 const ROUTE_TITLES: Record<string, string> = {
-  '/': 'Performance Snap',
+  '/': 'DNS ERP',
   '/products': 'Product Master',
   '/customers': 'Customer Directory',
   '/approvals': 'Approvals Engine',
@@ -75,7 +76,7 @@ export function Header({ onToggleSidebar }: HeaderProps) {
 
   return (
     <header className="sticky top-0 z-30 flex h-16 w-full items-center justify-between border-b border-slate-200/80 bg-white px-4 sm:px-6 backdrop-blur-md transition-all shrink-0">
-      {/* Left: Mobile Toggle & Page Title */}
+      {/* Left: Mobile Toggle & Enterprise Brand / Page Title */}
       <div className="flex items-center gap-3 sm:gap-4 min-w-0">
         <button
           onClick={onToggleSidebar}
@@ -85,11 +86,36 @@ export function Header({ onToggleSidebar }: HeaderProps) {
           <Menu className="h-5 w-5" />
         </button>
 
-        <div className="min-w-0">
-          <h1 className="text-base sm:text-lg md:text-xl font-black text-slate-800 tracking-tight truncate">
-            {currentTitle}
-          </h1>
-        </div>
+        {location.pathname === '/' ? (
+          <Link to="/" className="flex items-center gap-2.5 shrink-0 group">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-sky-500 text-white font-black text-sm shadow-md shadow-sky-500/25 group-hover:bg-sky-600 transition-colors">
+              <Layers className="h-5 w-5" />
+            </div>
+            <div className="min-w-0">
+              <h1 className="text-base sm:text-lg md:text-xl font-black text-slate-800 tracking-tight truncate leading-tight">
+                DNS ERP
+              </h1>
+              <span className="text-[10px] text-sky-600 font-bold block uppercase tracking-wider -mt-0.5">
+                Enterprise
+              </span>
+            </div>
+          </Link>
+        ) : (
+          <div className="flex items-center gap-2.5 min-w-0">
+            <Link to="/" className="flex items-center gap-2 shrink-0 group" title="DNS ERP Dashboard">
+              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-sky-500 text-white font-black text-xs shadow-md shadow-sky-500/25 group-hover:bg-sky-600 transition-colors">
+                <Layers className="h-4 w-4" />
+              </div>
+              <span className="font-black text-slate-800 tracking-tight text-base hidden sm:inline">
+                DNS ERP
+              </span>
+            </Link>
+            <span className="text-slate-300 font-light hidden sm:inline">/</span>
+            <h1 className="text-base sm:text-lg font-black text-slate-800 tracking-tight truncate">
+              {currentTitle}
+            </h1>
+          </div>
+        )}
       </div>
 
       {/* Center: Search Bar (Reference SaaS pill shape) */}
