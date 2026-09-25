@@ -8,13 +8,13 @@ export function AppLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-slate-50 font-sans text-slate-900 antialiased flex flex-col">
+    <div className="h-screen bg-slate-50 font-sans text-slate-900 antialiased flex flex-col overflow-hidden">
       <Header onToggleSidebar={() => setSidebarOpen((prev) => !prev)} />
-      <div className="flex flex-1">
+      <div className="flex flex-1 min-h-0 overflow-hidden">
         <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-        <main className="flex-1 p-4 md:p-6 lg:p-8 max-w-7xl mx-auto w-full pb-20 md:pb-8">
+        <div className="flex-1 flex min-w-0 h-full overflow-hidden">
           <Outlet />
-        </main>
+        </div>
       </div>
       <MobileNav />
     </div>
