@@ -20,20 +20,22 @@ vi.mock('../hooks/useInventory', () => ({
   })
 }));
 
+const mockGrnService = {
+  getGRNById: vi.fn().mockResolvedValue({
+    id: '123',
+    grnNumber: 'GRN-2025-0001',
+    supplierName: 'Alpha Imports',
+    status: 'SUBMITTED',
+    warehouseId: 'WH-MAIN',
+    items: []
+  })
+};
+
 vi.mock('../hooks/useGRN', () => ({
   useGRN: () => ({
     grns: [{ id: 'GRN-1', status: 'DRAFT' }],
     loading: false,
-    grnService: {
-      getGRNById: vi.fn().mockResolvedValue({
-        id: '123',
-        grnNumber: 'GRN-2025-0001',
-        supplierName: 'Alpha Imports',
-        status: 'SUBMITTED',
-        warehouseId: 'WH-MAIN',
-        items: []
-      })
-    }
+    grnService: mockGrnService
   })
 }));
 

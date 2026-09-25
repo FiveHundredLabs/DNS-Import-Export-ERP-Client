@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AppLayout } from './layouts/AppLayout';
+import { StandardLayout } from './layouts/StandardLayout';
 import { DashboardPage } from './features/dashboard/DashboardPage';
 import { ProductListPage } from './features/products/ProductListPage';
 import { ProductDetailPage } from './features/products/ProductDetailPage';
@@ -32,27 +33,40 @@ import { POSTransactionHistoryPage } from './features/pos/POSTransactionHistoryP
 import { POSSessionsPage } from './features/pos/POSSessionsPage';
 import { WarrantyHubPage } from './features/warranty/WarrantyHubPage';
 import { CommissionHubPage } from './features/commissions/CommissionHubPage';
+import { FinanceLayout } from './features/finance/FinanceLayout';
+import { FinanceDashboardPage } from './features/finance/pages/FinanceDashboardPage';
+import { ChartOfAccountsPage } from './features/finance/pages/ChartOfAccountsPage';
+import { SuppliersPage } from './features/finance/pages/SuppliersPage';
+import { PaymentApprovalPage } from './features/finance/pages/PaymentApprovalPage';
+import { FinanceCommissionsPage } from './features/finance/pages/FinanceCommissionsPage';
+import { FinanceDeskPage } from './features/finance/pages/FinanceDeskPage';
+import { FinanceReportsHubPage } from './features/finance/pages/reports/FinanceReportsHubPage';
+import { ProfitLossPage } from './features/finance/pages/reports/ProfitLossPage';
+import { BalanceSheetPage } from './features/finance/pages/reports/BalanceSheetPage';
+import { TrialBalancePage } from './features/finance/pages/reports/TrialBalancePage';
+import { GeneralLedgerPage } from './features/finance/pages/reports/GeneralLedgerPage';
+import { VatSummaryPage } from './features/finance/pages/reports/VatSummaryPage';
 import { ReportsPage } from './features/reports/ReportsPage';
-import { ModulePlaceholder } from './components/common/ModulePlaceholder';
 import { ProtectedRoute } from './components/common/ProtectedRoute';
-import { FileSpreadsheet, ShoppingCart, Boxes, Store, DollarSign, ShieldCheck, BarChart3 } from 'lucide-react';
 
 export function App() {
   return (
     <Routes>
       <Route path="/" element={<AppLayout />}>
-        {/* Core Operational Routes */}
-        <Route index element={<DashboardPage />} />
+        {/* Standard Single-Column Content Pages */}
+        <Route element={<StandardLayout />}>
+          {/* Core Operational Routes */}
+          <Route index element={<DashboardPage />} />
 
-        {/* Phase 3: Master Data */}
-        <Route
-          path="products"
-          element={
-            <ProtectedRoute>
-              <ProductListPage />
-            </ProtectedRoute>
-          }
-        />
+          {/* Phase 3: Master Data */}
+          <Route
+            path="products"
+            element={
+              <ProtectedRoute>
+                <ProductListPage />
+              </ProtectedRoute>
+            }
+          />
         <Route
           path="products/:id"
           element={
@@ -306,27 +320,6 @@ export function App() {
           }
         />
 
-        <Route
-          path="finance"
-          element={
-            <ProtectedRoute>
-              <ModulePlaceholder
-                title="Finance & Ledger (Expenses & Petty Cash)"
-                modulePhase="Phase 9"
-                isUnderDevelopment={true}
-                description="Financial accounting, categorized expense claims, petty cash running balances, and revenue reporting."
-                icon={DollarSign}
-                features={[
-                  'Categorized expense claims with managerial and director approval',
-                  'Petty cash running ledger: Opening Float + Replenishments - Expenses = Current Balance',
-                  'Operating expense vs COGS and gross profit calculations',
-                  'Cheque deposit tracking and financial audit reconciliation',
-                ]}
-              />
-            </ProtectedRoute>
-          }
-        />
-
         {/* Phase 10: Warranty, Loyalty & Commissions */}
         <Route
           path="warranty"
@@ -353,6 +346,34 @@ export function App() {
             </ProtectedRoute>
           }
         />
+        </Route>
+
+        {/* Phase 9: Finance & Accounting Module with Direct Extended Navigation */}
+        <Route
+          path="finance"
+          element={
+            <ProtectedRoute>
+              <FinanceLayout />
+            </ProtectedRoute>
+          }
+        >
+          {/* Initial Screen: 1 - Journal Entry (The Finance Desk) */}
+          <Route index element={<FinanceDeskPage />} />
+          <Route path="desk" element={<FinanceDeskPage />} />
+          <Route path="accounts" element={<ChartOfAccountsPage />} />
+          <Route path="payment-approvals" element={<PaymentApprovalPage />} />
+          <Route path="suppliers" element={<SuppliersPage />} />
+          <Route path="commissions" element={<FinanceCommissionsPage />} />
+          <Route path="dashboard" element={<FinanceDashboardPage />} />
+
+          {/* 5 - Reports and sub-reports with easy backward navigation */}
+          <Route path="reports" element={<FinanceReportsHubPage />} />
+          <Route path="reports/pnl" element={<ProfitLossPage />} />
+          <Route path="reports/balance-sheet" element={<BalanceSheetPage />} />
+          <Route path="reports/trial-balance" element={<TrialBalancePage />} />
+          <Route path="reports/general-ledger" element={<GeneralLedgerPage />} />
+          <Route path="reports/vat" element={<VatSummaryPage />} />
+        </Route>
 
         {/* Fallback */}
         <Route path="*" element={<Navigate to="/" replace />} />
