@@ -48,15 +48,18 @@ import { GeneralLedgerPage } from './features/finance/pages/reports/GeneralLedge
 import { VatSummaryPage } from './features/finance/pages/reports/VatSummaryPage';
 import { ReportsPage } from './features/reports/ReportsPage';
 import { ProtectedRoute } from './components/common/ProtectedRoute';
+import { LoginPage } from './features/auth/LoginPage';
 
 export function App() {
   return (
     <Routes>
+      <Route path="/login" element={<LoginPage />} />
       <Route path="/" element={<AppLayout />}>
         {/* Standard Single-Column Content Pages */}
         <Route element={<StandardLayout />}>
           {/* Core Operational Routes */}
           <Route index element={<DashboardPage />} />
+
 
           {/* Phase 3: Master Data */}
           <Route

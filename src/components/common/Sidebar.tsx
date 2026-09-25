@@ -25,7 +25,8 @@ interface SidebarProps {
 }
 
 export function Sidebar({ isOpen, onClose }: SidebarProps) {
-  const { canAccessRoute } = useAuth();
+  const { canAccessRoute, currentUser } = useAuth();
+
 
   const navItems = [
     { name: 'Dashboard', path: '/', icon: LayoutDashboard },
@@ -103,13 +104,32 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
           </nav>
         </div>
 
-        <div className="border-t border-slate-200 p-4">
-          <div className="rounded-lg bg-slate-50 p-3 text-xs text-slate-500 border border-slate-100">
-            <div className="font-semibold text-slate-700">DNS ERP Core</div>
-            <div className="text-[11px] text-slate-400 mt-0.5">PostgreSQL Backend Ready</div>
-          </div>
+        <div className="border-t border-slate-200 p-3 space-y-2">
+          <NavLink
+            to="/login"
+            onClick={() => onClose()}
+            className="flex items-center justify-between gap-2 rounded-lg bg-slate-50 hover:bg-indigo-50 border border-slate-200 hover:border-indigo-200 p-2.5 text-xs transition-colors group"
+            title="Switch User Role or View Example Users"
+          >
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-indigo-100 text-indigo-700 font-bold text-[11px]">
+                {currentUser.name
+                  .split(' ')
+                  .map((n) => n[0])
+                  .join('')}
+              </div>
+              <div className="min-w-0">
+                <div className="font-semibold text-slate-800 truncate text-xs">{currentUser.name}</div>
+                <div className="text-[10px] text-slate-500 truncate">{currentUser.role.replace('_', ' ')}</div>
+              </div>
+            </div>
+            <span className="text-[10px] font-semibold text-indigo-600 bg-indigo-50 border border-indigo-200 rounded px-1.5 py-0.5 group-hover:bg-indigo-600 group-hover:text-white transition-colors shrink-0">
+              Switch
+            </span>
+          </NavLink>
         </div>
       </aside>
     </>
   );
 }
+

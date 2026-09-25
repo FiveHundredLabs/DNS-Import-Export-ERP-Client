@@ -1,11 +1,17 @@
 import { useState } from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, Navigate } from 'react-router-dom';
 import { Header } from '../components/common/Header';
 import { Sidebar } from '../components/common/Sidebar';
 import { MobileNav } from '../components/common/MobileNav';
+import { useAuth } from '../hooks/useAuth';
 
 export function AppLayout() {
+  const { isAuthenticated } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
 
   return (
     <div className="h-screen bg-slate-50 font-sans text-slate-900 antialiased flex flex-col overflow-hidden">
@@ -20,3 +26,4 @@ export function AppLayout() {
     </div>
   );
 }
+
