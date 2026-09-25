@@ -41,10 +41,10 @@ describe('Phase 12 — Accessibility, Responsive UI & Form Validation Audit (Sec
       fireEvent.click(menuBtn);
       expect(onToggle).toHaveBeenCalledTimes(1);
 
-      // Notification button has accessible label
-      const notifBtn = screen.getByRole('button', { name: /notifications/i });
-      expect(notifBtn).toBeInTheDocument();
-      expect(notifBtn).toHaveAttribute('aria-label', 'Notifications');
+      // User profile menu button has accessible label
+      const profileBtn = screen.getByRole('button', { name: /user profile menu/i });
+      expect(profileBtn).toBeInTheDocument();
+      expect(profileBtn).toHaveAttribute('aria-label', 'User profile menu');
     });
 
     it('renders accessible semantic navigation landmark and close button in Sidebar', () => {
@@ -77,18 +77,18 @@ describe('Phase 12 — Accessibility, Responsive UI & Form Validation Audit (Sec
       );
 
       const menuBtn = screen.getByRole('button', { name: /toggle navigation menu/i });
-      const notifBtn = screen.getByRole('button', { name: /notifications/i });
+      const profileBtn = screen.getByRole('button', { name: /user profile menu/i });
 
       // Interactive buttons have tabIndex >= 0 (accessible via Tab key)
       expect(menuBtn.tabIndex).toBeGreaterThanOrEqual(0);
-      expect(notifBtn.tabIndex).toBeGreaterThanOrEqual(0);
+      expect(profileBtn.tabIndex).toBeGreaterThanOrEqual(0);
 
       // Focus traversal works cleanly
       menuBtn.focus();
       expect(document.activeElement).toBe(menuBtn);
 
-      notifBtn.focus();
-      expect(document.activeElement).toBe(notifBtn);
+      profileBtn.focus();
+      expect(document.activeElement).toBe(profileBtn);
 
       // Enter key actuation
       fireEvent.keyDown(menuBtn, { key: 'Enter', code: 'Enter' });

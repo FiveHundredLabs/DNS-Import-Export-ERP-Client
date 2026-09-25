@@ -68,7 +68,7 @@ export function InvoiceDetailPage() {
   const isOverdue = invoice.status === 'OVERDUE';
 
   return (
-    <div className="max-w-5xl mx-auto space-y-5 pb-12">
+    <div className="w-full space-y-5 pb-12">
       {/* Top Bar with Navigation and Actions */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <Link to="/invoices">

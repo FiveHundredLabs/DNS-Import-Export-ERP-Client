@@ -119,7 +119,7 @@ export function PaymentDetailPage() {
   const isPending = payment.status === 'PENDING_APPROVAL';
 
   return (
-    <div className="max-w-4xl mx-auto space-y-5 pb-12">
+    <div className="w-full space-y-5 pb-12">
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <Link to="/payments">

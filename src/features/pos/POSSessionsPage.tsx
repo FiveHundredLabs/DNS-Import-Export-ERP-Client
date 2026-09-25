@@ -46,7 +46,7 @@ export function POSSessionsPage() {
   };
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6">
+    <div className="w-full space-y-5">
       {/* Header & Sub-navigation */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-200 pb-4">
         <div>

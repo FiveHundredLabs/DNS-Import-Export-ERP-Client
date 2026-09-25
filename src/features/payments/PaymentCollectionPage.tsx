@@ -199,7 +199,7 @@ export function PaymentCollectionPage() {
   };
 
   return (
-    <div className="max-w-5xl mx-auto space-y-5 pb-12">
+    <div className="w-full space-y-5 pb-12">
       {/* Top Header */}
       <div className="flex items-center justify-between">
         <Link to="/payments">

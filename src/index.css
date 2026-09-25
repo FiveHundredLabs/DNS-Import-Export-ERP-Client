@@ -68,19 +68,17 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Custom Scrollbars */
+/* Cross-browser scrollbar hiding while preserving scroll functionality */
+html,
+body,
+* {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* Legacy Edge */
+}
+
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-::-webkit-scrollbar-thumb {
-  background: #CBD5E1;
-  border-radius: 9999px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: #94A3B8;
+  display: none; /* Chrome, Safari, Opera */
+  width: 0px;
+  height: 0px;
 }
 
