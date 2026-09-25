@@ -104,8 +104,9 @@ export function CustomerListPage() {
       </div>
 
       {/* Filter toolbar */}
-      <div className="flex flex-col sm:flex-row gap-3 bg-white p-3 rounded-xl border border-slate-200">
+      <div className="flex flex-col sm:flex-row gap-3 bg-white p-3.5 rounded-2xl border border-slate-200/80 shadow-sm">
         <div className="relative flex-1">
+
           <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
           <Input
             placeholder="Search by code, customer name, contact person, or phone..."

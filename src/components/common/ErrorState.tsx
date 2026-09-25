@@ -14,8 +14,9 @@ export function ErrorState({
   onRetry,
 }: ErrorStateProps) {
   return (
-    <div className="flex flex-col items-center justify-center rounded-xl border border-rose-200 bg-rose-50/50 p-8 text-center my-4">
-      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-rose-100 text-rose-600">
+    <div className="flex flex-col items-center justify-center rounded-2xl border border-rose-200/80 bg-rose-50/40 p-8 text-center my-4 shadow-xs">
+      <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-rose-100 text-rose-600 border border-rose-200">
+
         <AlertCircle className="h-6 w-6" />
       </div>
       <h3 className="mt-3 text-base font-semibold text-rose-900">{title}</h3>

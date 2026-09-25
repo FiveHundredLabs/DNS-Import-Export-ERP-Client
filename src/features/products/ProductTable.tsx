@@ -24,8 +24,9 @@ export function ProductTable({
   const canProposePrice = hasPermission('products:price_approval') || canEdit;
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white shadow-xs overflow-hidden">
+    <div className="rounded-2xl border border-slate-200/80 bg-white shadow-sm overflow-hidden">
       <Table>
+
         <TableHeader>
           <TableRow>
             <TableHead>Product / SKU</TableHead>

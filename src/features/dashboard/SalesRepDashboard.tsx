@@ -19,31 +19,32 @@ import { Link } from 'react-router-dom';
 
 export function SalesRepDashboard() {
   return (
-    <div className="space-y-5 pb-16 md:pb-0">
+    <div className="space-y-6 pb-16 md:pb-0">
       {/* Mobile-first Header Banner */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-gradient-to-r from-indigo-700 to-indigo-900 text-white p-5 rounded-xl shadow-sm">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white p-6 rounded-2xl border border-slate-800 shadow-md">
         <div>
-          <span className="text-[11px] font-semibold tracking-wider uppercase text-indigo-200">
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-wider uppercase bg-sky-500/20 text-sky-300 border border-sky-500/30 mb-2">
             Field Representative Hub
           </span>
-          <h1 className="text-xl font-bold">Good Day, Kasun</h1>
-          <p className="text-xs text-indigo-100">
-            Colombo Central Territory • 14 Assigned Dealers
+          <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white">Good Day, Kasun</h1>
+          <p className="text-xs text-slate-300 mt-0.5">
+            Colombo Central Territory • 14 Assigned Dealers • Active Cycle
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2.5 shrink-0">
           <Link to="/customers">
-            <Button size="sm" variant="secondary" className="gap-1.5 text-xs">
-              <Users className="h-3.5 w-3.5" /> Customer Hub
+            <Button size="sm" variant="secondary" className="gap-1.5 text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700">
+              <Users className="h-3.5 w-3.5 text-sky-400" /> Customer Hub
             </Button>
           </Link>
           <Link to="/orders">
-            <Button size="sm" className="gap-1.5 text-xs bg-white text-indigo-900 hover:bg-slate-100">
+            <Button size="sm" className="gap-1.5 text-xs bg-sky-500 hover:bg-sky-600 text-white font-bold shadow-md shadow-sky-500/25">
               <PlusCircle className="h-3.5 w-3.5" /> New Order
             </Button>
           </Link>
         </div>
       </div>
+
 
       {/* KPI Metrics */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
