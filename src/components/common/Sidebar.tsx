@@ -66,6 +66,16 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
 
   const isDashboardActive = location.pathname === '/';
 
+  // Inline style guarantees var(--primary) renders exactly — bypasses Tailwind opacity issues
+  const activeNavStyle: React.CSSProperties = {
+    backgroundColor: 'var(--primary)',
+    color: 'var(--primary-foreground)',
+  };
+  const activeSubStyle: React.CSSProperties = {
+    backgroundColor: 'var(--primary)',
+    color: 'var(--primary-foreground)',
+  };
+
   return (
     <>
       {/* Mobile Backdrop */}
@@ -102,12 +112,12 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
           <div>
             <div
               onClick={() => setDashboardExpanded(!dashboardExpanded)}
-              className={cn(
-                'flex items-center justify-between rounded-2xl px-4 py-3 text-xs font-bold transition-all cursor-pointer shadow-sm',
+              className="flex items-center justify-between rounded-2xl px-4 py-3 text-xs font-bold transition-all cursor-pointer shadow-sm"
+              style={
                 isDashboardActive && !location.search.includes('tab=settings')
-                  ? 'bg-primary text-primary-foreground shadow-md'
-                  : 'text-slate-700 hover:bg-slate-50'
-              )}
+                  ? activeNavStyle
+                  : undefined
+              }
             >
               <NavLink
                 to="/"
@@ -150,9 +160,12 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                     cn(
                       'flex items-center gap-2 rounded-xl px-3 py-1.5 text-[11px] font-semibold transition-colors',
                       isActive && !location.search.includes('tab=settings')
-                        ? 'text-primary bg-primary-light font-bold border-r-2 border-primary'
-                        : 'text-slate-500 hover:text-primary hover:bg-primary-light/40'
+                        ? 'font-bold shadow-sm'
+                        : 'text-slate-500 hover:text-primary hover:bg-primary-light/50'
                     )
+                  }
+                  style={({ isActive }) =>
+                    isActive && !location.search.includes('tab=settings') ? activeSubStyle : undefined
                   }
                 >
                   <Activity className="h-3 w-3 shrink-0" />
@@ -166,9 +179,10 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                     onClick={onClose}
                     className={
                       location.search.includes('tab=settings')
-                        ? 'flex items-center gap-2 rounded-xl px-3 py-1.5 text-[11px] font-bold text-primary bg-primary-light border-r-2 border-primary transition-colors'
-                        : 'flex items-center gap-2 rounded-xl px-3 py-1.5 text-[11px] font-semibold text-slate-500 hover:text-primary hover:bg-primary-light/40 transition-colors'
+                        ? 'flex items-center gap-2 rounded-xl px-3 py-1.5 text-[11px] font-bold shadow-sm transition-colors'
+                        : 'flex items-center gap-2 rounded-xl px-3 py-1.5 text-[11px] font-semibold text-slate-500 hover:text-primary hover:bg-primary-light/50 transition-colors'
                     }
+                    style={location.search.includes('tab=settings') ? activeSubStyle : undefined}
                   >
                     <Settings className="h-3 w-3 shrink-0" />
                     <span>Theme & Appearance</span>
@@ -182,10 +196,11 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                     cn(
                       'flex items-center gap-2 rounded-xl px-3 py-1.5 text-[11px] font-semibold transition-colors',
                       isActive
-                        ? 'text-primary bg-primary-light font-bold border-r-2 border-primary'
-                        : 'text-slate-500 hover:text-primary hover:bg-primary-light/40'
+                        ? 'font-bold shadow-sm'
+                        : 'text-slate-500 hover:text-primary hover:bg-primary-light/50'
                     )
                   }
+                  style={({ isActive }) => (isActive ? activeSubStyle : undefined)}
                 >
                   <CheckCircle className="h-3 w-3 shrink-0" />
                   <span>Approvals In-Tray</span>
@@ -198,10 +213,11 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                     cn(
                       'flex items-center gap-2 rounded-xl px-3 py-1.5 text-[11px] font-semibold transition-colors',
                       isActive
-                        ? 'text-primary bg-primary-light font-bold border-r-2 border-primary'
-                        : 'text-slate-500 hover:text-primary hover:bg-primary-light/40'
+                        ? 'font-bold shadow-sm'
+                        : 'text-slate-500 hover:text-primary hover:bg-primary-light/50'
                     )
                   }
+                  style={({ isActive }) => (isActive ? activeSubStyle : undefined)}
                 >
                   <Lightbulb className="h-3 w-3 shrink-0" />
                   <span>Insights & Analytics</span>
@@ -227,10 +243,11 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                       cn(
                         'group flex items-center justify-between rounded-xl px-3.5 py-2 text-xs font-semibold transition-all',
                         isActive
-                          ? 'bg-primary-light text-primary font-bold shadow-xs border-r-4 border-primary'
-                          : 'text-slate-600 hover:bg-primary-light/40 hover:text-primary'
+                          ? 'font-bold shadow-sm'
+                          : 'text-slate-600 hover:bg-primary-light/50 hover:text-primary'
                       )
                     }
+                    style={({ isActive }) => (isActive ? activeNavStyle : undefined)}
                   >
                     <div className="flex items-center gap-3">
                       <Icon className="h-4 w-4 shrink-0 transition-colors" />
@@ -260,10 +277,11 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                         cn(
                           'group flex items-center justify-between rounded-xl px-3.5 py-2 text-xs font-semibold transition-all',
                           isActive
-                            ? 'bg-primary-light text-primary font-bold shadow-xs border-r-4 border-primary'
-                            : 'text-slate-600 hover:bg-primary-light/40 hover:text-primary'
+                            ? 'font-bold shadow-sm'
+                            : 'text-slate-600 hover:bg-primary-light/50 hover:text-primary'
                         )
                       }
+                      style={({ isActive }) => (isActive ? activeNavStyle : undefined)}
                     >
                       <div className="flex items-center gap-3">
                         <Icon className="h-4 w-4 shrink-0 transition-colors" />
@@ -289,10 +307,11 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                   cn(
                     'group flex items-center justify-between rounded-xl px-3.5 py-2 text-xs font-semibold transition-all',
                     isActive
-                      ? 'bg-primary-light text-primary font-bold shadow-xs border-r-4 border-primary'
-                      : 'text-slate-600 hover:bg-primary-light/40 hover:text-primary'
+                      ? 'font-bold shadow-sm'
+                      : 'text-slate-600 hover:bg-primary-light/50 hover:text-primary'
                   )
                 }
+                style={({ isActive }) => (isActive ? activeNavStyle : undefined)}
               >
                 <div className="flex items-center gap-3">
                   <Users className="h-4 w-4 shrink-0 transition-colors" />
