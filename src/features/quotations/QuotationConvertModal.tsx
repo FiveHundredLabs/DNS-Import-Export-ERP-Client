@@ -65,7 +65,7 @@ export function QuotationConvertModal({
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-slate-900">
-            <ShoppingCart className="h-5 w-5 text-indigo-600" />
+            <ShoppingCart className="h-5 w-5 text-primary" />
             Convert Quotation to Sales Order
           </DialogTitle>
           <DialogDescription>
@@ -100,7 +100,7 @@ export function QuotationConvertModal({
               </div>
               <div className="flex justify-between border-t border-slate-200 pt-2 font-bold">
                 <span className="text-slate-700">Total Order Value:</span>
-                <span className="text-indigo-700">{formatCurrency(convertedOrder.totalAmount)}</span>
+                <span className="text-primary-text">{formatCurrency(convertedOrder.totalAmount)}</span>
               </div>
             </div>
 
@@ -118,12 +118,12 @@ export function QuotationConvertModal({
               </div>
             )}
 
-            <div className="rounded-lg border border-indigo-100 bg-indigo-50/70 p-3 text-xs text-indigo-900 space-y-1">
+            <div className="rounded-lg border border-primary-border/40 bg-primary-light/70 p-3 text-xs text-indigo-900 space-y-1">
               <div className="flex items-center gap-1.5 font-bold">
-                <ShieldCheck className="h-4 w-4 text-indigo-600" />
+                <ShieldCheck className="h-4 w-4 text-primary" />
                 Snapshot Integrity Guaranteed
               </div>
-              <p className="text-[11px] text-indigo-700 leading-relaxed">
+              <p className="text-[11px] text-primary-text leading-relaxed">
                 Unit prices, discounts, and item specifications from quotation{' '}
                 <span className="font-mono font-semibold">{quotation.quotationNumber}</span> are locked and
                 copied as immutable snapshots. Future price changes to the Product Master will not alter this order.
@@ -137,7 +137,7 @@ export function QuotationConvertModal({
               </div>
               <div>
                 <span className="text-slate-500">Total Quoted Value:</span>
-                <p className="font-semibold text-indigo-700">{formatCurrency(quotation.totalAmount)}</p>
+                <p className="font-semibold text-primary-text">{formatCurrency(quotation.totalAmount)}</p>
               </div>
             </div>
 
@@ -188,7 +188,7 @@ export function QuotationConvertModal({
                 size="sm"
                 onClick={handleConvert}
                 disabled={isSubmitting || !deliveryAddress}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white gap-1.5"
+                className="bg-primary hover:bg-primary-hover text-primary-foreground gap-1.5"
               >
                 {isSubmitting ? 'Converting...' : 'Confirm Conversion'}
                 <ArrowRight className="h-3.5 w-3.5" />

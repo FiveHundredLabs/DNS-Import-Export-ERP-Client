@@ -117,7 +117,7 @@ export function OrderListPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-xl font-bold tracking-tight text-slate-900 flex items-center gap-2">
-            <ShoppingCart className="h-6 w-6 text-indigo-600" />
+            <ShoppingCart className="h-6 w-6 text-primary" />
             Sales Orders & Approvals
           </h1>
           <p className="text-xs text-slate-500 mt-1">
@@ -130,16 +130,16 @@ export function OrderListPage() {
             variant="outline"
             size="sm"
             onClick={() => navigate('/orders/tracking')}
-            className="text-xs gap-1.5 border-indigo-200 text-indigo-700 hover:bg-indigo-50"
+            className="text-xs gap-1.5 border-primary-border text-primary-text hover:bg-primary-light"
           >
-            <Activity className="h-3.5 w-3.5 text-indigo-600" />
+            <Activity className="h-3.5 w-3.5 text-primary" />
             Pipeline Tracking
           </Button>
 
           <Button
             size="sm"
             onClick={() => navigate('/orders/new')}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs gap-1.5 shadow-xs"
+            className="bg-primary hover:bg-primary-hover text-primary-foreground text-xs gap-1.5 shadow-xs"
           >
             <Plus className="h-3.5 w-3.5" />
             New Sales Order
@@ -152,7 +152,7 @@ export function OrderListPage() {
         <Card className="p-4 bg-white border border-slate-200">
           <div className="flex items-center justify-between">
             <span className="text-xs font-medium text-slate-500">Total Filtered</span>
-            <ShoppingCart className="h-4 w-4 text-indigo-500" />
+            <ShoppingCart className="h-4 w-4 text-primary" />
           </div>
           <div className="mt-2 text-xl font-bold text-slate-900">{total} Orders</div>
           <div className="text-[11px] text-slate-400 mt-0.5">Active order portfolio</div>
@@ -172,9 +172,9 @@ export function OrderListPage() {
         <Card className="p-4 bg-white border border-slate-200">
           <div className="flex items-center justify-between">
             <span className="text-xs font-medium text-sky-700">In Fulfillment</span>
-            <Truck className="h-4 w-4 text-sky-600" />
+            <Truck className="h-4 w-4 text-primary" />
           </div>
-          <div className="mt-2 text-xl font-bold text-sky-600">{inFulfillmentCount}</div>
+          <div className="mt-2 text-xl font-bold text-primary">{inFulfillmentCount}</div>
           <div className="text-[11px] text-slate-400 mt-0.5">Picking, Invoiced, or Dispatched</div>
         </Card>
 
@@ -212,7 +212,7 @@ export function OrderListPage() {
                 <select
                   value={filters.customerId || ''}
                   onChange={(e) => handleCustomerFilter(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2 text-xs rounded-md border border-slate-200 bg-white focus:outline-hidden focus:ring-1 focus:ring-indigo-500"
+                  className="w-full pl-9 pr-3 py-2 text-xs rounded-md border border-slate-200 bg-white focus:outline-hidden focus:ring-1 focus:ring-primary"
                 >
                   <option value="">All Customers</option>
                   {customers.map((c) => (
@@ -298,7 +298,7 @@ export function OrderListPage() {
                   onClick={() => handleStatusFilter(tab.value)}
                   className={`px-3 py-1.5 rounded-full font-medium transition-colors shrink-0 text-xs ${
                     isActive
-                      ? 'bg-indigo-600 text-white shadow-xs'
+                      ? 'bg-primary text-primary-foreground shadow-xs'
                       : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                   }`}
                 >
@@ -337,7 +337,7 @@ export function OrderListPage() {
               <Button
                 size="sm"
                 onClick={() => navigate('/orders/new')}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs mt-2"
+                className="bg-primary hover:bg-primary-hover text-primary-foreground text-xs mt-2"
               >
                 Create First Order
               </Button>
@@ -350,7 +350,7 @@ export function OrderListPage() {
                     <TableHead className="w-[140px]">
                       <button
                         onClick={handleToggleSort}
-                        className="flex items-center gap-1 font-semibold text-slate-700 hover:text-indigo-600 text-xs"
+                        className="flex items-center gap-1 font-semibold text-slate-700 hover:text-primary text-xs"
                       >
                         Order #
                         <ArrowUpDown className="h-3 w-3" />
@@ -371,7 +371,7 @@ export function OrderListPage() {
                       <TableCell className="font-mono text-xs font-semibold text-slate-900">
                         <button
                           onClick={() => navigate(`/orders/${order.id}`)}
-                          className="hover:underline text-indigo-600 text-left"
+                          className="hover:underline text-primary text-left"
                         >
                           {order.orderNumber}
                         </button>

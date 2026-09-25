@@ -34,7 +34,7 @@ export function ProductDetailPage() {
     return (
       <div className="p-8 text-center">
         <h2 className="text-base font-semibold">Product not found.</h2>
-        <Link to="/products" className="text-indigo-600 text-xs underline mt-2 block">
+        <Link to="/products" className="text-primary text-xs underline mt-2 block">
           Return to Product Master
         </Link>
       </div>
@@ -108,8 +108,8 @@ export function ProductDetailPage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-2 gap-3 text-xs">
-                  <div className="p-3 bg-indigo-50/50 rounded-lg border border-indigo-100">
-                    <span className="text-indigo-600 block text-[10px] uppercase font-semibold">Available for Sale</span>
+                  <div className="p-3 bg-primary-light/50 rounded-lg border border-primary-border/40">
+                    <span className="text-primary block text-[10px] uppercase font-semibold">Available for Sale</span>
                     <span className="text-xl font-bold text-indigo-900">{product.stockOnHand} {product.uomCode}</span>
                   </div>
                   <div className="p-3 bg-rose-50/50 rounded-lg border border-rose-100">

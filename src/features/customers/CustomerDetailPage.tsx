@@ -33,7 +33,7 @@ export function CustomerDetailPage() {
     return (
       <div className="p-8 text-center">
         <h2 className="text-base font-semibold">Customer record not found.</h2>
-        <Link to="/customers" className="text-indigo-600 text-xs underline mt-2 block">
+        <Link to="/customers" className="text-primary text-xs underline mt-2 block">
           Return to Customer Master
         </Link>
       </div>
@@ -56,7 +56,7 @@ export function CustomerDetailPage() {
               ? ' This account is assigned to another Sales Representative.'
               : ' This account belongs to another operational area.'}
           </p>
-          <Link to="/customers" className="text-indigo-600 text-xs font-semibold underline mt-4 block">
+          <Link to="/customers" className="text-primary text-xs font-semibold underline mt-4 block">
             Return to Authorized Customer List
           </Link>
         </div>

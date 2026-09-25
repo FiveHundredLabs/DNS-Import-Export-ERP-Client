@@ -109,7 +109,7 @@ export function PaymentDetailPage() {
       <div className="p-12 text-center max-w-md mx-auto">
         <h2 className="text-base font-bold text-slate-900">Payment Not Found</h2>
         <p className="text-xs text-slate-500 mt-2">The requested payment receipt record could not be found.</p>
-        <Link to="/payments" className="text-indigo-600 text-xs font-semibold underline mt-4 block">
+        <Link to="/payments" className="text-primary text-xs font-semibold underline mt-4 block">
           Return to Payments Registry
         </Link>
       </div>
@@ -182,7 +182,7 @@ export function PaymentDetailPage() {
           {/* Header */}
           <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 border-b border-slate-200 pb-6">
             <div>
-              <div className="font-mono text-xl font-bold text-indigo-700">
+              <div className="font-mono text-xl font-bold text-primary-text">
                 {payment.receiptNumber}
               </div>
               <p className="text-xs text-slate-500 mt-1">
@@ -213,7 +213,7 @@ export function PaymentDetailPage() {
                 Customer Details
               </span>
               <div className="font-bold text-slate-900 text-sm">
-                <Link to={`/customers/${payment.customerId}`} className="hover:underline text-indigo-600">
+                <Link to={`/customers/${payment.customerId}`} className="hover:underline text-primary">
                   {payment.customerName}
                 </Link>
               </div>
@@ -282,7 +282,7 @@ export function PaymentDetailPage() {
                   <TableBody>
                     {payment.invoiceAllocations.map((alloc) => (
                       <TableRow key={alloc.invoiceId}>
-                        <TableCell className="font-mono text-xs font-semibold text-indigo-600">
+                        <TableCell className="font-mono text-xs font-semibold text-primary">
                           <Link to={`/invoices/${alloc.invoiceId}`} className="hover:underline">
                             {alloc.invoiceNumber}
                           </Link>
@@ -293,7 +293,7 @@ export function PaymentDetailPage() {
                         <TableCell className="text-right">
                           <Link
                             to={`/invoices/${alloc.invoiceId}`}
-                            className="text-xs text-indigo-600 hover:underline"
+                            className="text-xs text-primary hover:underline"
                           >
                             View Invoice
                           </Link>

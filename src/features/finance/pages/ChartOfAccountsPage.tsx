@@ -137,7 +137,7 @@ export function ChartOfAccountsPage() {
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-2xl font-bold tracking-tight text-slate-900">Chart of Accounts</h1>
-            <Badge variant="outline" className="bg-indigo-50 text-indigo-700 border-indigo-200 text-xs">
+            <Badge variant="outline" className="bg-primary-light text-primary-text border-primary-border text-xs">
               Double-Entry General Ledger
             </Badge>
           </div>
@@ -154,7 +154,7 @@ export function ChartOfAccountsPage() {
               setTargetSubClass('OPERATING_EXPENSE');
               setModalOpen(true);
             }}
-            className="gap-2 bg-indigo-600 hover:bg-indigo-700"
+            className="gap-2 bg-primary hover:bg-primary-hover"
           >
             <Plus className="h-4 w-4" />
             <span>Create Sub-Account</span>
@@ -167,7 +167,7 @@ export function ChartOfAccountsPage() {
         <Card className="p-4 border-slate-200">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Total Accounts</span>
-            <BookOpen className="h-4 w-4 text-indigo-600" />
+            <BookOpen className="h-4 w-4 text-primary" />
           </div>
           <div className="mt-2 flex items-baseline gap-2">
             <span className="text-2xl font-bold text-slate-900">{accounts.length}</span>
@@ -200,7 +200,7 @@ export function ChartOfAccountsPage() {
         <Card className="p-4 border-slate-200">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Primary Bank Float</span>
-            <DollarSign className="h-4 w-4 text-blue-600" />
+            <DollarSign className="h-4 w-4 text-primary" />
           </div>
           <div className="mt-2 flex items-baseline gap-2">
             <span className="text-xl font-bold text-slate-900">
@@ -250,7 +250,7 @@ export function ChartOfAccountsPage() {
                   ) : (
                     <ChevronDown className="h-4 w-4 text-slate-500" />
                   )}
-                  <FolderOpen className="h-4 w-4 text-indigo-600" />
+                  <FolderOpen className="h-4 w-4 text-primary" />
                   <div>
                     <span className="text-xs font-bold text-slate-800 uppercase tracking-wider">{group.name}</span>
                     <span className="ml-2 rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-semibold text-slate-700">
@@ -273,7 +273,7 @@ export function ChartOfAccountsPage() {
                       e.stopPropagation();
                       openCreateForGroup(group);
                     }}
-                    className="h-7 text-xs text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50"
+                    className="h-7 text-xs text-primary hover:text-primary hover:bg-primary-light"
                   >
                     <Plus className="h-3 w-3 mr-1" />
                     <span>Add Sub-Account</span>
@@ -295,7 +295,7 @@ export function ChartOfAccountsPage() {
                         className="flex items-center justify-between px-6 py-3 text-xs hover:bg-slate-50/60 transition-colors"
                       >
                         <div className="flex items-center gap-3 flex-1 min-w-0 pr-4">
-                          <span className="font-mono font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100 shrink-0">
+                          <span className="font-mono font-bold text-primary-text bg-primary-light px-2 py-0.5 rounded border border-primary-border/40 shrink-0">
                             {account.code}
                           </span>
 

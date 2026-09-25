@@ -49,7 +49,7 @@ export function GeneralLedgerPage() {
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-2xl font-bold tracking-tight text-slate-900">General Ledger Explorer</h1>
-            <Badge variant="outline" className="bg-indigo-50 text-indigo-700 border-indigo-200 text-xs">
+            <Badge variant="outline" className="bg-primary-light text-primary-text border-primary-border text-xs">
               Account Transaction Statement
             </Badge>
           </div>
@@ -94,10 +94,10 @@ export function GeneralLedgerPage() {
 
           <Card className="p-4 border-slate-200">
             <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Total Period Debits</span>
-            <div className="mt-2 text-xl font-bold text-indigo-700 font-mono">
+            <div className="mt-2 text-xl font-bold text-primary-text font-mono">
               {formatCurrency(report.totalDebits)}
             </div>
-            <span className="text-[11px] text-indigo-500 font-medium">Inward / Additions</span>
+            <span className="text-[11px] text-primary font-medium">Inward / Additions</span>
           </Card>
 
           <Card className="p-4 border-slate-200">
@@ -108,12 +108,12 @@ export function GeneralLedgerPage() {
             <span className="text-[11px] text-slate-400">Outward / Deductions</span>
           </Card>
 
-          <Card className="p-4 border-slate-200 bg-indigo-50/40 border-indigo-100">
+          <Card className="p-4 border-slate-200 bg-primary-light/40 border-primary-border/40">
             <span className="text-xs font-semibold uppercase tracking-wider text-indigo-900">Closing Balance</span>
             <div className="mt-2 text-xl font-bold text-indigo-950 font-mono">
               {formatCurrency(report.closingBalance)}
             </div>
-            <span className="text-[11px] text-indigo-600 font-medium">As of {dateFilter.endDate}</span>
+            <span className="text-[11px] text-primary font-medium">As of {dateFilter.endDate}</span>
           </Card>
         </div>
       )}
@@ -122,7 +122,7 @@ export function GeneralLedgerPage() {
       <Card className="overflow-hidden border-slate-200 bg-white shadow-sm">
         <div className="border-b border-slate-200 bg-slate-50 px-6 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <BookOpen className="h-4 w-4 text-indigo-600" />
+            <BookOpen className="h-4 w-4 text-primary" />
             <span className="text-xs font-bold text-slate-800 uppercase tracking-wider">
               {selectedAccount?.code} — {selectedAccount?.name}
             </span>
@@ -174,7 +174,7 @@ export function GeneralLedgerPage() {
                 report?.transactions.map((t, idx) => (
                   <tr key={`${t.journalId}-${idx}`} className="hover:bg-slate-50/60 transition-colors">
                     <td className="px-4 py-3 text-slate-600">{formatDate(t.date)}</td>
-                    <td className="px-4 py-3 font-mono font-bold text-indigo-700">{t.entryNumber}</td>
+                    <td className="px-4 py-3 font-mono font-bold text-primary-text">{t.entryNumber}</td>
                     <td className="px-4 py-3">
                       <Badge variant="outline" className="font-mono text-[10px] bg-slate-50">
                         {t.source}
@@ -186,7 +186,7 @@ export function GeneralLedgerPage() {
                         <div className="font-mono text-[11px] text-slate-400">Ref: {t.reference}</div>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-right font-mono font-medium text-indigo-700">
+                    <td className="px-4 py-3 text-right font-mono font-medium text-primary-text">
                       {t.debit > 0 ? formatCurrency(t.debit) : '—'}
                     </td>
                     <td className="px-4 py-3 text-right font-mono font-medium text-slate-700">
@@ -204,7 +204,7 @@ export function GeneralLedgerPage() {
                 <td colSpan={4} className="px-4 py-3.5 uppercase tracking-wider">
                   Closing Balance as of {dateFilter.endDate}
                 </td>
-                <td className="px-4 py-3.5 text-right font-mono text-indigo-800">
+                <td className="px-4 py-3.5 text-right font-mono text-primary-text">
                   {formatCurrency(report?.totalDebits || 0)}
                 </td>
                 <td className="px-4 py-3.5 text-right font-mono text-slate-800">

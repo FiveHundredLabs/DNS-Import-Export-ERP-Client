@@ -55,7 +55,7 @@ export function ModulePlaceholder({
       <Card className="border-slate-200">
         <CardHeader>
           <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-lg bg-indigo-50 text-indigo-600">
+            <div className="p-2.5 rounded-lg bg-primary-light text-primary">
               <Icon className="h-6 w-6" />
             </div>
             <div>
@@ -74,7 +74,7 @@ export function ModulePlaceholder({
             <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-slate-700">
               {features.map((f, i) => (
                 <li key={i} className="flex items-center gap-2">
-                  <span className="h-1.5 w-1.5 rounded-full bg-indigo-500" />
+                  <span className="h-1.5 w-1.5 rounded-full bg-primary-light" />
                   <span>{f}</span>
                 </li>
               ))}

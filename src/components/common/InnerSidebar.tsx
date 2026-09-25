@@ -89,7 +89,7 @@ export function InnerSidebar({
           <button
             type="button"
             onClick={handleBack}
-            className="flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-indigo-600 transition-colors"
+            className="flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-primary transition-colors"
             title={`Return to ${backLabel}`}
           >
             <ArrowLeft className="h-4 w-4" />
@@ -151,7 +151,7 @@ export function InnerSidebar({
                       className={cn(
                         'flex cursor-pointer items-center justify-between rounded-lg px-2.5 py-2 text-xs font-medium transition-colors',
                         isActive
-                          ? 'text-indigo-700 font-semibold'
+                          ? 'text-primary-text font-semibold'
                           : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
                       )}
                       onClick={() => toggleGroup(item.path)}
@@ -161,7 +161,7 @@ export function InnerSidebar({
                         onClick={(e) => e.stopPropagation()}
                         className="flex items-center gap-2.5 flex-1 min-w-0"
                       >
-                        <Icon className={cn('h-4 w-4 shrink-0', isActive ? 'text-indigo-600' : 'text-slate-400')} />
+                        <Icon className={cn('h-4 w-4 shrink-0', isActive ? 'text-primary' : 'text-slate-400')} />
                         <span className="truncate">{item.name}</span>
                       </NavLink>
 
@@ -195,7 +195,7 @@ export function InnerSidebar({
                                 cn(
                                   'flex items-center gap-2 rounded-md px-2 py-1.5 text-[11px] font-medium transition-colors',
                                   isSubActive
-                                    ? 'bg-indigo-50 text-indigo-700 font-semibold'
+                                    ? 'bg-primary-light text-primary-text font-semibold'
                                     : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'
                                 )
                               }
@@ -213,7 +213,7 @@ export function InnerSidebar({
                     to={item.path}
                     className={cn(
                       'flex items-center justify-center rounded-lg p-2 text-xs font-medium transition-colors',
-                      isActive ? 'bg-indigo-50 text-indigo-700' : 'text-slate-600 hover:bg-slate-50'
+                      isActive ? 'bg-primary-light text-primary-text' : 'text-slate-600 hover:bg-slate-50'
                     )}
                     title={item.name}
                   >
@@ -233,14 +233,14 @@ export function InnerSidebar({
                 cn(
                   'flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-medium transition-colors',
                   isDirectActive
-                    ? 'bg-indigo-50 text-indigo-700 font-semibold shadow-xs'
+                    ? 'bg-primary-light text-primary-text font-semibold shadow-xs'
                     : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900',
                   collapsed && 'justify-center px-2'
                 )
               }
               title={collapsed ? item.name : undefined}
             >
-              <Icon className={cn('h-4 w-4 shrink-0', isActive ? 'text-indigo-600' : 'text-slate-400')} />
+              <Icon className={cn('h-4 w-4 shrink-0', isActive ? 'text-primary' : 'text-slate-400')} />
               {!collapsed && <span className="truncate">{item.name}</span>}
             </NavLink>
           );

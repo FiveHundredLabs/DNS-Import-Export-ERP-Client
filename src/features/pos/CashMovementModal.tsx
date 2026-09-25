@@ -58,7 +58,7 @@ export function CashMovementModal({
       <div className="relative w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl transition-all border border-slate-200">
         <div className="flex items-center justify-between pb-3 border-b border-slate-100">
           <div className="flex items-center gap-2">
-            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600">
+            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary-light text-primary">
               <DollarSign className="h-5 w-5" />
             </span>
             <div>
@@ -150,7 +150,7 @@ export function CashMovementModal({
               }
               value={reason}
               onChange={(e) => setReason(e.target.value)}
-              className="w-full rounded-lg border border-slate-300 p-2.5 text-xs text-slate-900 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+              className="w-full rounded-lg border border-slate-300 p-2.5 text-xs text-slate-900 focus:border-primary focus:ring-1 focus:ring-primary"
               required
             />
           </div>

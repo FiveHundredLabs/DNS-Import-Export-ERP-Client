@@ -140,7 +140,7 @@ export function WarrantyHubPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-4">
         <div>
           <h1 className="text-xl font-bold text-slate-900 flex items-center gap-2">
-            <ShieldCheck className="h-6 w-6 text-indigo-600" />
+            <ShieldCheck className="h-6 w-6 text-primary" />
             Warranty & Claims Hub
           </h1>
           <p className="text-xs text-slate-500 mt-1">
@@ -149,7 +149,7 @@ export function WarrantyHubPage() {
         </div>
         <Button
           onClick={() => setIsNewClaimOpen(true)}
-          className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs h-9 gap-1.5 shadow-sm"
+          className="bg-primary hover:bg-primary-hover text-primary-foreground text-xs h-9 gap-1.5 shadow-sm"
         >
           <PlusCircle className="h-4 w-4" />
           Lodge Warranty Claim
@@ -291,7 +291,7 @@ export function WarrantyHubPage() {
                           <TableCell className="text-xs text-slate-700 font-medium">
                             {rec.customerName}
                           </TableCell>
-                          <TableCell className="font-mono text-xs text-indigo-600">
+                          <TableCell className="font-mono text-xs text-primary">
                             {rec.invoiceNumber}
                           </TableCell>
                           <TableCell>
@@ -419,7 +419,7 @@ export function WarrantyHubPage() {
                                   variant="ghost"
                                   size="sm"
                                   onClick={() => setResolvingClaim(claim)}
-                                  className="text-[11px] h-7 px-2 text-indigo-600 hover:text-indigo-800 font-semibold"
+                                  className="text-[11px] h-7 px-2 text-primary hover:text-primary-text font-semibold"
                                 >
                                   Resolve
                                 </Button>

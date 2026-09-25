@@ -35,7 +35,7 @@ export function StockMovementsPage() {
   const getMovementColor = (type: string) => {
     switch (type) {
       case 'GRN_INWARD': return 'bg-green-500';
-      case 'SALES_ISSUE': return 'bg-blue-500';
+      case 'SALES_ISSUE': return 'bg-primary-light';
       case 'TRANSFER_OUT': return 'bg-orange-500';
       case 'TRANSFER_IN': return 'bg-cyan-500';
       case 'DAMAGE_WRITE_OFF': return 'bg-red-500';

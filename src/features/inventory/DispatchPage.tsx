@@ -50,7 +50,7 @@ export function DispatchPage() {
     switch (status) {
       case 'ISSUED': return 'bg-purple-500';
       case 'INVOICED': return 'bg-cyan-500';
-      case 'DISPATCHED': return 'bg-blue-500';
+      case 'DISPATCHED': return 'bg-primary-light';
       case 'DELIVERED': return 'bg-green-500';
       default: return 'bg-gray-500';
     }

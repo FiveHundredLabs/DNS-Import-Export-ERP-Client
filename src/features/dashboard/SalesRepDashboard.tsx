@@ -146,7 +146,7 @@ export function SalesRepDashboard() {
             <div className="space-y-4">
               <div className="p-3 rounded-lg border border-slate-200 bg-white">
                 <div className="flex items-center justify-between mb-1.5">
-                  <span className="font-mono font-bold text-xs text-indigo-600">SO-1045</span>
+                  <span className="font-mono font-bold text-xs text-primary">SO-1045</span>
                   <Badge variant="warning">Special Approval</Badge>
                 </div>
                 <div className="text-xs text-slate-600">Muthurajawela Eng.</div>
@@ -159,7 +159,7 @@ export function SalesRepDashboard() {
 
               <div className="p-3 rounded-lg border border-slate-200 bg-white">
                 <div className="flex items-center justify-between mb-1.5">
-                  <span className="font-mono font-bold text-xs text-indigo-600">SO-1044</span>
+                  <span className="font-mono font-bold text-xs text-primary">SO-1044</span>
                   <Badge variant="success">Dispatched</Badge>
                 </div>
                 <div className="text-xs text-slate-600">Lanka Electrical Superstore</div>

@@ -97,7 +97,7 @@ export function ProductTable({
                         onClick={() => onProposePrice(p)}
                         title="Propose Selling Price Change"
                       >
-                        <TrendingUp className="h-4 w-4 text-indigo-600" />
+                        <TrendingUp className="h-4 w-4 text-primary" />
                       </Button>
                     )}
                     {canEdit && onEdit && (

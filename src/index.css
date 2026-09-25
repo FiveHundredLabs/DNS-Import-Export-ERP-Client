@@ -4,14 +4,15 @@
 
 @layer base {
   :root {
-    /* Dynamic ERP Primary Color System (Default: Light Blue #6AAED3) */
-    --primary-color: #6AAED3;
+    /* One Centralized Global Primary Color & Derived Theme Variables */
+    --primary: #6AAED3;
     --primary-hover: #559EC7;
     --primary-active: #468CB3;
+    --primary-foreground: #FFFFFF;
     --primary-light: #F0F7FB;
     --primary-border: #BEE0F0;
+    --primary-color: var(--primary);
     --primary-text: #24658B;
-    --primary-foreground: #FFFFFF;
     --primary-ring: rgba(106, 174, 211, 0.35);
 
     --background: 204 27% 97%; /* #F4F7F9 */
@@ -22,9 +23,6 @@
 
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 47.4% 11.2%;
-
-    --primary: var(--primary-color);
-    --primary-foreground: var(--primary-foreground);
 
     --secondary: 210 40% 96.1%;
     --secondary-foreground: 222.2 47.4% 11.2%;
@@ -52,8 +50,6 @@
     --card-foreground: 210 40% 98%;
     --popover: 222.2 84% 6.5%;
     --popover-foreground: 210 40% 98%;
-    --primary: 199 89% 48%;
-    --primary-foreground: 0 0% 100%;
     --secondary: 217.2 32.6% 17.5%;
     --secondary-foreground: 210 40% 98%;
     --muted: 217.2 32.6% 17.5%;
@@ -64,7 +60,6 @@
     --destructive-foreground: 210 40% 98%;
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
-    --ring: 199 89% 48%;
   }
 }
 

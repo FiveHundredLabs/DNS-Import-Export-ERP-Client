@@ -89,7 +89,7 @@ export function OrderTrackingPage() {
             Back to Sales Orders
           </button>
           <h1 className="text-xl font-bold tracking-tight text-slate-900 flex items-center gap-2">
-            <Activity className="h-6 w-6 text-indigo-600" />
+            <Activity className="h-6 w-6 text-primary" />
             Sales Rep Dedicated Order Tracking
           </h1>
           <p className="text-xs text-slate-500 mt-1">
@@ -120,7 +120,7 @@ export function OrderTrackingPage() {
           <Button
             size="sm"
             onClick={() => navigate('/orders/new')}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs mt-2"
+            className="bg-primary hover:bg-primary-hover text-primary-foreground text-xs mt-2"
           >
             Create Sales Order
           </Button>
@@ -157,7 +157,7 @@ export function OrderTrackingPage() {
                   <div className="flex items-center gap-3">
                     <div className="text-right">
                       <div className="text-[10px] text-slate-400 uppercase tracking-wider">Total Value</div>
-                      <div className="font-mono font-bold text-sm text-indigo-700">
+                      <div className="font-mono font-bold text-sm text-primary-text">
                         {formatCurrency(order.totalAmount)}
                       </div>
                     </div>
@@ -189,7 +189,7 @@ export function OrderTrackingPage() {
                         {/* Connecting bar */}
                         <div className="hidden sm:block absolute top-1/2 left-6 right-6 -translate-y-1/2 h-1 bg-slate-200 z-0">
                           <div
-                            className="h-full bg-indigo-600 transition-all duration-300"
+                            className="h-full bg-primary transition-all duration-300"
                             style={{
                               width: `${(stepIndex / (PIPELINE_STEPS.length - 1)) * 100}%`,
                             }}
@@ -213,7 +213,7 @@ export function OrderTrackingPage() {
                                     isDone
                                       ? 'bg-emerald-600 text-white'
                                       : isCurrent
-                                      ? 'bg-indigo-600 text-white ring-4 ring-indigo-100'
+                                      ? 'bg-primary text-white ring-4 ring-primary-light'
                                       : 'bg-slate-100 text-slate-400 border border-slate-200'
                                   }`}
                                 >
@@ -227,7 +227,7 @@ export function OrderTrackingPage() {
                                   <div
                                     className={`text-xs font-semibold ${
                                       isCurrent
-                                        ? 'text-indigo-700'
+                                        ? 'text-primary-text'
                                         : isDone
                                         ? 'text-slate-800'
                                         : 'text-slate-400'
@@ -238,7 +238,7 @@ export function OrderTrackingPage() {
                                   <div className="text-[10px] text-slate-500">
                                     {isDone && 'Completed'}
                                     {isCurrent && (
-                                      <span className="font-semibold text-indigo-600">
+                                      <span className="font-semibold text-primary">
                                         Current Stage
                                       </span>
                                     )}

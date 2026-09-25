@@ -99,9 +99,9 @@ export function BalancingBar({
             variant="outline"
             size="sm"
             onClick={onAutoBalance}
-            className="gap-1.5 text-xs text-indigo-700 border-indigo-200 bg-white hover:bg-indigo-50 shadow-xs"
+            className="gap-1.5 text-xs text-primary-text border-primary-border bg-white hover:bg-primary-light shadow-xs"
           >
-            <Wand2 className="h-3.5 w-3.5 text-indigo-600" />
+            <Wand2 className="h-3.5 w-3.5 text-primary" />
             <span>Auto-Balance ({formatCurrency(difference)})</span>
           </Button>
         )}

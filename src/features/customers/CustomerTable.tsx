@@ -108,7 +108,7 @@ export function CustomerTable({
                         onClick={() => onReviewCommercials(c)}
                         title="Review Commercial Terms"
                       >
-                        <CheckCircle2 className="h-4 w-4 text-indigo-600" />
+                        <CheckCircle2 className="h-4 w-4 text-primary" />
                       </Button>
                     )}
                     {onEdit && (

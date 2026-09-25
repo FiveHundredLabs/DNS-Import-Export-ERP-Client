@@ -93,7 +93,7 @@ export function SuppliersPage() {
         </div>
 
         <div className="flex items-center gap-2">
-          <Button onClick={handleOpenCreate} className="gap-2 bg-indigo-600 hover:bg-indigo-700">
+          <Button onClick={handleOpenCreate} className="gap-2 bg-primary hover:bg-primary-hover">
             <Plus className="h-4 w-4" />
             <span>Register Supplier</span>
           </Button>
@@ -105,7 +105,7 @@ export function SuppliersPage() {
         <Card className="p-4 border-slate-200">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Active Vendors</span>
-            <Building2 className="h-4 w-4 text-indigo-600" />
+            <Building2 className="h-4 w-4 text-primary" />
           </div>
           <div className="mt-2 flex items-baseline gap-2">
             <span className="text-2xl font-bold text-slate-900">
@@ -167,7 +167,7 @@ export function SuppliersPage() {
                   setPage(1);
                 }}
                 className={`rounded px-2.5 py-1 font-medium transition-colors ${
-                  statusFilter === st ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-600 hover:text-slate-900'
+                  statusFilter === st ? 'bg-white text-primary-text shadow-sm' : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
                 {st === 'ALL' ? 'All' : st === 'ACTIVE' ? 'Active' : 'Inactive'}
@@ -205,7 +205,7 @@ export function SuppliersPage() {
                   <tr key={sup.id} className="hover:bg-slate-50/60 transition-colors">
                     <td className="px-4 py-3.5">
                       <div className="font-semibold text-slate-900">{sup.name}</div>
-                      <div className="font-mono text-[11px] text-indigo-600 font-medium">{sup.code}</div>
+                      <div className="font-mono text-[11px] text-primary font-medium">{sup.code}</div>
                     </td>
                     <td className="px-4 py-3.5 font-medium text-slate-800">{sup.contactPerson}</td>
                     <td className="px-4 py-3.5 space-y-0.5">
@@ -247,7 +247,7 @@ export function SuppliersPage() {
                         <button
                           type="button"
                           onClick={() => handleOpenEdit(sup)}
-                          className="rounded p-1 text-slate-400 hover:bg-indigo-50 hover:text-indigo-600 transition-colors"
+                          className="rounded p-1 text-slate-400 hover:bg-primary-light hover:text-primary transition-colors"
                           title="Edit supplier"
                         >
                           <Edit className="h-4 w-4" />

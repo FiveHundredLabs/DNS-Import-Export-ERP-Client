@@ -63,9 +63,9 @@ const ROLE_METAS: Record<UserRole, RoleMeta> = {
     keyPermissions: ['Operational Approvals', 'Customer Credit Limits', 'GRN & Stock Oversight', 'Module Audits'],
     defaultPath: '/',
     badgeBg: 'bg-blue-100',
-    badgeText: 'text-blue-800 border-blue-200',
+    badgeText: 'text-blue-800 border-primary-border',
     accentBorder: 'hover:border-blue-400 group-hover:border-blue-400',
-    avatarBg: 'bg-blue-600 text-white',
+    avatarBg: 'bg-primary text-primary-foreground',
     icon: Briefcase,
   },
   SALES_MANAGER: {
@@ -75,10 +75,10 @@ const ROLE_METAS: Record<UserRole, RoleMeta> = {
     description: 'Sales pipeline monitoring, standard order approvals, credit term evaluations & quotation sign-offs.',
     keyPermissions: ['Quotation Approvals', 'Standard Order Authorizations', 'Credit Term Requests', 'Rep Commission Hub'],
     defaultPath: '/approvals',
-    badgeBg: 'bg-indigo-100',
-    badgeText: 'text-indigo-800 border-indigo-200',
-    accentBorder: 'hover:border-indigo-400 group-hover:border-indigo-400',
-    avatarBg: 'bg-indigo-600 text-white',
+    badgeBg: 'bg-primary-light',
+    badgeText: 'text-primary-text border-primary-border',
+    accentBorder: 'hover:border-primary group-hover:border-primary',
+    avatarBg: 'bg-primary text-primary-foreground',
     icon: TrendingUp,
   },
   FINANCE_MANAGER: {
@@ -239,11 +239,11 @@ export function LoginPage() {
   }, [activeCategory, searchQuery]);
 
   return (
-    <div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col justify-between selection:bg-indigo-500 selection:text-white">
+    <div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col justify-between selection:bg-primary selection:text-white">
       {/* Background glow effects */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute -top-40 left-1/4 h-96 w-96 rounded-full bg-indigo-600/15 blur-3xl" />
-        <div className="absolute top-1/3 -right-20 h-96 w-96 rounded-full bg-blue-600/10 blur-3xl" />
+        <div className="absolute -top-40 left-1/4 h-96 w-96 rounded-full bg-primary/15 blur-3xl" />
+        <div className="absolute top-1/3 -right-20 h-96 w-96 rounded-full bg-primary/10 blur-3xl" />
         <div className="absolute bottom-10 left-1/3 h-96 w-96 rounded-full bg-purple-600/10 blur-3xl" />
       </div>
 
@@ -251,13 +251,13 @@ export function LoginPage() {
       <header className="relative z-10 border-b border-slate-800 bg-slate-900/80 backdrop-blur px-6 py-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-tr from-indigo-600 to-indigo-500 text-white font-black text-base shadow-lg shadow-indigo-500/25 ring-1 ring-white/20">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground font-black text-base shadow-lg shadow-primary/25 ring-1 ring-white/20">
               DNS
             </div>
             <div>
               <div className="font-extrabold text-white tracking-tight text-base sm:text-lg flex items-center gap-2">
                 DNS DISTRIBUTION ERP
-                <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-primary-light/20 text-primary border border-primary/30">
                   ENTERPRISE v1.0
                 </span>
               </div>
@@ -272,11 +272,11 @@ export function LoginPage() {
             <div className="flex items-center gap-3 bg-slate-800/80 border border-slate-700/80 rounded-xl px-3 py-1.5 shadow-sm">
               <div className="text-right hidden sm:block">
                 <div className="text-xs font-semibold text-slate-200">{currentUser.name}</div>
-                <div className="text-[10px] text-indigo-400 font-medium">{currentUser.role.replace('_', ' ')}</div>
+                <div className="text-[10px] text-primary font-medium">{currentUser.role.replace('_', ' ')}</div>
               </div>
               <button
                 onClick={() => navigate(ROLE_METAS[currentUser.role]?.defaultPath || '/')}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow transition-colors"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary hover:bg-primary-hover text-primary-foreground text-xs font-semibold shadow transition-colors"
               >
                 Go to Workspace
                 <ArrowRight className="h-3.5 w-3.5" />
@@ -297,15 +297,15 @@ export function LoginPage() {
       <main className="relative z-10 flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 lg:p-8 flex flex-col justify-center">
         {/* Banner Alert if already signed in */}
         {isAuthenticated && currentUser && (
-          <div className="mb-6 rounded-xl border border-indigo-500/30 bg-indigo-950/40 p-4 text-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-lg">
+          <div className="mb-6 rounded-xl border border-primary/30 bg-indigo-950/40 p-4 text-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-lg">
             <div className="flex items-center gap-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-indigo-600/30 text-indigo-400 border border-indigo-500/40">
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/30 text-primary border border-primary/40">
                 <ShieldCheck className="h-5 w-5" />
               </div>
               <div>
                 <p className="text-xs sm:text-sm font-semibold text-white">
                   You are currently authenticated as{' '}
-                  <span className="text-indigo-300 font-bold">{currentUser.name}</span> ({currentUser.role.replace('_', ' ')})
+                  <span className="text-primary font-bold">{currentUser.name}</span> ({currentUser.role.replace('_', ' ')})
                 </p>
                 <p className="text-xs text-slate-400">
                   Select any example user below to switch to another role instantly, or return to your workspace.
@@ -314,7 +314,7 @@ export function LoginPage() {
             </div>
             <button
               onClick={() => navigate(ROLE_METAS[currentUser.role]?.defaultPath || '/')}
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition-all shadow-md shrink-0"
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-primary hover:bg-primary-hover text-primary-foreground text-xs font-bold transition-all shadow-md shrink-0"
             >
               Continue to Workspace
               <ChevronRight className="h-4 w-4" />
@@ -326,8 +326,8 @@ export function LoginPage() {
           {/* Left Column: Sign In Form (4 cols) */}
           <div className="lg:col-span-4 bg-slate-800/90 border border-slate-700/80 rounded-2xl p-6 sm:p-7 shadow-xl shadow-black/40 backdrop-blur">
             <div className="mb-6">
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 mb-3">
-                <Sparkles className="h-3 w-3 text-indigo-400" />
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-primary-light/20 text-primary border border-primary/30 mb-3">
+                <Sparkles className="h-3 w-3 text-primary" />
                 Sign In to ERP Portal
               </div>
               <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight">Enterprise Access</h1>
@@ -354,7 +354,7 @@ export function LoginPage() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="user@dnserp.com"
-                    className="w-full pl-10 pr-3 py-2.5 bg-slate-900/90 border border-slate-700 rounded-xl text-xs sm:text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                    className="w-full pl-10 pr-3 py-2.5 bg-slate-900/90 border border-slate-700 rounded-xl text-xs sm:text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
                   />
                 </div>
               </div>
@@ -372,7 +372,7 @@ export function LoginPage() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••"
-                    className="w-full pl-10 pr-10 py-2.5 bg-slate-900/90 border border-slate-700 rounded-xl text-xs sm:text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                    className="w-full pl-10 pr-10 py-2.5 bg-slate-900/90 border border-slate-700 rounded-xl text-xs sm:text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
                   />
                   <button
                     type="button"
@@ -391,11 +391,11 @@ export function LoginPage() {
                     type="checkbox"
                     checked={rememberMe}
                     onChange={(e) => setRememberMe(e.target.checked)}
-                    className="rounded border-slate-700 bg-slate-900 text-indigo-600 focus:ring-indigo-500"
+                    className="rounded border-slate-700 bg-slate-900 text-primary focus:ring-primary"
                   />
                   <span>Remember session</span>
                 </label>
-                <span className="text-[11px] text-indigo-400 hover:text-indigo-300 cursor-pointer">
+                <span className="text-[11px] text-primary hover:text-primary cursor-pointer">
                   Demo credentials enabled
                 </span>
               </div>
@@ -403,7 +403,7 @@ export function LoginPage() {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full mt-2 py-3 px-4 rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-600 text-white font-bold text-xs sm:text-sm shadow-lg shadow-indigo-600/30 hover:shadow-indigo-600/50 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                className="w-full mt-2 py-3 px-4 rounded-xl bg-primary hover:bg-primary-hover text-primary-foreground font-bold text-xs sm:text-sm shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50"
               >
                 {isLoading ? (
                   <span>Authenticating...</span>
@@ -420,7 +420,7 @@ export function LoginPage() {
             <div className="mt-6 pt-5 border-t border-slate-700/80">
               <div className="rounded-xl bg-slate-900/80 p-3.5 border border-slate-700 text-xs text-slate-300">
                 <div className="flex items-center gap-2 font-semibold text-white mb-1.5">
-                  <Info className="h-3.5 w-3.5 text-indigo-400" />
+                  <Info className="h-3.5 w-3.5 text-primary" />
                   <span>Role-Based Testing Guide</span>
                 </div>
                 <p className="text-[11px] text-slate-400 leading-relaxed">
@@ -436,7 +436,7 @@ export function LoginPage() {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-800/80 border border-slate-700/80 rounded-2xl p-4 backdrop-blur">
               <div>
                 <h2 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
-                  <Users className="h-5 w-5 text-indigo-400" />
+                  <Users className="h-5 w-5 text-primary" />
                   Example Users for Each Role ({MOCK_USERS.length} Roles)
                 </h2>
                 <p className="text-xs text-slate-400">
@@ -452,7 +452,7 @@ export function LoginPage() {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search role or name..."
-                  className="w-full pl-8 pr-3 py-1.5 bg-slate-900/90 border border-slate-700 rounded-lg text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                  className="w-full pl-8 pr-3 py-1.5 bg-slate-900/90 border border-slate-700 rounded-lg text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-primary"
                 />
               </div>
             </div>
@@ -470,7 +470,7 @@ export function LoginPage() {
                   onClick={() => setActiveCategory(tab.id as FilterCategory)}
                   className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                     activeCategory === tab.id
-                      ? 'bg-indigo-600 text-white shadow-sm'
+                      ? 'bg-primary text-primary-foreground shadow-sm'
                       : 'bg-slate-800/90 text-slate-400 hover:text-slate-200 hover:bg-slate-800 border border-slate-700/60'
                   }`}
                 >
@@ -493,7 +493,7 @@ export function LoginPage() {
                     onClick={() => handleSelectUser(user.email)}
                     className={`group relative rounded-2xl border p-4 transition-all duration-200 cursor-pointer flex flex-col justify-between ${
                       isCurrentActive
-                        ? 'border-indigo-500 bg-slate-800/95 ring-2 ring-indigo-500/30 shadow-lg'
+                        ? 'border-primary bg-slate-800/95 ring-2 ring-primary/30 shadow-lg'
                         : 'border-slate-700/80 bg-slate-800/70 hover:bg-slate-800 hover:border-slate-600 shadow-md'
                     }`}
                   >
@@ -533,7 +533,7 @@ export function LoginPage() {
                             .join('')}
                         </div>
                         <div className="min-w-0 flex-1">
-                          <h3 className="text-sm font-bold text-white truncate group-hover:text-indigo-300 transition-colors">
+                          <h3 className="text-sm font-bold text-white truncate group-hover:text-primary transition-colors">
                             {user.name}
                           </h3>
                           <p className="text-xs text-slate-400 font-mono truncate">{user.email}</p>
@@ -575,7 +575,7 @@ export function LoginPage() {
                           e.stopPropagation();
                           handleQuickLogin(user.id, meta.defaultPath);
                         }}
-                        className="flex-1 py-2 px-3 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow transition-all flex items-center justify-center gap-1.5 group-hover:shadow-indigo-600/30"
+                        className="flex-1 py-2 px-3 rounded-lg bg-primary hover:bg-primary-hover text-primary-foreground font-bold text-xs shadow transition-all flex items-center justify-center gap-1.5 group-hover:shadow-primary/30"
                       >
                         <span>Login as {meta.title}</span>
                         <ArrowRight className="h-3 w-3" />

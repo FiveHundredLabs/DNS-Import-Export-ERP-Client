@@ -70,7 +70,7 @@ export function ProfitLossPage() {
         <Card className="p-4 border-slate-200">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Gross Revenue</span>
-            <DollarSign className="h-4 w-4 text-indigo-600" />
+            <DollarSign className="h-4 w-4 text-primary" />
           </div>
           <div className="mt-2 flex items-baseline gap-2">
             <span className="text-2xl font-bold text-slate-900">
@@ -82,13 +82,13 @@ export function ProfitLossPage() {
         <Card className="p-4 border-slate-200">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Gross Profit</span>
-            <TrendingUp className="h-4 w-4 text-blue-600" />
+            <TrendingUp className="h-4 w-4 text-primary" />
           </div>
           <div className="mt-2 flex items-baseline gap-2">
             <span className="text-2xl font-bold text-slate-900">
               {formatCurrency(report?.grossProfit || 0)}
             </span>
-            <span className="text-xs font-semibold text-blue-600">
+            <span className="text-xs font-semibold text-primary">
               ({formatPercentage(grossMarginPercent)} Margin)
             </span>
           </div>
@@ -133,7 +133,7 @@ export function ProfitLossPage() {
                 report?.revenueItems.map((item) => (
                   <div key={item.accountId} className="flex justify-between items-center py-1 border-b border-slate-50">
                     <span className="flex items-center gap-2">
-                      <span className="font-mono text-indigo-600 font-semibold">{item.code}</span>
+                      <span className="font-mono text-primary font-semibold">{item.code}</span>
                       <span>{item.accountName}</span>
                     </span>
                     <span className="font-mono font-medium text-slate-800">{formatCurrency(item.amount)}</span>
@@ -157,7 +157,7 @@ export function ProfitLossPage() {
                 report?.cogsItems.map((item) => (
                   <div key={item.accountId} className="flex justify-between items-center py-1 border-b border-slate-50">
                     <span className="flex items-center gap-2">
-                      <span className="font-mono text-indigo-600 font-semibold">{item.code}</span>
+                      <span className="font-mono text-primary font-semibold">{item.code}</span>
                       <span>{item.accountName}</span>
                     </span>
                     <span className="font-mono font-medium text-slate-800">{formatCurrency(item.amount)}</span>
@@ -168,7 +168,7 @@ export function ProfitLossPage() {
           </div>
 
           {/* Gross Profit Subtotal */}
-          <div className="px-6 py-4 bg-indigo-50/50 flex justify-between items-center text-sm font-bold text-indigo-950 border-y border-indigo-100">
+          <div className="px-6 py-4 bg-primary-light/50 flex justify-between items-center text-sm font-bold text-indigo-950 border-y border-primary-border/40">
             <span className="uppercase tracking-wider">Gross Operating Profit (Revenue − COGS)</span>
             <span className="font-mono text-base">{formatCurrency(report?.grossProfit || 0)}</span>
           </div>
@@ -187,7 +187,7 @@ export function ProfitLossPage() {
                 report?.expenseItems.map((item) => (
                   <div key={item.accountId} className="flex justify-between items-center py-1 border-b border-slate-50">
                     <span className="flex items-center gap-2">
-                      <span className="font-mono text-indigo-600 font-semibold">{item.code}</span>
+                      <span className="font-mono text-primary font-semibold">{item.code}</span>
                       <span>{item.accountName}</span>
                     </span>
                     <span className="font-mono font-medium text-slate-800">{formatCurrency(item.amount)}</span>

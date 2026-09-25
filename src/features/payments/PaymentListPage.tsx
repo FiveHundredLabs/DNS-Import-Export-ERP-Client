@@ -193,7 +193,7 @@ export function PaymentListPage() {
                 <p className="text-[11px] font-medium text-slate-500">Total Collected</p>
                 <p className="text-lg font-bold text-slate-900 mt-0.5">{formatCurrency(totalCollected)}</p>
               </div>
-              <div className="h-9 w-9 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
+              <div className="h-9 w-9 rounded-lg bg-primary-light text-primary flex items-center justify-center">
                 <CreditCard className="h-5 w-5" />
               </div>
             </div>
@@ -237,11 +237,11 @@ export function PaymentListPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-[11px] font-medium text-slate-500">Cheque Collections</p>
-                <p className="text-lg font-bold text-blue-600 mt-0.5">
+                <p className="text-lg font-bold text-primary mt-0.5">
                   {payments.filter((p) => p.paymentMethod === 'CHEQUE').length} Cheques
                 </p>
               </div>
-              <div className="h-9 w-9 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
+              <div className="h-9 w-9 rounded-lg bg-primary-light text-primary flex items-center justify-center">
                 <ShieldCheck className="h-5 w-5" />
               </div>
             </div>
@@ -274,7 +274,7 @@ export function PaymentListPage() {
                     setCustomerIdFilter(e.target.value);
                     setPage(1);
                   }}
-                  className="w-full pl-9 pr-3 h-9 text-xs rounded-md border border-slate-300 bg-white focus:outline-hidden focus:ring-1 focus:ring-indigo-500"
+                  className="w-full pl-9 pr-3 h-9 text-xs rounded-md border border-slate-300 bg-white focus:outline-hidden focus:ring-1 focus:ring-primary"
                 >
                   <option value="">All Customers</option>
                   {customers.map((c) => (
@@ -343,7 +343,7 @@ export function PaymentListPage() {
                 }}
                 className={`px-3 py-1.5 rounded-md font-medium transition-colors text-[11px] whitespace-nowrap ${
                   statusFilter === st.value
-                    ? 'bg-indigo-600 text-white shadow-xs'
+                    ? 'bg-primary text-primary-foreground shadow-xs'
                     : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                 }`}
               >
@@ -391,7 +391,7 @@ export function PaymentListPage() {
 
                     return (
                       <TableRow key={p.id} className="hover:bg-slate-50/80">
-                        <TableCell className="font-mono text-xs font-bold text-indigo-600">
+                        <TableCell className="font-mono text-xs font-bold text-primary">
                           <Link to={`/payments/${p.id}`} className="hover:underline">
                             {p.receiptNumber}
                           </Link>
@@ -479,7 +479,7 @@ export function PaymentListPage() {
                               variant="ghost"
                               size="sm"
                               onClick={() => navigate(`/payments/${p.id}`)}
-                              className="h-7 w-7 p-0 text-slate-500 hover:text-indigo-600"
+                              className="h-7 w-7 p-0 text-slate-500 hover:text-primary"
                               title="View Details"
                             >
                               <Eye className="h-3.5 w-3.5" />

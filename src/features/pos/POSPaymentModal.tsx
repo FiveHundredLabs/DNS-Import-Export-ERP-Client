@@ -138,11 +138,11 @@ export function POSPaymentModal({
                 onClick={() => setMethod('CASH')}
                 className={`flex flex-col items-center justify-center rounded-xl p-3 text-xs font-bold border transition-all ${
                   method === 'CASH'
-                    ? 'border-indigo-600 bg-indigo-50 text-indigo-700 ring-2 ring-indigo-600/20 shadow-xs'
+                    ? 'border-primary bg-primary-light text-primary-text ring-2 ring-primary/20 shadow-xs'
                     : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
                 }`}
               >
-                <Banknote className="h-5 w-5 mb-1 text-indigo-600" />
+                <Banknote className="h-5 w-5 mb-1 text-primary" />
                 Cash
               </button>
               <button
@@ -150,11 +150,11 @@ export function POSPaymentModal({
                 onClick={() => setMethod('CARD')}
                 className={`flex flex-col items-center justify-center rounded-xl p-3 text-xs font-bold border transition-all ${
                   method === 'CARD'
-                    ? 'border-indigo-600 bg-indigo-50 text-indigo-700 ring-2 ring-indigo-600/20 shadow-xs'
+                    ? 'border-primary bg-primary-light text-primary-text ring-2 ring-primary/20 shadow-xs'
                     : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
                 }`}
               >
-                <CreditCard className="h-5 w-5 mb-1 text-sky-600" />
+                <CreditCard className="h-5 w-5 mb-1 text-primary" />
                 Card (POS)
               </button>
               <button
@@ -162,7 +162,7 @@ export function POSPaymentModal({
                 onClick={() => setMethod('CHEQUE')}
                 className={`flex flex-col items-center justify-center rounded-xl p-3 text-xs font-bold border transition-all ${
                   method === 'CHEQUE'
-                    ? 'border-indigo-600 bg-indigo-50 text-indigo-700 ring-2 ring-indigo-600/20 shadow-xs'
+                    ? 'border-primary bg-primary-light text-primary-text ring-2 ring-primary/20 shadow-xs'
                     : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
                 }`}
               >
@@ -290,8 +290,8 @@ export function POSPaymentModal({
 
           {/* Method: CARD Details */}
           {method === 'CARD' && (
-            <div className="rounded-xl border border-sky-200 bg-sky-50 p-4 text-xs text-sky-800 flex items-center gap-3">
-              <CreditCard className="h-6 w-6 text-sky-600 shrink-0" />
+            <div className="rounded-xl border border-sky-200 bg-primary-light p-4 text-xs text-sky-800 flex items-center gap-3">
+              <CreditCard className="h-6 w-6 text-primary shrink-0" />
               <div>
                 <div className="font-bold">Swipe / Tap on Showroom Terminal</div>
                 <div>
@@ -308,7 +308,7 @@ export function POSPaymentModal({
             <Button
               type="submit"
               disabled={isProcessing || isCashInsufficient}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold flex items-center gap-2"
+              className="bg-primary hover:bg-primary-hover text-primary-foreground font-semibold flex items-center gap-2"
             >
               <CheckCircle2 className="h-4 w-4" />
               {isProcessing ? 'Processing Sale...' : 'Complete Sale & Print Receipt'}

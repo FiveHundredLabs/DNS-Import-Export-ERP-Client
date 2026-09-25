@@ -110,7 +110,7 @@ export function OrderPickingPage() {
               orders.map(o => (
                 <div 
                   key={o.id} 
-                  className={`p-3 border rounded-md cursor-pointer transition-colors ${selectedOrder?.id === o.id ? 'border-blue-500 bg-blue-50' : 'hover:bg-slate-50'}`}
+                  className={`p-3 border rounded-md cursor-pointer transition-colors ${selectedOrder?.id === o.id ? 'border-blue-500 bg-primary-light' : 'hover:bg-slate-50'}`}
                   onClick={() => handleSelectOrder(o)}
                 >
                   <div className="font-bold">{o.id}</div>
@@ -137,7 +137,7 @@ export function OrderPickingPage() {
                   <Button 
                     onClick={handleConfirmIssue} 
                     disabled={processing}
-                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                    className="bg-primary hover:bg-primary-hover text-primary-foreground"
                   >
                     {processing ? 'Processing...' : 'Confirm Issue'}
                   </Button>

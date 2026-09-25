@@ -14,15 +14,15 @@ export function SalesAnalyticsTab({ salesReport }: SalesAnalyticsTabProps) {
     <div className="space-y-6">
       {/* Sales Summary Strip */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="bg-indigo-50/40 border-indigo-100">
+        <Card className="bg-primary-light/40 border-primary-border/40">
           <CardContent className="p-4">
-            <span className="text-xs font-semibold text-indigo-700 uppercase tracking-wider">
+            <span className="text-xs font-semibold text-primary-text uppercase tracking-wider">
               Total Gross Sales
             </span>
             <p className="text-2xl font-extrabold text-indigo-950 mt-1">
               {formatCurrencyLKR(salesReport.totalSales)}
             </p>
-            <span className="text-xs text-indigo-600 mt-1 block">Invoices + Showroom POS</span>
+            <span className="text-xs text-primary mt-1 block">Invoices + Showroom POS</span>
           </CardContent>
         </Card>
 
@@ -70,7 +70,7 @@ export function SalesAnalyticsTab({ salesReport }: SalesAnalyticsTabProps) {
         <Card>
           <CardHeader>
             <CardTitle className="text-base font-bold text-slate-900 flex items-center gap-2">
-              <Users2 className="w-4 h-4 text-indigo-600" />
+              <Users2 className="w-4 h-4 text-primary" />
               <span>Sales Performance by Representative</span>
             </CardTitle>
           </CardHeader>

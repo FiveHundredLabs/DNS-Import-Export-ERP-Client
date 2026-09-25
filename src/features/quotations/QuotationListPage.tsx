@@ -109,7 +109,7 @@ export function QuotationListPage() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-slate-900 flex items-center gap-2.5">
-            <FileSpreadsheet className="h-7 w-7 text-indigo-600" />
+            <FileSpreadsheet className="h-7 w-7 text-primary" />
             Quotation Management
           </h1>
           <p className="text-xs text-slate-500 mt-1">
@@ -119,7 +119,7 @@ export function QuotationListPage() {
 
         <Button
           onClick={() => navigate('/quotations/new')}
-          className="bg-indigo-600 hover:bg-indigo-700 text-white gap-2 shadow-xs"
+          className="bg-primary hover:bg-primary-hover text-primary-foreground gap-2 shadow-xs"
         >
           <Plus className="h-4 w-4" />
           New Quotation
@@ -128,15 +128,15 @@ export function QuotationListPage() {
 
       {/* Role Scoping Banner */}
       {currentUser.role === 'SALES_REP' ? (
-        <div className="rounded-lg bg-indigo-50 border border-indigo-200 p-3 text-xs flex items-center justify-between text-indigo-900">
+        <div className="rounded-lg bg-primary-light border border-primary-border p-3 text-xs flex items-center justify-between text-indigo-900">
           <div className="flex items-center gap-2">
-            <UserCheck className="h-4 w-4 text-indigo-600" />
+            <UserCheck className="h-4 w-4 text-primary" />
             <span>
               <strong>Territory Scoped View:</strong> Showing quotations created by you (
               <span className="font-semibold">{currentUser.name}</span>) for your assigned dealers.
             </span>
           </div>
-          <span className="text-[11px] font-medium text-indigo-600 bg-white px-2 py-0.5 rounded border border-indigo-200">
+          <span className="text-[11px] font-medium text-primary bg-white px-2 py-0.5 rounded border border-primary-border">
             Rep Max Discount Limit: 5%
           </span>
         </div>
@@ -160,7 +160,7 @@ export function QuotationListPage() {
               <p className="text-xs font-medium text-slate-500">Total Quotations</p>
               <h3 className="text-xl font-bold text-slate-900 mt-1">{total}</h3>
             </div>
-            <div className="rounded-lg bg-indigo-50 p-2.5 text-indigo-600">
+            <div className="rounded-lg bg-primary-light p-2.5 text-primary">
               <FileSpreadsheet className="h-5 w-5" />
             </div>
           </CardContent>
@@ -182,9 +182,9 @@ export function QuotationListPage() {
           <CardContent className="p-4 flex items-center justify-between">
             <div>
               <p className="text-xs font-medium text-slate-500">Converted Orders</p>
-              <h3 className="text-xl font-bold text-blue-600 mt-1">{convertedCount}</h3>
+              <h3 className="text-xl font-bold text-primary mt-1">{convertedCount}</h3>
             </div>
-            <div className="rounded-lg bg-blue-50 p-2.5 text-blue-600">
+            <div className="rounded-lg bg-primary-light p-2.5 text-primary">
               <ShoppingCart className="h-5 w-5" />
             </div>
           </CardContent>
@@ -225,7 +225,7 @@ export function QuotationListPage() {
                   aria-label="Filter by Customer"
                   value={filters.customerId || ''}
                   onChange={(e) => handleCustomerFilter(e.target.value)}
-                  className="w-full h-9 rounded-md border border-slate-200 bg-white px-3 py-1 text-xs text-slate-700 focus:outline-hidden focus:ring-1 focus:ring-indigo-500"
+                  className="w-full h-9 rounded-md border border-slate-200 bg-white px-3 py-1 text-xs text-slate-700 focus:outline-hidden focus:ring-1 focus:ring-primary"
                 >
                   <option value="">All Customers / Dealers</option>
                   {customers.map((c) => (
@@ -258,7 +258,7 @@ export function QuotationListPage() {
                   onClick={() => handleStatusFilter(f.value)}
                   className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors whitespace-nowrap ${
                     isActive
-                      ? 'bg-indigo-600 text-white shadow-xs'
+                      ? 'bg-primary text-primary-foreground shadow-xs'
                       : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                   }`}
                 >
@@ -287,7 +287,7 @@ export function QuotationListPage() {
               <Button
                 onClick={() => navigate('/quotations/new')}
                 size="sm"
-                className="mt-4 bg-indigo-600 hover:bg-indigo-700 text-white gap-1.5"
+                className="mt-4 bg-primary hover:bg-primary-hover text-primary-foreground gap-1.5"
               >
                 <Plus className="h-3.5 w-3.5" />
                 Create First Quotation
@@ -309,7 +309,7 @@ export function QuotationListPage() {
               <TableBody>
                 {quotations.map((q) => (
                   <TableRow key={q.id} className="hover:bg-slate-50/60">
-                    <TableCell className="font-mono text-xs font-bold text-indigo-600">
+                    <TableCell className="font-mono text-xs font-bold text-primary">
                       <button
                         onClick={() => navigate(`/quotations/${q.id}`)}
                         className="hover:underline text-left"
@@ -357,7 +357,7 @@ export function QuotationListPage() {
                           variant="ghost"
                           size="sm"
                           onClick={() => navigate(`/quotations/${q.id}`)}
-                          className="h-8 w-8 p-0 text-slate-600 hover:text-indigo-600"
+                          className="h-8 w-8 p-0 text-slate-600 hover:text-primary"
                           title="View Quotation"
                         >
                           <Eye className="h-4 w-4" />
@@ -388,7 +388,7 @@ export function QuotationListPage() {
                             variant="outline"
                             size="sm"
                             onClick={() => setConvertingQuotation(q)}
-                            className="text-[11px] h-7 px-2 text-indigo-600 border-indigo-200 hover:bg-indigo-50"
+                            className="text-[11px] h-7 px-2 text-primary border-primary-border hover:bg-primary-light"
                             title="Convert to Sales Order"
                           >
                             <ShoppingCart className="h-3 w-3 mr-1" />

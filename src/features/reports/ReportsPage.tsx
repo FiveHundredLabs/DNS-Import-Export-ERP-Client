@@ -110,7 +110,7 @@ export function ReportsPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <div className="p-2 rounded-lg bg-indigo-600 text-white shadow-sm">
+            <div className="p-2 rounded-lg bg-primary text-primary-foreground shadow-sm">
               <BarChart3 className="w-5 h-5" />
             </div>
             <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
@@ -141,7 +141,7 @@ export function ReportsPage() {
             onClick={() => setActiveTab('overview')}
             className={`py-3 px-3 sm:px-4 font-semibold text-xs sm:text-sm border-b-2 whitespace-nowrap flex items-center gap-2 transition-colors ${
               activeTab === 'overview'
-                ? 'border-indigo-600 text-indigo-600'
+                ? 'border-primary text-primary'
                 : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
             }`}
           >
@@ -153,7 +153,7 @@ export function ReportsPage() {
             onClick={() => setActiveTab('sales')}
             className={`py-3 px-3 sm:px-4 font-semibold text-xs sm:text-sm border-b-2 whitespace-nowrap flex items-center gap-2 transition-colors ${
               activeTab === 'sales'
-                ? 'border-indigo-600 text-indigo-600'
+                ? 'border-primary text-primary'
                 : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
             }`}
           >
@@ -165,7 +165,7 @@ export function ReportsPage() {
             onClick={() => setActiveTab('inventory')}
             className={`py-3 px-3 sm:px-4 font-semibold text-xs sm:text-sm border-b-2 whitespace-nowrap flex items-center gap-2 transition-colors ${
               activeTab === 'inventory'
-                ? 'border-indigo-600 text-indigo-600'
+                ? 'border-primary text-primary'
                 : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
             }`}
           >
@@ -177,7 +177,7 @@ export function ReportsPage() {
             onClick={() => setActiveTab('finance')}
             className={`py-3 px-3 sm:px-4 font-semibold text-xs sm:text-sm border-b-2 whitespace-nowrap flex items-center gap-2 transition-colors ${
               activeTab === 'finance'
-                ? 'border-indigo-600 text-indigo-600'
+                ? 'border-primary text-primary'
                 : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
             }`}
           >
@@ -190,7 +190,7 @@ export function ReportsPage() {
               onClick={() => setActiveTab('area')}
               className={`py-3 px-3 sm:px-4 font-semibold text-xs sm:text-sm border-b-2 whitespace-nowrap flex items-center gap-2 transition-colors ${
                 activeTab === 'area'
-                  ? 'border-indigo-600 text-indigo-600'
+                  ? 'border-primary text-primary'
                   : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
               }`}
             >

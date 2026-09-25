@@ -65,6 +65,7 @@ export const PRIMARY_COLOR_OPTIONS: PrimaryColorOption[] = [
 
 export const DEFAULT_PRIMARY_COLOR = PRIMARY_COLOR_OPTIONS.find((c) => c.hex === '#6AAED3')!;
 
+export const ERP_PRIMARY_COLOR_STORAGE_KEY = 'erp-primary-color';
 const COMPANY_SETTINGS_STORAGE_KEY = 'dns_erp_company_settings';
 const THEME_CHANGE_EVENT = 'dns_erp_theme_changed';
 
@@ -82,6 +83,18 @@ export class ThemeService {
 
   private loadSavedColor(): PrimaryColorOption {
     try {
+      // 1. Primary canonical storage key: erp-primary-color
+      const savedHex = localStorage.getItem(ERP_PRIMARY_COLOR_STORAGE_KEY);
+      if (savedHex) {
+        const match = PRIMARY_COLOR_OPTIONS.find(
+          (c) => c.hex.toLowerCase() === savedHex.trim().toLowerCase()
+        );
+        if (match) {
+          return match;
+        }
+      }
+
+      // 2. Legacy fallback: dns_erp_company_settings
       const raw = localStorage.getItem(COMPANY_SETTINGS_STORAGE_KEY);
       if (raw) {
         const parsed: CompanySettings = JSON.parse(raw);
@@ -90,12 +103,14 @@ export class ThemeService {
             (c) => c.hex.toLowerCase() === parsed.primaryColor.toLowerCase()
           );
           if (match) {
+            // Migrate to canonical key
+            localStorage.setItem(ERP_PRIMARY_COLOR_STORAGE_KEY, match.hex);
             return match;
           }
         }
       }
     } catch (e) {
-      console.warn('Failed to parse company theme settings from storage:', e);
+      console.warn('Failed to parse primary color from storage:', e);
     }
     return DEFAULT_PRIMARY_COLOR;
   }
@@ -103,7 +118,7 @@ export class ThemeService {
   private initSync() {
     if (typeof window !== 'undefined') {
       window.addEventListener('storage', (event) => {
-        if (event.key === COMPANY_SETTINGS_STORAGE_KEY) {
+        if (event.key === ERP_PRIMARY_COLOR_STORAGE_KEY || event.key === COMPANY_SETTINGS_STORAGE_KEY) {
           const newColor = this.loadSavedColor();
           if (newColor.hex !== this.currentColor.hex) {
             this.currentColor = newColor;
@@ -135,17 +150,18 @@ export class ThemeService {
     if (typeof document === 'undefined') return;
     const root = document.documentElement;
 
-    root.style.setProperty('--primary-color', color.hex);
+    // Central primary theme variables required by specification
+    root.style.setProperty('--primary', color.hex);
     root.style.setProperty('--primary-hover', color.hover);
     root.style.setProperty('--primary-active', color.active);
+    root.style.setProperty('--primary-foreground', color.foreground);
     root.style.setProperty('--primary-light', color.light);
     root.style.setProperty('--primary-border', color.border);
-    root.style.setProperty('--primary-text', color.text);
-    root.style.setProperty('--primary-foreground', color.foreground);
-    root.style.setProperty('--primary-ring', color.ring);
 
-    // Support standard Tailwind/shadcn hsl/hex variable
-    root.style.setProperty('--primary', color.hex);
+    // Aliases for comprehensive cross-component compatibility
+    root.style.setProperty('--primary-color', color.hex);
+    root.style.setProperty('--primary-text', color.text);
+    root.style.setProperty('--primary-ring', color.ring);
   }
 
   public getPrimaryColor(): PrimaryColorOption {
@@ -184,7 +200,7 @@ export class ThemeService {
       };
     }
 
-    // 3. Persist to company settings
+    // 3. Persist to canonical localStorage key: erp-primary-color and company settings
     const settings: CompanySettings = {
       primaryColor: matched.hex,
       updatedAt: new Date().toISOString(),
@@ -192,6 +208,7 @@ export class ThemeService {
     };
 
     try {
+      localStorage.setItem(ERP_PRIMARY_COLOR_STORAGE_KEY, matched.hex);
       localStorage.setItem(COMPANY_SETTINGS_STORAGE_KEY, JSON.stringify(settings));
     } catch (e) {
       console.error('Failed to save theme settings to storage:', e);

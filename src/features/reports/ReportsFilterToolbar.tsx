@@ -52,12 +52,12 @@ export function ReportsFilterToolbar({
         <div className="flex items-center gap-2">
           <Badge
             variant="outline"
-            className="flex items-center gap-1.5 px-3 py-1 font-semibold text-xs border-indigo-200 bg-indigo-50/50 text-indigo-700"
+            className="flex items-center gap-1.5 px-3 py-1 font-semibold text-xs border-primary-border bg-primary-light/50 text-primary-text"
           >
             {user?.role === 'SALES_REP' ? (
-              <UserCheck className="w-3.5 h-3.5 text-indigo-600" />
+              <UserCheck className="w-3.5 h-3.5 text-primary" />
             ) : (
-              <MapPin className="w-3.5 h-3.5 text-indigo-600" />
+              <MapPin className="w-3.5 h-3.5 text-primary" />
             )}
             <span>{getScopeLabel()}</span>
           </Badge>
@@ -121,7 +121,7 @@ export function ReportsFilterToolbar({
             value={filter.areaId || ''}
             disabled={isAreaLocked}
             onChange={(e) => onFilterChange({ areaId: e.target.value || undefined })}
-            className="w-full h-9 rounded-md border border-slate-200 bg-white px-3 py-1 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-slate-100 disabled:cursor-not-allowed"
+            className="w-full h-9 rounded-md border border-slate-200 bg-white px-3 py-1 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary disabled:bg-slate-100 disabled:cursor-not-allowed"
           >
             <option value="">All Territories</option>
             {MOCK_AREAS.map((a) => (
@@ -142,7 +142,7 @@ export function ReportsFilterToolbar({
             value={filter.salesRepId || ''}
             disabled={isRepLocked}
             onChange={(e) => onFilterChange({ salesRepId: e.target.value || undefined })}
-            className="w-full h-9 rounded-md border border-slate-200 bg-white px-3 py-1 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-slate-100 disabled:cursor-not-allowed"
+            className="w-full h-9 rounded-md border border-slate-200 bg-white px-3 py-1 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary disabled:bg-slate-100 disabled:cursor-not-allowed"
           >
             <option value="">All Sales Reps</option>
             {reps.map((r) => (

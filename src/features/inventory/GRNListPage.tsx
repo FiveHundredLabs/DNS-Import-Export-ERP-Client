@@ -27,7 +27,7 @@ export function GRNListPage() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'DRAFT': return 'bg-slate-500 hover:bg-slate-600';
-      case 'SUBMITTED': return 'bg-blue-500 hover:bg-blue-600';
+      case 'SUBMITTED': return 'bg-primary-light hover:bg-primary';
       case 'APPROVED': return 'bg-green-500 hover:bg-green-600';
       case 'REJECTED': return 'bg-red-500 hover:bg-red-600';
       default: return 'bg-gray-500 hover:bg-gray-600';

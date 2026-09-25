@@ -245,7 +245,7 @@ export function OrderDetailPage() {
             <Button
               size="sm"
               onClick={handleSubmitForApproval}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs gap-1.5 shadow-xs"
+              className="bg-primary hover:bg-primary-hover text-primary-foreground text-xs gap-1.5 shadow-xs"
             >
               <Send className="h-3.5 w-3.5" />
               Submit for Approval
@@ -282,9 +282,9 @@ export function OrderDetailPage() {
               variant="outline"
               size="sm"
               onClick={() => setActionType('ESCALATE_MANAGER')}
-              className="text-sky-700 border-sky-300 hover:bg-sky-50 text-xs gap-1.5"
+              className="text-sky-700 border-sky-300 hover:bg-primary-light text-xs gap-1.5"
             >
-              <ArrowUpRight className="h-3.5 w-3.5 text-sky-600" />
+              <ArrowUpRight className="h-3.5 w-3.5 text-primary" />
               Escalate to Manager
             </Button>
           )}
@@ -319,7 +319,7 @@ export function OrderDetailPage() {
             <Button
               size="sm"
               onClick={() => handleFulfillmentAdvance('PICKING')}
-              className="bg-sky-600 hover:bg-sky-700 text-white text-xs gap-1.5"
+              className="bg-primary hover:bg-primary-hover text-primary-foreground text-xs gap-1.5"
             >
               <Boxes className="h-3.5 w-3.5" />
               Start Picking
@@ -330,7 +330,7 @@ export function OrderDetailPage() {
             <Button
               size="sm"
               onClick={() => handleFulfillmentAdvance('ISSUED')}
-              className="bg-blue-600 hover:bg-blue-700 text-white text-xs gap-1.5"
+              className="bg-primary hover:bg-primary-hover text-primary-foreground text-xs gap-1.5"
             >
               <PackageCheck className="h-3.5 w-3.5" />
               Issue Goods
@@ -342,7 +342,7 @@ export function OrderDetailPage() {
               <Button
                 size="sm"
                 onClick={() => handleFulfillmentAdvance('ISSUED')}
-                className="bg-blue-600 hover:bg-blue-700 text-white text-xs gap-1.5"
+                className="bg-primary hover:bg-primary-hover text-primary-foreground text-xs gap-1.5"
               >
                 <PackageCheck className="h-3.5 w-3.5" />
                 Complete Issue
@@ -381,7 +381,7 @@ export function OrderDetailPage() {
                     navigate(`/invoices?search=${encodeURIComponent(order.orderNumber)}`);
                   }
                 }}
-                className="border-indigo-300 text-indigo-700 hover:bg-indigo-50 text-xs gap-1.5 font-semibold"
+                className="border-primary-border text-primary-text hover:bg-primary-light text-xs gap-1.5 font-semibold"
               >
                 <FileText className="h-3.5 w-3.5" />
                 View Tax Invoice
@@ -480,7 +480,7 @@ export function OrderDetailPage() {
               <span>Rep: {order.salesRepNameSnapshot}</span>
               {order.customerPoNumber && <span>PO Ref: {order.customerPoNumber}</span>}
               {order.quotationNumber && (
-                <span className="text-indigo-600 font-medium">
+                <span className="text-primary font-medium">
                   Converted from: {order.quotationNumber}
                 </span>
               )}
@@ -489,7 +489,7 @@ export function OrderDetailPage() {
 
           <div className="text-right">
             <span className="text-xs text-slate-500 block">Total Order Value</span>
-            <span className="text-2xl font-bold font-mono text-indigo-700">
+            <span className="text-2xl font-bold font-mono text-primary-text">
               {formatCurrency(order.totalAmount)}
             </span>
           </div>
@@ -635,7 +635,7 @@ export function OrderDetailPage() {
             </div>
             <div className="flex justify-between w-64 border-t-2 border-indigo-900 pt-2 font-bold text-sm text-slate-900">
               <span>Grand Total:</span>
-              <span className="font-mono text-indigo-700">{formatCurrency(order.totalAmount)}</span>
+              <span className="font-mono text-primary-text">{formatCurrency(order.totalAmount)}</span>
             </div>
           </div>
         </div>
@@ -644,7 +644,7 @@ export function OrderDetailPage() {
         <div className="border-t border-slate-200 bg-slate-50/50 p-6">
           <div className="flex items-center justify-between mb-4">
             <h4 className="text-xs font-bold uppercase tracking-wider text-slate-600 flex items-center gap-1.5">
-              <Clock className="h-4 w-4 text-indigo-600" />
+              <Clock className="h-4 w-4 text-primary" />
               Approval Timeline & State History
             </h4>
             {order.targetApproverRole && isPendingOrSpecial && (
@@ -667,7 +667,7 @@ export function OrderDetailPage() {
                 {actionType === 'APPROVE' && <CheckCircle className="h-5 w-5 text-emerald-600" />}
                 {actionType === 'REJECT' && <XCircle className="h-5 w-5 text-rose-600" />}
                 {(actionType === 'ESCALATE_MANAGER' || actionType === 'ESCALATE_DIRECTOR') && (
-                  <ArrowUpRight className="h-5 w-5 text-sky-600" />
+                  <ArrowUpRight className="h-5 w-5 text-primary" />
                 )}
                 {actionType === 'CANCEL' && <Ban className="h-5 w-5 text-slate-600" />}
                 {actionType === 'APPROVE' && 'Approve Sales Order'}
@@ -702,7 +702,7 @@ export function OrderDetailPage() {
                     : 'e.g. Exceeds standard discount parameters; requesting senior management override.'
                 }
                 rows={3}
-                className="w-full rounded-md border border-slate-200 p-2 text-xs focus:ring-1 focus:ring-indigo-500"
+                className="w-full rounded-md border border-slate-200 p-2 text-xs focus:ring-1 focus:ring-primary"
               />
             </div>
 
@@ -730,7 +730,7 @@ export function OrderDetailPage() {
                     ? 'bg-rose-600 hover:bg-rose-700 text-white'
                     : actionType === 'CANCEL'
                     ? 'bg-slate-700 hover:bg-slate-800 text-white'
-                    : 'bg-indigo-600 hover:bg-indigo-700 text-white'
+                    : 'bg-primary hover:bg-primary-hover text-primary-foreground'
                 }
               >
                 {isActionSubmitting ? 'Processing...' : 'Confirm Action'}

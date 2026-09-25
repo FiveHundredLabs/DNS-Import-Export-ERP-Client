@@ -368,7 +368,7 @@ export function PaymentCollectionPage() {
                 variant="outline"
                 size="sm"
                 onClick={handleAutoAllocate}
-                className="text-xs gap-1.5 h-8 border-indigo-200 text-indigo-700 hover:bg-indigo-50"
+                className="text-xs gap-1.5 h-8 border-primary-border text-primary-text hover:bg-primary-light"
               >
                 <Sparkles className="h-3.5 w-3.5" /> Auto-Allocate (FIFO)
               </Button>
@@ -405,7 +405,7 @@ export function PaymentCollectionPage() {
 
                       return (
                         <TableRow key={inv.id}>
-                          <TableCell className="font-mono text-xs font-semibold text-indigo-600">
+                          <TableCell className="font-mono text-xs font-semibold text-primary">
                             {inv.invoiceNumber}
                           </TableCell>
                           <TableCell className="text-xs text-slate-600 whitespace-nowrap">
@@ -454,7 +454,7 @@ export function PaymentCollectionPage() {
                   </div>
                   <div>
                     <span className="text-slate-500">Total Allocated: </span>
-                    <span className="font-mono font-bold text-indigo-700">
+                    <span className="font-mono font-bold text-primary-text">
                       {formatCurrency(totalAllocated)}
                     </span>
                   </div>

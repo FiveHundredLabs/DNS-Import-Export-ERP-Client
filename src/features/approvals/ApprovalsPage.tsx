@@ -71,13 +71,13 @@ export function ApprovalsPage() {
                       {getDocumentLink(app) ? (
                         <Link
                           to={getDocumentLink(app)!}
-                          className="font-mono font-bold text-xs text-indigo-600 hover:underline flex items-center gap-1"
+                          className="font-mono font-bold text-xs text-primary hover:underline flex items-center gap-1"
                         >
                           {app.documentReferenceNumber}
                           <ExternalLink className="h-3 w-3" />
                         </Link>
                       ) : (
-                        <span className="font-mono font-bold text-xs text-indigo-600">
+                        <span className="font-mono font-bold text-xs text-primary">
                           {app.documentReferenceNumber}
                         </span>
                       )}

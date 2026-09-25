@@ -38,7 +38,7 @@ export function AreaPerformanceTab({
       <div className="bg-white border border-slate-200 rounded-xl p-5 flex flex-wrap items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <span className="p-2 rounded-lg bg-indigo-50 text-indigo-600">
+            <span className="p-2 rounded-lg bg-primary-light text-primary">
               <MapPin className="w-5 h-5" />
             </span>
             <div>
@@ -57,7 +57,7 @@ export function AreaPerformanceTab({
               <select
                 value={selectedAreaId}
                 onChange={(e) => onAreaSelect(e.target.value)}
-                className="h-9 rounded-md border border-slate-200 bg-white px-3 py-1 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="h-9 rounded-md border border-slate-200 bg-white px-3 py-1 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary"
               >
                 {MOCK_AREAS.map((a) => (
                   <option key={a.id} value={a.id}>
@@ -68,7 +68,7 @@ export function AreaPerformanceTab({
             </div>
           )}
           {isAreaLocked && (
-            <Badge variant="outline" className="text-xs font-semibold text-indigo-700 bg-indigo-50">
+            <Badge variant="outline" className="text-xs font-semibold text-primary-text bg-primary-light">
               Territory Locked to Assigned Area
             </Badge>
           )}
@@ -93,7 +93,7 @@ export function AreaPerformanceTab({
               <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
                 Achieved Sales
               </span>
-              <p className="text-2xl font-extrabold text-indigo-600 mt-1">
+              <p className="text-2xl font-extrabold text-primary mt-1">
                 {formatCurrencyLKR(areaPerformance.totalSales)}
               </p>
               <span className="text-xs text-slate-400 mt-1 block">Invoices + Territory POS</span>
@@ -197,7 +197,7 @@ export function AreaPerformanceTab({
           <CardHeader>
             <CardTitle className="text-base font-bold text-slate-900 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Building2 className="w-4 h-4 text-indigo-600" />
+                <Building2 className="w-4 h-4 text-primary" />
                 <span>Top Regional Dealers & Accounts</span>
               </div>
               <Badge variant="outline" className="text-xs">

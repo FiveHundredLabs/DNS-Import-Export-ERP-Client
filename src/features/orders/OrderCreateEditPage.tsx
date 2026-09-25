@@ -318,11 +318,11 @@ export function OrderCreateEditPage() {
             Back to Sales Orders
           </button>
           <h1 className="text-xl font-bold tracking-tight text-slate-900 flex items-center gap-2">
-            <ShoppingCart className="h-6 w-6 text-indigo-600" />
+            <ShoppingCart className="h-6 w-6 text-primary" />
             {isEdit ? 'Edit Sales Order Draft' : 'Create Enterprise Sales Order'}
           </h1>
           {quotationNumber && (
-            <p className="text-xs text-indigo-600 font-medium mt-0.5">
+            <p className="text-xs text-primary font-medium mt-0.5">
               Converting from Approved Quotation: <span className="font-mono font-bold">{quotationNumber}</span>
             </p>
           )}
@@ -343,7 +343,7 @@ export function OrderCreateEditPage() {
             size="sm"
             onClick={() => handleSubmit(false)}
             disabled={isSubmitting}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs gap-1.5 shadow-xs"
+            className="bg-primary hover:bg-primary-hover text-primary-foreground text-xs gap-1.5 shadow-xs"
           >
             <Send className="h-3.5 w-3.5" />
             Submit Order
@@ -424,15 +424,15 @@ export function OrderCreateEditPage() {
               </div>
             </Card>
 
-            <Card className="p-3 bg-indigo-50 border border-indigo-200 text-indigo-900">
+            <Card className="p-3 bg-primary-light border border-primary-border text-indigo-900">
               <div className="flex items-center justify-between text-xs">
                 <span>Projected Total</span>
-                <ShoppingCart className="h-3.5 w-3.5 text-indigo-600" />
+                <ShoppingCart className="h-3.5 w-3.5 text-primary" />
               </div>
               <div className="mt-1 text-base font-bold font-mono text-indigo-950">
                 {formatCurrency(evaluation.totalAmount)}
               </div>
-              <div className="text-[10px] text-indigo-700 mt-0.5">
+              <div className="text-[10px] text-primary-text mt-0.5">
                 New balance: {formatCurrency(evaluation.projectedOutstanding)}
               </div>
             </Card>
@@ -473,7 +473,7 @@ export function OrderCreateEditPage() {
         <Card className="lg:col-span-1">
           <CardHeader className="py-3 px-4 border-b border-slate-200 flex flex-row items-center justify-between">
             <CardTitle className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
-              <Building2 className="h-3.5 w-3.5 text-indigo-600" />
+              <Building2 className="h-3.5 w-3.5 text-primary" />
               Customer Information
             </CardTitle>
             <Button
@@ -509,7 +509,7 @@ export function OrderCreateEditPage() {
         <Card className="lg:col-span-2">
           <CardHeader className="py-3 px-4 border-b border-slate-200">
             <CardTitle className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
-              <Truck className="h-3.5 w-3.5 text-indigo-600" />
+              <Truck className="h-3.5 w-3.5 text-primary" />
               Delivery & Commercial Terms
             </CardTitle>
           </CardHeader>
@@ -523,7 +523,7 @@ export function OrderCreateEditPage() {
                 onChange={(e) => setDeliveryAddress(e.target.value)}
                 placeholder="Warehouse or store delivery location"
                 rows={2}
-                className="w-full rounded-md border border-slate-200 p-2 text-xs focus:ring-1 focus:ring-indigo-500"
+                className="w-full rounded-md border border-slate-200 p-2 text-xs focus:ring-1 focus:ring-primary"
               />
             </div>
 
@@ -614,7 +614,7 @@ export function OrderCreateEditPage() {
           <Button
             size="sm"
             onClick={() => setIsProductSelectorOpen(true)}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs gap-1.5"
+            className="bg-primary hover:bg-primary-hover text-primary-foreground text-xs gap-1.5"
           >
             <Plus className="h-3.5 w-3.5" />
             Add Product Item
@@ -736,7 +736,7 @@ export function OrderCreateEditPage() {
               </div>
               <div className="flex justify-between w-64 border-t border-slate-300 pt-2 font-bold text-sm text-slate-900">
                 <span>Grand Total:</span>
-                <span className="font-mono text-indigo-700">{formatCurrency(evaluation.totalAmount)}</span>
+                <span className="font-mono text-primary-text">{formatCurrency(evaluation.totalAmount)}</span>
               </div>
             </div>
           )}

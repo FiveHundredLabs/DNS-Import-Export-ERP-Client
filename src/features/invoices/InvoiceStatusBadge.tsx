@@ -29,7 +29,7 @@ export function InvoiceStatusBadge({ status, className }: InvoiceStatusBadgeProp
       );
     case 'ISSUED':
       return (
-        <Badge variant="default" className={`gap-1 font-semibold bg-blue-600 hover:bg-blue-700 text-white ${className || ''}`}>
+        <Badge variant="default" className={`gap-1 font-semibold bg-primary hover:bg-primary-hover text-primary-foreground ${className || ''}`}>
           <FileText className="h-3 w-3" /> Issued
         </Badge>
       );

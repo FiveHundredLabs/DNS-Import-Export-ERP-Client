@@ -67,7 +67,7 @@ export function CreateTargetModal({ open, onOpenChange, onSuccess }: CreateTarge
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogHeader>
         <DialogTitle className="flex items-center gap-2 text-slate-900 text-sm">
-          <Target className="h-4 w-4 text-indigo-600" />
+          <Target className="h-4 w-4 text-primary" />
           Configure Sales Rep Target
         </DialogTitle>
       </DialogHeader>
@@ -87,7 +87,7 @@ export function CreateTargetModal({ open, onOpenChange, onSuccess }: CreateTarge
           <select
             value={salesRepId}
             onChange={(e) => setSalesRepId(e.target.value)}
-            className="w-full rounded-md border border-slate-300 p-2 text-xs bg-white text-slate-900 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            className="w-full rounded-md border border-slate-300 p-2 text-xs bg-white text-slate-900 focus:outline-none focus:ring-1 focus:ring-primary"
           >
             {salesReps.map((r) => (
               <option key={r.id} value={r.id}>
@@ -103,7 +103,7 @@ export function CreateTargetModal({ open, onOpenChange, onSuccess }: CreateTarge
             <select
               value={periodType}
               onChange={(e) => setPeriodType(e.target.value as TargetPeriodType)}
-              className="w-full rounded-md border border-slate-300 p-2 text-xs bg-white text-slate-900 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              className="w-full rounded-md border border-slate-300 p-2 text-xs bg-white text-slate-900 focus:outline-none focus:ring-1 focus:ring-primary"
             >
               <option value="MONTHLY">Monthly</option>
               <option value="WEEKLY">Weekly</option>
@@ -160,7 +160,7 @@ export function CreateTargetModal({ open, onOpenChange, onSuccess }: CreateTarge
             type="submit"
             size="sm"
             disabled={loading}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white"
+            className="bg-primary hover:bg-primary-hover text-primary-foreground"
           >
             {loading ? 'Configuring...' : 'Set Sales Target'}
           </Button>

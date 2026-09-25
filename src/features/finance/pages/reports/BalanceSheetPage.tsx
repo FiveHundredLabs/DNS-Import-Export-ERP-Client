@@ -37,7 +37,7 @@ export function BalanceSheetPage() {
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-2xl font-bold tracking-tight text-slate-900">Balance Sheet Statement</h1>
-            <Badge variant="outline" className="bg-indigo-50 text-indigo-700 border-indigo-200 text-xs">
+            <Badge variant="outline" className="bg-primary-light text-primary-text border-primary-border text-xs">
               Statement of Financial Position
             </Badge>
           </div>
@@ -135,7 +135,7 @@ export function BalanceSheetPage() {
         {/* LEFT COLUMN: ASSETS */}
         <div className="space-y-4">
           <Card className="overflow-hidden border-slate-200 bg-white shadow-sm">
-            <div className="border-b border-slate-200 bg-indigo-50/60 px-5 py-3">
+            <div className="border-b border-slate-200 bg-primary-light/60 px-5 py-3">
               <h2 className="text-xs font-bold uppercase tracking-wider text-indigo-950">
                 Assets (Economic Resources)
               </h2>
@@ -152,7 +152,7 @@ export function BalanceSheetPage() {
                   {report?.currentAssets.map((item) => (
                     <div key={item.accountId} className="flex justify-between items-center text-slate-600">
                       <span className="flex items-center gap-2">
-                        <span className="font-mono text-indigo-600">{item.code}</span>
+                        <span className="font-mono text-primary">{item.code}</span>
                         <span>{item.accountName}</span>
                       </span>
                       <span className="font-mono text-slate-800">{formatCurrency(item.amount)}</span>
@@ -174,7 +174,7 @@ export function BalanceSheetPage() {
                     report?.nonCurrentAssets.map((item) => (
                       <div key={item.accountId} className="flex justify-between items-center text-slate-600">
                         <span className="flex items-center gap-2">
-                          <span className="font-mono text-indigo-600">{item.code}</span>
+                          <span className="font-mono text-primary">{item.code}</span>
                           <span>{item.accountName}</span>
                         </span>
                         <span className="font-mono text-slate-800">{formatCurrency(item.amount)}</span>
@@ -186,7 +186,7 @@ export function BalanceSheetPage() {
             </div>
 
             {/* Total Assets Footnote */}
-            <div className="border-t-2 border-indigo-200 bg-indigo-50/80 px-5 py-3 flex justify-between items-center text-sm font-bold text-indigo-950">
+            <div className="border-t-2 border-primary-border bg-primary-light/80 px-5 py-3 flex justify-between items-center text-sm font-bold text-indigo-950">
               <span className="uppercase tracking-wider">Total Assets</span>
               <span className="font-mono text-base">{formatCurrency(report?.totalAssets || 0)}</span>
             </div>
@@ -213,7 +213,7 @@ export function BalanceSheetPage() {
                   {report?.currentLiabilities.map((item) => (
                     <div key={item.accountId} className="flex justify-between items-center text-slate-600">
                       <span className="flex items-center gap-2">
-                        <span className="font-mono text-indigo-600">{item.code}</span>
+                        <span className="font-mono text-primary">{item.code}</span>
                         <span>{item.accountName}</span>
                       </span>
                       <span className="font-mono text-slate-800">{formatCurrency(item.amount)}</span>
@@ -235,7 +235,7 @@ export function BalanceSheetPage() {
                     report?.longTermLiabilities.map((item) => (
                       <div key={item.accountId} className="flex justify-between items-center text-slate-600">
                         <span className="flex items-center gap-2">
-                          <span className="font-mono text-indigo-600">{item.code}</span>
+                          <span className="font-mono text-primary">{item.code}</span>
                           <span>{item.accountName}</span>
                         </span>
                         <span className="font-mono text-slate-800">{formatCurrency(item.amount)}</span>
@@ -255,7 +255,7 @@ export function BalanceSheetPage() {
                   {report?.equityItems.map((item) => (
                     <div key={item.accountId} className="flex justify-between items-center text-slate-600">
                       <span className="flex items-center gap-2">
-                        <span className="font-mono text-indigo-600">{item.code}</span>
+                        <span className="font-mono text-primary">{item.code}</span>
                         <span>{item.accountName}</span>
                       </span>
                       <span className="font-mono text-slate-800">{formatCurrency(item.amount)}</span>

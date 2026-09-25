@@ -49,7 +49,7 @@ const REPORT_CARDS: ReportCardItem[] = [
     path: '/finance/reports/balance-sheet',
     icon: Scale,
     badge: 'Real-Time Reconciled',
-    badgeColor: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+    badgeColor: 'bg-primary-light text-primary-text border-primary-border',
     features: ['Current & Non-Current Assets', 'Payables & Debt Liabilities', "Owner's Equity & Reserves"],
   },
   {
@@ -60,7 +60,7 @@ const REPORT_CARDS: ReportCardItem[] = [
     path: '/finance/reports/trial-balance',
     icon: FileSpreadsheet,
     badge: 'Zero Variance Check',
-    badgeColor: 'bg-blue-50 text-blue-700 border-blue-200',
+    badgeColor: 'bg-primary-light text-blue-700 border-primary-border',
     features: ['All GL Account Codes', 'Total Debits = Total Credits', 'Audit Proof'],
   },
   {
@@ -115,7 +115,7 @@ export function FinanceReportsHubPage() {
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-2xl font-bold tracking-tight text-slate-900">Financial Reports & Statements</h1>
-            <Badge variant="outline" className="bg-indigo-50 text-indigo-700 border-indigo-200 text-xs">
+            <Badge variant="outline" className="bg-primary-light text-primary-text border-primary-border text-xs">
               Live Audit Suite
             </Badge>
           </div>
@@ -147,10 +147,10 @@ export function FinanceReportsHubPage() {
           const Icon = report.icon;
           return (
             <Link key={report.id} to={report.path} className="group block">
-              <Card className="h-full p-5 border-slate-200 transition-all hover:border-indigo-400 hover:shadow-md flex flex-col justify-between">
+              <Card className="h-full p-5 border-slate-200 transition-all hover:border-primary hover:shadow-md flex flex-col justify-between">
                 <div>
                   <div className="flex items-start justify-between gap-3 mb-3">
-                    <div className="p-2.5 rounded-lg bg-indigo-50 text-indigo-600 border border-indigo-100 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                    <div className="p-2.5 rounded-lg bg-primary-light text-primary border border-primary-border/40 group-hover:bg-primary group-hover:text-white transition-colors">
                       <Icon className="h-5 w-5" />
                     </div>
                     <Badge variant="outline" className={`text-[10px] font-semibold ${report.badgeColor}`}>
@@ -161,7 +161,7 @@ export function FinanceReportsHubPage() {
                   <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
                     {report.category}
                   </span>
-                  <h3 className="text-base font-bold text-slate-900 group-hover:text-indigo-600 transition-colors mt-0.5">
+                  <h3 className="text-base font-bold text-slate-900 group-hover:text-primary transition-colors mt-0.5">
                     {report.title}
                   </h3>
                   <p className="text-xs text-slate-500 mt-2 line-clamp-2 leading-relaxed">
@@ -171,14 +171,14 @@ export function FinanceReportsHubPage() {
                   <div className="mt-4 pt-3 border-t border-slate-100 space-y-1">
                     {report.features.map((feat, idx) => (
                       <div key={idx} className="flex items-center gap-1.5 text-[11px] text-slate-600">
-                        <div className="h-1.5 w-1.5 rounded-full bg-indigo-500" />
+                        <div className="h-1.5 w-1.5 rounded-full bg-primary-light" />
                         <span>{feat}</span>
                       </div>
                     ))}
                   </div>
                 </div>
 
-                <div className="mt-5 pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-semibold text-indigo-600 group-hover:text-indigo-700">
+                <div className="mt-5 pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-semibold text-primary group-hover:text-primary-text">
                   <span>Open Statement</span>
                   <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
                 </div>

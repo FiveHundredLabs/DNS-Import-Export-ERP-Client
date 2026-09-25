@@ -51,7 +51,7 @@ export function POSSessionsPage() {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-200 pb-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-2.5">
-            <Clock className="h-7 w-7 text-indigo-600" />
+            <Clock className="h-7 w-7 text-primary" />
             Cashier Shift Sessions & Reconciliation
           </h1>
           <p className="text-xs text-slate-500 mt-0.5">
@@ -65,7 +65,7 @@ export function POSSessionsPage() {
               to="/pos"
               className={({ isActive }) =>
                 `rounded-md px-3 py-1.5 transition-colors ${
-                  isActive ? 'bg-white text-indigo-700 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                  isActive ? 'bg-white text-primary-text shadow-xs' : 'text-slate-600 hover:text-slate-900'
                 }`
               }
             >
@@ -75,7 +75,7 @@ export function POSSessionsPage() {
               to="/pos/transactions"
               className={({ isActive }) =>
                 `rounded-md px-3 py-1.5 transition-colors ${
-                  isActive ? 'bg-white text-indigo-700 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                  isActive ? 'bg-white text-primary-text shadow-xs' : 'text-slate-600 hover:text-slate-900'
                 }`
               }
             >
@@ -85,7 +85,7 @@ export function POSSessionsPage() {
               to="/pos/sessions"
               className={({ isActive }) =>
                 `rounded-md px-3 py-1.5 transition-colors ${
-                  isActive ? 'bg-white text-indigo-700 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                  isActive ? 'bg-white text-primary-text shadow-xs' : 'text-slate-600 hover:text-slate-900'
                 }`
               }
             >
@@ -134,7 +134,7 @@ export function POSSessionsPage() {
 
                   return (
                     <tr key={sess.id} className="hover:bg-slate-50/80 transition-colors">
-                      <td className="py-3.5 px-4 font-mono font-bold text-indigo-700">
+                      <td className="py-3.5 px-4 font-mono font-bold text-primary-text">
                         {sess.sessionNumber}
                       </td>
                       <td className="py-3.5 px-4 font-semibold text-slate-900">
@@ -164,7 +164,7 @@ export function POSSessionsPage() {
                               <CheckCircle className="h-3 w-3" /> Balanced
                             </span>
                           ) : diff > 0 ? (
-                            <span className="inline-flex items-center gap-1 rounded-md bg-sky-50 px-2 py-0.5 text-[11px] font-bold text-sky-700 border border-sky-200">
+                            <span className="inline-flex items-center gap-1 rounded-md bg-primary-light px-2 py-0.5 text-[11px] font-bold text-sky-700 border border-sky-200">
                               +{formatCurrency(diff)} Over
                             </span>
                           ) : (
@@ -192,7 +192,7 @@ export function POSSessionsPage() {
                           variant="outline"
                           size="sm"
                           onClick={() => handleViewSummary(sess.id)}
-                          className="h-7 text-xs text-indigo-700 hover:bg-indigo-50 border-indigo-200"
+                          className="h-7 text-xs text-primary-text hover:bg-primary-light border-primary-border"
                         >
                           View Summary
                         </Button>
@@ -212,7 +212,7 @@ export function POSSessionsPage() {
           <div className="relative w-full max-w-2xl rounded-2xl bg-white p-6 shadow-2xl transition-all border border-slate-200 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2">
-                <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-indigo-50 text-indigo-700">
+                <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary-light text-primary-text">
                   <FileSpreadsheet className="h-5 w-5" />
                 </span>
                 <div>
@@ -257,7 +257,7 @@ export function POSSessionsPage() {
                 </div>
                 <div>
                   <span className="text-[10px] text-slate-400 block uppercase font-bold">Total Transactions</span>
-                  <span className="font-bold text-indigo-700 text-sm">
+                  <span className="font-bold text-primary-text text-sm">
                     {selectedSessionSummary.transactions.length}
                   </span>
                 </div>
@@ -280,8 +280,8 @@ export function POSSessionsPage() {
                       {formatCurrency(selectedSessionSummary.cashSalesTotal)}
                     </div>
                   </div>
-                  <div className="rounded-lg bg-sky-50 border border-sky-100 p-2.5">
-                    <div className="text-sky-600 font-bold flex items-center gap-1">
+                  <div className="rounded-lg bg-primary-light border border-sky-100 p-2.5">
+                    <div className="text-primary font-bold flex items-center gap-1">
                       <CreditCard className="h-3.5 w-3.5" /> Card Sales
                     </div>
                     <div className="text-base font-extrabold text-sky-900 mt-1">
@@ -322,7 +322,7 @@ export function POSSessionsPage() {
                     - {formatCurrency(selectedSessionSummary.session.cashOutTotal)}
                   </span>
                 </div>
-                <div className="flex justify-between text-indigo-600">
+                <div className="flex justify-between text-primary">
                   <span>(+) Showroom Cash Sales:</span>
                   <span className="font-semibold">
                     + {formatCurrency(selectedSessionSummary.cashSalesTotal)}
@@ -330,7 +330,7 @@ export function POSSessionsPage() {
                 </div>
                 <div className="border-t border-slate-200 pt-2 flex justify-between font-extrabold text-slate-900 text-sm">
                   <span>Expected Physical Cash in Register:</span>
-                  <span className="text-indigo-700 font-mono">
+                  <span className="text-primary-text font-mono">
                     {formatCurrency(selectedSessionSummary.reconciliation.expectedCash)}
                   </span>
                 </div>
@@ -401,7 +401,7 @@ export function POSSessionsPage() {
               <Button variant="outline" size="sm" onClick={() => setSelectedSessionSummary(null)}>
                 Close
               </Button>
-              <Button size="sm" onClick={printSummary} className="bg-indigo-600 hover:bg-indigo-700 text-white flex items-center gap-1.5">
+              <Button size="sm" onClick={printSummary} className="bg-primary hover:bg-primary-hover text-primary-foreground flex items-center gap-1.5">
                 <Printer className="h-4 w-4" />
                 Print Shift Report
               </Button>

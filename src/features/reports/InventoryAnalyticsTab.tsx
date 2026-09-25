@@ -14,15 +14,15 @@ export function InventoryAnalyticsTab({ inventoryReport }: InventoryAnalyticsTab
     <div className="space-y-6">
       {/* Inventory Valuation Header Strip */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-        <Card className="bg-indigo-50/40 border-indigo-100">
+        <Card className="bg-primary-light/40 border-primary-border/40">
           <CardContent className="p-4">
-            <span className="text-xs font-semibold text-indigo-700 uppercase tracking-wider">
+            <span className="text-xs font-semibold text-primary-text uppercase tracking-wider">
               Total Stock Valuation
             </span>
             <p className="text-2xl font-extrabold text-indigo-950 mt-1">
               {formatCurrencyLKR(inventoryReport.totalStockValue)}
             </p>
-            <span className="text-xs text-indigo-600 mt-1 block">
+            <span className="text-xs text-primary mt-1 block">
               Cost basis across {inventoryReport.totalStockLines} catalog SKUs
             </span>
           </CardContent>
@@ -94,7 +94,7 @@ export function InventoryAnalyticsTab({ inventoryReport }: InventoryAnalyticsTab
       <Card>
         <CardHeader>
           <CardTitle className="text-base font-bold text-slate-900 flex items-center gap-2">
-            <Building2 className="w-4 h-4 text-indigo-600" />
+            <Building2 className="w-4 h-4 text-primary" />
             <span>Stock Positioning & Location Balance Ledger</span>
           </CardTitle>
         </CardHeader>
@@ -210,7 +210,7 @@ export function InventoryAnalyticsTab({ inventoryReport }: InventoryAnalyticsTab
                           {p.sku}
                         </td>
                         <td className="py-2.5 px-3 text-slate-900 font-medium">{p.name}</td>
-                        <td className="py-2.5 px-3 text-right font-bold text-indigo-600">
+                        <td className="py-2.5 px-3 text-right font-bold text-primary">
                           {p.unitsSold.toLocaleString()}
                         </td>
                       </tr>

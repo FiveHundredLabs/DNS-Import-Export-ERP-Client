@@ -103,7 +103,7 @@ export function ExecutiveOverviewTab({ kpis, salesReport }: ExecutiveOverviewTab
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between text-xs font-semibold">
                   <div className="flex items-center gap-2 text-slate-700">
-                    <Receipt className="w-4 h-4 text-indigo-600" />
+                    <Receipt className="w-4 h-4 text-primary" />
                     <span>Commercial B2B Tax Invoices</span>
                   </div>
                   <div className="text-right">
@@ -115,7 +115,7 @@ export function ExecutiveOverviewTab({ kpis, salesReport }: ExecutiveOverviewTab
                 </div>
                 <div className="w-full h-3 rounded-full bg-slate-100 overflow-hidden">
                   <div
-                    className="h-full bg-indigo-600 rounded-full transition-all duration-500"
+                    className="h-full bg-primary rounded-full transition-all duration-500"
                     style={{ width: `${invoiceShare}%` }}
                   />
                 </div>
@@ -151,7 +151,7 @@ export function ExecutiveOverviewTab({ kpis, salesReport }: ExecutiveOverviewTab
               </div>
               <div>
                 <p className="text-xs text-slate-500">Average Transaction Value</p>
-                <p className="text-xl font-bold text-indigo-600 mt-1">
+                <p className="text-xl font-bold text-primary mt-1">
                   {formatCurrencyLKR(salesReport.averageOrderValue)}
                 </p>
               </div>
@@ -192,16 +192,16 @@ export function ExecutiveOverviewTab({ kpis, salesReport }: ExecutiveOverviewTab
               </div>
             </div>
 
-            <div className="p-4 rounded-xl bg-indigo-50/50 border border-indigo-100 flex items-center justify-between">
+            <div className="p-4 rounded-xl bg-primary-light/50 border border-primary-border/40 flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-lg bg-indigo-600 text-white">
+                <div className="p-2.5 rounded-lg bg-primary text-white">
                   <ArrowUpRight className="w-5 h-5" />
                 </div>
                 <div>
                   <h4 className="text-xs font-bold text-indigo-950 uppercase tracking-wider">
                     Working Capital Position
                   </h4>
-                  <p className="text-xs text-indigo-700">
+                  <p className="text-xs text-primary-text">
                     Net cash collected vs customer credit exposure
                   </p>
                 </div>

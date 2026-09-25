@@ -64,12 +64,17 @@ export function AppearanceSettings() {
       } else {
         toast.error(result.error || 'Failed to update primary color.');
       }
-    }, 200);
+    }, 150);
   };
 
   const handleSelectSwatch = (hex: string) => {
     setSelectedHex(hex);
-    setSavedSuccess(false);
+    // Update global primary color immediately upon selecting swatch
+    const result = setPrimaryColor(hex);
+    if (result.success && result.color) {
+      setSavedSuccess(true);
+      setLastSavedColorName(result.color.name);
+    }
   };
 
   const isCurrentActive = currentColor.hex.toLowerCase() === selectedHex.toLowerCase();

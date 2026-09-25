@@ -58,7 +58,7 @@ export function RecordFollowUpModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogHeader>
         <DialogTitle className="flex items-center gap-2 text-slate-900 text-sm">
-          <ClipboardList className="h-4 w-4 text-indigo-600" />
+          <ClipboardList className="h-4 w-4 text-primary" />
           Field Follow-up: {followUp.customerName}
         </DialogTitle>
       </DialogHeader>
@@ -112,7 +112,7 @@ export function RecordFollowUpModal({
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             placeholder="Notes on card collection status, contractor sales, shopkeeper feedback..."
-            className="w-full rounded-md border border-slate-300 p-2.5 text-xs text-slate-900 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            className="w-full rounded-md border border-slate-300 p-2.5 text-xs text-slate-900 focus:outline-none focus:ring-1 focus:ring-primary"
             required
           />
         </div>
@@ -131,7 +131,7 @@ export function RecordFollowUpModal({
             type="submit"
             size="sm"
             disabled={loading}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white"
+            className="bg-primary hover:bg-primary-hover text-primary-foreground"
           >
             {loading ? 'Recording...' : 'Save Follow-up'}
           </Button>

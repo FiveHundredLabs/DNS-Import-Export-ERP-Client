@@ -98,7 +98,7 @@ export function DebitCreditRow({
       {/* 3. Debit (Dr) Input (Col 2 of 12) */}
       <div className="col-span-6 md:col-span-2">
         <div className="relative flex items-center">
-          <span className="absolute left-2.5 text-[10px] font-bold uppercase tracking-wider text-indigo-500 pointer-events-none">
+          <span className="absolute left-2.5 text-[10px] font-bold uppercase tracking-wider text-primary pointer-events-none">
             Dr
           </span>
           <Input
@@ -112,8 +112,8 @@ export function DebitCreditRow({
             className={cn(
               'h-9 pl-8 pr-2 text-xs font-mono text-right font-semibold transition-colors',
               isDebitActive
-                ? 'border-indigo-400 bg-indigo-50/40 text-indigo-900 focus:border-indigo-600 focus:ring-1 focus:ring-indigo-500'
-                : 'text-slate-700 focus:border-indigo-500',
+                ? 'border-primary-border bg-primary-light/40 text-indigo-900 focus:border-primary focus:ring-1 focus:ring-primary'
+                : 'text-slate-700 focus:border-primary',
               isCreditActive && 'bg-slate-50 opacity-40 cursor-not-allowed'
             )}
           />
@@ -138,7 +138,7 @@ export function DebitCreditRow({
               'h-9 pl-8 pr-2 text-xs font-mono text-right font-semibold transition-colors',
               isCreditActive
                 ? 'border-emerald-400 bg-emerald-50/40 text-emerald-900 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-500'
-                : 'text-slate-700 focus:border-indigo-500',
+                : 'text-slate-700 focus:border-primary',
               isDebitActive && 'bg-slate-50 opacity-40 cursor-not-allowed'
             )}
           />

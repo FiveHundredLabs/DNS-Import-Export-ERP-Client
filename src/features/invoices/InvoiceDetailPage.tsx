@@ -58,7 +58,7 @@ export function InvoiceDetailPage() {
         <p className="text-xs text-slate-500 mt-2">
           The requested invoice record could not be located in the system.
         </p>
-        <Link to="/invoices" className="text-indigo-600 text-xs font-semibold underline mt-4 block">
+        <Link to="/invoices" className="text-primary text-xs font-semibold underline mt-4 block">
           Return to Invoice Registry
         </Link>
       </div>
@@ -123,7 +123,7 @@ export function InvoiceDetailPage() {
           <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-6 border-b border-slate-200 pb-6">
             <div>
               <div className="flex items-center gap-2">
-                <div className="h-9 w-9 rounded-lg bg-indigo-900 text-white flex items-center justify-center font-black text-base">
+                <div className="h-9 w-9 rounded-lg bg-primary text-primary-foreground flex items-center justify-center font-black text-base">
                   DNS
                 </div>
                 <div>
@@ -146,7 +146,7 @@ export function InvoiceDetailPage() {
               <span className="inline-block px-3 py-1 rounded bg-slate-900 text-white font-mono text-xs uppercase tracking-wider font-bold">
                 COMMERCIAL TAX INVOICE
               </span>
-              <div className="font-mono text-xl font-bold text-indigo-700 pt-1">
+              <div className="font-mono text-xl font-bold text-primary-text pt-1">
                 {invoice.invoiceNumber}
               </div>
               <div className="pt-1">
@@ -155,7 +155,7 @@ export function InvoiceDetailPage() {
               <div className="text-xs text-slate-500 pt-2 space-y-0.5">
                 <p>
                   Order Ref:{' '}
-                  <Link to={`/orders/${invoice.orderId}`} className="font-mono font-semibold text-indigo-600 hover:underline">
+                  <Link to={`/orders/${invoice.orderId}`} className="font-mono font-semibold text-primary hover:underline">
                     {invoice.orderNumber}
                   </Link>
                 </p>
@@ -196,7 +196,7 @@ export function InvoiceDetailPage() {
               </div>
               <div>
                 <span className="text-slate-500">Payment Terms: </span>
-                <span className="font-bold text-indigo-700">{invoice.paymentTerms || 'Standard Credit'}</span>
+                <span className="font-bold text-primary-text">{invoice.paymentTerms || 'Standard Credit'}</span>
               </div>
               <div>
                 <span className="text-slate-500">Created At: </span>
@@ -259,7 +259,7 @@ export function InvoiceDetailPage() {
                 </span>
                 <p>Bank: Commercial Bank of Ceylon | Branch: City Office</p>
                 <p>Account Name: DNS Distribution (Pvt) Ltd</p>
-                <p className="font-mono font-semibold text-indigo-700">Account No: 1000984721</p>
+                <p className="font-mono font-semibold text-primary-text">Account No: 1000984721</p>
                 <p className="text-[10px] text-slate-500 pt-1">
                   Please quote Invoice Number <strong>{invoice.invoiceNumber}</strong> upon remitting funds.
                 </p>

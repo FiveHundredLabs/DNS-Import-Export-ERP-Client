@@ -76,9 +76,13 @@ describe('Configurable Primary Color System Audit', () => {
   });
 
   describe('3. Database Persistence & CSS Variables', () => {
-    it('persists selected color in company settings storage', () => {
+    it('persists selected color in canonical erp-primary-color storage', () => {
       themeService.setPrimaryColor('#263183', 'DIRECTOR');
 
+      const savedHex = localStorage.getItem('erp-primary-color');
+      expect(savedHex).toBe('#263183');
+
+      // Also verifies backward-compatible company settings
       const savedRaw = localStorage.getItem('dns_erp_company_settings');
       expect(savedRaw).not.toBeNull();
       const parsed = JSON.parse(savedRaw!);
@@ -89,8 +93,13 @@ describe('Configurable Primary Color System Audit', () => {
       themeService.setPrimaryColor('#EC1B27', 'DIRECTOR');
       const rootStyle = document.documentElement.style;
 
-      expect(rootStyle.getPropertyValue('--primary-color')).toBe('#EC1B27');
       expect(rootStyle.getPropertyValue('--primary')).toBe('#EC1B27');
+      expect(rootStyle.getPropertyValue('--primary-hover')).toBe('#D40F1B');
+      expect(rootStyle.getPropertyValue('--primary-active')).toBe('#B60A14');
+      expect(rootStyle.getPropertyValue('--primary-foreground')).toBe('#FFFFFF');
+      expect(rootStyle.getPropertyValue('--primary-light')).toBe('#FEF2F2');
+      expect(rootStyle.getPropertyValue('--primary-border')).toBe('#FECACA');
+      expect(rootStyle.getPropertyValue('--primary-color')).toBe('#EC1B27');
     });
   });
 
@@ -144,6 +153,48 @@ describe('Configurable Primary Color System Audit', () => {
 
       // Verify global theme is now Orange
       expect(themeService.getPrimaryColor().hex).toBe('#FA8223');
+    });
+
+    it('immediately updates global CSS variables and localStorage upon clicking a swatch', () => {
+      render(
+        <MemoryRouter>
+          <AppearanceSettings />
+        </MemoryRouter>
+      );
+
+      // Click Dark Blue swatch
+      const darkBlueSwatch = screen.getByRole('button', { name: /select dark blue/i });
+      fireEvent.click(darkBlueSwatch);
+
+      // Verify immediate update without needing to click save
+      expect(localStorage.getItem('erp-primary-color')).toBe('#263183');
+      expect(document.documentElement.style.getPropertyValue('--primary')).toBe('#263183');
+      expect(themeService.getPrimaryColor().hex).toBe('#263183');
+    });
+
+    it('tests all five primary colors switching reactively across the application', () => {
+      render(
+        <MemoryRouter>
+          <AppearanceSettings />
+        </MemoryRouter>
+      );
+
+      const colorTests = [
+        { name: /select orange/i, hex: '#FA8223' },
+        { name: /select dark blue/i, hex: '#263183' },
+        { name: /select red/i, hex: '#EC1B27' },
+        { name: /select light blue/i, hex: '#6AAED3' },
+        { name: /select black/i, hex: '#161511' },
+      ];
+
+      colorTests.forEach(({ name, hex }) => {
+        const swatch = screen.getByRole('button', { name });
+        fireEvent.click(swatch);
+
+        expect(localStorage.getItem('erp-primary-color')).toBe(hex);
+        expect(document.documentElement.style.getPropertyValue('--primary')).toBe(hex);
+        expect(themeService.getPrimaryColor().hex).toBe(hex);
+      });
     });
 
     it('renders access restricted banner for non-Director users', () => {

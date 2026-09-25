@@ -64,7 +64,7 @@ export function VatSummaryPage() {
             <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
               Taxable Supplies Base
             </span>
-            <Building className="h-4 w-4 text-indigo-600" />
+            <Building className="h-4 w-4 text-primary" />
           </div>
           <div className="mt-2 text-2xl font-bold text-slate-900 font-mono">
             {formatCurrency(report?.taxableSales || 0)}
@@ -135,7 +135,7 @@ export function VatSummaryPage() {
                 report?.transactions.map((tx, idx) => (
                   <tr key={`${tx.invoiceNumber}-${idx}`} className="hover:bg-slate-50/60 transition-colors">
                     <td className="px-4 py-3 text-slate-600">{formatDate(tx.date)}</td>
-                    <td className="px-4 py-3 font-mono font-bold text-indigo-700">{tx.invoiceNumber}</td>
+                    <td className="px-4 py-3 font-mono font-bold text-primary-text">{tx.invoiceNumber}</td>
                     <td className="px-4 py-3 font-medium text-slate-900">{tx.customerName}</td>
                     <td className="px-4 py-3 text-right font-mono text-slate-800">
                       {formatCurrency(tx.taxableAmount)}

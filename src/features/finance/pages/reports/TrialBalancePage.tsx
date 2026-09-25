@@ -37,7 +37,7 @@ export function TrialBalancePage() {
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-2xl font-bold tracking-tight text-slate-900">Trial Balance Statement</h1>
-            <Badge variant="outline" className="bg-indigo-50 text-indigo-700 border-indigo-200 text-xs">
+            <Badge variant="outline" className="bg-primary-light text-primary-text border-primary-border text-xs">
               General Ledger Verification
             </Badge>
           </div>
@@ -129,7 +129,7 @@ export function TrialBalancePage() {
             <tbody className="divide-y divide-slate-100 text-slate-700">
               {report?.items.map((item) => (
                 <tr key={item.accountId} className="hover:bg-slate-50/60 transition-colors">
-                  <td className="px-4 py-3 font-mono font-bold text-indigo-700">{item.code}</td>
+                  <td className="px-4 py-3 font-mono font-bold text-primary-text">{item.code}</td>
                   <td className="px-4 py-3 font-semibold text-slate-900">{item.name}</td>
                   <td className="px-4 py-3">
                     <Badge variant="outline" className="bg-slate-50 text-slate-600 border-slate-200 text-[10px]">

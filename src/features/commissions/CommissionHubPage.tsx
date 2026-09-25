@@ -64,7 +64,7 @@ export function CommissionHubPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-4">
         <div>
           <h1 className="text-xl font-bold text-slate-900 flex items-center gap-2">
-            <Award className="h-6 w-6 text-indigo-600" />
+            <Award className="h-6 w-6 text-primary" />
             Sales Target & Commission Hub
           </h1>
           <p className="text-xs text-slate-500 mt-1">
@@ -88,7 +88,7 @@ export function CommissionHubPage() {
               </select>
               <Button
                 onClick={() => setIsConfigOpen(true)}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs h-9 gap-1.5 shadow-sm"
+                className="bg-primary hover:bg-primary-hover text-primary-foreground text-xs h-9 gap-1.5 shadow-sm"
               >
                 <PlusCircle className="h-4 w-4" />
                 Configure Target
@@ -117,12 +117,12 @@ export function CommissionHubPage() {
             <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block">
               Sales Achieved
             </span>
-            <span className="text-2xl font-bold text-indigo-600 mt-1 block">
+            <span className="text-2xl font-bold text-primary mt-1 block">
               {formatCurrency(summary.achievedAmount)}
             </span>
             <div className="mt-2 flex items-center justify-between text-[11px]">
               <span className="text-slate-500">Progress</span>
-              <span className="font-bold text-indigo-700">{summary.achievementPercentage}%</span>
+              <span className="font-bold text-primary-text">{summary.achievementPercentage}%</span>
             </div>
             <div className="w-full bg-slate-100 h-2 rounded-full mt-1 overflow-hidden">
               <div
@@ -132,7 +132,7 @@ export function CommissionHubPage() {
                     : achievementPct >= 100
                     ? 'bg-emerald-600'
                     : achievementPct >= 80
-                    ? 'bg-blue-600'
+                    ? 'bg-primary'
                     : 'bg-amber-500'
                 }`}
                 style={{ width: `${Math.min(100, achievementPct)}%` }}
@@ -178,7 +178,7 @@ export function CommissionHubPage() {
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-sm font-semibold text-slate-900 flex items-center gap-2">
-            <TrendingUp className="h-4 w-4 text-indigo-600" />
+            <TrendingUp className="h-4 w-4 text-primary" />
             Enterprise Sales Commission Tier Policy (Sections 24 & 45)
           </CardTitle>
         </CardHeader>
@@ -194,14 +194,14 @@ export function CommissionHubPage() {
                   key={rule.id}
                   className={`p-3.5 rounded-xl border transition-all ${
                     isCurrent
-                      ? 'border-indigo-600 bg-indigo-50/50 shadow-xs ring-1 ring-indigo-500'
+                      ? 'border-primary bg-primary-light/50 shadow-xs ring-1 ring-primary'
                       : 'border-slate-200 bg-slate-50/60'
                   }`}
                 >
                   <div className="flex items-center justify-between mb-1.5">
                     <span className="font-bold text-xs text-slate-900">{rule.tierName}</span>
                     {isCurrent && (
-                      <Badge variant="default" className="text-[10px] bg-indigo-600">
+                      <Badge variant="default" className="text-[10px] bg-primary">
                         Current
                       </Badge>
                     )}
@@ -256,7 +256,7 @@ export function CommissionHubPage() {
                   {leaderboard.map((rep, idx) => (
                     <TableRow
                       key={rep.salesRepId}
-                      className={rep.salesRepId === selectedRepId ? 'bg-indigo-50/40 font-medium' : ''}
+                      className={rep.salesRepId === selectedRepId ? 'bg-primary-light/40 font-medium' : ''}
                     >
                       <TableCell className="text-center font-bold text-xs text-slate-500">
                         {idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : `#${idx + 1}`}
@@ -264,7 +264,7 @@ export function CommissionHubPage() {
                       <TableCell>
                         <button
                           onClick={() => setSelectedRepId(rep.salesRepId)}
-                          className="text-xs font-semibold text-indigo-600 hover:underline text-left"
+                          className="text-xs font-semibold text-primary hover:underline text-left"
                         >
                           {rep.salesRepName}
                         </button>

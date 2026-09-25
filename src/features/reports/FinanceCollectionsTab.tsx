@@ -77,7 +77,7 @@ export function FinanceCollectionsTab({ financeReport }: FinanceCollectionsTabPr
         <CardHeader>
           <CardTitle className="text-base font-bold text-slate-900 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Clock className="w-4 h-4 text-indigo-600" />
+              <Clock className="w-4 h-4 text-primary" />
               <span>Receivables Aging Schedule (Strict Match with Customer Ledger)</span>
             </div>
             <Badge variant="outline" className="text-xs">

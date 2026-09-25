@@ -77,7 +77,7 @@ export function GRNDetailPage() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'DRAFT': return 'bg-slate-500';
-      case 'SUBMITTED': return 'bg-blue-500';
+      case 'SUBMITTED': return 'bg-primary-light';
       case 'APPROVED': return 'bg-green-500';
       case 'REJECTED': return 'bg-red-500';
       default: return 'bg-gray-500';
@@ -184,7 +184,7 @@ export function GRNDetailPage() {
       </Card>
 
       {grn.status === 'SUBMITTED' && user?.role === 'MANAGER' && (
-        <Card className="border-blue-200 bg-blue-50">
+        <Card className="border-primary-border bg-primary-light">
           <CardHeader>
             <CardTitle className="text-blue-800">Manager Approval</CardTitle>
           </CardHeader>

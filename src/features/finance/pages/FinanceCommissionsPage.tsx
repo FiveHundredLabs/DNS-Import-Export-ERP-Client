@@ -140,7 +140,7 @@ export function FinanceCommissionsPage() {
             <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
               GL 2030 Balance
             </span>
-            <DollarSign className="h-4 w-4 text-indigo-600" />
+            <DollarSign className="h-4 w-4 text-primary" />
           </div>
           <div className="mt-2 flex items-baseline gap-2">
             <span className="text-2xl font-bold text-slate-900">
@@ -155,7 +155,7 @@ export function FinanceCommissionsPage() {
             <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
               Active Sales Reps
             </span>
-            <Users className="h-4 w-4 text-blue-600" />
+            <Users className="h-4 w-4 text-primary" />
           </div>
           <div className="mt-2 flex items-baseline gap-2">
             <span className="text-2xl font-bold text-slate-900">4</span>
@@ -185,7 +185,7 @@ export function FinanceCommissionsPage() {
                 onClick={() => setStatusFilter(status)}
                 className={`rounded px-3 py-1 font-medium transition-colors ${
                   statusFilter === status
-                    ? 'bg-white text-indigo-700 shadow-sm'
+                    ? 'bg-white text-primary-text shadow-sm'
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
@@ -223,7 +223,7 @@ export function FinanceCommissionsPage() {
                   <tr key={item.id} className="hover:bg-slate-50/60 transition-colors">
                     <td className="px-4 py-3.5 font-medium text-slate-900">{item.repName}</td>
                     <td className="px-4 py-3.5 font-mono text-slate-600">{item.period}</td>
-                    <td className="px-4 py-3.5 font-mono text-indigo-600">{item.orderNumber}</td>
+                    <td className="px-4 py-3.5 font-mono text-primary">{item.orderNumber}</td>
                     <td className="px-4 py-3.5 text-right font-mono text-slate-700">
                       {formatCurrency(item.saleValue)}
                     </td>

@@ -218,7 +218,7 @@ export function CustomerHubView({ customer }: { customer: Customer }) {
               <MapPin className="h-3.5 w-3.5 text-slate-400" /> {customer.address}
             </span>
             <span className="flex items-center gap-1 text-slate-600 font-medium">
-              <UserCheck className="h-3.5 w-3.5 text-indigo-500" /> Rep: {customer.assignedRepName}
+              <UserCheck className="h-3.5 w-3.5 text-primary" /> Rep: {customer.assignedRepName}
             </span>
           </div>
         </div>
@@ -411,7 +411,7 @@ export function CustomerHubView({ customer }: { customer: Customer }) {
                     <TableBody>
                       {filteredInvoices.map((inv) => (
                         <TableRow key={inv.id}>
-                          <TableCell className="font-mono text-xs font-semibold text-indigo-600">
+                          <TableCell className="font-mono text-xs font-semibold text-primary">
                             <button
                               onClick={() => navigate(`/invoices/${inv.id}`)}
                               className="hover:underline"
@@ -440,7 +440,7 @@ export function CustomerHubView({ customer }: { customer: Customer }) {
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => navigate(`/invoices/${inv.id}`)}
-                                className="text-xs h-7 px-2 text-indigo-600 hover:text-indigo-800"
+                                className="text-xs h-7 px-2 text-primary hover:text-primary-text"
                               >
                                 View
                               </Button>
@@ -482,7 +482,7 @@ export function CustomerHubView({ customer }: { customer: Customer }) {
               <Button
                 size="sm"
                 onClick={() => navigate(`/orders/new?customerId=${customer.id}`)}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs h-8 gap-1.5"
+                className="bg-primary hover:bg-primary-hover text-primary-foreground text-xs h-8 gap-1.5"
               >
                 <PlusCircle className="h-3.5 w-3.5" />
                 New Sales Order
@@ -523,7 +523,7 @@ export function CustomerHubView({ customer }: { customer: Customer }) {
                           <TableCell className="font-mono text-xs font-semibold text-slate-900">
                             <button
                               onClick={() => navigate(`/orders/${ord.id}`)}
-                              className="text-indigo-600 hover:underline text-left font-mono"
+                              className="text-primary hover:underline text-left font-mono"
                             >
                               {ord.orderNumber}
                             </button>
@@ -570,7 +570,7 @@ export function CustomerHubView({ customer }: { customer: Customer }) {
               <Button
                 size="sm"
                 onClick={() => navigate(`/quotations/new?customerId=${customer.id}`)}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs h-8 gap-1.5"
+                className="bg-primary hover:bg-primary-hover text-primary-foreground text-xs h-8 gap-1.5"
               >
                 <PlusCircle className="h-3.5 w-3.5" />
                 New Quotation
@@ -610,7 +610,7 @@ export function CustomerHubView({ customer }: { customer: Customer }) {
                     <TableBody>
                       {customerQuotations.map((qt) => (
                         <TableRow key={qt.id}>
-                          <TableCell className="font-mono text-xs font-semibold text-indigo-600">
+                          <TableCell className="font-mono text-xs font-semibold text-primary">
                             <button
                               onClick={() => navigate(`/quotations/${qt.id}`)}
                               className="hover:underline"
@@ -635,7 +635,7 @@ export function CustomerHubView({ customer }: { customer: Customer }) {
                               variant="ghost"
                               size="sm"
                               onClick={() => navigate(`/quotations/${qt.id}`)}
-                              className="text-xs h-7 px-2 text-indigo-600 hover:text-indigo-800"
+                              className="text-xs h-7 px-2 text-primary hover:text-primary-text"
                             >
                               View
                             </Button>
@@ -704,7 +704,7 @@ export function CustomerHubView({ customer }: { customer: Customer }) {
                           <TableCell className="font-mono text-xs font-semibold text-slate-900">
                             <button
                               onClick={() => navigate(`/payments/${pay.id}`)}
-                              className="text-indigo-600 hover:underline font-mono"
+                              className="text-primary hover:underline font-mono"
                             >
                               {pay.receiptNumber}
                             </button>
@@ -724,7 +724,7 @@ export function CustomerHubView({ customer }: { customer: Customer }) {
                               variant="ghost"
                               size="sm"
                               onClick={() => navigate(`/payments/${pay.id}`)}
-                              className="text-xs h-7 px-2 text-indigo-600 hover:text-indigo-800"
+                              className="text-xs h-7 px-2 text-primary hover:text-primary-text"
                             >
                               View
                             </Button>
@@ -757,7 +757,7 @@ export function CustomerHubView({ customer }: { customer: Customer }) {
                 onClick={() => navigate('/warranty')}
                 className="text-xs h-8 gap-1.5"
               >
-                <ShieldCheck className="h-3.5 w-3.5 text-indigo-600" />
+                <ShieldCheck className="h-3.5 w-3.5 text-primary" />
                 Warranty Hub
               </Button>
             </CardHeader>
@@ -834,7 +834,7 @@ export function CustomerHubView({ customer }: { customer: Customer }) {
                           <TableCell className="font-mono text-xs text-slate-600">
                             {w.serialNumber || 'N/A'}
                           </TableCell>
-                          <TableCell className="font-mono text-xs text-indigo-600">
+                          <TableCell className="font-mono text-xs text-primary">
                             {w.invoiceNumber}
                           </TableCell>
                           <TableCell>
@@ -935,7 +935,7 @@ export function CustomerHubView({ customer }: { customer: Customer }) {
                     key={act.id}
                     className="p-3 bg-white rounded-lg border border-slate-200 text-xs flex items-start gap-3"
                   >
-                    <div className="p-2 rounded-md bg-indigo-50 text-indigo-600 mt-0.5">
+                    <div className="p-2 rounded-md bg-primary-light text-primary mt-0.5">
                       <Clock className="h-4 w-4" />
                     </div>
                     <div className="flex-1 space-y-1">
