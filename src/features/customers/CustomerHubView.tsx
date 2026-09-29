@@ -223,7 +223,27 @@ export function CustomerHubView({ customer }: { customer: Customer }) {
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            size="sm"
+            variant="default"
+            disabled={customer.financials.totalOutstanding <= 0}
+            onClick={() => {
+              navigate(
+                `/payments/new?customerId=${customer.id}&amount=${customer.financials.totalOutstanding}`
+              );
+            }}
+            className="gap-1.5 text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-xs"
+            title={
+              customer.financials.totalOutstanding <= 0
+                ? 'No outstanding balance to settle'
+                : `Settle full balance of ${formatCurrency(customer.financials.totalOutstanding)}`
+            }
+          >
+            <CreditCard className="h-3.5 w-3.5" />
+            Settle Full Balance ({formatCurrency(customer.financials.totalOutstanding)})
+          </Button>
+
           <Button
             size="sm"
             variant="outline"
@@ -244,7 +264,12 @@ export function CustomerHubView({ customer }: { customer: Customer }) {
           <span className="text-lg font-bold text-slate-900 block mt-1">
             {formatCurrency(customer.financials.totalOutstanding)}
           </span>
-          <span className="text-[10px] text-slate-400">Limit: {formatCurrency(customer.commercialTerms.creditLimit)}</span>
+          <div className="text-[10px] text-slate-500 mt-0.5">
+            Limit: {formatCurrency(customer.commercialTerms.creditLimit)} •{' '}
+            <span className="text-emerald-700 font-semibold">
+              Avail: {formatCurrency(Math.max(0, customer.commercialTerms.creditLimit - customer.financials.totalOutstanding))}
+            </span>
+          </div>
         </div>
 
         <div className="p-4 rounded-xl border border-emerald-200 bg-emerald-50/50 shadow-xs">

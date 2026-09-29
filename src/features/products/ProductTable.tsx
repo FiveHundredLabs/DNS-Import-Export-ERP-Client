@@ -3,7 +3,7 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '.
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import { formatCurrency } from '../../utils/formatters';
-import { Eye, Edit3, TrendingUp, AlertTriangle } from 'lucide-react';
+import { Edit3, TrendingUp, AlertTriangle } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 
 interface ProductTableProps {
@@ -43,7 +43,18 @@ export function ProductTable({
           {products.map((p) => {
             const isDamaged = p.damagedStock > 0;
             return (
-              <TableRow key={p.id}>
+              <TableRow
+                key={p.id}
+                className="cursor-pointer hover:bg-slate-50/80 transition-colors focus:outline-hidden focus:bg-slate-50"
+                tabIndex={0}
+                onClick={() => onView(p)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    onView(p);
+                  }
+                }}
+              >
                 <TableCell>
                   <div className="font-semibold text-slate-900 flex items-center gap-1.5">
                     {p.name}
@@ -82,19 +93,14 @@ export function ProductTable({
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex items-center justify-end gap-1">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => onView(p)}
-                      title="View Product Details"
-                    >
-                      <Eye className="h-4 w-4 text-slate-600" />
-                    </Button>
                     {canProposePrice && onProposePrice && (
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => onProposePrice(p)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onProposePrice(p);
+                        }}
                         title="Propose Selling Price Change"
                       >
                         <TrendingUp className="h-4 w-4 text-primary" />
@@ -104,7 +110,10 @@ export function ProductTable({
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => onEdit(p)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onEdit(p);
+                        }}
                         title="Edit Master Data"
                       >
                         <Edit3 className="h-4 w-4 text-slate-600" />

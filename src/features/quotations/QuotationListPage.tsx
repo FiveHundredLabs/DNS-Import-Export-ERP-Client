@@ -308,14 +308,22 @@ export function QuotationListPage() {
               </TableHeader>
               <TableBody>
                 {quotations.map((q) => (
-                  <TableRow key={q.id} className="hover:bg-slate-50/60">
+                  <TableRow
+                    key={q.id}
+                    className="hover:bg-slate-50/70 cursor-pointer transition-colors focus:outline-hidden focus:bg-slate-50"
+                    tabIndex={0}
+                    onClick={() => navigate(`/quotations/${q.id}`)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        navigate(`/quotations/${q.id}`);
+                      }
+                    }}
+                  >
                     <TableCell className="font-mono text-xs font-bold text-primary">
-                      <button
-                        onClick={() => navigate(`/quotations/${q.id}`)}
-                        className="hover:underline text-left"
-                      >
+                      <span className="hover:underline text-left">
                         {q.quotationNumber}
-                      </button>
+                      </span>
                       <div className="text-[10px] font-normal text-slate-400">
                         Rep: {q.salesRepNameSnapshot}
                       </div>
@@ -356,17 +364,10 @@ export function QuotationListPage() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => navigate(`/quotations/${q.id}`)}
-                          className="h-8 w-8 p-0 text-slate-600 hover:text-primary"
-                          title="View Quotation"
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => whatsAppService.shareQuotation(q)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            whatsAppService.shareQuotation(q);
+                          }}
                           className="h-8 w-8 p-0 text-emerald-600 hover:bg-emerald-50"
                           title="Share via WhatsApp"
                         >
@@ -376,7 +377,10 @@ export function QuotationListPage() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => printerService.printQuotation(q)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            printerService.printQuotation(q);
+                          }}
                           className="h-8 w-8 p-0 text-slate-600 hover:bg-slate-100"
                           title="Print Quotation"
                         >
@@ -387,7 +391,10 @@ export function QuotationListPage() {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => setConvertingQuotation(q)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setConvertingQuotation(q);
+                            }}
                             className="text-[11px] h-7 px-2 text-primary border-primary-border hover:bg-primary-light"
                             title="Convert to Sales Order"
                           >

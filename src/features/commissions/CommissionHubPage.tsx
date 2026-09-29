@@ -227,8 +227,9 @@ export function CommissionHubPage() {
         </CardContent>
       </Card>
 
-      {/* Leaderboard */}
-      <Card>
+      {/* Leaderboard (Hidden for SALES_REP) */}
+      {role !== 'SALES_REP' && (
+        <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-sm font-semibold text-slate-900 flex items-center gap-2">
             <Trophy className="h-4 w-4 text-amber-500" />
@@ -302,6 +303,7 @@ export function CommissionHubPage() {
           )}
         </CardContent>
       </Card>
+      )}
 
       <CreateTargetModal
         open={isConfigOpen}

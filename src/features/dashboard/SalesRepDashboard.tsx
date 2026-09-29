@@ -13,6 +13,7 @@ import {
   Clock,
   ArrowRight,
   ShieldAlert,
+  CreditCard,
 } from 'lucide-react';
 import { formatCurrency, formatPercentage } from '../../utils/formatters';
 import { Link } from 'react-router-dom';
@@ -100,37 +101,93 @@ export function SalesRepDashboard() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Today's Route Visits */}
+        {/* Pending Payments & Route Receivables */}
         <Card className="lg:col-span-2">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-sm">Today's Dealer Visit Schedule</CardTitle>
-            <span className="text-xs text-slate-500 font-medium">3 of 5 completed</span>
+          <CardHeader className="flex flex-row items-center justify-between pb-3">
+            <div>
+              <CardTitle className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                <CreditCard className="h-4 w-4 text-emerald-600" />
+                Pending Payments & Route Receivables
+              </CardTitle>
+              <p className="text-[11px] text-slate-500 mt-0.5">
+                Outstanding balances for your assigned territory accounts requiring field collection.
+              </p>
+            </div>
+            <Link to="/payments">
+              <Button variant="ghost" size="sm" className="text-xs text-primary gap-1">
+                All Payments <ArrowRight className="h-3 w-3" />
+              </Button>
+            </Link>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
               {[
-                { name: 'Lanka Electrical Superstore', status: 'Completed', time: '09:30 AM', order: 'LKR 650,000' },
-                { name: 'Muthurajawela Engineering', status: 'Follow-up Due', time: '02:00 PM', order: 'Pending Note Check' },
-                { name: 'Kelani Valley Lighting Mart', status: 'Scheduled', time: '04:15 PM', order: 'Terms Verification' },
-              ].map((visit, idx) => (
+                {
+                  id: 'cust-001',
+                  name: 'Lanka Electrical Superstore',
+                  code: 'DLR-COL-001',
+                  amount: 450000,
+                  dueStatus: 'Overdue by 12 Days',
+                  statusVariant: 'destructive' as const,
+                  creditDays: 30,
+                },
+                {
+                  id: 'cust-002',
+                  name: 'Muthurajawela Engineering',
+                  code: 'DLR-GAM-002',
+                  amount: 280000,
+                  dueStatus: 'Due in 3 Days',
+                  statusVariant: 'warning' as const,
+                  creditDays: 45,
+                },
+                {
+                  id: 'cust-003',
+                  name: 'Kelani Valley Lighting Mart',
+                  code: 'DLR-KEL-003',
+                  amount: 195000,
+                  dueStatus: 'Within Terms',
+                  statusVariant: 'outline' as const,
+                  creditDays: 30,
+                },
+              ].map((pending) => (
                 <div
-                  key={idx}
-                  className="flex items-center justify-between p-3 rounded-lg border border-slate-100 bg-slate-50/50 hover:bg-slate-100 transition-colors"
+                  key={pending.id}
+                  className="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 rounded-xl border border-slate-200/80 bg-white hover:bg-slate-50/80 transition-colors gap-3"
                 >
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-md bg-white border border-slate-200 text-slate-600">
-                      <MapPin className="h-4 w-4" />
+                  <div className="flex items-start gap-3">
+                    <div className="p-2.5 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-100">
+                      <CreditCard className="h-4 w-4" />
                     </div>
                     <div>
-                      <div className="text-xs font-semibold text-slate-900">{visit.name}</div>
-                      <div className="text-[11px] text-slate-500 flex items-center gap-1">
-                        <Clock className="h-3 w-3" /> {visit.time} • Note: {visit.order}
+                      <Link
+                        to={`/customers/${pending.id}`}
+                        className="text-xs font-bold text-slate-900 hover:text-primary hover:underline"
+                      >
+                        {pending.name}
+                      </Link>
+                      <div className="text-[11px] text-slate-500 flex items-center gap-1.5 mt-0.5">
+                        <span className="font-mono text-slate-600">{pending.code}</span>
+                        <span>•</span>
+                        <span>Terms: {pending.creditDays}d</span>
                       </div>
                     </div>
                   </div>
-                  <Badge variant={visit.status === 'Completed' ? 'success' : 'warning'}>
-                    {visit.status}
-                  </Badge>
+
+                  <div className="flex items-center justify-between sm:justify-end gap-3 pt-2 sm:pt-0 border-t sm:border-0 border-slate-100">
+                    <div className="text-left sm:text-right">
+                      <div className="font-mono text-xs font-bold text-slate-900">
+                        {formatCurrency(pending.amount)}
+                      </div>
+                      <Badge variant={pending.statusVariant} className="text-[10px] mt-0.5">
+                        {pending.dueStatus}
+                      </Badge>
+                    </div>
+                    <Link to={`/payments/new?customerId=${pending.id}&amount=${pending.amount}`}>
+                      <Button size="sm" className="h-8 text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-semibold gap-1 shadow-xs">
+                        Collect Payment
+                      </Button>
+                    </Link>
+                  </div>
                 </div>
               ))}
             </div>

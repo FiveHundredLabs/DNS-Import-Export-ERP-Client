@@ -390,11 +390,22 @@ export function PaymentListPage() {
                     const isPending = p.status === 'PENDING_APPROVAL';
 
                     return (
-                      <TableRow key={p.id} className="hover:bg-slate-50/80">
+                      <TableRow
+                        key={p.id}
+                        className="hover:bg-slate-50/80 cursor-pointer transition-colors focus:outline-hidden focus:bg-slate-50"
+                        tabIndex={0}
+                        onClick={() => navigate(`/payments/${p.id}`)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            navigate(`/payments/${p.id}`);
+                          }
+                        }}
+                      >
                         <TableCell className="font-mono text-xs font-bold text-primary">
-                          <Link to={`/payments/${p.id}`} className="hover:underline">
+                          <span className="hover:underline">
                             {p.receiptNumber}
-                          </Link>
+                          </span>
                         </TableCell>
                         <TableCell className="text-xs text-slate-600 whitespace-nowrap">
                           {formatDateTime(p.collectedAt)}
@@ -427,7 +438,10 @@ export function PaymentListPage() {
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  onClick={() => handleOpenAction(p, 'APPROVE')}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleOpenAction(p, 'APPROVE');
+                                  }}
                                   className="h-7 px-2 text-[11px] font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100"
                                   title="Approve Settlement"
                                 >
@@ -436,7 +450,10 @@ export function PaymentListPage() {
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  onClick={() => handleOpenAction(p, 'REJECT')}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleOpenAction(p, 'REJECT');
+                                  }}
                                   className="h-7 px-2 text-[11px] font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100"
                                   title="Reject Settlement"
                                 >
@@ -448,7 +465,8 @@ export function PaymentListPage() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => {
+                              onClick={(e) => {
+                                e.stopPropagation();
                                 setSelectedPayment(p);
                                 setThermalModalOpen(true);
                               }}
@@ -460,7 +478,10 @@ export function PaymentListPage() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => pdfService.downloadReceiptPdf(p)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                pdfService.downloadReceiptPdf(p);
+                              }}
                               className="h-7 w-7 p-0 text-slate-500 hover:text-slate-900"
                               title="Download PDF Receipt"
                             >
@@ -469,20 +490,14 @@ export function PaymentListPage() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => whatsAppService.sharePaymentReceipt(p)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                whatsAppService.sharePaymentReceipt(p);
+                              }}
                               className="h-7 w-7 p-0 text-emerald-600 hover:text-emerald-700"
                               title="Share Receipt WhatsApp"
                             >
                               <Send className="h-3.5 w-3.5" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => navigate(`/payments/${p.id}`)}
-                              className="h-7 w-7 p-0 text-slate-500 hover:text-primary"
-                              title="View Details"
-                            >
-                              <Eye className="h-3.5 w-3.5" />
                             </Button>
                           </div>
                         </TableCell>

@@ -346,10 +346,16 @@ export function QuotationCreateEditPage() {
                     <Badge variant="success">Approved Master Record</Badge>
                   </div>
 
-                  <div className="grid grid-cols-3 gap-2 border-t border-slate-200 pt-2 text-[11px]">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 border-t border-slate-200 pt-2 text-[11px]">
                     <div>
-                      <span className="text-slate-500 block">Credit Limit:</span>
+                      <span className="text-slate-500 block">Total Credit Limit:</span>
                       <strong className="text-slate-800">{formatCurrency(selectedCustomer.commercialTerms.creditLimit)}</strong>
+                    </div>
+                    <div>
+                      <span className="text-slate-500 block">Available Credit:</span>
+                      <strong className="text-emerald-700">
+                        {formatCurrency(Math.max(0, selectedCustomer.commercialTerms.creditLimit - selectedCustomer.financials.totalOutstanding))}
+                      </strong>
                     </div>
                     <div>
                       <span className="text-slate-500 block">Credit Days:</span>
@@ -359,6 +365,12 @@ export function QuotationCreateEditPage() {
                       <span className="text-slate-500 block">Max Dealer Discount:</span>
                       <strong className="text-slate-800">{selectedCustomer.commercialTerms.maxDiscountPercentage || 12}%</strong>
                     </div>
+                  </div>
+
+                  <div className="mt-2.5 p-2 bg-slate-50 border border-slate-200 rounded text-[11px] text-slate-600 flex items-center justify-between">
+                    <span>
+                      ℹ️ <strong>Quotation Credit Policy:</strong> Quotations can exceed available credit. Credit limit enforcement applies strictly during Sales Order conversion.
+                    </span>
                   </div>
                 </div>
               ) : (

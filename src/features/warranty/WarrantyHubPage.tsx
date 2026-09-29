@@ -29,7 +29,7 @@ import {
 } from 'lucide-react';
 
 export function WarrantyHubPage() {
-  const { role, currentUser } = useAuth();
+  const { role, currentUser, hasPermission } = useAuth();
   const [activeTab, setActiveTab] = useState<'records' | 'claims' | 'followups'>('records');
 
   // Warranty Records state
@@ -147,13 +147,15 @@ export function WarrantyHubPage() {
             Reconcile dealer warranty notes, track valid periods, and manage replacement lifecycles.
           </p>
         </div>
-        <Button
-          onClick={() => setIsNewClaimOpen(true)}
-          className="bg-primary hover:bg-primary-hover text-primary-foreground text-xs h-9 gap-1.5 shadow-sm"
-        >
-          <PlusCircle className="h-4 w-4" />
-          Lodge Warranty Claim
-        </Button>
+        {role !== 'SALES_REP' && hasPermission('warranty:claims') && (
+          <Button
+            onClick={() => setIsNewClaimOpen(true)}
+            className="bg-primary hover:bg-primary-hover text-primary-foreground text-xs h-9 gap-1.5 shadow-sm"
+          >
+            <PlusCircle className="h-4 w-4" />
+            Lodge Warranty Claim
+          </Button>
+        )}
       </div>
 
       {/* KPI Metric Cards */}

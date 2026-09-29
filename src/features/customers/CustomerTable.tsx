@@ -3,7 +3,7 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '.
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import { formatCurrency } from '../../utils/formatters';
-import { Eye, Edit3, ShieldAlert, CheckCircle2 } from 'lucide-react';
+import { Edit3, ShieldAlert, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 
 interface CustomerTableProps {
@@ -32,7 +32,7 @@ export function CustomerTable({
             <TableHead>Customer / Code</TableHead>
             <TableHead>Type & Area</TableHead>
             <TableHead>Assigned Rep</TableHead>
-            <TableHead className="text-right">Credit Limit</TableHead>
+            <TableHead className="text-right">Credit / Available Limit</TableHead>
             <TableHead className="text-right">Total Outstanding</TableHead>
             <TableHead className="text-right">Overdue</TableHead>
             <TableHead className="text-center">Approval Stage</TableHead>
@@ -43,9 +43,21 @@ export function CustomerTable({
           {customers.map((c) => {
             const hasOverdue = c.financials.overdue > 0;
             const isPendingReview = c.approvalStage !== 'APPROVED';
+            const availableCredit = Math.max(0, c.commercialTerms.creditLimit - c.financials.totalOutstanding);
 
             return (
-              <TableRow key={c.id}>
+              <TableRow
+                key={c.id}
+                className="cursor-pointer hover:bg-slate-50/80 transition-colors focus:outline-hidden focus:bg-slate-50"
+                tabIndex={0}
+                onClick={() => onView(c)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    onView(c);
+                  }
+                }}
+              >
                 <TableCell>
                   <div className="font-semibold text-slate-900 flex items-center gap-1.5">
                     {c.name}
@@ -63,7 +75,10 @@ export function CustomerTable({
                   <span className="text-xs text-slate-700 font-medium">{c.assignedRepName}</span>
                 </TableCell>
                 <TableCell className="text-right font-mono text-xs text-slate-700">
-                  {formatCurrency(c.commercialTerms.creditLimit)}
+                  <div>{formatCurrency(c.commercialTerms.creditLimit)}</div>
+                  <div className="text-[10px] text-emerald-600 font-medium">
+                    Avail: {formatCurrency(availableCredit)}
+                  </div>
                   <div className="text-[10px] text-slate-400">{c.commercialTerms.creditDays} Days</div>
                 </TableCell>
                 <TableCell className="text-right font-mono font-semibold text-xs text-slate-900">
@@ -93,19 +108,14 @@ export function CustomerTable({
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex items-center justify-end gap-1">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => onView(c)}
-                      title="Customer 360 Hub"
-                    >
-                      <Eye className="h-4 w-4 text-slate-600" />
-                    </Button>
                     {isPendingReview && canCommercialReview && onReviewCommercials && (
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => onReviewCommercials(c)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onReviewCommercials(c);
+                        }}
                         title="Review Commercial Terms"
                       >
                         <CheckCircle2 className="h-4 w-4 text-primary" />
@@ -115,7 +125,10 @@ export function CustomerTable({
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => onEdit(c)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onEdit(c);
+                        }}
                         title="Edit Customer"
                       >
                         <Edit3 className="h-4 w-4 text-slate-600" />

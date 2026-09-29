@@ -91,8 +91,19 @@ export function GRNListPage() {
                 {filteredGRNs.map((g: any) => {
                   const totalValue = g.items?.reduce((acc: number, item: any) => acc + (item.unitCost * item.receivedQuantity), 0) || 0;
                   return (
-                    <TableRow key={g.id} className="cursor-pointer" onClick={() => navigate(`/inventory/grn/${g.id}`)}>
-                      <TableCell className="font-medium">{g.id}</TableCell>
+                    <TableRow
+                      key={g.id}
+                      className="cursor-pointer hover:bg-slate-50/80 transition-colors focus:outline-hidden focus:bg-slate-50"
+                      tabIndex={0}
+                      onClick={() => navigate(`/inventory/grn/${g.id}`)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          navigate(`/inventory/grn/${g.id}`);
+                        }
+                      }}
+                    >
+                      <TableCell className="font-medium text-primary hover:underline">{g.id}</TableCell>
                       <TableCell>{g.supplierName || 'Unknown Supplier'}</TableCell>
                       <TableCell>{g.submittedAt ? formatDate(g.submittedAt) : (g.createdAt ? formatDate(g.createdAt) : 'N/A')}</TableCell>
                       <TableCell className="text-right">{g.items?.length || 0}</TableCell>

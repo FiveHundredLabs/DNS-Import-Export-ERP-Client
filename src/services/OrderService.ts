@@ -23,6 +23,7 @@ import {
   canApproveOrder,
   canEscalateOrder,
   getAllowedEscalationTargets,
+  generateOrderNumber,
 } from '../rules/orderRules';
 
 export class OrderService {
@@ -265,7 +266,13 @@ export class OrderService {
       initialStatus = evalResult.isSpecialApproval ? 'SPECIAL_APPROVAL' : 'PENDING_APPROVAL';
     }
 
-    const orderNumber = `SO-${customer.code}-${Date.now().toString().slice(-4)}`;
+    const existingOrders = await this.repo.getAll();
+    const nextSeq = existingOrders.data.length + 1;
+    const orderNumber = generateOrderNumber(
+      customer.areaName || currentUser.areaName,
+      currentUser.name,
+      nextSeq
+    );
 
     const initialHistory: OrderApprovalAction[] = [
       {

@@ -16,6 +16,7 @@ import { productService, ProductService } from './ProductService';
 import { customerService, CustomerService } from './CustomerService';
 import { approvalService, ApprovalService } from './ApprovalService';
 import { evaluateDiscount } from '../rules/discountRules';
+import { generateOrderNumber } from '../rules/orderRules';
 
 export class QuotationService {
   private repo: IQuotationRepository;
@@ -588,7 +589,11 @@ export class QuotationService {
       );
     }
 
-    const orderNumber = `SO-${quotation.customerCodeSnapshot}-${Date.now().toString().slice(-4)}`;
+    const orderNumber = generateOrderNumber(
+      quotation.customerCodeSnapshot,
+      quotation.salesRepNameSnapshot,
+      1
+    );
     const convertedAt = new Date().toISOString();
 
     // Update quotation status to CONVERTED

@@ -312,14 +312,29 @@ export function InvoiceListPage() {
                 </TableHeader>
                 <TableBody>
                   {invoices.map((inv) => (
-                    <TableRow key={inv.id} className="hover:bg-slate-50/80">
+                    <TableRow
+                      key={inv.id}
+                      className="hover:bg-slate-50/80 cursor-pointer transition-colors focus:outline-hidden focus:bg-slate-50"
+                      tabIndex={0}
+                      onClick={() => navigate(`/invoices/${inv.id}`)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          navigate(`/invoices/${inv.id}`);
+                        }
+                      }}
+                    >
                       <TableCell className="font-mono text-xs font-bold text-primary">
-                        <Link to={`/invoices/${inv.id}`} className="hover:underline">
+                        <span className="hover:underline">
                           {inv.invoiceNumber}
-                        </Link>
+                        </span>
                       </TableCell>
                       <TableCell className="font-mono text-xs text-slate-600">
-                        <Link to={`/orders/${inv.orderId}`} className="hover:underline">
+                        <Link
+                          to={`/orders/${inv.orderId}`}
+                          onClick={(e) => e.stopPropagation()}
+                          className="hover:underline"
+                        >
                           {inv.orderNumber}
                         </Link>
                       </TableCell>
@@ -364,16 +379,10 @@ export function InvoiceListPage() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => navigate(`/invoices/${inv.id}`)}
-                            className="h-7 w-7 p-0 text-slate-500 hover:text-primary"
-                            title="View Invoice"
-                          >
-                            <Eye className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => printerService.printInvoice(inv)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              printerService.printInvoice(inv);
+                            }}
                             className="h-7 w-7 p-0 text-slate-500 hover:text-slate-900"
                             title="Print Invoice"
                           >
@@ -382,7 +391,10 @@ export function InvoiceListPage() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => pdfService.downloadInvoicePdf(inv)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              pdfService.downloadInvoicePdf(inv);
+                            }}
                             className="h-7 w-7 p-0 text-slate-500 hover:text-slate-900"
                             title="Download PDF"
                           >
@@ -391,7 +403,10 @@ export function InvoiceListPage() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => whatsAppService.shareInvoice(inv)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              whatsAppService.shareInvoice(inv);
+                            }}
                             className="h-7 w-7 p-0 text-emerald-600 hover:text-emerald-700"
                             title="Share via WhatsApp"
                           >
@@ -401,9 +416,10 @@ export function InvoiceListPage() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() =>
-                                navigate(`/payments/new?customerId=${inv.customerId}&invoiceId=${inv.id}`)
-                              }
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                navigate(`/payments/new?customerId=${inv.customerId}&invoiceId=${inv.id}`);
+                              }}
                               className="h-7 w-7 p-0 text-emerald-700 hover:bg-emerald-50"
                               title="Record Settlement"
                             >

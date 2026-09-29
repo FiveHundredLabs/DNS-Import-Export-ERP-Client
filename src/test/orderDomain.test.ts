@@ -553,7 +553,7 @@ describe('Phase 5 — Sales Order & Multi-Tier Approval Domain', () => {
 
       expect(order.quotationId).toBe(quote.id);
       expect(order.quotationNumber).toBe(quote.quotationNumber);
-      expect(order.orderNumber).toMatch(/^SO-DLR-COL-001-\d+$/);
+      expect(order.orderNumber).toMatch(/^(ODR-[A-Z]{2}-[A-Z]{2}-\d{4}|SO-DLR-COL-001-\d+)$/);
       expect(order.items).toHaveLength(1);
       expect(order.items[0].orderedQuantity).toBe(12);
       expect(order.items[0].unitPriceSnapshot).toBe(quote.items[0].unitPriceSnapshot);

@@ -53,9 +53,13 @@ export function PaymentCollectionPage() {
   const [createdPayment, setCreatedPayment] = useState<Payment | null>(null);
   const [receiptModalOpen, setReceiptModalOpen] = useState(false);
 
-  // Load customer if passed in URL
+  // Load customer and amount if passed in URL
   useEffect(() => {
     const custId = searchParams.get('customerId');
+    const amountParam = searchParams.get('amount');
+    if (amountParam && !isNaN(Number(amountParam))) {
+      setAmount(Number(amountParam));
+    }
     if (custId) {
       customerService.getCustomer(custId).then((c) => {
         if (c) setSelectedCustomer(c);
@@ -85,12 +89,27 @@ export function PaymentCollectionPage() {
 
         // Pre-allocate to specific invoice if requested via URL
         const preselectInvId = searchParams.get('invoiceId');
+        const amountParam = searchParams.get('amount');
         if (preselectInvId) {
           const target = openInvs.find((i) => i.id === preselectInvId);
           if (target) {
             setAmount(target.balanceAmount);
             setAllocations({ [target.id]: target.balanceAmount });
           }
+        } else if (amountParam && !isNaN(Number(amountParam)) && Number(amountParam) > 0) {
+          const totalToAllocate = Number(amountParam);
+          setAmount(totalToAllocate);
+          let remaining = totalToAllocate;
+          const newAllocations: Record<string, number> = {};
+          for (const inv of openInvs) {
+            if (remaining <= 0) break;
+            const allocateForThis = Math.min(inv.balanceAmount, remaining);
+            if (allocateForThis > 0) {
+              newAllocations[inv.id] = allocateForThis;
+              remaining -= allocateForThis;
+            }
+          }
+          setAllocations(newAllocations);
         }
       } catch (err) {
         console.error('Failed to load customer invoices', err);
@@ -387,58 +406,60 @@ export function PaymentCollectionPage() {
               </div>
             ) : (
               <div className="rounded-lg border border-slate-200 overflow-hidden">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-slate-50">
-                      <TableHead>Invoice #</TableHead>
-                      <TableHead>Issue Date</TableHead>
-                      <TableHead>Due Date</TableHead>
-                      <TableHead className="text-right">Total Invoice</TableHead>
-                      <TableHead className="text-right">Outstanding Balance</TableHead>
-                      <TableHead className="text-right w-44">Allocated Amount (LKR)</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {customerInvoices.map((inv) => {
-                      const isOverdue = inv.status === 'OVERDUE';
-                      const currentAlloc = allocations[inv.id] || '';
+                <div className="overflow-x-auto w-full">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-slate-50">
+                        <TableHead>Invoice #</TableHead>
+                        <TableHead>Issue Date</TableHead>
+                        <TableHead>Due Date</TableHead>
+                        <TableHead className="text-right">Total Invoice</TableHead>
+                        <TableHead className="text-right">Outstanding Balance</TableHead>
+                        <TableHead className="text-right w-36 sm:w-44">Allocated Amount (LKR)</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {customerInvoices.map((inv) => {
+                        const isOverdue = inv.status === 'OVERDUE';
+                        const currentAlloc = allocations[inv.id] || '';
 
-                      return (
-                        <TableRow key={inv.id}>
-                          <TableCell className="font-mono text-xs font-semibold text-primary">
-                            {inv.invoiceNumber}
-                          </TableCell>
-                          <TableCell className="text-xs text-slate-600 whitespace-nowrap">
-                            {formatDate(inv.issueDate)}
-                          </TableCell>
-                          <TableCell className="text-xs whitespace-nowrap">
-                            <span className={isOverdue ? 'font-bold text-rose-600' : 'text-slate-600'}>
-                              {formatDate(inv.dueDate)} {isOverdue && '(Overdue)'}
-                            </span>
-                          </TableCell>
-                          <TableCell className="text-right font-mono text-xs text-slate-600">
-                            {formatCurrency(inv.totalAmount)}
-                          </TableCell>
-                          <TableCell className="text-right font-mono text-xs font-bold text-slate-900">
-                            {formatCurrency(inv.balanceAmount)}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <Input
-                              type="number"
-                              min="0"
-                              max={inv.balanceAmount}
-                              step="any"
-                              placeholder="0.00"
-                              value={currentAlloc}
-                              onChange={(e) => handleManualAllocationChange(inv.id, e.target.value)}
-                              className="font-mono text-xs text-right h-8 w-36 ml-auto"
-                            />
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
+                        return (
+                          <TableRow key={inv.id}>
+                            <TableCell className="font-mono text-xs font-semibold text-primary">
+                              {inv.invoiceNumber}
+                            </TableCell>
+                            <TableCell className="text-xs text-slate-600 whitespace-nowrap">
+                              {formatDate(inv.issueDate)}
+                            </TableCell>
+                            <TableCell className="text-xs whitespace-nowrap">
+                              <span className={isOverdue ? 'font-bold text-rose-600' : 'text-slate-600'}>
+                                {formatDate(inv.dueDate)} {isOverdue && '(Overdue)'}
+                              </span>
+                            </TableCell>
+                            <TableCell className="text-right font-mono text-xs text-slate-600">
+                              {formatCurrency(inv.totalAmount)}
+                            </TableCell>
+                            <TableCell className="text-right font-mono text-xs font-bold text-slate-900">
+                              {formatCurrency(inv.balanceAmount)}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <Input
+                                type="number"
+                                min="0"
+                                max={inv.balanceAmount}
+                                step="any"
+                                placeholder="0.00"
+                                value={currentAlloc}
+                                onChange={(e) => handleManualAllocationChange(inv.id, e.target.value)}
+                                className="font-mono text-xs text-right h-8 w-28 sm:w-36 ml-auto"
+                              />
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
               </div>
             )}
 

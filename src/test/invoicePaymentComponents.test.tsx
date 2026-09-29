@@ -144,7 +144,7 @@ describe('Phase 7 — Invoice & Payment UI Components', () => {
       />
     );
 
-    expect(screen.getByText('Thermal 80mm ESC/POS Preview')).toBeInTheDocument();
+    expect(screen.getByText(/Thermal Receipt Preview/i)).toBeInTheDocument();
     expect(screen.getAllByText('DNS DISTRIBUTION (PVT) LTD').length).toBeGreaterThan(0);
     expect(screen.getByText(MOCK_PAYMENTS[0].receiptNumber)).toBeInTheDocument();
     expect(screen.getByText('Print Thermal Receipt')).toBeInTheDocument();

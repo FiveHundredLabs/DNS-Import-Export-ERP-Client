@@ -367,14 +367,22 @@ export function OrderListPage() {
                 </TableHeader>
                 <TableBody>
                   {orders.map((order) => (
-                    <TableRow key={order.id} className="hover:bg-slate-50/80">
+                    <TableRow
+                      key={order.id}
+                      className="hover:bg-slate-50/80 cursor-pointer transition-colors focus:outline-hidden focus:bg-slate-50 group"
+                      tabIndex={0}
+                      onClick={() => navigate(`/orders/${order.id}`)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          navigate(`/orders/${order.id}`);
+                        }
+                      }}
+                    >
                       <TableCell className="font-mono text-xs font-semibold text-slate-900">
-                        <button
-                          onClick={() => navigate(`/orders/${order.id}`)}
-                          className="hover:underline text-primary text-left"
-                        >
+                        <span className="text-primary hover:underline">
                           {order.orderNumber}
-                        </button>
+                        </span>
                         {order.quotationNumber && (
                           <div className="text-[10px] text-slate-400 font-normal">
                             Quote: {order.quotationNumber}
@@ -410,15 +418,9 @@ export function OrderListPage() {
                         />
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => navigate(`/orders/${order.id}`)}
-                          className="h-7 w-7 p-0 text-slate-500 hover:text-slate-900"
-                          title="View Order Details"
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
+                        <span className="text-xs font-medium text-primary opacity-0 group-hover:opacity-100 transition-opacity">
+                          View →
+                        </span>
                       </TableCell>
                     </TableRow>
                   ))}
