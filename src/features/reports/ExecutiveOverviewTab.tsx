@@ -1,8 +1,8 @@
-import React from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/card';
 import { StatCard } from '../../components/common/StatCard';
 import { Badge } from '../../components/ui/badge';
 import {
+  Download,
   TrendingUp,
   CreditCard,
   AlertCircle,
@@ -14,7 +14,8 @@ import {
   ShieldAlert,
 } from 'lucide-react';
 import { ExecutiveKpiSummary, SalesSummaryReport } from '../../types/reports';
-import { formatCurrencyLKR } from '../../utils/exportUtils';
+import { formatCurrencyLKR, exportToCSV } from '../../utils/exportUtils';
+import { Button } from '../../components/ui/button';
 
 interface ExecutiveOverviewTabProps {
   kpis: ExecutiveKpiSummary;
@@ -89,13 +90,37 @@ export function ExecutiveOverviewTab({ kpis, salesReport }: ExecutiveOverviewTab
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Channel Breakdown: Invoices vs POS */}
         <Card>
-          <CardHeader>
-            <CardTitle className="text-base font-bold text-slate-900 flex items-center justify-between">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-base font-bold text-slate-900 flex flex-wrap items-center gap-4">
               <span>Sales Channels: B2B Invoices vs Showroom POS</span>
               <Badge variant="outline" className="text-xs">
                 Total: {formatCurrencyLKR(salesReport.totalSales)}
               </Badge>
             </CardTitle>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                const timestamp = new Date().toISOString().split('T')[0];
+                exportToCSV(
+                  `Executive_Overview_KPIs_${timestamp}`,
+                  ['Metric', 'Value (LKR / Count)'],
+                  [
+                    ['Gross Revenue', kpis.grossRevenue],
+                    ['Total Collections', kpis.totalCollected],
+                    ['Outstanding Receivables', kpis.totalOutstanding],
+                    ['Overdue Receivables', kpis.totalOverdue],
+                    ['Inventory Valuation', kpis.totalInventoryValue],
+                    ['Active Orders', kpis.totalOrdersCount],
+                    ['Active Customers', kpis.activeCustomersCount],
+                  ]
+                );
+              }}
+              className="h-8 gap-1.5 flex-shrink-0"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Export KPIs</span>
+            </Button>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="space-y-4">
@@ -161,8 +186,8 @@ export function ExecutiveOverviewTab({ kpis, salesReport }: ExecutiveOverviewTab
 
         {/* Revenue vs Collection Realization */}
         <Card>
-          <CardHeader>
-            <CardTitle className="text-base font-bold text-slate-900 flex items-center justify-between">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-base font-bold text-slate-900 flex flex-wrap items-center gap-4">
               <span>Financial Realization & Liquidity</span>
               <Badge
                 variant={collectionRate >= 80 ? 'default' : 'secondary'}
@@ -218,10 +243,29 @@ export function ExecutiveOverviewTab({ kpis, salesReport }: ExecutiveOverviewTab
 
       {/* Sales Trend by Date */}
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-base font-bold text-slate-900">
             Daily Sales Activity Ledger
           </CardTitle>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              const timestamp = new Date().toISOString().split('T')[0];
+              exportToCSV(
+                `Daily_Sales_Ledger_${timestamp}`,
+                ['Date', 'Daily Sales Amount (LKR)', 'Share of Total Revenue'],
+                salesReport.salesByDate.map((item) => {
+                  const pct = salesReport.totalSales > 0 ? Math.round((item.amount / salesReport.totalSales) * 1000) / 10 : 0;
+                  return [item.date, item.amount, `${pct}%`];
+                })
+              );
+            }}
+            className="h-8 gap-1.5 flex-shrink-0"
+          >
+            <Download className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Download CSV</span>
+          </Button>
         </CardHeader>
         <CardContent>
           {salesReport.salesByDate.length === 0 ? (

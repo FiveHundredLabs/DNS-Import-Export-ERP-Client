@@ -137,6 +137,10 @@ export class CustomerService {
     const nextStage: CustomerApprovalStage = approved ? 'APPROVED' : 'REJECTED';
     return this.repo.updateApprovalStage(customerId, nextStage);
   }
+
+  async deleteCustomer(id: string): Promise<void> {
+    return this.repo.delete(id);
+  }
 }
 
 export const customerService = new CustomerService();

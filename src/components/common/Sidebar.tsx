@@ -64,6 +64,12 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     { name: 'Enterprise Reports', path: '/reports', icon: BarChart3 },
   ].filter((item) => canAccessRoute(item.path));
 
+  // Group 3: Administration
+  const administrationModules = [
+    { name: 'Area Management', path: '/areas', icon: Compass },
+    { name: 'Team Management', path: '/teams', icon: Users },
+  ].filter((item) => canAccessRoute(item.path));
+
   const isDashboardActive = location.pathname === '/';
 
   // Inline style guarantees var(--primary) renders exactly — bypasses Tailwind opacity issues
@@ -294,7 +300,42 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
             </div>
           )}
 
-          {/* Group 3: SUPPORT */}
+          {/* Group 3: ADMINISTRATION */}
+          {administrationModules.length > 0 && (
+            <div>
+              <div className="mb-2 px-3 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                Administration
+              </div>
+              <div className="space-y-1">
+                {administrationModules.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <NavLink
+                      key={item.path}
+                      to={item.path}
+                      onClick={onClose}
+                      className={({ isActive }) =>
+                        cn(
+                          'group flex items-center justify-between rounded-xl px-3.5 py-2 text-xs font-semibold transition-all',
+                          isActive
+                            ? 'font-bold shadow-sm'
+                            : 'text-slate-600 hover:bg-primary-light/50 hover:text-primary'
+                        )
+                      }
+                      style={({ isActive }) => (isActive ? activeNavStyle : undefined)}
+                    >
+                      <div className="flex items-center gap-3">
+                        <Icon className="h-4 w-4 shrink-0 transition-colors" />
+                        <span>{item.name}</span>
+                      </div>
+                    </NavLink>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Group 4: SUPPORT */}
           <div>
             <div className="mb-2 px-3 text-[10px] font-bold uppercase tracking-wider text-slate-400">
               Support & Roles

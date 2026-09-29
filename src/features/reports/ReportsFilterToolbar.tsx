@@ -1,8 +1,7 @@
-import React from 'react';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Badge } from '../../components/ui/badge';
-import { Download, Printer, Filter, RotateCcw, ShieldCheck, MapPin, UserCheck } from 'lucide-react';
+import { Printer, RotateCcw, MapPin, UserCheck } from 'lucide-react';
 import { ReportFilter } from '../../types/reports';
 import { User } from '../../types/auth';
 import { MOCK_AREAS } from '../../mock/mockAreas';
@@ -13,7 +12,6 @@ interface ReportsFilterToolbarProps {
   filter: ReportFilter;
   onFilterChange: (updates: Partial<ReportFilter>) => void;
   onReset: () => void;
-  onExportCSV: () => void;
   onPrint: () => void;
   activeTabTitle: string;
 }
@@ -23,7 +21,6 @@ export function ReportsFilterToolbar({
   filter,
   onFilterChange,
   onReset,
-  onExportCSV,
   onPrint,
   activeTabTitle,
 }: ReportsFilterToolbarProps) {
@@ -74,14 +71,6 @@ export function ReportsFilterToolbar({
           >
             <Printer className="w-4 h-4" />
             <span>Print</span>
-          </Button>
-          <Button
-            size="sm"
-            onClick={onExportCSV}
-            className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white"
-          >
-            <Download className="w-4 h-4" />
-            <span>Export CSV</span>
           </Button>
         </div>
       </div>

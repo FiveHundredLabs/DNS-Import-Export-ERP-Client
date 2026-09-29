@@ -18,8 +18,6 @@ import {
   ShieldAlert,
   Search,
   PlusCircle,
-  FileCheck2,
-  Clock,
   Eye,
   Store,
   FileText,

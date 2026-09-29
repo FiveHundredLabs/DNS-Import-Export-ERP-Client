@@ -3,7 +3,7 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '.
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import { formatCurrency } from '../../utils/formatters';
-import { Eye, Edit3, ShieldAlert, CheckCircle2 } from 'lucide-react';
+import { Eye, Edit3, CheckCircle2, Trash2 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 
 interface CustomerTableProps {
@@ -11,6 +11,7 @@ interface CustomerTableProps {
   onView: (customer: Customer) => void;
   onEdit?: (customer: Customer) => void;
   onReviewCommercials?: (customer: Customer) => void;
+  onDelete?: (customer: Customer) => void;
 }
 
 export function CustomerTable({
@@ -18,8 +19,9 @@ export function CustomerTable({
   onView,
   onEdit,
   onReviewCommercials,
+  onDelete,
 }: CustomerTableProps) {
-  const { hasPermission, role } = useAuth();
+  const { role } = useAuth();
   const canCommercialReview =
     role === 'SALES_MANAGER' || role === 'MANAGER' || role === 'DIRECTOR';
 
@@ -119,6 +121,21 @@ export function CustomerTable({
                         title="Edit Customer"
                       >
                         <Edit3 className="h-4 w-4 text-slate-600" />
+                      </Button>
+                    )}
+                    {onDelete && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => {
+                          if(window.confirm('Are you sure you want to delete this customer?')) {
+                            onDelete(c);
+                          }
+                        }}
+                        title="Delete Customer"
+                        className="hover:text-rose-600"
+                      >
+                        <Trash2 className="h-4 w-4" />
                       </Button>
                     )}
                   </div>

@@ -16,4 +16,5 @@ export interface ICustomerRepository {
   update(id: string, updates: Partial<Customer>): Promise<Customer>;
   updateCommercialTerms(id: string, terms: CommercialTerms): Promise<Customer>;
   updateApprovalStage(id: string, stage: CustomerApprovalStage): Promise<Customer>;
+  delete(id: string): Promise<void>;
 }
