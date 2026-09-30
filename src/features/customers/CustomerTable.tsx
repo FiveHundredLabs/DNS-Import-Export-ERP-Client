@@ -1,10 +1,7 @@
 import { Customer } from '../../types/customer';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../../components/ui/table';
 import { Badge } from '../../components/ui/badge';
-import { Button } from '../../components/ui/button';
 import { formatCurrency } from '../../utils/formatters';
-import { Edit3, ShieldAlert, CheckCircle2 } from 'lucide-react';
-import { useAuth } from '../../hooks/useAuth';
 
 interface CustomerTableProps {
   customers: Customer[];
@@ -16,12 +13,7 @@ interface CustomerTableProps {
 export function CustomerTable({
   customers,
   onView,
-  onEdit,
-  onReviewCommercials,
 }: CustomerTableProps) {
-  const { hasPermission, role } = useAuth();
-  const canCommercialReview =
-    role === 'SALES_MANAGER' || role === 'MANAGER' || role === 'DIRECTOR';
 
   return (
     <div className="rounded-2xl border border-slate-200/80 bg-white shadow-sm overflow-hidden">
@@ -36,13 +28,11 @@ export function CustomerTable({
             <TableHead className="text-right">Total Outstanding</TableHead>
             <TableHead className="text-right">Overdue</TableHead>
             <TableHead className="text-center">Approval Stage</TableHead>
-            <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {customers.map((c) => {
             const hasOverdue = c.financials.overdue > 0;
-            const isPendingReview = c.approvalStage !== 'APPROVED';
             const availableCredit = Math.max(0, c.commercialTerms.creditLimit - c.financials.totalOutstanding);
 
             return (
@@ -105,36 +95,6 @@ export function CustomerTable({
                   >
                     {c.approvalStage}
                   </Badge>
-                </TableCell>
-                <TableCell className="text-right">
-                  <div className="flex items-center justify-end gap-1">
-                    {isPendingReview && canCommercialReview && onReviewCommercials && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onReviewCommercials(c);
-                        }}
-                        title="Review Commercial Terms"
-                      >
-                        <CheckCircle2 className="h-4 w-4 text-primary" />
-                      </Button>
-                    )}
-                    {onEdit && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onEdit(c);
-                        }}
-                        title="Edit Customer"
-                      >
-                        <Edit3 className="h-4 w-4 text-slate-600" />
-                      </Button>
-                    )}
-                  </div>
                 </TableCell>
               </TableRow>
             );

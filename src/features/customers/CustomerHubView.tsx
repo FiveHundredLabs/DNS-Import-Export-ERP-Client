@@ -435,14 +435,15 @@ export function CustomerHubView({ customer }: { customer: Customer }) {
                     </TableHeader>
                     <TableBody>
                       {filteredInvoices.map((inv) => (
-                        <TableRow key={inv.id}>
+                        <TableRow
+                          key={inv.id}
+                          className="cursor-pointer hover:bg-slate-50/80 transition-colors"
+                          onClick={() => navigate(`/invoices/${inv.id}`)}
+                        >
                           <TableCell className="font-mono text-xs font-semibold text-primary">
-                            <button
-                              onClick={() => navigate(`/invoices/${inv.id}`)}
-                              className="hover:underline"
-                            >
+                            <span className="hover:underline">
                               {inv.invoiceNumber}
-                            </button>
+                            </span>
                           </TableCell>
                           <TableCell className="text-xs text-slate-600">{formatDate(inv.issueDate)}</TableCell>
                           <TableCell className="text-xs text-slate-600">
@@ -460,29 +461,20 @@ export function CustomerHubView({ customer }: { customer: Customer }) {
                             <InvoiceStatusBadge status={inv.status} />
                           </TableCell>
                           <TableCell className="text-right">
-                            <div className="flex items-center justify-end gap-1">
+                            {inv.balanceAmount > 0 && (
                               <Button
-                                variant="ghost"
+                                variant="outline"
                                 size="sm"
-                                onClick={() => navigate(`/invoices/${inv.id}`)}
-                                className="text-xs h-7 px-2 text-primary hover:text-primary-text"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  navigate(`/payments/new?customerId=${customer.id}&invoiceId=${inv.id}`);
+                                }}
+                                className="text-xs h-7 px-2 text-emerald-600 hover:text-emerald-800 border-emerald-300"
+                                title="Pay Invoice"
                               >
-                                View
+                                Pay
                               </Button>
-                              {inv.balanceAmount > 0 && (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() =>
-                                    navigate(`/payments/new?customerId=${customer.id}&invoiceId=${inv.id}`)
-                                  }
-                                  className="text-xs h-7 px-2 text-emerald-600 hover:text-emerald-800"
-                                  title="Pay Invoice"
-                                >
-                                  Pay
-                                </Button>
-                              )}
-                            </div>
+                            )}
                           </TableCell>
                         </TableRow>
                       ))}
@@ -539,19 +531,19 @@ export function CustomerHubView({ customer }: { customer: Customer }) {
                         <TableHead className="text-center">Items</TableHead>
                         <TableHead className="text-right">Order Amount</TableHead>
                         <TableHead className="text-center">Status / Approval</TableHead>
-                        <TableHead className="text-right w-[80px]">Action</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {customerOrders.map((ord) => (
-                        <TableRow key={ord.id}>
-                          <TableCell className="font-mono text-xs font-semibold text-slate-900">
-                            <button
-                              onClick={() => navigate(`/orders/${ord.id}`)}
-                              className="text-primary hover:underline text-left font-mono"
-                            >
+                        <TableRow
+                          key={ord.id}
+                          className="cursor-pointer hover:bg-slate-50/80 transition-colors"
+                          onClick={() => navigate(`/orders/${ord.id}`)}
+                        >
+                          <TableCell className="font-mono text-xs font-semibold text-primary">
+                            <span className="hover:underline">
                               {ord.orderNumber}
-                            </button>
+                            </span>
                           </TableCell>
                           <TableCell className="text-xs text-slate-600">{formatDate(ord.createdAt)}</TableCell>
                           <TableCell className="text-center text-xs text-slate-600">{ord.items.length} Items</TableCell>
@@ -560,17 +552,6 @@ export function CustomerHubView({ customer }: { customer: Customer }) {
                           </TableCell>
                           <TableCell className="text-center">
                             <OrderStatusBadge status={ord.status} isSpecialApproval={ord.isSpecialApproval} />
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => navigate(`/orders/${ord.id}`)}
-                              className="h-7 w-7 p-0 text-slate-500 hover:text-slate-900"
-                              title="View Order"
-                            >
-                              <Eye className="h-3.5 w-3.5" />
-                            </Button>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -629,19 +610,19 @@ export function CustomerHubView({ customer }: { customer: Customer }) {
                         <TableHead className="text-right">Discount</TableHead>
                         <TableHead className="text-right">Total Amount</TableHead>
                         <TableHead className="text-center">Status</TableHead>
-                        <TableHead className="text-right">Action</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {customerQuotations.map((qt) => (
-                        <TableRow key={qt.id}>
+                        <TableRow
+                          key={qt.id}
+                          className="cursor-pointer hover:bg-slate-50/80 transition-colors"
+                          onClick={() => navigate(`/quotations/${qt.id}`)}
+                        >
                           <TableCell className="font-mono text-xs font-semibold text-primary">
-                            <button
-                              onClick={() => navigate(`/quotations/${qt.id}`)}
-                              className="hover:underline"
-                            >
+                            <span className="hover:underline">
                               {qt.quotationNumber}
-                            </button>
+                            </span>
                           </TableCell>
                           <TableCell className="text-xs text-slate-600">{formatDate(qt.createdAt)}</TableCell>
                           <TableCell className="text-xs text-slate-600">{qt.validUntil}</TableCell>
@@ -654,16 +635,6 @@ export function CustomerHubView({ customer }: { customer: Customer }) {
                           </TableCell>
                           <TableCell className="text-center">
                             <QuotationStatusBadge status={qt.status} />
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => navigate(`/quotations/${qt.id}`)}
-                              className="text-xs h-7 px-2 text-primary hover:text-primary-text"
-                            >
-                              View
-                            </Button>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -720,19 +691,19 @@ export function CustomerHubView({ customer }: { customer: Customer }) {
                         <TableHead>Method</TableHead>
                         <TableHead className="text-right">Collected Amount</TableHead>
                         <TableHead className="text-center">Status</TableHead>
-                        <TableHead className="text-right">Action</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {customerPayments.map((pay) => (
-                        <TableRow key={pay.id}>
+                        <TableRow
+                          key={pay.id}
+                          className="cursor-pointer hover:bg-slate-50/80 transition-colors"
+                          onClick={() => navigate(`/payments/${pay.id}`)}
+                        >
                           <TableCell className="font-mono text-xs font-semibold text-slate-900">
-                            <button
-                              onClick={() => navigate(`/payments/${pay.id}`)}
-                              className="text-primary hover:underline font-mono"
-                            >
+                            <span className="text-primary hover:underline font-mono">
                               {pay.receiptNumber}
-                            </button>
+                            </span>
                           </TableCell>
                           <TableCell className="text-xs text-slate-600">{formatDate(pay.collectedAt)}</TableCell>
                           <TableCell className="text-xs text-slate-600">
@@ -743,16 +714,6 @@ export function CustomerHubView({ customer }: { customer: Customer }) {
                           </TableCell>
                           <TableCell className="text-center">
                             <PaymentStatusBadge status={pay.status} />
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => navigate(`/payments/${pay.id}`)}
-                              className="text-xs h-7 px-2 text-primary hover:text-primary-text"
-                            >
-                              View
-                            </Button>
                           </TableCell>
                         </TableRow>
                       ))}

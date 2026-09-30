@@ -362,7 +362,6 @@ export function OrderListPage() {
                     <TableHead className="hidden md:table-cell text-center">Credit Terms</TableHead>
                     <TableHead className="text-right">Order Amount</TableHead>
                     <TableHead className="text-center">Status / Approval</TableHead>
-                    <TableHead className="text-right w-[90px]">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -416,11 +415,6 @@ export function OrderListPage() {
                           status={order.status}
                           isSpecialApproval={order.isSpecialApproval}
                         />
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <span className="text-xs font-medium text-primary opacity-0 group-hover:opacity-100 transition-opacity">
-                          View →
-                        </span>
                       </TableCell>
                     </TableRow>
                   ))}

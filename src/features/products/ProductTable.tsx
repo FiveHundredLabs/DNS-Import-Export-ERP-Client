@@ -22,6 +22,7 @@ export function ProductTable({
   const { hasPermission } = useAuth();
   const canEdit = hasPermission('products:edit');
   const canProposePrice = hasPermission('products:price_approval') || canEdit;
+  const hasActions = Boolean((canProposePrice && onProposePrice) || (canEdit && onEdit));
 
   return (
     <div className="rounded-2xl border border-slate-200/80 bg-white shadow-sm overflow-hidden">
@@ -36,7 +37,7 @@ export function ProductTable({
             <TableHead className="text-right">Max Disc</TableHead>
             <TableHead className="text-center">Stock On Hand</TableHead>
             <TableHead className="text-center">Status</TableHead>
-            <TableHead className="text-right">Actions</TableHead>
+            {hasActions && <TableHead className="text-right">Actions</TableHead>}
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -91,36 +92,38 @@ export function ProductTable({
                     {p.status}
                   </Badge>
                 </TableCell>
-                <TableCell className="text-right">
-                  <div className="flex items-center justify-end gap-1">
-                    {canProposePrice && onProposePrice && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onProposePrice(p);
-                        }}
-                        title="Propose Selling Price Change"
-                      >
-                        <TrendingUp className="h-4 w-4 text-primary" />
-                      </Button>
-                    )}
-                    {canEdit && onEdit && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onEdit(p);
-                        }}
-                        title="Edit Master Data"
-                      >
-                        <Edit3 className="h-4 w-4 text-slate-600" />
-                      </Button>
-                    )}
-                  </div>
-                </TableCell>
+                {hasActions && (
+                  <TableCell className="text-right">
+                    <div className="flex items-center justify-end gap-1">
+                      {canProposePrice && onProposePrice && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onProposePrice(p);
+                          }}
+                          title="Propose Selling Price Change"
+                        >
+                          <TrendingUp className="h-4 w-4 text-primary" />
+                        </Button>
+                      )}
+                      {canEdit && onEdit && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onEdit(p);
+                          }}
+                          title="Edit Master Data"
+                        >
+                          <Edit3 className="h-4 w-4 text-slate-600" />
+                        </Button>
+                      )}
+                    </div>
+                  </TableCell>
+                )}
               </TableRow>
             );
           })}

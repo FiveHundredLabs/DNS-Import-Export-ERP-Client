@@ -276,7 +276,6 @@ export function PaymentDetailPage() {
                     <TableRow className="bg-slate-50">
                       <TableHead>Invoice #</TableHead>
                       <TableHead className="text-right">Allocated Amount (LKR)</TableHead>
-                      <TableHead className="text-right w-28">Action</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -289,14 +288,6 @@ export function PaymentDetailPage() {
                         </TableCell>
                         <TableCell className="text-right font-mono text-xs font-bold text-slate-900">
                           {formatCurrency(alloc.allocatedAmount)}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Link
-                            to={`/invoices/${alloc.invoiceId}`}
-                            className="text-xs text-primary hover:underline"
-                          >
-                            View Invoice
-                          </Link>
                         </TableCell>
                       </TableRow>
                     ))}
