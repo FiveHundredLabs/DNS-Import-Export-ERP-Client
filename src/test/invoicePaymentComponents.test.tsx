@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import React from 'react';
 import '@testing-library/jest-dom';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { InvoiceStatusBadge } from '../features/invoices/InvoiceStatusBadge';
 import { InvoiceListPage } from '../features/invoices/InvoiceListPage';
