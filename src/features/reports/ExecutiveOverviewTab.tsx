@@ -90,7 +90,7 @@ export function ExecutiveOverviewTab({ kpis, salesReport }: ExecutiveOverviewTab
         {/* Channel Breakdown: Invoices vs POS */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-base font-bold text-slate-900 flex items-center justify-between">
+            <CardTitle className="text-base font-semibold text-slate-900 flex items-center justify-between">
               <span>Sales Channels: B2B Invoices vs Showroom POS</span>
               <Badge variant="outline" className="text-xs">
                 Total: {formatCurrencyLKR(salesReport.totalSales)}
@@ -107,7 +107,7 @@ export function ExecutiveOverviewTab({ kpis, salesReport }: ExecutiveOverviewTab
                     <span>Commercial B2B Tax Invoices</span>
                   </div>
                   <div className="text-right">
-                    <span className="font-bold text-slate-900">
+                    <span className="font-semibold tabular-nums text-slate-900">
                       {formatCurrencyLKR(salesReport.invoiceSales)}
                     </span>
                     <span className="text-slate-400 ml-2">({invoiceShare}%)</span>
@@ -129,7 +129,7 @@ export function ExecutiveOverviewTab({ kpis, salesReport }: ExecutiveOverviewTab
                     <span>Showroom Retail / Walk-in POS</span>
                   </div>
                   <div className="text-right">
-                    <span className="font-bold text-slate-900">
+                    <span className="font-semibold tabular-nums text-slate-900">
                       {formatCurrencyLKR(salesReport.posSales)}
                     </span>
                     <span className="text-slate-400 ml-2">({posShare}%)</span>
@@ -147,11 +147,11 @@ export function ExecutiveOverviewTab({ kpis, salesReport }: ExecutiveOverviewTab
             <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 grid grid-cols-2 gap-4 text-center">
               <div>
                 <p className="text-xs text-slate-500">Total Sales Transactions</p>
-                <p className="text-xl font-bold text-slate-900 mt-1">{salesReport.totalOrders}</p>
+                <p className="text-xl font-semibold tabular-nums text-slate-900 mt-1">{salesReport.totalOrders}</p>
               </div>
               <div>
                 <p className="text-xs text-slate-500">Average Transaction Value</p>
-                <p className="text-xl font-bold text-primary mt-1">
+                <p className="text-xl font-semibold tabular-nums text-primary mt-1">
                   {formatCurrencyLKR(salesReport.averageOrderValue)}
                 </p>
               </div>
@@ -162,11 +162,11 @@ export function ExecutiveOverviewTab({ kpis, salesReport }: ExecutiveOverviewTab
         {/* Revenue vs Collection Realization */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-base font-bold text-slate-900 flex items-center justify-between">
+            <CardTitle className="text-base font-semibold text-slate-900 flex items-center justify-between">
               <span>Financial Realization & Liquidity</span>
               <Badge
                 variant={collectionRate >= 80 ? 'default' : 'secondary'}
-                className="text-xs"
+                className="text-xs font-medium tabular-nums"
               >
                 Realized: {collectionRate}%
               </Badge>
@@ -176,19 +176,19 @@ export function ExecutiveOverviewTab({ kpis, salesReport }: ExecutiveOverviewTab
             <div className="space-y-3">
               <div className="flex items-center justify-between text-sm">
                 <span className="text-slate-600">Gross Billed Sales:</span>
-                <span className="font-bold text-slate-900">{formatCurrencyLKR(kpis.grossRevenue)}</span>
+                <span className="font-semibold tabular-nums text-slate-900">{formatCurrencyLKR(kpis.grossRevenue)}</span>
               </div>
               <div className="flex items-center justify-between text-sm">
                 <span className="text-emerald-700 font-medium">Approved Collections Received:</span>
-                <span className="font-bold text-emerald-700">{formatCurrencyLKR(kpis.totalCollected)}</span>
+                <span className="font-semibold tabular-nums text-emerald-700">{formatCurrencyLKR(kpis.totalCollected)}</span>
               </div>
               <div className="flex items-center justify-between text-sm">
                 <span className="text-amber-700 font-medium">Uncollected Receivables:</span>
-                <span className="font-bold text-amber-700">{formatCurrencyLKR(kpis.totalOutstanding)}</span>
+                <span className="font-semibold tabular-nums text-amber-700">{formatCurrencyLKR(kpis.totalOutstanding)}</span>
               </div>
               <div className="flex items-center justify-between text-sm pt-2 border-t border-slate-200">
                 <span className="text-rose-700 font-medium">Critical Overdue Balance:</span>
-                <span className="font-bold text-rose-700">{formatCurrencyLKR(kpis.totalOverdue)}</span>
+                <span className="font-semibold tabular-nums text-rose-700">{formatCurrencyLKR(kpis.totalOverdue)}</span>
               </div>
             </div>
 
@@ -198,7 +198,7 @@ export function ExecutiveOverviewTab({ kpis, salesReport }: ExecutiveOverviewTab
                   <ArrowUpRight className="w-5 h-5" />
                 </div>
                 <div>
-                  <h4 className="text-xs font-bold text-indigo-950 uppercase tracking-wider">
+                  <h4 className="text-xs font-semibold text-indigo-950 uppercase tracking-wider">
                     Working Capital Position
                   </h4>
                   <p className="text-xs text-primary-text">
@@ -207,7 +207,7 @@ export function ExecutiveOverviewTab({ kpis, salesReport }: ExecutiveOverviewTab
                 </div>
               </div>
               <div className="text-right">
-                <span className="text-lg font-extrabold text-indigo-900">
+                <span className="text-lg font-semibold tabular-nums text-indigo-900">
                   {formatCurrencyLKR(kpis.totalCollected - kpis.totalOverdue)}
                 </span>
               </div>
@@ -219,7 +219,7 @@ export function ExecutiveOverviewTab({ kpis, salesReport }: ExecutiveOverviewTab
       {/* Sales Trend by Date */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base font-bold text-slate-900">
+          <CardTitle className="text-base font-semibold text-slate-900">
             Daily Sales Activity Ledger
           </CardTitle>
         </CardHeader>

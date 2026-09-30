@@ -415,8 +415,8 @@ export function OrderDetailPage() {
         <div className="rounded-lg bg-amber-500 text-white p-4 shadow-sm flex items-start gap-3">
           <ShieldAlert className="h-6 w-6 text-white shrink-0 mt-0.5" />
           <div className="space-y-1">
-            <h4 className="font-extrabold text-sm tracking-wide uppercase">
-              SPECIAL APPROVAL REQUIRED
+            <h4 className="font-semibold text-sm tracking-wide">
+              Special Approval Required
             </h4>
             <p className="text-xs text-amber-50">
               This order requires authorization from the <strong>{order.currentApproverRole || order.targetApproverRole}</strong> due to commercial limit breaches:
@@ -434,7 +434,7 @@ export function OrderDetailPage() {
         <div className="rounded-lg bg-amber-50 border border-amber-200 p-4 text-xs text-amber-900 flex items-start gap-3">
           <Clock className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
           <div className="space-y-1">
-            <h4 className="font-bold text-amber-900">Pending Sales Manager Approval</h4>
+            <h4 className="font-semibold text-amber-900">Pending Sales Manager Approval</h4>
             <p className="text-amber-800">
               Standard commercial terms order pending authorization by the Sales Manager.
             </p>
@@ -446,7 +446,7 @@ export function OrderDetailPage() {
         <div className="rounded-lg bg-rose-50 border border-rose-200 p-4 text-xs text-rose-900 flex items-start gap-3">
           <XCircle className="h-5 w-5 text-rose-600 shrink-0 mt-0.5" />
           <div>
-            <h4 className="font-bold">Sales Order Rejected</h4>
+            <h4 className="font-semibold">Sales Order Rejected</h4>
             <p className="mt-0.5">
               Rejected by {order.rejectedByName} on {formatDate(order.rejectedAt || '')}. Reason: "{order.rejectionReason}"
             </p>
@@ -458,7 +458,7 @@ export function OrderDetailPage() {
         <div className="rounded-lg bg-slate-100 border border-slate-300 p-4 text-xs text-slate-700 flex items-start gap-3">
           <Ban className="h-5 w-5 text-slate-500 shrink-0 mt-0.5" />
           <div>
-            <h4 className="font-bold">Sales Order Cancelled</h4>
+            <h4 className="font-semibold">Sales Order Cancelled</h4>
             <p className="mt-0.5">
               Cancelled on {formatDate(order.cancelledAt || '')}. Reason: "{order.cancellationReason}"
             </p>
@@ -472,7 +472,7 @@ export function OrderDetailPage() {
         <div className="p-6 border-b border-slate-200 bg-slate-50/50 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-3">
-              <span className="text-xl font-bold font-mono text-slate-900">{order.orderNumber}</span>
+              <span className="text-xl font-semibold font-mono text-slate-900 tabular-nums">{order.orderNumber}</span>
               <OrderStatusBadge status={order.status} isSpecialApproval={order.isSpecialApproval} />
             </div>
             <div className="text-xs text-slate-500 mt-1 flex flex-wrap items-center gap-4">
@@ -488,8 +488,8 @@ export function OrderDetailPage() {
           </div>
 
           <div className="text-right">
-            <span className="text-xs text-slate-500 block">Total Order Value</span>
-            <span className="text-2xl font-bold font-mono text-primary-text">
+            <span className="text-xs font-medium text-slate-500 block">Total Order Value</span>
+            <span className="text-2xl font-semibold font-mono text-primary tabular-nums">
               {formatCurrency(order.totalAmount)}
             </span>
           </div>
@@ -498,31 +498,31 @@ export function OrderDetailPage() {
         {/* Customer & Credit Snapshot at Time of Order */}
         <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-6 border-b border-slate-200">
           <div>
-            <h4 className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">
+            <h4 className="text-xs font-semibold text-slate-500 mb-2">
               Customer Snapshot
             </h4>
             <div className="space-y-1 text-xs">
-              <div className="font-bold text-slate-900">{order.customerNameSnapshot}</div>
+              <div className="font-semibold text-slate-900">{order.customerNameSnapshot}</div>
               <div className="text-slate-500 font-mono">Code: {order.customerCodeSnapshot}</div>
               <div className="text-slate-600">{order.customerPhoneSnapshot}</div>
               {order.customerAddressSnapshot && (
-                <div className="text-slate-500 text-[11px] mt-1">{order.customerAddressSnapshot}</div>
+                <div className="text-slate-500 text-xs mt-1">{order.customerAddressSnapshot}</div>
               )}
             </div>
           </div>
 
           <div>
-            <h4 className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">
+            <h4 className="text-xs font-semibold text-slate-500 mb-2">
               Credit Terms at Order
             </h4>
             <div className="space-y-1 text-xs text-slate-600">
               <div className="flex justify-between">
                 <span>Credit Limit:</span>
-                <span className="font-mono font-semibold">{formatCurrency(order.customerCreditLimitSnapshot)}</span>
+                <span className="font-mono font-semibold tabular-nums">{formatCurrency(order.customerCreditLimitSnapshot)}</span>
               </div>
               <div className="flex justify-between">
                 <span>Prior Outstanding:</span>
-                <span className="font-mono">{formatCurrency(order.customerOutstandingSnapshot)}</span>
+                <span className="font-mono tabular-nums">{formatCurrency(order.customerOutstandingSnapshot)}</span>
               </div>
               <div className="flex justify-between">
                 <span>Requested Terms:</span>
@@ -536,7 +536,7 @@ export function OrderDetailPage() {
           </div>
 
           <div>
-            <h4 className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">
+            <h4 className="text-xs font-semibold text-slate-500 mb-2">
               Delivery Information
             </h4>
             <div className="space-y-1 text-xs text-slate-600">
@@ -561,12 +561,12 @@ export function OrderDetailPage() {
 
         {/* Itemized Table */}
         <div className="p-6">
-          <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-3">
+          <h4 className="text-sm font-semibold text-slate-800 mb-3">
             Itemized Order Lines
           </h4>
           <div className="rounded-lg border border-slate-200 overflow-hidden">
-            <table className="w-full text-xs">
-              <thead className="bg-slate-50 border-b border-slate-200 text-slate-600">
+            <table className="w-full text-[13px] tabular-nums">
+              <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 text-[12.5px]">
                 <tr>
                   <th className="py-2.5 px-4 text-left font-semibold">Product Snapshot</th>
                   <th className="py-2.5 px-3 text-right font-semibold">Unit Price</th>
@@ -583,34 +583,34 @@ export function OrderDetailPage() {
                   <tr key={it.id} className="hover:bg-slate-50/60">
                     <td className="py-3 px-4">
                       <div className="font-semibold text-slate-900">{it.productNameSnapshot}</div>
-                      <div className="text-[11px] text-slate-400 font-mono">
+                      <div className="text-xs text-slate-400 font-mono">
                         {it.skuSnapshot} {it.uomSnapshot && `• ${it.uomSnapshot}`}
                       </div>
                       {it.requiresSpecialApproval && (
-                        <span className="inline-block mt-1 text-[10px] text-amber-800 bg-amber-100 px-1.5 py-0.5 rounded font-medium">
+                        <span className="inline-block mt-1 text-xs text-amber-800 bg-amber-100 px-1.5 py-0.5 rounded font-medium">
                           {it.specialApprovalReason || 'Excess discount'}
                         </span>
                       )}
                     </td>
-                    <td className="py-3 px-3 text-right font-mono text-slate-700">
+                    <td className="py-3 px-3 text-right font-mono text-slate-700 tabular-nums">
                       {formatCurrency(it.unitPriceSnapshot)}
                     </td>
-                    <td className="py-3 px-3 text-center font-semibold text-slate-900">
+                    <td className="py-3 px-3 text-center font-semibold text-slate-900 tabular-nums">
                       {it.orderedQuantity}
                     </td>
-                    <td className="py-3 px-3 text-center text-slate-700">
+                    <td className="py-3 px-3 text-center text-slate-700 tabular-nums">
                       {it.approvedQuantity}
                     </td>
-                    <td className="py-3 px-3 text-center text-slate-700">
+                    <td className="py-3 px-3 text-center text-slate-700 tabular-nums">
                       {it.issuedQuantity}
                     </td>
-                    <td className="py-3 px-3 text-center font-medium">
+                    <td className="py-3 px-3 text-center font-medium tabular-nums">
                       {it.discountPercentage}%
                     </td>
-                    <td className="py-3 px-3 text-right font-mono text-slate-600">
+                    <td className="py-3 px-3 text-right font-mono text-slate-600 tabular-nums">
                       - {formatCurrency(it.discountAmount)}
                     </td>
-                    <td className="py-3 px-4 text-right font-mono font-bold text-slate-900">
+                    <td className="py-3 px-4 text-right font-mono font-semibold text-slate-900 tabular-nums">
                       {formatCurrency(it.lineTotal)}
                     </td>
                   </tr>
@@ -623,19 +623,19 @@ export function OrderDetailPage() {
           <div className="mt-4 flex flex-col items-end text-xs space-y-1.5">
             <div className="flex justify-between w-64 text-slate-600">
               <span>Subtotal:</span>
-              <span className="font-mono font-medium">{formatCurrency(order.subtotal)}</span>
+              <span className="font-mono font-medium tabular-nums">{formatCurrency(order.subtotal)}</span>
             </div>
             <div className="flex justify-between w-64 text-emerald-600">
               <span>Applied Discount:</span>
-              <span className="font-mono font-medium">- {formatCurrency(order.discountAmount)}</span>
+              <span className="font-mono font-medium tabular-nums">- {formatCurrency(order.discountAmount)}</span>
             </div>
             <div className="flex justify-between w-64 text-slate-600">
               <span>VAT (18%):</span>
-              <span className="font-mono font-medium">{formatCurrency(order.taxAmount)}</span>
+              <span className="font-mono font-medium tabular-nums">{formatCurrency(order.taxAmount)}</span>
             </div>
-            <div className="flex justify-between w-64 border-t-2 border-indigo-900 pt-2 font-bold text-sm text-slate-900">
+            <div className="flex justify-between w-64 border-t-2 border-slate-900 pt-2 font-semibold text-sm text-slate-900">
               <span>Grand Total:</span>
-              <span className="font-mono text-primary-text">{formatCurrency(order.totalAmount)}</span>
+              <span className="font-mono font-semibold text-primary tabular-nums">{formatCurrency(order.totalAmount)}</span>
             </div>
           </div>
         </div>
@@ -643,7 +643,7 @@ export function OrderDetailPage() {
         {/* Approval Box & Audit Timeline */}
         <div className="border-t border-slate-200 bg-slate-50/50 p-6">
           <div className="flex items-center justify-between mb-4">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-600 flex items-center gap-1.5">
+            <h4 className="text-sm font-semibold text-slate-700 flex items-center gap-1.5">
               <Clock className="h-4 w-4 text-primary" />
               Approval Timeline & State History
             </h4>
@@ -686,7 +686,7 @@ export function OrderDetailPage() {
             </DialogHeader>
 
             <div className="py-2">
-              <label className="block text-xs font-medium text-slate-700 mb-1">
+              <label className="block text-[13px] font-medium text-slate-700 mb-1.5">
                 {actionType === 'APPROVE' ? 'Approval Notes (Optional)' : 'Explanatory Reason (Required)'}
               </label>
               <textarea
@@ -702,7 +702,7 @@ export function OrderDetailPage() {
                     : 'e.g. Exceeds standard discount parameters; requesting senior management override.'
                 }
                 rows={3}
-                className="w-full rounded-md border border-slate-200 p-2 text-xs focus:ring-1 focus:ring-primary"
+                className="w-full rounded-md border border-slate-200 p-2 text-sm focus:ring-1 focus:ring-primary"
               />
             </div>
 

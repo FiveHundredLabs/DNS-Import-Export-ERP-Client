@@ -48,7 +48,7 @@ export function GeneralLedgerPage() {
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900">General Ledger Explorer</h1>
+            <h1 className="text-2xl font-semibold tracking-tight text-slate-900">General Ledger Explorer</h1>
             <Badge variant="outline" className="bg-primary-light text-primary-text border-primary-border text-xs">
               Account Transaction Statement
             </Badge>
@@ -62,7 +62,7 @@ export function GeneralLedgerPage() {
       {/* Account Selector & Date Filter Controls */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-center">
         <div className="lg:col-span-4">
-          <label className="block text-xs font-semibold text-slate-700 mb-1">Select General Ledger Account</label>
+          <label className="block text-[13px] font-medium text-slate-700 mb-1.5">Select General Ledger Account</label>
           <CoaTreeSelect
             accounts={accounts}
             value={selectedAccountId}
@@ -72,7 +72,7 @@ export function GeneralLedgerPage() {
         </div>
 
         <div className="lg:col-span-8">
-          <label className="block text-xs font-semibold text-slate-700 mb-1">Statement Date Range</label>
+          <label className="block text-[13px] font-medium text-slate-700 mb-1.5">Statement Date Range</label>
           <ReportDateFilterBar
             filter={dateFilter}
             onChange={setDateFilter}
@@ -85,35 +85,35 @@ export function GeneralLedgerPage() {
       {report && (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
           <Card className="p-4 border-slate-200">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Opening Balance</span>
-            <div className="mt-2 text-xl font-bold text-slate-800 font-mono">
+            <span className="text-xs font-medium text-slate-500">Opening Balance</span>
+            <div className="mt-2 text-xl font-semibold text-slate-800 font-mono tabular-nums">
               {formatCurrency(report.openingBalance)}
             </div>
-            <span className="text-[11px] text-slate-400">Prior to {dateFilter.startDate}</span>
+            <span className="text-xs text-slate-400">Prior to {dateFilter.startDate}</span>
           </Card>
 
           <Card className="p-4 border-slate-200">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Total Period Debits</span>
-            <div className="mt-2 text-xl font-bold text-primary-text font-mono">
+            <span className="text-xs font-medium text-slate-500">Total Period Debits</span>
+            <div className="mt-2 text-xl font-semibold text-primary font-mono tabular-nums">
               {formatCurrency(report.totalDebits)}
             </div>
-            <span className="text-[11px] text-primary font-medium">Inward / Additions</span>
+            <span className="text-xs text-primary font-medium">Inward / Additions</span>
           </Card>
 
           <Card className="p-4 border-slate-200">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Total Period Credits</span>
-            <div className="mt-2 text-xl font-bold text-slate-700 font-mono">
+            <span className="text-xs font-medium text-slate-500">Total Period Credits</span>
+            <div className="mt-2 text-xl font-semibold text-slate-700 font-mono tabular-nums">
               {formatCurrency(report.totalCredits)}
             </div>
-            <span className="text-[11px] text-slate-400">Outward / Deductions</span>
+            <span className="text-xs text-slate-400">Outward / Deductions</span>
           </Card>
 
           <Card className="p-4 border-slate-200 bg-primary-light/40 border-primary-border/40">
-            <span className="text-xs font-semibold uppercase tracking-wider text-indigo-900">Closing Balance</span>
-            <div className="mt-2 text-xl font-bold text-indigo-950 font-mono">
+            <span className="text-xs font-medium text-indigo-900">Closing Balance</span>
+            <div className="mt-2 text-xl font-semibold text-indigo-950 font-mono tabular-nums">
               {formatCurrency(report.closingBalance)}
             </div>
-            <span className="text-[11px] text-primary font-medium">As of {dateFilter.endDate}</span>
+            <span className="text-xs text-primary font-medium">As of {dateFilter.endDate}</span>
           </Card>
         </div>
       )}
@@ -123,7 +123,7 @@ export function GeneralLedgerPage() {
         <div className="border-b border-slate-200 bg-slate-50 px-6 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <BookOpen className="h-4 w-4 text-primary" />
-            <span className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+            <span className="text-xs font-semibold text-slate-800">
               {selectedAccount?.code} — {selectedAccount?.name}
             </span>
           </div>
@@ -133,8 +133,8 @@ export function GeneralLedgerPage() {
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="border-b border-slate-200 bg-slate-50 text-[11px] font-bold uppercase tracking-wider text-slate-500">
+          <table className="w-full text-left text-[13px] tabular-nums">
+            <thead className="border-b border-slate-200 bg-slate-50 text-[12.5px] font-semibold text-slate-600">
               <tr>
                 <th className="px-4 py-3">Date</th>
                 <th className="px-4 py-3">Voucher #</th>
@@ -151,14 +151,14 @@ export function GeneralLedgerPage() {
                 <td className="px-4 py-2.5">{dateFilter.startDate}</td>
                 <td className="px-4 py-2.5">—</td>
                 <td className="px-4 py-2.5">
-                  <Badge variant="outline" className="text-[10px]">
+                  <Badge variant="outline" className="text-xs font-medium">
                     OPENING
                   </Badge>
                 </td>
                 <td className="px-4 py-2.5">Opening balance brought forward</td>
                 <td className="px-4 py-2.5 text-right">—</td>
                 <td className="px-4 py-2.5 text-right">—</td>
-                <td className="px-4 py-2.5 text-right font-mono font-bold text-slate-800">
+                <td className="px-4 py-2.5 text-right font-mono font-semibold text-slate-800 tabular-nums">
                   {formatCurrency(report?.openingBalance || 0)}
                 </td>
               </tr>
@@ -174,43 +174,43 @@ export function GeneralLedgerPage() {
                 report?.transactions.map((t, idx) => (
                   <tr key={`${t.journalId}-${idx}`} className="hover:bg-slate-50/60 transition-colors">
                     <td className="px-4 py-3 text-slate-600">{formatDate(t.date)}</td>
-                    <td className="px-4 py-3 font-mono font-bold text-primary-text">{t.entryNumber}</td>
+                    <td className="px-4 py-3 font-mono font-semibold text-primary tabular-nums">{t.entryNumber}</td>
                     <td className="px-4 py-3">
-                      <Badge variant="outline" className="font-mono text-[10px] bg-slate-50">
+                      <Badge variant="outline" className="font-mono text-xs bg-slate-50 font-medium">
                         {t.source}
                       </Badge>
                     </td>
                     <td className="px-4 py-3">
                       <div className="font-medium text-slate-900">{t.description}</div>
                       {t.reference && (
-                        <div className="font-mono text-[11px] text-slate-400">Ref: {t.reference}</div>
+                        <div className="font-mono text-xs text-slate-400">Ref: {t.reference}</div>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-right font-mono font-medium text-primary-text">
+                    <td className="px-4 py-3 text-right font-mono font-medium text-primary tabular-nums">
                       {t.debit > 0 ? formatCurrency(t.debit) : '—'}
                     </td>
-                    <td className="px-4 py-3 text-right font-mono font-medium text-slate-700">
+                    <td className="px-4 py-3 text-right font-mono font-medium text-slate-700 tabular-nums">
                       {t.credit > 0 ? formatCurrency(t.credit) : '—'}
                     </td>
-                    <td className="px-4 py-3 text-right font-mono font-bold text-slate-900">
+                    <td className="px-4 py-3 text-right font-mono font-semibold text-slate-900 tabular-nums">
                       {formatCurrency(t.runningBalance)}
                     </td>
                   </tr>
                 ))
               )}
             </tbody>
-            <tfoot className="border-t-2 border-slate-300 bg-slate-50 text-xs font-bold text-slate-900">
+            <tfoot className="border-t-2 border-slate-300 bg-slate-50 text-[13px] font-semibold text-slate-900">
               <tr>
-                <td colSpan={4} className="px-4 py-3.5 uppercase tracking-wider">
+                <td colSpan={4} className="px-4 py-3.5">
                   Closing Balance as of {dateFilter.endDate}
                 </td>
-                <td className="px-4 py-3.5 text-right font-mono text-primary-text">
+                <td className="px-4 py-3.5 text-right font-mono text-primary tabular-nums">
                   {formatCurrency(report?.totalDebits || 0)}
                 </td>
-                <td className="px-4 py-3.5 text-right font-mono text-slate-800">
+                <td className="px-4 py-3.5 text-right font-mono text-slate-800 tabular-nums">
                   {formatCurrency(report?.totalCredits || 0)}
                 </td>
-                <td className="px-4 py-3.5 text-right font-mono text-sm text-indigo-950">
+                <td className="px-4 py-3.5 text-right font-mono text-sm text-indigo-950 font-semibold tabular-nums">
                   {formatCurrency(report?.closingBalance || 0)}
                 </td>
               </tr>

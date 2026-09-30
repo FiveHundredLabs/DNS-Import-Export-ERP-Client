@@ -36,7 +36,7 @@ export function BalanceSheetPage() {
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900">Balance Sheet Statement</h1>
+            <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Balance Sheet Statement</h1>
             <Badge variant="outline" className="bg-primary-light text-primary-text border-primary-border text-xs">
               Statement of Financial Position
             </Badge>
@@ -94,7 +94,7 @@ export function BalanceSheetPage() {
 
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-sm font-bold">
+                <span className="text-sm font-semibold">
                   {report?.isBalanced
                     ? 'Balance Sheet Reconciled (Assets = Liabilities + Equity)'
                     : 'Balance Sheet Discrepancy Detected'}
@@ -104,7 +104,7 @@ export function BalanceSheetPage() {
                     report?.isBalanced
                       ? 'bg-emerald-200 text-emerald-900 border-none'
                       : 'bg-rose-200 text-rose-900 border-none'
-                  } text-[10px] font-bold`}
+                  } text-xs font-semibold`}
                 >
                   {report?.isBalanced ? 'Audit Verified' : `Imbalance: ${formatCurrency(report?.discrepancy || 0)}`}
                 </Badge>
@@ -116,14 +116,14 @@ export function BalanceSheetPage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-4 text-xs font-mono font-bold">
+          <div className="flex items-center gap-4 text-xs font-semibold tabular-nums">
             <div>
-              <span className="text-[10px] text-slate-500 font-sans block">Total Assets</span>
+              <span className="text-xs text-slate-500 font-sans block">Total Assets</span>
               <span className="text-slate-900">{formatCurrency(report?.totalAssets || 0)}</span>
             </div>
             <span className="text-slate-400">=</span>
             <div>
-              <span className="text-[10px] text-slate-500 font-sans block">Liab. + Equity</span>
+              <span className="text-xs text-slate-500 font-sans block">Liab. + Equity</span>
               <span className="text-slate-900">{formatCurrency(report?.totalLiabilitiesAndEquity || 0)}</span>
             </div>
           </div>
@@ -136,7 +136,7 @@ export function BalanceSheetPage() {
         <div className="space-y-4">
           <Card className="overflow-hidden border-slate-200 bg-white shadow-sm">
             <div className="border-b border-slate-200 bg-primary-light/60 px-5 py-3">
-              <h2 className="text-xs font-bold uppercase tracking-wider text-indigo-950">
+              <h2 className="text-xs font-semibold uppercase tracking-wider text-indigo-950">
                 Assets (Economic Resources)
               </h2>
             </div>
@@ -144,18 +144,18 @@ export function BalanceSheetPage() {
             <div className="p-5 space-y-4 text-xs">
               {/* Current Assets */}
               <div className="space-y-2">
-                <div className="flex justify-between items-center font-bold text-slate-800 border-b border-slate-100 pb-1">
+                <div className="flex justify-between items-center font-semibold text-slate-800 border-b border-slate-100 pb-1">
                   <span>Current Assets</span>
-                  <span className="font-mono">{formatCurrency(report?.totalCurrentAssets || 0)}</span>
+                  <span className="tabular-nums font-semibold">{formatCurrency(report?.totalCurrentAssets || 0)}</span>
                 </div>
                 <div className="space-y-1.5 pl-3">
                   {report?.currentAssets.map((item) => (
                     <div key={item.accountId} className="flex justify-between items-center text-slate-600">
                       <span className="flex items-center gap-2">
-                        <span className="font-mono text-primary">{item.code}</span>
+                        <span className="tabular-nums text-primary font-medium">{item.code}</span>
                         <span>{item.accountName}</span>
                       </span>
-                      <span className="font-mono text-slate-800">{formatCurrency(item.amount)}</span>
+                      <span className="tabular-nums text-slate-800 font-medium">{formatCurrency(item.amount)}</span>
                     </div>
                   ))}
                 </div>
@@ -163,9 +163,9 @@ export function BalanceSheetPage() {
 
               {/* Non-Current Assets */}
               <div className="space-y-2 pt-2 border-t border-slate-100">
-                <div className="flex justify-between items-center font-bold text-slate-800 border-b border-slate-100 pb-1">
+                <div className="flex justify-between items-center font-semibold text-slate-800 border-b border-slate-100 pb-1">
                   <span>Non-Current Assets (Fixed Assets)</span>
-                  <span className="font-mono">{formatCurrency(report?.totalNonCurrentAssets || 0)}</span>
+                  <span className="tabular-nums font-semibold">{formatCurrency(report?.totalNonCurrentAssets || 0)}</span>
                 </div>
                 <div className="space-y-1.5 pl-3">
                   {report?.nonCurrentAssets.length === 0 ? (
@@ -174,10 +174,10 @@ export function BalanceSheetPage() {
                     report?.nonCurrentAssets.map((item) => (
                       <div key={item.accountId} className="flex justify-between items-center text-slate-600">
                         <span className="flex items-center gap-2">
-                          <span className="font-mono text-primary">{item.code}</span>
+                          <span className="tabular-nums text-primary font-medium">{item.code}</span>
                           <span>{item.accountName}</span>
                         </span>
-                        <span className="font-mono text-slate-800">{formatCurrency(item.amount)}</span>
+                        <span className="tabular-nums text-slate-800 font-medium">{formatCurrency(item.amount)}</span>
                       </div>
                     ))
                   )}
@@ -186,9 +186,9 @@ export function BalanceSheetPage() {
             </div>
 
             {/* Total Assets Footnote */}
-            <div className="border-t-2 border-primary-border bg-primary-light/80 px-5 py-3 flex justify-between items-center text-sm font-bold text-indigo-950">
+            <div className="border-t-2 border-primary-border bg-primary-light/80 px-5 py-3 flex justify-between items-center text-sm font-semibold text-indigo-950">
               <span className="uppercase tracking-wider">Total Assets</span>
-              <span className="font-mono text-base">{formatCurrency(report?.totalAssets || 0)}</span>
+              <span className="tabular-nums text-base font-semibold">{formatCurrency(report?.totalAssets || 0)}</span>
             </div>
           </Card>
         </div>
@@ -197,7 +197,7 @@ export function BalanceSheetPage() {
         <div className="space-y-4">
           <Card className="overflow-hidden border-slate-200 bg-white shadow-sm">
             <div className="border-b border-slate-200 bg-slate-100/70 px-5 py-3">
-              <h2 className="text-xs font-bold uppercase tracking-wider text-slate-800">
+              <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-800">
                 Liabilities & Owner's Equity
               </h2>
             </div>
@@ -205,18 +205,18 @@ export function BalanceSheetPage() {
             <div className="p-5 space-y-4 text-xs">
               {/* Current Liabilities */}
               <div className="space-y-2">
-                <div className="flex justify-between items-center font-bold text-slate-800 border-b border-slate-100 pb-1">
+                <div className="flex justify-between items-center font-semibold text-slate-800 border-b border-slate-100 pb-1">
                   <span>Current Liabilities</span>
-                  <span className="font-mono">{formatCurrency(report?.totalCurrentLiabilities || 0)}</span>
+                  <span className="tabular-nums font-semibold">{formatCurrency(report?.totalCurrentLiabilities || 0)}</span>
                 </div>
                 <div className="space-y-1.5 pl-3">
                   {report?.currentLiabilities.map((item) => (
                     <div key={item.accountId} className="flex justify-between items-center text-slate-600">
                       <span className="flex items-center gap-2">
-                        <span className="font-mono text-primary">{item.code}</span>
+                        <span className="tabular-nums text-primary font-medium">{item.code}</span>
                         <span>{item.accountName}</span>
                       </span>
-                      <span className="font-mono text-slate-800">{formatCurrency(item.amount)}</span>
+                      <span className="tabular-nums text-slate-800 font-medium">{formatCurrency(item.amount)}</span>
                     </div>
                   ))}
                 </div>
@@ -224,9 +224,9 @@ export function BalanceSheetPage() {
 
               {/* Long-Term Liabilities */}
               <div className="space-y-2 pt-2 border-t border-slate-100">
-                <div className="flex justify-between items-center font-bold text-slate-800 border-b border-slate-100 pb-1">
+                <div className="flex justify-between items-center font-semibold text-slate-800 border-b border-slate-100 pb-1">
                   <span>Long-Term Liabilities</span>
-                  <span className="font-mono">{formatCurrency(report?.totalLongTermLiabilities || 0)}</span>
+                  <span className="tabular-nums font-semibold">{formatCurrency(report?.totalLongTermLiabilities || 0)}</span>
                 </div>
                 <div className="space-y-1.5 pl-3">
                   {report?.longTermLiabilities.length === 0 ? (
@@ -235,10 +235,10 @@ export function BalanceSheetPage() {
                     report?.longTermLiabilities.map((item) => (
                       <div key={item.accountId} className="flex justify-between items-center text-slate-600">
                         <span className="flex items-center gap-2">
-                          <span className="font-mono text-primary">{item.code}</span>
+                          <span className="tabular-nums text-primary font-medium">{item.code}</span>
                           <span>{item.accountName}</span>
                         </span>
-                        <span className="font-mono text-slate-800">{formatCurrency(item.amount)}</span>
+                        <span className="tabular-nums text-slate-800 font-medium">{formatCurrency(item.amount)}</span>
                       </div>
                     ))
                   )}
@@ -247,18 +247,18 @@ export function BalanceSheetPage() {
 
               {/* Owner's Equity & Reserves */}
               <div className="space-y-2 pt-2 border-t border-slate-100">
-                <div className="flex justify-between items-center font-bold text-slate-800 border-b border-slate-100 pb-1">
+                <div className="flex justify-between items-center font-semibold text-slate-800 border-b border-slate-100 pb-1">
                   <span>Owner's Equity & Reserves</span>
-                  <span className="font-mono">{formatCurrency(report?.totalEquity || 0)}</span>
+                  <span className="tabular-nums font-semibold">{formatCurrency(report?.totalEquity || 0)}</span>
                 </div>
                 <div className="space-y-1.5 pl-3">
                   {report?.equityItems.map((item) => (
                     <div key={item.accountId} className="flex justify-between items-center text-slate-600">
                       <span className="flex items-center gap-2">
-                        <span className="font-mono text-primary">{item.code}</span>
+                        <span className="tabular-nums text-primary font-medium">{item.code}</span>
                         <span>{item.accountName}</span>
                       </span>
-                      <span className="font-mono text-slate-800">{formatCurrency(item.amount)}</span>
+                      <span className="tabular-nums text-slate-800 font-medium">{formatCurrency(item.amount)}</span>
                     </div>
                   ))}
                 </div>
@@ -266,9 +266,9 @@ export function BalanceSheetPage() {
             </div>
 
             {/* Total Liabilities & Equity Footnote */}
-            <div className="border-t-2 border-slate-300 bg-slate-50 px-5 py-3 flex justify-between items-center text-sm font-bold text-slate-900">
+            <div className="border-t-2 border-slate-300 bg-slate-50 px-5 py-3 flex justify-between items-center text-sm font-semibold text-slate-900">
               <span className="uppercase tracking-wider">Total Liabilities & Equity</span>
-              <span className="font-mono text-base">
+              <span className="tabular-nums text-base font-semibold">
                 {formatCurrency(report?.totalLiabilitiesAndEquity || 0)}
               </span>
             </div>

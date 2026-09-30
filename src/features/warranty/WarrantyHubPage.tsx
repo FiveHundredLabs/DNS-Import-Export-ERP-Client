@@ -139,7 +139,7 @@ export function WarrantyHubPage() {
       {/* Top Banner / Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-4">
         <div>
-          <h1 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+          <h1 className="text-xl font-semibold text-slate-900 flex items-center gap-2">
             <ShieldCheck className="h-6 w-6 text-primary" />
             Warranty & Claims Hub
           </h1>
@@ -150,7 +150,7 @@ export function WarrantyHubPage() {
         {role !== 'SALES_REP' && hasPermission('warranty:claims') && (
           <Button
             onClick={() => setIsNewClaimOpen(true)}
-            className="bg-primary hover:bg-primary-hover text-primary-foreground text-xs h-9 gap-1.5 shadow-sm"
+            className="bg-primary hover:bg-primary-hover text-primary-foreground text-xs font-medium h-9 gap-1.5 shadow-sm"
           >
             <PlusCircle className="h-4 w-4" />
             Lodge Warranty Claim
@@ -166,7 +166,7 @@ export function WarrantyHubPage() {
               <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block">
                 Active Warranties
               </span>
-              <span className="text-2xl font-bold text-slate-900 mt-1 block">
+              <span className="text-2xl font-semibold tabular-nums text-slate-900 mt-1 block">
                 {activeWarrantiesCount}
               </span>
             </div>
@@ -174,7 +174,7 @@ export function WarrantyHubPage() {
               <ShieldCheck className="h-5 w-5" />
             </div>
           </div>
-          <span className="text-[11px] text-emerald-700 mt-2 block font-medium">
+          <span className="text-xs text-emerald-700 mt-2 block font-medium">
             Protected customer equipment
           </span>
         </Card>
@@ -185,7 +185,7 @@ export function WarrantyHubPage() {
               <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block">
                 Active Claims In Pipeline
               </span>
-              <span className="text-2xl font-bold text-amber-700 mt-1 block">
+              <span className="text-2xl font-semibold tabular-nums text-amber-700 mt-1 block">
                 {pendingClaimsCount}
               </span>
             </div>
@@ -193,7 +193,7 @@ export function WarrantyHubPage() {
               <ShieldAlert className="h-5 w-5" />
             </div>
           </div>
-          <span className="text-[11px] text-amber-800 mt-2 block font-medium">
+          <span className="text-xs text-amber-800 mt-2 block font-medium">
             Pending technical inspection & resolution
           </span>
         </Card>
@@ -204,7 +204,7 @@ export function WarrantyHubPage() {
               <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block">
                 Missing Warranty Notes
               </span>
-              <span className="text-2xl font-bold text-rose-700 mt-1 block">
+              <span className="text-2xl font-semibold tabular-nums text-rose-700 mt-1 block">
                 {totalPendingCards}
               </span>
             </div>
@@ -212,7 +212,7 @@ export function WarrantyHubPage() {
               <Store className="h-5 w-5" />
             </div>
           </div>
-          <span className="text-[11px] text-rose-700 mt-2 block font-medium">
+          <span className="text-xs text-rose-700 mt-2 block font-medium">
             Across {followUps.length} dealer partner locations
           </span>
         </Card>
@@ -220,14 +220,14 @@ export function WarrantyHubPage() {
 
       {/* Main Tabs Hub */}
       <Tabs value={activeTab} onValueChange={(v: any) => setActiveTab(v)}>
-        <TabsList className="bg-slate-100 p-1 border border-slate-200 rounded-lg">
-          <TabsTrigger value="records" className="text-xs font-semibold">
+        <TabsList className="bg-slate-100 p-1 border border-slate-200 rounded-xl flex overflow-x-auto max-w-full [scrollbar-width:none]">
+          <TabsTrigger value="records" className="text-xs font-semibold whitespace-nowrap shrink-0">
             Warranty Records
           </TabsTrigger>
-          <TabsTrigger value="claims" className="text-xs font-semibold">
+          <TabsTrigger value="claims" className="text-xs font-semibold whitespace-nowrap shrink-0">
             Warranty Claims ({pendingClaimsCount})
           </TabsTrigger>
-          <TabsTrigger value="followups" className="text-xs font-semibold">
+          <TabsTrigger value="followups" className="text-xs font-semibold whitespace-nowrap shrink-0">
             Field Follow-up ({totalPendingCards} Pending)
           </TabsTrigger>
         </TabsList>
@@ -268,53 +268,85 @@ export function WarrantyHubPage() {
               ) : records.length === 0 ? (
                 <div className="py-8 text-center text-xs text-slate-500">No warranty records found.</div>
               ) : (
-                <div className="rounded-lg border border-slate-200 overflow-hidden">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Product / SKU</TableHead>
-                        <TableHead>Customer / Dealer</TableHead>
-                        <TableHead>Invoice #</TableHead>
-                        <TableHead>Sale Type</TableHead>
-                        <TableHead>Start Date</TableHead>
-                        <TableHead>Warranty Expiry</TableHead>
-                        <TableHead className="text-center">Status</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {records.map((rec) => (
-                        <TableRow key={rec.id}>
-                          <TableCell>
-                            <div className="font-semibold text-slate-900 text-xs">{rec.productName}</div>
-                            <div className="text-[11px] text-slate-400 font-mono">
+                <>
+                  {/* Mobile Cards for Warranty Records */}
+                  <div className="block md:hidden space-y-3">
+                    {records.map((rec) => (
+                      <div key={rec.id} className="p-3.5 rounded-2xl border border-slate-200/90 bg-white shadow-xs space-y-2">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <h4 className="text-xs font-bold text-slate-900 truncate">{rec.productName}</h4>
+                            <span className="font-mono text-[11px] text-slate-400 block">
                               SKU: {rec.sku} {rec.serialNumber && `| SN: ${rec.serialNumber}`}
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-xs text-slate-700 font-medium">
-                            {rec.customerName}
-                          </TableCell>
-                          <TableCell className="font-mono text-xs text-primary">
-                            {rec.invoiceNumber}
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant={rec.saleType === 'SHOWROOM' ? 'info' : 'secondary'} className="text-[10px]">
-                              {rec.saleType}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-xs text-slate-600">
-                            {formatDate(rec.warrantyStartDate)}
-                          </TableCell>
-                          <TableCell className="text-xs font-semibold text-slate-800">
-                            {formatDate(rec.warrantyExpiryDate)}
-                          </TableCell>
-                          <TableCell className="text-center">
-                            <WarrantyStatusBadge status={rec.status} />
-                          </TableCell>
+                            </span>
+                          </div>
+                          <WarrantyStatusBadge status={rec.status} />
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 text-xs bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+                          <div>
+                            <span className="text-[10px] text-slate-400 block">Customer</span>
+                            <span className="font-medium text-slate-800 truncate block">{rec.customerName}</span>
+                            <span className="font-mono text-[11px] text-primary">{rec.invoiceNumber}</span>
+                          </div>
+                          <div className="text-right">
+                            <span className="text-[10px] text-slate-400 block">Expiry Date</span>
+                            <span className="font-semibold text-slate-800">{formatDate(rec.warrantyExpiryDate)}</span>
+                            <span className="text-[10px] text-slate-400 block mt-0.5">{rec.saleType}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Desktop Table for Warranty Records */}
+                  <div className="hidden md:block rounded-lg border border-slate-200 overflow-hidden">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Product / SKU</TableHead>
+                          <TableHead>Customer / Dealer</TableHead>
+                          <TableHead>Invoice #</TableHead>
+                          <TableHead>Sale Type</TableHead>
+                          <TableHead>Start Date</TableHead>
+                          <TableHead>Warranty Expiry</TableHead>
+                          <TableHead className="text-center">Status</TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
+                      </TableHeader>
+                      <TableBody>
+                        {records.map((rec) => (
+                          <TableRow key={rec.id}>
+                            <TableCell>
+                              <div className="font-semibold text-slate-900 text-xs">{rec.productName}</div>
+                              <div className="text-[11px] text-slate-400 font-mono">
+                                SKU: {rec.sku} {rec.serialNumber && `| SN: ${rec.serialNumber}`}
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-xs text-slate-700 font-medium">
+                              {rec.customerName}
+                            </TableCell>
+                            <TableCell className="font-mono text-xs text-primary">
+                              {rec.invoiceNumber}
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant={rec.saleType === 'SHOWROOM' ? 'info' : 'secondary'} className="text-[10px]">
+                                {rec.saleType}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-xs text-slate-600">
+                              {formatDate(rec.warrantyStartDate)}
+                            </TableCell>
+                            <TableCell className="text-xs font-semibold text-slate-800">
+                              {formatDate(rec.warrantyExpiryDate)}
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <WarrantyStatusBadge status={rec.status} />
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </>
               )}
             </CardContent>
           </Card>
@@ -359,85 +391,162 @@ export function WarrantyHubPage() {
               ) : claims.length === 0 ? (
                 <div className="py-8 text-center text-xs text-slate-500">No warranty claims on record.</div>
               ) : (
-                <div className="rounded-lg border border-slate-200 overflow-hidden">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Claim #</TableHead>
-                        <TableHead>Customer</TableHead>
-                        <TableHead>Product / Serial</TableHead>
-                        <TableHead>Complaint Date</TableHead>
-                        <TableHead>Defect Details</TableHead>
-                        <TableHead className="text-center">Status</TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {claims.map((claim) => (
-                        <TableRow key={claim.id}>
-                          <TableCell className="font-mono text-xs font-bold text-slate-900">
-                            {claim.claimNumber}
-                          </TableCell>
-                          <TableCell className="text-xs text-slate-700">{claim.customerName}</TableCell>
-                          <TableCell>
-                            <div className="text-xs font-medium text-slate-900">{claim.productName}</div>
-                            <div className="text-[11px] text-slate-400 font-mono">
+                <>
+                  {/* Mobile Cards for Warranty Claims */}
+                  <div className="block md:hidden space-y-3">
+                    {claims.map((claim) => (
+                      <div key={claim.id} className="p-3.5 rounded-2xl border border-slate-200/90 bg-white shadow-xs space-y-2.5">
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <span className="font-mono text-xs font-bold text-primary">
+                              {claim.claimNumber}
+                            </span>
+                            <h4 className="text-xs font-bold text-slate-900 mt-0.5">{claim.productName}</h4>
+                            <span className="font-mono text-[11px] text-slate-400">
                               {claim.sku} {claim.serialNumber && `| ${claim.serialNumber}`}
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-xs text-slate-600">
-                            {formatDate(claim.complaintDate)}
-                          </TableCell>
-                          <TableCell className="text-xs text-slate-600 max-w-[200px] truncate" title={claim.complaintReason}>
-                            {claim.complaintReason}
-                          </TableCell>
-                          <TableCell className="text-center">
-                            <ClaimStatusBadge status={claim.status} />
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex items-center justify-end gap-1">
-                              {claim.status === 'SUBMITTED' && (
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => handleInspectClaim(claim.id)}
-                                  className="text-[11px] h-7 px-2"
-                                >
-                                  Inspect
-                                </Button>
-                              )}
-                              {claim.status === 'IN_INSPECTION' && (
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => handleApproveClaim(claim.id)}
-                                  className="text-[11px] h-7 px-2 text-emerald-600 border-emerald-300 hover:bg-emerald-50"
-                                >
-                                  Approve
-                                </Button>
-                              )}
-                              {(claim.status === 'SUBMITTED' || claim.status === 'IN_INSPECTION' || claim.status === 'APPROVED') && (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => setResolvingClaim(claim)}
-                                  className="text-[11px] h-7 px-2 text-primary hover:text-primary-text font-semibold"
-                                >
-                                  Resolve
-                                </Button>
-                              )}
-                              {claim.resolutionType && (
-                                <span className="text-[11px] text-slate-500 font-medium">
-                                  {claim.resolutionType}
-                                </span>
-                              )}
-                            </div>
-                          </TableCell>
+                            </span>
+                          </div>
+                          <ClaimStatusBadge status={claim.status} />
+                        </div>
+
+                        <div className="rounded-xl bg-slate-50 p-2.5 text-xs border border-slate-100 space-y-1">
+                          <div className="flex justify-between">
+                            <span className="text-slate-400">Customer:</span>
+                            <span className="font-medium text-slate-800">{claim.customerName}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-slate-400">Complaint Date:</span>
+                            <span className="text-slate-700">{formatDate(claim.complaintDate)}</span>
+                          </div>
+                          <div className="pt-1 border-t border-slate-200/60">
+                            <span className="text-slate-400 block text-[10.5px]">Defect Details:</span>
+                            <p className="text-slate-700 italic text-[11px] mt-0.5">{claim.complaintReason}</p>
+                          </div>
+                        </div>
+
+                        {/* Action buttons (Touch targets min 38px) */}
+                        <div className="pt-1 flex items-center justify-end gap-2 flex-wrap">
+                          {claim.status === 'SUBMITTED' && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleInspectClaim(claim.id)}
+                              className="text-xs h-8 px-3 rounded-xl"
+                            >
+                              Inspect
+                            </Button>
+                          )}
+                          {claim.status === 'IN_INSPECTION' && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleApproveClaim(claim.id)}
+                              className="text-xs h-8 px-3 rounded-xl text-emerald-600 border-emerald-300 hover:bg-emerald-50"
+                            >
+                              Approve
+                            </Button>
+                          )}
+                          {(claim.status === 'SUBMITTED' || claim.status === 'IN_INSPECTION' || claim.status === 'APPROVED') && (
+                            <Button
+                              variant="default"
+                              size="sm"
+                              onClick={() => setResolvingClaim(claim)}
+                              className="text-xs h-8 px-3 rounded-xl bg-primary hover:bg-primary-hover text-primary-foreground font-semibold"
+                            >
+                              Resolve Claim
+                            </Button>
+                          )}
+                          {claim.resolutionType && (
+                            <span className="text-xs text-slate-500 font-semibold px-2 py-1 rounded bg-slate-100">
+                              {claim.resolutionType}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Desktop Table for Claims */}
+                  <div className="hidden md:block rounded-lg border border-slate-200 overflow-hidden">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Claim #</TableHead>
+                          <TableHead>Customer</TableHead>
+                          <TableHead>Product / Serial</TableHead>
+                          <TableHead>Complaint Date</TableHead>
+                          <TableHead>Defect Details</TableHead>
+                          <TableHead className="text-center">Status</TableHead>
+                          <TableHead className="text-right">Actions</TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
+                      </TableHeader>
+                      <TableBody>
+                        {claims.map((claim) => (
+                          <TableRow key={claim.id}>
+                            <TableCell className="tabular-nums text-xs font-semibold text-slate-900">
+                              {claim.claimNumber}
+                            </TableCell>
+                            <TableCell className="text-xs text-slate-700">{claim.customerName}</TableCell>
+                            <TableCell>
+                              <div className="text-xs font-medium text-slate-900">{claim.productName}</div>
+                              <div className="text-xs text-slate-400 font-mono">
+                                {claim.sku} {claim.serialNumber && `| ${claim.serialNumber}`}
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-xs text-slate-600">
+                              {formatDate(claim.complaintDate)}
+                            </TableCell>
+                            <TableCell className="text-xs text-slate-600 max-w-[200px] truncate" title={claim.complaintReason}>
+                              {claim.complaintReason}
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <ClaimStatusBadge status={claim.status} />
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex items-center justify-end gap-1">
+                                {claim.status === 'SUBMITTED' && (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleInspectClaim(claim.id)}
+                                    className="text-[11px] h-7 px-2"
+                                  >
+                                    Inspect
+                                  </Button>
+                                )}
+                                {claim.status === 'IN_INSPECTION' && (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleApproveClaim(claim.id)}
+                                    className="text-[11px] h-7 px-2 text-emerald-600 border-emerald-300 hover:bg-emerald-50"
+                                  >
+                                    Approve
+                                  </Button>
+                                )}
+                                {(claim.status === 'SUBMITTED' || claim.status === 'IN_INSPECTION' || claim.status === 'APPROVED') && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => setResolvingClaim(claim)}
+                                    className="text-[11px] h-7 px-2 text-primary hover:text-primary-text font-semibold"
+                                  >
+                                    Resolve
+                                  </Button>
+                                )}
+                                {claim.resolutionType && (
+                                  <span className="text-[11px] text-slate-500 font-medium">
+                                    {claim.resolutionType}
+                                  </span>
+                                )}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </>
               )}
             </CardContent>
           </Card>
@@ -471,14 +580,14 @@ export function WarrantyHubPage() {
                       <div className="flex items-start justify-between">
                         <div>
                           <h4 className="font-semibold text-slate-900 text-xs">{fu.customerName}</h4>
-                          <span className="text-[11px] text-slate-400">Dealer Account</span>
+                          <span className="text-xs text-slate-400">Dealer Account</span>
                         </div>
                         {fu.pendingNotesCount > 0 ? (
-                          <Badge variant="warning" className="text-[11px] font-bold">
+                          <Badge variant="warning" className="text-xs font-semibold">
                             {fu.pendingNotesCount} Missing Cards
                           </Badge>
                         ) : (
-                          <Badge variant="success" className="text-[11px]">
+                          <Badge variant="success" className="text-xs font-semibold">
                             Fully Reconciled
                           </Badge>
                         )}
@@ -486,17 +595,17 @@ export function WarrantyHubPage() {
 
                       <div className="grid grid-cols-2 gap-2 text-center text-xs py-2 bg-slate-50 rounded-lg">
                         <div>
-                          <span className="text-[10px] text-slate-400 uppercase block">Units Sold</span>
-                          <span className="text-sm font-bold text-slate-900">{fu.totalUnitsSold}</span>
+                          <span className="text-xs text-slate-400 uppercase block">Units Sold</span>
+                          <span className="text-sm font-semibold tabular-nums text-slate-900">{fu.totalUnitsSold}</span>
                         </div>
                         <div>
-                          <span className="text-[10px] text-slate-400 uppercase block">Cards Received</span>
-                          <span className="text-sm font-bold text-emerald-700">{fu.warrantyNotesReceived}</span>
+                          <span className="text-xs text-slate-400 uppercase block">Cards Received</span>
+                          <span className="text-sm font-semibold tabular-nums text-emerald-700">{fu.warrantyNotesReceived}</span>
                         </div>
                       </div>
 
                       {fu.followUpNotes && fu.followUpNotes.length > 0 && (
-                        <div className="text-[11px] text-slate-600 bg-slate-50 p-2 rounded border border-slate-100">
+                        <div className="text-xs text-slate-600 bg-slate-50 p-2 rounded border border-slate-100">
                           <span className="font-semibold text-slate-700 block mb-0.5">Last Log:</span>
                           <p className="line-clamp-2 italic">{fu.followUpNotes[fu.followUpNotes.length - 1]}</p>
                         </div>

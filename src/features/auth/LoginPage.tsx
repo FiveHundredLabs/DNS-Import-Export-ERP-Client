@@ -251,13 +251,13 @@ export function LoginPage() {
       <header className="relative z-10 border-b border-slate-800 bg-slate-900/80 backdrop-blur px-6 py-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground font-black text-base shadow-lg shadow-primary/25 ring-1 ring-white/20">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground font-bold text-base shadow-lg shadow-primary/25 ring-1 ring-white/20">
               DNS
             </div>
             <div>
-              <div className="font-extrabold text-white tracking-tight text-base sm:text-lg flex items-center gap-2">
+              <div className="font-semibold text-white tracking-tight text-base sm:text-lg flex items-center gap-2">
                 DNS DISTRIBUTION ERP
-                <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-primary-light/20 text-primary border border-primary/30">
+                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-primary-light/20 text-primary border border-primary/30">
                   ENTERPRISE v1.0
                 </span>
               </div>
@@ -326,11 +326,11 @@ export function LoginPage() {
           {/* Left Column: Sign In Form (4 cols) */}
           <div className="lg:col-span-4 bg-slate-800/90 border border-slate-700/80 rounded-2xl p-6 sm:p-7 shadow-xl shadow-black/40 backdrop-blur">
             <div className="mb-6">
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-primary-light/20 text-primary border border-primary/30 mb-3">
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-primary-light/20 text-primary border border-primary/30 mb-3">
                 <Sparkles className="h-3 w-3 text-primary" />
                 Sign In to ERP Portal
               </div>
-              <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight">Enterprise Access</h1>
+              <h1 className="text-xl sm:text-2xl font-semibold text-white tracking-tight">Enterprise Access</h1>
               <p className="text-xs text-slate-400 mt-1">
                 Enter your credentials or pick any role example on the right for 1-click access.
               </p>

@@ -68,7 +68,7 @@ export function CustomerCommercialApprovalModal({
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">
+            <label className="block text-[13px] font-medium text-slate-700 mb-1.5">
               Credit Limit (LKR)
             </label>
             <Input
@@ -78,7 +78,7 @@ export function CustomerCommercialApprovalModal({
             />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">
+            <label className="block text-[13px] font-medium text-slate-700 mb-1.5">
               Credit Days (Terms)
             </label>
             <Input
@@ -91,7 +91,7 @@ export function CustomerCommercialApprovalModal({
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">
+            <label className="block text-[13px] font-medium text-slate-700 mb-1.5">
               Default Discount (%)
             </label>
             <Input
@@ -101,7 +101,7 @@ export function CustomerCommercialApprovalModal({
             />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">
+            <label className="block text-[13px] font-medium text-slate-700 mb-1.5">
               Max Allowable Discount (%)
             </label>
             <Input
@@ -120,17 +120,17 @@ export function CustomerCommercialApprovalModal({
               : 'bg-emerald-50 border-emerald-200 text-emerald-800'
           }`}
         >
-          <div className="flex items-center justify-between font-semibold">
+          <div className="flex items-center justify-between font-medium">
             <span>Approval Destination:</span>
-            <span className="uppercase tracking-wider font-bold">
+            <span className="font-semibold">
               {routeEvaluation.targetRole} APPROVAL
             </span>
           </div>
-          <p className="mt-1 text-[11px]">{routeEvaluation.reason}</p>
+          <p className="mt-1 text-xs">{routeEvaluation.reason}</p>
         </div>
 
         <div>
-          <label className="block text-xs font-semibold text-slate-700 mb-1">Commercial Notes</label>
+          <label className="block text-[13px] font-medium text-slate-700 mb-1.5">Commercial Notes</label>
           <Input
             value={notes}
             onChange={(e) => setNotes(e.target.value)}

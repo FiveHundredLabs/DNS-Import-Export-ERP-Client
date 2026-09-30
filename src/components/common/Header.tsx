@@ -8,6 +8,7 @@ import {
   Search,
   ChevronDown,
   Layers,
+  ArrowLeft,
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 
@@ -77,41 +78,52 @@ export function Header({ onToggleSidebar }: HeaderProps) {
   return (
     <header className="sticky top-0 z-30 flex h-16 w-full items-center justify-between border-b border-slate-200/80 bg-white px-4 sm:px-6 backdrop-blur-md transition-all shrink-0">
       {/* Left: Mobile Toggle & Enterprise Brand / Page Title */}
-      <div className="flex items-center gap-3 sm:gap-4 min-w-0">
-        <button
-          onClick={onToggleSidebar}
-          className="rounded-xl p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-900 transition-colors focus:outline-none focus:ring-2 focus:ring-primary md:hidden"
-          aria-label="Toggle navigation menu"
-        >
-          <Menu className="h-5 w-5" />
-        </button>
+      {/* Left: Mobile Back or Menu Toggle & Enterprise Brand / Page Title */}
+      <div className="flex items-center gap-2.5 sm:gap-4 min-w-0">
+        {location.pathname !== '/' ? (
+          <button
+            onClick={() => navigate(-1)}
+            className="rounded-xl p-2 text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors focus:outline-none focus:ring-2 focus:ring-primary md:hidden shrink-0"
+            aria-label="Go back"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </button>
+        ) : (
+          <button
+            onClick={onToggleSidebar}
+            className="rounded-xl p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-900 transition-colors focus:outline-none focus:ring-2 focus:ring-primary md:hidden shrink-0"
+            aria-label="Toggle navigation menu"
+          >
+            <Menu className="h-5 w-5" />
+          </button>
+        )}
 
         {location.pathname === '/' ? (
-          <Link to="/" className="flex items-center gap-2.5 shrink-0 group">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-primary-foreground font-black text-sm shadow-md group-hover:bg-primary-hover transition-colors">
+          <Link to="/" className="flex items-center gap-2.5 min-w-0 group">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground font-semibold text-sm shadow-md group-hover:bg-primary-hover transition-colors">
               <Layers className="h-5 w-5" />
             </div>
             <div className="min-w-0">
-              <h1 className="text-base sm:text-lg md:text-xl font-black text-slate-800 tracking-tight truncate leading-tight">
+              <h1 className="text-sm sm:text-lg md:text-xl font-bold text-slate-900 tracking-tight truncate leading-tight">
                 LabsCore ERP
               </h1>
-              <span className="text-[10px] text-primary font-bold block uppercase tracking-wider -mt-0.5">
-                DNS Import & Exports (Pvt) Ltd
+              <span className="text-[10.5px] sm:text-[11.5px] text-primary font-semibold block uppercase tracking-wider -mt-0.5 truncate">
+                DNS Distribution
               </span>
             </div>
           </Link>
         ) : (
-          <div className="flex items-center gap-2.5 min-w-0">
-            <Link to="/" className="flex items-center gap-2 shrink-0 group" title="DNS ERP Dashboard">
-              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary text-primary-foreground font-black text-xs shadow-md group-hover:bg-primary-hover transition-colors">
+          <div className="flex items-center gap-2 min-w-0">
+            <Link to="/" className="hidden md:flex items-center gap-2 shrink-0 group" title="DNS ERP Dashboard">
+              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary text-primary-foreground font-semibold text-xs shadow-md group-hover:bg-primary-hover transition-colors">
                 <Layers className="h-4 w-4" />
               </div>
-              <span className="font-black text-slate-800 tracking-tight text-base hidden sm:inline">
+              <span className="font-semibold text-slate-900 tracking-tight text-base">
                 DNS ERP
               </span>
             </Link>
-            <span className="text-slate-300 font-light hidden sm:inline">/</span>
-            <h1 className="text-base sm:text-lg font-black text-slate-800 tracking-tight truncate">
+            <span className="text-slate-300 font-light hidden md:inline">/</span>
+            <h1 className="text-sm sm:text-base md:text-lg font-bold text-slate-900 tracking-tight truncate">
               {currentTitle}
             </h1>
           </div>
@@ -127,7 +139,7 @@ export function Header({ onToggleSidebar }: HeaderProps) {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search orders, products, dealers..."
-            className="w-full pl-9 pr-4 py-2 bg-slate-50/80 hover:bg-slate-50 focus:bg-white border border-slate-200/90 rounded-full text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all shadow-[0_1px_2px_rgba(0,0,0,0.02)]"
+            className="w-full pl-9 pr-4 py-2 bg-slate-50/80 hover:bg-slate-50 focus:bg-white border border-slate-200/90 rounded-full text-sm font-normal text-slate-900 placeholder:text-slate-400 placeholder:text-[13px] focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all shadow-[0_1px_2px_rgba(0,0,0,0.02)]"
           />
         </div>
       </div>
@@ -137,7 +149,7 @@ export function Header({ onToggleSidebar }: HeaderProps) {
         {/* Switch Role Quick Button */}
         <Link
           to="/login"
-          className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-slate-200/90 bg-slate-50 hover:bg-primary-light hover:border-primary-border text-slate-700 hover:text-primary-text text-xs font-semibold transition-all shadow-2xs"
+          className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-slate-200/90 bg-slate-50 hover:bg-primary-light hover:border-primary-border text-slate-700 hover:text-primary-text text-[13px] font-medium transition-all shadow-2xs"
           title="Switch User Role or Log In as another user"
         >
           <Users className="h-3.5 w-3.5 text-primary" />
@@ -167,7 +179,7 @@ export function Header({ onToggleSidebar }: HeaderProps) {
               <div className="text-xs font-bold text-slate-800 leading-tight flex items-center gap-1">
                 {currentUser.name}
               </div>
-              <div className="text-[10px] text-slate-500 font-medium">
+              <div className="text-[11px] text-slate-500 font-medium">
                 {formatRole(currentUser.role)}
               </div>
             </div>

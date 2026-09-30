@@ -19,7 +19,7 @@ export function SalesAnalyticsTab({ salesReport }: SalesAnalyticsTabProps) {
             <span className="text-xs font-semibold text-primary-text uppercase tracking-wider">
               Total Gross Sales
             </span>
-            <p className="text-2xl font-extrabold text-indigo-950 mt-1">
+            <p className="text-2xl font-semibold tabular-nums text-indigo-950 mt-1">
               {formatCurrencyLKR(salesReport.totalSales)}
             </p>
             <span className="text-xs text-primary mt-1 block">Invoices + Showroom POS</span>
@@ -31,7 +31,7 @@ export function SalesAnalyticsTab({ salesReport }: SalesAnalyticsTabProps) {
             <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
               B2B Commercial Invoices
             </span>
-            <p className="text-2xl font-extrabold text-slate-900 mt-1">
+            <p className="text-2xl font-semibold tabular-nums text-slate-900 mt-1">
               {formatCurrencyLKR(salesReport.invoiceSales)}
             </p>
             <span className="text-xs text-slate-500 mt-1 block">Credit & cash trade orders</span>
@@ -43,7 +43,7 @@ export function SalesAnalyticsTab({ salesReport }: SalesAnalyticsTabProps) {
             <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
               Showroom POS Volume
             </span>
-            <p className="text-2xl font-extrabold text-slate-900 mt-1">
+            <p className="text-2xl font-semibold tabular-nums text-slate-900 mt-1">
               {formatCurrencyLKR(salesReport.posSales)}
             </p>
             <span className="text-xs text-slate-500 mt-1 block">Retail & counter sales</span>
@@ -55,7 +55,7 @@ export function SalesAnalyticsTab({ salesReport }: SalesAnalyticsTabProps) {
             <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
               Average Order Value (AOV)
             </span>
-            <p className="text-2xl font-extrabold text-slate-900 mt-1">
+            <p className="text-2xl font-semibold tabular-nums text-slate-900 mt-1">
               {formatCurrencyLKR(salesReport.averageOrderValue)}
             </p>
             <span className="text-xs text-slate-500 mt-1 block">
@@ -69,7 +69,7 @@ export function SalesAnalyticsTab({ salesReport }: SalesAnalyticsTabProps) {
         {/* Sales by Representative */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-base font-bold text-slate-900 flex items-center gap-2">
+            <CardTitle className="text-base font-semibold text-slate-900 flex items-center gap-2">
               <Users2 className="w-4 h-4 text-primary" />
               <span>Sales Performance by Representative</span>
             </CardTitle>
@@ -101,12 +101,12 @@ export function SalesAnalyticsTab({ salesReport }: SalesAnalyticsTabProps) {
                           <td className="py-2.5 px-3 font-semibold text-slate-800">
                             {rep.repName}
                           </td>
-                          <td className="py-2.5 px-3 text-center text-slate-600">{rep.orderCount}</td>
-                          <td className="py-2.5 px-3 text-right font-bold text-slate-900">
+                          <td className="py-2.5 px-3 text-center tabular-nums text-slate-600">{rep.orderCount}</td>
+                          <td className="py-2.5 px-3 text-right font-semibold tabular-nums text-slate-900">
                             {formatCurrencyLKR(rep.amount)}
                           </td>
                           <td className="py-2.5 px-3 text-right">
-                            <Badge variant="outline" className="text-[10px] font-semibold">
+                            <Badge variant="outline" className="text-xs font-medium tabular-nums">
                               {share}%
                             </Badge>
                           </td>
@@ -123,7 +123,7 @@ export function SalesAnalyticsTab({ salesReport }: SalesAnalyticsTabProps) {
         {/* Sales by Category */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-base font-bold text-slate-900 flex items-center gap-2">
+            <CardTitle className="text-base font-semibold text-slate-900 flex items-center gap-2">
               <Layers className="w-4 h-4 text-emerald-600" />
               <span>Sales by Product Category</span>
             </CardTitle>
@@ -145,7 +145,7 @@ export function SalesAnalyticsTab({ salesReport }: SalesAnalyticsTabProps) {
                       <div className="flex items-center justify-between text-xs">
                         <span className="font-semibold text-slate-800">{cat.category}</span>
                         <div className="text-right">
-                          <span className="font-bold text-slate-900">
+                          <span className="font-semibold tabular-nums text-slate-900">
                             {formatCurrencyLKR(cat.amount)}
                           </span>
                           <span className="text-slate-400 ml-2">({cat.quantity} units, {pct}%)</span>

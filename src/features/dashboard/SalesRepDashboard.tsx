@@ -24,10 +24,10 @@ export function SalesRepDashboard() {
       {/* Mobile-first Header Banner */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white p-6 rounded-2xl border border-slate-800 shadow-md">
         <div>
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-wider uppercase bg-primary/20 text-white border border-primary/30 mb-2">
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium tracking-wide uppercase bg-primary/20 text-white border border-primary/30 mb-2">
             Field Representative Hub
           </span>
-          <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white">Good Day, Kasun</h1>
+          <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-white">Good Day, Kasun</h1>
           <p className="text-xs text-slate-300 mt-0.5">
             Colombo Central Territory • 14 Assigned Dealers • Active Cycle
           </p>
@@ -39,7 +39,7 @@ export function SalesRepDashboard() {
             </Button>
           </Link>
           <Link to="/orders">
-            <Button size="sm" className="gap-1.5 text-xs bg-primary hover:bg-primary-hover text-primary-foreground font-bold shadow-md">
+            <Button size="sm" className="gap-1.5 text-xs bg-primary hover:bg-primary-hover text-primary-foreground font-medium shadow-md">
               <PlusCircle className="h-3.5 w-3.5" /> New Order
             </Button>
           </Link>
@@ -88,7 +88,7 @@ export function SalesRepDashboard() {
           </div>
           <div className="flex-1">
             <div className="flex items-center justify-between">
-              <h3 className="text-xs font-bold text-amber-900 uppercase tracking-wide">
+              <h3 className="text-xs font-semibold text-amber-900 uppercase tracking-wide">
                 Warranty Note Follow-Up Required
               </h3>
               <Badge variant="warning">22 Pending Notes</Badge>
@@ -105,11 +105,11 @@ export function SalesRepDashboard() {
         <Card className="lg:col-span-2">
           <CardHeader className="flex flex-row items-center justify-between pb-3">
             <div>
-              <CardTitle className="text-sm font-bold text-slate-900 flex items-center gap-2">
+              <CardTitle className="text-sm font-semibold text-slate-900 flex items-center gap-2">
                 <CreditCard className="h-4 w-4 text-emerald-600" />
                 Pending Payments & Route Receivables
               </CardTitle>
-              <p className="text-[11px] text-slate-500 mt-0.5">
+              <p className="text-xs text-slate-500 mt-0.5">
                 Outstanding balances for your assigned territory accounts requiring field collection.
               </p>
             </div>

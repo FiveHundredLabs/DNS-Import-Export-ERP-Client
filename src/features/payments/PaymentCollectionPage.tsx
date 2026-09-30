@@ -124,9 +124,16 @@ export function PaymentCollectionPage() {
         const openInvs = res.data.filter((i) => i.balanceAmount > 0);
         // Sort FIFO by oldest first: issueDate ascending, then createdAt, then dueDate
         openInvs.sort((a, b) => {
-          const dateA = new Date(a.issueDate || a.createdAt || a.dueDate).getTime();
-          const dateB = new Date(b.issueDate || b.createdAt || b.dueDate).getTime();
-          if (dateA !== dateB) return dateA - dateB;
+          const parseTs = (d?: string) => (d ? new Date(d).getTime() || 0 : 0);
+          const issueA = parseTs(a.issueDate);
+          const issueB = parseTs(b.issueDate);
+          if (issueA !== issueB) return issueA - issueB;
+          const createdA = parseTs(a.createdAt);
+          const createdB = parseTs(b.createdAt);
+          if (createdA !== createdB) return createdA - createdB;
+          const dueA = parseTs(a.dueDate);
+          const dueB = parseTs(b.dueDate);
+          if (dueA !== dueB) return dueA - dueB;
           return (a.invoiceNumber || '').localeCompare(b.invoiceNumber || '');
         });
         setCustomerInvoices(openInvs);
@@ -154,10 +161,10 @@ export function PaymentCollectionPage() {
         }
 
         const totalToAllocate =
-          isUrlCustomer && amountParam && !isNaN(Number(amountParam))
-            ? Number(amountParam)
-            : typeof amountRef.current === 'number' && !isNaN(amountRef.current)
+          typeof amountRef.current === 'number' && !isNaN(amountRef.current)
             ? amountRef.current
+            : isUrlCustomer && amountParam && !isNaN(Number(amountParam))
+            ? Number(amountParam)
             : 0;
 
         if (totalToAllocate > 0) {
@@ -462,76 +469,178 @@ export function PaymentCollectionPage() {
                 This customer has no open invoices with outstanding balances.
               </div>
             ) : (
-              <div className="rounded-lg border border-slate-200 overflow-hidden">
-                <div className="overflow-x-auto w-full">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="bg-slate-50">
-                        <TableHead>Invoice #</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Issue Date</TableHead>
-                        <TableHead>Due Date</TableHead>
-                        <TableHead className="text-right">Total Invoice</TableHead>
-                        <TableHead className="text-right">Balance Due</TableHead>
-                        <TableHead className="text-right">Pending Collection</TableHead>
-                        <TableHead className="text-right w-36 sm:w-44">Allocated Amount (LKR)</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {customerInvoices.map((inv) => {
-                        const isOverdue = inv.status === 'OVERDUE';
-                        const currentAlloc = allocations[inv.id] !== undefined ? allocations[inv.id] : '';
-                        const pendingCollection = inv.collectedAmount || 0;
-                        const allocableBalance = Math.max(0, inv.balanceAmount - pendingCollection);
-                        const isFullyCollected = allocableBalance <= 0;
+              <>
+                {/* 1. Mobile Cards View for Invoice Allocation (Visible on small screens, hidden on md+) */}
+                <div className="block md:hidden space-y-3">
+                  {customerInvoices.map((inv) => {
+                    const isOverdue = inv.status === 'OVERDUE';
+                    const currentAlloc = allocations[inv.id] !== undefined ? allocations[inv.id] : '';
+                    const pendingCollection = inv.collectedAmount || 0;
+                    const allocableBalance = Math.max(0, inv.balanceAmount - pendingCollection);
+                    const isFullyCollected = allocableBalance <= 0;
 
-                        return (
-                          <TableRow key={inv.id} className={isFullyCollected ? 'bg-slate-50/60 opacity-80' : undefined}>
-                            <TableCell className="font-mono text-xs font-semibold text-primary">
-                              {inv.invoiceNumber}
-                            </TableCell>
-                            <TableCell className="text-xs">
-                              <InvoiceStatusBadge status={inv.status} />
-                            </TableCell>
-                            <TableCell className="text-xs text-slate-600 whitespace-nowrap">
-                              {formatDate(inv.issueDate)}
-                            </TableCell>
-                            <TableCell className="text-xs whitespace-nowrap">
-                              <span className={isOverdue ? 'font-bold text-rose-600' : 'text-slate-600'}>
-                                {formatDate(inv.dueDate)} {isOverdue && '(Overdue)'}
+                    return (
+                      <div
+                        key={inv.id}
+                        className={`rounded-2xl border p-3.5 space-y-3 transition-colors ${
+                          isFullyCollected
+                            ? 'bg-slate-50/70 border-slate-200 opacity-75'
+                            : isOverdue
+                            ? 'bg-rose-50/30 border-rose-200'
+                            : 'bg-white border-slate-200/90 shadow-xs'
+                        }`}
+                      >
+                        {/* Top: Invoice # & Status */}
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-mono text-xs font-bold text-primary">
+                            {inv.invoiceNumber}
+                          </span>
+                          <div className="flex items-center gap-1.5">
+                            {isOverdue && (
+                              <span className="text-[10.5px] font-bold text-rose-600 bg-rose-100 px-1.5 py-0.5 rounded">
+                                Overdue
                               </span>
-                            </TableCell>
-                            <TableCell className="text-right font-mono text-xs text-slate-600">
+                            )}
+                            <InvoiceStatusBadge status={inv.status} />
+                          </div>
+                        </div>
+
+                        {/* Dates & Amounts */}
+                        <div className="grid grid-cols-2 gap-2 text-xs bg-slate-50/80 p-2.5 rounded-xl border border-slate-100">
+                          <div>
+                            <span className="text-[10.5px] text-slate-400 block">Due Date</span>
+                            <span className={`font-medium ${isOverdue ? 'font-bold text-rose-600' : 'text-slate-700'}`}>
+                              {formatDate(inv.dueDate)}
+                            </span>
+                            <span className="text-[10.5px] text-slate-400 block mt-1">Total Invoice</span>
+                            <span className="font-mono text-slate-700 tabular-nums">
                               {formatCurrency(inv.totalAmount)}
-                            </TableCell>
-                            <TableCell className="text-right font-mono text-xs font-bold text-slate-900">
+                            </span>
+                          </div>
+
+                          <div className="text-right">
+                            <span className="text-[10.5px] text-slate-400 block">Balance Due</span>
+                            <span className="font-mono font-bold text-slate-900 tabular-nums text-sm">
                               {formatCurrency(inv.balanceAmount)}
-                            </TableCell>
-                            <TableCell className="text-right font-mono text-xs text-blue-600 font-medium">
-                              {pendingCollection > 0 ? formatCurrency(pendingCollection) : '—'}
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <Input
-                                type="number"
-                                min="0"
-                                max={allocableBalance}
-                                step="any"
-                                placeholder={isFullyCollected ? '0.00' : '0.00'}
-                                disabled={isFullyCollected}
-                                value={currentAlloc}
-                                onChange={(e) => handleManualAllocationChange(inv.id, e.target.value)}
-                                className={`font-mono text-xs text-right h-8 w-28 sm:w-36 ml-auto ${
-                                  isFullyCollected ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : ''
-                                }`}
-                              />
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
-                    </TableBody>
-                  </Table>
+                            </span>
+                            {pendingCollection > 0 && (
+                              <div className="mt-1">
+                                <span className="text-[10px] text-blue-600 block font-medium">Pending Coll.</span>
+                                <span className="font-mono text-[11px] text-blue-700 font-semibold tabular-nums">
+                                  {formatCurrency(pendingCollection)}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Allocation Input + Quick Max Action */}
+                        <div className="pt-1">
+                          <div className="flex items-center justify-between mb-1.5">
+                            <label className="text-[11px] font-semibold text-slate-700">
+                              Allocated Amount (LKR)
+                            </label>
+                            {!isFullyCollected && allocableBalance > 0 && (
+                              <button
+                                type="button"
+                                onClick={() => handleManualAllocationChange(inv.id, allocableBalance.toString())}
+                                className="text-[11px] font-bold text-primary hover:underline bg-primary-light px-2 py-0.5 rounded-md border border-primary-border"
+                              >
+                                Allocate Full ({formatCurrency(allocableBalance)})
+                              </button>
+                            )}
+                          </div>
+                          <Input
+                            type="number"
+                            min="0"
+                            max={allocableBalance}
+                            step="any"
+                            placeholder={isFullyCollected ? 'Already Collected' : '0.00'}
+                            disabled={isFullyCollected}
+                            value={currentAlloc}
+                            onChange={(e) => handleManualAllocationChange(inv.id, e.target.value)}
+                            className={`font-mono text-sm font-bold text-right h-10 w-full rounded-xl ${
+                              isFullyCollected ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-white'
+                            }`}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
-              </div>
+
+                {/* 2. Desktop Full Table View (Hidden on mobile, block on md+) */}
+                <div className="hidden md:block rounded-lg border border-slate-200 overflow-hidden">
+                  <div className="overflow-x-auto w-full">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-slate-50">
+                          <TableHead>Invoice #</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Issue Date</TableHead>
+                          <TableHead>Due Date</TableHead>
+                          <TableHead className="text-right">Total Invoice</TableHead>
+                          <TableHead className="text-right">Balance Due</TableHead>
+                          <TableHead className="text-right">Pending Collection</TableHead>
+                          <TableHead className="text-right w-36 sm:w-44">Allocated Amount (LKR)</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {customerInvoices.map((inv) => {
+                          const isOverdue = inv.status === 'OVERDUE';
+                          const currentAlloc = allocations[inv.id] !== undefined ? allocations[inv.id] : '';
+                          const pendingCollection = inv.collectedAmount || 0;
+                          const allocableBalance = Math.max(0, inv.balanceAmount - pendingCollection);
+                          const isFullyCollected = allocableBalance <= 0;
+
+                          return (
+                            <TableRow key={inv.id} className={isFullyCollected ? 'bg-slate-50/60 opacity-80' : undefined}>
+                              <TableCell className="font-mono text-xs font-semibold text-primary">
+                                {inv.invoiceNumber}
+                              </TableCell>
+                              <TableCell className="text-xs">
+                                <InvoiceStatusBadge status={inv.status} />
+                              </TableCell>
+                              <TableCell className="text-xs text-slate-600 whitespace-nowrap">
+                                {formatDate(inv.issueDate)}
+                              </TableCell>
+                              <TableCell className="text-xs whitespace-nowrap">
+                                <span className={isOverdue ? 'font-bold text-rose-600' : 'text-slate-600'}>
+                                  {formatDate(inv.dueDate)} {isOverdue && '(Overdue)'}
+                                </span>
+                              </TableCell>
+                              <TableCell className="text-right font-mono text-xs text-slate-600">
+                                {formatCurrency(inv.totalAmount)}
+                              </TableCell>
+                              <TableCell className="text-right font-mono text-xs font-bold text-slate-900">
+                                {formatCurrency(inv.balanceAmount)}
+                              </TableCell>
+                              <TableCell className="text-right font-mono text-xs text-blue-600 font-medium">
+                                {pendingCollection > 0 ? formatCurrency(pendingCollection) : '—'}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <Input
+                                  type="number"
+                                  min="0"
+                                  max={allocableBalance}
+                                  step="any"
+                                  placeholder={isFullyCollected ? '0.00' : '0.00'}
+                                  disabled={isFullyCollected}
+                                  value={currentAlloc}
+                                  onChange={(e) => handleManualAllocationChange(inv.id, e.target.value)}
+                                  className={`font-mono text-xs text-right h-8 w-28 sm:w-36 ml-auto ${
+                                    isFullyCollected ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : ''
+                                  }`}
+                                />
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+              </>
             )}
 
             {/* Allocation Summary Footer */}

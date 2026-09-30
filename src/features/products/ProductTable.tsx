@@ -61,28 +61,28 @@ export function ProductTable({
                     {p.name}
                     {p.isPromotional && <Badge variant="warning">Promo</Badge>}
                   </div>
-                  <div className="font-mono text-[11px] text-slate-500">
+                  <div className="font-mono text-xs text-slate-500 mt-0.5">
                     SKU: {p.sku} | Barcode: {p.barcode}
                   </div>
                 </TableCell>
                 <TableCell>
-                  <span className="text-xs text-slate-600">{p.categoryName}</span>
+                  <span className="text-[13px] text-slate-600 font-normal">{p.categoryName}</span>
                 </TableCell>
-                <TableCell className="text-right font-mono text-xs text-slate-600">
+                <TableCell className="text-right tabular-nums text-[13px] text-slate-600 font-normal">
                   {formatCurrency(p.pricing.costPrice)}
                 </TableCell>
-                <TableCell className="text-right font-mono font-bold text-xs text-slate-900">
+                <TableCell className="text-right tabular-nums font-semibold text-[13.5px] text-slate-900">
                   {formatCurrency(p.pricing.currentSellingPrice)}
                 </TableCell>
-                <TableCell className="text-right font-mono text-xs text-slate-600">
+                <TableCell className="text-right tabular-nums text-[13px] text-slate-600 font-normal">
                   {p.pricing.maxDiscountPercentage}%
                 </TableCell>
                 <TableCell className="text-center">
-                  <span className="font-semibold text-xs text-slate-900">
+                  <span className="font-medium text-[13px] text-slate-900">
                     {p.stockOnHand} {p.uomCode}
                   </span>
                   {isDamaged && (
-                    <div className="flex items-center justify-center gap-1 text-[10px] text-rose-600">
+                    <div className="flex items-center justify-center gap-1 text-xs text-rose-600 font-medium mt-0.5">
                       <AlertTriangle className="h-3 w-3" /> {p.damagedStock} Damaged
                     </div>
                   )}

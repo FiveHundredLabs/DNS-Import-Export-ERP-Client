@@ -136,7 +136,7 @@ export function ChartOfAccountsPage() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900">Chart of Accounts</h1>
+            <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Chart of Accounts</h1>
             <Badge variant="outline" className="bg-primary-light text-primary-text border-primary-border text-xs">
               Double-Entry General Ledger
             </Badge>
@@ -154,7 +154,7 @@ export function ChartOfAccountsPage() {
               setTargetSubClass('OPERATING_EXPENSE');
               setModalOpen(true);
             }}
-            className="gap-2 bg-primary hover:bg-primary-hover"
+            className="gap-2 bg-primary hover:bg-primary-hover font-medium"
           >
             <Plus className="h-4 w-4" />
             <span>Create Sub-Account</span>
@@ -170,7 +170,7 @@ export function ChartOfAccountsPage() {
             <BookOpen className="h-4 w-4 text-primary" />
           </div>
           <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-slate-900">{accounts.length}</span>
+            <span className="text-2xl font-semibold text-slate-900 tabular-nums">{accounts.length}</span>
             <span className="text-xs text-slate-500">Active GL Accounts</span>
           </div>
         </Card>
@@ -181,7 +181,7 @@ export function ChartOfAccountsPage() {
             <Lock className="h-4 w-4 text-amber-600" />
           </div>
           <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-slate-900">{totalSystemAccounts}</span>
+            <span className="text-2xl font-semibold text-slate-900 tabular-nums">{totalSystemAccounts}</span>
             <span className="text-xs text-amber-600 font-medium">Non-deletable Defaults</span>
           </div>
         </Card>
@@ -192,7 +192,7 @@ export function ChartOfAccountsPage() {
             <Layers className="h-4 w-4 text-emerald-600" />
           </div>
           <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-slate-900">{totalCustomAccounts}</span>
+            <span className="text-2xl font-semibold text-slate-900 tabular-nums">{totalCustomAccounts}</span>
             <span className="text-xs text-emerald-600 font-medium">Finance Created</span>
           </div>
         </Card>
@@ -203,7 +203,7 @@ export function ChartOfAccountsPage() {
             <DollarSign className="h-4 w-4 text-primary" />
           </div>
           <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-xl font-bold text-slate-900">
+            <span className="text-xl font-semibold text-slate-900 tabular-nums">
               {formatCurrency(accounts.find((a) => a.code === '1010')?.currentBalance || 0)}
             </span>
           </div>
@@ -252,8 +252,8 @@ export function ChartOfAccountsPage() {
                   )}
                   <FolderOpen className="h-4 w-4 text-primary" />
                   <div>
-                    <span className="text-xs font-bold text-slate-800 uppercase tracking-wider">{group.name}</span>
-                    <span className="ml-2 rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-semibold text-slate-700">
+                    <span className="text-xs font-semibold text-slate-800 uppercase tracking-wider">{group.name}</span>
+                    <span className="ml-2 rounded-full bg-slate-200 px-2 py-0.5 text-xs font-semibold text-slate-700">
                       {groupAccounts.length}
                     </span>
                   </div>
@@ -261,7 +261,7 @@ export function ChartOfAccountsPage() {
 
                 <div className="flex items-center gap-4">
                   <div className="text-right">
-                    <span className="text-xs font-mono font-semibold text-slate-800">
+                    <span className="text-xs tabular-nums font-semibold text-slate-800">
                       {formatCurrency(totalBalance)}
                     </span>
                   </div>
@@ -273,7 +273,7 @@ export function ChartOfAccountsPage() {
                       e.stopPropagation();
                       openCreateForGroup(group);
                     }}
-                    className="h-7 text-xs text-primary hover:text-primary hover:bg-primary-light"
+                    className="h-7 text-xs text-primary hover:text-primary hover:bg-primary-light font-medium"
                   >
                     <Plus className="h-3 w-3 mr-1" />
                     <span>Add Sub-Account</span>
@@ -295,7 +295,7 @@ export function ChartOfAccountsPage() {
                         className="flex items-center justify-between px-6 py-3 text-xs hover:bg-slate-50/60 transition-colors"
                       >
                         <div className="flex items-center gap-3 flex-1 min-w-0 pr-4">
-                          <span className="font-mono font-bold text-primary-text bg-primary-light px-2 py-0.5 rounded border border-primary-border/40 shrink-0">
+                          <span className="tabular-nums font-semibold text-primary-text bg-primary-light px-2 py-0.5 rounded border border-primary-border/40 shrink-0">
                             {account.code}
                           </span>
 
@@ -305,7 +305,7 @@ export function ChartOfAccountsPage() {
                               {account.isSystem && (
                                 <Badge
                                   variant="secondary"
-                                  className="gap-1 bg-amber-50 text-amber-700 border-amber-200 text-[10px] font-semibold"
+                                  className="gap-1 bg-amber-50 text-amber-700 border-amber-200 text-xs font-semibold"
                                   title="Non-deletable default system account"
                                 >
                                   <Lock className="h-2.5 w-2.5" />
@@ -314,14 +314,14 @@ export function ChartOfAccountsPage() {
                               )}
                             </div>
                             {account.description && (
-                              <p className="text-[11px] text-slate-500 truncate mt-0.5">{account.description}</p>
+                              <p className="text-xs text-slate-500 truncate mt-0.5">{account.description}</p>
                             )}
                           </div>
                         </div>
 
                         <div className="flex items-center gap-6 shrink-0">
                           <div className="text-right">
-                            <span className="font-mono text-xs font-semibold text-slate-900">
+                            <span className="tabular-nums text-xs font-semibold text-slate-900">
                               {formatCurrency(account.currentBalance)}
                             </span>
                           </div>

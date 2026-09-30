@@ -83,7 +83,7 @@ export function AreaPerformanceTab({
               <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
                 Territory Target
               </span>
-              <p className="text-2xl font-extrabold text-slate-900 mt-1">
+              <p className="text-2xl font-semibold tabular-nums text-slate-900 mt-1">
                 {formatCurrencyLKR(areaPerformance.totalTarget)}
               </p>
               <span className="text-xs text-slate-400 mt-1 block">Aggregated monthly goal</span>
@@ -93,7 +93,7 @@ export function AreaPerformanceTab({
               <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
                 Achieved Sales
               </span>
-              <p className="text-2xl font-extrabold text-primary mt-1">
+              <p className="text-2xl font-semibold tabular-nums text-primary mt-1">
                 {formatCurrencyLKR(areaPerformance.totalSales)}
               </p>
               <span className="text-xs text-slate-400 mt-1 block">Invoices + Territory POS</span>
@@ -103,7 +103,7 @@ export function AreaPerformanceTab({
               <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
                 Total Collections
               </span>
-              <p className="text-2xl font-extrabold text-emerald-600 mt-1">
+              <p className="text-2xl font-semibold tabular-nums text-emerald-600 mt-1">
                 {formatCurrencyLKR(areaPerformance.totalCollections)}
               </p>
               <span className="text-xs text-slate-400 mt-1 block">Approved payment receipts</span>
@@ -112,7 +112,7 @@ export function AreaPerformanceTab({
             <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-center">
               <span className="text-xs font-semibold text-slate-500">Achievement Rate</span>
               <p
-                className={`text-2xl font-black mt-1 ${
+                className={`text-2xl font-semibold tabular-nums mt-1 ${
                   isTargetAchieved ? 'text-emerald-600' : 'text-amber-600'
                 }`}
               >
@@ -135,7 +135,7 @@ export function AreaPerformanceTab({
         {/* Sales Rep Leaderboard in Territory */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-base font-bold text-slate-900 flex items-center justify-between">
+            <CardTitle className="text-base font-semibold text-slate-900 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Trophy className="w-4 h-4 text-amber-500" />
                 <span>Sales Rep Territory Performance</span>
@@ -166,21 +166,21 @@ export function AreaPerformanceTab({
                     {areaPerformance.repPerformance.map((rep) => (
                       <tr key={rep.repId} className="hover:bg-slate-50/80">
                         <td className="py-2.5 px-3 font-semibold text-slate-800">{rep.repName}</td>
-                        <td className="py-2.5 px-3 text-right text-slate-600">
+                        <td className="py-2.5 px-3 text-right tabular-nums text-slate-600">
                           {formatCurrencyLKR(rep.target)}
                         </td>
-                        <td className="py-2.5 px-3 text-right font-bold text-slate-900">
+                        <td className="py-2.5 px-3 text-right font-semibold tabular-nums text-slate-900">
                           {formatCurrencyLKR(rep.sales)}
                         </td>
                         <td className="py-2.5 px-3 text-center">
                           <Badge
                             variant={rep.achievementPercentage >= 100 ? 'default' : 'secondary'}
-                            className="text-[10px]"
+                            className="text-xs font-medium tabular-nums"
                           >
                             {rep.achievementPercentage}%
                           </Badge>
                         </td>
-                        <td className="py-2.5 px-3 text-right font-semibold text-emerald-600">
+                        <td className="py-2.5 px-3 text-right font-semibold tabular-nums text-emerald-600">
                           {formatCurrencyLKR(rep.collections)}
                         </td>
                       </tr>
@@ -195,7 +195,7 @@ export function AreaPerformanceTab({
         {/* Top Territory Dealers / Customers */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-base font-bold text-slate-900 flex items-center justify-between">
+            <CardTitle className="text-base font-semibold text-slate-900 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Building2 className="w-4 h-4 text-primary" />
                 <span>Top Regional Dealers & Accounts</span>
@@ -226,10 +226,10 @@ export function AreaPerformanceTab({
                       <tr key={c.customerId} className="hover:bg-slate-50/80">
                         <td className="py-2.5 px-3 font-semibold text-slate-800">{c.customerName}</td>
                         <td className="py-2.5 px-3 font-mono text-slate-500">{c.customerCode}</td>
-                        <td className="py-2.5 px-3 text-right font-bold text-slate-900">
+                        <td className="py-2.5 px-3 text-right font-semibold tabular-nums text-slate-900">
                           {formatCurrencyLKR(c.totalSales)}
                         </td>
-                        <td className="py-2.5 px-3 text-right font-semibold text-amber-700">
+                        <td className="py-2.5 px-3 text-right font-semibold tabular-nums text-amber-700">
                           {formatCurrencyLKR(c.outstandingBalance)}
                         </td>
                       </tr>

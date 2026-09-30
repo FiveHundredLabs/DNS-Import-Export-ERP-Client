@@ -38,7 +38,7 @@ export function StatCard({
     <Card className={cn('bg-white border border-slate-200/80 rounded-2xl shadow-sm hover:shadow-md transition-all duration-200', className)}>
       <CardContent className="p-5">
         <div className="flex items-center justify-between">
-          <span className="text-xs font-semibold text-slate-500 tracking-tight">{title}</span>
+          <span className="text-[13px] font-medium text-slate-600">{title}</span>
           <div className="flex items-center gap-2">
             {Icon && (
               <div className={cn('p-1.5 rounded-lg border', iconBg)}>
@@ -49,16 +49,16 @@ export function StatCard({
           </div>
         </div>
 
-        <div className="mt-3">
-          <div className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900">{value}</div>
+        <div className="mt-2.5">
+          <div className="text-2xl sm:text-[26px] font-semibold tracking-tight tabular-nums text-slate-900 leading-tight">{value}</div>
         </div>
 
-        <div className="mt-3 flex items-center justify-between text-xs">
-          <span className="text-slate-400 font-medium">{subtitle || period}</span>
+        <div className="mt-2.5 flex items-center justify-between text-xs">
+          <span className="text-slate-500 font-normal">{subtitle || period}</span>
           {trend && (
             <span
               className={cn(
-                'inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full border',
+                'inline-flex items-center gap-1 text-[11.5px] font-medium tabular-nums px-2 py-0.5 rounded-full border',
                 trend.isPositive
                   ? 'text-emerald-700 bg-emerald-50/80 border-emerald-200/60'
                   : 'text-rose-700 bg-rose-50/80 border-rose-200/60'

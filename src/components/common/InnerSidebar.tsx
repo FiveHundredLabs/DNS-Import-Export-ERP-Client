@@ -95,7 +95,7 @@ export function InnerSidebar({
           <button
             type="button"
             onClick={handleBack}
-            className="flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-primary transition-colors"
+            className="flex items-center gap-1.5 text-[13px] font-medium text-slate-600 hover:text-primary transition-colors"
             title={`Return to ${backLabel}`}
           >
             <ArrowLeft className="h-4 w-4" />
@@ -121,7 +121,7 @@ export function InnerSidebar({
       {/* Title */}
       {!collapsed && title && (
         <div className="px-4 pt-4 pb-2">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+          <span className="text-[11.5px] font-semibold uppercase tracking-wider text-slate-500">
             {title}
           </span>
         </div>
@@ -155,7 +155,7 @@ export function InnerSidebar({
                   <div>
                     <div
                       className={cn(
-                        'flex cursor-pointer items-center justify-between rounded-lg px-2.5 py-2 text-xs font-medium transition-colors',
+                        'flex cursor-pointer items-center justify-between rounded-lg px-2.5 py-2 text-[13px] font-medium leading-normal transition-colors',
                         isActive
                           ? 'text-primary-text font-semibold'
                           : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
@@ -199,10 +199,10 @@ export function InnerSidebar({
                               end={sub.exact ?? false}
                               className={({ isActive }) =>
                                 cn(
-                                  'flex items-center gap-2 rounded-md px-2 py-1.5 text-[11px] font-medium transition-colors',
+                                  'flex items-center gap-2 rounded-md px-2 py-1.5 text-xs font-medium leading-normal transition-colors',
                                   isActive
-                                    ? 'font-semibold shadow-sm'
-                                    : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'
+                                    ? 'font-semibold shadow-xs'
+                                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
                                 )
                               }
                               style={({ isActive }) => (isActive ? activeStyle : undefined)}
@@ -230,8 +230,8 @@ export function InnerSidebar({
                   <NavLink
                     to={item.path}
                     className={cn(
-                      'flex items-center justify-center rounded-lg p-2 text-xs font-medium transition-colors',
-                      isActive ? 'shadow-sm' : 'text-slate-600 hover:bg-slate-50'
+                      'flex items-center justify-center rounded-lg p-2 text-[13px] font-medium transition-colors',
+                      isActive ? 'shadow-xs' : 'text-slate-600 hover:bg-slate-50'
                     )}
                     style={isActive ? activeStyle : undefined}
                     title={item.name}
@@ -250,9 +250,9 @@ export function InnerSidebar({
               end={item.exact ?? false}
               className={({ isActive }) =>
                 cn(
-                  'flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-medium transition-colors',
+                  'flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] font-medium leading-normal transition-colors',
                   isActive
-                    ? 'font-semibold shadow-sm'
+                    ? 'font-semibold shadow-xs'
                     : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900',
                   collapsed && 'justify-center px-2'
                 )
@@ -278,7 +278,7 @@ export function InnerSidebar({
 
       {/* Footer */}
       {!collapsed && footer && (
-        <div className="border-t border-slate-200 p-3 bg-slate-50/50 text-[11px] text-slate-400">
+        <div className="border-t border-slate-200 p-3 bg-slate-50/50 text-xs text-slate-500">
           {footer}
         </div>
       )}

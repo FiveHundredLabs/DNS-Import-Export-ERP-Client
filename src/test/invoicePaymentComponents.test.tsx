@@ -162,20 +162,38 @@ describe('Phase 7 — Invoice & Payment UI Components', () => {
     expect(allocInput3.value).toBe('0');
 
     // Total allocated must equal 100,000 and unallocated float must be 0
-    expect(screen.getByText('LKR 100,000.00')).toBeInTheDocument();
-    expect(screen.getByText('LKR 0.00')).toBeInTheDocument();
+    expect(screen.getByText(/Total Allocated:/i).parentElement?.textContent).toContain('100,000.00');
+    expect(screen.getByText(/Collected:/i).parentElement?.textContent).toContain('100,000.00');
+    expect(screen.getByText(/Unallocated Float:/i).parentElement?.textContent).toContain('0.00');
 
     // User changes Collection Amount to 200,000 (covers 150,000 of INV-2025-0101 and 50,000 of INV-2025-0102)
     fireEvent.change(collectionAmountInput, { target: { value: '200000' } });
     expect(allocInput1.value).toBe('150000');
     expect(allocInput2.value).toBe('50000');
     expect(allocInput3.value).toBe('0');
+    expect(screen.getByText(/Total Allocated:/i).parentElement?.textContent).toContain('200,000.00');
+    expect(screen.getByText(/Unallocated Float:/i).parentElement?.textContent).toContain('0.00');
+
+    // User manually modifies an invoice allocation (e.g. INV-2025-0102 set to 20000)
+    fireEvent.change(allocInput2, { target: { value: '20000' } });
+    expect(allocInput2.value).toBe('20000');
+    // Float becomes positive (30,000 unallocated float)
+    expect(screen.getByText(/Unallocated Float:/i).parentElement?.textContent).toContain('30,000.00');
+
+    // Changing Collection Amount again re-applies FIFO and overwrites stale/manual allocations
+    fireEvent.change(collectionAmountInput, { target: { value: '100000' } });
+    expect(allocInput1.value).toBe('100000');
+    expect(allocInput2.value).toBe('0');
+    expect(allocInput3.value).toBe('0');
+    expect(screen.getByText(/Unallocated Float:/i).parentElement?.textContent).toContain('0.00');
 
     // User clears Collection Amount
     fireEvent.change(collectionAmountInput, { target: { value: '' } });
     expect(allocInput1.value).toBe('0');
     expect(allocInput2.value).toBe('0');
     expect(allocInput3.value).toBe('0');
+    expect(screen.getByText(/Total Allocated:/i).parentElement?.textContent).toContain('0.00');
+    expect(screen.getByText(/Unallocated Float:/i).parentElement?.textContent).toContain('0.00');
   });
 
   it('renders PaymentDetailPage with collection summary and action buttons', async () => {

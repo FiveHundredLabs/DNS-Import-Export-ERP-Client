@@ -88,7 +88,7 @@ export function CustomerCreateModal({
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">Customer Code</label>
+            <label className="block text-[13px] font-medium text-slate-700 mb-1.5">Customer Code</label>
             <Input
               value={code}
               onChange={(e) => setCode(e.target.value.toUpperCase())}
@@ -96,7 +96,7 @@ export function CustomerCreateModal({
             />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">Customer Type</label>
+            <label className="block text-[13px] font-medium text-slate-700 mb-1.5">Customer Type</label>
             <Select value={type} onChange={(e) => setType(e.target.value as CustomerType)}>
               <option value="DEALER">Authorized Dealer</option>
               <option value="SHOWROOM">Showroom Outlet</option>
@@ -106,7 +106,7 @@ export function CustomerCreateModal({
         </div>
 
         <div>
-          <label className="block text-xs font-semibold text-slate-700 mb-1">
+          <label className="block text-[13px] font-medium text-slate-700 mb-1.5">
             Shop / Business Full Name <span className="text-rose-500">*</span>
           </label>
           <Input
@@ -118,7 +118,7 @@ export function CustomerCreateModal({
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">
+            <label className="block text-[13px] font-medium text-slate-700 mb-1.5">
               Contact Person <span className="text-rose-500">*</span>
             </label>
             <Input
@@ -128,7 +128,7 @@ export function CustomerCreateModal({
             />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">
+            <label className="block text-[13px] font-medium text-slate-700 mb-1.5">
               Contact Phone <span className="text-rose-500">*</span>
             </label>
             <Input
@@ -140,7 +140,7 @@ export function CustomerCreateModal({
         </div>
 
         <div>
-          <label className="block text-xs font-semibold text-slate-700 mb-1">Email Address</label>
+          <label className="block text-[13px] font-medium text-slate-700 mb-1.5">Email Address</label>
           <Input
             type="email"
             value={email}
@@ -150,7 +150,7 @@ export function CustomerCreateModal({
         </div>
 
         <div>
-          <label className="block text-xs font-semibold text-slate-700 mb-1">Registered Address</label>
+          <label className="block text-[13px] font-medium text-slate-700 mb-1.5">Registered Address</label>
           <Input
             value={address}
             onChange={(e) => setAddress(e.target.value)}

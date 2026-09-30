@@ -122,15 +122,15 @@ export function ThermalReceiptModal({
             </div>
           )}
 
-          <div className="flex justify-between items-center text-sm font-black pt-2 pb-1 border-t border-slate-900 mt-2">
+          <div className="flex justify-between items-center text-sm font-semibold pt-2 pb-1 border-t border-slate-900 mt-2">
             <span>AMOUNT PAID:</span>
-            <span>{formatCurrency(payment.amount)}</span>
+            <span className="tabular-nums">{formatCurrency(payment.amount)}</span>
           </div>
 
           {payment.invoiceAllocations && payment.invoiceAllocations.length > 0 && (
             <>
               <div className="border-t border-dashed border-slate-400 my-2" />
-              <div className="font-bold text-[10px] uppercase text-slate-600 mb-1">
+              <div className="font-semibold text-xs uppercase text-slate-600 mb-1">
                 Settled Invoices:
               </div>
               {payment.invoiceAllocations.map((alloc) => (

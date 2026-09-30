@@ -108,7 +108,7 @@ export function QuotationListPage() {
       {/* Header and Action */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900 flex items-center gap-2.5">
+          <h1 className="text-2xl font-semibold tracking-tight text-slate-900 flex items-center gap-2.5">
             <FileSpreadsheet className="h-7 w-7 text-primary" />
             Quotation Management
           </h1>
@@ -136,7 +136,7 @@ export function QuotationListPage() {
               <span className="font-semibold">{currentUser.name}</span>) for your assigned dealers.
             </span>
           </div>
-          <span className="text-[11px] font-medium text-primary bg-white px-2 py-0.5 rounded border border-primary-border">
+          <span className="text-xs font-medium text-primary bg-white px-2.5 py-0.5 rounded border border-primary-border">
             Rep Max Discount Limit: 5%
           </span>
         </div>
@@ -338,18 +338,18 @@ export function QuotationListPage() {
                       </div>
                     </TableCell>
 
-                    <TableCell className="text-xs text-slate-600">
+                    <TableCell className="text-[13px] text-slate-600">
                       {formatDate(q.createdAt)}
                     </TableCell>
 
-                    <TableCell className="text-center text-xs text-slate-700 font-medium">
+                    <TableCell className="text-center text-[13px] text-slate-700 font-normal">
                       {q.items.length} {q.items.length === 1 ? 'item' : 'items'}
                     </TableCell>
 
-                    <TableCell className="text-right font-mono text-xs font-bold text-slate-900">
+                    <TableCell className="text-right tabular-nums text-[13.5px] font-semibold text-slate-900">
                       {formatCurrency(q.totalAmount)}
                       {q.discountAmount > 0 && (
-                        <div className="text-[10px] text-emerald-600 font-normal">
+                        <div className="text-xs text-emerald-600 font-normal mt-0.5">
                           - {formatCurrency(q.discountAmount)} disc
                         </div>
                       )}
@@ -395,7 +395,7 @@ export function QuotationListPage() {
                               e.stopPropagation();
                               setConvertingQuotation(q);
                             }}
-                            className="text-[11px] h-7 px-2 text-primary border-primary-border hover:bg-primary-light"
+                            className="text-xs h-7 px-2.5 text-primary border-primary-border hover:bg-primary-light font-medium"
                             title="Convert to Sales Order"
                           >
                             <ShoppingCart className="h-3 w-3 mr-1" />

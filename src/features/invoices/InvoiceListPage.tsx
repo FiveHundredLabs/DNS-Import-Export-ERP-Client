@@ -99,8 +99,8 @@ export function InvoiceListPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold tracking-tight text-slate-900">Commercial Tax Invoices</h1>
-          <p className="text-xs text-slate-500">
+          <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Commercial Tax Invoices</h1>
+          <p className="text-xs text-slate-500 mt-0.5">
             IRD-compliant invoice management, credit receivables tracking, and settlement history.
           </p>
         </div>
@@ -109,7 +109,7 @@ export function InvoiceListPage() {
             variant="outline"
             size="sm"
             onClick={fetchInvoices}
-            className="text-xs gap-1.5"
+            className="gap-1.5"
             title="Refresh Invoices"
           >
             <RefreshCw className="h-3.5 w-3.5" /> Refresh
@@ -117,7 +117,7 @@ export function InvoiceListPage() {
           <Button
             size="sm"
             onClick={() => navigate('/payments/new')}
-            className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs gap-1.5 shadow-sm"
+            className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5 shadow-xs"
           >
             <CreditCard className="h-3.5 w-3.5" /> Record Payment
           </Button>
@@ -130,8 +130,8 @@ export function InvoiceListPage() {
           <CardContent className="p-3.5">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-[11px] font-medium text-slate-500">Total Receivables</p>
-                <p className="text-lg font-bold text-slate-900 mt-0.5">{formatCurrency(totalReceivables)}</p>
+                <p className="text-[13px] font-medium text-slate-600">Total Receivables</p>
+                <p className="text-lg font-semibold tabular-nums text-slate-900 mt-0.5">{formatCurrency(totalReceivables)}</p>
               </div>
               <div className="h-9 w-9 rounded-lg bg-primary-light text-primary flex items-center justify-center">
                 <Receipt className="h-5 w-5" />
@@ -144,8 +144,8 @@ export function InvoiceListPage() {
           <CardContent className="p-3.5">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-[11px] font-medium text-slate-500">Overdue Invoices</p>
-                <p className="text-lg font-bold text-rose-600 mt-0.5">{overdueCount} ({formatCurrency(overdueAmount)})</p>
+                <p className="text-[13px] font-medium text-slate-600">Overdue Invoices</p>
+                <p className="text-lg font-semibold tabular-nums text-rose-600 mt-0.5">{overdueCount} ({formatCurrency(overdueAmount)})</p>
               </div>
               <div className="h-9 w-9 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center">
                 <AlertTriangle className="h-5 w-5" />
@@ -158,8 +158,8 @@ export function InvoiceListPage() {
           <CardContent className="p-3.5">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-[11px] font-medium text-slate-500">Active Pipeline</p>
-                <p className="text-lg font-bold text-primary mt-0.5">
+                <p className="text-[13px] font-medium text-slate-600">Active Pipeline</p>
+                <p className="text-lg font-semibold tabular-nums text-primary mt-0.5">
                   {invoices.filter((i) => i.status === 'ISSUED' || i.status === 'PARTIALLY_PAID').length} open
                 </p>
               </div>
@@ -174,8 +174,8 @@ export function InvoiceListPage() {
           <CardContent className="p-3.5">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-[11px] font-medium text-slate-500">Fully Settled</p>
-                <p className="text-lg font-bold text-emerald-600 mt-0.5">{paidCount} Paid</p>
+                <p className="text-[13px] font-medium text-slate-600">Fully Settled</p>
+                <p className="text-lg font-semibold tabular-nums text-emerald-600 mt-0.5">{paidCount} Paid</p>
               </div>
               <div className="h-9 w-9 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
                 <CheckCircle className="h-5 w-5" />
@@ -326,7 +326,7 @@ export function InvoiceListPage() {
                         }
                       }}
                     >
-                      <TableCell className="font-mono text-xs font-bold text-primary">
+                      <TableCell className="font-mono text-xs font-semibold tabular-nums text-primary">
                         <span className="hover:underline">
                           {inv.invoiceNumber}
                         </span>
@@ -340,31 +340,31 @@ export function InvoiceListPage() {
                           {inv.orderNumber}
                         </Link>
                       </TableCell>
-                      <TableCell className="text-xs">
+                      <TableCell className="text-[13px]">
                         <div className="font-semibold text-slate-900">{inv.customerName}</div>
-                        <div className="text-[10px] text-slate-400 font-mono">{inv.customerCode}</div>
+                        <div className="text-xs text-slate-400 font-mono mt-0.5">{inv.customerCode}</div>
                       </TableCell>
-                      <TableCell className="text-xs text-slate-600 whitespace-nowrap">
+                      <TableCell className="text-[13px] text-slate-600 whitespace-nowrap">
                         {formatDate(inv.issueDate)}
                       </TableCell>
-                      <TableCell className="text-xs whitespace-nowrap">
+                      <TableCell className="text-[13px] whitespace-nowrap">
                         <span
                           className={
                             inv.status === 'OVERDUE'
-                              ? 'font-bold text-rose-600'
+                              ? 'font-semibold text-rose-600'
                               : 'text-slate-600'
                           }
                         >
                           {formatDate(inv.dueDate)}
                         </span>
                       </TableCell>
-                      <TableCell className="text-right font-mono text-xs font-bold text-slate-900">
+                      <TableCell className="text-right tabular-nums text-[13.5px] font-semibold text-slate-900">
                         {formatCurrency(inv.totalAmount)}
                       </TableCell>
-                      <TableCell className="text-right font-mono text-xs text-emerald-600">
+                      <TableCell className="text-right tabular-nums text-[13px] text-emerald-600 font-medium">
                         {inv.paidAmount > 0 ? formatCurrency(inv.paidAmount) : '-'}
                       </TableCell>
-                      <TableCell className="text-right font-mono text-xs font-bold text-slate-900">
+                      <TableCell className="text-right tabular-nums text-[13.5px] font-semibold text-slate-900">
                         {inv.balanceAmount > 0 ? (
                           <span className={inv.status === 'OVERDUE' ? 'text-rose-600' : 'text-slate-900'}>
                             {formatCurrency(inv.balanceAmount)}

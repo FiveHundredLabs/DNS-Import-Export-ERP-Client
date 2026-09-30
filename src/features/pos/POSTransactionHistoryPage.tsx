@@ -213,7 +213,7 @@ export function POSTransactionHistoryPage() {
       <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xs">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="border-b border-slate-200 bg-slate-50 font-bold uppercase tracking-wider text-slate-500 text-[10px]">
+            <thead className="border-b border-slate-200 bg-slate-50 font-semibold uppercase tracking-wider text-slate-500 text-xs">
               <tr>
                 <th className="py-3 px-4">Receipt Number</th>
                 <th className="py-3 px-4">Date & Time</th>
@@ -243,7 +243,7 @@ export function POSTransactionHistoryPage() {
               ) : (
                 filteredTransactions.map((tx) => (
                   <tr key={tx.id} className="hover:bg-slate-50/80 transition-colors">
-                    <td className="py-3.5 px-4 font-mono font-bold text-primary-text">
+                    <td className="py-3.5 px-4 font-mono font-semibold tabular-nums text-primary-text">
                       {tx.receiptNumber}
                     </td>
                     <td className="py-3.5 px-4 text-slate-500 text-[11px]">
@@ -251,13 +251,13 @@ export function POSTransactionHistoryPage() {
                     </td>
                     <td className="py-3.5 px-4">
                       <div className="font-semibold text-slate-900">{tx.customerName || 'Walk-in Customer'}</div>
-                      {tx.customerCode && <div className="text-[10px] text-slate-400">Code: {tx.customerCode}</div>}
+                      {tx.customerCode && <div className="text-xs text-slate-400">Code: {tx.customerCode}</div>}
                     </td>
                     <td className="py-3.5 px-4 text-[11px] text-slate-600">
                       {tx.items.length} line {tx.items.length === 1 ? 'item' : 'items'}
                     </td>
                     <td className="py-3.5 px-4">{getMethodBadge(tx.paymentMethod)}</td>
-                    <td className="py-3.5 px-4 text-right font-extrabold text-slate-900">
+                    <td className="py-3.5 px-4 text-right font-semibold tabular-nums text-slate-900">
                       {formatCurrency(tx.totalAmount)}
                     </td>
                     <td className="py-3.5 px-4 text-[11px] text-slate-600">
@@ -265,11 +265,11 @@ export function POSTransactionHistoryPage() {
                     </td>
                     <td className="py-3.5 px-4 text-center">
                       {tx.status === 'COMPLETED' ? (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-bold text-emerald-800">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-medium text-emerald-800">
                           <CheckCircle className="h-3 w-3" /> Completed
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-rose-100 px-2 py-0.5 text-[11px] font-bold text-rose-800">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-rose-100 px-2.5 py-0.5 text-xs font-medium text-rose-800">
                           <AlertCircle className="h-3 w-3" /> Refunded
                         </span>
                       )}
@@ -327,7 +327,7 @@ export function POSTransactionHistoryPage() {
                   <RotateCcw className="h-5 w-5" />
                 </span>
                 <div>
-                  <h3 className="text-base font-bold text-slate-900">Process Sale Refund</h3>
+                  <h3 className="text-base font-semibold text-slate-900">Process Sale Refund</h3>
                   <p className="text-xs text-slate-500 font-mono">
                     Receipt: {refundingTx.receiptNumber}
                   </p>
@@ -349,19 +349,19 @@ export function POSTransactionHistoryPage() {
               )}
 
               <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800 space-y-1">
-                <div className="font-bold flex items-center gap-1">
+                <div className="font-semibold flex items-center gap-1">
                   <AlertCircle className="h-3.5 w-3.5" /> Inventory Ledger Notice
                 </div>
                 <div>
                   Refunding this sale will automatically create a <strong>SALES_RETURN</strong> movement and add {refundingTx.items.reduce((sum, i) => sum + i.quantity, 0)} units back to the <strong>SHOWROOM</strong> location stock balance.
                 </div>
-                <div className="font-extrabold pt-1">
+                <div className="font-semibold tabular-nums pt-1">
                   Total Refund Amount: {formatCurrency(refundingTx.totalAmount)}
                 </div>
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-slate-700 block mb-1">
+                <label className="text-xs font-medium text-slate-700 block mb-1">
                   Refund Reason / Customer Justification <span className="text-rose-500">*</span>
                 </label>
                 <textarea

@@ -60,7 +60,7 @@ export function DialogTitle({
 }: React.HTMLAttributes<HTMLHeadingElement>) {
   return (
     <h2
-      className={cn('text-lg font-semibold leading-none text-slate-900', className)}
+      className={cn('text-lg font-semibold tracking-normal leading-snug text-slate-900', className)}
       {...props}
     />
   );
@@ -71,7 +71,7 @@ export function DialogDescription({
   ...props
 }: React.HTMLAttributes<HTMLParagraphElement>) {
   return (
-    <p className={cn('text-sm text-slate-500 mt-1', className)} {...props} />
+    <p className={cn('text-[13px] text-slate-500 leading-relaxed mt-1 font-normal', className)} {...props} />
   );
 }
 
