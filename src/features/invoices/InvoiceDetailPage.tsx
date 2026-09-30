@@ -295,6 +295,14 @@ export function InvoiceDetailPage() {
                   {formatCurrency(invoice.paidAmount)}
                 </span>
               </div>
+              {invoice.collectedAmount !== undefined && invoice.collectedAmount > 0 && (
+                <div className="flex justify-between py-1 text-blue-600">
+                  <span>Collected (Pending Verification):</span>
+                  <span className="font-mono font-semibold">
+                    {formatCurrency(invoice.collectedAmount)}
+                  </span>
+                </div>
+              )}
               <div className="flex justify-between py-2 bg-slate-50 px-3 rounded-lg border border-slate-200 text-sm font-black">
                 <span className={invoice.balanceAmount > 0 ? 'text-rose-700' : 'text-emerald-700'}>
                   Balance Due:

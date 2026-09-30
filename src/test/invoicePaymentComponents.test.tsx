@@ -31,6 +31,12 @@ describe('Phase 7 — Invoice & Payment UI Components', () => {
     rerender(<InvoiceStatusBadge status="DRAFT" />);
     expect(screen.getByText('Draft')).toBeInTheDocument();
 
+    rerender(<InvoiceStatusBadge status="COLLECTED" />);
+    expect(screen.getByText('Collected')).toBeInTheDocument();
+
+    rerender(<InvoiceStatusBadge status="PARTIALLY_COLLECTED" />);
+    expect(screen.getByText('Partially Collected')).toBeInTheDocument();
+
     rerender(<InvoiceStatusBadge status="CANCELLED" />);
     expect(screen.getByText('Cancelled')).toBeInTheDocument();
   });

@@ -157,7 +157,13 @@ export function CustomerHubView({ customer }: { customer: Customer }) {
     if (invoiceFilter === 'ALL') return true;
     if (invoiceFilter === 'OVERDUE') return inv.status === 'OVERDUE';
     if (invoiceFilter === 'PAID') return inv.status === 'PAID';
-    if (invoiceFilter === 'PENDING') return inv.status === 'ISSUED' || inv.status === 'PARTIALLY_PAID';
+    if (invoiceFilter === 'PENDING')
+      return (
+        inv.status === 'ISSUED' ||
+        inv.status === 'PARTIALLY_PAID' ||
+        inv.status === 'COLLECTED' ||
+        inv.status === 'PARTIALLY_COLLECTED'
+      );
     if (invoiceFilter === 'NEAR_DUE') {
       const now = new Date();
       const sevenDays = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);

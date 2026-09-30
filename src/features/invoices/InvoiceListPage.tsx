@@ -252,6 +252,8 @@ export function InvoiceListPage() {
               [
                 { label: 'All Invoices', value: 'ALL' },
                 { label: 'Issued', value: 'ISSUED' },
+                { label: 'Collected', value: 'COLLECTED' },
+                { label: 'Partially Collected', value: 'PARTIALLY_COLLECTED' },
                 { label: 'Partially Paid', value: 'PARTIALLY_PAID' },
                 { label: 'Overdue', value: 'OVERDUE' },
                 { label: 'Paid', value: 'PAID' },

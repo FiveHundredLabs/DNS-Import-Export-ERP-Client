@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { Customer } from '../../types/customer';
 import { Invoice } from '../../types/invoice';
@@ -6,6 +6,8 @@ import { PaymentMethod, PaymentAllocation, Payment } from '../../types/payment';
 import { customerService } from '../../services/CustomerService';
 import { invoiceService } from '../../services/InvoiceService';
 import { paymentService } from '../../services/PaymentService';
+import { autoAllocatePayment } from '../../rules/paymentRules';
+import { InvoiceStatusBadge } from '../invoices/InvoiceStatusBadge';
 import { CustomerSelector } from '../../components/selectors/CustomerSelector';
 import { CustomerSummaryCard } from '../../components/selectors/CustomerSummaryCard';
 import { ThermalReceiptModal } from './ThermalReceiptModal';
@@ -49,16 +51,53 @@ export function PaymentCollectionPage() {
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  const amountRef = useRef<number | ''>(amount);
+  amountRef.current = amount;
+
   // Receipt Modal State
   const [createdPayment, setCreatedPayment] = useState<Payment | null>(null);
   const [receiptModalOpen, setReceiptModalOpen] = useState(false);
+
+  // Auto-allocate helper: applies FIFO across open invoices
+  const applyFifoAllocations = (totalToAllocate: number, invoices: Invoice[]) => {
+    if (totalToAllocate <= 0 || !invoices || invoices.length === 0) {
+      const cleared: Record<string, number> = {};
+      for (const inv of invoices || []) {
+        cleared[inv.id] = 0;
+      }
+      setAllocations(cleared);
+      return;
+    }
+
+    const allocs = autoAllocatePayment(totalToAllocate, invoices);
+    const newAllocations: Record<string, number> = {};
+    for (const inv of invoices) {
+      newAllocations[inv.id] = 0;
+    }
+    for (const alloc of allocs) {
+      newAllocations[alloc.invoiceId] = alloc.allocatedAmount;
+    }
+
+    setAllocations(newAllocations);
+  };
+
+  // When user updates collection amount in the input
+  const handleAmountChange = (newVal: number | '') => {
+    setAmount(newVal);
+    amountRef.current = newVal;
+    setErrorMessage(null);
+    const num = typeof newVal === 'number' && !isNaN(newVal) ? newVal : 0;
+    applyFifoAllocations(num, customerInvoices);
+  };
 
   // Load customer and amount if passed in URL
   useEffect(() => {
     const custId = searchParams.get('customerId');
     const amountParam = searchParams.get('amount');
     if (amountParam && !isNaN(Number(amountParam))) {
-      setAmount(Number(amountParam));
+      const parsedAmt = Number(amountParam);
+      setAmount(parsedAmt);
+      amountRef.current = parsedAmt;
     }
     if (custId) {
       customerService.getCustomer(custId).then((c) => {
@@ -83,33 +122,54 @@ export function PaymentCollectionPage() {
         });
         // Open invoices have balanceAmount > 0
         const openInvs = res.data.filter((i) => i.balanceAmount > 0);
-        // Sort FIFO by dueDate ascending
-        openInvs.sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
+        // Sort FIFO by oldest first: issueDate ascending, then createdAt, then dueDate
+        openInvs.sort((a, b) => {
+          const dateA = new Date(a.issueDate || a.createdAt || a.dueDate).getTime();
+          const dateB = new Date(b.issueDate || b.createdAt || b.dueDate).getTime();
+          if (dateA !== dateB) return dateA - dateB;
+          return (a.invoiceNumber || '').localeCompare(b.invoiceNumber || '');
+        });
         setCustomerInvoices(openInvs);
 
         // Pre-allocate to specific invoice if requested via URL
         const preselectInvId = searchParams.get('invoiceId');
         const amountParam = searchParams.get('amount');
-        if (preselectInvId) {
+        const urlCustId = searchParams.get('customerId');
+        const isUrlCustomer = !urlCustId || urlCustId === selectedCustomer.id;
+
+        if (preselectInvId && isUrlCustomer) {
           const target = openInvs.find((i) => i.id === preselectInvId);
           if (target) {
-            setAmount(target.balanceAmount);
-            setAllocations({ [target.id]: target.balanceAmount });
-          }
-        } else if (amountParam && !isNaN(Number(amountParam)) && Number(amountParam) > 0) {
-          const totalToAllocate = Number(amountParam);
-          setAmount(totalToAllocate);
-          let remaining = totalToAllocate;
-          const newAllocations: Record<string, number> = {};
-          for (const inv of openInvs) {
-            if (remaining <= 0) break;
-            const allocateForThis = Math.min(inv.balanceAmount, remaining);
-            if (allocateForThis > 0) {
-              newAllocations[inv.id] = allocateForThis;
-              remaining -= allocateForThis;
+            const allocable = Math.max(0, target.balanceAmount - (target.collectedAmount || 0));
+            setAmount(allocable);
+            amountRef.current = allocable;
+            const initialAllocs: Record<string, number> = {};
+            for (const inv of openInvs) {
+              initialAllocs[inv.id] = 0;
             }
+            initialAllocs[target.id] = allocable;
+            setAllocations(initialAllocs);
+            return;
           }
-          setAllocations(newAllocations);
+        }
+
+        const totalToAllocate =
+          isUrlCustomer && amountParam && !isNaN(Number(amountParam))
+            ? Number(amountParam)
+            : typeof amountRef.current === 'number' && !isNaN(amountRef.current)
+            ? amountRef.current
+            : 0;
+
+        if (totalToAllocate > 0) {
+          setAmount(totalToAllocate);
+          amountRef.current = totalToAllocate;
+          applyFifoAllocations(totalToAllocate, openInvs);
+        } else {
+          const cleared: Record<string, number> = {};
+          for (const inv of openInvs) {
+            cleared[inv.id] = 0;
+          }
+          setAllocations(cleared);
         }
       } catch (err) {
         console.error('Failed to load customer invoices', err);
@@ -124,31 +184,26 @@ export function PaymentCollectionPage() {
   const totalAllocated = Object.values(allocations).reduce((acc, val) => acc + (val || 0), 0);
   const unallocatedAmount = (Number(amount) || 0) - totalAllocated;
 
-  // Auto-allocate FIFO algorithm
+  // Auto-allocate FIFO algorithm against oldest outstanding invoices
   const handleAutoAllocate = () => {
     const totalToAllocate = Number(amount) || 0;
-    if (totalToAllocate <= 0) return;
-
-    let remaining = totalToAllocate;
-    const newAllocations: Record<string, number> = {};
-
-    for (const inv of customerInvoices) {
-      if (remaining <= 0) break;
-      const allocateForThis = Math.min(inv.balanceAmount, remaining);
-      if (allocateForThis > 0) {
-        newAllocations[inv.id] = allocateForThis;
-        remaining -= allocateForThis;
-      }
-    }
-
-    setAllocations(newAllocations);
+    applyFifoAllocations(totalToAllocate, customerInvoices);
   };
 
   const handleManualAllocationChange = (invoiceId: string, val: string) => {
-    const num = parseFloat(val) || 0;
+    if (val === '') {
+      setAllocations((prev) => {
+        const next = { ...prev };
+        delete next[invoiceId];
+        return next;
+      });
+      return;
+    }
+    const num = parseFloat(val);
+    const safeNum = Math.max(0, isNaN(num) ? 0 : num);
     setAllocations((prev) => ({
       ...prev,
-      [invoiceId]: num,
+      [invoiceId]: safeNum,
     }));
   };
 
@@ -171,9 +226,10 @@ export function PaymentCollectionPage() {
     for (const inv of customerInvoices) {
       const allocated = allocations[inv.id] || 0;
       if (allocated > 0) {
-        if (allocated > inv.balanceAmount) {
+        const allocable = Math.max(0, inv.balanceAmount - (inv.collectedAmount || 0));
+        if (allocated > allocable + 0.001) {
           setErrorMessage(
-            `Allocated amount for invoice ${inv.invoiceNumber} cannot exceed open balance of ${formatCurrency(inv.balanceAmount)}.`
+            `Allocated amount for invoice ${inv.invoiceNumber} cannot exceed remaining uncollected balance of ${formatCurrency(allocable)}.`
           );
           return;
         }
@@ -249,6 +305,7 @@ export function PaymentCollectionPage() {
                 setSelectedCustomer(cust);
                 setAllocations({});
                 setAmount('');
+                amountRef.current = '';
               }}
             />
           </div>
@@ -285,7 +342,7 @@ export function PaymentCollectionPage() {
                   step="any"
                   placeholder="0.00"
                   value={amount}
-                  onChange={(e) => setAmount(e.target.value === '' ? '' : parseFloat(e.target.value))}
+                  onChange={(e) => handleAmountChange(e.target.value === '' ? '' : parseFloat(e.target.value))}
                   className="font-mono text-sm font-bold h-9"
                   required
                 />
@@ -411,22 +468,30 @@ export function PaymentCollectionPage() {
                     <TableHeader>
                       <TableRow className="bg-slate-50">
                         <TableHead>Invoice #</TableHead>
+                        <TableHead>Status</TableHead>
                         <TableHead>Issue Date</TableHead>
                         <TableHead>Due Date</TableHead>
                         <TableHead className="text-right">Total Invoice</TableHead>
-                        <TableHead className="text-right">Outstanding Balance</TableHead>
+                        <TableHead className="text-right">Balance Due</TableHead>
+                        <TableHead className="text-right">Pending Collection</TableHead>
                         <TableHead className="text-right w-36 sm:w-44">Allocated Amount (LKR)</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {customerInvoices.map((inv) => {
                         const isOverdue = inv.status === 'OVERDUE';
-                        const currentAlloc = allocations[inv.id] || '';
+                        const currentAlloc = allocations[inv.id] !== undefined ? allocations[inv.id] : '';
+                        const pendingCollection = inv.collectedAmount || 0;
+                        const allocableBalance = Math.max(0, inv.balanceAmount - pendingCollection);
+                        const isFullyCollected = allocableBalance <= 0;
 
                         return (
-                          <TableRow key={inv.id}>
+                          <TableRow key={inv.id} className={isFullyCollected ? 'bg-slate-50/60 opacity-80' : undefined}>
                             <TableCell className="font-mono text-xs font-semibold text-primary">
                               {inv.invoiceNumber}
+                            </TableCell>
+                            <TableCell className="text-xs">
+                              <InvoiceStatusBadge status={inv.status} />
                             </TableCell>
                             <TableCell className="text-xs text-slate-600 whitespace-nowrap">
                               {formatDate(inv.issueDate)}
@@ -442,16 +507,22 @@ export function PaymentCollectionPage() {
                             <TableCell className="text-right font-mono text-xs font-bold text-slate-900">
                               {formatCurrency(inv.balanceAmount)}
                             </TableCell>
+                            <TableCell className="text-right font-mono text-xs text-blue-600 font-medium">
+                              {pendingCollection > 0 ? formatCurrency(pendingCollection) : '—'}
+                            </TableCell>
                             <TableCell className="text-right">
                               <Input
                                 type="number"
                                 min="0"
-                                max={inv.balanceAmount}
+                                max={allocableBalance}
                                 step="any"
-                                placeholder="0.00"
+                                placeholder={isFullyCollected ? '0.00' : '0.00'}
+                                disabled={isFullyCollected}
                                 value={currentAlloc}
                                 onChange={(e) => handleManualAllocationChange(inv.id, e.target.value)}
-                                className="font-mono text-xs text-right h-8 w-28 sm:w-36 ml-auto"
+                                className={`font-mono text-xs text-right h-8 w-28 sm:w-36 ml-auto ${
+                                  isFullyCollected ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : ''
+                                }`}
                               />
                             </TableCell>
                           </TableRow>
