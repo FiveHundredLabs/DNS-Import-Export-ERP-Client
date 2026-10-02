@@ -145,6 +145,17 @@ export class InventoryService {
       timestamp: new Date().toISOString(),
     });
   }
+
+  /** Alias for executeSalesIssue used by OrderPickingPage */
+  async recordIssue(
+    productId: string,
+    locationId: string,
+    quantity: number,
+    referenceDocumentId: string,
+    user: { id: string; name: string }
+  ): Promise<void> {
+    return this.executeSalesIssue(productId, locationId, quantity, referenceDocumentId, user);
+  }
 }
 
 import { MockInventoryRepository } from '../repositories/mock/MockInventoryRepository';

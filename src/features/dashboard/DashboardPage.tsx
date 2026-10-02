@@ -1,9 +1,10 @@
 import { useAuth } from '../../hooks/useAuth';
 import { DirectorDashboard } from './DirectorDashboard';
 import { SalesRepDashboard } from './SalesRepDashboard';
+import { SalesManagerDashboard } from './SalesManagerDashboard';
 import { StatCard } from '../../components/common/StatCard';
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/card';
-import { Package, Users, DollarSign, Boxes, Store, ShieldCheck, CheckCircle2, Info, ArrowUpRight, TrendingUp } from 'lucide-react';
+import { CheckCircle2 } from 'lucide-react';
 import { formatCurrency } from '../../utils/formatters';
 
 export function DashboardPage() {
@@ -13,11 +14,15 @@ export function DashboardPage() {
     return <DirectorDashboard />;
   }
 
+  if (role === 'SALES_MANAGER') {
+    return <SalesManagerDashboard />;
+  }
+
   if (role === 'SALES_REP') {
     return <SalesRepDashboard />;
   }
 
-  // Generalized role-specific dashboard for Sales Manager, Finance, Area Manager, Stock Keeper, Cashier
+  // Generalized role-specific dashboard for Finance, Area Manager, Stock Keeper, Cashier
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -32,14 +37,6 @@ export function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {role === 'SALES_MANAGER' && (
-          <>
-            <StatCard title="Team Sales" value={formatCurrency(18900000)} period="This month" trend={{ value: '18.4%', isPositive: true }} variant="success" />
-            <StatCard title="Pending Approvals" value="3 Requests" period="Requires action" trend={{ value: '2 urgent', isPositive: false }} variant="warning" />
-            <StatCard title="Dealers in Area" value="48 Dealers" period="Active portfolio" trend={{ value: '4 new', isPositive: true }} variant="default" />
-            <StatCard title="Warranty Claims" value="4 Active" period="Resolution time 2d" variant="default" />
-          </>
-        )}
         {role === 'FINANCE_MANAGER' && (
           <>
             <StatCard title="Collections Today" value={formatCurrency(3450000)} period="Verified" trend={{ value: '12.8%', isPositive: true }} variant="success" />

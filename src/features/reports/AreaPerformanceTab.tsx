@@ -1,11 +1,11 @@
-import React from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
-import { MapPin, Target, Users, Building2, TrendingUp, Trophy } from 'lucide-react';
+import { MapPin, Building2, Trophy, Download } from 'lucide-react';
 import { AreaPerformanceReport } from '../../types/reports';
 import { User } from '../../types/auth';
 import { MOCK_AREAS } from '../../mock/mockAreas';
-import { formatCurrencyLKR } from '../../utils/exportUtils';
+import { formatCurrencyLKR, exportToCSV } from '../../utils/exportUtils';
+import { Button } from '../../components/ui/button';
 
 interface AreaPerformanceTabProps {
   areaPerformance: AreaPerformanceReport | null;
@@ -134,17 +134,39 @@ export function AreaPerformanceTab({
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Sales Rep Leaderboard in Territory */}
         <Card>
-          <CardHeader>
-            <CardTitle className="text-base font-bold text-slate-900 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Trophy className="w-4 h-4 text-amber-500" />
-                <span>Sales Rep Territory Performance</span>
-              </div>
-              <Badge variant="outline" className="text-xs">
-                {areaPerformance.repPerformance.length} Reps
-              </Badge>
-            </CardTitle>
-          </CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-base font-bold text-slate-900 flex flex-wrap items-center gap-4">
+            <div className="flex items-center gap-2">
+              <Trophy className="w-4 h-4 text-amber-500" />
+              <span>Sales Rep Territory Performance</span>
+            </div>
+            <Badge variant="outline" className="text-xs">
+              {areaPerformance.repPerformance.length} Reps
+            </Badge>
+          </CardTitle>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              const timestamp = new Date().toISOString().split('T')[0];
+              exportToCSV(
+                `Area_Performance_${areaPerformance.areaName.replace(/\s+/g, '_')}_${timestamp}`,
+                ['Sales Rep', 'Monthly Target (LKR)', 'Achieved Sales (LKR)', 'Achievement %', 'Collections (LKR)'],
+                areaPerformance.repPerformance.map((r) => [
+                  r.repName,
+                  r.target,
+                  r.sales,
+                  `${r.achievementPercentage}%`,
+                  r.collections,
+                ])
+              );
+            }}
+            className="h-8 gap-1.5 flex-shrink-0"
+          >
+            <Download className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Download CSV</span>
+          </Button>
+        </CardHeader>
           <CardContent>
             {areaPerformance.repPerformance.length === 0 ? (
               <div className="text-center py-6 text-xs text-slate-400">
@@ -194,17 +216,33 @@ export function AreaPerformanceTab({
 
         {/* Top Territory Dealers / Customers */}
         <Card>
-          <CardHeader>
-            <CardTitle className="text-base font-bold text-slate-900 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Building2 className="w-4 h-4 text-primary" />
-                <span>Top Regional Dealers & Accounts</span>
-              </div>
-              <Badge variant="outline" className="text-xs">
-                {areaPerformance.topCustomers.length} Accounts
-              </Badge>
-            </CardTitle>
-          </CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-base font-bold text-slate-900 flex flex-wrap items-center gap-4">
+            <div className="flex items-center gap-2">
+              <Building2 className="w-4 h-4 text-primary" />
+              <span>Top Regional Dealers & Accounts</span>
+            </div>
+            <Badge variant="outline" className="text-xs">
+              {areaPerformance.topCustomers.length} Accounts
+            </Badge>
+          </CardTitle>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              const timestamp = new Date().toISOString().split('T')[0];
+              exportToCSV(
+                `Top_Area_Customers_${areaPerformance.areaName.replace(/\s+/g, '_')}_${timestamp}`,
+                ['Customer Name', 'Code', 'Purchases (LKR)', 'Outstanding (LKR)'],
+                areaPerformance.topCustomers.map((c) => [c.customerName, c.customerCode, c.totalSales, c.outstandingBalance])
+              );
+            }}
+            className="h-8 gap-1.5 flex-shrink-0"
+          >
+            <Download className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Download CSV</span>
+          </Button>
+        </CardHeader>
           <CardContent>
             {areaPerformance.topCustomers.length === 0 ? (
               <div className="text-center py-6 text-xs text-slate-400">
