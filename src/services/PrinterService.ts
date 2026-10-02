@@ -15,6 +15,7 @@ export interface ThermalReceiptData {
   cashierOrRepName: string;
   balanceDueRemaining?: number;
   invoiceAllocations?: Array<{ invoiceNumber: string; allocatedAmount: number }>;
+  paperWidth?: '80mm' | '58mm';
 }
 
 export interface IPrinterService {
@@ -22,7 +23,7 @@ export interface IPrinterService {
   printPOSTransactionReceipt(tx: POSTransaction): Promise<boolean>;
   printQuotation(quotation: Quotation): Promise<boolean>;
   printInvoice(invoice: Invoice): Promise<boolean>;
-  printPaymentReceipt(payment: Payment, remainingBalance?: number): Promise<boolean>;
+  printPaymentReceipt(payment: Payment, remainingBalance?: number, paperWidth?: '80mm' | '58mm'): Promise<boolean>;
   isPrinterConnected(): Promise<boolean>;
 }
 
@@ -51,24 +52,26 @@ export class ThermalPrinterService implements IPrinterService {
         `
           : '';
 
+      const is58mm = data.paperWidth === '58mm';
       const receiptHtml = `
         <!DOCTYPE html>
         <html>
           <head>
             <title>Receipt - ${data.receiptNumber}</title>
             <style>
-              @page { margin: 0; size: 80mm auto; }
+              @page { margin: 0; size: ${is58mm ? '58mm' : '80mm'} auto; }
               body {
                 font-family: 'Courier New', Courier, monospace;
-                width: 280px;
+                width: ${is58mm ? '200px' : '280px'};
                 margin: 0 auto;
-                padding: 10px;
-                font-size: 12px;
+                padding: ${is58mm ? '6px' : '10px'};
+                font-size: ${is58mm ? '10px' : '12px'};
                 color: #000;
+                word-break: break-word;
               }
               .center { text-align: center; }
-              .divider { border-top: 1px dashed #000; margin: 8px 0; }
-              .row { display: flex; justify-content: space-between; margin: 3px 0; }
+              .divider { border-top: 1px dashed #000; margin: 6px 0; }
+              .row { display: flex; justify-content: space-between; margin: 2px 0; gap: 4px; }
               .bold { font-weight: bold; }
             </style>
           </head>
@@ -120,7 +123,7 @@ export class ThermalPrinterService implements IPrinterService {
     }
   }
 
-  async printPaymentReceipt(payment: Payment, remainingBalance?: number): Promise<boolean> {
+  async printPaymentReceipt(payment: Payment, remainingBalance?: number, paperWidth: '80mm' | '58mm' = '80mm'): Promise<boolean> {
     return this.printThermalReceipt({
       title: payment.status === 'APPROVED' ? 'OFFICIAL RECEIPT' : 'COLLECTION ACKNOWLEDGEMENT',
       receiptNumber: payment.receiptNumber,
@@ -133,6 +136,7 @@ export class ThermalPrinterService implements IPrinterService {
       cashierOrRepName: payment.salesRepName,
       balanceDueRemaining: remainingBalance,
       invoiceAllocations: payment.invoiceAllocations,
+      paperWidth,
     });
   }
 

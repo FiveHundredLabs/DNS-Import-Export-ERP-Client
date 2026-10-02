@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import React from 'react';
 import '@testing-library/jest-dom';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { InvoiceStatusBadge } from '../features/invoices/InvoiceStatusBadge';
 import { InvoiceListPage } from '../features/invoices/InvoiceListPage';
@@ -30,6 +30,12 @@ describe('Phase 7 — Invoice & Payment UI Components', () => {
 
     rerender(<InvoiceStatusBadge status="DRAFT" />);
     expect(screen.getByText('Draft')).toBeInTheDocument();
+
+    rerender(<InvoiceStatusBadge status="COLLECTED" />);
+    expect(screen.getByText('Collected')).toBeInTheDocument();
+
+    rerender(<InvoiceStatusBadge status="PARTIALLY_COLLECTED" />);
+    expect(screen.getByText('Partially Collected')).toBeInTheDocument();
 
     rerender(<InvoiceStatusBadge status="CANCELLED" />);
     expect(screen.getByText('Cancelled')).toBeInTheDocument();
@@ -117,6 +123,79 @@ describe('Phase 7 — Invoice & Payment UI Components', () => {
     expect(screen.getByText('Issue Receipt (Submit for Approval)')).toBeInTheDocument();
   });
 
+  it('automatically calculates FIFO allocations when invoices load with an amount and updates allocations when user changes Collection Amount', async () => {
+    render(
+      <MemoryRouter initialEntries={['/payments/new?customerId=cust-001&amount=1450000']}>
+        <PaymentCollectionPage />
+      </MemoryRouter>
+    );
+
+    // Wait for customer open invoices to load
+    await waitFor(() => {
+      expect(screen.getByText('INV-2025-0101')).toBeInTheDocument();
+      expect(screen.getByText('INV-2025-0102')).toBeInTheDocument();
+      expect(screen.getByText('INV-2025-0103')).toBeInTheDocument();
+    });
+
+    const row1 = screen.getByText('INV-2025-0101').closest('tr');
+    const row2 = screen.getByText('INV-2025-0102').closest('tr');
+    const row3 = screen.getByText('INV-2025-0103').closest('tr');
+
+    const allocInput1 = row1?.querySelector('input[type="number"]') as HTMLInputElement;
+    const allocInput2 = row2?.querySelector('input[type="number"]') as HTMLInputElement;
+    const allocInput3 = row3?.querySelector('input[type="number"]') as HTMLInputElement;
+
+    // Initially with 1,450,000, all three invoices are fully allocated
+    expect(allocInput1.value).toBe('150000');
+    expect(allocInput2.value).toBe('450000');
+    expect(allocInput3.value).toBe('850000');
+
+    // Find Collection Amount input
+    const collectionAmountInput = screen.getByDisplayValue('1450000') as HTMLInputElement;
+
+    // User changes Collection Amount to 100,000 (as in the screenshot issue)
+    fireEvent.change(collectionAmountInput, { target: { value: '100000' } });
+
+    // Oldest invoice (INV-2025-0101) must receive 100,000 and subsequent invoices must receive 0
+    expect(allocInput1.value).toBe('100000');
+    expect(allocInput2.value).toBe('0');
+    expect(allocInput3.value).toBe('0');
+
+    // Total allocated must equal 100,000 and unallocated float must be 0
+    expect(screen.getByText(/Total Allocated:/i).parentElement?.textContent).toContain('100,000.00');
+    expect(screen.getByText(/Collected:/i).parentElement?.textContent).toContain('100,000.00');
+    expect(screen.getByText(/Unallocated Float:/i).parentElement?.textContent).toContain('0.00');
+
+    // User changes Collection Amount to 200,000 (covers 150,000 of INV-2025-0101 and 50,000 of INV-2025-0102)
+    fireEvent.change(collectionAmountInput, { target: { value: '200000' } });
+    expect(allocInput1.value).toBe('150000');
+    expect(allocInput2.value).toBe('50000');
+    expect(allocInput3.value).toBe('0');
+    expect(screen.getByText(/Total Allocated:/i).parentElement?.textContent).toContain('200,000.00');
+    expect(screen.getByText(/Unallocated Float:/i).parentElement?.textContent).toContain('0.00');
+
+    // User manually modifies an invoice allocation (e.g. INV-2025-0102 set to 20000)
+    fireEvent.change(allocInput2, { target: { value: '20000' } });
+    expect(allocInput2.value).toBe('20000');
+    // Float becomes positive (30,000 unallocated float)
+    expect(screen.getByText(/Unallocated Float:/i).parentElement?.textContent).toContain('30,000.00');
+
+    // Changing Collection Amount again re-applies FIFO and overwrites stale/manual allocations
+    fireEvent.change(collectionAmountInput, { target: { value: '100000' } });
+    expect(allocInput1.value).toBe('100000');
+    expect(allocInput2.value).toBe('0');
+    expect(allocInput3.value).toBe('0');
+    expect(screen.getByText(/Unallocated Float:/i).parentElement?.textContent).toContain('0.00');
+
+    // User clears Collection Amount
+    fireEvent.change(collectionAmountInput, { target: { value: '' } });
+    expect(allocInput1.value).toBe('0');
+    expect(allocInput2.value).toBe('0');
+    expect(allocInput3.value).toBe('0');
+    expect(screen.getByText(/Total Allocated:/i).parentElement?.textContent).toContain('0.00');
+    expect(screen.getByText(/Unallocated Float:/i).parentElement?.textContent).toContain('0.00');
+  });
+
   it('renders PaymentDetailPage with collection summary and action buttons', async () => {
     render(
       <MemoryRouter initialEntries={[`/payments/${MOCK_PAYMENTS[0].id}`]}>
@@ -144,7 +223,7 @@ describe('Phase 7 — Invoice & Payment UI Components', () => {
       />
     );
 
-    expect(screen.getByText('Thermal 80mm ESC/POS Preview')).toBeInTheDocument();
+    expect(screen.getByText(/Thermal Receipt Preview/i)).toBeInTheDocument();
     expect(screen.getAllByText('DNS DISTRIBUTION (PVT) LTD').length).toBeGreaterThan(0);
     expect(screen.getByText(MOCK_PAYMENTS[0].receiptNumber)).toBeInTheDocument();
     expect(screen.getByText('Print Thermal Receipt')).toBeInTheDocument();

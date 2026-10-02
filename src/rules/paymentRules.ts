@@ -1,3 +1,4 @@
+import { Invoice } from '../types/invoice';
 import { PaymentAllocation } from '../types/payment';
 import { UserRole } from '../types/auth';
 
@@ -5,6 +6,92 @@ export interface PaymentAllocationValidationResult {
   valid: boolean;
   error?: string;
   totalAllocated: number;
+}
+
+/**
+ * Automatically allocates a payment amount against outstanding invoices using FIFO (oldest first).
+ * Invoices are ordered by issueDate ascending (oldest first), falling back to createdAt, dueDate, or invoiceNumber.
+ * Only invoices with outstanding balance (> 0) and not CANCELLED or DRAFT are considered.
+ *
+ * Rules:
+ * - Fully settles oldest invoices first.
+ * - Remaining amount after settling older invoices is allocated to the next oldest invoice.
+ * - If payment covers all invoices, all are fully settled.
+ */
+function parseTimestamp(dateStr?: string): number {
+  if (!dateStr) return 0;
+  const time = new Date(dateStr).getTime();
+  return isNaN(time) ? 0 : time;
+}
+
+export function autoAllocatePayment(
+  paymentAmount: number,
+  invoices: Invoice[]
+): PaymentAllocation[] {
+  if (paymentAmount <= 0 || !invoices || invoices.length === 0) {
+    return [];
+  }
+
+  // Filter out cancelled, draft, paid, or fully collected invoices
+  const outstandingInvoices = invoices.filter((inv) => {
+    if (
+      inv.status === 'CANCELLED' ||
+      inv.status === 'DRAFT' ||
+      inv.status === 'PAID' ||
+      inv.status === 'COLLECTED'
+    ) {
+      return false;
+    }
+    if (inv.balanceAmount <= 0) {
+      return false;
+    }
+    const uncollectedBalance = Math.max(0, inv.balanceAmount - (inv.collectedAmount || 0));
+    return uncollectedBalance > 0;
+  });
+
+  // Sort by oldest first:
+  // Primary: issueDate ascending
+  // Secondary: createdAt ascending
+  // Tertiary: dueDate ascending
+  // Quaternary: invoiceNumber ascending
+  const sortedInvoices = [...outstandingInvoices].sort((a, b) => {
+    const issueA = parseTimestamp(a.issueDate);
+    const issueB = parseTimestamp(b.issueDate);
+    if (issueA !== issueB) return issueA - issueB;
+
+    const createdA = parseTimestamp(a.createdAt);
+    const createdB = parseTimestamp(b.createdAt);
+    if (createdA !== createdB) return createdA - createdB;
+
+    const dueA = parseTimestamp(a.dueDate);
+    const dueB = parseTimestamp(b.dueDate);
+    if (dueA !== dueB) return dueA - dueB;
+
+    return (a.invoiceNumber || '').localeCompare(b.invoiceNumber || '');
+  });
+
+  const allocations: PaymentAllocation[] = [];
+  let remaining = paymentAmount;
+
+  for (const inv of sortedInvoices) {
+    if (remaining <= 0) break;
+
+    // Remaining uncollected balance on this invoice (deducting any pending collection)
+    const uncollectedBalance = Math.max(0, inv.balanceAmount - (inv.collectedAmount || 0));
+    if (uncollectedBalance <= 0) continue;
+
+    const allocAmount = Math.min(uncollectedBalance, remaining);
+    if (allocAmount > 0) {
+      allocations.push({
+        invoiceId: inv.id,
+        invoiceNumber: inv.invoiceNumber,
+        allocatedAmount: allocAmount,
+      });
+      remaining -= allocAmount;
+    }
+  }
+
+  return allocations;
 }
 
 /**

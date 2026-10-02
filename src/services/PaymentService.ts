@@ -12,6 +12,7 @@ import {
   validatePaymentAllocation,
   validateChequeDetails,
   canUserCollectPayment,
+  autoAllocatePayment,
 } from '../rules/paymentRules';
 import { calculateInvoiceStatus, isPastDueDate } from '../rules/invoiceRules';
 
@@ -90,10 +91,17 @@ export class PaymentService {
       throw new Error(`Permission Denied: ${territoryAuth.reason}`);
     }
 
+    // Automatic allocation: If caller did not provide allocations, automatically allocate against oldest outstanding invoices first (FIFO)
+    let effectiveAllocations = data.invoiceAllocations;
+    if (!effectiveAllocations || effectiveAllocations.length === 0) {
+      const customerInvoices = await this.invoiceSvc.getInvoicesByCustomer(customer.id);
+      effectiveAllocations = autoAllocatePayment(data.amount, customerInvoices);
+    }
+
     // Fetch existing balances of allocated invoices to validate allocations
     const invoiceBalances: Record<string, number> = {};
-    if (data.invoiceAllocations && data.invoiceAllocations.length > 0) {
-      for (const alloc of data.invoiceAllocations) {
+    if (effectiveAllocations && effectiveAllocations.length > 0) {
+      for (const alloc of effectiveAllocations) {
         const inv = await this.invoiceSvc.getInvoiceById(alloc.invoiceId);
         if (!inv) {
           throw new Error(`Allocated invoice with ID ${alloc.invoiceId} does not exist.`);
@@ -108,17 +116,23 @@ export class PaymentService {
             `Cannot allocate payment to invoice ${inv.invoiceNumber} in status '${inv.status}'.`
           );
         }
-        if (inv.balanceAmount <= 0) {
+        if (inv.balanceAmount <= 0 || inv.status === 'PAID') {
           throw new Error(`Invoice ${inv.invoiceNumber} is already fully paid.`);
         }
-        invoiceBalances[alloc.invoiceId] = inv.balanceAmount;
+        const remainingUncollected = Math.max(0, inv.balanceAmount - (inv.collectedAmount || 0));
+        if (inv.status === 'COLLECTED' || remainingUncollected <= 0) {
+          throw new Error(
+            `Invoice ${inv.invoiceNumber} is already fully collected and awaiting Head Office verification.`
+          );
+        }
+        invoiceBalances[alloc.invoiceId] = remainingUncollected;
       }
     }
 
     // Validate allocations against payment amount and individual balances
     const allocValidation = validatePaymentAllocation(
       data.amount,
-      data.invoiceAllocations || [],
+      effectiveAllocations || [],
       invoiceBalances
     );
     if (!allocValidation.valid) {
@@ -174,10 +188,33 @@ export class PaymentService {
               isCleared: false,
             }
           : undefined,
-      invoiceAllocations: data.invoiceAllocations || [],
+      invoiceAllocations: effectiveAllocations || [],
       notes: data.notes,
       collectedAt: now.toISOString(),
     });
+
+    // Update allocated invoices to mark as Collected / Partially Collected by sales representative.
+    // Balances and paidAmounts remain UNTOUCHED until Head Office approves!
+    if (effectiveAllocations && effectiveAllocations.length > 0) {
+      for (const alloc of effectiveAllocations) {
+        const inv = await this.invoiceSvc.getInvoiceById(alloc.invoiceId);
+        if (inv) {
+          const currentCollected = inv.collectedAmount || 0;
+          const newCollectedAmount = currentCollected + alloc.allocatedAmount;
+          const newStatus = calculateInvoiceStatus(
+            inv.totalAmount,
+            inv.paidAmount,
+            inv.dueDate,
+            undefined,
+            newCollectedAmount
+          );
+          await this.invoiceSvc.updateInvoice(inv.id, {
+            collectedAmount: newCollectedAmount,
+            status: newStatus,
+          });
+        }
+      }
+    }
 
     // Create central approval request for Finance Manager sign-off
     try {
@@ -252,11 +289,20 @@ export class PaymentService {
           }
           const newPaidAmount = inv.paidAmount + alloc.allocatedAmount;
           const newBalanceAmount = Math.max(0, inv.totalAmount - newPaidAmount);
-          const newStatus = calculateInvoiceStatus(inv.totalAmount, newPaidAmount, inv.dueDate);
+          const currentCollected = inv.collectedAmount || 0;
+          const newCollectedAmount = Math.max(0, currentCollected - alloc.allocatedAmount);
+          const newStatus = calculateInvoiceStatus(
+            inv.totalAmount,
+            newPaidAmount,
+            inv.dueDate,
+            undefined,
+            newCollectedAmount
+          );
 
           await this.invoiceSvc.updateInvoice(inv.id, {
             paidAmount: newPaidAmount,
             balanceAmount: newBalanceAmount,
+            collectedAmount: newCollectedAmount,
             status: newStatus,
           });
         }
@@ -372,6 +418,29 @@ export class PaymentService {
       rejectedByName: currentUser.name,
       rejectedAt: new Date().toISOString(),
     });
+
+    // Revert collection status on allocated invoices
+    if (payment.invoiceAllocations && payment.invoiceAllocations.length > 0) {
+      for (const alloc of payment.invoiceAllocations) {
+        const inv = await this.invoiceSvc.getInvoiceById(alloc.invoiceId);
+        if (inv) {
+          const currentCollected = inv.collectedAmount || 0;
+          const newCollectedAmount = Math.max(0, currentCollected - alloc.allocatedAmount);
+          const newStatus = calculateInvoiceStatus(
+            inv.totalAmount,
+            inv.paidAmount,
+            inv.dueDate,
+            undefined,
+            newCollectedAmount
+          );
+
+          await this.invoiceSvc.updateInvoice(inv.id, {
+            collectedAmount: newCollectedAmount,
+            status: newStatus,
+          });
+        }
+      }
+    }
 
     if (syncApprovalRequest) {
       try {

@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Payment } from '../../types/payment';
 import { printerService } from '../../services/PrinterService';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
@@ -18,26 +19,58 @@ export function ThermalReceiptModal({
   payment,
   customerBalance,
 }: ThermalReceiptModalProps) {
+  const [paperWidth, setPaperWidth] = useState<'80mm' | '58mm'>('80mm');
+
   if (!payment) return null;
 
   const handlePrint = async () => {
-    await printerService.printPaymentReceipt(payment, customerBalance);
+    await printerService.printPaymentReceipt(payment, customerBalance, paperWidth);
   };
+
+  const is58mm = paperWidth === '58mm';
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-md bg-slate-900/90 text-white border-slate-700">
         <DialogHeader className="border-b border-slate-800 pb-3">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <DialogTitle className="text-sm font-bold flex items-center gap-2 text-white">
               <Printer className="h-4 w-4 text-emerald-400" />
-              Thermal 80mm ESC/POS Preview
+              Thermal Receipt Preview
             </DialogTitle>
+            <div className="flex items-center gap-1 bg-slate-800 p-0.5 rounded-md text-[11px] self-start sm:self-auto">
+              <button
+                type="button"
+                onClick={() => setPaperWidth('80mm')}
+                className={`px-2 py-0.5 rounded font-medium transition-colors ${
+                  paperWidth === '80mm'
+                    ? 'bg-emerald-600 text-white shadow-xs'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                80mm Standard
+              </button>
+              <button
+                type="button"
+                onClick={() => setPaperWidth('58mm')}
+                className={`px-2 py-0.5 rounded font-medium transition-colors ${
+                  paperWidth === '58mm'
+                    ? 'bg-emerald-600 text-white shadow-xs'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                58mm Mobile
+              </button>
+            </div>
           </div>
         </DialogHeader>
 
         {/* Realistic ESC/POS Paper simulation */}
-        <div className="my-2 p-4 bg-amber-50/95 text-slate-900 rounded shadow-inner font-mono text-xs max-h-[460px] overflow-y-auto">
+        <div
+          className={`my-2 p-3 sm:p-4 bg-amber-50/95 text-slate-900 rounded shadow-inner font-mono text-xs max-h-[460px] overflow-y-auto mx-auto transition-all ${
+            is58mm ? 'w-full max-w-[260px] text-[11px]' : 'w-full max-w-[340px]'
+          }`}
+        >
           <div className="text-center font-bold text-sm tracking-wide">
             DNS DISTRIBUTION (PVT) LTD
           </div>
@@ -89,15 +122,15 @@ export function ThermalReceiptModal({
             </div>
           )}
 
-          <div className="flex justify-between items-center text-sm font-black pt-2 pb-1 border-t border-slate-900 mt-2">
+          <div className="flex justify-between items-center text-sm font-semibold pt-2 pb-1 border-t border-slate-900 mt-2">
             <span>AMOUNT PAID:</span>
-            <span>{formatCurrency(payment.amount)}</span>
+            <span className="tabular-nums">{formatCurrency(payment.amount)}</span>
           </div>
 
           {payment.invoiceAllocations && payment.invoiceAllocations.length > 0 && (
             <>
               <div className="border-t border-dashed border-slate-400 my-2" />
-              <div className="font-bold text-[10px] uppercase text-slate-600 mb-1">
+              <div className="font-semibold text-xs uppercase text-slate-600 mb-1">
                 Settled Invoices:
               </div>
               {payment.invoiceAllocations.map((alloc) => (

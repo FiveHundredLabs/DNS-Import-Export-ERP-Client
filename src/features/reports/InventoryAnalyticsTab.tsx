@@ -20,7 +20,7 @@ export function InventoryAnalyticsTab({ inventoryReport, advancedReports }: Inve
             <span className="text-xs font-semibold text-primary-text uppercase tracking-wider">
               Total Stock Valuation
             </span>
-            <p className="text-2xl font-extrabold text-indigo-950 mt-1">
+            <p className="text-2xl font-semibold tabular-nums text-indigo-950 mt-1">
               {formatCurrencyLKR(inventoryReport.totalStockValue)}
             </p>
             <span className="text-xs text-primary mt-1 block">
@@ -34,7 +34,7 @@ export function InventoryAnalyticsTab({ inventoryReport, advancedReports }: Inve
             <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
               Warehouse Valuation
             </span>
-            <p className="text-2xl font-extrabold text-slate-900 mt-1">
+            <p className="text-2xl font-semibold tabular-nums text-slate-900 mt-1">
               {formatCurrencyLKR(inventoryReport.warehouseStockValue)}
             </p>
             <span className="text-xs text-slate-500 mt-1 block">Central bulk distribution facility</span>
@@ -46,7 +46,7 @@ export function InventoryAnalyticsTab({ inventoryReport, advancedReports }: Inve
             <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
               Showroom Valuation
             </span>
-            <p className="text-2xl font-extrabold text-slate-900 mt-1">
+            <p className="text-2xl font-semibold tabular-nums text-slate-900 mt-1">
               {formatCurrencyLKR(inventoryReport.showroomStockValue)}
             </p>
             <span className="text-xs text-slate-500 mt-1 block">Retail floor & active counter stock</span>
@@ -58,7 +58,7 @@ export function InventoryAnalyticsTab({ inventoryReport, advancedReports }: Inve
             <span className="text-xs font-semibold text-rose-700 uppercase tracking-wider">
               Damaged Stock Loss Value
             </span>
-            <p className="text-2xl font-extrabold text-rose-950 mt-1">
+            <p className="text-2xl font-semibold tabular-nums text-rose-950 mt-1">
               {formatCurrencyLKR(inventoryReport.damagedStockValue)}
             </p>
             <span className="text-xs text-rose-600 mt-1 block">
@@ -79,7 +79,7 @@ export function InventoryAnalyticsTab({ inventoryReport, advancedReports }: Inve
               <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
               Low Stock Warnings
             </span>
-            <p className="text-2xl font-extrabold text-amber-950 mt-1">
+            <p className="text-2xl font-semibold tabular-nums text-amber-950 mt-1">
               {inventoryReport.lowStockCount} SKUs
             </p>
             <span className="text-xs text-amber-700 mt-1 block">
@@ -129,12 +129,12 @@ export function InventoryAnalyticsTab({ inventoryReport, advancedReports }: Inve
                   }`}
                 >
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-slate-700">{loc.location}</span>
-                    <Badge variant={isDamaged ? 'destructive' : 'outline'} className="text-[10px]">
+                    <span className="text-xs font-semibold text-slate-700">{loc.location}</span>
+                    <Badge variant={isDamaged ? 'destructive' : 'outline'} className="text-xs font-medium tabular-nums">
                       {loc.units.toLocaleString()} Units
                     </Badge>
                   </div>
-                  <p className="text-lg font-bold text-slate-900 mt-2">
+                  <p className="text-lg font-semibold tabular-nums text-slate-900 mt-2">
                     {formatCurrencyLKR(loc.value)}
                   </p>
                   <p className="text-xs text-slate-500 mt-1">
@@ -198,10 +198,10 @@ export function InventoryAnalyticsTab({ inventoryReport, advancedReports }: Inve
                     {inventoryReport.damagedStockSummary.map((item) => (
                       <tr key={item.productId} className="hover:bg-slate-50/80">
                         <td className="py-2.5 px-3 font-semibold text-slate-900">{item.name}</td>
-                        <td className="py-2.5 px-3 text-center text-rose-700 font-bold">
+                        <td className="py-2.5 px-3 text-center text-rose-700 font-semibold tabular-nums">
                           {item.damagedQty}
                         </td>
-                        <td className="py-2.5 px-3 text-right font-bold text-rose-700">
+                        <td className="py-2.5 px-3 text-right font-semibold tabular-nums text-rose-700">
                           {formatCurrencyLKR(item.estimatedLoss)}
                         </td>
                       </tr>
@@ -259,7 +259,7 @@ export function InventoryAnalyticsTab({ inventoryReport, advancedReports }: Inve
                           {p.sku}
                         </td>
                         <td className="py-2.5 px-3 text-slate-900 font-medium">{p.name}</td>
-                        <td className="py-2.5 px-3 text-right font-bold text-primary">
+                        <td className="py-2.5 px-3 text-right font-semibold tabular-nums text-primary">
                           {p.unitsSold.toLocaleString()}
                         </td>
                       </tr>

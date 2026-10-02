@@ -32,6 +32,7 @@ import {
   ShieldCheck,
   RefreshCw,
   Building2,
+  ChevronRight,
 } from 'lucide-react';
 
 export function PaymentListPage() {
@@ -190,8 +191,8 @@ export function PaymentListPage() {
           <CardContent className="p-3.5">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-[11px] font-medium text-slate-500">Total Collected</p>
-                <p className="text-lg font-bold text-slate-900 mt-0.5">{formatCurrency(totalCollected)}</p>
+                <p className="text-xs font-medium text-slate-500">Total Collected</p>
+                <p className="text-xl font-semibold text-slate-900 tabular-nums mt-0.5">{formatCurrency(totalCollected)}</p>
               </div>
               <div className="h-9 w-9 rounded-lg bg-primary-light text-primary flex items-center justify-center">
                 <CreditCard className="h-5 w-5" />
@@ -204,8 +205,8 @@ export function PaymentListPage() {
           <CardContent className="p-3.5">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-[11px] font-medium text-slate-500">Pending Finance Verification</p>
-                <p className="text-lg font-bold text-amber-600 mt-0.5">
+                <p className="text-xs font-medium text-slate-500">Pending Finance Verification</p>
+                <p className="text-xl font-semibold text-amber-700 tabular-nums mt-0.5">
                   {pendingCount} ({formatCurrency(pendingAmount)})
                 </p>
               </div>
@@ -220,8 +221,8 @@ export function PaymentListPage() {
           <CardContent className="p-3.5">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-[11px] font-medium text-slate-500">Reconciled & Posted</p>
-                <p className="text-lg font-bold text-emerald-600 mt-0.5">
+                <p className="text-xs font-medium text-slate-500">Reconciled & Posted</p>
+                <p className="text-xl font-semibold text-emerald-700 tabular-nums mt-0.5">
                   {formatCurrency(approvedAmount)}
                 </p>
               </div>
@@ -236,8 +237,8 @@ export function PaymentListPage() {
           <CardContent className="p-3.5">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-[11px] font-medium text-slate-500">Cheque Collections</p>
-                <p className="text-lg font-bold text-primary mt-0.5">
+                <p className="text-xs font-medium text-slate-500">Cheque Collections</p>
+                <p className="text-xl font-semibold text-primary tabular-nums mt-0.5">
                   {payments.filter((p) => p.paymentMethod === 'CHEQUE').length} Cheques
                 </p>
               </div>
@@ -341,7 +342,7 @@ export function PaymentListPage() {
                   setStatusFilter(st.value);
                   setPage(1);
                 }}
-                className={`px-3 py-1.5 rounded-md font-medium transition-colors text-[11px] whitespace-nowrap ${
+                className={`px-3 py-1.5 rounded-md font-medium transition-colors text-xs whitespace-nowrap ${
                   statusFilter === st.value
                     ? 'bg-primary text-primary-foreground shadow-xs'
                     : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
@@ -372,126 +373,233 @@ export function PaymentListPage() {
               />
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Receipt #</TableHead>
-                    <TableHead>Collected Date</TableHead>
-                    <TableHead>Customer</TableHead>
-                    <TableHead>Method & Details</TableHead>
-                    <TableHead className="text-right">Collected Amount</TableHead>
-                    <TableHead className="text-center">Status</TableHead>
-                    <TableHead className="text-right w-48">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {payments.map((p) => {
-                    const isPending = p.status === 'PENDING_APPROVAL';
+            <>
+              {/* 1. Mobile Cards View (Visible on small screens, hidden on md+) */}
+              <div className="block md:hidden p-3 space-y-3">
+                {payments.map((p) => {
+                  const isPending = p.status === 'PENDING_APPROVAL';
 
-                    return (
-                      <TableRow key={p.id} className="hover:bg-slate-50/80">
-                        <TableCell className="font-mono text-xs font-bold text-primary">
-                          <Link to={`/payments/${p.id}`} className="hover:underline">
+                  return (
+                    <div
+                      key={p.id}
+                      onClick={() => navigate(`/payments/${p.id}`)}
+                      className="rounded-2xl border border-slate-200/90 bg-white p-3.5 shadow-xs hover:border-primary/50 transition-all cursor-pointer active:scale-[0.99]"
+                    >
+                      {/* Top Row: Receipt # + Status */}
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-mono text-xs font-bold text-primary tabular-nums">
                             {p.receiptNumber}
-                          </Link>
-                        </TableCell>
-                        <TableCell className="text-xs text-slate-600 whitespace-nowrap">
-                          {formatDateTime(p.collectedAt)}
-                        </TableCell>
-                        <TableCell className="text-xs">
-                          <div className="font-semibold text-slate-900">{p.customerName}</div>
-                          <div className="text-[10px] text-slate-400 font-mono">
-                            Rep: {p.salesRepName}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-xs">
-                          <span className="font-semibold text-slate-800">{p.paymentMethod}</span>
-                          {p.chequeNumber && (
-                            <div className="text-[11px] text-slate-500 font-mono">
-                              Chq: {p.chequeNumber} ({p.bankName || 'Bank'})
-                            </div>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right font-mono text-xs font-bold text-slate-900">
-                          {formatCurrency(p.amount)}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <PaymentStatusBadge status={p.status} />
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex items-center justify-end gap-1">
-                            {/* Fast Finance Manager inline action */}
-                            {isFinanceOrDirector && isPending && (
-                              <>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleOpenAction(p, 'APPROVE')}
-                                  className="h-7 px-2 text-[11px] font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100"
-                                  title="Approve Settlement"
-                                >
-                                  Approve
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleOpenAction(p, 'REJECT')}
-                                  className="h-7 px-2 text-[11px] font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100"
-                                  title="Reject Settlement"
-                                >
-                                  Reject
-                                </Button>
-                              </>
-                            )}
+                          </span>
+                          <span className="text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded bg-slate-100 text-slate-700">
+                            {p.paymentMethod}
+                          </span>
+                        </div>
+                        <PaymentStatusBadge status={p.status} />
+                      </div>
 
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => {
-                                setSelectedPayment(p);
-                                setThermalModalOpen(true);
-                              }}
-                              className="h-7 w-7 p-0 text-slate-500 hover:text-slate-900"
-                              title="Thermal Receipt Preview"
-                            >
-                              <Printer className="h-3.5 w-3.5" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => pdfService.downloadReceiptPdf(p)}
-                              className="h-7 w-7 p-0 text-slate-500 hover:text-slate-900"
-                              title="Download PDF Receipt"
-                            >
-                              <Download className="h-3.5 w-3.5" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => whatsAppService.sharePaymentReceipt(p)}
-                              className="h-7 w-7 p-0 text-emerald-600 hover:text-emerald-700"
-                              title="Share Receipt WhatsApp"
-                            >
-                              <Send className="h-3.5 w-3.5" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => navigate(`/payments/${p.id}`)}
-                              className="h-7 w-7 p-0 text-slate-500 hover:text-primary"
-                              title="View Details"
-                            >
-                              <Eye className="h-3.5 w-3.5" />
-                            </Button>
+                      {/* Customer Info */}
+                      <div className="mt-2">
+                        <h4 className="text-xs font-bold text-slate-900 leading-snug">
+                          {p.customerName}
+                        </h4>
+                        <div className="text-[11px] text-slate-400 mt-0.5 flex items-center justify-between">
+                          <span>Officer: {p.salesRepName}</span>
+                          <span>{formatDateTime(p.collectedAt)}</span>
+                        </div>
+                      </div>
+
+                      {/* Cheque Info if any */}
+                      {p.chequeNumber && (
+                        <div className="mt-1 text-[11px] font-mono text-slate-500 bg-slate-50 px-2 py-1 rounded-md">
+                          Chq: {p.chequeNumber} ({p.bankName || 'Bank'})
+                        </div>
+                      )}
+
+                      {/* Amount & Actions */}
+                      <div className="mt-2.5 pt-2.5 border-t border-slate-100 flex items-center justify-between">
+                        <div>
+                          <span className="text-[10.5px] text-slate-400 block">Collected Amount</span>
+                          <div className="text-sm font-bold text-slate-900 tabular-nums">
+                            {formatCurrency(p.amount)}
                           </div>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </div>
+                        </div>
+
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedPayment(p);
+                              setThermalModalOpen(true);
+                            }}
+                            className="h-8 w-8 p-0 text-slate-600 hover:text-slate-900 rounded-lg"
+                            title="Thermal Receipt"
+                          >
+                            <Printer className="h-4 w-4" />
+                          </Button>
+
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              whatsAppService.sharePaymentReceipt(p);
+                            }}
+                            className="h-8 w-8 p-0 text-emerald-600 hover:text-emerald-700 rounded-lg"
+                            title="WhatsApp Receipt"
+                          >
+                            <Send className="h-4 w-4" />
+                          </Button>
+
+                          <span className="inline-flex items-center text-xs font-semibold text-primary gap-0.5 ml-1">
+                            Details <ChevronRight className="h-4 w-4" />
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* 2. Desktop Full Table View (Hidden on mobile, block on md+) */}
+              <div className="hidden md:block overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Receipt #</TableHead>
+                      <TableHead>Collected Date</TableHead>
+                      <TableHead>Customer</TableHead>
+                      <TableHead>Method & Details</TableHead>
+                      <TableHead className="text-right">Collected Amount</TableHead>
+                      <TableHead className="text-center">Status</TableHead>
+                      <TableHead className="text-right w-48">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {payments.map((p) => {
+                      const isPending = p.status === 'PENDING_APPROVAL';
+
+                      return (
+                        <TableRow
+                          key={p.id}
+                          className="hover:bg-slate-50/80 cursor-pointer transition-colors focus:outline-hidden focus:bg-slate-50"
+                          tabIndex={0}
+                          onClick={() => navigate(`/payments/${p.id}`)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              navigate(`/payments/${p.id}`);
+                            }
+                          }}
+                        >
+                          <TableCell className="font-mono text-[13px] font-medium text-primary tabular-nums">
+                            <span className="hover:underline">
+                              {p.receiptNumber}
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-[13px] text-slate-600 whitespace-nowrap">
+                            {formatDateTime(p.collectedAt)}
+                          </TableCell>
+                          <TableCell className="text-[13px]">
+                            <div className="font-semibold text-slate-900">{p.customerName}</div>
+                            <div className="text-xs text-slate-400 font-mono">
+                              Rep: {p.salesRepName}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-[13px]">
+                            <span className="font-semibold text-slate-800">{p.paymentMethod}</span>
+                            {p.chequeNumber && (
+                              <div className="text-xs text-slate-500 font-mono">
+                                Chq: {p.chequeNumber} ({p.bankName || 'Bank'})
+                              </div>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-[13px] font-semibold text-slate-900 tabular-nums">
+                            {formatCurrency(p.amount)}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <PaymentStatusBadge status={p.status} />
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex items-center justify-end gap-1">
+                              {/* Fast Finance Manager inline action */}
+                              {isFinanceOrDirector && isPending && (
+                                <>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleOpenAction(p, 'APPROVE');
+                                    }}
+                                    className="h-7 px-2 text-[11px] font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100"
+                                    title="Approve Settlement"
+                                  >
+                                    Approve
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleOpenAction(p, 'REJECT');
+                                    }}
+                                    className="h-7 px-2 text-[11px] font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100"
+                                    title="Reject Settlement"
+                                  >
+                                    Reject
+                                  </Button>
+                                </>
+                              )}
+
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedPayment(p);
+                                  setThermalModalOpen(true);
+                                }}
+                                className="h-7 w-7 p-0 text-slate-500 hover:text-slate-900"
+                                title="Thermal Receipt Preview"
+                              >
+                                <Printer className="h-3.5 w-3.5" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  pdfService.downloadReceiptPdf(p);
+                                }}
+                                className="h-7 w-7 p-0 text-slate-500 hover:text-slate-900"
+                                title="Download PDF Receipt"
+                              >
+                                <Download className="h-3.5 w-3.5" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  whatsAppService.sharePaymentReceipt(p);
+                                }}
+                                className="h-7 w-7 p-0 text-emerald-600 hover:text-emerald-700"
+                                title="Share Receipt WhatsApp"
+                              >
+                                <Send className="h-3.5 w-3.5" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            </>
           )}
 
           {/* Pagination */}

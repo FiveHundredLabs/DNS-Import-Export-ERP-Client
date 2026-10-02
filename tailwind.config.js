@@ -6,6 +6,48 @@ export default {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        sans: [
+          'Inter',
+          'ui-sans-serif',
+          'system-ui',
+          '-apple-system',
+          'BlinkMacSystemFont',
+          '"Segoe UI"',
+          'Roboto',
+          '"Helvetica Neue"',
+          'Arial',
+          'sans-serif',
+        ],
+        mono: [
+          '"JetBrains Mono"',
+          'ui-monospace',
+          'SFMono-Regular',
+          'Menlo',
+          'Monaco',
+          'Consolas',
+          '"Liberation Mono"',
+          '"Courier New"',
+          'monospace',
+        ],
+      },
+      fontSize: {
+        'page-title': ['1.5rem', { lineHeight: '1.25', fontWeight: '600' }], // 24px, 600
+        'section-title': ['1.125rem', { lineHeight: '1.3', fontWeight: '600' }], // 18px, 600
+        'card-title': ['1rem', { lineHeight: '1.35', fontWeight: '600' }], // 16px, 600
+        'body-text': ['0.875rem', { lineHeight: '1.5', fontWeight: '400' }], // 14px, 400
+        'secondary-text': ['0.8125rem', { lineHeight: '1.45', fontWeight: '400' }], // 13px, 400
+        'table-text': ['0.84375rem', { lineHeight: '1.45', fontWeight: '400' }], // 13.5px, 400
+        'table-header': ['0.78125rem', { lineHeight: '1.35', fontWeight: '600' }], // 12.5px, 600
+        'form-label': ['0.8125rem', { lineHeight: '1.35', fontWeight: '500' }], // 13px, 500
+        'input-text': ['0.875rem', { lineHeight: '1.45', fontWeight: '400' }], // 14px, 400
+        'btn-text': ['0.84375rem', { lineHeight: '1.35', fontWeight: '500' }], // 13.5px, 500
+        'helper-text': ['0.75rem', { lineHeight: '1.4', fontWeight: '400' }], // 12px, 400
+        'kpi-number': ['1.75rem', { lineHeight: '1.2', fontWeight: '600' }], // 28px, 600
+        'financial-amount': ['1.375rem', { lineHeight: '1.25', fontWeight: '600' }], // 22px, 600
+        'nav-text': ['0.84375rem', { lineHeight: '1.4', fontWeight: '500' }], // 13.5px, 500
+        'badge-text': ['0.71875rem', { lineHeight: '1.3', fontWeight: '500' }], // 11.5px, 500
+      },
       colors: {
         canvas: "#F4F7F9",
         brand: {

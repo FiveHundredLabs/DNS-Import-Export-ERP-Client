@@ -1,6 +1,7 @@
 import { useAuth } from '../../hooks/useAuth';
 import { DirectorDashboard } from './DirectorDashboard';
 import { SalesRepDashboard } from './SalesRepDashboard';
+import { AreaManagerDashboard } from './AreaManagerDashboard';
 import { SalesManagerDashboard } from './SalesManagerDashboard';
 import { StatCard } from '../../components/common/StatCard';
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/card';
@@ -22,16 +23,20 @@ export function DashboardPage() {
     return <SalesRepDashboard />;
   }
 
-  // Generalized role-specific dashboard for Finance, Area Manager, Stock Keeper, Cashier
+  if (role === 'AREA_MANAGER') {
+    return <AreaManagerDashboard />;
+  }
+
+  // Generalized role-specific dashboard for Sales Manager, Finance, Stock Keeper, Cashier
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl font-black tracking-tight text-slate-800">
+          <h1 className="text-2xl font-semibold tracking-tight text-slate-900">
             {role.replace('_', ' ')} Performance Snap
           </h1>
-          <p className="text-xs text-slate-500">
-            Authenticated as <span className="font-bold text-slate-700">{currentUser.name}</span> • Role workspace & operational analytics
+          <p className="text-xs text-slate-500 mt-0.5">
+            Authenticated as <span className="font-semibold text-slate-700">{currentUser.name}</span> • Role workspace & operational analytics
           </p>
         </div>
       </div>
@@ -74,9 +79,9 @@ export function DashboardPage() {
       {/* Role Analytics & Operations Card */}
       <Card className="bg-white border border-slate-200/80 rounded-2xl shadow-sm p-6">
         <CardHeader className="p-0 pb-4">
-          <CardTitle className="text-base font-bold text-slate-800 flex items-center justify-between">
+          <CardTitle className="text-base font-semibold text-slate-900 flex items-center justify-between">
             <span>Role Workflow Summary</span>
-            <span className="text-xs font-semibold text-primary-text bg-primary-light px-2.5 py-1 rounded-full border border-primary-border">
+            <span className="text-[11.5px] font-medium text-primary-text bg-primary-light px-2.5 py-0.5 rounded-full border border-primary-border">
               Active Authorization Level
             </span>
           </CardTitle>
@@ -84,7 +89,7 @@ export function DashboardPage() {
         <CardContent className="p-0">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
             <div className="rounded-xl border border-slate-200/80 p-4 bg-slate-50/50">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Permissions Scope</span>
+              <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Permissions Scope</span>
               <p className="text-xs text-slate-600 mt-1 font-medium leading-relaxed">
                 Operating under strict RBAC governance with full audit tracking on every mutation.
               </p>

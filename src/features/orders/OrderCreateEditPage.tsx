@@ -317,13 +317,13 @@ export function OrderCreateEditPage() {
             <ArrowLeft className="h-3.5 w-3.5" />
             Back to Sales Orders
           </button>
-          <h1 className="text-xl font-bold tracking-tight text-slate-900 flex items-center gap-2">
+          <h1 className="text-2xl font-semibold tracking-tight text-slate-900 flex items-center gap-2">
             <ShoppingCart className="h-6 w-6 text-primary" />
             {isEdit ? 'Edit Sales Order Draft' : 'Create Enterprise Sales Order'}
           </h1>
           {quotationNumber && (
             <p className="text-xs text-primary font-medium mt-0.5">
-              Converting from Approved Quotation: <span className="font-mono font-bold">{quotationNumber}</span>
+              Converting from Approved Quotation: <span className="font-mono font-semibold">{quotationNumber}</span>
             </p>
           )}
         </div>
@@ -334,7 +334,7 @@ export function OrderCreateEditPage() {
             size="sm"
             onClick={() => handleSubmit(true)}
             disabled={isSubmitting}
-            className="text-xs gap-1.5"
+            className="text-xs gap-1.5 font-medium"
           >
             <Save className="h-3.5 w-3.5" />
             Save as Draft
@@ -343,7 +343,7 @@ export function OrderCreateEditPage() {
             size="sm"
             onClick={() => handleSubmit(false)}
             disabled={isSubmitting}
-            className="bg-primary hover:bg-primary-hover text-primary-foreground text-xs gap-1.5 shadow-xs"
+            className="bg-primary hover:bg-primary-hover text-primary-foreground text-xs gap-1.5 font-medium shadow-xs"
           >
             <Send className="h-3.5 w-3.5" />
             Submit Order
@@ -355,7 +355,7 @@ export function OrderCreateEditPage() {
         <div className="rounded-lg bg-rose-50 border border-rose-200 p-4 text-xs text-rose-800 flex items-start gap-3">
           <AlertTriangle className="h-5 w-5 text-rose-600 shrink-0 mt-0.5" />
           <div>
-            <h4 className="font-bold">Validation Error</h4>
+            <h4 className="font-semibold">Validation Error</h4>
             <p>{formError}</p>
           </div>
         </div>
@@ -372,14 +372,14 @@ export function OrderCreateEditPage() {
                   : 'bg-slate-50 border-slate-200'
               }`}
             >
-              <div className="flex items-center justify-between text-xs text-slate-500">
+              <div className="flex items-center justify-between text-xs text-slate-500 font-medium">
                 <span>Credit Limit</span>
                 <CreditCard className="h-3.5 w-3.5 text-slate-400" />
               </div>
-              <div className="mt-1 text-base font-bold font-mono text-slate-900">
+              <div className="mt-1 text-xl font-semibold font-mono text-slate-900 tabular-nums">
                 {formatCurrency(selectedCustomer.commercialTerms?.creditLimit || 0)}
               </div>
-              <div className="text-[10px] text-slate-500 mt-0.5">
+              <div className="text-xs text-slate-500 mt-0.5">
                 Current Due: {formatCurrency(selectedCustomer.financials?.totalOutstanding || 0)}
               </div>
             </Card>
@@ -391,14 +391,14 @@ export function OrderCreateEditPage() {
                   : 'bg-emerald-50 border-emerald-200 text-emerald-900'
               }`}
             >
-              <div className="flex items-center justify-between text-xs">
+              <div className="flex items-center justify-between text-xs font-medium">
                 <span>Available Credit</span>
                 <CheckCircle className="h-3.5 w-3.5" />
               </div>
-              <div className="mt-1 text-base font-bold font-mono">
+              <div className="mt-1 text-xl font-semibold font-mono tabular-nums">
                 {formatCurrency(evaluation.availableCredit)}
               </div>
-              <div className="text-[10px] opacity-80 mt-0.5">
+              <div className="text-xs opacity-80 mt-0.5">
                 {evaluation.availableCredit >= evaluation.totalAmount
                   ? 'Sufficient credit available'
                   : `Breached by ${formatCurrency(evaluation.projectedOutstanding - (selectedCustomer.commercialTerms?.creditLimit || 0))}`}
@@ -412,27 +412,27 @@ export function OrderCreateEditPage() {
                   : 'bg-slate-50 border-slate-200 text-slate-800'
               }`}
             >
-              <div className="flex items-center justify-between text-xs text-slate-500">
+              <div className="flex items-center justify-between text-xs text-slate-500 font-medium">
                 <span>Credit Days</span>
                 <Clock className="h-3.5 w-3.5 text-slate-400" />
               </div>
-              <div className="mt-1 text-base font-bold">
+              <div className="mt-1 text-xl font-semibold tabular-nums">
                 {requestedCreditDays} <span className="text-xs font-normal text-slate-500">days req.</span>
               </div>
-              <div className="text-[10px] text-slate-500 mt-0.5">
+              <div className="text-xs text-slate-500 mt-0.5">
                 Customer limit: {selectedCustomer.commercialTerms?.creditDays || 30} days
               </div>
             </Card>
 
             <Card className="p-3 bg-primary-light border border-primary-border text-indigo-900">
-              <div className="flex items-center justify-between text-xs">
+              <div className="flex items-center justify-between text-xs font-medium">
                 <span>Projected Total</span>
                 <ShoppingCart className="h-3.5 w-3.5 text-primary" />
               </div>
-              <div className="mt-1 text-base font-bold font-mono text-indigo-950">
+              <div className="mt-1 text-xl font-semibold font-mono text-indigo-950 tabular-nums">
                 {formatCurrency(evaluation.totalAmount)}
               </div>
-              <div className="text-[10px] text-primary-text mt-0.5">
+              <div className="text-xs text-primary mt-0.5">
                 New balance: {formatCurrency(evaluation.projectedOutstanding)}
               </div>
             </Card>
@@ -445,10 +445,10 @@ export function OrderCreateEditPage() {
                 <ShieldAlert className="h-6 w-6 text-white shrink-0 mt-0.5" />
                 <div className="space-y-1 flex-1">
                   <div className="flex items-center justify-between">
-                    <h3 className="font-extrabold text-sm tracking-wide uppercase">
-                      ⚠️ SPECIAL APPROVAL REQUIRED
+                    <h3 className="font-semibold text-sm tracking-wide">
+                      Special Approval Required
                     </h3>
-                    <Badge variant="outline" className="bg-white text-amber-900 font-bold text-xs border-amber-200">
+                    <Badge variant="outline" className="bg-white text-amber-900 font-semibold text-xs border-amber-200">
                       Routes to {evaluation.targetApproverRole.replace('_', ' ')}
                     </Badge>
                   </div>
@@ -472,7 +472,7 @@ export function OrderCreateEditPage() {
         {/* Customer Selection Card */}
         <Card className="lg:col-span-1">
           <CardHeader className="py-3 px-4 border-b border-slate-200 flex flex-row items-center justify-between">
-            <CardTitle className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+            <CardTitle className="text-sm font-semibold text-slate-700 flex items-center gap-1.5">
               <Building2 className="h-3.5 w-3.5 text-primary" />
               Customer Information
             </CardTitle>
@@ -480,7 +480,7 @@ export function OrderCreateEditPage() {
               variant="outline"
               size="sm"
               onClick={() => setIsCustomerSelectorOpen(true)}
-              className="text-xs h-7 gap-1"
+              className="text-xs h-7 gap-1 font-medium"
             >
               {selectedCustomer ? 'Change Customer' : 'Select Customer'}
             </Button>
@@ -488,7 +488,7 @@ export function OrderCreateEditPage() {
           <CardContent className="p-4 space-y-3">
             {selectedCustomer ? (
               <div className="space-y-2">
-                <div className="font-bold text-sm text-slate-900">{selectedCustomer.name}</div>
+                <div className="font-semibold text-sm text-slate-900">{selectedCustomer.name}</div>
                 <div className="text-xs text-slate-500 font-mono">Code: {selectedCustomer.code}</div>
                 <div className="text-xs text-slate-600">{selectedCustomer.phone}</div>
                 <div className="text-xs text-slate-600">{selectedCustomer.email}</div>
@@ -508,14 +508,14 @@ export function OrderCreateEditPage() {
         {/* Order Terms & Delivery Details */}
         <Card className="lg:col-span-2">
           <CardHeader className="py-3 px-4 border-b border-slate-200">
-            <CardTitle className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+            <CardTitle className="text-sm font-semibold text-slate-700 flex items-center gap-1.5">
               <Truck className="h-3.5 w-3.5 text-primary" />
               Delivery & Commercial Terms
             </CardTitle>
           </CardHeader>
           <CardContent className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1">
+              <label className="block text-[13px] font-medium text-slate-700 mb-1.5">
                 Delivery Address <span className="text-rose-500">*</span>
               </label>
               <textarea
@@ -529,7 +529,7 @@ export function OrderCreateEditPage() {
 
             <div className="space-y-3">
               <div>
-                <label className="block text-xs font-medium text-slate-700 mb-1">
+                <label className="block text-[13px] font-medium text-slate-700 mb-1.5">
                   Requested Delivery Date
                 </label>
                 <div className="relative">
@@ -544,7 +544,7 @@ export function OrderCreateEditPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-slate-700 mb-1">
+                <label className="block text-[13px] font-medium text-slate-700 mb-1.5">
                   Customer PO / Reference #
                 </label>
                 <Input
@@ -557,7 +557,7 @@ export function OrderCreateEditPage() {
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1">
+              <label className="block text-[13px] font-medium text-slate-700 mb-1.5">
                 Requested Credit Days
               </label>
               <Input
@@ -568,13 +568,13 @@ export function OrderCreateEditPage() {
                 onChange={(e) => setRequestedCreditDays(Number(e.target.value))}
                 className="text-xs"
               />
-              <span className="text-[10px] text-slate-400">
+              <span className="text-xs text-slate-400">
                 Customer limit: {selectedCustomer?.commercialTerms?.creditDays || 30} days
               </span>
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1">
+              <label className="block text-[13px] font-medium text-slate-700 mb-1.5">
                 Payment Terms Notes
               </label>
               <Input
@@ -586,7 +586,7 @@ export function OrderCreateEditPage() {
             </div>
 
             <div className="md:col-span-2">
-              <label className="block text-xs font-medium text-slate-700 mb-1">
+              <label className="block text-[13px] font-medium text-slate-700 mb-1.5">
                 Order Notes / Special Instructions
               </label>
               <Input
@@ -604,7 +604,7 @@ export function OrderCreateEditPage() {
       <Card>
         <CardHeader className="py-3 px-4 border-b border-slate-200 flex flex-row items-center justify-between">
           <div>
-            <CardTitle className="text-sm font-semibold text-slate-900">
+            <CardTitle className="text-base font-semibold text-slate-900">
               Order Line Items
             </CardTitle>
             <p className="text-xs text-slate-500">
@@ -614,7 +614,7 @@ export function OrderCreateEditPage() {
           <Button
             size="sm"
             onClick={() => setIsProductSelectorOpen(true)}
-            className="bg-primary hover:bg-primary-hover text-primary-foreground text-xs gap-1.5"
+            className="bg-primary hover:bg-primary-hover text-primary-foreground text-xs gap-1.5 font-medium"
           >
             <Plus className="h-3.5 w-3.5" />
             Add Product Item
@@ -627,8 +627,8 @@ export function OrderCreateEditPage() {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-xs">
-                <thead className="bg-slate-50 border-b border-slate-200 text-slate-600">
+              <table className="w-full text-[13px] tabular-nums">
+                <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 text-[12.5px]">
                   <tr>
                     <th className="py-2.5 px-4 text-left font-semibold">Product</th>
                     <th className="py-2.5 px-3 text-right font-semibold w-[120px]">Unit Price</th>
@@ -653,11 +653,11 @@ export function OrderCreateEditPage() {
                       <tr key={it.id} className="hover:bg-slate-50/60">
                         <td className="py-3 px-4">
                           <div className="font-semibold text-slate-900">{it.product.name}</div>
-                          <div className="text-[11px] text-slate-400 font-mono">
+                          <div className="text-xs text-slate-400 font-mono">
                             {it.product.sku} • Stock: {it.product.stockOnHand} {it.product.uomCode}
                           </div>
                         </td>
-                        <td className="py-3 px-3 text-right font-mono text-slate-700">
+                        <td className="py-3 px-3 text-right font-mono text-slate-700 tabular-nums">
                           {formatCurrency(price)}
                         </td>
                         <td className="py-3 px-3 text-center">
@@ -668,7 +668,7 @@ export function OrderCreateEditPage() {
                             onChange={(e) =>
                               handleUpdateItem(idx, 'quantity', Math.max(1, parseInt(e.target.value) || 1))
                             }
-                            className="w-16 h-7 text-xs text-center mx-auto"
+                            className="w-16 h-7 text-xs text-center mx-auto tabular-nums"
                           />
                         </td>
                         <td className="py-3 px-3 text-center">
@@ -681,25 +681,25 @@ export function OrderCreateEditPage() {
                               onChange={(e) =>
                                 handleUpdateItem(idx, 'discountPercentage', parseFloat(e.target.value) || 0)
                               }
-                              className={`w-14 h-7 text-xs text-center ${
-                                isExcessDisc ? 'border-amber-500 font-bold text-amber-700 bg-amber-50' : ''
+                              className={`w-14 h-7 text-xs text-center tabular-nums ${
+                                isExcessDisc ? 'border-amber-500 font-semibold text-amber-700 bg-amber-50' : ''
                               }`}
                             />
                             <span className="text-slate-400">%</span>
                           </div>
                           {isExcessDisc && (
-                            <span className="text-[9px] text-amber-700 font-semibold block mt-0.5">
+                            <span className="text-xs text-amber-700 font-medium block mt-0.5">
                               &gt; 5% Rep Limit
                             </span>
                           )}
                         </td>
-                        <td className="py-3 px-3 text-right font-mono text-slate-600">
+                        <td className="py-3 px-3 text-right font-mono text-slate-600 tabular-nums">
                           - {formatCurrency(disc)}
                         </td>
-                        <td className="py-3 px-3 text-right font-mono text-slate-600">
+                        <td className="py-3 px-3 text-right font-mono text-slate-600 tabular-nums">
                           {formatCurrency(tax)}
                         </td>
-                        <td className="py-3 px-4 text-right font-mono font-bold text-slate-900">
+                        <td className="py-3 px-4 text-right font-mono font-semibold text-slate-900 tabular-nums">
                           {formatCurrency(total)}
                         </td>
                         <td className="py-3 px-2 text-center">
@@ -724,19 +724,19 @@ export function OrderCreateEditPage() {
             <div className="border-t border-slate-200 p-4 bg-slate-50/50 flex flex-col items-end text-xs space-y-1.5">
               <div className="flex justify-between w-64 text-slate-600">
                 <span>Subtotal (List):</span>
-                <span className="font-mono font-medium">{formatCurrency(evaluation.subtotal)}</span>
+                <span className="font-mono font-medium tabular-nums">{formatCurrency(evaluation.subtotal)}</span>
               </div>
               <div className="flex justify-between w-64 text-emerald-600">
                 <span>Total Discount:</span>
-                <span className="font-mono font-medium">- {formatCurrency(evaluation.discountAmount)}</span>
+                <span className="font-mono font-medium tabular-nums">- {formatCurrency(evaluation.discountAmount)}</span>
               </div>
               <div className="flex justify-between w-64 text-slate-600">
                 <span>VAT (18%):</span>
-                <span className="font-mono font-medium">{formatCurrency(evaluation.taxAmount)}</span>
+                <span className="font-mono font-medium tabular-nums">{formatCurrency(evaluation.taxAmount)}</span>
               </div>
-              <div className="flex justify-between w-64 border-t border-slate-300 pt-2 font-bold text-sm text-slate-900">
+              <div className="flex justify-between w-64 border-t border-slate-300 pt-2 font-semibold text-sm text-slate-900">
                 <span>Grand Total:</span>
-                <span className="font-mono text-primary-text">{formatCurrency(evaluation.totalAmount)}</span>
+                <span className="font-mono font-semibold text-primary tabular-nums">{formatCurrency(evaluation.totalAmount)}</span>
               </div>
             </div>
           )}

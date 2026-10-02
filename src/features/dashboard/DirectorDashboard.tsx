@@ -343,22 +343,22 @@ export function DirectorDashboard() {
           <div>
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-1.5">
-                <h3 className="text-sm font-bold text-slate-800 tracking-tight">Orders by channels</h3>
+                <h3 className="text-sm font-semibold text-slate-900 tracking-normal">Orders by channels</h3>
                 <Info className="h-3.5 w-3.5 text-slate-300 hover:text-slate-400 cursor-pointer" />
               </div>
             </div>
 
             <div className="flex items-baseline gap-2 mb-4">
               <span className="text-xs text-slate-400">Total</span>
-              <span className="text-2xl font-black text-slate-900">2,641</span>
-              <span className="inline-flex items-center gap-0.5 text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200/60">
+              <span className="text-2xl font-semibold tabular-nums text-slate-900">2,641</span>
+              <span className="inline-flex items-center gap-0.5 text-[11.5px] font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200/60 tabular-nums">
                 ↗ 21%
               </span>
             </div>
 
             {/* Channels Table / List */}
             <div className="space-y-3">
-              <div className="flex items-center justify-between text-[11px] font-semibold text-slate-400 border-b border-slate-100 pb-1.5">
+              <div className="flex items-center justify-between text-xs font-semibold text-slate-500 border-b border-slate-100 pb-1.5">
                 <span>Source</span>
                 <div className="flex items-center gap-6">
                   <span>Percent %</span>
@@ -379,11 +379,11 @@ export function DirectorDashboard() {
                       <div className={`p-1.5 rounded-lg ${ch.color}`}>
                         <IconComponent className="h-3.5 w-3.5" />
                       </div>
-                      <span className="font-semibold text-slate-800">{ch.name}</span>
+                      <span className="font-medium text-slate-800">{ch.name}</span>
                     </div>
-                    <div className="flex items-center gap-6 font-mono">
-                      <span className="text-slate-500 font-medium">{ch.pct}</span>
-                      <span className="w-10 text-right font-bold text-slate-800">{ch.total}</span>
+                    <div className="flex items-center gap-6 font-mono tabular-nums">
+                      <span className="text-slate-500 font-normal">{ch.pct}</span>
+                      <span className="w-10 text-right font-medium text-slate-900">{ch.total}</span>
                     </div>
                   </div>
                 );
@@ -397,13 +397,13 @@ export function DirectorDashboard() {
           <div>
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-1.5">
-                <h3 className="text-sm font-bold text-slate-800 tracking-tight">Daily Sales</h3>
+                <h3 className="text-sm font-semibold text-slate-900 tracking-normal">Daily Sales</h3>
                 <Info className="h-3.5 w-3.5 text-slate-300 hover:text-slate-400 cursor-pointer" />
               </div>
             </div>
 
             {/* Donut Legend */}
-            <div className="flex flex-wrap items-center gap-2.5 text-[11px] font-semibold text-slate-600 mb-2">
+            <div className="flex flex-wrap items-center gap-2.5 text-xs font-medium text-slate-600 mb-2">
               {SETTLEMENT_MIX.map((item) => (
                 <span key={item.name} className="flex items-center gap-1">
                   <span className="h-2 w-2 rounded-full" style={{ backgroundColor: item.color }} />
@@ -434,13 +434,13 @@ export function DirectorDashboard() {
 
               {/* Center Text (Total £1,749.69 in reference screenshot) */}
               <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                <span className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">Total</span>
-                <span className="text-sm font-black text-slate-900 tracking-tight">LKR 1,749,690</span>
+                <span className="text-xs text-slate-400 font-medium uppercase tracking-wider">Total</span>
+                <span className="text-sm font-semibold text-slate-900 tracking-tight tabular-nums">LKR 1,749,690</span>
               </div>
             </div>
           </div>
 
-          <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
+          <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs text-slate-400">
             <span>Verified by Finance Desk</span>
             <span className="font-semibold text-slate-700">100% Reconciled</span>
           </div>
@@ -451,14 +451,14 @@ export function DirectorDashboard() {
           <div>
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-1.5">
-                <h3 className="text-sm font-bold text-slate-800 tracking-tight">Average Order Value</h3>
+                <h3 className="text-sm font-semibold text-slate-900 tracking-normal">Average Order Value</h3>
                 <Info className="h-3.5 w-3.5 text-slate-300 hover:text-slate-400 cursor-pointer" />
               </div>
             </div>
 
             <div className="flex items-baseline gap-2 mb-4">
-              <span className="text-2xl font-black text-slate-900">LKR 224k</span>
-              <span className="inline-flex items-center gap-0.5 text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200/60">
+              <span className="text-2xl font-semibold tabular-nums text-slate-900">LKR 224k</span>
+              <span className="inline-flex items-center gap-0.5 text-[11.5px] font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200/60 tabular-nums">
                 ↗ 12%
               </span>
             </div>
@@ -477,13 +477,13 @@ export function DirectorDashboard() {
                     dataKey="month"
                     axisLine={false}
                     tickLine={false}
-                    tick={{ fill: '#94A3B8', fontSize: 10 }}
+                    tick={{ fill: '#94A3B8', fontSize: 11 }}
                     dy={5}
                   />
                   <YAxis
                     axisLine={false}
                     tickLine={false}
-                    tick={{ fill: '#94A3B8', fontSize: 9 }}
+                    tick={{ fill: '#94A3B8', fontSize: 11 }}
                     tickFormatter={(v) => `${v}k`}
                   />
                   <Tooltip
@@ -493,8 +493,8 @@ export function DirectorDashboard() {
                       borderColor: '#334155',
                       borderRadius: '0.75rem',
                       color: '#fff',
-                      fontSize: '11px',
-                      fontWeight: 600,
+                      fontSize: '12px',
+                      fontWeight: 500,
                     }}
                   />
                   <Area
@@ -510,7 +510,7 @@ export function DirectorDashboard() {
             </div>
           </div>
 
-          <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
+          <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs text-slate-400">
             <span>Fiscal trend analysis</span>
             <span className="font-semibold text-primary">Highest in Q3</span>
           </div>

@@ -25,7 +25,7 @@ export function FinanceCollectionsTab({ financeReport, advancedReports }: Financ
             <span className="text-xs font-semibold text-amber-800 uppercase tracking-wider">
               Total Trade Receivables
             </span>
-            <p className="text-2xl font-extrabold text-amber-950 mt-1">
+            <p className="text-2xl font-semibold tabular-nums text-amber-950 mt-1">
               {formatCurrencyLKR(financeReport.totalReceivables)}
             </p>
             <span className="text-xs text-amber-700 mt-1 block">Sum of active customer debt</span>
@@ -37,7 +37,7 @@ export function FinanceCollectionsTab({ financeReport, advancedReports }: Financ
             <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
               Current Due (Within Terms)
             </span>
-            <p className="text-2xl font-extrabold text-slate-900 mt-1">
+            <p className="text-2xl font-semibold tabular-nums text-slate-900 mt-1">
               {formatCurrencyLKR(financeReport.currentDue)}
             </p>
             <span className="text-xs text-slate-500 mt-1 block">Within credit period</span>
@@ -49,7 +49,7 @@ export function FinanceCollectionsTab({ financeReport, advancedReports }: Financ
             <span className="text-xs font-semibold text-rose-800 uppercase tracking-wider">
               Total Overdue Exposure
             </span>
-            <p className="text-2xl font-extrabold text-rose-950 mt-1">
+            <p className="text-2xl font-semibold tabular-nums text-rose-950 mt-1">
               {formatCurrencyLKR(financeReport.overdue)}
             </p>
             <span className="text-xs text-rose-700 mt-1 block">
@@ -63,7 +63,7 @@ export function FinanceCollectionsTab({ financeReport, advancedReports }: Financ
             <span className="text-xs font-semibold text-emerald-800 uppercase tracking-wider">
               Approved Collections
             </span>
-            <p className="text-2xl font-extrabold text-emerald-950 mt-1">
+            <p className="text-2xl font-semibold tabular-nums text-emerald-950 mt-1">
               {formatCurrencyLKR(financeReport.totalCollections)}
             </p>
             <span className="text-xs text-emerald-700 mt-1 block">
@@ -122,15 +122,15 @@ export function FinanceCollectionsTab({ financeReport, advancedReports }: Financ
                   }`}
                 >
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-slate-800">{bucket.bucket}</span>
-                    <Badge variant={isOverdueBucket ? 'secondary' : 'outline'} className="text-[10px]">
+                    <span className="text-xs font-semibold text-slate-800">{bucket.bucket}</span>
+                    <Badge variant={isOverdueBucket ? 'secondary' : 'outline'} className="text-xs font-medium tabular-nums">
                       {bucket.customerCount} Accounts
                     </Badge>
                   </div>
-                  <p className="text-lg font-extrabold text-slate-900 mt-2">
+                  <p className="text-lg font-semibold tabular-nums text-slate-900 mt-2">
                     {formatCurrencyLKR(bucket.amount)}
                   </p>
-                  <p className="text-[11px] text-slate-500 mt-1">{share}% of total debt</p>
+                  <p className="text-xs text-slate-500 mt-1">{share}% of total debt</p>
                 </div>
               );
             })}
@@ -186,7 +186,7 @@ export function FinanceCollectionsTab({ financeReport, advancedReports }: Financ
                           {item.method.replace(/_/g, ' ')}
                         </span>
                         <div className="text-right">
-                          <span className="font-bold text-slate-900">
+                          <span className="font-semibold tabular-nums text-slate-900">
                             {formatCurrencyLKR(item.amount)}
                           </span>
                           <span className="text-slate-400 ml-2">
@@ -265,10 +265,10 @@ export function FinanceCollectionsTab({ financeReport, advancedReports }: Financ
                           {debtor.customerName}
                         </td>
                         <td className="py-2.5 px-3 font-mono text-slate-600">{debtor.code}</td>
-                        <td className="py-2.5 px-3 text-right font-bold text-amber-700">
+                        <td className="py-2.5 px-3 text-right font-semibold tabular-nums text-amber-700">
                           {formatCurrencyLKR(debtor.balance)}
                         </td>
-                        <td className="py-2.5 px-3 text-right font-bold text-rose-700">
+                        <td className="py-2.5 px-3 text-right font-semibold tabular-nums text-rose-700">
                           {debtor.overdue > 0 ? formatCurrencyLKR(debtor.overdue) : '—'}
                         </td>
                       </tr>

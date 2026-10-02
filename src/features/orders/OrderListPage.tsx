@@ -26,6 +26,7 @@ import {
   Activity,
   Calendar,
   X,
+  ChevronRight,
 } from 'lucide-react';
 
 const STATUS_FILTERS: Array<{ label: string; value: OrderStatus | 'ALL' }> = [
@@ -116,7 +117,7 @@ export function OrderListPage() {
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold tracking-tight text-slate-900 flex items-center gap-2">
+          <h1 className="text-2xl font-semibold tracking-tight text-slate-900 flex items-center gap-2">
             <ShoppingCart className="h-6 w-6 text-primary" />
             Sales Orders & Approvals
           </h1>
@@ -130,7 +131,7 @@ export function OrderListPage() {
             variant="outline"
             size="sm"
             onClick={() => navigate('/orders/tracking')}
-            className="text-xs gap-1.5 border-primary-border text-primary-text hover:bg-primary-light"
+            className="gap-1.5 border-primary-border text-primary-text hover:bg-primary-light"
           >
             <Activity className="h-3.5 w-3.5 text-primary" />
             Pipeline Tracking
@@ -139,7 +140,7 @@ export function OrderListPage() {
           <Button
             size="sm"
             onClick={() => navigate('/orders/new')}
-            className="bg-primary hover:bg-primary-hover text-primary-foreground text-xs gap-1.5 shadow-xs"
+            className="bg-primary hover:bg-primary-hover text-primary-foreground gap-1.5 shadow-xs"
           >
             <Plus className="h-3.5 w-3.5" />
             New Sales Order
@@ -151,31 +152,31 @@ export function OrderListPage() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card className="p-4 bg-white border border-slate-200">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-500">Total Filtered</span>
+            <span className="text-[13px] font-medium text-slate-600">Total Filtered</span>
             <ShoppingCart className="h-4 w-4 text-primary" />
           </div>
-          <div className="mt-2 text-xl font-bold text-slate-900">{total} Orders</div>
-          <div className="text-[11px] text-slate-400 mt-0.5">Active order portfolio</div>
+          <div className="mt-2 text-xl font-semibold tabular-nums text-slate-900">{total} Orders</div>
+          <div className="text-xs text-slate-400 mt-0.5">Active order portfolio</div>
         </Card>
 
         <Card className="p-4 bg-white border border-slate-200">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-amber-700">Pending Approval</span>
+            <span className="text-[13px] font-medium text-amber-700">Pending Approval</span>
             <Clock className="h-4 w-4 text-amber-600" />
           </div>
-          <div className="mt-2 text-xl font-bold text-amber-600">{pendingApprovalsCount}</div>
-          <div className="text-[11px] text-slate-400 mt-0.5">
+          <div className="mt-2 text-xl font-semibold tabular-nums text-amber-600">{pendingApprovalsCount}</div>
+          <div className="text-xs text-slate-400 mt-0.5">
             {specialOrdersCount} require special approval
           </div>
         </Card>
 
         <Card className="p-4 bg-white border border-slate-200">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-sky-700">In Fulfillment</span>
+            <span className="text-[13px] font-medium text-sky-700">In Fulfillment</span>
             <Truck className="h-4 w-4 text-primary" />
           </div>
-          <div className="mt-2 text-xl font-bold text-primary">{inFulfillmentCount}</div>
-          <div className="text-[11px] text-slate-400 mt-0.5">Picking, Invoiced, or Dispatched</div>
+          <div className="mt-2 text-xl font-semibold tabular-nums text-primary">{inFulfillmentCount}</div>
+          <div className="text-xs text-slate-400 mt-0.5">Picking, Invoiced, or Dispatched</div>
         </Card>
 
         <Card className="p-4 bg-white border border-slate-200">
@@ -343,88 +344,149 @@ export function OrderListPage() {
               </Button>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-[140px]">
-                      <button
-                        onClick={handleToggleSort}
-                        className="flex items-center gap-1 font-semibold text-slate-700 hover:text-primary text-xs"
-                      >
-                        Order #
-                        <ArrowUpDown className="h-3 w-3" />
-                      </button>
-                    </TableHead>
-                    <TableHead className="w-[100px]">Date</TableHead>
-                    <TableHead>Customer</TableHead>
-                    <TableHead className="hidden lg:table-cell">Sales Rep</TableHead>
-                    <TableHead className="hidden md:table-cell text-center">Credit Terms</TableHead>
-                    <TableHead className="text-right">Order Amount</TableHead>
-                    <TableHead className="text-center">Status / Approval</TableHead>
-                    <TableHead className="text-right w-[90px]">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {orders.map((order) => (
-                    <TableRow key={order.id} className="hover:bg-slate-50/80">
-                      <TableCell className="font-mono text-xs font-semibold text-slate-900">
-                        <button
-                          onClick={() => navigate(`/orders/${order.id}`)}
-                          className="hover:underline text-primary text-left"
-                        >
-                          {order.orderNumber}
-                        </button>
-                        {order.quotationNumber && (
-                          <div className="text-[10px] text-slate-400 font-normal">
-                            Quote: {order.quotationNumber}
-                          </div>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-xs text-slate-600">
-                        {formatDate(order.createdAt)}
-                      </TableCell>
-                      <TableCell>
-                        <div className="font-semibold text-xs text-slate-900">
-                          {order.customerNameSnapshot}
+            <>
+              {/* 1. Mobile Cards View (Visible on small screens, hidden on md+) */}
+              <div className="block md:hidden p-3 space-y-3">
+                {orders.map((order) => {
+                  const itemCount = order.items?.length || 0;
+                  return (
+                    <div
+                      key={order.id}
+                      onClick={() => navigate(`/orders/${order.id}`)}
+                      className="rounded-2xl border border-slate-200/90 bg-white p-3.5 shadow-xs hover:border-primary/50 transition-all cursor-pointer active:scale-[0.99]"
+                    >
+                      {/* Top Row: Order # + Status Badge */}
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono text-xs font-bold text-primary">
+                            {order.orderNumber}
+                          </span>
+                          {order.quotationNumber && (
+                            <span className="text-[10.5px] text-slate-400 font-mono">
+                              Quote: {order.quotationNumber}
+                            </span>
+                          )}
                         </div>
-                        <div className="text-[11px] text-slate-400 font-mono">
-                          {order.customerCodeSnapshot}
-                        </div>
-                      </TableCell>
-                      <TableCell className="hidden lg:table-cell text-xs text-slate-600">
-                        {order.salesRepNameSnapshot}
-                      </TableCell>
-                      <TableCell className="hidden md:table-cell text-center">
-                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-slate-100 text-slate-700">
-                          {order.requestedCreditDays} Days Credit
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-right font-mono text-xs font-bold text-slate-900">
-                        {formatCurrency(order.totalAmount)}
-                      </TableCell>
-                      <TableCell className="text-center">
                         <OrderStatusBadge
                           status={order.status}
                           isSpecialApproval={order.isSpecialApproval}
                         />
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => navigate(`/orders/${order.id}`)}
-                          className="h-7 w-7 p-0 text-slate-500 hover:text-slate-900"
-                          title="View Order Details"
+                      </div>
+
+                      {/* Customer Name & Code */}
+                      <div className="mt-2">
+                        <h4 className="text-xs font-bold text-slate-900 leading-snug">
+                          {order.customerNameSnapshot}
+                        </h4>
+                        <span className="font-mono text-[11px] text-slate-400">
+                          {order.customerCodeSnapshot}
+                        </span>
+                      </div>
+
+                      {/* Middle: Items Count & Total Amount */}
+                      <div className="mt-2.5 pt-2.5 border-t border-slate-100 flex items-center justify-between">
+                        <div className="text-xs text-slate-500">
+                          <span className="font-semibold text-slate-700">{itemCount} {itemCount === 1 ? 'Item' : 'Items'}</span>
+                          <span className="mx-1 text-slate-300">•</span>
+                          <span>{order.requestedCreditDays}d Credit</span>
+                        </div>
+                        <div className="text-sm font-bold text-slate-900 tabular-nums">
+                          {formatCurrency(order.totalAmount)}
+                        </div>
+                      </div>
+
+                      {/* Bottom Footer: Date & Rep */}
+                      <div className="mt-2 flex items-center justify-between text-[11px] text-slate-400">
+                        <span>{formatDate(order.createdAt)}</span>
+                        <span className="flex items-center text-primary font-semibold gap-0.5">
+                          View Order <ChevronRight className="h-3.5 w-3.5" />
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* 2. Desktop Full Table View (Hidden on mobile, block on md+) */}
+              <div className="hidden md:block overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-[140px]">
+                        <button
+                          onClick={handleToggleSort}
+                          className="flex items-center gap-1 font-semibold text-slate-700 hover:text-primary text-xs"
                         >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
+                          Order #
+                          <ArrowUpDown className="h-3 w-3" />
+                        </button>
+                      </TableHead>
+                      <TableHead className="w-[100px]">Date</TableHead>
+                      <TableHead>Customer</TableHead>
+                      <TableHead className="hidden lg:table-cell">Sales Rep</TableHead>
+                      <TableHead className="hidden md:table-cell text-center">Credit Terms</TableHead>
+                      <TableHead className="text-right">Order Amount</TableHead>
+                      <TableHead className="text-center">Status / Approval</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+                  </TableHeader>
+                  <TableBody>
+                    {orders.map((order) => (
+                      <TableRow
+                        key={order.id}
+                        className="hover:bg-slate-50/80 cursor-pointer transition-colors focus:outline-hidden focus:bg-slate-50 group"
+                        tabIndex={0}
+                        onClick={() => navigate(`/orders/${order.id}`)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            navigate(`/orders/${order.id}`);
+                          }
+                        }}
+                      >
+                        <TableCell className="font-mono text-[13px] font-semibold text-slate-900">
+                          <span className="text-primary hover:underline">
+                            {order.orderNumber}
+                          </span>
+                          {order.quotationNumber && (
+                            <div className="text-xs text-slate-400 font-normal mt-0.5">
+                              Quote: {order.quotationNumber}
+                            </div>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-[13px] text-slate-600">
+                          {formatDate(order.createdAt)}
+                        </TableCell>
+                        <TableCell>
+                          <div className="font-semibold text-[13px] text-slate-900">
+                            {order.customerNameSnapshot}
+                          </div>
+                          <div className="text-xs text-slate-400 font-mono mt-0.5">
+                            {order.customerCodeSnapshot}
+                          </div>
+                        </TableCell>
+                        <TableCell className="hidden lg:table-cell text-[13px] text-slate-600">
+                          {order.salesRepNameSnapshot}
+                        </TableCell>
+                        <TableCell className="hidden md:table-cell text-center">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-700">
+                            {order.requestedCreditDays} Days Credit
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums text-[13.5px] font-semibold text-slate-900">
+                          {formatCurrency(order.totalAmount)}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <OrderStatusBadge
+                            status={order.status}
+                            isSpecialApproval={order.isSpecialApproval}
+                          />
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </>
           )}
 
           {/* Pagination */}

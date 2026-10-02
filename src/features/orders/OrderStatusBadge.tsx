@@ -44,7 +44,7 @@ export function OrderStatusBadge({ status, isSpecialApproval }: OrderStatusBadge
     <div className="inline-flex items-center gap-1.5 flex-wrap">
       {getBadge()}
       {isSpecialApproval && status !== 'SPECIAL_APPROVAL' && status !== 'CANCELLED' && status !== 'REJECTED' && (
-        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300">
+        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-semibold bg-amber-100 text-amber-900 border border-amber-300">
           Special Approval
         </span>
       )}

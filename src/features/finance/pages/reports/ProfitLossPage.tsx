@@ -47,7 +47,7 @@ export function ProfitLossPage() {
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900">Profit & Loss (P&L) Statement</h1>
+            <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Profit & Loss (P&L) Statement</h1>
             <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 text-xs">
               Income Statement
             </Badge>
@@ -69,11 +69,11 @@ export function ProfitLossPage() {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <Card className="p-4 border-slate-200">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Gross Revenue</span>
+            <span className="text-xs font-medium text-slate-500">Gross Revenue</span>
             <DollarSign className="h-4 w-4 text-primary" />
           </div>
           <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-slate-900">
+            <span className="text-2xl font-semibold text-slate-900 tabular-nums">
               {formatCurrency(report?.totalRevenue || 0)}
             </span>
           </div>
@@ -81,11 +81,11 @@ export function ProfitLossPage() {
 
         <Card className="p-4 border-slate-200">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Gross Profit</span>
+            <span className="text-xs font-medium text-slate-500">Gross Profit</span>
             <TrendingUp className="h-4 w-4 text-primary" />
           </div>
           <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-slate-900">
+            <span className="text-2xl font-semibold text-slate-900 tabular-nums">
               {formatCurrency(report?.grossProfit || 0)}
             </span>
             <span className="text-xs font-semibold text-primary">
@@ -96,11 +96,11 @@ export function ProfitLossPage() {
 
         <Card className="p-4 border-slate-200">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Net Operating Profit</span>
+            <span className="text-xs font-medium text-slate-500">Net Operating Profit</span>
             <PieChart className="h-4 w-4 text-emerald-600" />
           </div>
           <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-emerald-700">
+            <span className="text-2xl font-semibold text-emerald-700 tabular-nums">
               {formatCurrency(report?.netOperatingProfit || 0)}
             </span>
             <span className="text-xs font-semibold text-emerald-600">
@@ -113,7 +113,7 @@ export function ProfitLossPage() {
       {/* Structured Statement Table */}
       <Card className="overflow-hidden border-slate-200 bg-white shadow-sm">
         <div className="border-b border-slate-200 bg-slate-50 px-6 py-4">
-          <h2 className="text-sm font-bold text-slate-800 uppercase tracking-wider">
+          <h2 className="text-sm font-semibold text-slate-800">
             Statement of Financial Performance ({dateFilter.startDate} to {dateFilter.endDate})
           </h2>
         </div>
@@ -121,9 +121,9 @@ export function ProfitLossPage() {
         <div className="divide-y divide-slate-100 text-xs">
           {/* 1. Operating Revenue */}
           <div className="p-6 space-y-3">
-            <div className="flex justify-between items-center text-sm font-bold text-slate-900">
-              <span className="text-indigo-900 uppercase tracking-wider">1. Operating Revenue</span>
-              <span className="font-mono">{formatCurrency(report?.totalRevenue || 0)}</span>
+            <div className="flex justify-between items-center text-sm font-semibold text-slate-900">
+              <span className="text-indigo-900 font-semibold">1. Operating Revenue</span>
+              <span className="font-mono tabular-nums">{formatCurrency(report?.totalRevenue || 0)}</span>
             </div>
 
             <div className="pl-4 space-y-1.5 text-slate-600">
@@ -136,7 +136,7 @@ export function ProfitLossPage() {
                       <span className="font-mono text-primary font-semibold">{item.code}</span>
                       <span>{item.accountName}</span>
                     </span>
-                    <span className="font-mono font-medium text-slate-800">{formatCurrency(item.amount)}</span>
+                    <span className="font-mono font-medium text-slate-800 tabular-nums">{formatCurrency(item.amount)}</span>
                   </div>
                 ))
               )}
@@ -145,9 +145,9 @@ export function ProfitLossPage() {
 
           {/* 2. Cost of Goods Sold */}
           <div className="p-6 space-y-3 bg-slate-50/40">
-            <div className="flex justify-between items-center text-sm font-bold text-slate-900">
-              <span className="text-slate-800 uppercase tracking-wider">2. Direct Cost of Goods Sold (COGS)</span>
-              <span className="font-mono text-slate-800">({formatCurrency(report?.totalCogs || 0)})</span>
+            <div className="flex justify-between items-center text-sm font-semibold text-slate-900">
+              <span className="text-slate-800 font-semibold">2. Direct Cost of Goods Sold (COGS)</span>
+              <span className="font-mono text-slate-800 tabular-nums">({formatCurrency(report?.totalCogs || 0)})</span>
             </div>
 
             <div className="pl-4 space-y-1.5 text-slate-600">
@@ -160,7 +160,7 @@ export function ProfitLossPage() {
                       <span className="font-mono text-primary font-semibold">{item.code}</span>
                       <span>{item.accountName}</span>
                     </span>
-                    <span className="font-mono font-medium text-slate-800">{formatCurrency(item.amount)}</span>
+                    <span className="font-mono font-medium text-slate-800 tabular-nums">{formatCurrency(item.amount)}</span>
                   </div>
                 ))
               )}
@@ -168,16 +168,16 @@ export function ProfitLossPage() {
           </div>
 
           {/* Gross Profit Subtotal */}
-          <div className="px-6 py-4 bg-primary-light/50 flex justify-between items-center text-sm font-bold text-indigo-950 border-y border-primary-border/40">
-            <span className="uppercase tracking-wider">Gross Operating Profit (Revenue − COGS)</span>
-            <span className="font-mono text-base">{formatCurrency(report?.grossProfit || 0)}</span>
+          <div className="px-6 py-4 bg-primary-light/50 flex justify-between items-center text-sm font-semibold text-indigo-950 border-y border-primary-border/40">
+            <span>Gross Operating Profit (Revenue − COGS)</span>
+            <span className="font-mono text-base tabular-nums font-semibold">{formatCurrency(report?.grossProfit || 0)}</span>
           </div>
 
           {/* 3. Operating Expenses */}
           <div className="p-6 space-y-3">
-            <div className="flex justify-between items-center text-sm font-bold text-slate-900">
-              <span className="text-rose-900 uppercase tracking-wider">3. Operating Expenses & Overheads</span>
-              <span className="font-mono text-rose-700">({formatCurrency(report?.totalOperatingExpenses || 0)})</span>
+            <div className="flex justify-between items-center text-sm font-semibold text-slate-900">
+              <span className="text-rose-900 font-semibold">3. Operating Expenses & Overheads</span>
+              <span className="font-mono text-rose-700 tabular-nums">({formatCurrency(report?.totalOperatingExpenses || 0)})</span>
             </div>
 
             <div className="pl-4 space-y-1.5 text-slate-600">
@@ -190,7 +190,7 @@ export function ProfitLossPage() {
                       <span className="font-mono text-primary font-semibold">{item.code}</span>
                       <span>{item.accountName}</span>
                     </span>
-                    <span className="font-mono font-medium text-slate-800">{formatCurrency(item.amount)}</span>
+                    <span className="font-mono font-medium text-slate-800 tabular-nums">{formatCurrency(item.amount)}</span>
                   </div>
                 ))
               )}
@@ -198,14 +198,14 @@ export function ProfitLossPage() {
           </div>
 
           {/* Net Operating Profit Final Total */}
-          <div className="px-6 py-5 bg-emerald-50 flex justify-between items-center text-base font-bold text-emerald-950 border-t-2 border-emerald-300">
+          <div className="px-6 py-5 bg-emerald-50 flex justify-between items-center text-base font-semibold text-emerald-950 border-t-2 border-emerald-300">
             <div className="flex items-center gap-2">
-              <span className="uppercase tracking-wider">Net Operating Profit (Bottom Line)</span>
-              <Badge className="bg-emerald-200 text-emerald-900 border-none text-[10px]">
+              <span>Net Operating Profit (Bottom Line)</span>
+              <Badge className="bg-emerald-200 text-emerald-900 border-none text-xs font-medium">
                 Audited Ledger Output
               </Badge>
             </div>
-            <span className="font-mono text-xl text-emerald-800">
+            <span className="font-mono text-xl text-emerald-800 tabular-nums font-semibold">
               {formatCurrency(report?.netOperatingProfit || 0)}
             </span>
           </div>

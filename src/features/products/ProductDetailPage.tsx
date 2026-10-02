@@ -56,7 +56,7 @@ export function ProductDetailPage() {
               {product.status}
             </Badge>
           </div>
-          <h1 className="text-xl font-bold text-slate-900">{product.name}</h1>
+          <h1 className="text-xl font-semibold text-slate-900">{product.name}</h1>
         </div>
       </div>
 
@@ -109,12 +109,12 @@ export function ProductDetailPage() {
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-2 gap-3 text-xs">
                   <div className="p-3 bg-primary-light/50 rounded-lg border border-primary-border/40">
-                    <span className="text-primary block text-[10px] uppercase font-semibold">Available for Sale</span>
-                    <span className="text-xl font-bold text-indigo-900">{product.stockOnHand} {product.uomCode}</span>
+                    <span className="text-primary block text-xs uppercase font-semibold">Available for Sale</span>
+                    <span className="text-xl font-semibold tabular-nums text-indigo-900">{product.stockOnHand} {product.uomCode}</span>
                   </div>
                   <div className="p-3 bg-rose-50/50 rounded-lg border border-rose-100">
-                    <span className="text-rose-600 block text-[10px] uppercase font-semibold">Damaged / Non-Sale</span>
-                    <span className="text-xl font-bold text-rose-900">{product.damagedStock} {product.uomCode}</span>
+                    <span className="text-rose-600 block text-xs uppercase font-semibold">Damaged / Non-Sale</span>
+                    <span className="text-xl font-semibold tabular-nums text-rose-900">{product.damagedStock} {product.uomCode}</span>
                   </div>
                 </div>
               </CardContent>
@@ -130,20 +130,20 @@ export function ProductDetailPage() {
             <CardContent>
               <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 text-xs">
                 <div className="p-3 rounded-lg border border-slate-200 bg-slate-50">
-                  <span className="text-slate-400 block text-[10px] uppercase">Cost Price</span>
-                  <span className="text-base font-bold text-slate-900">{formatCurrency(product.pricing.costPrice)}</span>
+                  <span className="text-slate-500 block text-xs uppercase">Cost Price</span>
+                  <span className="text-base font-semibold tabular-nums text-slate-900">{formatCurrency(product.pricing.costPrice)}</span>
                 </div>
                 <div className="p-3 rounded-lg border border-slate-200 bg-emerald-50/50">
-                  <span className="text-emerald-700 block text-[10px] uppercase font-semibold">Current Selling Price</span>
-                  <span className="text-base font-bold text-emerald-900">{formatCurrency(product.pricing.currentSellingPrice)}</span>
+                  <span className="text-emerald-700 block text-xs uppercase font-semibold">Current Selling Price</span>
+                  <span className="text-base font-semibold tabular-nums text-emerald-900">{formatCurrency(product.pricing.currentSellingPrice)}</span>
                 </div>
                 <div className="p-3 rounded-lg border border-slate-200 bg-slate-50">
-                  <span className="text-slate-400 block text-[10px] uppercase">Minimum Floor Price</span>
-                  <span className="text-base font-semibold text-slate-800">{formatCurrency(product.pricing.minimumSellingPrice)}</span>
+                  <span className="text-slate-500 block text-xs uppercase">Minimum Floor Price</span>
+                  <span className="text-base font-semibold tabular-nums text-slate-800">{formatCurrency(product.pricing.minimumSellingPrice)}</span>
                 </div>
                 <div className="p-3 rounded-lg border border-slate-200 bg-slate-50">
-                  <span className="text-slate-400 block text-[10px] uppercase">Max Rep Discount</span>
-                  <span className="text-base font-semibold text-slate-800">{product.pricing.maxDiscountPercentage}%</span>
+                  <span className="text-slate-500 block text-xs uppercase">Max Rep Discount</span>
+                  <span className="text-base font-semibold tabular-nums text-slate-800">{product.pricing.maxDiscountPercentage}%</span>
                 </div>
               </div>
             </CardContent>
@@ -160,16 +160,16 @@ export function ProductDetailPage() {
                 <div className="flex justify-between items-center p-2.5 bg-slate-50 rounded border border-slate-100">
                   <div>
                     <div className="font-semibold text-slate-900">Main Central Warehouse (Colombo)</div>
-                    <div className="text-[11px] text-slate-500">Rack B-14, Bay 02</div>
+                    <div className="text-xs text-slate-500">Rack B-14, Bay 02</div>
                   </div>
-                  <span className="font-bold text-slate-900">{Math.floor(product.stockOnHand * 0.8)} {product.uomCode}</span>
+                  <span className="font-semibold tabular-nums text-slate-900">{Math.floor(product.stockOnHand * 0.8)} {product.uomCode}</span>
                 </div>
                 <div className="flex justify-between items-center p-2.5 bg-slate-50 rounded border border-slate-100">
                   <div>
                     <div className="font-semibold text-slate-900">Kotte Brand Showroom & Store</div>
-                    <div className="text-[11px] text-slate-500">Showroom POS Inventory</div>
+                    <div className="text-xs text-slate-500">Showroom POS Inventory</div>
                   </div>
-                  <span className="font-bold text-slate-900">{Math.ceil(product.stockOnHand * 0.2)} {product.uomCode}</span>
+                  <span className="font-semibold tabular-nums text-slate-900">{Math.ceil(product.stockOnHand * 0.2)} {product.uomCode}</span>
                 </div>
               </div>
             </CardContent>

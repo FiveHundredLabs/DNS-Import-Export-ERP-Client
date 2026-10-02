@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { Customer } from '../../types/customer';
 import { Invoice } from '../../types/invoice';
@@ -6,6 +6,8 @@ import { PaymentMethod, PaymentAllocation, Payment } from '../../types/payment';
 import { customerService } from '../../services/CustomerService';
 import { invoiceService } from '../../services/InvoiceService';
 import { paymentService } from '../../services/PaymentService';
+import { autoAllocatePayment } from '../../rules/paymentRules';
+import { InvoiceStatusBadge } from '../invoices/InvoiceStatusBadge';
 import { CustomerSelector } from '../../components/selectors/CustomerSelector';
 import { CustomerSummaryCard } from '../../components/selectors/CustomerSummaryCard';
 import { ThermalReceiptModal } from './ThermalReceiptModal';
@@ -49,13 +51,54 @@ export function PaymentCollectionPage() {
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  const amountRef = useRef<number | ''>(amount);
+  amountRef.current = amount;
+
   // Receipt Modal State
   const [createdPayment, setCreatedPayment] = useState<Payment | null>(null);
   const [receiptModalOpen, setReceiptModalOpen] = useState(false);
 
-  // Load customer if passed in URL
+  // Auto-allocate helper: applies FIFO across open invoices
+  const applyFifoAllocations = (totalToAllocate: number, invoices: Invoice[]) => {
+    if (totalToAllocate <= 0 || !invoices || invoices.length === 0) {
+      const cleared: Record<string, number> = {};
+      for (const inv of invoices || []) {
+        cleared[inv.id] = 0;
+      }
+      setAllocations(cleared);
+      return;
+    }
+
+    const allocs = autoAllocatePayment(totalToAllocate, invoices);
+    const newAllocations: Record<string, number> = {};
+    for (const inv of invoices) {
+      newAllocations[inv.id] = 0;
+    }
+    for (const alloc of allocs) {
+      newAllocations[alloc.invoiceId] = alloc.allocatedAmount;
+    }
+
+    setAllocations(newAllocations);
+  };
+
+  // When user updates collection amount in the input
+  const handleAmountChange = (newVal: number | '') => {
+    setAmount(newVal);
+    amountRef.current = newVal;
+    setErrorMessage(null);
+    const num = typeof newVal === 'number' && !isNaN(newVal) ? newVal : 0;
+    applyFifoAllocations(num, customerInvoices);
+  };
+
+  // Load customer and amount if passed in URL
   useEffect(() => {
     const custId = searchParams.get('customerId');
+    const amountParam = searchParams.get('amount');
+    if (amountParam && !isNaN(Number(amountParam))) {
+      const parsedAmt = Number(amountParam);
+      setAmount(parsedAmt);
+      amountRef.current = parsedAmt;
+    }
     if (custId) {
       customerService.getCustomer(custId).then((c) => {
         if (c) setSelectedCustomer(c);
@@ -79,18 +122,61 @@ export function PaymentCollectionPage() {
         });
         // Open invoices have balanceAmount > 0
         const openInvs = res.data.filter((i) => i.balanceAmount > 0);
-        // Sort FIFO by dueDate ascending
-        openInvs.sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
+        // Sort FIFO by oldest first: issueDate ascending, then createdAt, then dueDate
+        openInvs.sort((a, b) => {
+          const parseTs = (d?: string) => (d ? new Date(d).getTime() || 0 : 0);
+          const issueA = parseTs(a.issueDate);
+          const issueB = parseTs(b.issueDate);
+          if (issueA !== issueB) return issueA - issueB;
+          const createdA = parseTs(a.createdAt);
+          const createdB = parseTs(b.createdAt);
+          if (createdA !== createdB) return createdA - createdB;
+          const dueA = parseTs(a.dueDate);
+          const dueB = parseTs(b.dueDate);
+          if (dueA !== dueB) return dueA - dueB;
+          return (a.invoiceNumber || '').localeCompare(b.invoiceNumber || '');
+        });
         setCustomerInvoices(openInvs);
 
         // Pre-allocate to specific invoice if requested via URL
         const preselectInvId = searchParams.get('invoiceId');
-        if (preselectInvId) {
+        const amountParam = searchParams.get('amount');
+        const urlCustId = searchParams.get('customerId');
+        const isUrlCustomer = !urlCustId || urlCustId === selectedCustomer.id;
+
+        if (preselectInvId && isUrlCustomer) {
           const target = openInvs.find((i) => i.id === preselectInvId);
           if (target) {
-            setAmount(target.balanceAmount);
-            setAllocations({ [target.id]: target.balanceAmount });
+            const allocable = Math.max(0, target.balanceAmount - (target.collectedAmount || 0));
+            setAmount(allocable);
+            amountRef.current = allocable;
+            const initialAllocs: Record<string, number> = {};
+            for (const inv of openInvs) {
+              initialAllocs[inv.id] = 0;
+            }
+            initialAllocs[target.id] = allocable;
+            setAllocations(initialAllocs);
+            return;
           }
+        }
+
+        const totalToAllocate =
+          typeof amountRef.current === 'number' && !isNaN(amountRef.current)
+            ? amountRef.current
+            : isUrlCustomer && amountParam && !isNaN(Number(amountParam))
+            ? Number(amountParam)
+            : 0;
+
+        if (totalToAllocate > 0) {
+          setAmount(totalToAllocate);
+          amountRef.current = totalToAllocate;
+          applyFifoAllocations(totalToAllocate, openInvs);
+        } else {
+          const cleared: Record<string, number> = {};
+          for (const inv of openInvs) {
+            cleared[inv.id] = 0;
+          }
+          setAllocations(cleared);
         }
       } catch (err) {
         console.error('Failed to load customer invoices', err);
@@ -105,31 +191,26 @@ export function PaymentCollectionPage() {
   const totalAllocated = Object.values(allocations).reduce((acc, val) => acc + (val || 0), 0);
   const unallocatedAmount = (Number(amount) || 0) - totalAllocated;
 
-  // Auto-allocate FIFO algorithm
+  // Auto-allocate FIFO algorithm against oldest outstanding invoices
   const handleAutoAllocate = () => {
     const totalToAllocate = Number(amount) || 0;
-    if (totalToAllocate <= 0) return;
-
-    let remaining = totalToAllocate;
-    const newAllocations: Record<string, number> = {};
-
-    for (const inv of customerInvoices) {
-      if (remaining <= 0) break;
-      const allocateForThis = Math.min(inv.balanceAmount, remaining);
-      if (allocateForThis > 0) {
-        newAllocations[inv.id] = allocateForThis;
-        remaining -= allocateForThis;
-      }
-    }
-
-    setAllocations(newAllocations);
+    applyFifoAllocations(totalToAllocate, customerInvoices);
   };
 
   const handleManualAllocationChange = (invoiceId: string, val: string) => {
-    const num = parseFloat(val) || 0;
+    if (val === '') {
+      setAllocations((prev) => {
+        const next = { ...prev };
+        delete next[invoiceId];
+        return next;
+      });
+      return;
+    }
+    const num = parseFloat(val);
+    const safeNum = Math.max(0, isNaN(num) ? 0 : num);
     setAllocations((prev) => ({
       ...prev,
-      [invoiceId]: num,
+      [invoiceId]: safeNum,
     }));
   };
 
@@ -152,9 +233,10 @@ export function PaymentCollectionPage() {
     for (const inv of customerInvoices) {
       const allocated = allocations[inv.id] || 0;
       if (allocated > 0) {
-        if (allocated > inv.balanceAmount) {
+        const allocable = Math.max(0, inv.balanceAmount - (inv.collectedAmount || 0));
+        if (allocated > allocable + 0.001) {
           setErrorMessage(
-            `Allocated amount for invoice ${inv.invoiceNumber} cannot exceed open balance of ${formatCurrency(inv.balanceAmount)}.`
+            `Allocated amount for invoice ${inv.invoiceNumber} cannot exceed remaining uncollected balance of ${formatCurrency(allocable)}.`
           );
           return;
         }
@@ -230,6 +312,7 @@ export function PaymentCollectionPage() {
                 setSelectedCustomer(cust);
                 setAllocations({});
                 setAmount('');
+                amountRef.current = '';
               }}
             />
           </div>
@@ -266,7 +349,7 @@ export function PaymentCollectionPage() {
                   step="any"
                   placeholder="0.00"
                   value={amount}
-                  onChange={(e) => setAmount(e.target.value === '' ? '' : parseFloat(e.target.value))}
+                  onChange={(e) => handleAmountChange(e.target.value === '' ? '' : parseFloat(e.target.value))}
                   className="font-mono text-sm font-bold h-9"
                   required
                 />
@@ -386,60 +469,178 @@ export function PaymentCollectionPage() {
                 This customer has no open invoices with outstanding balances.
               </div>
             ) : (
-              <div className="rounded-lg border border-slate-200 overflow-hidden">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-slate-50">
-                      <TableHead>Invoice #</TableHead>
-                      <TableHead>Issue Date</TableHead>
-                      <TableHead>Due Date</TableHead>
-                      <TableHead className="text-right">Total Invoice</TableHead>
-                      <TableHead className="text-right">Outstanding Balance</TableHead>
-                      <TableHead className="text-right w-44">Allocated Amount (LKR)</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {customerInvoices.map((inv) => {
-                      const isOverdue = inv.status === 'OVERDUE';
-                      const currentAlloc = allocations[inv.id] || '';
+              <>
+                {/* 1. Mobile Cards View for Invoice Allocation (Visible on small screens, hidden on md+) */}
+                <div className="block md:hidden space-y-3">
+                  {customerInvoices.map((inv) => {
+                    const isOverdue = inv.status === 'OVERDUE';
+                    const currentAlloc = allocations[inv.id] !== undefined ? allocations[inv.id] : '';
+                    const pendingCollection = inv.collectedAmount || 0;
+                    const allocableBalance = Math.max(0, inv.balanceAmount - pendingCollection);
+                    const isFullyCollected = allocableBalance <= 0;
 
-                      return (
-                        <TableRow key={inv.id}>
-                          <TableCell className="font-mono text-xs font-semibold text-primary">
+                    return (
+                      <div
+                        key={inv.id}
+                        className={`rounded-2xl border p-3.5 space-y-3 transition-colors ${
+                          isFullyCollected
+                            ? 'bg-slate-50/70 border-slate-200 opacity-75'
+                            : isOverdue
+                            ? 'bg-rose-50/30 border-rose-200'
+                            : 'bg-white border-slate-200/90 shadow-xs'
+                        }`}
+                      >
+                        {/* Top: Invoice # & Status */}
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-mono text-xs font-bold text-primary">
                             {inv.invoiceNumber}
-                          </TableCell>
-                          <TableCell className="text-xs text-slate-600 whitespace-nowrap">
-                            {formatDate(inv.issueDate)}
-                          </TableCell>
-                          <TableCell className="text-xs whitespace-nowrap">
-                            <span className={isOverdue ? 'font-bold text-rose-600' : 'text-slate-600'}>
-                              {formatDate(inv.dueDate)} {isOverdue && '(Overdue)'}
+                          </span>
+                          <div className="flex items-center gap-1.5">
+                            {isOverdue && (
+                              <span className="text-[10.5px] font-bold text-rose-600 bg-rose-100 px-1.5 py-0.5 rounded">
+                                Overdue
+                              </span>
+                            )}
+                            <InvoiceStatusBadge status={inv.status} />
+                          </div>
+                        </div>
+
+                        {/* Dates & Amounts */}
+                        <div className="grid grid-cols-2 gap-2 text-xs bg-slate-50/80 p-2.5 rounded-xl border border-slate-100">
+                          <div>
+                            <span className="text-[10.5px] text-slate-400 block">Due Date</span>
+                            <span className={`font-medium ${isOverdue ? 'font-bold text-rose-600' : 'text-slate-700'}`}>
+                              {formatDate(inv.dueDate)}
                             </span>
-                          </TableCell>
-                          <TableCell className="text-right font-mono text-xs text-slate-600">
-                            {formatCurrency(inv.totalAmount)}
-                          </TableCell>
-                          <TableCell className="text-right font-mono text-xs font-bold text-slate-900">
-                            {formatCurrency(inv.balanceAmount)}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <Input
-                              type="number"
-                              min="0"
-                              max={inv.balanceAmount}
-                              step="any"
-                              placeholder="0.00"
-                              value={currentAlloc}
-                              onChange={(e) => handleManualAllocationChange(inv.id, e.target.value)}
-                              className="font-mono text-xs text-right h-8 w-36 ml-auto"
-                            />
-                          </TableCell>
+                            <span className="text-[10.5px] text-slate-400 block mt-1">Total Invoice</span>
+                            <span className="font-mono text-slate-700 tabular-nums">
+                              {formatCurrency(inv.totalAmount)}
+                            </span>
+                          </div>
+
+                          <div className="text-right">
+                            <span className="text-[10.5px] text-slate-400 block">Balance Due</span>
+                            <span className="font-mono font-bold text-slate-900 tabular-nums text-sm">
+                              {formatCurrency(inv.balanceAmount)}
+                            </span>
+                            {pendingCollection > 0 && (
+                              <div className="mt-1">
+                                <span className="text-[10px] text-blue-600 block font-medium">Pending Coll.</span>
+                                <span className="font-mono text-[11px] text-blue-700 font-semibold tabular-nums">
+                                  {formatCurrency(pendingCollection)}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Allocation Input + Quick Max Action */}
+                        <div className="pt-1">
+                          <div className="flex items-center justify-between mb-1.5">
+                            <label className="text-[11px] font-semibold text-slate-700">
+                              Allocated Amount (LKR)
+                            </label>
+                            {!isFullyCollected && allocableBalance > 0 && (
+                              <button
+                                type="button"
+                                onClick={() => handleManualAllocationChange(inv.id, allocableBalance.toString())}
+                                className="text-[11px] font-bold text-primary hover:underline bg-primary-light px-2 py-0.5 rounded-md border border-primary-border"
+                              >
+                                Allocate Full ({formatCurrency(allocableBalance)})
+                              </button>
+                            )}
+                          </div>
+                          <Input
+                            type="number"
+                            min="0"
+                            max={allocableBalance}
+                            step="any"
+                            placeholder={isFullyCollected ? 'Already Collected' : '0.00'}
+                            disabled={isFullyCollected}
+                            value={currentAlloc}
+                            onChange={(e) => handleManualAllocationChange(inv.id, e.target.value)}
+                            className={`font-mono text-sm font-bold text-right h-10 w-full rounded-xl ${
+                              isFullyCollected ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-white'
+                            }`}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* 2. Desktop Full Table View (Hidden on mobile, block on md+) */}
+                <div className="hidden md:block rounded-lg border border-slate-200 overflow-hidden">
+                  <div className="overflow-x-auto w-full">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-slate-50">
+                          <TableHead>Invoice #</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Issue Date</TableHead>
+                          <TableHead>Due Date</TableHead>
+                          <TableHead className="text-right">Total Invoice</TableHead>
+                          <TableHead className="text-right">Balance Due</TableHead>
+                          <TableHead className="text-right">Pending Collection</TableHead>
+                          <TableHead className="text-right w-36 sm:w-44">Allocated Amount (LKR)</TableHead>
                         </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </div>
+                      </TableHeader>
+                      <TableBody>
+                        {customerInvoices.map((inv) => {
+                          const isOverdue = inv.status === 'OVERDUE';
+                          const currentAlloc = allocations[inv.id] !== undefined ? allocations[inv.id] : '';
+                          const pendingCollection = inv.collectedAmount || 0;
+                          const allocableBalance = Math.max(0, inv.balanceAmount - pendingCollection);
+                          const isFullyCollected = allocableBalance <= 0;
+
+                          return (
+                            <TableRow key={inv.id} className={isFullyCollected ? 'bg-slate-50/60 opacity-80' : undefined}>
+                              <TableCell className="font-mono text-xs font-semibold text-primary">
+                                {inv.invoiceNumber}
+                              </TableCell>
+                              <TableCell className="text-xs">
+                                <InvoiceStatusBadge status={inv.status} />
+                              </TableCell>
+                              <TableCell className="text-xs text-slate-600 whitespace-nowrap">
+                                {formatDate(inv.issueDate)}
+                              </TableCell>
+                              <TableCell className="text-xs whitespace-nowrap">
+                                <span className={isOverdue ? 'font-bold text-rose-600' : 'text-slate-600'}>
+                                  {formatDate(inv.dueDate)} {isOverdue && '(Overdue)'}
+                                </span>
+                              </TableCell>
+                              <TableCell className="text-right font-mono text-xs text-slate-600">
+                                {formatCurrency(inv.totalAmount)}
+                              </TableCell>
+                              <TableCell className="text-right font-mono text-xs font-bold text-slate-900">
+                                {formatCurrency(inv.balanceAmount)}
+                              </TableCell>
+                              <TableCell className="text-right font-mono text-xs text-blue-600 font-medium">
+                                {pendingCollection > 0 ? formatCurrency(pendingCollection) : '—'}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <Input
+                                  type="number"
+                                  min="0"
+                                  max={allocableBalance}
+                                  step="any"
+                                  placeholder={isFullyCollected ? '0.00' : '0.00'}
+                                  disabled={isFullyCollected}
+                                  value={currentAlloc}
+                                  onChange={(e) => handleManualAllocationChange(inv.id, e.target.value)}
+                                  className={`font-mono text-xs text-right h-8 w-28 sm:w-36 ml-auto ${
+                                    isFullyCollected ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : ''
+                                  }`}
+                                />
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+              </>
             )}
 
             {/* Allocation Summary Footer */}

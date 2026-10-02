@@ -261,6 +261,26 @@ describe('Phase 7 — Invoice Domain & Billing Integration', () => {
       expect(status).toBe('OVERDUE');
     });
 
+    it('calculates COLLECTED when sales rep collects full invoice total before verification', () => {
+      const status = calculateInvoiceStatus(50000, 0, '2026-10-01', undefined, 50000);
+      expect(status).toBe('COLLECTED');
+    });
+
+    it('calculates PARTIALLY_COLLECTED when sales rep collects only part of invoice total', () => {
+      const status = calculateInvoiceStatus(50000, 0, '2026-10-01', undefined, 20000);
+      expect(status).toBe('PARTIALLY_COLLECTED');
+    });
+
+    it('calculates COLLECTED when prior verified paidAmount plus new collectedAmount equals total', () => {
+      const status = calculateInvoiceStatus(50000, 20000, '2026-10-01', undefined, 30000);
+      expect(status).toBe('COLLECTED');
+    });
+
+    it('calculates PAID when Head Office has verified and recorded full payment regardless of collectedAmount', () => {
+      const status = calculateInvoiceStatus(50000, 50000, '2026-10-01', undefined, 0);
+      expect(status).toBe('PAID');
+    });
+
     it('checks past due date correctly with isPastDueDate helper', () => {
       const reference = new Date('2026-09-24T12:00:00Z');
       expect(isPastDueDate('2026-09-20', reference)).toBe(true);

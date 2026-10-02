@@ -89,9 +89,9 @@ export function AppearanceSettings() {
             <span className="text-slate-300">/</span>
             <span>Settings</span>
             <span className="text-slate-300">/</span>
-            <span className="text-primary font-bold">Appearance</span>
+            <span className="text-primary font-semibold">Appearance</span>
           </div>
-          <h2 className="text-xl font-black text-slate-900 tracking-tight flex items-center gap-2">
+          <h2 className="text-xl font-semibold text-slate-900 tracking-tight flex items-center gap-2">
             <Palette className="h-5 w-5 text-primary" />
             Primary Color System
           </h2>
@@ -111,12 +111,12 @@ export function AppearanceSettings() {
               <CheckCircle2 className="h-5 w-5" />
             </div>
             <div className="flex-1 min-w-0">
-              <h4 className="text-xs font-extrabold text-emerald-950">
+              <h4 className="text-xs font-semibold text-emerald-950">
                 Primary Color Successfully Updated & Saved!
               </h4>
               <p className="text-xs text-emerald-700 mt-0.5">
                 The global enterprise theme is now active with{' '}
-                <span className="font-bold underline">{lastSavedColorName}</span> ({currentColor.hex}
+                <span className="font-semibold underline">{lastSavedColorName}</span> ({currentColor.hex}
                 ). All navigation, primary buttons, badges, links, and input highlights reflect this
                 change.
               </p>
@@ -136,7 +136,7 @@ export function AppearanceSettings() {
         <Card className="lg:col-span-7 bg-white border border-slate-200/90 rounded-2xl shadow-sm p-6">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h3 className="text-sm font-bold text-slate-800 tracking-tight flex items-center gap-2">
+              <h3 className="text-sm font-semibold text-slate-800 tracking-tight flex items-center gap-2">
                 <Sliders className="h-4 w-4 text-slate-500" />
                 Select Enterprise Primary Color
               </h3>
@@ -145,7 +145,7 @@ export function AppearanceSettings() {
                 be active at a time.
               </p>
             </div>
-            <Badge variant="outline" className="text-[10px] uppercase font-mono">
+            <Badge variant="outline" className="text-xs uppercase font-mono">
               Director Only
             </Badge>
           </div>
@@ -185,14 +185,14 @@ export function AppearanceSettings() {
                     {/* Color Name & Hex Code Display */}
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-extrabold text-slate-900">{color.name}</span>
+                        <span className="text-sm font-semibold text-slate-900">{color.name}</span>
                         {isPersisted && (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
+                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-xs font-semibold text-emerald-700">
                             Active
                           </span>
                         )}
                         {color.hex === '#6AAED3' && (
-                          <span className="text-[10px] font-semibold text-slate-400">
+                          <span className="text-xs font-medium text-slate-400">
                             (Default)
                           </span>
                         )}
