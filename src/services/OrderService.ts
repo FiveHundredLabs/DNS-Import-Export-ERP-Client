@@ -973,6 +973,22 @@ export class OrderService {
 
     return order;
   }
+
+  /** Alias used by inventory pages: getOrders with status array filter */
+  async getOrders(filters?: { status?: string | string[] }): Promise<SalesOrder[]> {
+    const statusFilter = Array.isArray(filters?.status) ? filters!.status[0] : filters?.status;
+    const result = await this.listOrders(
+      statusFilter && statusFilter !== 'ALL' ? { status: statusFilter as any } : {}
+    );
+    if (!filters?.status || filters.status === 'ALL') return result.data;
+    const statuses = Array.isArray(filters.status) ? filters.status : [filters.status];
+    return result.data.filter((o) => statuses.includes(o.status));
+  }
+
+  /** Alias used by DispatchPage: advance order to the specified status string */
+  async advanceOrderStatus(orderId: string, nextStatus: string, user: User): Promise<SalesOrder> {
+    return this.updateFulfillmentStatus(orderId, nextStatus as OrderStatus, user);
+  }
 }
 
 export const orderService = new OrderService();

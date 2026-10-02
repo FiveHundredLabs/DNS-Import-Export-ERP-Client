@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
 import { Input } from '../../components/ui/input';
@@ -16,7 +16,8 @@ export function StockMovementsPage() {
 
   const filteredMovements = useMemo(() => {
     return (movements || []).filter((m: any) => {
-      if (typeFilter !== 'ALL' && m.type !== typeFilter) return false;
+      const mType = m.movementType ?? m.type;
+      if (typeFilter !== 'ALL' && mType !== typeFilter) return false;
       
       const mDate = new Date(m.timestamp);
       if (dateFrom) {
@@ -114,9 +115,9 @@ export function StockMovementsPage() {
                   return (
                     <TableRow key={m.id}>
                       <TableCell className="whitespace-nowrap">{formatDate(m.timestamp)}</TableCell>
-                      <TableCell>
-                        <Badge className={`${getMovementColor(m.type)} text-white border-0`}>
-                          {m.type.replace(/_/g, ' ')}
+                    <TableCell>
+                        <Badge className={`${getMovementColor(m.movementType ?? m.type)} text-white border-0`}>
+                          {(m.movementType ?? m.type)?.replace(/_/g, ' ')}
                         </Badge>
                       </TableCell>
                       <TableCell>{product?.name || m.productId}</TableCell>

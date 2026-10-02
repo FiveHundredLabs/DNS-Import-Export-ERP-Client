@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
@@ -6,8 +6,9 @@ import { Input } from '../../components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
 import { Skeleton } from '../../components/ui/skeleton';
-import { inventoryService } from '../../services/inventoryService';
-import { authService } from '../../services/authService';
+import { inventoryService } from '../../services/InventoryService';
+import { useAuth } from '../../hooks/useAuth';
+import { MOCK_PRODUCTS } from '../../mock/mockProducts';
 import { formatDate } from '../../utils/formatters';
 import { toast } from 'sonner';
 
@@ -21,16 +22,19 @@ export function TransferListPage() {
   const [source, setSource] = useState('WAREHOUSE');
   const [target, setTarget] = useState('SHOWROOM');
   const [productId, setProductId] = useState('');
+  const [productSearch, setProductSearch] = useState('');
+  const [showDropdown, setShowDropdown] = useState(false);
   const [quantity, setQuantity] = useState('');
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const user = authService.getCurrentUser();
+  const { user } = useAuth();
 
   const fetchTransfers = async () => {
     try {
       setLoading(true);
       const movements = await inventoryService.getStockMovements();
       // Derive transfers from TRANSFER_OUT movements
-      const transferRecords = movements.filter(m => m.movementType === 'TRANSFER_OUT' || m.type === 'TRANSFER_OUT').map((m: any) => ({
+      const transferRecords = movements.filter((m: any) => m.movementType === 'TRANSFER_OUT' || m.type === 'TRANSFER_OUT').map((m: any) => ({
         id: m.id,
         fromLocation: m.sourceLocation || m.fromLocationId || 'WAREHOUSE',
         toLocation: m.targetLocation || m.toLocationId || 'SHOWROOM', // To location might be on the corresponding TRANSFER_IN, assuming SHOWROOM
@@ -48,6 +52,17 @@ export function TransferListPage() {
 
   useEffect(() => {
     fetchTransfers();
+  }, []);
+
+  // Close dropdown when clicking outside the dropdown container
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   const handleExecuteTransfer = async () => {
@@ -72,6 +87,7 @@ export function TransferListPage() {
       toast.success('Stock transferred successfully');
       setIsModalOpen(false);
       setProductId('');
+      setProductSearch('');
       setQuantity('');
       fetchTransfers();
     } catch (err: any) {
@@ -160,14 +176,56 @@ export function TransferListPage() {
                 <option value="SHOWROOM">Showroom</option>
               </select>
             </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <label className="text-right text-sm font-medium">Product ID</label>
-              <Input 
-                value={productId} 
-                onChange={e => setProductId(e.target.value)} 
-                className="col-span-3"
-                placeholder="e.g. p1"
-              />
+            <div className="grid grid-cols-4 items-start gap-4">
+              <label className="text-right text-sm font-medium pt-2">Product</label>
+              <div className="col-span-3 relative" ref={dropdownRef}>
+                <Input
+                  value={productSearch}
+                  onChange={e => {
+                    setProductSearch(e.target.value);
+                    setProductId('');
+                    setShowDropdown(true);
+                  }}
+                  onFocus={() => setShowDropdown(true)}
+                  placeholder="Search product name or SKU..."
+                  autoComplete="off"
+                />
+                {productId && !showDropdown && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Selected: <span className="font-medium text-foreground">{productSearch}</span>
+                  </p>
+                )}
+                {showDropdown && productSearch && (
+                  <div className="absolute z-50 w-full mt-1 bg-background border border-input rounded-md shadow-md max-h-48 overflow-y-auto">
+                    {MOCK_PRODUCTS.filter(p =>
+                      p.name.toLowerCase().includes(productSearch.toLowerCase()) ||
+                      p.sku.toLowerCase().includes(productSearch.toLowerCase())
+                    ).length === 0 ? (
+                      <div className="px-3 py-2 text-sm text-muted-foreground">No products found</div>
+                    ) : (
+                      MOCK_PRODUCTS.filter(p =>
+                        p.name.toLowerCase().includes(productSearch.toLowerCase()) ||
+                        p.sku.toLowerCase().includes(productSearch.toLowerCase())
+                      ).map(p => (
+                        <button
+                          key={p.id}
+                          type="button"
+                          className="w-full text-left px-3 py-2 text-sm hover:bg-muted transition-colors"
+                          onMouseDown={e => {
+                            e.preventDefault();
+                            setProductId(p.id);
+                            setProductSearch(`${p.name} (${p.sku})`);
+                            setShowDropdown(false);
+                          }}
+                        >
+                          <span className="font-medium">{p.name}</span>
+                          <span className="text-muted-foreground ml-2 text-xs">{p.sku}</span>
+                        </button>
+                      ))
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <label className="text-right text-sm font-medium">Quantity</label>
@@ -181,7 +239,7 @@ export function TransferListPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsModalOpen(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => { setIsModalOpen(false); setProductSearch(''); setProductId(''); setQuantity(''); }}>Cancel</Button>
             <Button onClick={handleExecuteTransfer} disabled={processing}>
               {processing ? 'Transferring...' : 'Execute Transfer'}
             </Button>

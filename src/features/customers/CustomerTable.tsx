@@ -4,21 +4,26 @@ import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import { formatCurrency } from '../../utils/formatters';
 import { Phone, MessageSquare, ChevronRight, MapPin, User, AlertCircle, ArrowUpRight } from 'lucide-react';
+import { useAuth } from '../../hooks/useAuth';
 
 interface CustomerTableProps {
   customers: Customer[];
   onView: (customer: Customer) => void;
   onEdit?: (customer: Customer) => void;
   onReviewCommercials?: (customer: Customer) => void;
+  onDelete?: (customer: Customer) => void;
 }
 
 export function CustomerTable({
   customers,
   onView,
+  onEdit,
+  onReviewCommercials,
+  onDelete,
 }: CustomerTableProps) {
-  const cleanPhoneForWhatsApp = (phone: string) => {
-    return phone.replace(/[^0-9]/g, '');
-  };
+  const { role } = useAuth();
+  const canCommercialReview =
+    role === 'SALES_MANAGER' || role === 'MANAGER' || role === 'DIRECTOR';
 
   return (
     <div>
@@ -49,6 +54,21 @@ export function CustomerTable({
                       <Badge variant="warning" className="text-[10px] py-0">
                         {c.loyaltyTier}
                       </Badge>
+                    )}
+                    {onDelete && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => {
+                          if(window.confirm('Are you sure you want to delete this customer?')) {
+                            onDelete(c);
+                          }
+                        }}
+                        title="Delete Customer"
+                        className="hover:text-rose-600"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     )}
                   </div>
                   <h3 className="text-sm font-bold text-slate-900 mt-1 truncate">

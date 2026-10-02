@@ -225,6 +225,13 @@ export function canAccessRoute(role: UserRole, path: string): boolean {
   if (path.startsWith('/audit')) {
     return hasPermission(role, 'audit:view');
   }
+  if (path.startsWith('/areas') || path.startsWith('/teams')) {
+    return (
+      role === 'DIRECTOR' ||
+      role === 'MANAGER' ||
+      role === 'SALES_MANAGER'
+    );
+  }
   if (path.startsWith('/settings')) {
     return role === 'DIRECTOR' || role === 'MANAGER';
   }

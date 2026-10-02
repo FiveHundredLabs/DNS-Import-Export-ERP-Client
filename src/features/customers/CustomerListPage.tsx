@@ -23,6 +23,8 @@ export function CustomerListPage() {
   const [reviewModalOpen, setReviewModalOpen] = useState(false);
   const [selectedCustomerForReview, setSelectedCustomerForReview] = useState<Customer | null>(null);
 
+  const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
+
   const initialFilters = useMemo(() => {
     return {
       page: 1,
@@ -38,6 +40,8 @@ export function CustomerListPage() {
     error,
     refetch,
     createCustomer,
+    updateCustomer,
+    deleteCustomer,
     setCommercialTerms,
     setFilters,
   } = useCustomers(initialFilters);
@@ -96,7 +100,10 @@ export function CustomerListPage() {
             <RefreshCw className="h-3.5 w-3.5" /> Refresh
           </Button>
           {canCreate && (
-            <Button size="sm" onClick={() => setCreateModalOpen(true)} className="gap-1.5">
+            <Button size="sm" onClick={() => {
+              setEditingCustomer(null);
+              setCreateModalOpen(true);
+            }} className="gap-1.5">
               <Plus className="h-4 w-4" /> Register Customer
             </Button>
           )}
@@ -140,12 +147,20 @@ export function CustomerListPage() {
           title="No customers found"
           description="Try adjusting your search criteria or register a new customer."
           actionLabel={canCreate ? 'Register Customer' : undefined}
-          onAction={() => setCreateModalOpen(true)}
+          onAction={() => {
+            setEditingCustomer(null);
+            setCreateModalOpen(true);
+          }}
         />
       ) : (
         <CustomerTable
           customers={customers}
           onView={(c) => navigate(`/customers/${c.id}`)}
+          onEdit={(c) => {
+            setEditingCustomer(c);
+            setCreateModalOpen(true);
+          }}
+          onDelete={(c) => deleteCustomer(c.id)}
           onReviewCommercials={(c) => {
             setSelectedCustomerForReview(c);
             setReviewModalOpen(true);
@@ -156,10 +171,17 @@ export function CustomerListPage() {
       {/* Area Manager Customer Creation Modal */}
       <CustomerCreateModal
         open={createModalOpen}
-        onOpenChange={setCreateModalOpen}
+        onOpenChange={(open) => {
+          setCreateModalOpen(open);
+          if (!open) setEditingCustomer(null);
+        }}
         onCreate={async (data) => {
           await createCustomer(data);
         }}
+        onUpdate={async (id, data) => {
+          await updateCustomer(id, data);
+        }}
+        editingCustomer={editingCustomer}
       />
 
       {/* Sales Manager Commercial Terms Setup Modal */}

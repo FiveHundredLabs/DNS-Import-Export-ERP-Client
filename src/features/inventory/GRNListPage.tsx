@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
@@ -89,7 +89,7 @@ export function GRNListPage() {
               </TableHeader>
               <TableBody>
                 {filteredGRNs.map((g: any) => {
-                  const totalValue = g.items?.reduce((acc: number, item: any) => acc + (item.unitCost * item.receivedQuantity), 0) || 0;
+                  const totalValue = g.items?.reduce((acc: number, item: any) => acc + ((item.unitCostSnapshot ?? item.unitCost ?? 0) * (item.receivedQuantity - (item.damagedQuantity ?? 0))), 0) || 0;
                   return (
                     <TableRow
                       key={g.id}
