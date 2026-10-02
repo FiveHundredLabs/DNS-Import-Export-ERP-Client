@@ -1,45 +1,344 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
-    --background: 210 40% 98%;
-    --foreground: 222.2 84% 4.9%;
+    /* One Centralized Global Primary Color & Derived Theme Variables */
+    --primary: #6AAED3;
+    --primary-hover: #559EC7;
+    --primary-active: #468CB3;
+    --primary-foreground: #FFFFFF;
+    --primary-light: #F0F7FB;
+    --primary-border: #BEE0F0;
+    --primary-color: var(--primary);
+    --primary-text: #24658B;
+    --primary-ring: rgba(106, 174, 211, 0.35);
 
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --background: 204 27% 97%; /* #F4F7F9 */
+    --foreground: 222.2 47.4% 11.2%; /* #1E293B */
+
+    --card: 0 0% 100%; /* #FFFFFF */
+    --card-foreground: 222.2 47.4% 11.2%; /* #1E293B */
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-
-    --primary: 238.7 83.5% 58.6%;
-    --primary-foreground: 210 40% 98%;
+    --popover-foreground: 222.2 47.4% 11.2%;
 
     --secondary: 210 40% 96.1%;
     --secondary-foreground: 222.2 47.4% 11.2%;
 
     --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted-foreground: 215.4 16.3% 46.9%; /* #64748B */
 
-    --accent: 210 40% 96.1%;
+    --accent: 204 27% 97%;
     --accent-foreground: 222.2 47.4% 11.2%;
 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 214.3 31.8% 91.4%;
+    --border: 214.3 31.8% 91.4%; /* #E2E8F0 */
     --input: 214.3 31.8% 91.4%;
-    --ring: 238.7 83.5% 58.6%;
+    --ring: var(--primary-ring);
 
-    --radius: 0.5rem;
+    --radius: 1rem;
   }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --card: 222.2 84% 6.5%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 84% 6.5%;
+    --popover-foreground: 210 40% 98%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+  }
+}
+
+html {
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue',
-    Arial, sans-serif;
+  background-color: #F4F7F9;
+  color: #1E293B;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-size: 0.875rem; /* 14px */
+  line-height: 1.5;   /* 1.5 - 1.6 body line height */
+  letter-spacing: normal;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
+
+/* Tabular figures for accounting, financial reports, currencies, and inventory data */
+table,
+.tabular-nums,
+[data-tabular],
+.financial-amount,
+.font-mono {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+}
+
+/* Numeric inputs should always maintain tabular figures */
+input[type="number"],
+input[type="tel"],
+input[inputmode="numeric"],
+input[inputmode="decimal"] {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+}
+
+/* Enterprise form controls typography */
+label {
+  display: inline-block;
+  font-size: 0.8125rem; /* 13px */
+  font-weight: 500;     /* 500 weight for labels */
+  line-height: 1.25rem;
+  color: #334155;
+}
+
+input,
+select,
+textarea {
+  font-family: inherit;
+  font-size: 0.875rem; /* 14px */
+  font-weight: 400;
+  line-height: 1.45;
+  letter-spacing: normal;
+}
+
+input::placeholder,
+textarea::placeholder {
+  font-size: 0.84375rem; /* 13.5px */
+  font-weight: 400;
+  color: #94A3B8;
+}
+
+/* Refined typography scale and hierarchy for enterprise headings */
+h1 {
+  font-size: 1.5rem; /* 24px */
+  font-weight: 600;  /* 600 weight */
+  line-height: 1.25; /* 1.2 - 1.3 */
+  letter-spacing: -0.015em;
+  text-rendering: optimizeLegibility;
+}
+
+h2 {
+  font-size: 1.125rem; /* 18px */
+  font-weight: 600;   /* 600 weight */
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+  text-rendering: optimizeLegibility;
+}
+
+h3 {
+  font-size: 1rem;    /* 16px */
+  font-weight: 600;   /* 600 weight */
+  line-height: 1.35;
+  letter-spacing: normal;
+  text-rendering: optimizeLegibility;
+}
+
+h4, h5, h6 {
+  letter-spacing: normal;
+  text-rendering: optimizeLegibility;
+}
+
+/* Tables typography defaults - Fast scannability */
+th {
+  font-size: 0.78125rem; /* 12.5px */
+  font-weight: 600;
+  line-height: 1.35;
+  text-transform: none; /* sentence/title casing, avoiding uppercase table content */
+  letter-spacing: normal;
+}
+
+td {
+  font-size: 0.84375rem; /* 13.5px */
+  font-weight: 400;
+  line-height: 1.45;
+}
+
+/* Monospace SKUs, barcodes, transaction hashes, and serial numbers */
+code, kbd, samp, pre, .font-mono {
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+@layer utilities {
+  /* Prevent tiny unreadable microcopy on badges, labels, and mobile (No 10px) */
+  .text-\[10px\] {
+    font-size: 0.71875rem; /* 11.5px minimum readable size */
+    line-height: 1rem;
+    letter-spacing: normal;
+  }
+
+  .text-\[11px\] {
+    font-size: 0.75rem; /* 12px comfortable readable size */
+    line-height: 1.125rem;
+    letter-spacing: normal;
+  }
+
+  /* Centralized Typography Scale Reusable Classes */
+  .erp-page-title {
+    font-size: 1.5rem; /* 24px */
+    font-weight: 600;
+    line-height: 1.25;
+    letter-spacing: -0.015em;
+  }
+
+  .erp-section-title {
+    font-size: 1.125rem; /* 18px */
+    font-weight: 600;
+    line-height: 1.3;
+    letter-spacing: -0.01em;
+  }
+
+  .erp-card-title {
+    font-size: 1rem; /* 16px */
+    font-weight: 600;
+    line-height: 1.35;
+  }
+
+  .erp-body-text {
+    font-size: 0.875rem; /* 14px */
+    font-weight: 400;
+    line-height: 1.5;
+  }
+
+  .erp-secondary-text {
+    font-size: 0.8125rem; /* 13px */
+    font-weight: 400;
+    line-height: 1.45;
+  }
+
+  .erp-table-text {
+    font-size: 0.84375rem; /* 13.5px */
+    font-weight: 400;
+    line-height: 1.45;
+  }
+
+  .erp-table-header {
+    font-size: 0.78125rem; /* 12.5px */
+    font-weight: 600;
+    line-height: 1.35;
+  }
+
+  .erp-form-label {
+    font-size: 0.8125rem; /* 13px */
+    font-weight: 500;
+    line-height: 1.35;
+  }
+
+  .erp-input-text {
+    font-size: 0.875rem; /* 14px */
+    font-weight: 400;
+    line-height: 1.45;
+  }
+
+  .erp-btn-text {
+    font-size: 0.84375rem; /* 13.5px */
+    font-weight: 500;
+    line-height: 1.35;
+  }
+
+  .erp-helper-text {
+    font-size: 0.75rem; /* 12px */
+    font-weight: 400;
+    line-height: 1.4;
+  }
+
+  .erp-kpi-number {
+    font-size: 1.75rem; /* 28px */
+    font-weight: 600;
+    line-height: 1.2;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .erp-financial-amount {
+    font-size: 1.375rem; /* 22px */
+    font-weight: 600;
+    line-height: 1.25;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .erp-nav-text {
+    font-size: 0.84375rem; /* 13.5px */
+    font-weight: 500;
+    line-height: 1.4;
+  }
+
+  .erp-badge-text {
+    font-size: 0.71875rem; /* 11.5px */
+    font-weight: 500;
+    line-height: 1.3;
+  }
+}
+
+/* Cross-browser scrollbar hiding while preserving scroll functionality */
+html,
+body,
+* {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* Legacy Edge */
+}
+
+::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+  width: 0px;
+  height: 0px;
+}
+
+/* Form control accents with dynamic primary color */
+input[type="checkbox"],
+input[type="radio"],
+input[type="range"] {
+  accent-color: var(--primary-color);
+}
+
+::selection {
+  background-color: var(--primary-light);
+  color: var(--primary-text);
+}
+
+/* Dynamic primary focus & interactive form highlights */
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  border-color: var(--primary-color);
+  outline: none;
+}
+
+/* Dynamic Primary Accent for Progress and Range Bars */
+progress::-webkit-progress-value {
+  background-color: var(--primary-color);
+}
+progress::-moz-progress-bar {
+  background-color: var(--primary-color);
+}
+
+/* Stepper and interactive toggle switches */
+[data-state="checked"],
+[aria-checked="true"] {
+  background-color: var(--primary-color);
+  border-color: var(--primary-color);
+}
+
+

@@ -61,6 +61,16 @@ export class GRNService {
     await this.grnRepo.save(grn);
   }
 
+  async getGRNById(id: string): Promise<GRN | null> {
+    return this.grnRepo.getById(id);
+  }
+
+  async createGRN(grn: GRN, _user?: any): Promise<GRN> {
+    grn.status = 'DRAFT';
+    await this.grnRepo.save(grn);
+    return grn;
+  }
+
   async getGRNs(filters?: any): Promise<GRN[]> {
     return this.grnRepo.getAll();
   }

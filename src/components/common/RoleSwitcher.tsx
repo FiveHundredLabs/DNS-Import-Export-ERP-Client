@@ -18,7 +18,7 @@ export function RoleSwitcher() {
 
   return (
     <div className="flex items-center gap-2 bg-slate-900 text-white px-3 py-1.5 rounded-lg border border-slate-700 shadow-sm text-xs">
-      <Users className="h-3.5 w-3.5 text-indigo-400" />
+      <Users className="h-3.5 w-3.5 text-primary" />
       <span className="font-medium text-slate-300 hidden sm:inline">Role View:</span>
       <select
         value={currentUser.role}

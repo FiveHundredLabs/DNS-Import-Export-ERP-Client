@@ -319,7 +319,7 @@ export function ShowroomPOSTerminal() {
       <header className="flex flex-wrap items-center justify-between border-b border-slate-200 bg-white px-5 py-2.5 shadow-xs">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
-            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-600 text-white shadow-xs">
+            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-white shadow-xs">
               <Store className="h-5 w-5" />
             </span>
             <div>
@@ -335,7 +335,7 @@ export function ShowroomPOSTerminal() {
               to="/pos"
               className={({ isActive }) =>
                 `rounded-md px-3 py-1.5 transition-colors ${
-                  isActive ? 'bg-white text-indigo-700 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                  isActive ? 'bg-white text-primary-text shadow-xs' : 'text-slate-600 hover:text-slate-900'
                 }`
               }
             >
@@ -345,7 +345,7 @@ export function ShowroomPOSTerminal() {
               to="/pos/transactions"
               className={({ isActive }) =>
                 `rounded-md px-3 py-1.5 transition-colors ${
-                  isActive ? 'bg-white text-indigo-700 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                  isActive ? 'bg-white text-primary-text shadow-xs' : 'text-slate-600 hover:text-slate-900'
                 }`
               }
             >
@@ -355,7 +355,7 @@ export function ShowroomPOSTerminal() {
               to="/pos/sessions"
               className={({ isActive }) =>
                 `rounded-md px-3 py-1.5 transition-colors ${
-                  isActive ? 'bg-white text-indigo-700 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                  isActive ? 'bg-white text-primary-text shadow-xs' : 'text-slate-600 hover:text-slate-900'
                 }`
               }
             >
@@ -370,17 +370,17 @@ export function ShowroomPOSTerminal() {
             <div className="flex items-center gap-3">
               <div className="hidden md:flex items-center gap-3.5 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-1.5 text-xs">
                 <div>
-                  <span className="text-[10px] text-slate-400 block uppercase font-bold">Cashier</span>
-                  <span className="font-bold text-slate-800">{activeSession.cashierName}</span>
+                  <span className="text-xs text-slate-500 block uppercase font-semibold">Cashier</span>
+                  <span className="font-semibold text-slate-800">{activeSession.cashierName}</span>
                 </div>
                 <div className="h-6 w-px bg-slate-200" />
                 <div>
-                  <span className="text-[10px] text-slate-400 block uppercase font-bold">Shift #</span>
-                  <span className="font-mono font-bold text-indigo-600">{activeSession.sessionNumber}</span>
+                  <span className="text-xs text-slate-500 block uppercase font-semibold">Shift #</span>
+                  <span className="tabular-nums font-semibold text-primary">{activeSession.sessionNumber}</span>
                 </div>
                 <div className="h-6 w-px bg-slate-200" />
                 <div>
-                  <span className="text-[10px] text-slate-400 block uppercase font-bold">Elapsed</span>
+                  <span className="text-xs text-slate-500 block uppercase font-semibold">Elapsed</span>
                   <span className="font-semibold text-slate-700 flex items-center gap-1">
                     <Clock className="h-3 w-3 text-slate-400" />
                     {elapsedTime || '< 1m'}
@@ -388,18 +388,18 @@ export function ShowroomPOSTerminal() {
                 </div>
                 <div className="h-6 w-px bg-slate-200" />
                 <div>
-                  <span className="text-[10px] text-slate-400 block uppercase font-bold">Opening Float</span>
-                  <span className="font-semibold text-slate-700">{formatCurrency(activeSession.openingBalance)}</span>
+                  <span className="text-xs text-slate-500 block uppercase font-semibold">Opening Float</span>
+                  <span className="font-semibold tabular-nums text-slate-700">{formatCurrency(activeSession.openingBalance)}</span>
                 </div>
                 <div className="h-6 w-px bg-slate-200" />
                 <div>
-                  <span className="text-[10px] text-slate-400 block uppercase font-bold">Cash Sales</span>
-                  <span className="font-bold text-emerald-600">{formatCurrency(sessionCashSales)}</span>
+                  <span className="text-xs text-slate-500 block uppercase font-semibold">Cash Sales</span>
+                  <span className="font-semibold tabular-nums text-emerald-600">{formatCurrency(sessionCashSales)}</span>
                 </div>
                 <div className="h-6 w-px bg-slate-200" />
                 <div>
-                  <span className="text-[10px] text-slate-400 block uppercase font-bold">Total Sales</span>
-                  <span className="font-semibold text-slate-700">{formatCurrency(activeSession.totalSales)}</span>
+                  <span className="text-xs text-slate-500 block font-medium">Total Sales</span>
+                  <span className="font-semibold text-slate-700 tabular-nums">{formatCurrency(activeSession.totalSales)}</span>
                 </div>
               </div>
 
@@ -407,16 +407,16 @@ export function ShowroomPOSTerminal() {
                 variant="outline"
                 size="sm"
                 onClick={() => setIsCashMovementModalOpen(true)}
-                className="flex items-center gap-1.5 text-xs text-slate-700 hover:bg-slate-50"
+                className="flex items-center gap-1.5 text-xs text-slate-700 hover:bg-slate-50 font-medium"
               >
-                <DollarSign className="h-3.5 w-3.5 text-indigo-600" />
+                <DollarSign className="h-3.5 w-3.5 text-primary" />
                 Cash In/Out
               </Button>
 
               <Button
                 size="sm"
                 onClick={() => setIsCloseShiftModalOpen(true)}
-                className="flex items-center gap-1.5 text-xs bg-slate-900 hover:bg-slate-800 text-white"
+                className="flex items-center gap-1.5 text-xs bg-slate-900 hover:bg-slate-800 text-white font-medium"
               >
                 <Lock className="h-3.5 w-3.5" />
                 Close Shift
@@ -424,14 +424,14 @@ export function ShowroomPOSTerminal() {
             </div>
           ) : (
             <div className="flex items-center gap-3">
-              <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-800 flex items-center gap-1.5">
+              <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-800 flex items-center gap-1.5">
                 <AlertCircle className="h-3.5 w-3.5" />
                 Shift Session Closed
               </span>
               <Button
                 size="sm"
                 onClick={() => setIsOpenShiftModalOpen(true)}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white flex items-center gap-1.5 font-bold shadow-xs"
+                className="bg-emerald-600 hover:bg-emerald-700 text-white flex items-center gap-1.5 font-medium shadow-xs"
               >
                 <Play className="h-3.5 w-3.5" />
                 Open Shift
@@ -475,7 +475,7 @@ export function ShowroomPOSTerminal() {
                   className="pl-9 text-xs h-9 font-medium"
                 />
               </div>
-              <Button type="submit" size="sm" className="bg-indigo-600 hover:bg-indigo-700 text-white h-9 px-3 text-xs shrink-0">
+              <Button type="submit" size="sm" className="bg-primary hover:bg-primary-hover text-primary-foreground h-9 px-3 text-xs shrink-0 font-medium">
                 Scan / Add
               </Button>
               <Button
@@ -483,7 +483,7 @@ export function ShowroomPOSTerminal() {
                 variant="outline"
                 size="sm"
                 onClick={() => setIsProductSearchModalOpen(true)}
-                className="h-9 px-3 text-xs shrink-0 flex items-center gap-1 border-indigo-200 text-indigo-700 hover:bg-indigo-50"
+                className="h-9 px-3 text-xs shrink-0 flex items-center gap-1 border-primary-border text-primary-text hover:bg-primary-light font-medium"
               >
                 <PackageSearch className="h-3.5 w-3.5" />
                 Search Master
@@ -493,8 +493,8 @@ export function ShowroomPOSTerminal() {
             {/* Customer Master Selector Badge / Button */}
             <div className="md:col-span-5 flex items-center justify-between border-l border-slate-200 pl-3">
               <div className="overflow-hidden">
-                <span className="text-[10px] uppercase font-bold text-slate-400 block">Customer</span>
-                <span className="text-xs font-bold text-slate-800 truncate block">
+                <span className="text-xs font-medium text-slate-500 block">Customer</span>
+                <span className="text-xs font-semibold text-slate-800 truncate block">
                   {selectedCustomer ? `${selectedCustomer.name} (${selectedCustomer.code})` : 'Walk-in Retail Customer'}
                 </span>
               </div>
@@ -502,9 +502,9 @@ export function ShowroomPOSTerminal() {
                 variant="outline"
                 size="sm"
                 onClick={() => setIsCustomerModalOpen(true)}
-                className="h-8 text-xs shrink-0 ml-2"
+                className="h-8 text-xs shrink-0 ml-2 font-medium"
               >
-                <UserCheck className="h-3.5 w-3.5 mr-1 text-indigo-600" />
+                <UserCheck className="h-3.5 w-3.5 mr-1 text-primary" />
                 {selectedCustomer ? 'Change' : 'Assign'}
               </Button>
             </div>
@@ -523,7 +523,7 @@ export function ShowroomPOSTerminal() {
                 <button
                   key={c.id}
                   onClick={() => setSelectedCategory(c.id)}
-                  className={`rounded-lg px-3 py-1.5 font-bold transition-all text-xs whitespace-nowrap ${
+                  className={`rounded-lg px-3 py-1.5 font-medium transition-all text-xs whitespace-nowrap ${
                     selectedCategory === c.id
                       ? 'bg-slate-900 text-white shadow-xs'
                       : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
@@ -574,16 +574,16 @@ export function ShowroomPOSTerminal() {
                       className={`flex flex-col justify-between rounded-2xl border p-3.5 text-left transition-all relative ${
                         isOutOfStock
                           ? 'border-slate-200 bg-slate-100/60 opacity-60 cursor-not-allowed'
-                          : 'border-slate-200 bg-white hover:border-indigo-500 hover:shadow-md cursor-pointer'
+                          : 'border-slate-200 bg-white hover:border-primary hover:shadow-md cursor-pointer'
                       }`}
                     >
                       <div>
                         <div className="flex items-center justify-between mb-1">
-                          <span className="font-mono text-[10px] text-slate-400 uppercase tracking-wider">
+                          <span className="font-mono text-xs text-slate-400">
                             {p.sku}
                           </span>
                           <span
-                            className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                            className={`rounded-full px-2 py-0.5 text-xs font-medium ${
                               stock > 10
                                 ? 'bg-emerald-100 text-emerald-800'
                                 : stock > 0
@@ -594,19 +594,19 @@ export function ShowroomPOSTerminal() {
                             {stock > 0 ? `${stock} in Showroom` : 'Out of Stock'}
                           </span>
                         </div>
-                        <h4 className="text-xs font-bold text-slate-900 line-clamp-2 leading-snug">
+                        <h4 className="text-xs font-semibold text-slate-900 line-clamp-2 leading-snug">
                           {p.name}
                         </h4>
                       </div>
 
                       <div className="mt-3 flex items-end justify-between border-t border-slate-100 pt-2">
                         <div>
-                          <span className="text-[10px] text-slate-400 block">Unit Price</span>
-                          <span className="text-sm font-extrabold text-slate-900">
+                          <span className="text-xs text-slate-400 block font-medium">Unit Price</span>
+                          <span className="text-sm font-semibold text-slate-900 tabular-nums">
                             {formatCurrency(p.pricing.currentSellingPrice)}
                           </span>
                         </div>
-                        <span className="rounded-lg bg-indigo-50 p-1.5 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white">
+                        <span className="rounded-lg bg-primary-light p-1.5 text-primary group-hover:bg-primary group-hover:text-white">
                           <Plus className="h-4 w-4" />
                         </span>
                       </div>
@@ -623,10 +623,10 @@ export function ShowroomPOSTerminal() {
           {/* Cart Header */}
           <div className="flex items-center justify-between border-b border-slate-200 px-5 py-3.5">
             <div className="flex items-center gap-2">
-              <ShoppingCart className="h-5 w-5 text-indigo-600" />
-              <h2 className="text-sm font-bold text-slate-900">Current Order Cart</h2>
+              <ShoppingCart className="h-5 w-5 text-primary" />
+              <h2 className="text-sm font-semibold text-slate-900">Current Order Cart</h2>
             </div>
-            <span className="rounded-full bg-indigo-100 px-2.5 py-0.5 text-xs font-bold text-indigo-700">
+            <span className="rounded-full bg-primary-light px-2.5 py-0.5 text-xs font-medium text-primary-text">
               {cart.reduce((sum, i) => sum + i.quantity, 0)} items
             </span>
           </div>
@@ -636,7 +636,7 @@ export function ShowroomPOSTerminal() {
             {cart.length === 0 ? (
               <div className="flex h-full flex-col items-center justify-center p-6 text-center text-slate-400">
                 <ShoppingCart className="h-12 w-12 text-slate-200 mb-2" />
-                <p className="text-sm font-bold text-slate-600">Cart is empty</p>
+                <p className="text-sm font-semibold text-slate-600">Cart is empty</p>
                 <p className="text-xs text-slate-400 mt-1">
                   Scan a barcode or click catalog products on the left to begin sales checkout.
                 </p>
@@ -653,10 +653,10 @@ export function ShowroomPOSTerminal() {
                   <div key={item.product.id} className="rounded-xl border border-slate-100 bg-slate-50/50 p-3 text-xs">
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1">
-                        <div className="font-bold text-slate-900 line-clamp-1">
+                        <div className="font-semibold text-slate-900 line-clamp-1">
                           {item.product.name}
                         </div>
-                        <div className="text-[11px] text-slate-500 font-mono">
+                        <div className="text-xs text-slate-500 font-mono">
                           {item.product.sku} | {formatCurrency(item.product.pricing.currentSellingPrice)}
                         </div>
                       </div>
@@ -673,7 +673,7 @@ export function ShowroomPOSTerminal() {
                       <div className="flex items-center gap-1">
                         <button
                           onClick={() => handleUpdateQty(item.product.id, item.quantity - 1)}
-                          className="flex h-6 w-6 items-center justify-center rounded-md border border-slate-300 bg-white text-slate-600 hover:bg-slate-100 font-bold"
+                          className="flex h-6 w-6 items-center justify-center rounded-md border border-slate-300 bg-white text-slate-600 hover:bg-slate-100 font-medium"
                         >
                           <Minus className="h-3 w-3" />
                         </button>
@@ -682,11 +682,11 @@ export function ShowroomPOSTerminal() {
                           min="1"
                           value={item.quantity}
                           onChange={(e) => handleUpdateQty(item.product.id, parseInt(e.target.value) || 1)}
-                          className="h-6 w-10 text-center font-bold text-slate-900 border border-slate-300 rounded-md bg-white text-xs"
+                          className="h-6 w-10 text-center font-semibold text-slate-900 border border-slate-300 rounded-md bg-white text-xs tabular-nums"
                         />
                         <button
                           onClick={() => handleUpdateQty(item.product.id, item.quantity + 1)}
-                          className="flex h-6 w-6 items-center justify-center rounded-md border border-slate-300 bg-white text-slate-600 hover:bg-slate-100 font-bold"
+                          className="flex h-6 w-6 items-center justify-center rounded-md border border-slate-300 bg-white text-slate-600 hover:bg-slate-100 font-medium"
                         >
                           <Plus className="h-3 w-3" />
                         </button>
@@ -694,7 +694,7 @@ export function ShowroomPOSTerminal() {
 
                       {/* Cashier Line Discount */}
                       <div className="flex items-center gap-1">
-                        <span className="text-[11px] text-slate-500">Disc%:</span>
+                        <span className="text-xs text-slate-500">Disc%:</span>
                         <input
                           type="number"
                           min="0"
@@ -704,13 +704,13 @@ export function ShowroomPOSTerminal() {
                           onChange={(e) =>
                             handleUpdateDiscount(item.product.id, parseFloat(e.target.value) || 0)
                           }
-                          className="h-6 w-12 text-center font-bold text-slate-800 border border-slate-300 rounded-md bg-white text-xs"
+                          className="h-6 w-12 text-center font-semibold text-slate-800 border border-slate-300 rounded-md bg-white text-xs tabular-nums"
                         />
                       </div>
 
                       {/* Line Total */}
                       <div className="text-right">
-                        <span className="font-extrabold text-slate-900 block">
+                        <span className="font-semibold text-slate-900 tabular-nums block">
                           {formatCurrency(lineTotal)}
                         </span>
                       </div>
@@ -726,10 +726,10 @@ export function ShowroomPOSTerminal() {
             <div className="space-y-1 text-xs">
               <div className="flex justify-between text-slate-600">
                 <span>Subtotal:</span>
-                <span className="font-semibold text-slate-900">{formatCurrency(subtotal)}</span>
+                <span className="font-semibold text-slate-900 tabular-nums">{formatCurrency(subtotal)}</span>
               </div>
               {discountTotal > 0 && (
-                <div className="flex justify-between text-emerald-600 font-semibold">
+                <div className="flex justify-between text-emerald-600 font-semibold tabular-nums">
                   <span>Line Discounts:</span>
                   <span>- {formatCurrency(discountTotal)}</span>
                 </div>
@@ -737,12 +737,12 @@ export function ShowroomPOSTerminal() {
               {taxTotal > 0 && (
                 <div className="flex justify-between text-slate-600">
                   <span>VAT (18% Included):</span>
-                  <span>{formatCurrency(taxTotal)}</span>
+                  <span className="font-medium tabular-nums">{formatCurrency(taxTotal)}</span>
                 </div>
               )}
-              <div className="border-t border-slate-200 pt-1.5 flex justify-between text-base font-extrabold text-slate-900">
+              <div className="border-t border-slate-200 pt-1.5 flex justify-between text-base font-semibold text-slate-900">
                 <span>Grand Total:</span>
-                <span className="text-indigo-600 text-lg">{formatCurrency(grandTotal)}</span>
+                <span className="text-primary text-xl font-semibold tabular-nums">{formatCurrency(grandTotal)}</span>
               </div>
             </div>
 
@@ -752,7 +752,7 @@ export function ShowroomPOSTerminal() {
                 size="sm"
                 onClick={() => setCart([])}
                 disabled={cart.length === 0}
-                className="text-xs text-rose-600 hover:bg-rose-50 hover:text-rose-700"
+                className="text-xs text-rose-600 hover:bg-rose-50 hover:text-rose-700 font-medium"
               >
                 Clear
               </Button>
@@ -760,7 +760,7 @@ export function ShowroomPOSTerminal() {
                 size="sm"
                 disabled={cart.length === 0 || !activeSession}
                 onClick={() => setIsPaymentModalOpen(true)}
-                className="col-span-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold flex items-center justify-center gap-1.5 shadow-sm"
+                className="col-span-2 bg-primary hover:bg-primary-hover text-primary-foreground font-medium flex items-center justify-center gap-1.5 shadow-sm text-xs"
               >
                 <CreditCard className="h-4 w-4" />
                 Checkout ({formatCurrency(grandTotal)})
@@ -774,8 +774,8 @@ export function ShowroomPOSTerminal() {
       {isCustomerModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
           <div className="relative w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl transition-all border border-slate-200">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <h3 className="text-base font-bold text-slate-900">Select Customer from Master</h3>
+            <div className="flex items-center justify-between pb-3 border-slate-100">
+              <h3 className="text-base font-semibold text-slate-900">Select Customer from Master</h3>
               <button
                 onClick={() => setIsCustomerModalOpen(false)}
                 className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
@@ -842,8 +842,8 @@ export function ShowroomPOSTerminal() {
           <div className="relative w-full max-w-2xl rounded-2xl bg-white p-6 shadow-2xl transition-all border border-slate-200">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2">
-                <PackageSearch className="h-5 w-5 text-indigo-600" />
-                <h3 className="text-base font-bold text-slate-900">Search Canonical Product Master</h3>
+                <PackageSearch className="h-5 w-5 text-primary" />
+                <h3 className="text-base font-semibold text-slate-900">Search Canonical Product Master</h3>
               </div>
               <button
                 onClick={() => setIsProductSearchModalOpen(false)}

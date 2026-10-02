@@ -92,7 +92,7 @@ export function POSTransactionHistoryPage() {
         );
       case 'CARD':
         return (
-          <span className="inline-flex items-center gap-1 rounded-md bg-sky-50 px-2 py-0.5 text-xs font-semibold text-sky-700 border border-sky-200">
+          <span className="inline-flex items-center gap-1 rounded-md bg-primary-light px-2 py-0.5 text-xs font-semibold text-sky-700 border border-sky-200">
             <CreditCard className="h-3 w-3" /> Card
           </span>
         );
@@ -108,12 +108,12 @@ export function POSTransactionHistoryPage() {
   };
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6">
+    <div className="w-full space-y-5">
       {/* Header & Sub-navigation */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-200 pb-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-2.5">
-            <Receipt className="h-7 w-7 text-indigo-600" />
+            <Receipt className="h-7 w-7 text-primary" />
             POS Showroom Transactions
           </h1>
           <p className="text-xs text-slate-500 mt-0.5">
@@ -127,7 +127,7 @@ export function POSTransactionHistoryPage() {
               to="/pos"
               className={({ isActive }) =>
                 `rounded-md px-3 py-1.5 transition-colors ${
-                  isActive ? 'bg-white text-indigo-700 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                  isActive ? 'bg-white text-primary-text shadow-xs' : 'text-slate-600 hover:text-slate-900'
                 }`
               }
             >
@@ -137,7 +137,7 @@ export function POSTransactionHistoryPage() {
               to="/pos/transactions"
               className={({ isActive }) =>
                 `rounded-md px-3 py-1.5 transition-colors ${
-                  isActive ? 'bg-white text-indigo-700 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                  isActive ? 'bg-white text-primary-text shadow-xs' : 'text-slate-600 hover:text-slate-900'
                 }`
               }
             >
@@ -147,7 +147,7 @@ export function POSTransactionHistoryPage() {
               to="/pos/sessions"
               className={({ isActive }) =>
                 `rounded-md px-3 py-1.5 transition-colors ${
-                  isActive ? 'bg-white text-indigo-700 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                  isActive ? 'bg-white text-primary-text shadow-xs' : 'text-slate-600 hover:text-slate-900'
                 }`
               }
             >
@@ -188,7 +188,7 @@ export function POSTransactionHistoryPage() {
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value as any)}
-            className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 focus:outline-none focus:ring-1 focus:ring-primary"
           >
             <option value="ALL">All Statuses</option>
             <option value="COMPLETED">Completed</option>
@@ -199,7 +199,7 @@ export function POSTransactionHistoryPage() {
           <select
             value={methodFilter}
             onChange={(e) => setMethodFilter(e.target.value)}
-            className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 focus:outline-none focus:ring-1 focus:ring-primary"
           >
             <option value="ALL">All Payment Methods</option>
             <option value="CASH">Cash Only</option>
@@ -213,7 +213,7 @@ export function POSTransactionHistoryPage() {
       <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xs">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="border-b border-slate-200 bg-slate-50 font-bold uppercase tracking-wider text-slate-500 text-[10px]">
+            <thead className="border-b border-slate-200 bg-slate-50 font-semibold uppercase tracking-wider text-slate-500 text-xs">
               <tr>
                 <th className="py-3 px-4">Receipt Number</th>
                 <th className="py-3 px-4">Date & Time</th>
@@ -243,7 +243,7 @@ export function POSTransactionHistoryPage() {
               ) : (
                 filteredTransactions.map((tx) => (
                   <tr key={tx.id} className="hover:bg-slate-50/80 transition-colors">
-                    <td className="py-3.5 px-4 font-mono font-bold text-indigo-700">
+                    <td className="py-3.5 px-4 font-mono font-semibold tabular-nums text-primary-text">
                       {tx.receiptNumber}
                     </td>
                     <td className="py-3.5 px-4 text-slate-500 text-[11px]">
@@ -251,13 +251,13 @@ export function POSTransactionHistoryPage() {
                     </td>
                     <td className="py-3.5 px-4">
                       <div className="font-semibold text-slate-900">{tx.customerName || 'Walk-in Customer'}</div>
-                      {tx.customerCode && <div className="text-[10px] text-slate-400">Code: {tx.customerCode}</div>}
+                      {tx.customerCode && <div className="text-xs text-slate-400">Code: {tx.customerCode}</div>}
                     </td>
                     <td className="py-3.5 px-4 text-[11px] text-slate-600">
                       {tx.items.length} line {tx.items.length === 1 ? 'item' : 'items'}
                     </td>
                     <td className="py-3.5 px-4">{getMethodBadge(tx.paymentMethod)}</td>
-                    <td className="py-3.5 px-4 text-right font-extrabold text-slate-900">
+                    <td className="py-3.5 px-4 text-right font-semibold tabular-nums text-slate-900">
                       {formatCurrency(tx.totalAmount)}
                     </td>
                     <td className="py-3.5 px-4 text-[11px] text-slate-600">
@@ -265,11 +265,11 @@ export function POSTransactionHistoryPage() {
                     </td>
                     <td className="py-3.5 px-4 text-center">
                       {tx.status === 'COMPLETED' ? (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-bold text-emerald-800">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-medium text-emerald-800">
                           <CheckCircle className="h-3 w-3" /> Completed
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-rose-100 px-2 py-0.5 text-[11px] font-bold text-rose-800">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-rose-100 px-2.5 py-0.5 text-xs font-medium text-rose-800">
                           <AlertCircle className="h-3 w-3" /> Refunded
                         </span>
                       )}
@@ -282,7 +282,7 @@ export function POSTransactionHistoryPage() {
                           onClick={() => setViewingTx(tx)}
                           className="h-7 text-xs flex items-center gap-1 text-slate-700"
                         >
-                          <Printer className="h-3 w-3 text-indigo-600" />
+                          <Printer className="h-3 w-3 text-primary" />
                           Receipt
                         </Button>
                         {tx.status === 'COMPLETED' && (
@@ -327,7 +327,7 @@ export function POSTransactionHistoryPage() {
                   <RotateCcw className="h-5 w-5" />
                 </span>
                 <div>
-                  <h3 className="text-base font-bold text-slate-900">Process Sale Refund</h3>
+                  <h3 className="text-base font-semibold text-slate-900">Process Sale Refund</h3>
                   <p className="text-xs text-slate-500 font-mono">
                     Receipt: {refundingTx.receiptNumber}
                   </p>
@@ -349,19 +349,19 @@ export function POSTransactionHistoryPage() {
               )}
 
               <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800 space-y-1">
-                <div className="font-bold flex items-center gap-1">
+                <div className="font-semibold flex items-center gap-1">
                   <AlertCircle className="h-3.5 w-3.5" /> Inventory Ledger Notice
                 </div>
                 <div>
                   Refunding this sale will automatically create a <strong>SALES_RETURN</strong> movement and add {refundingTx.items.reduce((sum, i) => sum + i.quantity, 0)} units back to the <strong>SHOWROOM</strong> location stock balance.
                 </div>
-                <div className="font-extrabold pt-1">
+                <div className="font-semibold tabular-nums pt-1">
                   Total Refund Amount: {formatCurrency(refundingTx.totalAmount)}
                 </div>
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-slate-700 block mb-1">
+                <label className="text-xs font-medium text-slate-700 block mb-1">
                   Refund Reason / Customer Justification <span className="text-rose-500">*</span>
                 </label>
                 <textarea
@@ -369,7 +369,7 @@ export function POSTransactionHistoryPage() {
                   placeholder="e.g. Customer returned sealed items due to incorrect voltage rating requirement."
                   value={refundReason}
                   onChange={(e) => setRefundReason(e.target.value)}
-                  className="w-full rounded-lg border border-slate-300 p-2.5 text-xs text-slate-900 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                  className="w-full rounded-lg border border-slate-300 p-2.5 text-xs text-slate-900 focus:border-primary focus:ring-1 focus:ring-primary"
                   required
                   autoFocus
                 />

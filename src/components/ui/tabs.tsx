@@ -77,9 +77,9 @@ export function TabsTrigger({
       aria-selected={isActive}
       onClick={() => ctx.setActiveTab(value)}
       className={cn(
-        'inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-xs font-medium ring-offset-white transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500',
+        'inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-xs font-medium ring-offset-white transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
         isActive
-          ? 'bg-white text-slate-900 shadow-sm'
+          ? 'bg-white text-primary font-bold shadow-sm'
           : 'text-slate-600 hover:text-slate-900',
         className
       )}

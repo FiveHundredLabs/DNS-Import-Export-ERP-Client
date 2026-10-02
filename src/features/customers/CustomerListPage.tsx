@@ -23,6 +23,8 @@ export function CustomerListPage() {
   const [reviewModalOpen, setReviewModalOpen] = useState(false);
   const [selectedCustomerForReview, setSelectedCustomerForReview] = useState<Customer | null>(null);
 
+  const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
+
   const initialFilters = useMemo(() => {
     return {
       page: 1,
@@ -38,6 +40,8 @@ export function CustomerListPage() {
     error,
     refetch,
     createCustomer,
+    updateCustomer,
+    deleteCustomer,
     setCommercialTerms,
     setFilters,
   } = useCustomers(initialFilters);
@@ -73,7 +77,7 @@ export function CustomerListPage() {
           <div className="flex items-center gap-2">
             <h1 className="text-xl font-bold tracking-tight text-slate-900">Customer Master</h1>
             {role === 'SALES_REP' && (
-              <span className="flex items-center gap-1 text-[11px] font-semibold text-indigo-700 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded">
+              <span className="flex items-center gap-1 text-[11px] font-semibold text-primary-text bg-primary-light border border-primary-border px-2 py-0.5 rounded">
                 <ShieldCheck className="h-3 w-3" /> Assigned Territory
               </span>
             )}
@@ -96,7 +100,10 @@ export function CustomerListPage() {
             <RefreshCw className="h-3.5 w-3.5" /> Refresh
           </Button>
           {canCreate && (
-            <Button size="sm" onClick={() => setCreateModalOpen(true)} className="gap-1.5">
+            <Button size="sm" onClick={() => {
+              setEditingCustomer(null);
+              setCreateModalOpen(true);
+            }} className="gap-1.5">
               <Plus className="h-4 w-4" /> Register Customer
             </Button>
           )}
@@ -104,8 +111,9 @@ export function CustomerListPage() {
       </div>
 
       {/* Filter toolbar */}
-      <div className="flex flex-col sm:flex-row gap-3 bg-white p-3 rounded-xl border border-slate-200">
+      <div className="flex flex-col sm:flex-row gap-3 bg-white p-3.5 rounded-2xl border border-slate-200/80 shadow-sm">
         <div className="relative flex-1">
+
           <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
           <Input
             placeholder="Search by code, customer name, contact person, or phone..."
@@ -139,12 +147,20 @@ export function CustomerListPage() {
           title="No customers found"
           description="Try adjusting your search criteria or register a new customer."
           actionLabel={canCreate ? 'Register Customer' : undefined}
-          onAction={() => setCreateModalOpen(true)}
+          onAction={() => {
+            setEditingCustomer(null);
+            setCreateModalOpen(true);
+          }}
         />
       ) : (
         <CustomerTable
           customers={customers}
           onView={(c) => navigate(`/customers/${c.id}`)}
+          onEdit={(c) => {
+            setEditingCustomer(c);
+            setCreateModalOpen(true);
+          }}
+          onDelete={(c) => deleteCustomer(c.id)}
           onReviewCommercials={(c) => {
             setSelectedCustomerForReview(c);
             setReviewModalOpen(true);
@@ -155,10 +171,17 @@ export function CustomerListPage() {
       {/* Area Manager Customer Creation Modal */}
       <CustomerCreateModal
         open={createModalOpen}
-        onOpenChange={setCreateModalOpen}
+        onOpenChange={(open) => {
+          setCreateModalOpen(open);
+          if (!open) setEditingCustomer(null);
+        }}
         onCreate={async (data) => {
           await createCustomer(data);
         }}
+        onUpdate={async (id, data) => {
+          await updateCustomer(id, data);
+        }}
+        editingCustomer={editingCustomer}
       />
 
       {/* Sales Manager Commercial Terms Setup Modal */}

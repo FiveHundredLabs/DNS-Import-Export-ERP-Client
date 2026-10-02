@@ -55,11 +55,11 @@ export function ApprovalTimeline({ history }: { history: TimelineEntry[] }) {
                   'absolute -left-6 top-1 flex h-4 w-4 items-center justify-center rounded-full text-white',
                   isApprove && 'bg-emerald-500',
                   isReject && 'bg-rose-500',
-                  isEscalate && 'bg-sky-500',
-                  isSubmit && 'bg-indigo-500',
+                  isEscalate && 'bg-primary-light',
+                  isSubmit && 'bg-primary-light',
                   isCancel && 'bg-slate-500',
                   isPick && 'bg-amber-500',
-                  isIssue && 'bg-blue-500',
+                  isIssue && 'bg-primary-light',
                   isInvoice && 'bg-purple-500',
                   isDispatch && 'bg-teal-500',
                   isCreate && 'bg-slate-400'
@@ -79,22 +79,22 @@ export function ApprovalTimeline({ history }: { history: TimelineEntry[] }) {
 
               <div className="rounded-lg border border-slate-200 bg-white p-3 shadow-xs">
                 <div className="flex items-center justify-between">
-                  <div className="text-xs font-semibold text-slate-900">
+                  <div className="text-[13px] font-medium text-slate-900">
                     {step.actorName} <span className="font-normal text-slate-500">({step.actorRole})</span>
                   </div>
-                  <span className="text-[10px] text-slate-400">{formatDateTime(step.timestamp)}</span>
+                  <span className="text-xs text-slate-400">{formatDateTime(step.timestamp)}</span>
                 </div>
                 <div className="mt-1 flex items-center gap-1.5 text-xs font-medium flex-wrap">
                   <span
                     className={cn(
-                      'px-1.5 py-0.5 rounded text-[10px] uppercase font-bold',
+                      'px-2 py-0.5 rounded-full text-[11.5px] font-medium tracking-normal',
                       isApprove && 'bg-emerald-50 text-emerald-700',
                       isReject && 'bg-rose-50 text-rose-700',
-                      isEscalate && 'bg-sky-50 text-sky-700',
-                      isSubmit && 'bg-indigo-50 text-indigo-700',
+                      isEscalate && 'bg-primary-light text-sky-700',
+                      isSubmit && 'bg-primary-light text-primary-text',
                       isCancel && 'bg-slate-100 text-slate-700',
                       isPick && 'bg-amber-50 text-amber-700',
-                      isIssue && 'bg-blue-50 text-blue-700',
+                      isIssue && 'bg-primary-light text-blue-700',
                       isInvoice && 'bg-purple-50 text-purple-700',
                       isDispatch && 'bg-teal-50 text-teal-700',
                       isCreate && 'bg-slate-100 text-slate-600'
@@ -103,7 +103,7 @@ export function ApprovalTimeline({ history }: { history: TimelineEntry[] }) {
                     {step.action}
                   </span>
                   {step.targetRole && (
-                    <span className="text-[10px] text-sky-700 bg-sky-50 px-1 py-0.5 rounded font-semibold">
+                    <span className="text-xs text-sky-700 bg-primary-light px-1.5 py-0.5 rounded font-medium">
                       → {step.targetRole}
                     </span>
                   )}

@@ -80,8 +80,8 @@ describe('Phase 11 — Enterprise Analytics & Reporting UI Components', () => {
     });
   });
 
-  it('triggers CSV export when clicking Export CSV button', async () => {
-    const exportSpy = vi.spyOn(exportUtils, 'exportToCSV');
+  it('triggers print when clicking Print button', async () => {
+    const printSpy = vi.spyOn(exportUtils, 'triggerPrintReport');
 
     render(
       <MemoryRouter>
@@ -94,11 +94,11 @@ describe('Phase 11 — Enterprise Analytics & Reporting UI Components', () => {
       expect(screen.getByText('Gross Revenue')).toBeInTheDocument();
     });
 
-    const exportBtn = screen.getByText('Export CSV');
-    fireEvent.click(exportBtn);
+    const printBtn = screen.getByText('Print');
+    fireEvent.click(printBtn);
 
-    expect(exportSpy).toHaveBeenCalled();
-    exportSpy.mockRestore();
+    expect(printSpy).toHaveBeenCalled();
+    printSpy.mockRestore();
   });
 
   it('applies date range filter correctly', async () => {

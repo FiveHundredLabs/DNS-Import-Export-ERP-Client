@@ -13,30 +13,52 @@ export function isPastDueDate(dueDate: string, referenceDate: Date = new Date())
 }
 
 /**
- * Calculates current invoice status based on financial amounts and due date.
- * Business rules:
- * - paidAmount >= totalAmount -> PAID
- * - paidAmount < totalAmount && isPastDueDate -> OVERDUE
- * - paidAmount > 0 && paidAmount < totalAmount -> PARTIALLY_PAID
- * - otherwise ISSUED
+ * Calculates current invoice status based on financial amounts, collection state, and due date.
+ *
+ * Supported payment statuses:
+ * - Collected: The sales representative has collected the money from the customer.
+ * - Partially Collected: The sales representative has collected only part of the invoice amount.
+ * - Paid: The collected money has been handed over to Head Office, verified, and officially recorded in the system as received revenue.
+ * - Partially Paid: Only part of the collected amount has been handed over to Head Office and verified.
+ *
+ * Collected and Paid are distinct stages: money is officially recognized as revenue
+ * only after Head Office verifies and approves the payment.
  */
 export function calculateInvoiceStatus(
   totalAmount: number,
   paidAmount: number,
   dueDate: string,
-  referenceDate?: Date
+  referenceDate?: Date,
+  collectedAmount?: number
 ): InvoiceStatus {
-  if (paidAmount >= totalAmount) {
+  // 1. Officially received and verified revenue by Head Office
+  if (paidAmount >= totalAmount && totalAmount > 0) {
+    return 'PAID';
+  }
+  if (totalAmount === 0 && paidAmount === 0) {
     return 'PAID';
   }
 
-  const pastDue = isPastDueDate(dueDate, referenceDate);
-  if (paidAmount < totalAmount && pastDue) {
-    return 'OVERDUE';
+  // 2. Collection stage: sales rep collected money from customer, pending Head Office verification
+  const pendingCollection = collectedAmount || 0;
+  if (pendingCollection > 0) {
+    if (paidAmount + pendingCollection >= totalAmount - 0.001) {
+      return 'COLLECTED';
+    }
+    return 'PARTIALLY_COLLECTED';
   }
 
+  // 3. Partially verified by Head Office (Partially Paid) or Overdue
+  const pastDue = isPastDueDate(dueDate, referenceDate);
   if (paidAmount > 0 && paidAmount < totalAmount) {
+    if (pastDue) {
+      return 'OVERDUE';
+    }
     return 'PARTIALLY_PAID';
+  }
+
+  if (paidAmount < totalAmount && pastDue) {
+    return 'OVERDUE';
   }
 
   return 'ISSUED';

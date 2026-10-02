@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { reportService } from '../services/ReportService';
+import { advancedReportService } from '../services/AdvancedReportService';
 import { useAuth } from './useAuth';
 import {
   ReportFilter,
@@ -33,23 +34,63 @@ export function useReports(initialFilter: ReportFilter = {}) {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
+  const [advancedReports, setAdvancedReports] = useState<any>({});
+
   const fetchReports = useCallback(async () => {
     if (!user) return;
     setLoading(true);
     setError(null);
 
     try {
-      const [kpiRes, salesRes, invRes, finRes] = await Promise.all([
+      const [
+        kpiRes, salesRes, invRes, finRes, 
+        creditExc, commLinked, perfComm, tillRec, dailyShowroom, oldStock, slowMoving,
+        commAdj, weeklySales, posCheque, posAudit, grnSum, batchExp, stockVar, stockMov, chequeReal
+      ] = await Promise.all([
         reportService.getExecutiveKpis(user, filter),
         reportService.getSalesReport(user, filter),
         reportService.getInventoryReport(user, filter),
         reportService.getFinanceReport(user, filter),
+        advancedReportService.getCreditExceptions(user, filter),
+        advancedReportService.getCommissionLinkedSales(user, filter),
+        advancedReportService.getPerformanceBasedCommission(user, filter),
+        advancedReportService.getCashierTillReconciliation(user, filter),
+        advancedReportService.getDailyShowroomSummary(user, filter),
+        advancedReportService.getOldStockTracking(user, filter),
+        advancedReportService.getSlowMovingProducts(user, filter),
+        advancedReportService.getCommissionAdjustments(user, filter),
+        advancedReportService.getWeeklySalesPerformance(user, filter),
+        advancedReportService.getPosChequeRegister(user, filter),
+        advancedReportService.getPosAuditLog(user, filter),
+        advancedReportService.getGrnSummary(user, filter),
+        advancedReportService.getBatchExpiration(user, filter),
+        advancedReportService.getStockVariance(user, filter),
+        advancedReportService.getStockMovement(user, filter),
+        advancedReportService.getChequeRealizationAndAging(user, filter),
       ]);
 
       setKpis(kpiRes);
       setSalesReport(salesRes);
       setInventoryReport(invRes);
       setFinanceReport(finRes);
+      setAdvancedReports({
+        creditExceptions: creditExc,
+        commissionLinkedSales: commLinked,
+        performanceCommission: perfComm,
+        tillReconciliation: tillRec,
+        dailyShowroomSummary: dailyShowroom,
+        oldStockTracking: oldStock,
+        slowMovingProducts: slowMoving,
+        commissionAdjustments: commAdj,
+        weeklySalesPerformance: weeklySales,
+        posChequeRegister: posCheque,
+        posAuditLog: posAudit,
+        grnSummary: grnSum,
+        batchExpiration: batchExp,
+        stockVariance: stockVar,
+        stockMovement: stockMov,
+        chequeRealizationAndAging: chequeReal,
+      });
 
       // Area performance (visible for DIRECTOR, MANAGER, AREA_MANAGER)
       const allowedAreaRoles = ['DIRECTOR', 'MANAGER', 'AREA_MANAGER'];
@@ -119,5 +160,6 @@ export function useReports(initialFilter: ReportFilter = {}) {
     loading,
     error,
     refresh: fetchReports,
+    advancedReports,
   };
 }

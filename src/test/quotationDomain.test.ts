@@ -415,7 +415,7 @@ describe('Phase 4 — Quotation Domain & Sales Foundation', () => {
       // Verify converted order payload
       expect(convertedOrder.quotationId).toBe(quotation.id);
       expect(convertedOrder.quotationNumber).toBe(quotation.quotationNumber);
-      expect(convertedOrder.orderNumber).toMatch(/^SO-DLR-COL-001-\d+$/);
+      expect(convertedOrder.orderNumber).toMatch(/^(ODR-[A-Z]{2}-[A-Z]{2}-\d{4}|SO-DLR-COL-001-\d+)$/);
       expect(convertedOrder.totalAmount).toBe(quotation.totalAmount);
       expect(convertedOrder.items).toHaveLength(quotation.items.length);
       expect(convertedOrder.items[0].unitPriceSnapshot).toBe(quotation.items[0].unitPriceSnapshot);

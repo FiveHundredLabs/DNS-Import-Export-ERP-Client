@@ -101,7 +101,7 @@ export function OpenShiftModal({
               placeholder="e.g. Counter 1 Main Showroom Register. Clean register handoff."
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              className="w-full rounded-lg border border-slate-300 p-2.5 text-xs text-slate-900 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+              className="w-full rounded-lg border border-slate-300 p-2.5 text-xs text-slate-900 focus:border-primary focus:ring-1 focus:ring-primary"
             />
           </div>
 

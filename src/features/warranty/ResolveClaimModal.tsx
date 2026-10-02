@@ -84,11 +84,11 @@ export function ResolveClaimModal({
               onClick={() => setResolution('REPLACE')}
               className={`p-3 rounded-lg border text-center transition-all flex flex-col items-center gap-1.5 ${
                 resolution === 'REPLACE'
-                  ? 'border-indigo-600 bg-indigo-50/60 text-indigo-700 font-bold ring-1 ring-indigo-600'
+                  ? 'border-primary bg-primary-light/60 text-primary-text font-bold ring-1 ring-indigo-600'
                   : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
               }`}
             >
-              <RefreshCw className="h-4 w-4 text-indigo-600" />
+              <RefreshCw className="h-4 w-4 text-primary" />
               <span className="text-xs">Replace Unit</span>
               <span className="text-[10px] text-slate-400 font-normal">Issue new stock</span>
             </button>
@@ -132,7 +132,7 @@ export function ResolveClaimModal({
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             placeholder="Record technical inspection outcome, root cause, and warranty resolution remarks..."
-            className="w-full rounded-md border border-slate-300 p-2.5 text-xs text-slate-900 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            className="w-full rounded-md border border-slate-300 p-2.5 text-xs text-slate-900 focus:outline-none focus:ring-1 focus:ring-primary"
             required
           />
         </div>
@@ -151,7 +151,7 @@ export function ResolveClaimModal({
             type="submit"
             size="sm"
             disabled={loading}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white"
+            className="bg-primary hover:bg-primary-hover text-primary-foreground"
           >
             {loading ? 'Saving...' : 'Finalize Resolution'}
           </Button>

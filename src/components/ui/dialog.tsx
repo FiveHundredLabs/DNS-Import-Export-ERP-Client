@@ -31,7 +31,7 @@ export function Dialog({ open, onOpenChange, children }: DialogProps) {
       <div className="relative z-50 w-full max-w-lg rounded-xl border border-slate-200 bg-white p-6 shadow-xl animate-in zoom-in-95 max-h-[90vh] overflow-y-auto">
         <button
           onClick={() => onOpenChange(false)}
-          className="absolute right-4 top-4 rounded-sm p-1 text-slate-400 hover:text-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          className="absolute right-4 top-4 rounded-sm p-1 text-slate-400 hover:text-slate-600 focus:outline-none focus:ring-2 focus:ring-primary"
           aria-label="Close dialog"
         >
           <X className="h-4 w-4" />
@@ -60,7 +60,7 @@ export function DialogTitle({
 }: React.HTMLAttributes<HTMLHeadingElement>) {
   return (
     <h2
-      className={cn('text-lg font-semibold leading-none text-slate-900', className)}
+      className={cn('text-lg font-semibold tracking-normal leading-snug text-slate-900', className)}
       {...props}
     />
   );
@@ -71,7 +71,7 @@ export function DialogDescription({
   ...props
 }: React.HTMLAttributes<HTMLParagraphElement>) {
   return (
-    <p className={cn('text-sm text-slate-500 mt-1', className)} {...props} />
+    <p className={cn('text-[13px] text-slate-500 leading-relaxed mt-1 font-normal', className)} {...props} />
   );
 }
 

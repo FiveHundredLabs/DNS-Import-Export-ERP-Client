@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { useReports } from '../../hooks/useReports';
 import { ReportsFilterToolbar } from './ReportsFilterToolbar';
@@ -7,21 +7,20 @@ import { SalesAnalyticsTab } from './SalesAnalyticsTab';
 import { InventoryAnalyticsTab } from './InventoryAnalyticsTab';
 import { FinanceCollectionsTab } from './FinanceCollectionsTab';
 import { AreaPerformanceTab } from './AreaPerformanceTab';
+import { CommissionAnalyticsTab } from './CommissionAnalyticsTab';
+import { PosAnalyticsTab } from './PosAnalyticsTab';
 import { TableLoadingSkeleton, CardGridSkeleton } from '../../components/common/LoadingSkeleton';
-import { EmptyState } from '../../components/common/EmptyState';
 import { ErrorState } from '../../components/common/ErrorState';
-import { exportToCSV, triggerPrintReport } from '../../utils/exportUtils';
+import { triggerPrintReport } from '../../utils/exportUtils';
 import {
   BarChart3,
   TrendingUp,
   Package,
   DollarSign,
   MapPin,
-  FileSpreadsheet,
-  AlertCircle,
 } from 'lucide-react';
 
-export type ReportTabType = 'overview' | 'sales' | 'inventory' | 'finance' | 'area';
+export type ReportTabType = 'overview' | 'sales' | 'inventory' | 'finance' | 'area' | 'commission' | 'pos';
 
 export function ReportsPage() {
   const { user } = useAuth();
@@ -41,12 +40,15 @@ export function ReportsPage() {
     loading,
     error,
     refresh,
+    advancedReports,
   } = useReports();
 
   const isAreaPerformanceAllowed =
     user?.role === 'DIRECTOR' || user?.role === 'MANAGER' || user?.role === 'AREA_MANAGER';
 
   const tabTitles: Record<ReportTabType, string> = {
+    commission: 'Commission Analytics',
+    pos: 'POS Analytics',
     overview: 'Executive Overview',
     sales: 'Sales Analytics',
     inventory: 'Inventory Analytics',
@@ -54,63 +56,14 @@ export function ReportsPage() {
     area: 'Area Performance',
   };
 
-  const handleExportCSV = () => {
-    const timestamp = new Date().toISOString().split('T')[0];
-
-    if (activeTab === 'overview' && kpis) {
-      exportToCSV(
-        `Executive_Overview_${timestamp}`,
-        ['Metric', 'Value (LKR / Count)'],
-        [
-          ['Gross Revenue', kpis.grossRevenue],
-          ['Total Collections', kpis.totalCollected],
-          ['Outstanding Receivables', kpis.totalOutstanding],
-          ['Overdue Receivables', kpis.totalOverdue],
-          ['Inventory Valuation', kpis.totalInventoryValue],
-          ['Active Orders', kpis.totalOrdersCount],
-          ['Active Customers', kpis.activeCustomersCount],
-        ]
-      );
-    } else if (activeTab === 'sales' && salesReport) {
-      exportToCSV(
-        `Sales_By_Rep_${timestamp}`,
-        ['Sales Rep ID', 'Representative Name', 'Orders Count', 'Total Sales (LKR)'],
-        salesReport.salesByRep.map((r) => [r.repId, r.repName, r.orderCount, r.amount])
-      );
-    } else if (activeTab === 'inventory' && inventoryReport) {
-      exportToCSV(
-        `Inventory_Valuation_${timestamp}`,
-        ['Location', 'Units', 'Cost Valuation (LKR)'],
-        inventoryReport.stockByLocation.map((l) => [l.location, l.units, l.value])
-      );
-    } else if (activeTab === 'finance' && financeReport) {
-      exportToCSV(
-        `Receivables_Aging_${timestamp}`,
-        ['Aging Bucket', 'Accounts Count', 'Outstanding Amount (LKR)'],
-        financeReport.agingBuckets.map((b) => [b.bucket, b.customerCount, b.amount])
-      );
-    } else if (activeTab === 'area' && areaPerformance) {
-      exportToCSV(
-        `Area_Performance_${areaPerformance.areaName.replace(/\s+/g, '_')}_${timestamp}`,
-        ['Sales Rep', 'Monthly Target (LKR)', 'Achieved Sales (LKR)', 'Achievement %', 'Collections (LKR)'],
-        areaPerformance.repPerformance.map((r) => [
-          r.repName,
-          r.target,
-          r.sales,
-          `${r.achievementPercentage}%`,
-          r.collections,
-        ])
-      );
-    }
-  };
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
+    <div className="w-full space-y-5">
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <div className="p-2 rounded-lg bg-indigo-600 text-white shadow-sm">
+            <div className="p-2 rounded-lg bg-primary text-primary-foreground shadow-sm">
               <BarChart3 className="w-5 h-5" />
             </div>
             <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
@@ -129,7 +82,6 @@ export function ReportsPage() {
         filter={filter}
         onFilterChange={updateFilter}
         onReset={resetFilter}
-        onExportCSV={handleExportCSV}
         onPrint={triggerPrintReport}
         activeTabTitle={tabTitles[activeTab]}
       />
@@ -141,7 +93,7 @@ export function ReportsPage() {
             onClick={() => setActiveTab('overview')}
             className={`py-3 px-3 sm:px-4 font-semibold text-xs sm:text-sm border-b-2 whitespace-nowrap flex items-center gap-2 transition-colors ${
               activeTab === 'overview'
-                ? 'border-indigo-600 text-indigo-600'
+                ? 'border-primary text-primary'
                 : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
             }`}
           >
@@ -153,7 +105,7 @@ export function ReportsPage() {
             onClick={() => setActiveTab('sales')}
             className={`py-3 px-3 sm:px-4 font-semibold text-xs sm:text-sm border-b-2 whitespace-nowrap flex items-center gap-2 transition-colors ${
               activeTab === 'sales'
-                ? 'border-indigo-600 text-indigo-600'
+                ? 'border-primary text-primary'
                 : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
             }`}
           >
@@ -165,7 +117,7 @@ export function ReportsPage() {
             onClick={() => setActiveTab('inventory')}
             className={`py-3 px-3 sm:px-4 font-semibold text-xs sm:text-sm border-b-2 whitespace-nowrap flex items-center gap-2 transition-colors ${
               activeTab === 'inventory'
-                ? 'border-indigo-600 text-indigo-600'
+                ? 'border-primary text-primary'
                 : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
             }`}
           >
@@ -177,7 +129,7 @@ export function ReportsPage() {
             onClick={() => setActiveTab('finance')}
             className={`py-3 px-3 sm:px-4 font-semibold text-xs sm:text-sm border-b-2 whitespace-nowrap flex items-center gap-2 transition-colors ${
               activeTab === 'finance'
-                ? 'border-indigo-600 text-indigo-600'
+                ? 'border-primary text-primary'
                 : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
             }`}
           >
@@ -185,12 +137,36 @@ export function ReportsPage() {
             <span>Finance & Collections</span>
           </button>
 
+          <button
+            onClick={() => setActiveTab('commission')}
+            className={`py-3 px-3 sm:px-4 font-semibold text-xs sm:text-sm border-b-2 whitespace-nowrap flex items-center gap-2 transition-colors ${
+              activeTab === 'commission'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+            }`}
+          >
+            <BarChart3 className="w-4 h-4" />
+            <span>Commission Analytics</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('pos')}
+            className={`py-3 px-3 sm:px-4 font-semibold text-xs sm:text-sm border-b-2 whitespace-nowrap flex items-center gap-2 transition-colors ${
+              activeTab === 'pos'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+            }`}
+          >
+            <MapPin className="w-4 h-4" />
+            <span>POS Analytics</span>
+          </button>
+
           {isAreaPerformanceAllowed && (
             <button
               onClick={() => setActiveTab('area')}
               className={`py-3 px-3 sm:px-4 font-semibold text-xs sm:text-sm border-b-2 whitespace-nowrap flex items-center gap-2 transition-colors ${
                 activeTab === 'area'
-                  ? 'border-indigo-600 text-indigo-600'
+                  ? 'border-primary text-primary'
                   : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
               }`}
             >
@@ -216,15 +192,30 @@ export function ReportsPage() {
           )}
 
           {activeTab === 'sales' && salesReport && (
-            <SalesAnalyticsTab salesReport={salesReport} />
+            <SalesAnalyticsTab salesReport={salesReport} advancedReports={advancedReports} />
           )}
 
           {activeTab === 'inventory' && inventoryReport && (
-            <InventoryAnalyticsTab inventoryReport={inventoryReport} />
+            <InventoryAnalyticsTab 
+              inventoryReport={inventoryReport}
+              advancedReports={advancedReports} 
+            />
           )}
 
           {activeTab === 'finance' && financeReport && (
-            <FinanceCollectionsTab financeReport={financeReport} />
+            <FinanceCollectionsTab financeReport={financeReport} advancedReports={advancedReports} />
+          )}
+
+          {activeTab === 'commission' && (
+            <CommissionAnalyticsTab 
+              advancedReports={advancedReports} 
+            />
+          )}
+
+          {activeTab === 'pos' && (
+            <PosAnalyticsTab 
+              advancedReports={advancedReports} 
+            />
           )}
 
           {activeTab === 'area' && isAreaPerformanceAllowed && (

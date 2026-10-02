@@ -290,7 +290,7 @@ export function PaymentApprovalPage() {
             <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
               Pending Verification Value
             </span>
-            <DollarSign className="h-4 w-4 text-indigo-600" />
+            <DollarSign className="h-4 w-4 text-primary" />
           </div>
           <div className="mt-2 flex items-baseline gap-2">
             <span className="text-2xl font-bold text-slate-900">{formatCurrency(pendingTotal)}</span>
@@ -332,7 +332,7 @@ export function PaymentApprovalPage() {
                 type="button"
                 onClick={() => setStatusTab(tab)}
                 className={`rounded px-3 py-1 font-medium transition-colors ${
-                  statusTab === tab ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-600 hover:text-slate-900'
+                  statusTab === tab ? 'bg-white text-primary-text shadow-sm' : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
                 {tab === 'PENDING'
@@ -377,7 +377,7 @@ export function PaymentApprovalPage() {
                   <tr key={item.id} className="hover:bg-slate-50/60 transition-colors">
                     <td className="px-4 py-3.5">
                       <div className="font-semibold text-slate-900">{item.receiptNumber}</div>
-                      <div className="font-mono text-[11px] text-indigo-600">{item.invoiceNumber}</div>
+                      <div className="font-mono text-[11px] text-primary">{item.invoiceNumber}</div>
                       <div className="text-[10px] text-slate-400">{formatDate(item.collectedAt)}</div>
                     </td>
                     <td className="px-4 py-3.5">

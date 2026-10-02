@@ -109,7 +109,7 @@ export function FinanceCommissionsPage() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900">Commissions Sub-Ledger</h1>
+            <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Commissions Sub-Ledger</h1>
             <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200 text-xs">
               GL Code 2030 (Commission Payable)
             </Badge>
@@ -130,7 +130,7 @@ export function FinanceCommissionsPage() {
             <Award className="h-4 w-4 text-purple-600" />
           </div>
           <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-slate-900">{formatCurrency(totalAccruedUnpaid)}</span>
+            <span className="text-2xl font-semibold text-slate-900 tabular-nums">{formatCurrency(totalAccruedUnpaid)}</span>
             <span className="text-xs text-purple-600 font-medium">Under GL 2030</span>
           </div>
         </Card>
@@ -140,10 +140,10 @@ export function FinanceCommissionsPage() {
             <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
               GL 2030 Balance
             </span>
-            <DollarSign className="h-4 w-4 text-indigo-600" />
+            <DollarSign className="h-4 w-4 text-primary" />
           </div>
           <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-slate-900">
+            <span className="text-2xl font-semibold text-slate-900 tabular-nums">
               {formatCurrency(commissionPayableAcc?.currentBalance || 185000)}
             </span>
             <span className="text-xs text-slate-500">Ledger Liability</span>
@@ -155,10 +155,10 @@ export function FinanceCommissionsPage() {
             <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
               Active Sales Reps
             </span>
-            <Users className="h-4 w-4 text-blue-600" />
+            <Users className="h-4 w-4 text-primary" />
           </div>
           <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-slate-900">4</span>
+            <span className="text-2xl font-semibold text-slate-900 tabular-nums">4</span>
             <span className="text-xs text-slate-500">Earning Commission</span>
           </div>
         </Card>
@@ -185,7 +185,7 @@ export function FinanceCommissionsPage() {
                 onClick={() => setStatusFilter(status)}
                 className={`rounded px-3 py-1 font-medium transition-colors ${
                   statusFilter === status
-                    ? 'bg-white text-indigo-700 shadow-sm'
+                    ? 'bg-white text-primary-text shadow-sm'
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
@@ -200,7 +200,7 @@ export function FinanceCommissionsPage() {
       <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="border-b border-slate-200 bg-slate-50 text-[11px] font-bold uppercase tracking-wider text-slate-500">
+            <thead className="border-b border-slate-200 bg-slate-50 text-xs font-semibold uppercase tracking-wider text-slate-500">
               <tr>
                 <th className="px-4 py-3">Sales Representative</th>
                 <th className="px-4 py-3">Period</th>
@@ -222,20 +222,20 @@ export function FinanceCommissionsPage() {
                 filteredAccruals.map((item) => (
                   <tr key={item.id} className="hover:bg-slate-50/60 transition-colors">
                     <td className="px-4 py-3.5 font-medium text-slate-900">{item.repName}</td>
-                    <td className="px-4 py-3.5 font-mono text-slate-600">{item.period}</td>
-                    <td className="px-4 py-3.5 font-mono text-indigo-600">{item.orderNumber}</td>
-                    <td className="px-4 py-3.5 text-right font-mono text-slate-700">
+                    <td className="px-4 py-3.5 tabular-nums text-slate-600">{item.period}</td>
+                    <td className="px-4 py-3.5 tabular-nums text-primary font-medium">{item.orderNumber}</td>
+                    <td className="px-4 py-3.5 text-right tabular-nums text-slate-700">
                       {formatCurrency(item.saleValue)}
                     </td>
-                    <td className="px-4 py-3.5 text-right font-mono text-slate-700">{item.ratePercentage}%</td>
-                    <td className="px-4 py-3.5 text-right font-mono font-bold text-slate-900">
+                    <td className="px-4 py-3.5 text-right tabular-nums text-slate-700">{item.ratePercentage}%</td>
+                    <td className="px-4 py-3.5 text-right tabular-nums font-semibold text-slate-900">
                       {formatCurrency(item.accruedAmount)}
                     </td>
                     <td className="px-4 py-3.5 text-center">
                       {item.status === 'ACCRUED' ? (
-                        <Badge className="bg-purple-50 text-purple-700 border-purple-200">Accrued</Badge>
+                        <Badge className="bg-purple-50 text-purple-700 border-purple-200 text-xs font-semibold">Accrued</Badge>
                       ) : (
-                        <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200">Paid Out</Badge>
+                        <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 text-xs font-semibold">Paid Out</Badge>
                       )}
                     </td>
                   </tr>

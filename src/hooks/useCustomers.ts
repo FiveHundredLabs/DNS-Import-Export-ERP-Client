@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Customer, CommercialTerms, CustomerApprovalStage } from '../types/customer';
+import { Customer, CommercialTerms } from '../types/customer';
 import { customerService } from '../services/CustomerService';
 import { CustomerFilters } from '../repositories/ICustomerRepository';
 
@@ -56,6 +56,11 @@ export function useCustomers(initialFilters?: CustomerFilters) {
     return res;
   };
 
+  const deleteCustomer = async (id: string) => {
+    await customerService.deleteCustomer(id);
+    await fetchCustomers();
+  };
+
   return {
     customers,
     loading,
@@ -69,5 +74,6 @@ export function useCustomers(initialFilters?: CustomerFilters) {
     updateCustomer,
     setCommercialTerms,
     finalizeApproval,
+    deleteCustomer,
   };
 }

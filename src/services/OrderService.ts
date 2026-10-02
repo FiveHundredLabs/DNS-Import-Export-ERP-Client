@@ -23,6 +23,7 @@ import {
   canApproveOrder,
   canEscalateOrder,
   getAllowedEscalationTargets,
+  generateOrderNumber,
 } from '../rules/orderRules';
 
 export class OrderService {
@@ -265,7 +266,13 @@ export class OrderService {
       initialStatus = evalResult.isSpecialApproval ? 'SPECIAL_APPROVAL' : 'PENDING_APPROVAL';
     }
 
-    const orderNumber = `SO-${customer.code}-${Date.now().toString().slice(-4)}`;
+    const existingOrders = await this.repo.getAll();
+    const nextSeq = existingOrders.data.length + 1;
+    const orderNumber = generateOrderNumber(
+      customer.areaName || currentUser.areaName,
+      currentUser.name,
+      nextSeq
+    );
 
     const initialHistory: OrderApprovalAction[] = [
       {
@@ -965,6 +972,22 @@ export class OrderService {
     }
 
     return order;
+  }
+
+  /** Alias used by inventory pages: getOrders with status array filter */
+  async getOrders(filters?: { status?: string | string[] }): Promise<SalesOrder[]> {
+    const statusFilter = Array.isArray(filters?.status) ? filters!.status[0] : filters?.status;
+    const result = await this.listOrders(
+      statusFilter && statusFilter !== 'ALL' ? { status: statusFilter as any } : {}
+    );
+    if (!filters?.status || filters.status === 'ALL') return result.data;
+    const statuses = Array.isArray(filters.status) ? filters.status : [filters.status];
+    return result.data.filter((o) => statuses.includes(o.status));
+  }
+
+  /** Alias used by DispatchPage: advance order to the specified status string */
+  async advanceOrderStatus(orderId: string, nextStatus: string, user: User): Promise<SalesOrder> {
+    return this.updateFulfillmentStatus(orderId, nextStatus as OrderStatus, user);
   }
 }
 

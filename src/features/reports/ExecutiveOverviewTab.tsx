@@ -1,8 +1,8 @@
-import React from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/card';
 import { StatCard } from '../../components/common/StatCard';
 import { Badge } from '../../components/ui/badge';
 import {
+  Download,
   TrendingUp,
   CreditCard,
   AlertCircle,
@@ -14,7 +14,8 @@ import {
   ShieldAlert,
 } from 'lucide-react';
 import { ExecutiveKpiSummary, SalesSummaryReport } from '../../types/reports';
-import { formatCurrencyLKR } from '../../utils/exportUtils';
+import { formatCurrencyLKR, exportToCSV } from '../../utils/exportUtils';
+import { Button } from '../../components/ui/button';
 
 interface ExecutiveOverviewTabProps {
   kpis: ExecutiveKpiSummary;
@@ -89,13 +90,37 @@ export function ExecutiveOverviewTab({ kpis, salesReport }: ExecutiveOverviewTab
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Channel Breakdown: Invoices vs POS */}
         <Card>
-          <CardHeader>
-            <CardTitle className="text-base font-bold text-slate-900 flex items-center justify-between">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-base font-bold text-slate-900 flex flex-wrap items-center gap-4">
               <span>Sales Channels: B2B Invoices vs Showroom POS</span>
               <Badge variant="outline" className="text-xs">
                 Total: {formatCurrencyLKR(salesReport.totalSales)}
               </Badge>
             </CardTitle>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                const timestamp = new Date().toISOString().split('T')[0];
+                exportToCSV(
+                  `Executive_Overview_KPIs_${timestamp}`,
+                  ['Metric', 'Value (LKR / Count)'],
+                  [
+                    ['Gross Revenue', kpis.grossRevenue],
+                    ['Total Collections', kpis.totalCollected],
+                    ['Outstanding Receivables', kpis.totalOutstanding],
+                    ['Overdue Receivables', kpis.totalOverdue],
+                    ['Inventory Valuation', kpis.totalInventoryValue],
+                    ['Active Orders', kpis.totalOrdersCount],
+                    ['Active Customers', kpis.activeCustomersCount],
+                  ]
+                );
+              }}
+              className="h-8 gap-1.5 flex-shrink-0"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Export KPIs</span>
+            </Button>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="space-y-4">
@@ -103,11 +128,11 @@ export function ExecutiveOverviewTab({ kpis, salesReport }: ExecutiveOverviewTab
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between text-xs font-semibold">
                   <div className="flex items-center gap-2 text-slate-700">
-                    <Receipt className="w-4 h-4 text-indigo-600" />
+                    <Receipt className="w-4 h-4 text-primary" />
                     <span>Commercial B2B Tax Invoices</span>
                   </div>
                   <div className="text-right">
-                    <span className="font-bold text-slate-900">
+                    <span className="font-semibold tabular-nums text-slate-900">
                       {formatCurrencyLKR(salesReport.invoiceSales)}
                     </span>
                     <span className="text-slate-400 ml-2">({invoiceShare}%)</span>
@@ -115,7 +140,7 @@ export function ExecutiveOverviewTab({ kpis, salesReport }: ExecutiveOverviewTab
                 </div>
                 <div className="w-full h-3 rounded-full bg-slate-100 overflow-hidden">
                   <div
-                    className="h-full bg-indigo-600 rounded-full transition-all duration-500"
+                    className="h-full bg-primary rounded-full transition-all duration-500"
                     style={{ width: `${invoiceShare}%` }}
                   />
                 </div>
@@ -129,7 +154,7 @@ export function ExecutiveOverviewTab({ kpis, salesReport }: ExecutiveOverviewTab
                     <span>Showroom Retail / Walk-in POS</span>
                   </div>
                   <div className="text-right">
-                    <span className="font-bold text-slate-900">
+                    <span className="font-semibold tabular-nums text-slate-900">
                       {formatCurrencyLKR(salesReport.posSales)}
                     </span>
                     <span className="text-slate-400 ml-2">({posShare}%)</span>
@@ -147,11 +172,11 @@ export function ExecutiveOverviewTab({ kpis, salesReport }: ExecutiveOverviewTab
             <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 grid grid-cols-2 gap-4 text-center">
               <div>
                 <p className="text-xs text-slate-500">Total Sales Transactions</p>
-                <p className="text-xl font-bold text-slate-900 mt-1">{salesReport.totalOrders}</p>
+                <p className="text-xl font-semibold tabular-nums text-slate-900 mt-1">{salesReport.totalOrders}</p>
               </div>
               <div>
                 <p className="text-xs text-slate-500">Average Transaction Value</p>
-                <p className="text-xl font-bold text-indigo-600 mt-1">
+                <p className="text-xl font-semibold tabular-nums text-primary mt-1">
                   {formatCurrencyLKR(salesReport.averageOrderValue)}
                 </p>
               </div>
@@ -161,12 +186,12 @@ export function ExecutiveOverviewTab({ kpis, salesReport }: ExecutiveOverviewTab
 
         {/* Revenue vs Collection Realization */}
         <Card>
-          <CardHeader>
-            <CardTitle className="text-base font-bold text-slate-900 flex items-center justify-between">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-base font-bold text-slate-900 flex flex-wrap items-center gap-4">
               <span>Financial Realization & Liquidity</span>
               <Badge
                 variant={collectionRate >= 80 ? 'default' : 'secondary'}
-                className="text-xs"
+                className="text-xs font-medium tabular-nums"
               >
                 Realized: {collectionRate}%
               </Badge>
@@ -176,38 +201,38 @@ export function ExecutiveOverviewTab({ kpis, salesReport }: ExecutiveOverviewTab
             <div className="space-y-3">
               <div className="flex items-center justify-between text-sm">
                 <span className="text-slate-600">Gross Billed Sales:</span>
-                <span className="font-bold text-slate-900">{formatCurrencyLKR(kpis.grossRevenue)}</span>
+                <span className="font-semibold tabular-nums text-slate-900">{formatCurrencyLKR(kpis.grossRevenue)}</span>
               </div>
               <div className="flex items-center justify-between text-sm">
                 <span className="text-emerald-700 font-medium">Approved Collections Received:</span>
-                <span className="font-bold text-emerald-700">{formatCurrencyLKR(kpis.totalCollected)}</span>
+                <span className="font-semibold tabular-nums text-emerald-700">{formatCurrencyLKR(kpis.totalCollected)}</span>
               </div>
               <div className="flex items-center justify-between text-sm">
                 <span className="text-amber-700 font-medium">Uncollected Receivables:</span>
-                <span className="font-bold text-amber-700">{formatCurrencyLKR(kpis.totalOutstanding)}</span>
+                <span className="font-semibold tabular-nums text-amber-700">{formatCurrencyLKR(kpis.totalOutstanding)}</span>
               </div>
               <div className="flex items-center justify-between text-sm pt-2 border-t border-slate-200">
                 <span className="text-rose-700 font-medium">Critical Overdue Balance:</span>
-                <span className="font-bold text-rose-700">{formatCurrencyLKR(kpis.totalOverdue)}</span>
+                <span className="font-semibold tabular-nums text-rose-700">{formatCurrencyLKR(kpis.totalOverdue)}</span>
               </div>
             </div>
 
-            <div className="p-4 rounded-xl bg-indigo-50/50 border border-indigo-100 flex items-center justify-between">
+            <div className="p-4 rounded-xl bg-primary-light/50 border border-primary-border/40 flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-lg bg-indigo-600 text-white">
+                <div className="p-2.5 rounded-lg bg-primary text-white">
                   <ArrowUpRight className="w-5 h-5" />
                 </div>
                 <div>
-                  <h4 className="text-xs font-bold text-indigo-950 uppercase tracking-wider">
+                  <h4 className="text-xs font-semibold text-indigo-950 uppercase tracking-wider">
                     Working Capital Position
                   </h4>
-                  <p className="text-xs text-indigo-700">
+                  <p className="text-xs text-primary-text">
                     Net cash collected vs customer credit exposure
                   </p>
                 </div>
               </div>
               <div className="text-right">
-                <span className="text-lg font-extrabold text-indigo-900">
+                <span className="text-lg font-semibold tabular-nums text-indigo-900">
                   {formatCurrencyLKR(kpis.totalCollected - kpis.totalOverdue)}
                 </span>
               </div>
@@ -218,10 +243,29 @@ export function ExecutiveOverviewTab({ kpis, salesReport }: ExecutiveOverviewTab
 
       {/* Sales Trend by Date */}
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-base font-bold text-slate-900">
             Daily Sales Activity Ledger
           </CardTitle>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              const timestamp = new Date().toISOString().split('T')[0];
+              exportToCSV(
+                `Daily_Sales_Ledger_${timestamp}`,
+                ['Date', 'Daily Sales Amount (LKR)', 'Share of Total Revenue'],
+                salesReport.salesByDate.map((item) => {
+                  const pct = salesReport.totalSales > 0 ? Math.round((item.amount / salesReport.totalSales) * 1000) / 10 : 0;
+                  return [item.date, item.amount, `${pct}%`];
+                })
+              );
+            }}
+            className="h-8 gap-1.5 flex-shrink-0"
+          >
+            <Download className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Download CSV</span>
+          </Button>
         </CardHeader>
         <CardContent>
           {salesReport.salesByDate.length === 0 ? (

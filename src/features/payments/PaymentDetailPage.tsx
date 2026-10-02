@@ -109,7 +109,7 @@ export function PaymentDetailPage() {
       <div className="p-12 text-center max-w-md mx-auto">
         <h2 className="text-base font-bold text-slate-900">Payment Not Found</h2>
         <p className="text-xs text-slate-500 mt-2">The requested payment receipt record could not be found.</p>
-        <Link to="/payments" className="text-indigo-600 text-xs font-semibold underline mt-4 block">
+        <Link to="/payments" className="text-primary text-xs font-semibold underline mt-4 block">
           Return to Payments Registry
         </Link>
       </div>
@@ -119,7 +119,7 @@ export function PaymentDetailPage() {
   const isPending = payment.status === 'PENDING_APPROVAL';
 
   return (
-    <div className="max-w-4xl mx-auto space-y-5 pb-12">
+    <div className="w-full space-y-5 pb-12">
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <Link to="/payments">
@@ -182,7 +182,7 @@ export function PaymentDetailPage() {
           {/* Header */}
           <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 border-b border-slate-200 pb-6">
             <div>
-              <div className="font-mono text-xl font-bold text-indigo-700">
+              <div className="font-mono text-xl font-semibold tabular-nums text-primary-text">
                 {payment.receiptNumber}
               </div>
               <p className="text-xs text-slate-500 mt-1">
@@ -194,13 +194,13 @@ export function PaymentDetailPage() {
             </div>
 
             <div className="text-left sm:text-right">
-              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
+              <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block">
                 Total Amount Collected
               </span>
-              <div className="font-mono text-2xl font-black text-slate-900 mt-1">
+              <div className="font-mono text-2xl font-semibold tabular-nums text-slate-900 mt-1">
                 {formatCurrency(payment.amount)}
               </div>
-              <div className="text-xs font-semibold text-slate-700 mt-1">
+              <div className="text-xs font-medium text-slate-700 mt-1">
                 Method: {payment.paymentMethod}
               </div>
             </div>
@@ -209,11 +209,11 @@ export function PaymentDetailPage() {
           {/* Details Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200 text-xs">
             <div className="space-y-1.5">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+              <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
                 Customer Details
               </span>
-              <div className="font-bold text-slate-900 text-sm">
-                <Link to={`/customers/${payment.customerId}`} className="hover:underline text-indigo-600">
+              <div className="font-semibold text-slate-900 text-sm">
+                <Link to={`/customers/${payment.customerId}`} className="hover:underline text-primary">
                   {payment.customerName}
                 </Link>
               </div>
@@ -221,12 +221,12 @@ export function PaymentDetailPage() {
                 <div className="text-slate-600 font-mono">Code: {payment.customerCode}</div>
               )}
               <div className="text-slate-600">
-                Collecting Officer: <span className="font-semibold">{payment.salesRepName}</span>
+                Collecting Officer: <span className="font-medium">{payment.salesRepName}</span>
               </div>
             </div>
 
             <div className="space-y-1.5 md:text-right">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+              <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
                 Verification & Approval
               </span>
               {payment.chequeNumber && (
@@ -262,7 +262,7 @@ export function PaymentDetailPage() {
 
           {/* Invoice Allocations */}
           <div>
-            <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wide mb-3">
+            <h3 className="text-xs font-semibold text-slate-800 uppercase tracking-wide mb-3">
               Allocated Invoices
             </h3>
             {payment.invoiceAllocations.length === 0 ? (
@@ -276,27 +276,18 @@ export function PaymentDetailPage() {
                     <TableRow className="bg-slate-50">
                       <TableHead>Invoice #</TableHead>
                       <TableHead className="text-right">Allocated Amount (LKR)</TableHead>
-                      <TableHead className="text-right w-28">Action</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {payment.invoiceAllocations.map((alloc) => (
                       <TableRow key={alloc.invoiceId}>
-                        <TableCell className="font-mono text-xs font-semibold text-indigo-600">
+                        <TableCell className="font-mono text-xs font-semibold text-primary">
                           <Link to={`/invoices/${alloc.invoiceId}`} className="hover:underline">
                             {alloc.invoiceNumber}
                           </Link>
                         </TableCell>
-                        <TableCell className="text-right font-mono text-xs font-bold text-slate-900">
+                        <TableCell className="text-right font-mono text-xs font-semibold tabular-nums text-slate-900">
                           {formatCurrency(alloc.allocatedAmount)}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Link
-                            to={`/invoices/${alloc.invoiceId}`}
-                            className="text-xs text-indigo-600 hover:underline"
-                          >
-                            View Invoice
-                          </Link>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -328,7 +319,7 @@ export function PaymentDetailPage() {
       >
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-base font-bold flex items-center gap-2">
+            <DialogTitle className="text-base font-semibold flex items-center gap-2">
               {actionDialogMode === 'APPROVE' ? (
                 <>
                   <CheckCircle className="h-5 w-5 text-emerald-600" />
@@ -345,7 +336,7 @@ export function PaymentDetailPage() {
 
           <div className="space-y-4 text-xs py-2">
             <div className="space-y-1.5">
-              <label className="font-semibold text-slate-700 block">
+              <label className="font-medium text-slate-700 block">
                 {actionDialogMode === 'APPROVE' ? 'Approval Remark:' : 'Rejection Reason (Mandatory):'}
               </label>
               <Input

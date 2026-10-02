@@ -59,7 +59,7 @@ export function ReportDateFilterBar({
       {/* Presets */}
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-xs font-semibold text-slate-500 flex items-center gap-1.5">
-          <Calendar className="h-3.5 w-3.5 text-indigo-600" />
+          <Calendar className="h-3.5 w-3.5 text-primary" />
           Period:
         </span>
         <div className="flex rounded-md border border-slate-200 bg-slate-50 p-0.5 text-xs">
@@ -70,7 +70,7 @@ export function ReportDateFilterBar({
               onClick={() => handlePreset(p)}
               className={`rounded px-2.5 py-1 font-medium transition-colors ${
                 filter.preset === p
-                  ? 'bg-white text-indigo-700 shadow-sm'
+                  ? 'bg-white text-primary-text shadow-sm'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >

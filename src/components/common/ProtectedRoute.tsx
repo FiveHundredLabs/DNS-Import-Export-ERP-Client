@@ -1,8 +1,7 @@
 import { ReactNode } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, Navigate, Link } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
-import { ErrorState } from './ErrorState';
-import { ShieldAlert } from 'lucide-react';
+import { ShieldAlert, Users } from 'lucide-react';
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -10,8 +9,12 @@ interface ProtectedRouteProps {
 }
 
 export function ProtectedRoute({ children }: ProtectedRouteProps) {
-  const { role, canAccessRoute } = useAuth();
+  const { role, canAccessRoute, isAuthenticated } = useAuth();
   const location = useLocation();
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace state={{ from: location.pathname }} />;
+  }
 
   const isAllowed = canAccessRoute(location.pathname);
 
@@ -27,8 +30,17 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
             Your current role (<span className="font-semibold text-slate-800">{role}</span>) does not have authorization to access <span className="font-mono font-medium text-slate-700">{location.pathname}</span>.
           </p>
           <p className="mt-2 text-[11px] text-slate-400">
-            Use the role switcher in the navigation bar to test this view with an authorized role (e.g. Director, Manager, or Sales Manager).
+            Switch to an authorized role (e.g. Director, Manager, or Sales Manager) on the login page.
           </p>
+          <div className="mt-4">
+            <Link
+              to="/login"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-primary hover:bg-primary-hover text-primary-foreground text-xs font-semibold shadow-sm transition-colors"
+            >
+              <Users className="h-3.5 w-3.5" />
+              Switch User / Role
+            </Link>
+          </div>
         </div>
       </div>
     );
@@ -36,3 +48,4 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
 
   return <>{children}</>;
 }
+

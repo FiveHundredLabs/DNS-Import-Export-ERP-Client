@@ -1,5 +1,4 @@
 import { BaseEntity } from './common';
-import { UserRole } from './auth';
 
 export type QuotationStatus =
   | 'DRAFT'

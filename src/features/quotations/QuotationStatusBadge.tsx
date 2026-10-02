@@ -13,7 +13,7 @@ export function QuotationStatusBadge({ status, className }: QuotationStatusBadge
     case 'PENDING_APPROVAL':
       return <Badge variant="warning" className={className}>Pending Approval</Badge>;
     case 'CONVERTED':
-      return <Badge variant="default" className={`bg-blue-600 hover:bg-blue-700 text-white ${className || ''}`}>Converted</Badge>;
+      return <Badge variant="default" className={`bg-primary hover:bg-primary-hover text-primary-foreground ${className || ''}`}>Converted</Badge>;
     case 'DRAFT':
       return <Badge variant="secondary" className={className}>Draft</Badge>;
     case 'REJECTED':

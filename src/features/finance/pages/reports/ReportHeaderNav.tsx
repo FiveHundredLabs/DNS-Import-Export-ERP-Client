@@ -24,7 +24,7 @@ export function ReportHeaderNav() {
     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-2 border-b border-slate-200 print:hidden">
       <Link
         to="/finance/reports"
-        className="flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-indigo-600 transition-colors bg-white px-3 py-1.5 rounded-md border border-slate-200 shadow-2xs"
+        className="flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-primary transition-colors bg-white px-3 py-1.5 rounded-md border border-slate-200 shadow-2xs"
       >
         <ArrowLeft className="h-3.5 w-3.5" />
         <span>Back to Reports Hub</span>
@@ -42,7 +42,7 @@ export function ReportHeaderNav() {
               className={cn(
                 'flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-md transition-colors whitespace-nowrap',
                 isActive
-                  ? 'bg-indigo-600 text-white font-semibold shadow-xs'
+                  ? 'bg-primary text-primary-foreground font-semibold shadow-xs'
                   : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50 hover:text-slate-900'
               )}
             >

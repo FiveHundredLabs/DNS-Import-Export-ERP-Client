@@ -143,7 +143,7 @@ export function QuotationDetailPage() {
   }
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto">
+    <div className="space-y-6 w-full">
       {/* Top Navigation & Action Toolbar */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <button
@@ -253,7 +253,7 @@ export function QuotationDetailPage() {
             <Button
               size="sm"
               onClick={() => setIsConvertModalOpen(true)}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs gap-1.5 shadow-xs"
+              className="bg-primary hover:bg-primary-hover text-primary-foreground text-xs gap-1.5 shadow-xs"
             >
               <ShoppingCart className="h-3.5 w-3.5" />
               Convert to Sales Order
@@ -282,8 +282,8 @@ export function QuotationDetailPage() {
       )}
 
       {quotation.status === 'CONVERTED' && (
-        <div className="rounded-lg bg-blue-50 border border-blue-200 p-4 text-xs text-blue-900 flex items-start gap-3">
-          <CheckCircle className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
+        <div className="rounded-lg bg-primary-light border border-primary-border p-4 text-xs text-blue-900 flex items-start gap-3">
+          <CheckCircle className="h-5 w-5 text-primary shrink-0 mt-0.5" />
           <div>
             <h4 className="font-bold text-blue-900">Converted to Sales Order</h4>
             <p className="text-blue-800 mt-0.5">
@@ -323,21 +323,21 @@ export function QuotationDetailPage() {
           {/* Document Header */}
           <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 border-b border-slate-200 pb-6">
             <div>
-              <h2 className="text-2xl font-black text-indigo-900 tracking-tight">DNS DISTRIBUTION (PVT) LTD</h2>
+              <h2 className="text-2xl font-semibold text-slate-900 tracking-tight">DNS DISTRIBUTION (PVT) LTD</h2>
               <p className="text-xs text-slate-500 font-medium mt-0.5">
                 Authorized Electrical, Automation & Industrial Wholesale Distributor
               </p>
-              <p className="text-[11px] text-slate-500 mt-1">
+              <p className="text-xs text-slate-500 mt-1">
                 142 First Cross Street, Colombo 11, Sri Lanka | Tel: +94 11 234 5678
               </p>
-              <p className="text-[11px] text-slate-400">VAT Registration No: 109847291-7000</p>
+              <p className="text-xs text-slate-400">VAT Registration No: 109847291-7000</p>
             </div>
 
             <div className="text-left sm:text-right space-y-1">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+              <span className="text-xs font-medium text-slate-500 block">
                 Official Commercial Document
               </span>
-              <div className="text-xl font-bold font-mono text-indigo-600">
+              <div className="text-xl font-semibold font-mono text-primary tabular-nums">
                 {quotation.quotationNumber}
               </div>
               <div className="pt-1">
@@ -345,7 +345,7 @@ export function QuotationDetailPage() {
               </div>
               <div className="text-xs text-slate-500 pt-2">
                 <span>Date Issued: </span>
-                <strong className="text-slate-700">{formatDate(quotation.createdAt)}</strong>
+                <strong className="text-slate-700 font-medium">{formatDate(quotation.createdAt)}</strong>
               </div>
               <div className="text-xs text-rose-600">
                 <span>Valid Until: </span>
@@ -357,11 +357,11 @@ export function QuotationDetailPage() {
           {/* Customer & Rep Meta Box */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 rounded-lg bg-slate-50/80 border border-slate-200 p-4 text-xs">
             <div>
-              <div className="flex items-center gap-1.5 font-bold uppercase tracking-wider text-[10px] text-slate-500 mb-1">
-                <Building2 className="h-3.5 w-3.5 text-indigo-600" />
+              <div className="flex items-center gap-1.5 font-medium text-xs text-slate-500 mb-1">
+                <Building2 className="h-3.5 w-3.5 text-primary" />
                 Quoted Customer / Dealer
               </div>
-              <h4 className="font-bold text-slate-900 text-sm">{quotation.customerNameSnapshot}</h4>
+              <h4 className="font-semibold text-slate-900 text-sm">{quotation.customerNameSnapshot}</h4>
               <p className="text-slate-500 mt-0.5">Dealer Code: <span className="font-mono">{quotation.customerCodeSnapshot}</span></p>
               {quotation.customerAddressSnapshot && (
                 <p className="text-slate-600 mt-0.5">{quotation.customerAddressSnapshot}</p>
@@ -370,11 +370,11 @@ export function QuotationDetailPage() {
             </div>
 
             <div className="sm:text-right">
-              <div className="flex items-center gap-1.5 font-bold uppercase tracking-wider text-[10px] text-slate-500 mb-1 sm:justify-end">
-                <User className="h-3.5 w-3.5 text-indigo-600" />
+              <div className="flex items-center gap-1.5 font-medium text-xs text-slate-500 mb-1 sm:justify-end">
+                <User className="h-3.5 w-3.5 text-primary" />
                 Sales Representative
               </div>
-              <h4 className="font-bold text-slate-900 text-sm">{quotation.salesRepNameSnapshot}</h4>
+              <h4 className="font-semibold text-slate-900 text-sm">{quotation.salesRepNameSnapshot}</h4>
               <p className="text-slate-500 mt-0.5">Commercial Sales Division</p>
               <p className="text-slate-500 mt-0.5">Ref: Territory Western Central</p>
             </div>
@@ -397,26 +397,26 @@ export function QuotationDetailPage() {
               <TableBody>
                 {quotation.items.map((it, idx) => (
                   <TableRow key={it.id || idx}>
-                    <TableCell className="text-center text-xs text-slate-400">{idx + 1}</TableCell>
+                    <TableCell className="text-center text-[13px] text-slate-400 tabular-nums">{idx + 1}</TableCell>
                     <TableCell>
-                      <div className="font-semibold text-xs text-slate-900">{it.productNameSnapshot}</div>
-                      <div className="font-mono text-[11px] text-slate-500">
-                        SKU: {it.skuSnapshot} {it.requiresApproval && <span className="text-amber-600 font-sans ml-1">(Approval Required)</span>}
+                      <div className="font-semibold text-[13px] text-slate-900">{it.productNameSnapshot}</div>
+                      <div className="font-mono text-xs text-slate-500">
+                        SKU: {it.skuSnapshot} {it.requiresApproval && <span className="text-amber-600 font-sans ml-1 font-medium">(Approval Required)</span>}
                       </div>
                     </TableCell>
-                    <TableCell className="text-center text-xs text-slate-700">
+                    <TableCell className="text-center text-[13px] text-slate-700 tabular-nums">
                       {it.quantity} {it.uomSnapshot || 'pcs'}
                     </TableCell>
-                    <TableCell className="text-right font-mono text-xs text-slate-700">
+                    <TableCell className="text-right font-mono text-[13px] text-slate-700 tabular-nums">
                       {formatCurrency(it.unitPriceSnapshot)}
                     </TableCell>
-                    <TableCell className="text-right font-mono text-xs text-slate-700">
+                    <TableCell className="text-right font-mono text-[13px] text-slate-700 tabular-nums">
                       {it.discountPercentage}%
                     </TableCell>
-                    <TableCell className="text-right font-mono text-xs text-slate-500">
+                    <TableCell className="text-right font-mono text-[13px] text-slate-500 tabular-nums">
                       {formatCurrency(it.taxAmount)}
                     </TableCell>
-                    <TableCell className="text-right font-mono text-xs font-bold text-slate-900">
+                    <TableCell className="text-right font-mono text-[13px] font-semibold text-slate-900 tabular-nums">
                       {formatCurrency(it.lineTotal)}
                     </TableCell>
                   </TableRow>
@@ -430,7 +430,7 @@ export function QuotationDetailPage() {
             <div className="flex-1 space-y-3 text-xs text-slate-600">
               <div>
                 <strong className="block text-slate-800 font-semibold mb-1">Standard Terms & Conditions:</strong>
-                <p className="leading-relaxed bg-slate-50 p-2.5 rounded border border-slate-200 text-[11px]">
+                <p className="leading-relaxed bg-slate-50 p-2.5 rounded border border-slate-200 text-xs">
                   {quotation.termsAndConditions || 'Payment within agreed credit period. Prices valid until validity date.'}
                 </p>
               </div>
@@ -438,7 +438,7 @@ export function QuotationDetailPage() {
               {quotation.notes && (
                 <div>
                   <strong className="block text-slate-800 font-semibold mb-1">Special Notes / Remarks:</strong>
-                  <p className="text-[11px] text-slate-600 bg-slate-50 p-2 rounded border border-slate-200">
+                  <p className="text-xs text-slate-600 bg-slate-50 p-2 rounded border border-slate-200">
                     {quotation.notes}
                   </p>
                 </div>
@@ -448,22 +448,22 @@ export function QuotationDetailPage() {
             <div className="w-full sm:w-80 space-y-2 text-xs">
               <div className="flex justify-between text-slate-600 py-1">
                 <span>Subtotal (List Price):</span>
-                <span className="font-mono font-medium">{formatCurrency(quotation.subtotal)}</span>
+                <span className="font-mono font-medium tabular-nums">{formatCurrency(quotation.subtotal)}</span>
               </div>
 
               <div className="flex justify-between text-emerald-600 py-1">
                 <span>Total Applied Discount:</span>
-                <span className="font-mono font-medium">- {formatCurrency(quotation.discountAmount)}</span>
+                <span className="font-mono font-medium tabular-nums">- {formatCurrency(quotation.discountAmount)}</span>
               </div>
 
               <div className="flex justify-between text-slate-600 py-1">
                 <span>VAT (18% Included):</span>
-                <span className="font-mono font-medium">{formatCurrency(quotation.taxAmount)}</span>
+                <span className="font-mono font-medium tabular-nums">{formatCurrency(quotation.taxAmount)}</span>
               </div>
 
-              <div className="border-t-2 border-indigo-900 pt-2 flex justify-between font-bold text-base text-slate-900">
+              <div className="border-t-2 border-slate-900 pt-2 flex justify-between font-semibold text-base text-slate-900">
                 <span>Grand Total:</span>
-                <span className="text-indigo-700 font-mono">{formatCurrency(quotation.totalAmount)}</span>
+                <span className="text-primary font-mono font-semibold tabular-nums">{formatCurrency(quotation.totalAmount)}</span>
               </div>
             </div>
           </div>
@@ -507,7 +507,7 @@ export function QuotationDetailPage() {
             </DialogHeader>
 
             <div className="py-2">
-              <label className="block text-xs font-medium text-slate-700 mb-1">
+              <label className="block text-[13px] font-medium text-slate-700 mb-1.5">
                 {actionType === 'APPROVE' ? 'Approval Notes (Optional)' : 'Rejection Reason (Required)'}
               </label>
               <textarea
@@ -519,7 +519,7 @@ export function QuotationDetailPage() {
                     : 'e.g. Requested 12% discount exceeds commercial margin limit.'
                 }
                 rows={3}
-                className="w-full rounded-md border border-slate-200 p-2 text-xs focus:ring-1 focus:ring-indigo-500"
+                className="w-full rounded-md border border-slate-200 p-2 text-sm focus:ring-1 focus:ring-primary"
               />
             </div>
 

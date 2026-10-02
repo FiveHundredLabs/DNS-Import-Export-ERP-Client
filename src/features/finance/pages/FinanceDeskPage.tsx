@@ -287,7 +287,7 @@ export function FinanceDeskPage() {
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-2xl font-bold tracking-tight text-slate-900">The Finance Desk</h1>
-            <Badge variant="outline" className="bg-indigo-50 text-indigo-700 border-indigo-200 text-xs">
+            <Badge variant="outline" className="bg-primary-light text-primary-text border-primary-border text-xs">
               Universal Debit / Credit Entry
             </Badge>
           </div>
@@ -301,7 +301,7 @@ export function FinanceDeskPage() {
             size="sm"
             variant="outline"
             onClick={() => setAccountModalOpen(true)}
-            className="gap-1.5 text-xs text-indigo-700 border-indigo-200 hover:bg-indigo-50"
+            className="gap-1.5 text-xs text-primary-text border-primary-border hover:bg-primary-light"
           >
             <Plus className="h-4 w-4" />
             <span>New GL Account</span>
@@ -310,10 +310,10 @@ export function FinanceDeskPage() {
       </div>
 
       {/* Quick Journal Presets Bar */}
-      <Card className="p-3 bg-gradient-to-r from-indigo-50/60 via-white to-slate-50 border-slate-200 shadow-2xs">
+      <Card className="p-3 bg-gradient-to-r from-primary-light/60 via-white to-slate-50 border-slate-200 shadow-2xs">
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <Zap className="h-4 w-4 text-indigo-600 shrink-0" />
+            <Zap className="h-4 w-4 text-primary shrink-0" />
             <span className="text-xs font-bold text-slate-800">Quick Journal Presets:</span>
           </div>
 
@@ -321,10 +321,10 @@ export function FinanceDeskPage() {
             <button
               type="button"
               onClick={() => applyPreset('SUPPLIER_PAYMENT')}
-              className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-2xs hover:border-indigo-300 hover:bg-indigo-50/60 hover:text-indigo-700 transition-colors"
+              className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-2xs hover:border-primary-border hover:bg-primary-light/60 hover:text-primary-text transition-colors"
               title="Dr Accounts Payable (2010) | Cr Bank Account (1010)"
             >
-              <Receipt className="h-3.5 w-3.5 text-indigo-600" />
+              <Receipt className="h-3.5 w-3.5 text-primary" />
               <span>Pay Supplier Bill</span>
             </button>
 
@@ -404,7 +404,7 @@ export function FinanceDeskPage() {
               <span>Account Title & Code</span>
             </div>
             <div className="col-span-3">Line Memo / Description</div>
-            <div className="col-span-2 text-right text-indigo-600">Debit (Dr LKR)</div>
+            <div className="col-span-2 text-right text-primary">Debit (Dr LKR)</div>
             <div className="col-span-2 text-right text-emerald-600">Credit (Cr LKR)</div>
             <div className="col-span-1 text-right">Action</div>
           </div>
@@ -431,7 +431,7 @@ export function FinanceDeskPage() {
               variant="outline"
               size="sm"
               onClick={handleAddLine}
-              className="gap-1.5 text-xs text-indigo-600 hover:bg-indigo-50 border-dashed border-indigo-300"
+              className="gap-1.5 text-xs text-primary hover:bg-primary-light border-dashed border-primary-border"
             >
               <Plus className="h-3.5 w-3.5" />
               <span>Add Journal Line</span>
@@ -441,7 +441,7 @@ export function FinanceDeskPage() {
               <button
                 type="button"
                 onClick={handleAutoBalance}
-                className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 underline underline-offset-2 flex items-center gap-1"
+                className="text-xs font-semibold text-primary hover:text-primary-text underline underline-offset-2 flex items-center gap-1"
               >
                 <span>Auto-balance remaining {formatCurrency(difference)}</span>
                 <ArrowRight className="h-3.5 w-3.5" />
@@ -454,12 +454,12 @@ export function FinanceDeskPage() {
         {hasActiveEntries && (
           <div className="rounded-lg border border-slate-200 bg-slate-50/70 p-3.5 text-xs space-y-1.5">
             <div className="flex items-center gap-1.5 font-semibold text-slate-700">
-              <Info className="h-3.5 w-3.5 text-indigo-600" />
+              <Info className="h-3.5 w-3.5 text-primary" />
               <span>Live Ledger Impact Preview:</span>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-slate-600 text-[11px]">
               <div>
-                <span className="font-semibold text-indigo-700">Debiting (Dr):</span>
+                <span className="font-semibold text-primary-text">Debiting (Dr):</span>
                 {activeDebitLines.length === 0 ? (
                   <span className="text-slate-400 italic ml-1">None entered</span>
                 ) : (
@@ -467,7 +467,7 @@ export function FinanceDeskPage() {
                     {activeDebitLines.map((l) => (
                       <li key={l.id}>
                         <span className="font-mono font-bold text-slate-800">{l.accountCode}</span> ({l.accountName}):{' '}
-                        <span className="font-bold text-indigo-700">{formatCurrency(l.debit)}</span>
+                        <span className="font-bold text-primary-text">{formatCurrency(l.debit)}</span>
                       </li>
                     ))}
                   </ul>
@@ -535,7 +535,7 @@ export function FinanceDeskPage() {
                 ) : (
                   journals.slice(0, 8).map((je) => (
                     <tr key={je.id} className="hover:bg-slate-50/60 transition-colors">
-                      <td className="px-4 py-3 font-mono font-bold text-indigo-700">{je.entryNumber}</td>
+                      <td className="px-4 py-3 font-mono font-bold text-primary-text">{je.entryNumber}</td>
                       <td className="px-4 py-3 text-slate-600">{formatDate(je.date)}</td>
                       <td className="px-4 py-3">
                         <div className="font-semibold text-slate-900">{je.description}</div>
@@ -551,7 +551,7 @@ export function FinanceDeskPage() {
                       <td className="px-4 py-3 space-y-0.5">
                         {je.lines.map((l) => (
                           <div key={l.id} className="text-[11px] text-slate-600">
-                            <span className="font-mono text-indigo-600">{l.accountCode}</span>: {l.accountName}{' '}
+                            <span className="font-mono text-primary">{l.accountCode}</span>: {l.accountName}{' '}
                             {l.debit > 0 ? `(Dr ${formatCurrency(l.debit)})` : `(Cr ${formatCurrency(l.credit)})`}
                           </div>
                         ))}

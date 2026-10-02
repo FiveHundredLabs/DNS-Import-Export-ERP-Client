@@ -3,6 +3,8 @@ import { BaseEntity } from './common';
 export type InvoiceStatus =
   | 'DRAFT'
   | 'ISSUED'
+  | 'COLLECTED'
+  | 'PARTIALLY_COLLECTED'
   | 'PAID'
   | 'PARTIALLY_PAID'
   | 'OVERDUE'
@@ -43,6 +45,7 @@ export interface Invoice extends BaseEntity {
   taxTotal: number;
   totalAmount: number;
   paidAmount: number;
+  collectedAmount?: number;
   balanceAmount: number;
   status: InvoiceStatus;
   notes?: string;

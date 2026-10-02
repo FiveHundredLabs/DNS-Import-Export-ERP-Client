@@ -53,14 +53,14 @@ export function FinanceDashboardPage() {
       description: 'Universal debit/credit form for expenses, assets, and manual vouchers.',
       path: '/finance/desk',
       icon: Zap,
-      color: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+      color: 'bg-primary-light text-primary-text border-primary-border',
     },
     {
       title: 'Chart of Accounts',
       description: 'Hierarchical general ledger account tree and custom sub-accounts.',
       path: '/finance/accounts',
       icon: BookOpen,
-      color: 'bg-blue-50 text-blue-700 border-blue-200',
+      color: 'bg-primary-light text-blue-700 border-primary-border',
     },
     {
       title: 'Cash Verification Desk',
@@ -126,8 +126,8 @@ export function FinanceDashboardPage() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900">Finance & Accounting Command Hub</h1>
-            <Badge variant="outline" className="bg-indigo-50 text-indigo-700 border-indigo-200 text-xs">
+            <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Finance & Accounting Command Hub</h1>
+            <Badge variant="outline" className="bg-primary-light text-primary-text border-primary-border text-xs">
               Phase 9 Master Ledger
             </Badge>
           </div>
@@ -138,7 +138,7 @@ export function FinanceDashboardPage() {
 
         <div className="flex items-center gap-2">
           <Link to="/finance/desk">
-            <Button className="gap-2 bg-indigo-600 hover:bg-indigo-700">
+            <Button className="gap-2 bg-primary hover:bg-primary-hover font-medium">
               <Zap className="h-4 w-4" />
               <span>Open Finance Desk</span>
             </Button>
@@ -151,23 +151,23 @@ export function FinanceDashboardPage() {
         <Card className="p-4 border-slate-200">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Bank Float (1010)</span>
-            <DollarSign className="h-4 w-4 text-blue-600" />
+            <DollarSign className="h-4 w-4 text-primary" />
           </div>
-          <div className="mt-2 text-2xl font-bold text-slate-900 font-mono">
+          <div className="mt-2 text-2xl font-semibold text-slate-900 tabular-nums">
             {formatCurrency(bankAccount?.currentBalance || 0)}
           </div>
-          <span className="text-[11px] text-slate-400">Available Operating Liquidity</span>
+          <span className="text-xs text-slate-400">Available Operating Liquidity</span>
         </Card>
 
         <Card className="p-4 border-slate-200">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Accounts Receivable (1020)</span>
-            <TrendingUp className="h-4 w-4 text-indigo-600" />
+            <TrendingUp className="h-4 w-4 text-primary" />
           </div>
-          <div className="mt-2 text-2xl font-bold text-slate-900 font-mono">
+          <div className="mt-2 text-2xl font-semibold text-slate-900 tabular-nums">
             {formatCurrency(arAccount?.currentBalance || 0)}
           </div>
-          <span className="text-[11px] text-indigo-600 font-medium">Customer Outstandings</span>
+          <span className="text-xs text-primary font-medium">Customer Outstandings</span>
         </Card>
 
         <Card className="p-4 border-slate-200">
@@ -175,10 +175,10 @@ export function FinanceDashboardPage() {
             <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Accounts Payable (2010)</span>
             <Receipt className="h-4 w-4 text-amber-600" />
           </div>
-          <div className="mt-2 text-2xl font-bold text-slate-900 font-mono">
+          <div className="mt-2 text-2xl font-semibold text-slate-900 tabular-nums">
             {formatCurrency(apAccount?.currentBalance || 0)}
           </div>
-          <span className="text-[11px] text-amber-600 font-medium">Vendor Liabilities</span>
+          <span className="text-xs text-amber-600 font-medium">Vendor Liabilities</span>
         </Card>
 
         <Card className="p-4 border-slate-200 bg-emerald-50/40 border-emerald-100">
@@ -186,32 +186,32 @@ export function FinanceDashboardPage() {
             <span className="text-xs font-semibold uppercase tracking-wider text-emerald-900">Net Operating Profit</span>
             <PieChart className="h-4 w-4 text-emerald-700" />
           </div>
-          <div className="mt-2 text-2xl font-bold text-emerald-900 font-mono">
+          <div className="mt-2 text-2xl font-semibold text-emerald-900 tabular-nums">
             {formatCurrency(netProfit)}
           </div>
-          <span className="text-[11px] text-emerald-700 font-medium">Period Bottom Line</span>
+          <span className="text-xs text-emerald-700 font-medium">Period Bottom Line</span>
         </Card>
       </div>
 
       {/* Module Navigation Grid */}
       <div className="space-y-3">
-        <h2 className="text-sm font-bold uppercase tracking-wider text-slate-500">Finance & Accounting Workspaces</h2>
+        <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-500">Finance & Accounting Workspaces</h2>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {quickNav.map((item) => {
             const Icon = item.icon;
             return (
               <Link key={item.path} to={item.path} className="group block">
-                <Card className="h-full p-4 border-slate-200 transition-all hover:border-indigo-300 hover:shadow-md">
+                <Card className="h-full p-4 border-slate-200 transition-all hover:border-primary-border hover:shadow-md">
                   <div className="flex items-start gap-3">
                     <div className={`p-2 rounded-lg border ${item.color} shrink-0`}>
                       <Icon className="h-5 w-5" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between">
-                        <h3 className="text-sm font-semibold text-slate-900 group-hover:text-indigo-600 transition-colors">
+                        <h3 className="text-sm font-semibold text-slate-900 group-hover:text-primary transition-colors">
                           {item.title}
                         </h3>
-                        <ArrowRight className="h-4 w-4 text-slate-400 group-hover:text-indigo-600 group-hover:translate-x-0.5 transition-all" />
+                        <ArrowRight className="h-4 w-4 text-slate-400 group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
                       </div>
                       <p className="text-xs text-slate-500 mt-1 line-clamp-2">{item.description}</p>
                     </div>
@@ -226,8 +226,8 @@ export function FinanceDashboardPage() {
       {/* Recent Posted General Ledger Entries */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <h2 className="text-sm font-bold uppercase tracking-wider text-slate-500">Recent Ledger Activity</h2>
-          <Link to="/finance/reports/general-ledger" className="text-xs font-semibold text-indigo-600 hover:underline">
+          <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-500">Recent Ledger Activity</h2>
+          <Link to="/finance/reports/general-ledger" className="text-xs font-semibold text-primary hover:underline">
             View All Account Statements →
           </Link>
         </div>
@@ -235,7 +235,7 @@ export function FinanceDashboardPage() {
         <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="border-b border-slate-200 bg-slate-50 text-[11px] font-bold uppercase tracking-wider text-slate-500">
+              <thead className="border-b border-slate-200 bg-slate-50 text-xs font-semibold uppercase tracking-wider text-slate-500">
                 <tr>
                   <th className="px-4 py-3">Voucher #</th>
                   <th className="px-4 py-3">Date</th>
@@ -249,25 +249,25 @@ export function FinanceDashboardPage() {
               <tbody className="divide-y divide-slate-100 text-slate-700">
                 {journals.slice(0, 5).map((je) => (
                   <tr key={je.id} className="hover:bg-slate-50/60 transition-colors">
-                    <td className="px-4 py-3 font-mono font-bold text-indigo-700">{je.entryNumber}</td>
+                    <td className="px-4 py-3 tabular-nums font-semibold text-primary-text">{je.entryNumber}</td>
                     <td className="px-4 py-3 text-slate-600">{formatDate(je.date)}</td>
                     <td className="px-4 py-3">
                       <div className="font-semibold text-slate-900">{je.description}</div>
-                      {je.reference && <div className="text-[11px] text-slate-400 font-mono">Ref: {je.reference}</div>}
+                      {je.reference && <div className="text-xs text-slate-400 font-mono">Ref: {je.reference}</div>}
                     </td>
                     <td className="px-4 py-3">
-                      <Badge variant="outline" className="font-mono text-[10px]">
+                      <Badge variant="outline" className="font-mono text-xs">
                         {je.source}
                       </Badge>
                     </td>
-                    <td className="px-4 py-3 text-right font-mono font-semibold text-slate-900">
+                    <td className="px-4 py-3 text-right tabular-nums font-semibold text-slate-900">
                       {formatCurrency(je.totalDebit)}
                     </td>
-                    <td className="px-4 py-3 text-right font-mono font-semibold text-slate-900">
+                    <td className="px-4 py-3 text-right tabular-nums font-semibold text-slate-900">
                       {formatCurrency(je.totalCredit)}
                     </td>
                     <td className="px-4 py-3 text-center">
-                      <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[10px]">
+                      <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 text-xs font-semibold">
                         <ShieldCheck className="h-3 w-3 mr-1" />
                         <span>Posted</span>
                       </Badge>

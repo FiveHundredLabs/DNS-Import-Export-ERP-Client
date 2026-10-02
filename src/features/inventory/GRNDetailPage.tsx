@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
@@ -7,7 +7,7 @@ import { Textarea } from '../../components/ui/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table';
 import { Skeleton } from '../../components/ui/skeleton';
 import { useGRN } from '../../hooks/useGRN';
-import { authService } from '../../services/authService';
+import { useAuth } from '../../hooks/useAuth';
 import { MOCK_PRODUCTS } from '../../mock/mockProducts';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 import { toast } from 'sonner';
@@ -22,7 +22,7 @@ export function GRNDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [comment, setComment] = useState('');
   
-  const user = authService.getCurrentUser();
+  const { user } = useAuth();
 
   useEffect(() => {
     const fetchGRN = async () => {
@@ -77,7 +77,7 @@ export function GRNDetailPage() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'DRAFT': return 'bg-slate-500';
-      case 'SUBMITTED': return 'bg-blue-500';
+      case 'SUBMITTED': return 'bg-primary-light';
       case 'APPROVED': return 'bg-green-500';
       case 'REJECTED': return 'bg-red-500';
       default: return 'bg-gray-500';
@@ -104,7 +104,7 @@ export function GRNDetailPage() {
     );
   }
 
-  const totalValue = grn.items?.reduce((acc: number, item: any) => acc + (item.unitCost * (item.receivedQuantity - (item.damagedQuantity || 0))), 0) || 0;
+  const totalValue = grn.items?.reduce((acc: number, item: any) => acc + ((item.unitCostSnapshot ?? item.unitCost ?? 0) * (item.receivedQuantity - (item.damagedQuantity || 0))), 0) || 0;
 
   return (
     <div className="p-6 space-y-6">
@@ -161,7 +161,8 @@ export function GRNDetailPage() {
               {grn.items?.map((item: any, idx: number) => {
                 const product = MOCK_PRODUCTS.find(p => p.id === item.productId);
                 const goodQty = item.receivedQuantity - (item.damagedQuantity || 0);
-                const lineValue = goodQty * item.unitCost;
+                const unitCost = item.unitCostSnapshot ?? item.unitCost ?? 0;
+                const lineValue = goodQty * unitCost;
                 return (
                   <TableRow key={idx}>
                     <TableCell>{product?.name || item.productId}</TableCell>
@@ -170,7 +171,7 @@ export function GRNDetailPage() {
                     <TableCell className="text-right">{item.receivedQuantity}</TableCell>
                     <TableCell className="text-right">{item.damagedQuantity || 0}</TableCell>
                     <TableCell className="text-right">{goodQty}</TableCell>
-                    <TableCell className="text-right">{formatCurrency(item.unitCost)}</TableCell>
+                    <TableCell className="text-right">{formatCurrency(unitCost)}</TableCell>
                     <TableCell className="text-right">{formatCurrency(lineValue)}</TableCell>
                   </TableRow>
                 );
@@ -184,7 +185,7 @@ export function GRNDetailPage() {
       </Card>
 
       {grn.status === 'SUBMITTED' && user?.role === 'MANAGER' && (
-        <Card className="border-blue-200 bg-blue-50">
+        <Card className="border-primary-border bg-primary-light">
           <CardHeader>
             <CardTitle className="text-blue-800">Manager Approval</CardTitle>
           </CardHeader>

@@ -115,7 +115,7 @@ export function POSPaymentModal({
           <div className="text-xs font-semibold uppercase tracking-wider text-slate-400">
             Total Payable Amount
           </div>
-          <div className="text-3xl font-extrabold tracking-tight mt-0.5">
+          <div className="text-2xl sm:text-3xl font-semibold tabular-nums tracking-tight mt-0.5">
             {formatCurrency(totalAmount)}
           </div>
         </div>
@@ -129,20 +129,20 @@ export function POSPaymentModal({
 
           {/* Payment Method Selector */}
           <div>
-            <label className="text-xs font-semibold text-slate-700 block mb-1.5">
+            <label className="text-xs font-medium text-slate-700 block mb-1.5">
               Select Payment Method
             </label>
             <div className="grid grid-cols-3 gap-2">
               <button
                 type="button"
                 onClick={() => setMethod('CASH')}
-                className={`flex flex-col items-center justify-center rounded-xl p-3 text-xs font-bold border transition-all ${
+                className={`flex flex-col items-center justify-center rounded-xl p-3 text-xs font-medium border transition-all ${
                   method === 'CASH'
-                    ? 'border-indigo-600 bg-indigo-50 text-indigo-700 ring-2 ring-indigo-600/20 shadow-xs'
+                    ? 'border-primary bg-primary-light text-primary-text ring-2 ring-primary/20 shadow-xs'
                     : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
                 }`}
               >
-                <Banknote className="h-5 w-5 mb-1 text-indigo-600" />
+                <Banknote className="h-5 w-5 mb-1 text-primary" />
                 Cash
               </button>
               <button
@@ -150,11 +150,11 @@ export function POSPaymentModal({
                 onClick={() => setMethod('CARD')}
                 className={`flex flex-col items-center justify-center rounded-xl p-3 text-xs font-bold border transition-all ${
                   method === 'CARD'
-                    ? 'border-indigo-600 bg-indigo-50 text-indigo-700 ring-2 ring-indigo-600/20 shadow-xs'
+                    ? 'border-primary bg-primary-light text-primary-text ring-2 ring-primary/20 shadow-xs'
                     : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
                 }`}
               >
-                <CreditCard className="h-5 w-5 mb-1 text-sky-600" />
+                <CreditCard className="h-5 w-5 mb-1 text-primary" />
                 Card (POS)
               </button>
               <button
@@ -162,7 +162,7 @@ export function POSPaymentModal({
                 onClick={() => setMethod('CHEQUE')}
                 className={`flex flex-col items-center justify-center rounded-xl p-3 text-xs font-bold border transition-all ${
                   method === 'CHEQUE'
-                    ? 'border-indigo-600 bg-indigo-50 text-indigo-700 ring-2 ring-indigo-600/20 shadow-xs'
+                    ? 'border-primary bg-primary-light text-primary-text ring-2 ring-primary/20 shadow-xs'
                     : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
                 }`}
               >
@@ -239,7 +239,7 @@ export function POSPaymentModal({
                 <span className="font-semibold">
                   {isCashInsufficient ? 'Insufficient Tender:' : 'Change to Return to Customer:'}
                 </span>
-                <span className="text-base font-extrabold">
+                <span className="text-base font-semibold tabular-nums">
                   {isCashInsufficient
                     ? `- ${formatCurrency(totalAmount - cashTendered)}`
                     : formatCurrency(changeGiven)}
@@ -252,7 +252,7 @@ export function POSPaymentModal({
           {method === 'CHEQUE' && (
             <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-4 text-xs">
               <div>
-                <label className="font-semibold text-slate-700 block mb-1">
+                <label className="font-medium text-slate-700 block mb-1">
                   Cheque Number <span className="text-rose-500">*</span>
                 </label>
                 <Input
@@ -265,7 +265,7 @@ export function POSPaymentModal({
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="font-semibold text-slate-700 block mb-1">
+                  <label className="font-medium text-slate-700 block mb-1">
                     Bank Name <span className="text-rose-500">*</span>
                   </label>
                   <Input
@@ -276,7 +276,7 @@ export function POSPaymentModal({
                   />
                 </div>
                 <div>
-                  <label className="font-semibold text-slate-700 block mb-1">Cheque Date</label>
+                  <label className="font-medium text-slate-700 block mb-1">Cheque Date</label>
                   <Input
                     type="date"
                     value={chequeDate}
@@ -290,12 +290,12 @@ export function POSPaymentModal({
 
           {/* Method: CARD Details */}
           {method === 'CARD' && (
-            <div className="rounded-xl border border-sky-200 bg-sky-50 p-4 text-xs text-sky-800 flex items-center gap-3">
-              <CreditCard className="h-6 w-6 text-sky-600 shrink-0" />
+            <div className="rounded-xl border border-sky-200 bg-primary-light p-4 text-xs text-sky-800 flex items-center gap-3">
+              <CreditCard className="h-6 w-6 text-primary shrink-0" />
               <div>
-                <div className="font-bold">Swipe / Tap on Showroom Terminal</div>
+                <div className="font-semibold">Swipe / Tap on Showroom Terminal</div>
                 <div>
-                  Charge amount <span className="font-bold">{formatCurrency(totalAmount)}</span> to merchant terminal. Once transaction approves, proceed.
+                  Charge amount <span className="font-semibold tabular-nums">{formatCurrency(totalAmount)}</span> to merchant terminal. Once transaction approves, proceed.
                 </div>
               </div>
             </div>
@@ -308,7 +308,7 @@ export function POSPaymentModal({
             <Button
               type="submit"
               disabled={isProcessing || isCashInsufficient}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold flex items-center gap-2"
+              className="bg-primary hover:bg-primary-hover text-primary-foreground font-semibold flex items-center gap-2"
             >
               <CheckCircle2 className="h-4 w-4" />
               {isProcessing ? 'Processing Sale...' : 'Complete Sale & Print Receipt'}

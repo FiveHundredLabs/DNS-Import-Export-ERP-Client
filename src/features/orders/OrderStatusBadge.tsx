@@ -12,7 +12,7 @@ export function OrderStatusBadge({ status, isSpecialApproval }: OrderStatusBadge
       case 'DRAFT':
         return <Badge variant="secondary">Draft</Badge>;
       case 'SUBMITTED':
-        return <Badge variant="outline" className="border-indigo-300 text-indigo-700 bg-indigo-50">Submitted</Badge>;
+        return <Badge variant="outline" className="border-primary-border text-primary-text bg-primary-light">Submitted</Badge>;
       case 'PENDING_APPROVAL':
         return <Badge variant="warning">Pending Approval</Badge>;
       case 'SPECIAL_APPROVAL':
@@ -20,11 +20,11 @@ export function OrderStatusBadge({ status, isSpecialApproval }: OrderStatusBadge
       case 'APPROVED':
         return <Badge variant="success">Approved</Badge>;
       case 'PICKING':
-        return <Badge variant="info" className="bg-sky-600 text-white">Picking</Badge>;
+        return <Badge variant="info" className="bg-primary text-primary-foreground">Picking</Badge>;
       case 'PARTIALLY_ISSUED':
         return <Badge variant="warning" className="bg-amber-500 text-white">Partially Issued</Badge>;
       case 'ISSUED':
-        return <Badge variant="info" className="bg-blue-600 text-white">Issued</Badge>;
+        return <Badge variant="info" className="bg-primary text-primary-foreground">Issued</Badge>;
       case 'INVOICED':
         return <Badge variant="default" className="bg-purple-600 text-white hover:bg-purple-700">Invoiced</Badge>;
       case 'DISPATCHED':
@@ -44,7 +44,7 @@ export function OrderStatusBadge({ status, isSpecialApproval }: OrderStatusBadge
     <div className="inline-flex items-center gap-1.5 flex-wrap">
       {getBadge()}
       {isSpecialApproval && status !== 'SPECIAL_APPROVAL' && status !== 'CANCELLED' && status !== 'REJECTED' && (
-        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300">
+        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-semibold bg-amber-100 text-amber-900 border border-amber-300">
           Special Approval
         </span>
       )}

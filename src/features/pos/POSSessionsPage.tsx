@@ -46,12 +46,12 @@ export function POSSessionsPage() {
   };
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6">
+    <div className="w-full space-y-5">
       {/* Header & Sub-navigation */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-200 pb-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-2.5">
-            <Clock className="h-7 w-7 text-indigo-600" />
+            <Clock className="h-7 w-7 text-primary" />
             Cashier Shift Sessions & Reconciliation
           </h1>
           <p className="text-xs text-slate-500 mt-0.5">
@@ -65,7 +65,7 @@ export function POSSessionsPage() {
               to="/pos"
               className={({ isActive }) =>
                 `rounded-md px-3 py-1.5 transition-colors ${
-                  isActive ? 'bg-white text-indigo-700 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                  isActive ? 'bg-white text-primary-text shadow-xs' : 'text-slate-600 hover:text-slate-900'
                 }`
               }
             >
@@ -75,7 +75,7 @@ export function POSSessionsPage() {
               to="/pos/transactions"
               className={({ isActive }) =>
                 `rounded-md px-3 py-1.5 transition-colors ${
-                  isActive ? 'bg-white text-indigo-700 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                  isActive ? 'bg-white text-primary-text shadow-xs' : 'text-slate-600 hover:text-slate-900'
                 }`
               }
             >
@@ -85,7 +85,7 @@ export function POSSessionsPage() {
               to="/pos/sessions"
               className={({ isActive }) =>
                 `rounded-md px-3 py-1.5 transition-colors ${
-                  isActive ? 'bg-white text-indigo-700 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                  isActive ? 'bg-white text-primary-text shadow-xs' : 'text-slate-600 hover:text-slate-900'
                 }`
               }
             >
@@ -99,7 +99,7 @@ export function POSSessionsPage() {
       <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xs">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="border-b border-slate-200 bg-slate-50 font-bold uppercase tracking-wider text-slate-500 text-[10px]">
+            <thead className="border-b border-slate-200 bg-slate-50 font-semibold uppercase tracking-wider text-slate-500 text-xs">
               <tr>
                 <th className="py-3 px-4">Shift Number</th>
                 <th className="py-3 px-4">Cashier</th>
@@ -134,7 +134,7 @@ export function POSSessionsPage() {
 
                   return (
                     <tr key={sess.id} className="hover:bg-slate-50/80 transition-colors">
-                      <td className="py-3.5 px-4 font-mono font-bold text-indigo-700">
+                      <td className="py-3.5 px-4 font-mono font-bold text-primary-text">
                         {sess.sessionNumber}
                       </td>
                       <td className="py-3.5 px-4 font-semibold text-slate-900">
@@ -146,25 +146,25 @@ export function POSSessionsPage() {
                       <td className="py-3.5 px-4 text-[11px] text-slate-500">
                         {sess.closedAt ? new Date(sess.closedAt).toLocaleString() : '—'}
                       </td>
-                      <td className="py-3.5 px-4 text-right font-semibold text-slate-800">
+                      <td className="py-3.5 px-4 text-right font-semibold tabular-nums text-slate-800">
                         {formatCurrency(sess.openingBalance)}
                       </td>
-                      <td className="py-3.5 px-4 text-right font-extrabold text-emerald-600">
+                      <td className="py-3.5 px-4 text-right font-semibold tabular-nums text-emerald-600">
                         {formatCurrency(sess.totalSales)}
                       </td>
-                      <td className="py-3.5 px-4 text-right font-semibold text-slate-900">
+                      <td className="py-3.5 px-4 text-right font-semibold tabular-nums text-slate-900">
                         {sess.actualCash !== undefined ? formatCurrency(sess.actualCash) : '—'}
                       </td>
                       <td className="py-3.5 px-4 text-center">
                         {sess.status === 'OPEN' ? (
-                          <span className="text-[11px] text-slate-400">In Progress</span>
+                          <span className="text-xs text-slate-400">In Progress</span>
                         ) : diff !== undefined ? (
                           isBalanced ? (
-                            <span className="inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2 py-0.5 text-[11px] font-bold text-emerald-700 border border-emerald-200">
+                            <span className="inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700 border border-emerald-200">
                               <CheckCircle className="h-3 w-3" /> Balanced
                             </span>
                           ) : diff > 0 ? (
-                            <span className="inline-flex items-center gap-1 rounded-md bg-sky-50 px-2 py-0.5 text-[11px] font-bold text-sky-700 border border-sky-200">
+                            <span className="inline-flex items-center gap-1 rounded-md bg-primary-light px-2 py-0.5 text-xs font-medium text-sky-700 border border-sky-200">
                               +{formatCurrency(diff)} Over
                             </span>
                           ) : (
@@ -192,7 +192,7 @@ export function POSSessionsPage() {
                           variant="outline"
                           size="sm"
                           onClick={() => handleViewSummary(sess.id)}
-                          className="h-7 text-xs text-indigo-700 hover:bg-indigo-50 border-indigo-200"
+                          className="h-7 text-xs text-primary-text hover:bg-primary-light border-primary-border"
                         >
                           View Summary
                         </Button>
@@ -212,7 +212,7 @@ export function POSSessionsPage() {
           <div className="relative w-full max-w-2xl rounded-2xl bg-white p-6 shadow-2xl transition-all border border-slate-200 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2">
-                <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-indigo-50 text-indigo-700">
+                <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary-light text-primary-text">
                   <FileSpreadsheet className="h-5 w-5" />
                 </span>
                 <div>
@@ -236,19 +236,19 @@ export function POSSessionsPage() {
               {/* Shift Timing Details */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 rounded-xl border border-slate-200 bg-slate-50 p-3.5">
                 <div>
-                  <span className="text-[10px] text-slate-400 block uppercase font-bold">Shift Status</span>
+                  <span className="text-xs text-slate-500 block uppercase font-semibold">Shift Status</span>
                   <Badge variant={selectedSessionSummary.session.status === 'OPEN' ? 'warning' : 'outline'}>
                     {selectedSessionSummary.session.status}
                   </Badge>
                 </div>
                 <div>
-                  <span className="text-[10px] text-slate-400 block uppercase font-bold">Opened At</span>
+                  <span className="text-xs text-slate-500 block uppercase font-semibold">Opened At</span>
                   <span className="font-semibold text-slate-800">
                     {new Date(selectedSessionSummary.session.openedAt).toLocaleString()}
                   </span>
                 </div>
                 <div>
-                  <span className="text-[10px] text-slate-400 block uppercase font-bold">Closed At</span>
+                  <span className="text-xs text-slate-500 block uppercase font-semibold">Closed At</span>
                   <span className="font-semibold text-slate-800">
                     {selectedSessionSummary.session.closedAt
                       ? new Date(selectedSessionSummary.session.closedAt).toLocaleString()
@@ -256,8 +256,8 @@ export function POSSessionsPage() {
                   </span>
                 </div>
                 <div>
-                  <span className="text-[10px] text-slate-400 block uppercase font-bold">Total Transactions</span>
-                  <span className="font-bold text-indigo-700 text-sm">
+                  <span className="text-xs text-slate-500 block uppercase font-semibold">Total Transactions</span>
+                  <span className="font-semibold tabular-nums text-primary-text text-sm">
                     {selectedSessionSummary.transactions.length}
                   </span>
                 </div>
@@ -265,34 +265,34 @@ export function POSSessionsPage() {
 
               {/* Sales Breakdown by Payment Method */}
               <div className="rounded-xl border border-slate-200 bg-white p-4 space-y-2">
-                <div className="font-bold text-slate-800 uppercase tracking-wider text-[11px] mb-2 flex items-center justify-between">
+                <div className="font-semibold text-slate-800 uppercase tracking-wider text-xs mb-2 flex items-center justify-between">
                   <span>Sales by Tender Method</span>
-                  <span className="text-emerald-700 font-extrabold text-xs">
+                  <span className="text-emerald-700 font-semibold tabular-nums text-xs">
                     Total: {formatCurrency(selectedSessionSummary.session.totalSales)}
                   </span>
                 </div>
                 <div className="grid grid-cols-3 gap-2 text-xs">
                   <div className="rounded-lg bg-emerald-50 border border-emerald-100 p-2.5">
-                    <div className="text-emerald-600 font-bold flex items-center gap-1">
+                    <div className="text-emerald-600 font-semibold flex items-center gap-1">
                       <Banknote className="h-3.5 w-3.5" /> Cash Sales
                     </div>
-                    <div className="text-base font-extrabold text-emerald-900 mt-1">
+                    <div className="text-base font-semibold tabular-nums text-emerald-900 mt-1">
                       {formatCurrency(selectedSessionSummary.cashSalesTotal)}
                     </div>
                   </div>
-                  <div className="rounded-lg bg-sky-50 border border-sky-100 p-2.5">
-                    <div className="text-sky-600 font-bold flex items-center gap-1">
+                  <div className="rounded-lg bg-primary-light border border-sky-100 p-2.5">
+                    <div className="text-primary font-semibold flex items-center gap-1">
                       <CreditCard className="h-3.5 w-3.5" /> Card Sales
                     </div>
-                    <div className="text-base font-extrabold text-sky-900 mt-1">
+                    <div className="text-base font-semibold tabular-nums text-sky-900 mt-1">
                       {formatCurrency(selectedSessionSummary.cardSalesTotal)}
                     </div>
                   </div>
                   <div className="rounded-lg bg-amber-50 border border-amber-100 p-2.5">
-                    <div className="text-amber-600 font-bold flex items-center gap-1">
+                    <div className="text-amber-600 font-semibold flex items-center gap-1">
                       <Building2 className="h-3.5 w-3.5" /> Cheque Sales
                     </div>
-                    <div className="text-base font-extrabold text-amber-900 mt-1">
+                    <div className="text-base font-semibold tabular-nums text-amber-900 mt-1">
                       {formatCurrency(selectedSessionSummary.chequeSalesTotal)}
                     </div>
                   </div>
@@ -301,47 +301,47 @@ export function POSSessionsPage() {
 
               {/* Cash Reconciliation Calculation */}
               <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-2 text-xs">
-                <div className="font-bold text-slate-800 uppercase tracking-wider text-[11px] mb-2">
+                <div className="font-semibold text-slate-800 uppercase tracking-wider text-xs mb-2">
                   Drawer Float Mathematical Reconciliation
                 </div>
                 <div className="flex justify-between text-slate-600">
                   <span>Opening Cash Float:</span>
-                  <span className="font-semibold text-slate-800">
+                  <span className="font-semibold tabular-nums text-slate-800">
                     {formatCurrency(selectedSessionSummary.session.openingBalance)}
                   </span>
                 </div>
                 <div className="flex justify-between text-emerald-600">
                   <span>(+) Total Cash In (Added Float):</span>
-                  <span className="font-semibold">
+                  <span className="font-semibold tabular-nums">
                     + {formatCurrency(selectedSessionSummary.session.cashInTotal)}
                   </span>
                 </div>
                 <div className="flex justify-between text-amber-600">
                   <span>(-) Total Cash Out (Safe Drops):</span>
-                  <span className="font-semibold">
+                  <span className="font-semibold tabular-nums">
                     - {formatCurrency(selectedSessionSummary.session.cashOutTotal)}
                   </span>
                 </div>
-                <div className="flex justify-between text-indigo-600">
+                <div className="flex justify-between text-primary">
                   <span>(+) Showroom Cash Sales:</span>
-                  <span className="font-semibold">
+                  <span className="font-semibold tabular-nums">
                     + {formatCurrency(selectedSessionSummary.cashSalesTotal)}
                   </span>
                 </div>
-                <div className="border-t border-slate-200 pt-2 flex justify-between font-extrabold text-slate-900 text-sm">
+                <div className="border-t border-slate-200 pt-2 flex justify-between font-semibold text-slate-900 text-sm">
                   <span>Expected Physical Cash in Register:</span>
-                  <span className="text-indigo-700 font-mono">
+                  <span className="text-primary-text font-mono tabular-nums">
                     {formatCurrency(selectedSessionSummary.reconciliation.expectedCash)}
                   </span>
                 </div>
                 {selectedSessionSummary.session.actualCash !== undefined && (
                   <>
-                    <div className="flex justify-between font-bold text-slate-900">
+                    <div className="flex justify-between font-semibold text-slate-900">
                       <span>Counted / Actual Cash:</span>
-                      <span className="font-mono">{formatCurrency(selectedSessionSummary.session.actualCash)}</span>
+                      <span className="font-mono tabular-nums">{formatCurrency(selectedSessionSummary.session.actualCash)}</span>
                     </div>
                     <div
-                      className={`rounded-lg p-2.5 border flex items-center justify-between font-bold ${
+                      className={`rounded-lg p-2.5 border flex items-center justify-between font-semibold ${
                         selectedSessionSummary.reconciliation.isBalanced
                           ? 'bg-emerald-100/70 border-emerald-200 text-emerald-800'
                           : selectedSessionSummary.reconciliation.difference > 0
@@ -401,7 +401,7 @@ export function POSSessionsPage() {
               <Button variant="outline" size="sm" onClick={() => setSelectedSessionSummary(null)}>
                 Close
               </Button>
-              <Button size="sm" onClick={printSummary} className="bg-indigo-600 hover:bg-indigo-700 text-white flex items-center gap-1.5">
+              <Button size="sm" onClick={printSummary} className="bg-primary hover:bg-primary-hover text-primary-foreground flex items-center gap-1.5">
                 <Printer className="h-4 w-4" />
                 Print Shift Report
               </Button>

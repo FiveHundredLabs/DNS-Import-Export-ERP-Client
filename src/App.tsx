@@ -48,15 +48,23 @@ import { GeneralLedgerPage } from './features/finance/pages/reports/GeneralLedge
 import { VatSummaryPage } from './features/finance/pages/reports/VatSummaryPage';
 import { ReportsPage } from './features/reports/ReportsPage';
 import { ProtectedRoute } from './components/common/ProtectedRoute';
+import { LoginPage } from './features/auth/LoginPage';
+import { Toaster } from 'sonner';
+import { AreaListPage } from './features/administration/AreaListPage';
+import { TeamListPage } from './features/administration/TeamListPage';
 
 export function App() {
   return (
-    <Routes>
+    <>
+      <Toaster richColors position="top-right" />
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
       <Route path="/" element={<AppLayout />}>
         {/* Standard Single-Column Content Pages */}
         <Route element={<StandardLayout />}>
           {/* Core Operational Routes */}
           <Route index element={<DashboardPage />} />
+
 
           {/* Phase 3: Master Data */}
           <Route
@@ -346,6 +354,22 @@ export function App() {
             </ProtectedRoute>
           }
         />
+        <Route
+          path="areas"
+          element={
+            <ProtectedRoute>
+              <AreaListPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="teams"
+          element={
+            <ProtectedRoute>
+              <TeamListPage />
+            </ProtectedRoute>
+          }
+        />
         </Route>
 
         {/* Phase 9: Finance & Accounting Module with Direct Extended Navigation */}
@@ -379,5 +403,6 @@ export function App() {
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>
+    </>
   );
 }

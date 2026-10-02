@@ -127,7 +127,6 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
   ],
   SALES_REP: [
     'view:sales_rep_dashboard',
-    'products:view',
     'customers:view',
     'quotations:view',
     'quotations:create',
@@ -137,7 +136,6 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'payments:view',
     'payments:create',
     'warranty:view',
-    'warranty:claims',
     'commissions:view',
   ],
   STOCK_KEEPER: [
@@ -226,6 +224,13 @@ export function canAccessRoute(role: UserRole, path: string): boolean {
   }
   if (path.startsWith('/audit')) {
     return hasPermission(role, 'audit:view');
+  }
+  if (path.startsWith('/areas') || path.startsWith('/teams')) {
+    return (
+      role === 'DIRECTOR' ||
+      role === 'MANAGER' ||
+      role === 'SALES_MANAGER'
+    );
   }
   if (path.startsWith('/settings')) {
     return role === 'DIRECTOR' || role === 'MANAGER';

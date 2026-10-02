@@ -38,8 +38,8 @@ export function ApprovalsPage() {
     <div className="space-y-5">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold tracking-tight text-slate-900">Enterprise Approvals Engine</h1>
-          <p className="text-xs text-slate-500">
+          <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Enterprise Approvals Engine</h1>
+          <p className="text-xs text-slate-500 mt-0.5">
             Multi-tier hierarchical decision workflows with traceable audit history.
           </p>
         </div>
@@ -71,30 +71,30 @@ export function ApprovalsPage() {
                       {getDocumentLink(app) ? (
                         <Link
                           to={getDocumentLink(app)!}
-                          className="font-mono font-bold text-xs text-indigo-600 hover:underline flex items-center gap-1"
+                          className="font-mono font-semibold text-[13px] text-primary hover:underline flex items-center gap-1"
                         >
                           {app.documentReferenceNumber}
                           <ExternalLink className="h-3 w-3" />
                         </Link>
                       ) : (
-                        <span className="font-mono font-bold text-xs text-indigo-600">
+                        <span className="font-mono font-semibold text-[13px] text-primary">
                           {app.documentReferenceNumber}
                         </span>
                       )}
                       <ApprovalBadge status={app.status} />
                       {app.isSpecialScenario && (
-                        <span className="flex items-center gap-1 text-[11px] font-bold text-amber-700 bg-amber-100/80 px-2 py-0.5 rounded">
-                          <AlertTriangle className="h-3 w-3" /> SPECIAL SCENARIO
+                        <span className="flex items-center gap-1 text-xs font-medium text-amber-800 bg-amber-100/80 px-2.5 py-0.5 rounded-full">
+                          <AlertTriangle className="h-3 w-3" /> Special Scenario
                         </span>
                       )}
                     </div>
-                    <CardTitle className="text-sm font-semibold">{app.title}</CardTitle>
+                    <CardTitle className="text-base font-semibold">{app.title}</CardTitle>
                   </div>
 
                   <div className="flex items-center gap-3">
-                    <div className="text-right text-[11px] text-slate-500 hidden sm:block">
-                      <div>Current Approver: <span className="font-bold text-slate-800">{app.currentApproverRole}</span></div>
-                      <div className="flex items-center justify-end gap-1">
+                    <div className="text-right text-xs text-slate-500 hidden sm:block">
+                      <div>Current Approver: <span className="font-semibold text-slate-800">{app.currentApproverRole}</span></div>
+                      <div className="flex items-center justify-end gap-1 mt-0.5">
                         <Clock className="h-3 w-3" /> {formatDateTime(app.createdAt)}
                       </div>
                     </div>

@@ -66,14 +66,14 @@ export function CoaTreeSelect({
         disabled={disabled}
         onClick={() => setIsOpen(!isOpen)}
         className={cn(
-          'flex h-9 w-full items-center justify-between rounded-md border border-slate-300 bg-white px-3 py-1 text-xs text-left shadow-sm transition-colors focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400',
+          'flex h-9 w-full items-center justify-between rounded-md border border-slate-300 bg-white px-3 py-1 text-xs text-left shadow-sm transition-colors focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400',
           selectedAccount ? 'text-slate-900 font-medium' : 'text-slate-500'
         )}
       >
         <span className="truncate">
           {selectedAccount ? (
             <span>
-              <span className="font-mono font-semibold text-indigo-600 mr-1.5">{selectedAccount.code}</span>
+              <span className="font-mono font-semibold text-primary mr-1.5">{selectedAccount.code}</span>
               {selectedAccount.name}
             </span>
           ) : (
@@ -95,7 +95,7 @@ export function CoaTreeSelect({
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder="Search code or account title..."
-                  className="w-full rounded bg-slate-50 py-1 pl-8 pr-2 text-xs text-slate-800 placeholder-slate-400 outline-none focus:bg-white focus:ring-1 focus:ring-indigo-500"
+                  className="w-full rounded bg-slate-50 py-1 pl-8 pr-2 text-xs text-slate-800 placeholder-slate-400 outline-none focus:bg-white focus:ring-1 focus:ring-primary"
                   autoFocus
                 />
               </div>
@@ -122,15 +122,15 @@ export function CoaTreeSelect({
                               setIsOpen(false);
                             }}
                             className={cn(
-                              'flex w-full items-center justify-between rounded px-2 py-1.5 text-left text-xs transition-colors hover:bg-indigo-50 hover:text-indigo-700',
-                              isSelected ? 'bg-indigo-50 font-semibold text-indigo-700' : 'text-slate-700'
+                              'flex w-full items-center justify-between rounded px-2 py-1.5 text-left text-xs transition-colors hover:bg-primary-light hover:text-primary-text',
+                              isSelected ? 'bg-primary-light font-semibold text-primary-text' : 'text-slate-700'
                             )}
                           >
                             <span className="truncate">
                               <span className="font-mono text-slate-500 mr-2">{acc.code}</span>
                               {acc.name}
                             </span>
-                            {isSelected && <Check className="h-3.5 w-3.5 text-indigo-600 shrink-0 ml-1" />}
+                            {isSelected && <Check className="h-3.5 w-3.5 text-primary shrink-0 ml-1" />}
                           </button>
                         );
                       })}
@@ -148,7 +148,7 @@ export function CoaTreeSelect({
                     setIsOpen(false);
                     onAddNew();
                   }}
-                  className="flex w-full items-center justify-center gap-1.5 rounded py-1.5 text-xs font-semibold text-indigo-600 hover:bg-indigo-100/60 transition-colors"
+                  className="flex w-full items-center justify-center gap-1.5 rounded py-1.5 text-xs font-semibold text-primary hover:bg-primary-light/60 transition-colors"
                 >
                   <Plus className="h-3.5 w-3.5" />
                   <span>Add New Account</span>

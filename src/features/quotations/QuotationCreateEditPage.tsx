@@ -292,8 +292,8 @@ export function QuotationCreateEditPage() {
             <ArrowLeft className="h-3.5 w-3.5" />
             Back to Quotations
           </button>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900 flex items-center gap-2">
-            <FileSpreadsheet className="h-6 w-6 text-indigo-600" />
+          <h1 className="text-2xl font-semibold tracking-tight text-slate-900 flex items-center gap-2">
+            <FileSpreadsheet className="h-6 w-6 text-primary" />
             {isEdit ? 'Edit Draft Quotation' : 'Create New Quotation'}
           </h1>
           <p className="text-xs text-slate-500">
@@ -315,8 +315,8 @@ export function QuotationCreateEditPage() {
           {/* Customer Selection Card */}
           <Card className="shadow-xs">
             <CardHeader className="pb-3 flex flex-row items-center justify-between">
-              <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                <Building2 className="h-4 w-4 text-indigo-600" />
+              <CardTitle className="text-base font-semibold flex items-center gap-2">
+                <Building2 className="h-4 w-4 text-primary" />
                 Customer & Commercial Terms
               </CardTitle>
               {selectedCustomer && (
@@ -324,7 +324,7 @@ export function QuotationCreateEditPage() {
                   variant="outline"
                   size="sm"
                   onClick={() => setIsCustomerSelectorOpen(!isCustomerSelectorOpen)}
-                  className="text-xs h-7"
+                  className="text-xs h-7 font-medium"
                 >
                   {isCustomerSelectorOpen ? 'Cancel' : 'Change Customer'}
                 </Button>
@@ -335,7 +335,7 @@ export function QuotationCreateEditPage() {
                 <div className="rounded-lg border border-slate-200 bg-slate-50/80 p-3 text-xs space-y-2">
                   <div className="flex justify-between items-start">
                     <div>
-                      <h4 className="font-bold text-slate-900 text-sm flex items-center gap-2">
+                      <h4 className="font-semibold text-slate-900 text-sm flex items-center gap-2">
                         {selectedCustomer.name}
                         <Badge variant="outline">{selectedCustomer.type}</Badge>
                       </h4>
@@ -346,19 +346,31 @@ export function QuotationCreateEditPage() {
                     <Badge variant="success">Approved Master Record</Badge>
                   </div>
 
-                  <div className="grid grid-cols-3 gap-2 border-t border-slate-200 pt-2 text-[11px]">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 border-t border-slate-200 pt-2 text-xs">
                     <div>
-                      <span className="text-slate-500 block">Credit Limit:</span>
-                      <strong className="text-slate-800">{formatCurrency(selectedCustomer.commercialTerms.creditLimit)}</strong>
+                      <span className="text-slate-500 block">Total Credit Limit:</span>
+                      <strong className="text-slate-800 font-semibold tabular-nums">{formatCurrency(selectedCustomer.commercialTerms.creditLimit)}</strong>
+                    </div>
+                    <div>
+                      <span className="text-slate-500 block">Available Credit:</span>
+                      <strong className="text-emerald-700 font-semibold tabular-nums">
+                        {formatCurrency(Math.max(0, selectedCustomer.commercialTerms.creditLimit - selectedCustomer.financials.totalOutstanding))}
+                      </strong>
                     </div>
                     <div>
                       <span className="text-slate-500 block">Credit Days:</span>
-                      <strong className="text-slate-800">{selectedCustomer.commercialTerms.creditDays} Days</strong>
+                      <strong className="text-slate-800 font-semibold tabular-nums">{selectedCustomer.commercialTerms.creditDays} Days</strong>
                     </div>
                     <div>
                       <span className="text-slate-500 block">Max Dealer Discount:</span>
-                      <strong className="text-slate-800">{selectedCustomer.commercialTerms.maxDiscountPercentage || 12}%</strong>
+                      <strong className="text-slate-800 font-semibold tabular-nums">{selectedCustomer.commercialTerms.maxDiscountPercentage || 12}%</strong>
                     </div>
+                  </div>
+
+                  <div className="mt-2.5 p-2 bg-slate-50 border border-slate-200 rounded text-xs text-slate-600 flex items-center justify-between">
+                    <span>
+                      ℹ️ <strong>Quotation Credit Policy:</strong> Quotations can exceed available credit. Credit limit enforcement applies strictly during Sales Order conversion.
+                    </span>
                   </div>
                 </div>
               ) : (
@@ -380,14 +392,14 @@ export function QuotationCreateEditPage() {
           {/* Product Line Items Card */}
           <Card className="shadow-xs">
             <CardHeader className="pb-3 flex flex-row items-center justify-between">
-              <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                <Package className="h-4 w-4 text-indigo-600" />
+              <CardTitle className="text-base font-semibold flex items-center gap-2">
+                <Package className="h-4 w-4 text-primary" />
                 Product Line Items ({items.length})
               </CardTitle>
               <Button
                 size="sm"
                 onClick={() => setIsProductSelectorOpen(!isProductSelectorOpen)}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs h-8 gap-1.5"
+                className="bg-primary hover:bg-primary-hover text-primary-foreground text-xs h-8 gap-1.5 font-medium"
               >
                 <Plus className="h-3.5 w-3.5" />
                 Add Product
@@ -396,7 +408,7 @@ export function QuotationCreateEditPage() {
             <CardContent className="space-y-4">
               {/* Product Selector Dropdown / Search Modal */}
               {isProductSelectorOpen && (
-                <div className="rounded-lg border-2 border-indigo-200 bg-indigo-50/40 p-3 mb-4">
+                <div className="rounded-lg border-2 border-primary-border bg-primary-light/40 p-3 mb-4">
                   <div className="flex justify-between items-center mb-2">
                     <span className="text-xs font-bold text-indigo-900">Select Item from Product Master:</span>
                     <Button
@@ -461,7 +473,7 @@ export function QuotationCreateEditPage() {
                         {/* Quantity and Discount Fields */}
                         <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mt-3 pt-3 border-t border-slate-100 items-end">
                           <div>
-                            <label className="block text-[10px] font-medium text-slate-500 mb-1">
+                            <label className="block text-xs font-medium text-slate-500 mb-1">
                               Quantity
                             </label>
                             <Input
@@ -469,21 +481,21 @@ export function QuotationCreateEditPage() {
                               min="1"
                               value={it.quantity}
                               onChange={(e) => handleUpdateItem(idx, 'quantity', parseInt(e.target.value) || 1)}
-                              className="h-8 text-xs font-mono"
+                              className="h-8 text-xs font-mono tabular-nums"
                             />
                           </div>
 
                           <div>
-                            <label className="block text-[10px] font-medium text-slate-500 mb-1">
+                            <label className="block text-xs font-medium text-slate-500 mb-1">
                               List Price (LKR)
                             </label>
-                            <div className="h-8 flex items-center font-mono font-medium text-slate-700 bg-slate-50 px-2 rounded border border-slate-200 text-xs">
+                            <div className="h-8 flex items-center font-mono font-medium text-slate-700 bg-slate-50 px-2 rounded border border-slate-200 text-xs tabular-nums">
                               {formatCurrency(it.unitPrice)}
                             </div>
                           </div>
 
                           <div>
-                            <label className="block text-[10px] font-medium text-slate-500 mb-1">
+                            <label className="block text-xs font-medium text-slate-500 mb-1">
                               Discount %
                             </label>
                             <Input
@@ -495,26 +507,26 @@ export function QuotationCreateEditPage() {
                               onChange={(e) =>
                                 handleUpdateItem(idx, 'discountPercentage', parseFloat(e.target.value) || 0)
                               }
-                              className={`h-8 text-xs font-mono ${
+                              className={`h-8 text-xs font-mono tabular-nums ${
                                 isExcessDiscount ? 'border-amber-400 focus:ring-amber-500' : ''
                               }`}
                             />
                           </div>
 
                           <div>
-                            <label className="block text-[10px] font-medium text-slate-500 mb-1">
+                            <label className="block text-xs font-medium text-slate-500 mb-1">
                               VAT (18%)
                             </label>
-                            <div className="h-8 flex items-center font-mono text-slate-500 text-xs">
+                            <div className="h-8 flex items-center font-mono text-slate-500 text-xs tabular-nums">
                               {formatCurrency(it.taxAmount)}
                             </div>
                           </div>
 
                           <div className="text-right sm:col-span-1 col-span-2">
-                            <label className="block text-[10px] font-medium text-slate-500 mb-1">
+                            <label className="block text-xs font-medium text-slate-500 mb-1">
                               Line Total
                             </label>
-                            <div className="h-8 flex items-center justify-end font-mono font-bold text-slate-900 text-xs">
+                            <div className="h-8 flex items-center justify-end font-mono font-semibold text-slate-900 text-xs tabular-nums">
                               {formatCurrency(it.total)}
                             </div>
                           </div>
@@ -522,7 +534,7 @@ export function QuotationCreateEditPage() {
 
                         {/* Discount Warning / Validation Feedback */}
                         {isExcessDiscount && (
-                          <div className="mt-2.5 rounded bg-amber-100/70 border border-amber-300 p-2 text-[11px] text-amber-900 flex items-center gap-1.5">
+                          <div className="mt-2.5 rounded bg-amber-100/70 border border-amber-300 p-2 text-xs text-amber-900 flex items-center gap-1.5">
                             <ShieldAlert className="h-3.5 w-3.5 text-amber-600 shrink-0" />
                             <span>
                               <strong>Approval Required:</strong> {it.evalResult.reason}
@@ -543,14 +555,14 @@ export function QuotationCreateEditPage() {
           {/* Validity & Notes Card */}
           <Card className="shadow-xs">
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-indigo-600" />
+              <CardTitle className="text-base font-semibold flex items-center gap-2">
+                <Calendar className="h-4 w-4 text-primary" />
                 Document Validity & Remarks
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3 text-xs">
               <div>
-                <label className="block font-medium text-slate-700 mb-1">
+                <label className="block text-[13px] font-medium text-slate-700 mb-1.5">
                   Valid Until Date <span className="text-rose-500">*</span>
                 </label>
                 <Input
@@ -562,7 +574,7 @@ export function QuotationCreateEditPage() {
               </div>
 
               <div>
-                <label className="block font-medium text-slate-700 mb-1">
+                <label className="block text-[13px] font-medium text-slate-700 mb-1.5">
                   Internal Remarks / Notes (Optional)
                 </label>
                 <textarea
@@ -570,19 +582,19 @@ export function QuotationCreateEditPage() {
                   onChange={(e) => setNotes(e.target.value)}
                   placeholder="Notes regarding delivery schedule, site requirements..."
                   rows={2}
-                  className="w-full rounded-md border border-slate-200 p-2 text-xs focus:outline-hidden focus:ring-1 focus:ring-indigo-500"
+                  className="w-full rounded-md border border-slate-200 p-2 text-xs focus:outline-hidden focus:ring-1 focus:ring-primary"
                 />
               </div>
 
               <div>
-                <label className="block font-medium text-slate-700 mb-1">
+                <label className="block text-[13px] font-medium text-slate-700 mb-1.5">
                   Terms & Conditions
                 </label>
                 <textarea
                   value={terms}
                   onChange={(e) => setTerms(e.target.value)}
                   rows={3}
-                  className="w-full rounded-md border border-slate-200 p-2 text-xs focus:outline-hidden focus:ring-1 focus:ring-indigo-500 font-sans"
+                  className="w-full rounded-md border border-slate-200 p-2 text-xs focus:outline-hidden focus:ring-1 focus:ring-primary font-sans"
                 />
               </div>
             </CardContent>
@@ -591,50 +603,50 @@ export function QuotationCreateEditPage() {
           {/* Pricing Summary Card */}
           <Card className="shadow-xs">
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-semibold">Quotation Financial Summary</CardTitle>
+              <CardTitle className="text-base font-semibold">Quotation Financial Summary</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="space-y-2 text-xs">
                 <div className="flex justify-between text-slate-600">
                   <span>Gross Subtotal:</span>
-                  <span className="font-mono">{formatCurrency(totals.grossSubtotal)}</span>
+                  <span className="font-mono tabular-nums font-medium">{formatCurrency(totals.grossSubtotal)}</span>
                 </div>
 
                 <div className="flex justify-between text-emerald-600">
                   <span>Total Discount:</span>
-                  <span className="font-mono">- {formatCurrency(totals.totalDiscount)}</span>
+                  <span className="font-mono tabular-nums font-medium">- {formatCurrency(totals.totalDiscount)}</span>
                 </div>
 
                 <div className="flex justify-between text-slate-600">
                   <span>18% VAT:</span>
-                  <span className="font-mono">{formatCurrency(totals.totalTax)}</span>
+                  <span className="font-mono tabular-nums font-medium">{formatCurrency(totals.totalTax)}</span>
                 </div>
 
-                <div className="border-t border-slate-200 pt-2 flex justify-between font-bold text-sm text-slate-900">
+                <div className="border-t border-slate-300 pt-2 flex justify-between font-semibold text-sm text-slate-900">
                   <span>Grand Total (LKR):</span>
-                  <span className="text-indigo-600 font-mono">{formatCurrency(totals.grandTotal)}</span>
+                  <span className="text-primary font-mono font-semibold tabular-nums">{formatCurrency(totals.grandTotal)}</span>
                 </div>
               </div>
 
               {/* Approval status banner */}
               {totals.anyRequiresApproval ? (
                 <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 text-xs text-amber-900 space-y-1">
-                  <div className="font-bold flex items-center gap-1.5">
+                  <div className="font-semibold flex items-center gap-1.5">
                     <ShieldAlert className="h-4 w-4 text-amber-600" />
                     Special Approval Required
                   </div>
-                  <p className="text-[11px] text-amber-800 leading-relaxed">
+                  <p className="text-xs text-amber-800 leading-relaxed">
                     One or more requested discounts exceed your standard authority limit (5%). Submitting this
                     quotation will route it to the <strong>Sales Manager</strong> for approval before it can be sent or converted.
                   </p>
                 </div>
               ) : (
                 <div className="rounded-lg bg-emerald-50 border border-emerald-200 p-3 text-xs text-emerald-900 space-y-1">
-                  <div className="font-bold flex items-center gap-1.5">
+                  <div className="font-semibold flex items-center gap-1.5">
                     <CheckCircle className="h-4 w-4 text-emerald-600" />
                     Standard Authority Quotation
                   </div>
-                  <p className="text-[11px] text-emerald-700 leading-relaxed">
+                  <p className="text-xs text-emerald-700 leading-relaxed">
                     All discounts are within your authorized rep limit. This quotation can be issued immediately.
                   </p>
                 </div>
@@ -645,7 +657,7 @@ export function QuotationCreateEditPage() {
                 <Button
                   onClick={() => handleSubmit(false)}
                   disabled={isSubmitting || !selectedCustomer || items.length === 0}
-                  className="w-full bg-indigo-600 hover:bg-indigo-700 text-white gap-2"
+                  className="w-full bg-primary hover:bg-primary-hover text-primary-foreground gap-2"
                 >
                   <Send className="h-4 w-4" />
                   {isSubmitting

@@ -180,7 +180,7 @@ export function ThermalReceiptModal({
           <Button variant="outline" onClick={onClose}>
             Close
           </Button>
-          <Button onClick={handlePrint} className="bg-indigo-600 hover:bg-indigo-700 text-white flex items-center gap-2">
+          <Button onClick={handlePrint} className="bg-primary hover:bg-primary-hover text-primary-foreground flex items-center gap-2">
             <Printer className="h-4 w-4" />
             Print Receipt
           </Button>

@@ -53,26 +53,26 @@ describe('Phase 10 — Warranty & Commission UI Components', () => {
     expect(screen.getByText('REJECTED')).toBeTruthy();
   });
 
-  it('renders WarrantyHubPage with header, metric cards, and async loaded tables', async () => {
+  it('renders WarrantyHubPage with header, metric cards, and hides claim button for SALES_REP', async () => {
     render(<WarrantyHubPage />);
     expect(screen.getByText('Warranty & Claims Hub')).toBeTruthy();
     expect(screen.getByText('Active Warranties')).toBeTruthy();
     expect(screen.getByText('Missing Warranty Notes')).toBeTruthy();
-    expect(screen.getByText('Lodge Warranty Claim')).toBeTruthy();
+    // Sales Rep cannot file warranty claims per RBAC
+    expect(screen.queryByText('Lodge Warranty Claim')).toBeNull();
 
     await waitFor(() => {
       expect(screen.getByText(/Registered Warranties Master Ledger/i)).toBeTruthy();
     });
   });
 
-  it('renders CommissionHubPage with target progress and tier ladder', async () => {
+  it('renders CommissionHubPage with target progress and hides leaderboard for SALES_REP', async () => {
     render(<CommissionHubPage />);
     expect(screen.getByText('Sales Target & Commission Hub')).toBeTruthy();
     expect(screen.getByText(/Enterprise Sales Commission Tier Policy/)).toBeTruthy();
 
-    await waitFor(() => {
-      expect(screen.getByText(/Sales Representative Performance Leaderboard/i)).toBeTruthy();
-    });
+    // Sales Rep cannot view other reps' figures or leaderboard per RBAC
+    expect(screen.queryByText(/Sales Representative Performance Leaderboard/i)).toBeNull();
   });
 
   it('renders NewClaimModal with customer selector and complaint fields', async () => {

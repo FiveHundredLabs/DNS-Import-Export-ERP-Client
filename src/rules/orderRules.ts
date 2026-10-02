@@ -270,3 +270,32 @@ export function getAllowedEscalationTargets(
   }
   return [];
 }
+
+/**
+ * Generates an enterprise-standard Sales Order ID.
+ * Format: ODR-{AREA_FIRST_TWO_LETTERS}-{SALES_REP_FIRST_TWO_LETTERS}-{SEQUENCE_NUMBER}
+ * Example: ODR-CO-RA-0001
+ * Preserves backwards compatibility and ensures uppercase 2-letter tokens with 4-digit zero-padding.
+ */
+export function generateOrderNumber(
+  areaName?: string,
+  repName?: string,
+  sequenceNumber: number = 1
+): string {
+  const areaPart = (areaName || 'Colombo')
+    .replace(/[^a-zA-Z]/g, '')
+    .slice(0, 2)
+    .toUpperCase()
+    .padEnd(2, 'X');
+
+  const repPart = (repName || 'SalesRep')
+    .replace(/[^a-zA-Z]/g, '')
+    .slice(0, 2)
+    .toUpperCase()
+    .padEnd(2, 'X');
+
+  const seqPart = String(Math.max(1, sequenceNumber)).padStart(4, '0');
+
+  return `ODR-${areaPart}-${repPart}-${seqPart}`;
+}
+

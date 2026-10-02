@@ -46,7 +46,7 @@ export function CustomerSelector({ onSelect, selectedCustomerId, assignedRepId }
                 key={c.id}
                 onClick={() => onSelect(c)}
                 className={`flex items-center justify-between p-2.5 text-xs cursor-pointer transition-colors ${
-                  isSelected ? 'bg-indigo-50/80 border-l-2 border-indigo-600' : 'hover:bg-slate-50'
+                  isSelected ? 'bg-primary-light/80 border-l-2 border-primary' : 'hover:bg-slate-50'
                 }`}
               >
                 <div>

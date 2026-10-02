@@ -1,4 +1,4 @@
-import { BaseEntity, PaginatedResult } from './common';
+import { BaseEntity } from './common';
 import { UserRole } from './auth';
 
 export type OrderStatus =

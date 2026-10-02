@@ -1,12 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table';
 import { Skeleton } from '../../components/ui/skeleton';
-import { orderService } from '../../services/orderService';
-import { inventoryService } from '../../services/inventoryService';
-import { authService } from '../../services/authService';
+import { orderService } from '../../services/OrderService';
+import { inventoryService } from '../../services/InventoryService';
+import { useAuth } from '../../hooks/useAuth';
 import { MOCK_PRODUCTS } from '../../mock/mockProducts';
 import { toast } from 'sonner';
 
@@ -16,8 +16,9 @@ export function OrderPickingPage() {
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [pickQuantities, setPickQuantities] = useState<Record<string, number>>({});
   const [processing, setProcessing] = useState(false);
+  const [orderSearch, setOrderSearch] = useState('');
 
-  const user = authService.getCurrentUser();
+  const { user } = useAuth();
 
   const fetchOrders = async () => {
     try {
@@ -72,7 +73,7 @@ export function OrderPickingPage() {
       }
 
       if (pickedItems.length > 0) {
-        await orderService.updateFulfillmentStatus(selectedOrder.id, pickedItems, user);
+        await orderService.updateFulfillmentStatus(selectedOrder.id, 'PICKING', user);
         toast.success('Stock issued successfully');
         setSelectedOrder(null);
         fetchOrders();
@@ -94,6 +95,12 @@ export function OrderPickingPage() {
         <Card className="md:col-span-1 h-[calc(100vh-200px)] overflow-y-auto">
           <CardHeader>
             <CardTitle>Pending Orders</CardTitle>
+            <Input
+              placeholder="Search by order ID or customer..."
+              value={orderSearch}
+              onChange={e => setOrderSearch(e.target.value)}
+              className="mt-2"
+            />
           </CardHeader>
           <CardContent className="space-y-2">
             {loading ? (
@@ -107,20 +114,26 @@ export function OrderPickingPage() {
                 No orders pending picking
               </div>
             ) : (
-              orders.map(o => (
-                <div 
-                  key={o.id} 
-                  className={`p-3 border rounded-md cursor-pointer transition-colors ${selectedOrder?.id === o.id ? 'border-blue-500 bg-blue-50' : 'hover:bg-slate-50'}`}
-                  onClick={() => handleSelectOrder(o)}
-                >
-                  <div className="font-bold">{o.id}</div>
-                  <div className="text-sm">{o.customerName || 'Unknown Customer'}</div>
-                  <div className="text-xs text-muted-foreground mt-1 flex justify-between">
-                    <span>{o.status}</span>
-                    <span>{new Date(o.createdAt).toLocaleDateString()}</span>
+              orders
+                .filter(o => {
+                  if (!orderSearch) return true;
+                  const s = orderSearch.toLowerCase();
+                  return o.id.toLowerCase().includes(s) || (o.customerName || '').toLowerCase().includes(s);
+                })
+                .map(o => (
+                  <div
+                    key={o.id}
+                    className={`p-3 border rounded-md cursor-pointer transition-colors ${selectedOrder?.id === o.id ? 'border-blue-500 bg-primary-light' : 'hover:bg-slate-50'}`}
+                    onClick={() => handleSelectOrder(o)}
+                  >
+                    <div className="font-bold">{o.id}</div>
+                    <div className="text-sm">{o.customerName || 'Unknown Customer'}</div>
+                    <div className="text-xs text-muted-foreground mt-1 flex justify-between">
+                      <span>{o.status}</span>
+                      <span>{new Date(o.createdAt).toLocaleDateString()}</span>
+                    </div>
                   </div>
-                </div>
-              ))
+                ))
             )}
           </CardContent>
         </Card>
@@ -137,7 +150,7 @@ export function OrderPickingPage() {
                   <Button 
                     onClick={handleConfirmIssue} 
                     disabled={processing}
-                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                    className="bg-primary hover:bg-primary-hover text-primary-foreground"
                   >
                     {processing ? 'Processing...' : 'Confirm Issue'}
                   </Button>

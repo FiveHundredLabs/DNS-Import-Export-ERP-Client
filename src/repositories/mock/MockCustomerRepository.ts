@@ -136,4 +136,11 @@ export class MockCustomerRepository implements ICustomerRepository {
     this.customers[idx] = updated;
     return updated;
   }
+
+  async delete(id: string): Promise<void> {
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    const idx = this.customers.findIndex((c) => c.id === id);
+    if (idx === -1) throw new Error(`Customer with id ${id} not found.`);
+    this.customers.splice(idx, 1);
+  }
 }

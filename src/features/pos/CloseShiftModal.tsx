@@ -62,7 +62,7 @@ export function CloseShiftModal({
       <div className="relative w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl transition-all border border-slate-200">
         <div className="flex items-center justify-between pb-3 border-b border-slate-100">
           <div className="flex items-center gap-2">
-            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-indigo-50 text-indigo-700">
+            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary-light text-primary-text">
               <Lock className="h-5 w-5" />
             </span>
             <div>
@@ -104,13 +104,13 @@ export function CloseShiftModal({
               <span>Cash Out (-) Safe Drops:</span>
               <span className="font-semibold">- {formatCurrency(session.cashOutTotal)}</span>
             </div>
-            <div className="flex justify-between text-indigo-600">
+            <div className="flex justify-between text-primary">
               <span>Cash Sales (+) Showroom Sales:</span>
               <span className="font-semibold">+ {formatCurrency(cashSalesTotal)}</span>
             </div>
             <div className="border-t border-slate-200 pt-2 flex justify-between font-bold text-slate-900 text-sm">
               <span>Expected Cash Float:</span>
-              <span className="text-indigo-700">{formatCurrency(reconciliation.expectedCash)}</span>
+              <span className="text-primary-text">{formatCurrency(reconciliation.expectedCash)}</span>
             </div>
           </div>
 
@@ -139,7 +139,7 @@ export function CloseShiftModal({
                 reconciliation.isBalanced
                   ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
                   : reconciliation.difference > 0
-                  ? 'bg-sky-50 border-sky-200 text-sky-800'
+                  ? 'bg-primary-light border-sky-200 text-sky-800'
                   : 'bg-rose-50 border-rose-200 text-rose-800'
               }`}
             >
@@ -174,7 +174,7 @@ export function CloseShiftModal({
               placeholder="e.g. Verified denominations with Finance Officer. Float transferred to safe."
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              className="w-full rounded-lg border border-slate-300 p-2.5 text-xs text-slate-900 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+              className="w-full rounded-lg border border-slate-300 p-2.5 text-xs text-slate-900 focus:border-primary focus:ring-1 focus:ring-primary"
             />
           </div>
 

@@ -174,7 +174,7 @@ export function ProductPriceProposalModal({
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             placeholder="e.g. Supplier raw material tariff increase / Promotional volume tier..."
-            className="w-full rounded-md border border-slate-300 p-2 text-xs shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            className="w-full rounded-md border border-slate-300 p-2 text-xs shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
           />
           {error && <p className="mt-1 text-xs text-rose-600">{error}</p>}
         </div>

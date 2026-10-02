@@ -139,7 +139,7 @@ export function NewClaimModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogHeader>
         <DialogTitle className="flex items-center gap-2 text-slate-900">
-          <ShieldAlert className="h-5 w-5 text-indigo-600" />
+          <ShieldAlert className="h-5 w-5 text-primary" />
           Lodge Warranty Claim
         </DialogTitle>
       </DialogHeader>
@@ -162,7 +162,7 @@ export function NewClaimModal({
               <select
                 value={selectedCustomerId}
                 onChange={(e) => handleCustomerChange(e.target.value)}
-                className="w-full rounded-md border border-slate-300 p-2 text-xs bg-white text-slate-900 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                className="w-full rounded-md border border-slate-300 p-2 text-xs bg-white text-slate-900 focus:outline-none focus:ring-1 focus:ring-primary"
               >
                 <option value="ALL">All Customers</option>
                 {MOCK_CUSTOMERS.map((c) => (
@@ -210,7 +210,7 @@ export function NewClaimModal({
             <select
               value={selectedRecordId}
               onChange={(e) => handleRecordChange(e.target.value)}
-              className="w-full rounded-md border border-slate-300 p-2 text-xs bg-white text-slate-900 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              className="w-full rounded-md border border-slate-300 p-2 text-xs bg-white text-slate-900 focus:outline-none focus:ring-1 focus:ring-primary"
             >
               {filteredRecords.map((r) => (
                 <option key={r.id} value={r.id}>
@@ -284,7 +284,7 @@ export function NewClaimModal({
             value={complaintReason}
             onChange={(e) => setComplaintReason(e.target.value)}
             placeholder="Describe the failure, test observations, and customer report..."
-            className="w-full rounded-md border border-slate-300 p-2.5 text-xs text-slate-900 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            className="w-full rounded-md border border-slate-300 p-2.5 text-xs text-slate-900 focus:outline-none focus:ring-1 focus:ring-primary"
             required
           />
         </div>
@@ -303,7 +303,7 @@ export function NewClaimModal({
             type="submit"
             size="sm"
             disabled={loading || isExpired || !selectedRecord}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white"
+            className="bg-primary hover:bg-primary-hover text-primary-foreground"
           >
             {loading ? 'Submitting...' : 'Lodge Claim'}
           </Button>

@@ -39,7 +39,7 @@ export function VatSummaryPage() {
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900">VAT Summary & Tax Filing Report</h1>
+            <h1 className="text-2xl font-semibold tracking-tight text-slate-900">VAT Summary & Tax Filing Report</h1>
             <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 text-xs">
               18% Value Added Tax (RAMIS Ready)
             </Badge>
@@ -64,9 +64,9 @@ export function VatSummaryPage() {
             <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
               Taxable Supplies Base
             </span>
-            <Building className="h-4 w-4 text-indigo-600" />
+            <Building className="h-4 w-4 text-primary" />
           </div>
-          <div className="mt-2 text-2xl font-bold text-slate-900 font-mono">
+          <div className="mt-2 text-2xl font-semibold text-slate-900 tabular-nums">
             {formatCurrency(report?.taxableSales || 0)}
           </div>
           <span className="text-xs text-slate-400">18% Standard Rated Sales</span>
@@ -79,7 +79,7 @@ export function VatSummaryPage() {
             </span>
             <Percent className="h-4 w-4 text-amber-600" />
           </div>
-          <div className="mt-2 text-2xl font-bold text-amber-700 font-mono">
+          <div className="mt-2 text-2xl font-semibold text-amber-700 tabular-nums">
             {formatCurrency(report?.vatCollected || 0)}
           </div>
           <span className="text-xs text-amber-600 font-medium">Under GL 2020</span>
@@ -92,7 +92,7 @@ export function VatSummaryPage() {
             </span>
             <FileCheck className="h-4 w-4 text-emerald-700" />
           </div>
-          <div className="mt-2 text-2xl font-bold text-emerald-900 font-mono">
+          <div className="mt-2 text-2xl font-semibold text-emerald-900 tabular-nums">
             {formatCurrency(report?.netVatPayable || 0)}
           </div>
           <span className="text-xs text-emerald-700 font-medium">Payable to Inland Revenue Dept</span>
@@ -104,7 +104,7 @@ export function VatSummaryPage() {
         <div className="border-b border-slate-200 bg-slate-50 px-6 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Receipt className="h-4 w-4 text-amber-600" />
-            <span className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+            <span className="text-xs font-semibold text-slate-800 uppercase tracking-wider">
               Taxable Invoices & Journal Records
             </span>
           </div>
@@ -115,7 +115,7 @@ export function VatSummaryPage() {
 
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="border-b border-slate-200 bg-slate-50 text-[11px] font-bold uppercase tracking-wider text-slate-500">
+            <thead className="border-b border-slate-200 bg-slate-50 text-xs font-semibold uppercase tracking-wider text-slate-500">
               <tr>
                 <th className="px-4 py-3">Date</th>
                 <th className="px-4 py-3">Invoice / Voucher #</th>
@@ -135,27 +135,27 @@ export function VatSummaryPage() {
                 report?.transactions.map((tx, idx) => (
                   <tr key={`${tx.invoiceNumber}-${idx}`} className="hover:bg-slate-50/60 transition-colors">
                     <td className="px-4 py-3 text-slate-600">{formatDate(tx.date)}</td>
-                    <td className="px-4 py-3 font-mono font-bold text-indigo-700">{tx.invoiceNumber}</td>
+                    <td className="px-4 py-3 tabular-nums font-semibold text-primary-text">{tx.invoiceNumber}</td>
                     <td className="px-4 py-3 font-medium text-slate-900">{tx.customerName}</td>
-                    <td className="px-4 py-3 text-right font-mono text-slate-800">
+                    <td className="px-4 py-3 text-right tabular-nums text-slate-800">
                       {formatCurrency(tx.taxableAmount)}
                     </td>
-                    <td className="px-4 py-3 text-right font-mono font-bold text-amber-700">
+                    <td className="px-4 py-3 text-right tabular-nums font-semibold text-amber-700">
                       {formatCurrency(tx.vatAmount)}
                     </td>
                   </tr>
                 ))
               )}
             </tbody>
-            <tfoot className="border-t-2 border-slate-300 bg-slate-50 text-xs font-bold text-slate-900">
+            <tfoot className="border-t-2 border-slate-300 bg-slate-50 text-xs font-semibold text-slate-900">
               <tr>
                 <td colSpan={3} className="px-4 py-3.5 uppercase tracking-wider">
                   Total Taxable Base & VAT Liability
                 </td>
-                <td className="px-4 py-3.5 text-right font-mono text-slate-900">
+                <td className="px-4 py-3.5 text-right tabular-nums font-semibold text-slate-900">
                   {formatCurrency(report?.taxableSales || 0)}
                 </td>
-                <td className="px-4 py-3.5 text-right font-mono text-sm text-amber-800">
+                <td className="px-4 py-3.5 text-right tabular-nums text-sm font-semibold text-amber-800">
                   {formatCurrency(report?.vatCollected || 0)}
                 </td>
               </tr>

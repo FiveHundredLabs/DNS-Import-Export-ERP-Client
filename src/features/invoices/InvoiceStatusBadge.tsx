@@ -15,6 +15,18 @@ export function InvoiceStatusBadge({ status, className }: InvoiceStatusBadgeProp
           <CheckCircle2 className="h-3 w-3" /> Paid
         </Badge>
       );
+    case 'COLLECTED':
+      return (
+        <Badge variant="secondary" className={`gap-1 font-semibold bg-blue-100 text-blue-800 border-blue-200 ${className || ''}`}>
+          <CheckCircle2 className="h-3 w-3 text-blue-600" /> Collected
+        </Badge>
+      );
+    case 'PARTIALLY_COLLECTED':
+      return (
+        <Badge variant="secondary" className={`gap-1 font-semibold bg-amber-50 text-amber-800 border-amber-200 ${className || ''}`}>
+          <Clock className="h-3 w-3 text-amber-600" /> Partially Collected
+        </Badge>
+      );
     case 'PARTIALLY_PAID':
       return (
         <Badge variant="warning" className={`gap-1 font-semibold ${className || ''}`}>
@@ -29,7 +41,7 @@ export function InvoiceStatusBadge({ status, className }: InvoiceStatusBadgeProp
       );
     case 'ISSUED':
       return (
-        <Badge variant="default" className={`gap-1 font-semibold bg-blue-600 hover:bg-blue-700 text-white ${className || ''}`}>
+        <Badge variant="default" className={`gap-1 font-semibold bg-primary hover:bg-primary-hover text-primary-foreground ${className || ''}`}>
           <FileText className="h-3 w-3" /> Issued
         </Badge>
       );
