@@ -12,6 +12,13 @@ import { useAuth } from '../../hooks/useAuth';
 import { Card, CardContent } from '../../components/ui/card';
 import { Input } from '../../components/ui/input';
 import { Button } from '../../components/ui/button';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../../components/ui/select';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../../components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
 import { TableLoadingSkeleton } from '../../components/common/LoadingSkeleton';
@@ -268,38 +275,46 @@ export function PaymentListPage() {
             </div>
             <div className="w-full md:w-56">
               <div className="relative">
-                <Building2 className="absolute left-3 top-2.5 h-4 w-4 text-slate-400 pointer-events-none" />
-                <select
-                  value={customerIdFilter}
-                  onChange={(e) => {
-                    setCustomerIdFilter(e.target.value);
+                <Building2 className="absolute left-3 top-2.5 h-4 w-4 text-slate-400 pointer-events-none z-10" />
+                <Select
+                  value={customerIdFilter || '__all__'}
+                  onValueChange={(val) => {
+                    setCustomerIdFilter(val === '__all__' ? '' : val);
                     setPage(1);
                   }}
-                  className="w-full pl-9 pr-3 h-9 text-xs rounded-md border border-slate-300 bg-white focus:outline-hidden focus:ring-1 focus:ring-primary"
                 >
-                  <option value="">All Customers</option>
-                  {customers.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name} ({c.code})
-                    </option>
-                  ))}
-                </select>
+                  <SelectTrigger className="w-full pl-9 pr-3 h-9 text-xs rounded-md border border-slate-300 bg-white">
+                    <SelectValue placeholder="All Customers" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__all__">All Customers</SelectItem>
+                    {customers.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.name} ({c.code})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <select
+              <Select
                 value={methodFilter}
-                onChange={(e) => {
-                  setMethodFilter(e.target.value as any);
+                onValueChange={(val) => {
+                  setMethodFilter(val as any);
                   setPage(1);
                 }}
-                className="text-xs h-9 px-3 rounded-md border border-slate-300 bg-white"
               >
-                <option value="ALL">All Payment Methods</option>
-                <option value="CASH">Cash</option>
-                <option value="CHEQUE">Cheque</option>
-                <option value="BANK_TRANSFER">Bank Transfer</option>
-              </select>
+                <SelectTrigger className="text-xs h-9 px-3 rounded-md border border-slate-300 bg-white min-w-36">
+                  <SelectValue placeholder="Payment Method" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">All Payment Methods</SelectItem>
+                  <SelectItem value="CASH">Cash</SelectItem>
+                  <SelectItem value="CHEQUE">Cheque</SelectItem>
+                  <SelectItem value="BANK_TRANSFER">Bank Transfer</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div className="flex items-center gap-2">
               <Input

@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { cn } from '../../utils/cn';
+import { RoleSwitcher } from './RoleSwitcher';
 
 export function MobileNav() {
   const { role, currentUser, logout } = useAuth();
@@ -94,14 +95,14 @@ export function MobileNav() {
             end
             className={({ isActive }) =>
               cn(
-                'flex flex-col items-center justify-center min-h-[48px] py-1 px-1 transition-all rounded-xl',
+                'flex flex-col items-center justify-center min-h-[48px] py-1 px-1 transition-all rounded-md',
                 isActive
                   ? 'text-primary font-semibold'
                   : 'text-slate-500 hover:text-slate-800'
               )
             }
           >
-            <div className={cn('relative p-1 rounded-xl transition-colors', isDashboardActive && 'bg-primary-light')}>
+            <div className={cn('relative p-1 rounded-md transition-colors', isDashboardActive && 'bg-primary-light')}>
               <LayoutDashboard className="h-5 w-5" />
             </div>
             <span className="text-[11px] font-medium tracking-tight mt-0.5">Dashboard</span>
@@ -112,14 +113,14 @@ export function MobileNav() {
             to="/customers"
             className={({ isActive }) =>
               cn(
-                'flex flex-col items-center justify-center min-h-[48px] py-1 px-1 transition-all rounded-xl',
+                'flex flex-col items-center justify-center min-h-[48px] py-1 px-1 transition-all rounded-md',
                 isActive || isCustomersActive
                   ? 'text-primary font-semibold'
                   : 'text-slate-500 hover:text-slate-800'
               )
             }
           >
-            <div className={cn('relative p-1 rounded-xl transition-colors', isCustomersActive && 'bg-primary-light')}>
+            <div className={cn('relative p-1 rounded-md transition-colors', isCustomersActive && 'bg-primary-light')}>
               <Users className="h-5 w-5" />
             </div>
             <span className="text-[11px] font-medium tracking-tight mt-0.5">Customers</span>
@@ -130,14 +131,14 @@ export function MobileNav() {
             to="/orders"
             className={({ isActive }) =>
               cn(
-                'flex flex-col items-center justify-center min-h-[48px] py-1 px-1 transition-all rounded-xl',
+                'flex flex-col items-center justify-center min-h-[48px] py-1 px-1 transition-all rounded-md',
                 isActive || isOrdersActive
                   ? 'text-primary font-semibold'
                   : 'text-slate-500 hover:text-slate-800'
               )
             }
           >
-            <div className={cn('relative p-1 rounded-xl transition-colors', isOrdersActive && 'bg-primary-light')}>
+            <div className={cn('relative p-1 rounded-md transition-colors', isOrdersActive && 'bg-primary-light')}>
               <ShoppingCart className="h-5 w-5" />
             </div>
             <span className="text-[11px] font-medium tracking-tight mt-0.5">Orders</span>
@@ -148,14 +149,14 @@ export function MobileNav() {
             to="/warranty"
             className={({ isActive }) =>
               cn(
-                'flex flex-col items-center justify-center min-h-[48px] py-1 px-1 transition-all rounded-xl',
+                'flex flex-col items-center justify-center min-h-[48px] py-1 px-1 transition-all rounded-md',
                 isActive || isWarrantyActive
                   ? 'text-primary font-semibold'
                   : 'text-slate-500 hover:text-slate-800'
               )
             }
           >
-            <div className={cn('relative p-1 rounded-xl transition-colors', isWarrantyActive && 'bg-primary-light')}>
+            <div className={cn('relative p-1 rounded-md transition-colors', isWarrantyActive && 'bg-primary-light')}>
               <ShieldCheck className="h-5 w-5" />
             </div>
             <span className="text-[11px] font-medium tracking-tight mt-0.5">Warranty</span>
@@ -168,13 +169,13 @@ export function MobileNav() {
             aria-expanded={moreOpen}
             aria-label="Open More features menu"
             className={cn(
-              'flex flex-col items-center justify-center min-h-[48px] py-1 px-1 transition-all rounded-xl focus:outline-none',
+              'flex flex-col items-center justify-center min-h-[48px] py-1 px-1 transition-all rounded-md focus:outline-none',
               moreOpen || isMoreRouteActive
                 ? 'text-primary font-semibold'
                 : 'text-slate-500 hover:text-slate-800'
             )}
           >
-            <div className={cn('relative p-1 rounded-xl transition-colors', (moreOpen || isMoreRouteActive) && 'bg-primary-light')}>
+            <div className={cn('relative p-1 rounded-md transition-colors', (moreOpen || isMoreRouteActive) && 'bg-primary-light')}>
               <MoreHorizontal className="h-5 w-5" />
             </div>
             <span className="text-[11px] font-medium tracking-tight mt-0.5">More ⋯</span>
@@ -213,7 +214,7 @@ export function MobileNav() {
           </div>
           <button
             onClick={() => setMoreOpen(false)}
-            className="p-2 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors focus:outline-none"
+            className="p-2 rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors focus:outline-none"
             aria-label="Close menu"
           >
             <X className="h-5 w-5" />
@@ -221,9 +222,9 @@ export function MobileNav() {
         </div>
 
         {/* User Badge / Territory Summary */}
-        <div className="my-4 flex items-center justify-between rounded-2xl bg-slate-50 p-3 border border-slate-200/80">
+        <div className="my-4 flex items-center justify-between rounded-xl bg-slate-50 p-3 border border-slate-200/80">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground font-bold text-sm shadow-xs">
+            <div className="flex h-10 w-10 items-center justify-center rounded-md bg-primary text-primary-foreground font-bold text-sm shadow-xs">
               {currentUser.name
                 .split(' ')
                 .map((n) => n[0])
@@ -236,7 +237,7 @@ export function MobileNav() {
               </div>
             </div>
           </div>
-          <span className="inline-flex items-center gap-1 rounded-full bg-primary-light px-2.5 py-1 text-[11px] font-semibold text-primary-text border border-primary-border">
+          <span className="inline-flex items-center gap-1 rounded-md bg-primary-light px-2.5 py-1 text-[11px] font-semibold text-primary-text border border-primary-border">
             <UserCheck className="h-3.5 w-3.5" />
             {role.replace('_', ' ')}
           </span>
@@ -411,21 +412,17 @@ export function MobileNav() {
         </div>
 
         {/* Group 4: Account Actions */}
-        <div className="pt-5 border-t border-slate-100 mt-5 space-y-2">
-          <button
-            onClick={() => handleNavClick('/login')}
-            className="w-full flex items-center justify-between p-3 rounded-2xl border border-slate-200/80 bg-slate-50 hover:bg-slate-100 text-xs font-semibold text-slate-700 transition-colors"
-          >
-            <div className="flex items-center gap-2.5">
-              <Users className="h-4 w-4 text-slate-500" />
-              <span>Switch User Role</span>
+        <div className="pt-4 border-t border-slate-100 mt-4 space-y-2.5">
+          <div className="p-3 rounded-xl border border-slate-200/80 bg-slate-50">
+            <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5 px-0.5">
+              Switch Role View
             </div>
-            <ChevronRight className="h-4 w-4 text-slate-400" />
-          </button>
+            <RoleSwitcher className="w-full" triggerClassName="w-full justify-between bg-white text-xs h-9 rounded-md" />
+          </div>
 
           <button
             onClick={handleLogout}
-            className="w-full flex items-center justify-center gap-2 p-3 rounded-2xl border border-rose-200 bg-rose-50 hover:bg-rose-100 text-xs font-bold text-rose-700 transition-colors"
+            className="w-full flex items-center justify-center gap-2 p-2.5 rounded-md border border-rose-200 bg-rose-50 hover:bg-rose-100 text-xs font-bold text-rose-700 transition-colors"
           >
             <LogOut className="h-4 w-4 text-rose-600" />
             <span>Sign Out Session</span>

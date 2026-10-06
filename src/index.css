@@ -42,7 +42,7 @@
     --input: 214.3 31.8% 91.4%;
     --ring: var(--primary-ring);
 
-    --radius: 1rem;
+    --radius: 0.5rem;
   }
 
   .dark {
@@ -334,11 +334,36 @@ progress::-moz-progress-bar {
   background-color: var(--primary-color);
 }
 
-/* Stepper and interactive toggle switches */
-[data-state="checked"],
-[aria-checked="true"] {
+/* Stepper and interactive toggle switches (scoped strictly to checkboxes and switches, excluding dropdown options) */
+input[type="checkbox"]:checked,
+input[type="radio"]:checked,
+[role="switch"][data-state="checked"],
+[role="checkbox"][data-state="checked"] {
   background-color: var(--primary-color);
   border-color: var(--primary-color);
+}
+
+/* Explicitly style all dropdown and select items: prevent any black/dark background on hover or selection */
+[role="option"],
+[data-radix-collection-item],
+[data-radix-select-item] {
+  background-color: transparent !important;
+  color: #1e293b !important;
+}
+
+[role="option"][data-state="checked"] {
+  background-color: #f8fafc !important; /* soft slate-50 */
+  color: #0f172a !important;
+}
+
+[role="option"]:hover,
+[role="option"]:focus,
+[role="option"][data-highlighted],
+[role="option"][data-state="checked"][data-highlighted],
+[role="option"][data-state="checked"]:hover,
+[role="option"][data-state="checked"]:focus {
+  background-color: #f1f5f9 !important; /* clean light slate-100 */
+  color: #0f172a !important;
 }
 
 

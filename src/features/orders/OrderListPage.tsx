@@ -9,6 +9,13 @@ import { OrderStatusBadge } from './OrderStatusBadge';
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../../components/ui/select';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../../components/ui/table';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 import {
@@ -209,19 +216,23 @@ export function OrderListPage() {
             {/* Customer Filter */}
             <div className="w-full md:w-64">
               <div className="relative">
-                <Building2 className="absolute left-3 top-2.5 h-4 w-4 text-slate-400 pointer-events-none" />
-                <select
-                  value={filters.customerId || ''}
-                  onChange={(e) => handleCustomerFilter(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2 text-xs rounded-md border border-slate-200 bg-white focus:outline-hidden focus:ring-1 focus:ring-primary"
+                <Building2 className="absolute left-3 top-2.5 h-4 w-4 text-slate-400 pointer-events-none z-10" />
+                <Select
+                  value={filters.customerId || '__all__'}
+                  onValueChange={(val) => handleCustomerFilter(val === '__all__' ? '' : val)}
                 >
-                  <option value="">All Customers</option>
-                  {customers.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name} ({c.code})
-                    </option>
-                  ))}
-                </select>
+                  <SelectTrigger className="w-full pl-9 pr-3 py-2 text-xs rounded-md border border-slate-200 bg-white">
+                    <SelectValue placeholder="All Customers" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__all__">All Customers</SelectItem>
+                    {customers.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.name} ({c.code})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
@@ -297,7 +308,7 @@ export function OrderListPage() {
                 <button
                   key={tab.value}
                   onClick={() => handleStatusFilter(tab.value)}
-                  className={`px-3 py-1.5 rounded-full font-medium transition-colors shrink-0 text-xs ${
+                  className={`px-3 py-1.5 rounded-md font-medium transition-colors shrink-0 text-xs ${
                     isActive
                       ? 'bg-primary text-primary-foreground shadow-xs'
                       : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
