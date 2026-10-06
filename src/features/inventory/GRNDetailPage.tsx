@@ -109,8 +109,23 @@ export function GRNDetailPage() {
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">GRN Number: {grn.id}</h1>
-        <Badge className={`${getStatusColor(grn.status)} text-white border-0`}>{grn.status}</Badge>
+        <div className="flex items-center gap-3">
+          <h1 className="text-2xl font-bold">GRN Number: {grn.grnNumber || grn.id}</h1>
+          <Badge className={`${getStatusColor(grn.status)} text-white border-0`}>{grn.status}</Badge>
+        </div>
+        <div className="flex items-center gap-2">
+          {grn.status === 'APPROVED' && (
+            <Button
+              onClick={() => navigate(`/finance/ap/bills/new?grnId=${grn.id}`)}
+              className="bg-primary hover:bg-primary-hover text-white text-xs"
+            >
+              Cost in Finance (Create Vendor Bill)
+            </Button>
+          )}
+          <Button variant="outline" size="sm" onClick={() => navigate('/inventory/grn')}>
+            Back to List
+          </Button>
+        </div>
       </div>
 
       <Card>
