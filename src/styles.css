@@ -1,0 +1,431 @@
+/**
+ * ==============================================================================
+ * DNS DISTRIBUTION ERP — CENTRAL SYSTEM STYLES & DESIGN SYSTEM TOKENS
+ * ==============================================================================
+ * Single source of truth for all system-wide styles, theme tokens, typography,
+ * border radiuses, form controls, Radix UI overrides, and layout utilities.
+ *
+ * For UI Developers:
+ * - This stylesheet is imported at application root (`src/main.tsx` and `src/index.css`).
+ * - All components can be imported from a single place: `@/components` or `@/components/ui`.
+ * - Refer to `src/components/UI_DEVELOPER_GUIDE.md` for full design guidelines.
+ *
+ * TABLE OF CONTENTS:
+ * 1. GOOGLE FONTS (Inter & JetBrains Mono)
+ * 2. TAILWIND CORE DIRECTIVES
+ * 3. DESIGN TOKENS & DYNAMIC PRIMARY THEME VARIABLES (:root & .dark)
+ * 4. GLOBAL HTML & BODY BASE TYPOGRAPHY
+ * 5. TABULAR FIGURES & ACCOUNTING/FINANCIAL RULES
+ * 6. ENTERPRISE TYPOGRAPHY HIERARCHY (Headings, Tables, Code)
+ * 7. FORM CONTROLS & INTERACTIVE COMPONENT ACCENTS
+ * 8. RADIX UI & SHADCN SYSTEM OVERRIDES (Dropdowns, Menus, Modals)
+ * 9. ENTERPRISE TYPOGRAPHY & LAYOUT UTILITY CLASSES (.erp-*)
+ * 10. SCROLLBAR HIDING & ACCESSIBILITY UTILITIES
+ * ==============================================================================
+ */
+
+/* ------------------------------------------------------------------------------
+ * 1. GOOGLE FONTS (Inter for UI, JetBrains Mono for SKUs/Currencies)
+ * ------------------------------------------------------------------------------ */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
+/* ------------------------------------------------------------------------------
+ * 2. TAILWIND CORE DIRECTIVES
+ * ------------------------------------------------------------------------------ */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ------------------------------------------------------------------------------
+ * 3. DESIGN TOKENS & DYNAMIC PRIMARY THEME VARIABLES
+ * ------------------------------------------------------------------------------ */
+@layer base {
+  :root {
+    /* Centralized Dynamic Primary Palette (Set dynamically via ThemeService) */
+    --primary: #6AAED3;
+    --primary-hover: #559EC7;
+    --primary-active: #468CB3;
+    --primary-foreground: #FFFFFF;
+    --primary-light: #F0F7FB;
+    --primary-border: #BEE0F0;
+    --primary-color: var(--primary);
+    --primary-text: #24658B;
+    --primary-ring: rgba(106, 174, 211, 0.35);
+
+    /* Neutral & Background Canvas */
+    --background: 204 27% 97%;       /* #F4F7F9 */
+    --foreground: 222.2 47.4% 11.2%; /* #1E293B */
+
+    /* Card & Surfaces */
+    --card: 0 0% 100%;               /* #FFFFFF */
+    --card-foreground: 222.2 47.4% 11.2%;
+
+    /* Popover & Flyouts */
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 47.4% 11.2%;
+
+    /* Secondary & Muted */
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%; /* #64748B */
+
+    /* Accent & Destructive */
+    --accent: 204 27% 97%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    /* Form Controls & Borders */
+    --border: 214.3 31.8% 91.4%;     /* #E2E8F0 */
+    --input: 214.3 31.8% 91.4%;
+    --ring: var(--primary-ring);
+
+    /* System Default Radius (0.5rem = 8px; low-height controls override to 6px) */
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --card: 222.2 84% 6.5%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 84% 6.5%;
+    --popover-foreground: 210 40% 98%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+  }
+}
+
+/* ------------------------------------------------------------------------------
+ * 4. GLOBAL HTML & BODY BASE TYPOGRAPHY
+ * ------------------------------------------------------------------------------ */
+html {
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  margin: 0;
+  background-color: #F4F7F9;
+  color: #1E293B;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-size: 0.875rem; /* 14px */
+  line-height: 1.5;   /* Enterprise comfortable reading line height */
+  letter-spacing: normal;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* ------------------------------------------------------------------------------
+ * 5. TABULAR FIGURES & ACCOUNTING/FINANCIAL RULES
+ * ------------------------------------------------------------------------------ */
+table,
+.tabular-nums,
+[data-tabular],
+.financial-amount,
+.font-mono {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+}
+
+/* Numeric form inputs must always align figures identically */
+input[type="number"],
+input[type="tel"],
+input[inputmode="numeric"],
+input[inputmode="decimal"] {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+}
+
+/* ------------------------------------------------------------------------------
+ * 6. ENTERPRISE TYPOGRAPHY HIERARCHY
+ * ------------------------------------------------------------------------------ */
+/* Headings Scale */
+h1 {
+  font-size: 1.5rem;     /* 24px */
+  font-weight: 600;      /* Semibold */
+  line-height: 1.25;
+  letter-spacing: -0.015em;
+  text-rendering: optimizeLegibility;
+}
+
+h2 {
+  font-size: 1.125rem;   /* 18px */
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+  text-rendering: optimizeLegibility;
+}
+
+h3 {
+  font-size: 1rem;        /* 16px */
+  font-weight: 600;
+  line-height: 1.35;
+  letter-spacing: normal;
+  text-rendering: optimizeLegibility;
+}
+
+h4, h5, h6 {
+  letter-spacing: normal;
+  text-rendering: optimizeLegibility;
+}
+
+/* Data Tables Typography */
+th {
+  font-size: 0.78125rem; /* 12.5px */
+  font-weight: 600;
+  line-height: 1.35;
+  text-transform: none;  /* Clean sentence casing for fast enterprise scanning */
+  letter-spacing: normal;
+}
+
+td {
+  font-size: 0.84375rem; /* 13.5px */
+  font-weight: 400;
+  line-height: 1.45;
+}
+
+/* Monospace SKUs, Barcodes, Transaction Hashes & Currencies */
+code, kbd, samp, pre, .font-mono {
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+/* ------------------------------------------------------------------------------
+ * 7. FORM CONTROLS & INTERACTIVE COMPONENT ACCENTS
+ * ------------------------------------------------------------------------------ */
+label {
+  display: inline-block;
+  font-size: 0.8125rem; /* 13px */
+  font-weight: 500;     /* 500 label weight */
+  line-height: 1.25rem;
+  color: #334155;
+}
+
+input,
+select,
+textarea {
+  font-family: inherit;
+  font-size: 0.875rem; /* 14px */
+  font-weight: 400;
+  line-height: 1.45;
+  letter-spacing: normal;
+}
+
+input::placeholder,
+textarea::placeholder {
+  font-size: 0.84375rem; /* 13.5px */
+  font-weight: 400;
+  color: #94A3B8;
+}
+
+/* Dynamic Primary Accent for Native Checkboxes, Radios, and Sliders */
+input[type="checkbox"],
+input[type="radio"],
+input[type="range"] {
+  accent-color: var(--primary-color);
+}
+
+/* Text Selection Accent */
+::selection {
+  background-color: var(--primary-light);
+  color: var(--primary-text);
+}
+
+/* Dynamic Primary Focus & Interactive Form Highlights */
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  border-color: var(--primary-color);
+  outline: none;
+}
+
+/* Dynamic Progress and Meter Bars */
+progress::-webkit-progress-value {
+  background-color: var(--primary-color);
+}
+progress::-moz-progress-bar {
+  background-color: var(--primary-color);
+}
+
+/* Toggles & Checkbox States (Scoped strictly, avoiding dropdown collision) */
+input[type="checkbox"]:checked,
+input[type="radio"]:checked,
+[role="switch"][data-state="checked"],
+[role="checkbox"][data-state="checked"] {
+  background-color: var(--primary-color);
+  border-color: var(--primary-color);
+}
+
+/* ------------------------------------------------------------------------------
+ * 8. RADIX UI & SHADCN SYSTEM OVERRIDES
+ * ------------------------------------------------------------------------------ */
+/*
+ * SAFEGUARD FOR DROPDOWNS:
+ * Radix UI Select items use data-state="checked" and data-highlighted.
+ * Dropdown options must NEVER have dark/black backgrounds on hover or selection.
+ */
+[role="option"],
+[data-radix-collection-item],
+[data-radix-select-item] {
+  background-color: transparent !important;
+  color: #1e293b !important;
+}
+
+[role="option"][data-state="checked"] {
+  background-color: #f8fafc !important; /* Soft light slate-50 */
+  color: #0f172a !important;
+}
+
+[role="option"]:hover,
+[role="option"]:focus,
+[role="option"][data-highlighted],
+[role="option"][data-state="checked"][data-highlighted],
+[role="option"][data-state="checked"]:hover,
+[role="option"][data-state="checked"]:focus {
+  background-color: #f1f5f9 !important; /* Clean light slate-100 */
+  color: #0f172a !important;
+}
+
+/* ------------------------------------------------------------------------------
+ * 9. ENTERPRISE TYPOGRAPHY & LAYOUT UTILITY CLASSES (.erp-*)
+ * ------------------------------------------------------------------------------ */
+@layer utilities {
+  /* Prevent tiny unreadable microcopy on badges, labels, and mobile (No 10px) */
+  .text-\[10px\] {
+    font-size: 0.71875rem; /* 11.5px minimum readable size */
+    line-height: 1rem;
+    letter-spacing: normal;
+  }
+
+  .text-\[11px\] {
+    font-size: 0.75rem;    /* 12px comfortable readable size */
+    line-height: 1.125rem;
+    letter-spacing: normal;
+  }
+
+  /* Centralized Typography Scale Reusable Classes */
+  .erp-page-title {
+    font-size: 1.5rem;    /* 24px */
+    font-weight: 600;
+    line-height: 1.25;
+    letter-spacing: -0.015em;
+  }
+
+  .erp-section-title {
+    font-size: 1.125rem;  /* 18px */
+    font-weight: 600;
+    line-height: 1.3;
+    letter-spacing: -0.01em;
+  }
+
+  .erp-card-title {
+    font-size: 1rem;       /* 16px */
+    font-weight: 600;
+    line-height: 1.35;
+  }
+
+  .erp-body-text {
+    font-size: 0.875rem;  /* 14px */
+    font-weight: 400;
+    line-height: 1.5;
+  }
+
+  .erp-secondary-text {
+    font-size: 0.8125rem; /* 13px */
+    font-weight: 400;
+    line-height: 1.45;
+  }
+
+  .erp-table-text {
+    font-size: 0.84375rem; /* 13.5px */
+    font-weight: 400;
+    line-height: 1.45;
+  }
+
+  .erp-table-header {
+    font-size: 0.78125rem; /* 12.5px */
+    font-weight: 600;
+    line-height: 1.35;
+  }
+
+  .erp-form-label {
+    font-size: 0.8125rem; /* 13px */
+    font-weight: 500;
+    line-height: 1.35;
+  }
+
+  .erp-input-text {
+    font-size: 0.875rem;  /* 14px */
+    font-weight: 400;
+    line-height: 1.45;
+  }
+
+  .erp-btn-text {
+    font-size: 0.84375rem; /* 13.5px */
+    font-weight: 500;
+    line-height: 1.35;
+  }
+
+  .erp-helper-text {
+    font-size: 0.75rem;   /* 12px */
+    font-weight: 400;
+    line-height: 1.4;
+  }
+
+  .erp-kpi-number {
+    font-size: 1.75rem;   /* 28px */
+    font-weight: 600;
+    line-height: 1.2;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .erp-financial-amount {
+    font-size: 1.375rem;  /* 22px */
+    font-weight: 600;
+    line-height: 1.25;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .erp-nav-text {
+    font-size: 0.84375rem; /* 13.5px */
+    font-weight: 500;
+    line-height: 1.4;
+  }
+
+  .erp-badge-text {
+    font-size: 0.71875rem; /* 11.5px */
+    font-weight: 500;
+    line-height: 1.3;
+  }
+}
+
+/* ------------------------------------------------------------------------------
+ * 10. SCROLLBAR HIDING & ACCESSIBILITY UTILITIES
+ * ------------------------------------------------------------------------------ */
+/* Cross-browser scrollbar hiding while preserving scroll functionality */
+html,
+body,
+* {
+  scrollbar-width: none;          /* Firefox */
+  -ms-overflow-style: none;       /* Legacy Edge */
+}
+
+::-webkit-scrollbar {
+  display: none;                  /* Chrome, Safari, Opera */
+  width: 0px;
+  height: 0px;
+}
