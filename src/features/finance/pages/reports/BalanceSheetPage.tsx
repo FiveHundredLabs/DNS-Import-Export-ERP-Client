@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import { useFinanceLedger } from '../../hooks/useFinanceLedger';
 import { BalanceSheetReport } from '../../api/types';
 import { ReportHeaderNav } from './ReportHeaderNav';
 import { formatCurrency, formatDate } from '../../../../utils/formatters';
-import { Scale, CheckCircle2, AlertTriangle, Printer, Calendar, ShieldCheck } from 'lucide-react';
+import { Scale, CheckCircle2, AlertTriangle, Printer, Calendar, ShieldCheck, ChevronDown, ChevronRight } from 'lucide-react';
 import { Card } from '../../../../components/ui/card';
 import { Badge } from '../../../../components/ui/badge';
 import { Button } from '../../../../components/ui/button';
@@ -13,6 +14,17 @@ export function BalanceSheetPage() {
   const { getBalanceSheet } = useFinanceLedger();
   const [report, setReport] = useState<BalanceSheetReport | null>(null);
   const [asOfDate, setAsOfDate] = useState<string>(new Date().toISOString().slice(0, 10));
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
+    currentAssets: true,
+    nonCurrentAssets: true,
+    currentLiabilities: true,
+    longTermLiabilities: true,
+    equity: true,
+  });
+
+  const toggleSection = (sec: string) => {
+    setExpandedSections((prev) => ({ ...prev, [sec]: !prev[sec] }));
+  };
 
   const loadReport = useCallback(async () => {
     const data = await getBalanceSheet(asOfDate);
@@ -144,44 +156,74 @@ export function BalanceSheetPage() {
             <div className="p-5 space-y-4 text-xs">
               {/* Current Assets */}
               <div className="space-y-2">
-                <div className="flex justify-between items-center font-semibold text-slate-800 border-b border-slate-100 pb-1">
-                  <span>Current Assets</span>
+                <div
+                  onClick={() => toggleSection('currentAssets')}
+                  className="flex justify-between items-center font-semibold text-slate-800 border-b border-slate-100 pb-1 cursor-pointer select-none hover:text-primary transition-colors"
+                >
+                  <div className="flex items-center gap-1.5">
+                    {expandedSections.currentAssets ? (
+                      <ChevronDown className="h-3.5 w-3.5 text-slate-500" />
+                    ) : (
+                      <ChevronRight className="h-3.5 w-3.5 text-slate-500" />
+                    )}
+                    <span>Current Assets</span>
+                  </div>
                   <span className="tabular-nums font-semibold">{formatCurrency(report?.totalCurrentAssets || 0)}</span>
                 </div>
-                <div className="space-y-1.5 pl-3">
-                  {report?.currentAssets.map((item) => (
-                    <div key={item.accountId} className="flex justify-between items-center text-slate-600">
-                      <span className="flex items-center gap-2">
-                        <span className="tabular-nums text-primary font-medium">{item.code}</span>
-                        <span>{item.accountName}</span>
-                      </span>
-                      <span className="tabular-nums text-slate-800 font-medium">{formatCurrency(item.amount)}</span>
-                    </div>
-                  ))}
-                </div>
+                {expandedSections.currentAssets && (
+                  <div className="space-y-1.5 pl-5 animate-in fade-in-50">
+                    {report?.currentAssets.map((item) => (
+                      <div key={item.accountId} className="flex justify-between items-center text-slate-600">
+                        <Link
+                          to={`/finance/reports/general-ledger?accountId=${item.accountId}`}
+                          className="flex items-center gap-2 hover:text-primary hover:underline transition-colors"
+                        >
+                          <span className="tabular-nums text-primary font-medium">{item.code}</span>
+                          <span className="font-medium text-slate-900">{item.accountName}</span>
+                        </Link>
+                        <span className="tabular-nums text-slate-800 font-medium">{formatCurrency(item.amount)}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Non-Current Assets */}
               <div className="space-y-2 pt-2 border-t border-slate-100">
-                <div className="flex justify-between items-center font-semibold text-slate-800 border-b border-slate-100 pb-1">
-                  <span>Non-Current Assets (Fixed Assets)</span>
+                <div
+                  onClick={() => toggleSection('nonCurrentAssets')}
+                  className="flex justify-between items-center font-semibold text-slate-800 border-b border-slate-100 pb-1 cursor-pointer select-none hover:text-primary transition-colors"
+                >
+                  <div className="flex items-center gap-1.5">
+                    {expandedSections.nonCurrentAssets ? (
+                      <ChevronDown className="h-3.5 w-3.5 text-slate-500" />
+                    ) : (
+                      <ChevronRight className="h-3.5 w-3.5 text-slate-500" />
+                    )}
+                    <span>Non-Current Assets (Fixed Assets)</span>
+                  </div>
                   <span className="tabular-nums font-semibold">{formatCurrency(report?.totalNonCurrentAssets || 0)}</span>
                 </div>
-                <div className="space-y-1.5 pl-3">
-                  {report?.nonCurrentAssets.length === 0 ? (
-                    <div className="text-slate-400 italic">No fixed assets registered.</div>
-                  ) : (
-                    report?.nonCurrentAssets.map((item) => (
-                      <div key={item.accountId} className="flex justify-between items-center text-slate-600">
-                        <span className="flex items-center gap-2">
-                          <span className="tabular-nums text-primary font-medium">{item.code}</span>
-                          <span>{item.accountName}</span>
-                        </span>
-                        <span className="tabular-nums text-slate-800 font-medium">{formatCurrency(item.amount)}</span>
-                      </div>
-                    ))
-                  )}
-                </div>
+                {expandedSections.nonCurrentAssets && (
+                  <div className="space-y-1.5 pl-5 animate-in fade-in-50">
+                    {report?.nonCurrentAssets.length === 0 ? (
+                      <div className="text-slate-400 italic">No fixed assets registered.</div>
+                    ) : (
+                      report?.nonCurrentAssets.map((item) => (
+                        <div key={item.accountId} className="flex justify-between items-center text-slate-600">
+                          <Link
+                            to={`/finance/reports/general-ledger?accountId=${item.accountId}`}
+                            className="flex items-center gap-2 hover:text-primary hover:underline transition-colors"
+                          >
+                            <span className="tabular-nums text-primary font-medium">{item.code}</span>
+                            <span className="font-medium text-slate-900">{item.accountName}</span>
+                          </Link>
+                          <span className="tabular-nums text-slate-800 font-medium">{formatCurrency(item.amount)}</span>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -205,63 +247,108 @@ export function BalanceSheetPage() {
             <div className="p-5 space-y-4 text-xs">
               {/* Current Liabilities */}
               <div className="space-y-2">
-                <div className="flex justify-between items-center font-semibold text-slate-800 border-b border-slate-100 pb-1">
-                  <span>Current Liabilities</span>
+                <div
+                  onClick={() => toggleSection('currentLiabilities')}
+                  className="flex justify-between items-center font-semibold text-slate-800 border-b border-slate-100 pb-1 cursor-pointer select-none hover:text-primary transition-colors"
+                >
+                  <div className="flex items-center gap-1.5">
+                    {expandedSections.currentLiabilities ? (
+                      <ChevronDown className="h-3.5 w-3.5 text-slate-500" />
+                    ) : (
+                      <ChevronRight className="h-3.5 w-3.5 text-slate-500" />
+                    )}
+                    <span>Current Liabilities</span>
+                  </div>
                   <span className="tabular-nums font-semibold">{formatCurrency(report?.totalCurrentLiabilities || 0)}</span>
                 </div>
-                <div className="space-y-1.5 pl-3">
-                  {report?.currentLiabilities.map((item) => (
-                    <div key={item.accountId} className="flex justify-between items-center text-slate-600">
-                      <span className="flex items-center gap-2">
-                        <span className="tabular-nums text-primary font-medium">{item.code}</span>
-                        <span>{item.accountName}</span>
-                      </span>
-                      <span className="tabular-nums text-slate-800 font-medium">{formatCurrency(item.amount)}</span>
-                    </div>
-                  ))}
-                </div>
+                {expandedSections.currentLiabilities && (
+                  <div className="space-y-1.5 pl-5 animate-in fade-in-50">
+                    {report?.currentLiabilities.map((item) => (
+                      <div key={item.accountId} className="flex justify-between items-center text-slate-600">
+                        <Link
+                          to={`/finance/reports/general-ledger?accountId=${item.accountId}`}
+                          className="flex items-center gap-2 hover:text-primary hover:underline transition-colors"
+                        >
+                          <span className="tabular-nums text-primary font-medium">{item.code}</span>
+                          <span className="font-medium text-slate-900">{item.accountName}</span>
+                        </Link>
+                        <span className="tabular-nums text-slate-800 font-medium">{formatCurrency(item.amount)}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Long-Term Liabilities */}
               <div className="space-y-2 pt-2 border-t border-slate-100">
-                <div className="flex justify-between items-center font-semibold text-slate-800 border-b border-slate-100 pb-1">
-                  <span>Long-Term Liabilities</span>
+                <div
+                  onClick={() => toggleSection('longTermLiabilities')}
+                  className="flex justify-between items-center font-semibold text-slate-800 border-b border-slate-100 pb-1 cursor-pointer select-none hover:text-primary transition-colors"
+                >
+                  <div className="flex items-center gap-1.5">
+                    {expandedSections.longTermLiabilities ? (
+                      <ChevronDown className="h-3.5 w-3.5 text-slate-500" />
+                    ) : (
+                      <ChevronRight className="h-3.5 w-3.5 text-slate-500" />
+                    )}
+                    <span>Long-Term Liabilities</span>
+                  </div>
                   <span className="tabular-nums font-semibold">{formatCurrency(report?.totalLongTermLiabilities || 0)}</span>
                 </div>
-                <div className="space-y-1.5 pl-3">
-                  {report?.longTermLiabilities.length === 0 ? (
-                    <div className="text-slate-400 italic">No long-term debt liabilities.</div>
-                  ) : (
-                    report?.longTermLiabilities.map((item) => (
-                      <div key={item.accountId} className="flex justify-between items-center text-slate-600">
-                        <span className="flex items-center gap-2">
-                          <span className="tabular-nums text-primary font-medium">{item.code}</span>
-                          <span>{item.accountName}</span>
-                        </span>
-                        <span className="tabular-nums text-slate-800 font-medium">{formatCurrency(item.amount)}</span>
-                      </div>
-                    ))
-                  )}
-                </div>
+                {expandedSections.longTermLiabilities && (
+                  <div className="space-y-1.5 pl-5 animate-in fade-in-50">
+                    {report?.longTermLiabilities.length === 0 ? (
+                      <div className="text-slate-400 italic">No long-term debt liabilities.</div>
+                    ) : (
+                      report?.longTermLiabilities.map((item) => (
+                        <div key={item.accountId} className="flex justify-between items-center text-slate-600">
+                          <Link
+                            to={`/finance/reports/general-ledger?accountId=${item.accountId}`}
+                            className="flex items-center gap-2 hover:text-primary hover:underline transition-colors"
+                          >
+                            <span className="tabular-nums text-primary font-medium">{item.code}</span>
+                            <span className="font-medium text-slate-900">{item.accountName}</span>
+                          </Link>
+                          <span className="tabular-nums text-slate-800 font-medium">{formatCurrency(item.amount)}</span>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Owner's Equity & Reserves */}
               <div className="space-y-2 pt-2 border-t border-slate-100">
-                <div className="flex justify-between items-center font-semibold text-slate-800 border-b border-slate-100 pb-1">
-                  <span>Owner's Equity & Reserves</span>
+                <div
+                  onClick={() => toggleSection('equity')}
+                  className="flex justify-between items-center font-semibold text-slate-800 border-b border-slate-100 pb-1 cursor-pointer select-none hover:text-primary transition-colors"
+                >
+                  <div className="flex items-center gap-1.5">
+                    {expandedSections.equity ? (
+                      <ChevronDown className="h-3.5 w-3.5 text-slate-500" />
+                    ) : (
+                      <ChevronRight className="h-3.5 w-3.5 text-slate-500" />
+                    )}
+                    <span>Owner's Equity & Reserves</span>
+                  </div>
                   <span className="tabular-nums font-semibold">{formatCurrency(report?.totalEquity || 0)}</span>
                 </div>
-                <div className="space-y-1.5 pl-3">
-                  {report?.equityItems.map((item) => (
-                    <div key={item.accountId} className="flex justify-between items-center text-slate-600">
-                      <span className="flex items-center gap-2">
-                        <span className="tabular-nums text-primary font-medium">{item.code}</span>
-                        <span>{item.accountName}</span>
-                      </span>
-                      <span className="tabular-nums text-slate-800 font-medium">{formatCurrency(item.amount)}</span>
-                    </div>
-                  ))}
-                </div>
+                {expandedSections.equity && (
+                  <div className="space-y-1.5 pl-5 animate-in fade-in-50">
+                    {report?.equityItems.map((item) => (
+                      <div key={item.accountId} className="flex justify-between items-center text-slate-600">
+                        <Link
+                          to={`/finance/reports/general-ledger?accountId=${item.accountId}`}
+                          className="flex items-center gap-2 hover:text-primary hover:underline transition-colors"
+                        >
+                          <span className="tabular-nums text-primary font-medium">{item.code}</span>
+                          <span className="font-medium text-slate-900">{item.accountName}</span>
+                        </Link>
+                        <span className="tabular-nums text-slate-800 font-medium">{formatCurrency(item.amount)}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
 

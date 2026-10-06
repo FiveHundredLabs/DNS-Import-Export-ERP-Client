@@ -1,16 +1,26 @@
 import { useState, useEffect, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import { useFinanceLedger } from '../../hooks/useFinanceLedger';
 import { ProfitLossReport } from '../../api/types';
 import { ReportDateFilterBar, DateFilterState } from './ReportDateFilterBar';
 import { ReportHeaderNav } from './ReportHeaderNav';
 import { formatCurrency, formatPercentage } from '../../../../utils/formatters';
-import { TrendingUp, DollarSign, PieChart, ArrowUpRight, ArrowDownRight, Layers } from 'lucide-react';
+import { TrendingUp, DollarSign, PieChart, ArrowUpRight, ArrowDownRight, Layers, ChevronDown, ChevronRight } from 'lucide-react';
 import { Card } from '../../../../components/ui/card';
 import { Badge } from '../../../../components/ui/badge';
 
 export function ProfitLossPage() {
   const { getProfitLoss, loading } = useFinanceLedger();
   const [report, setReport] = useState<ProfitLossReport | null>(null);
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
+    revenue: true,
+    cogs: true,
+    expenses: true,
+  });
+
+  const toggleSection = (sec: string) => {
+    setExpandedSections((prev) => ({ ...prev, [sec]: !prev[sec] }));
+  };
 
   const [dateFilter, setDateFilter] = useState<DateFilterState>({
     preset: 'THIS_MONTH',
@@ -121,50 +131,80 @@ export function ProfitLossPage() {
         <div className="divide-y divide-slate-100 text-xs">
           {/* 1. Operating Revenue */}
           <div className="p-6 space-y-3">
-            <div className="flex justify-between items-center text-sm font-semibold text-slate-900">
-              <span className="text-indigo-900 font-semibold">1. Operating Revenue</span>
+            <div
+              onClick={() => toggleSection('revenue')}
+              className="flex justify-between items-center text-sm font-semibold text-slate-900 cursor-pointer select-none hover:text-primary transition-colors"
+            >
+              <div className="flex items-center gap-2">
+                {expandedSections.revenue ? (
+                  <ChevronDown className="h-4 w-4 text-slate-500" />
+                ) : (
+                  <ChevronRight className="h-4 w-4 text-slate-500" />
+                )}
+                <span className="text-indigo-900 font-semibold">1. Operating Revenue</span>
+              </div>
               <span className="font-mono tabular-nums">{formatCurrency(report?.totalRevenue || 0)}</span>
             </div>
 
-            <div className="pl-4 space-y-1.5 text-slate-600">
-              {report?.revenueItems.length === 0 ? (
-                <div className="text-slate-400 italic">No revenue recorded in selected date range.</div>
-              ) : (
-                report?.revenueItems.map((item) => (
-                  <div key={item.accountId} className="flex justify-between items-center py-1 border-b border-slate-50">
-                    <span className="flex items-center gap-2">
-                      <span className="font-mono text-primary font-semibold">{item.code}</span>
-                      <span>{item.accountName}</span>
-                    </span>
-                    <span className="font-mono font-medium text-slate-800 tabular-nums">{formatCurrency(item.amount)}</span>
-                  </div>
-                ))
-              )}
-            </div>
+            {expandedSections.revenue && (
+              <div className="pl-6 space-y-1.5 text-slate-600 animate-in fade-in-50">
+                {report?.revenueItems.length === 0 ? (
+                  <div className="text-slate-400 italic">No revenue recorded in selected date range.</div>
+                ) : (
+                  report?.revenueItems.map((item) => (
+                    <div key={item.accountId} className="flex justify-between items-center py-1 border-b border-slate-50">
+                      <Link
+                        to={`/finance/reports/general-ledger?accountId=${item.accountId}`}
+                        className="flex items-center gap-2 hover:text-primary hover:underline transition-colors"
+                      >
+                        <span className="font-mono text-primary font-semibold">{item.code}</span>
+                        <span className="font-medium text-slate-900">{item.accountName}</span>
+                      </Link>
+                      <span className="font-mono font-medium text-slate-800 tabular-nums">{formatCurrency(item.amount)}</span>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
           </div>
 
           {/* 2. Cost of Goods Sold */}
           <div className="p-6 space-y-3 bg-slate-50/40">
-            <div className="flex justify-between items-center text-sm font-semibold text-slate-900">
-              <span className="text-slate-800 font-semibold">2. Direct Cost of Goods Sold (COGS)</span>
+            <div
+              onClick={() => toggleSection('cogs')}
+              className="flex justify-between items-center text-sm font-semibold text-slate-900 cursor-pointer select-none hover:text-primary transition-colors"
+            >
+              <div className="flex items-center gap-2">
+                {expandedSections.cogs ? (
+                  <ChevronDown className="h-4 w-4 text-slate-500" />
+                ) : (
+                  <ChevronRight className="h-4 w-4 text-slate-500" />
+                )}
+                <span className="text-slate-800 font-semibold">2. Direct Cost of Goods Sold (COGS)</span>
+              </div>
               <span className="font-mono text-slate-800 tabular-nums">({formatCurrency(report?.totalCogs || 0)})</span>
             </div>
 
-            <div className="pl-4 space-y-1.5 text-slate-600">
-              {report?.cogsItems.length === 0 ? (
-                <div className="text-slate-400 italic">No COGS recognized in period.</div>
-              ) : (
-                report?.cogsItems.map((item) => (
-                  <div key={item.accountId} className="flex justify-between items-center py-1 border-b border-slate-50">
-                    <span className="flex items-center gap-2">
-                      <span className="font-mono text-primary font-semibold">{item.code}</span>
-                      <span>{item.accountName}</span>
-                    </span>
-                    <span className="font-mono font-medium text-slate-800 tabular-nums">{formatCurrency(item.amount)}</span>
-                  </div>
-                ))
-              )}
-            </div>
+            {expandedSections.cogs && (
+              <div className="pl-6 space-y-1.5 text-slate-600 animate-in fade-in-50">
+                {report?.cogsItems.length === 0 ? (
+                  <div className="text-slate-400 italic">No COGS recognized in period.</div>
+                ) : (
+                  report?.cogsItems.map((item) => (
+                    <div key={item.accountId} className="flex justify-between items-center py-1 border-b border-slate-50">
+                      <Link
+                        to={`/finance/reports/general-ledger?accountId=${item.accountId}`}
+                        className="flex items-center gap-2 hover:text-primary hover:underline transition-colors"
+                      >
+                        <span className="font-mono text-primary font-semibold">{item.code}</span>
+                        <span className="font-medium text-slate-900">{item.accountName}</span>
+                      </Link>
+                      <span className="font-mono font-medium text-slate-800 tabular-nums">{formatCurrency(item.amount)}</span>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
           </div>
 
           {/* Gross Profit Subtotal */}
@@ -175,26 +215,41 @@ export function ProfitLossPage() {
 
           {/* 3. Operating Expenses */}
           <div className="p-6 space-y-3">
-            <div className="flex justify-between items-center text-sm font-semibold text-slate-900">
-              <span className="text-rose-900 font-semibold">3. Operating Expenses & Overheads</span>
+            <div
+              onClick={() => toggleSection('expenses')}
+              className="flex justify-between items-center text-sm font-semibold text-slate-900 cursor-pointer select-none hover:text-primary transition-colors"
+            >
+              <div className="flex items-center gap-2">
+                {expandedSections.expenses ? (
+                  <ChevronDown className="h-4 w-4 text-slate-500" />
+                ) : (
+                  <ChevronRight className="h-4 w-4 text-slate-500" />
+                )}
+                <span className="text-rose-900 font-semibold">3. Operating Expenses & Overheads</span>
+              </div>
               <span className="font-mono text-rose-700 tabular-nums">({formatCurrency(report?.totalOperatingExpenses || 0)})</span>
             </div>
 
-            <div className="pl-4 space-y-1.5 text-slate-600">
-              {report?.expenseItems.length === 0 ? (
-                <div className="text-slate-400 italic">No operating expenses in period.</div>
-              ) : (
-                report?.expenseItems.map((item) => (
-                  <div key={item.accountId} className="flex justify-between items-center py-1 border-b border-slate-50">
-                    <span className="flex items-center gap-2">
-                      <span className="font-mono text-primary font-semibold">{item.code}</span>
-                      <span>{item.accountName}</span>
-                    </span>
-                    <span className="font-mono font-medium text-slate-800 tabular-nums">{formatCurrency(item.amount)}</span>
-                  </div>
-                ))
-              )}
-            </div>
+            {expandedSections.expenses && (
+              <div className="pl-6 space-y-1.5 text-slate-600 animate-in fade-in-50">
+                {report?.expenseItems.length === 0 ? (
+                  <div className="text-slate-400 italic">No operating expenses in period.</div>
+                ) : (
+                  report?.expenseItems.map((item) => (
+                    <div key={item.accountId} className="flex justify-between items-center py-1 border-b border-slate-50">
+                      <Link
+                        to={`/finance/reports/general-ledger?accountId=${item.accountId}`}
+                        className="flex items-center gap-2 hover:text-primary hover:underline transition-colors"
+                      >
+                        <span className="font-mono text-primary font-semibold">{item.code}</span>
+                        <span className="font-medium text-slate-900">{item.accountName}</span>
+                      </Link>
+                      <span className="font-mono font-medium text-slate-800 tabular-nums">{formatCurrency(item.amount)}</span>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
           </div>
 
           {/* Net Operating Profit Final Total */}

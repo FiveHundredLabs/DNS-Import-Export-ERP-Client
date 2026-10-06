@@ -64,12 +64,15 @@ export interface JournalEntry {
   description: string;
   reference?: string;
   source: JournalSource;
-  status: 'POSTED' | 'DRAFT';
+  status: 'POSTED' | 'DRAFT' | 'VOIDED' | 'CLEARED';
   lines: JournalLine[];
   totalDebit: number;
   totalCredit: number;
   createdBy: string;
   createdAt: string;
+  voidedAt?: string;
+  voidedBy?: string;
+  voidReason?: string;
 }
 
 export interface CreateAccountDTO {

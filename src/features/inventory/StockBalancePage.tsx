@@ -37,6 +37,7 @@ interface StockRow {
   damagedQuantity: number;
   reservedQuantity: number;
   availableForSale: number;
+  physicalStock: number;
   costPrice: number;
 }
 
@@ -73,6 +74,7 @@ export function StockBalancePage() {
         damagedQuantity: b.damagedQuantity ?? 0,
         reservedQuantity: b.reservedQuantity ?? 0,
         availableForSale,
+        physicalStock: b.availableQuantity ?? (availableForSale + (b.reservedQuantity ?? 0)),
         costPrice: product?.pricing?.costPrice ?? 0,
       } as StockRow;
     });
@@ -156,14 +158,15 @@ export function StockBalancePage() {
   };
 
   const handleExportCSV = () => {
-    const headers = ['SKU', 'Product Name', 'Category', 'Location', 'Available', 'Reserved', 'Damaged', 'Est. Value'];
+    const headers = ['SKU', 'Product Name', 'Category', 'Location', 'Physical Stock', 'Reserved', 'Available Stock', 'Damaged', 'Est. Value'];
     const rows = filteredBalances.map(b => [
       b.sku,
       b.productName,
       b.category,
       b.locationType,
-      b.availableForSale,
+      b.physicalStock,
       b.reservedQuantity,
+      b.availableForSale,
       b.damagedQuantity,
       (b.availableForSale * b.costPrice).toFixed(2),
     ]);
@@ -281,8 +284,9 @@ export function StockBalancePage() {
                     <TableHead>Product Name</TableHead>
                     <TableHead>Category</TableHead>
                     <TableHead className="text-center">Location</TableHead>
-                    <TableHead className="text-right">Available</TableHead>
+                    <TableHead className="text-right">Physical Stock</TableHead>
                     <TableHead className="text-right">Reserved</TableHead>
+                    <TableHead className="text-right">Available Stock</TableHead>
                     <TableHead className="text-right">Damaged</TableHead>
                     <TableHead className="text-right">Est. Value</TableHead>
                     <TableHead className="text-center">Status</TableHead>
@@ -303,8 +307,9 @@ export function StockBalancePage() {
                         <TableCell className="text-center">
                           <Badge variant="outline" className="text-xs">{b.locationType}</Badge>
                         </TableCell>
-                        <TableCell className="text-right font-bold">{b.availableForSale}</TableCell>
+                        <TableCell className="text-right font-mono font-medium text-slate-700">{b.physicalStock}</TableCell>
                         <TableCell className="text-right text-muted-foreground">{b.reservedQuantity}</TableCell>
+                        <TableCell className="text-right font-bold text-slate-900">{b.availableForSale}</TableCell>
                         <TableCell className={`text-right ${b.damagedQuantity > 0 ? 'text-orange-600 font-medium' : 'text-muted-foreground'}`}>
                           {b.damagedQuantity}
                         </TableCell>

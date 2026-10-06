@@ -34,8 +34,8 @@ export function DebitCreditRow({
   onRemove,
   onAddNewAccount,
   canRemove,
-  suggestedAmount,
-  suggestedType,
+  suggestedAmount: _suggestedAmount,
+  suggestedType: _suggestedType,
 }: DebitCreditRowProps) {
   const handleAccountChange = (acc: Account) => {
     onChange(index, {

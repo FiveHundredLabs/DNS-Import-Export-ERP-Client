@@ -26,7 +26,7 @@ export interface IFinanceRepository {
   }): Promise<Account[]>;
   getAccountById(id: string): Promise<Account | null>;
   createAccount(dto: CreateAccountDTO): Promise<Account>;
-  updateAccount(id: string, dto: Partial<CreateAccountDTO>): Promise<Account>;
+  updateAccount(id: string, dto: Partial<CreateAccountDTO> & { isActive?: boolean }): Promise<Account>;
   deleteAccount(id: string): Promise<void>;
 
   // Suppliers
@@ -46,6 +46,7 @@ export interface IFinanceRepository {
   }): Promise<JournalEntry[]>;
   getJournalEntryById(id: string): Promise<JournalEntry | null>;
   createJournalEntry(dto: CreateJournalEntryDTO): Promise<JournalEntry>;
+  voidJournalEntry(id: string, reason?: string): Promise<JournalEntry>;
 
   // Reports
   getProfitLossReport(dateRange?: DateRangeFilter): Promise<ProfitLossReport>;

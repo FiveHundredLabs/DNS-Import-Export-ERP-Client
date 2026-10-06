@@ -14,6 +14,7 @@ import {
   createJournalEntrySchema,
 } from '../types';
 import { IFinanceRepository } from '../finance.repository';
+import { periodLockService } from '../../services/periodLockService';
 
 // 11 Non-deletable default system accounts
 export const DEFAULT_SYSTEM_ACCOUNTS: Account[] = [
@@ -549,7 +550,7 @@ export class MockFinanceRepository implements IFinanceRepository {
     return newAccount;
   }
 
-  async updateAccount(id: string, dto: Partial<CreateAccountDTO>): Promise<Account> {
+  async updateAccount(id: string, dto: Partial<CreateAccountDTO> & { isActive?: boolean }): Promise<Account> {
     await this.delay();
     const index = this.accounts.findIndex((a) => a.id === id);
     if (index === -1) {
@@ -563,12 +564,16 @@ export class MockFinanceRepository implements IFinanceRepository {
     if (current.isSystem && dto.accountSubClass && dto.accountSubClass !== current.accountSubClass) {
       throw new Error('System account sub-category cannot be reassigned');
     }
+    if (current.isSystem && dto.isActive === false) {
+      throw new Error('System accounts cannot be deactivated');
+    }
 
     const updated: Account = {
       ...current,
       name: dto.name?.trim() ?? current.name,
       description: dto.description !== undefined ? dto.description.trim() : current.description,
       parentId: dto.parentId !== undefined ? dto.parentId : current.parentId,
+      isActive: dto.isActive !== undefined ? dto.isActive : current.isActive,
       updatedAt: new Date().toISOString(),
     };
 
@@ -718,6 +723,9 @@ export class MockFinanceRepository implements IFinanceRepository {
 
   async createJournalEntry(dto: CreateJournalEntryDTO): Promise<JournalEntry> {
     await this.delay();
+    // Validate period lock
+    periodLockService.assertNotLocked(dto.date);
+
     // Validate schema & invariant
     createJournalEntrySchema.parse(dto);
 
@@ -774,6 +782,41 @@ export class MockFinanceRepository implements IFinanceRepository {
 
     this.journals.unshift(newJournal);
     return newJournal;
+  }
+
+  async voidJournalEntry(id: string, reason?: string): Promise<JournalEntry> {
+    await this.delay();
+    const journal = this.journals.find((j) => j.id === id);
+    if (!journal) {
+      throw new Error(`Journal entry ${id} not found`);
+    }
+
+    if (journal.status === 'VOIDED') {
+      throw new Error(`Journal entry ${journal.entryNumber} is already voided.`);
+    }
+
+    // Period closing control: Hard error if transaction date is in closed period
+    periodLockService.assertNotLocked(journal.date);
+
+    // Revert account balances
+    for (const line of journal.lines) {
+      const acc = this.accounts.find((a) => a.id === line.accountId);
+      if (acc) {
+        if (acc.accountClass === 'ASSET' || acc.accountClass === 'EXPENSE') {
+          // Revert: subtract what was debited, add what was credited
+          acc.currentBalance = Number((acc.currentBalance - line.debit + line.credit).toFixed(2));
+        } else {
+          // Revert: subtract what was credited, add what was debited
+          acc.currentBalance = Number((acc.currentBalance - line.credit + line.debit).toFixed(2));
+        }
+        acc.updatedAt = new Date().toISOString();
+      }
+    }
+
+    journal.status = 'VOIDED';
+    journal.voidedAt = new Date().toISOString();
+    journal.voidReason = reason || 'Voided/Reversed by authorized finance manager';
+    return journal;
   }
 
   // REPORTS

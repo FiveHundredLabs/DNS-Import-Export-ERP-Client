@@ -46,6 +46,13 @@ import { BalanceSheetPage } from './features/finance/pages/reports/BalanceSheetP
 import { TrialBalancePage } from './features/finance/pages/reports/TrialBalancePage';
 import { GeneralLedgerPage } from './features/finance/pages/reports/GeneralLedgerPage';
 import { VatSummaryPage } from './features/finance/pages/reports/VatSummaryPage';
+import { VendorBillCostingPage } from './features/finance/pages/ap/VendorBillCostingPage';
+import { BatchSupplierPaymentPage } from './features/finance/pages/ap/BatchSupplierPaymentPage';
+import { ReceiptApprovalQueuePage } from './features/finance/pages/ar/ReceiptApprovalQueuePage';
+import { ARCollectionAllocationPage } from './features/finance/pages/ar/ARCollectionAllocationPage';
+import { ManualJournalPage } from './features/finance/pages/journal/ManualJournalPage';
+import { BankReconciliationPage } from './features/finance/pages/reconciliation/BankReconciliationPage';
+import { FinancialPeriodLockPage } from './features/finance/pages/settings/FinancialPeriodLockPage';
 import { ReportsPage } from './features/reports/ReportsPage';
 import { ProtectedRoute } from './components/common/ProtectedRoute';
 import { LoginPage } from './features/auth/LoginPage';
@@ -384,8 +391,24 @@ export function App() {
           {/* Initial Screen: 1 - Journal Entry (The Finance Desk) */}
           <Route index element={<FinanceDeskPage />} />
           <Route path="desk" element={<FinanceDeskPage />} />
+          <Route path="journal/new" element={<ManualJournalPage />} />
           <Route path="accounts" element={<ChartOfAccountsPage />} />
+
+          {/* Accounts Payable (AP) Workflows */}
+          <Route path="ap/bills/new" element={<VendorBillCostingPage />} />
+          <Route path="ap/payments/new" element={<BatchSupplierPaymentPage />} />
+
+          {/* Accounts Receivable (AR) & Collections */}
           <Route path="payment-approvals" element={<PaymentApprovalPage />} />
+          <Route path="ar/approvals" element={<ReceiptApprovalQueuePage />} />
+          <Route path="ar/allocate" element={<ARCollectionAllocationPage />} />
+
+          {/* Bank Reconciliation Workspace */}
+          <Route path="reconciliation" element={<BankReconciliationPage />} />
+
+          {/* Period Closing & Settings */}
+          <Route path="settings/closing" element={<FinancialPeriodLockPage />} />
+
           <Route path="suppliers" element={<SuppliersPage />} />
           <Route path="commissions" element={<FinanceCommissionsPage />} />
           <Route path="dashboard" element={<FinanceDashboardPage />} />

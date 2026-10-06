@@ -3,8 +3,13 @@ import { StockBalance, StockMovement } from '../../types/inventory';
 import { MOCK_STOCK_BALANCES, MOCK_STOCK_MOVEMENTS } from '../../mock/mockInventory';
 
 export class MockInventoryRepository implements IInventoryRepository {
-  private balances: StockBalance[] = JSON.parse(JSON.stringify(MOCK_STOCK_BALANCES));
-  private movements: StockMovement[] = JSON.parse(JSON.stringify(MOCK_STOCK_MOVEMENTS));
+  private balances: StockBalance[];
+  private movements: StockMovement[];
+
+  constructor(initialBalances?: StockBalance[], initialMovements?: StockMovement[]) {
+    this.balances = initialBalances ? JSON.parse(JSON.stringify(initialBalances)) : JSON.parse(JSON.stringify(MOCK_STOCK_BALANCES));
+    this.movements = initialMovements ? JSON.parse(JSON.stringify(initialMovements)) : JSON.parse(JSON.stringify(MOCK_STOCK_MOVEMENTS));
+  }
 
   async getBalance(productId: string, locationId: string): Promise<StockBalance | null> {
     return this.balances.find(b => b.productId === productId && b.locationId === locationId) || null;

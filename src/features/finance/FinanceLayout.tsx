@@ -9,6 +9,11 @@ import {
   Receipt,
   Users,
   Zap,
+  CreditCard,
+  Landmark,
+  Lock,
+  FileText,
+  SlidersHorizontal,
 } from 'lucide-react';
 import { InnerSidebarLayout } from '../../components/layout/InnerSidebarLayout';
 import { InnerNavItem } from '../../components/common/InnerSidebar';
@@ -21,9 +26,24 @@ const FINANCE_NAV_ITEMS: InnerNavItem[] = [
     exact: false,
   },
   {
+    name: 'Manual Journal Voucher',
+    path: '/finance/journal/new',
+    icon: FileText,
+  },
+  {
     name: 'Chart of Accounts',
     path: '/finance/accounts',
     icon: BookOpen,
+  },
+  {
+    name: 'Vendor Bill Costing (AP)',
+    path: '/finance/ap/bills/new',
+    icon: Receipt,
+  },
+  {
+    name: 'Batch Supplier Payments',
+    path: '/finance/ap/payments/new',
+    icon: CreditCard,
   },
   {
     name: 'Cash Verification',
@@ -31,9 +51,29 @@ const FINANCE_NAV_ITEMS: InnerNavItem[] = [
     icon: CheckCircle2,
   },
   {
+    name: 'Receipt Approval Queue (AR)',
+    path: '/finance/ar/approvals',
+    icon: CheckCircle2,
+  },
+  {
+    name: 'AR Collection Allocation',
+    path: '/finance/ar/allocate',
+    icon: SlidersHorizontal,
+  },
+  {
+    name: 'Bank Reconciliation',
+    path: '/finance/reconciliation',
+    icon: Landmark,
+  },
+  {
     name: 'Supplier Management',
     path: '/finance/suppliers',
     icon: Building2,
+  },
+  {
+    name: 'Period Closing Lock',
+    path: '/finance/settings/closing',
+    icon: Lock,
   },
   {
     name: 'Financial Reports',

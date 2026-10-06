@@ -1,15 +1,19 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../../../components/ui/dialog';
 import { Button } from '../../../components/ui/button';
 import { Input } from '../../../components/ui/input';
 import { Select } from '../../../components/ui/select';
 import { Textarea } from '../../../components/ui/textarea';
+import { Badge } from '../../../components/ui/badge';
+import { Lock } from 'lucide-react';
 import { Account, AccountClass, AccountSubClass, CreateAccountDTO } from '../api/types';
 
 interface AccountModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onCreate: (dto: CreateAccountDTO) => Promise<Account>;
+  onUpdate?: (id: string, dto: Partial<CreateAccountDTO>) => Promise<Account>;
+  accountToEdit?: Account | null;
   existingAccounts?: Account[];
   defaultClass?: AccountClass;
   defaultSubClass?: AccountSubClass;
@@ -19,10 +23,15 @@ export function AccountModal({
   open,
   onOpenChange,
   onCreate,
+  onUpdate,
+  accountToEdit = null,
   existingAccounts = [],
   defaultClass = 'EXPENSE',
   defaultSubClass = 'OPERATING_EXPENSE',
 }: AccountModalProps) {
+  const isEditing = Boolean(accountToEdit);
+  const isLockedSystemAccount = Boolean(accountToEdit?.isSystem);
+
   const [code, setCode] = useState('');
   const [name, setName] = useState('');
   const [accountClass, setAccountClass] = useState<AccountClass>(defaultClass);
@@ -32,7 +41,27 @@ export function AccountModal({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (accountToEdit) {
+      setCode(accountToEdit.code);
+      setName(accountToEdit.name);
+      setAccountClass(accountToEdit.accountClass);
+      setAccountSubClass(accountToEdit.accountSubClass);
+      setDescription(accountToEdit.description || '');
+      setParentId(accountToEdit.parentId || '');
+    } else {
+      setCode('');
+      setName('');
+      setAccountClass(defaultClass);
+      setAccountSubClass(defaultSubClass);
+      setDescription('');
+      setParentId('');
+    }
+    setError(null);
+  }, [accountToEdit, defaultClass, defaultSubClass, open]);
+
   const handleClassChange = (newClass: AccountClass) => {
+    if (isLockedSystemAccount) return;
     setAccountClass(newClass);
     if (newClass === 'ASSET') setAccountSubClass('CURRENT_ASSET');
     else if (newClass === 'LIABILITY') setAccountSubClass('CURRENT_LIABILITY');
@@ -43,30 +72,42 @@ export function AccountModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!code.trim() || !name.trim()) {
-      setError('Account Code and Account Name are required.');
+    if (!name.trim()) {
+      setError('Account Name is required.');
+      return;
+    }
+    if (!isEditing && !code.trim()) {
+      setError('Account Code is required.');
       return;
     }
 
     try {
       setSubmitting(true);
       setError(null);
-      await onCreate({
-        code: code.trim(),
-        name: name.trim(),
-        accountClass,
-        accountSubClass,
-        description: description.trim() || undefined,
-        parentId: parentId || undefined,
-      });
+
+      if (isEditing && accountToEdit) {
+        if (!onUpdate) {
+          throw new Error('Update handler not provided');
+        }
+        await onUpdate(accountToEdit.id, {
+          name: name.trim(),
+          description: description.trim() || undefined,
+          ...(!isLockedSystemAccount ? { accountClass, accountSubClass, parentId: parentId || undefined } : {}),
+        });
+      } else {
+        await onCreate({
+          code: code.trim(),
+          name: name.trim(),
+          accountClass,
+          accountSubClass,
+          description: description.trim() || undefined,
+          parentId: parentId || undefined,
+        });
+      }
 
       onOpenChange(false);
-      setCode('');
-      setName('');
-      setDescription('');
-      setParentId('');
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Account creation failed');
+      setError(err instanceof Error ? err.message : 'Account operation failed');
     } finally {
       setSubmitting(false);
     }
@@ -75,9 +116,23 @@ export function AccountModal({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogHeader>
-        <DialogTitle>Create New General Ledger Account</DialogTitle>
+        <div className="flex items-center gap-2">
+          <DialogTitle>
+            {isEditing ? (isLockedSystemAccount ? 'Edit System Account Name' : 'Edit Account') : 'Create New General Ledger Account'}
+          </DialogTitle>
+          {isLockedSystemAccount && (
+            <Badge variant="outline" className="gap-1 bg-amber-50 text-amber-700 border-amber-200 text-xs">
+              <Lock className="h-2.5 w-2.5" />
+              <span>System Locked</span>
+            </Badge>
+          )}
+        </div>
         <DialogDescription>
-          Add a custom general ledger sub-account to the Chart of Accounts hierarchy.
+          {isEditing
+            ? isLockedSystemAccount
+              ? 'Default system accounts have locked classifications and codes. You can modify the descriptive display name.'
+              : 'Modify the account name and configuration settings.'
+            : 'Add a custom general ledger sub-account to the Chart of Accounts hierarchy.'}
         </DialogDescription>
       </DialogHeader>
 
@@ -93,6 +148,7 @@ export function AccountModal({
               value={code}
               onChange={(e) => setCode(e.target.value)}
               placeholder="e.g. 6040"
+              disabled={isEditing}
               required
             />
           </div>
@@ -103,6 +159,7 @@ export function AccountModal({
             <Select
               value={accountClass}
               onChange={(e) => handleClassChange(e.target.value as AccountClass)}
+              disabled={isLockedSystemAccount}
             >
               <option value="ASSET">Asset</option>
               <option value="LIABILITY">Liability</option>
@@ -122,6 +179,7 @@ export function AccountModal({
             onChange={(e) => setName(e.target.value)}
             placeholder="e.g. Delivery Van Fuel & Maintenance"
             required
+            autoFocus={isEditing}
           />
         </div>
 
@@ -133,6 +191,7 @@ export function AccountModal({
             <Select
               value={accountSubClass}
               onChange={(e) => setAccountSubClass(e.target.value as AccountSubClass)}
+              disabled={isLockedSystemAccount}
             >
               {accountClass === 'ASSET' && (
                 <>
@@ -161,10 +220,14 @@ export function AccountModal({
             <label className="block text-xs font-semibold text-slate-700 mb-1">
               Parent Account (Optional)
             </label>
-            <Select value={parentId} onChange={(e) => setParentId(e.target.value)}>
+            <Select
+              value={parentId}
+              onChange={(e) => setParentId(e.target.value)}
+              disabled={isLockedSystemAccount}
+            >
               <option value="">None (Top-Level in Group)</option>
               {existingAccounts
-                .filter((a) => a.accountClass === accountClass)
+                .filter((a) => a.accountClass === accountClass && (!accountToEdit || a.id !== accountToEdit.id))
                 .map((a) => (
                   <option key={a.id} value={a.id}>
                     {a.code} - {a.name}
@@ -190,8 +253,8 @@ export function AccountModal({
           <Button type="button" variant="outline" size="sm" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button type="submit" size="sm" disabled={submitting}>
-            {submitting ? 'Creating...' : 'Create Account'}
+          <Button type="submit" size="sm" disabled={submitting} className="bg-primary hover:bg-primary-hover text-white">
+            {submitting ? 'Saving...' : isEditing ? 'Save Changes' : 'Create Account'}
           </Button>
         </DialogFooter>
       </form>

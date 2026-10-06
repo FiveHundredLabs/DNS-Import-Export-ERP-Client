@@ -17,17 +17,18 @@ describe('Phase F-1: Chart of Accounts & Supplier Management UI', () => {
 
     // Check category groups
     await waitFor(() => {
-      expect(screen.getByText('Current Assets')).toBeDefined();
-      expect(screen.getByText('Current Liabilities')).toBeDefined();
-      expect(screen.getByText("Owner's Equity & Reserves")).toBeDefined();
-      expect(screen.getByText('Operating Revenue (Sales)')).toBeDefined();
+      expect(screen.getByText('Asset')).toBeDefined();
+      expect(screen.getByText('Liability')).toBeDefined();
+      expect(screen.getByText('Equity')).toBeDefined();
+      expect(screen.getByText(/Revenue/)).toBeDefined();
+      expect(screen.getByText('Expense')).toBeDefined();
     });
 
     // Check locked default accounts have padlock indicators
     await waitFor(() => {
       expect(screen.getByText('Bank Account')).toBeDefined();
       expect(screen.getByText('1010')).toBeDefined();
-      const systemBadges = screen.getAllByText('System Locked');
+      const systemBadges = screen.getAllByText('System');
       expect(systemBadges.length).toBeGreaterThanOrEqual(10);
     });
   });

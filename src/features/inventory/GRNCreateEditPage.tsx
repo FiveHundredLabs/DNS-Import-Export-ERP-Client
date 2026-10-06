@@ -356,8 +356,10 @@ export function GRNCreateEditPage() {
                           <Input
                             type="number" min="0" step="0.01"
                             value={item.unitCost}
+                            disabled={user?.role === 'STOCK_KEEPER'}
                             onChange={e => updateItem(item._tempId, 'unitCost', parseFloat(e.target.value) || 0)}
-                            className="text-right w-28 h-8"
+                            className={`text-right w-28 h-8 ${user?.role === 'STOCK_KEEPER' ? 'bg-slate-50 cursor-not-allowed opacity-80' : ''}`}
+                            title={user?.role === 'STOCK_KEEPER' ? 'Draft Unit Cost (Reference only — Costing abstracted to Finance Desk)' : undefined}
                           />
                         </td>
                         <td className="py-2 px-3 text-right font-medium">
