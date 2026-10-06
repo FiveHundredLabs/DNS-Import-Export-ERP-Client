@@ -3,6 +3,13 @@ import { Card, CardContent, CardHeader } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../../components/ui/select';
 import { Textarea } from '../../components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table';
@@ -200,25 +207,37 @@ export function StockBalancePage() {
           <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between flex-wrap">
             <div className="flex gap-2 flex-wrap">
               {/* Location Filter */}
-              <select
+              <Select
                 value={locationFilter}
-                onChange={e => setLocationFilter(e.target.value)}
-                className="h-9 rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                onValueChange={(val) => setLocationFilter(val)}
               >
-                <option value="All">All Locations</option>
-                <option value="WAREHOUSE">Warehouse</option>
-                <option value="SHOWROOM">Showroom</option>
-                <option value="TRANSIT">Transit</option>
-              </select>
+                <SelectTrigger className="h-9 rounded-md border border-input bg-background px-3 text-sm min-w-36">
+                  <SelectValue placeholder="Location" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="All">All Locations</SelectItem>
+                  <SelectItem value="WAREHOUSE">Warehouse</SelectItem>
+                  <SelectItem value="SHOWROOM">Showroom</SelectItem>
+                  <SelectItem value="TRANSIT">Transit</SelectItem>
+                </SelectContent>
+              </Select>
 
               {/* Category Filter */}
-              <select
+              <Select
                 value={categoryFilter}
-                onChange={e => setCategoryFilter(e.target.value)}
-                className="h-9 rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                onValueChange={(val) => setCategoryFilter(val)}
               >
-                {categories.map(c => <option key={c} value={c}>{c}</option>)}
-              </select>
+                <SelectTrigger className="h-9 rounded-md border border-input bg-background px-3 text-sm min-w-36">
+                  <SelectValue placeholder="Category" />
+                </SelectTrigger>
+                <SelectContent>
+                  {categories.map((c) => (
+                    <SelectItem key={c} value={c}>
+                      {c}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
 
               {/* Low Stock Toggle */}
               <label className="flex items-center gap-2 cursor-pointer px-3 h-9 border rounded-md bg-background text-sm">

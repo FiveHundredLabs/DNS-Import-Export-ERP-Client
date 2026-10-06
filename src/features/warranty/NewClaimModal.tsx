@@ -2,6 +2,13 @@ import { useState, useEffect, useMemo } from 'react';
 import { Dialog, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../../components/ui/select';
 import { Alert, AlertDescription } from '../../components/ui/alert';
 import { WarrantyRecord } from '../../types/warranty';
 import { warrantyService } from '../../services/WarrantyService';
@@ -159,18 +166,22 @@ export function NewClaimModal({
               <label className="block font-semibold text-slate-700 mb-1">
                 Select Customer
               </label>
-              <select
+              <Select
                 value={selectedCustomerId}
-                onChange={(e) => handleCustomerChange(e.target.value)}
-                className="w-full rounded-md border border-slate-300 p-2 text-xs bg-white text-slate-900 focus:outline-none focus:ring-1 focus:ring-primary"
+                onValueChange={(val) => handleCustomerChange(val)}
               >
-                <option value="ALL">All Customers</option>
-                {MOCK_CUSTOMERS.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name} ({c.type})
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger className="w-full text-xs h-9">
+                  <SelectValue placeholder="All Customers" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">All Customers</SelectItem>
+                  {MOCK_CUSTOMERS.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.name} ({c.type})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <label className="block font-semibold text-slate-700 mb-1">
@@ -207,17 +218,21 @@ export function NewClaimModal({
               No matching warranty records found.
             </div>
           ) : (
-            <select
+            <Select
               value={selectedRecordId}
-              onChange={(e) => handleRecordChange(e.target.value)}
-              className="w-full rounded-md border border-slate-300 p-2 text-xs bg-white text-slate-900 focus:outline-none focus:ring-1 focus:ring-primary"
+              onValueChange={(val) => handleRecordChange(val)}
             >
-              {filteredRecords.map((r) => (
-                <option key={r.id} value={r.id}>
-                  {r.productName} ({r.sku}) - {r.customerName} [Exp: {r.warrantyExpiryDate}]
-                </option>
-              ))}
-            </select>
+              <SelectTrigger className="w-full text-xs h-9">
+                <SelectValue placeholder="Select warranty record" />
+              </SelectTrigger>
+              <SelectContent>
+                {filteredRecords.map((r) => (
+                  <SelectItem key={r.id} value={r.id}>
+                    {r.productName} ({r.sku}) - {r.customerName} [Exp: {r.warrantyExpiryDate}]
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           )}
         </div>
 

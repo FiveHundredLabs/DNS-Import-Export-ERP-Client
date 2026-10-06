@@ -2,6 +2,13 @@ import { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
 import { Input } from '../../components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../../components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table';
 import { Skeleton } from '../../components/ui/skeleton';
 import { useInventory } from '../../hooks/useInventory';
@@ -66,15 +73,21 @@ export function StockMovementsPage() {
           <div className="flex flex-col sm:flex-row gap-4 mt-4 items-end">
             <div className="flex flex-col gap-1 w-full sm:w-48">
               <label className="text-sm font-medium">Movement Type</label>
-              <select 
+              <Select
                 value={typeFilter}
-                onChange={e => setTypeFilter(e.target.value)}
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                onValueChange={(val) => setTypeFilter(val)}
               >
-                {movementTypes.map(t => (
-                  <option key={t} value={t}>{t === 'ALL' ? 'All Types' : t.replace(/_/g, ' ')}</option>
-                ))}
-              </select>
+                <SelectTrigger className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
+                  <SelectValue placeholder="Movement Type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {movementTypes.map((t) => (
+                    <SelectItem key={t} value={t}>
+                      {t === 'ALL' ? 'All Types' : t.replace(/_/g, ' ')}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="flex flex-col gap-1 w-full sm:w-40">
               <label className="text-sm font-medium">From Date</label>

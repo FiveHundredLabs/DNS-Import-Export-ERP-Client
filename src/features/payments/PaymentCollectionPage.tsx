@@ -15,6 +15,13 @@ import { useAuth } from '../../hooks/useAuth';
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/card';
 import { Input } from '../../components/ui/input';
 import { Button } from '../../components/ui/button';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../../components/ui/select';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../../components/ui/table';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 import {
@@ -104,7 +111,7 @@ export function PaymentCollectionPage() {
         if (c) setSelectedCustomer(c);
       });
     }
-  }, [searchParams]);
+  }, [searchParams.toString()]);
 
   // Load open invoices for selected customer
   useEffect(() => {
@@ -185,7 +192,7 @@ export function PaymentCollectionPage() {
       }
     }
     loadInvoices();
-  }, [selectedCustomer, searchParams]);
+  }, [selectedCustomer, searchParams.toString()]);
 
   // Total allocated sum
   const totalAllocated = Object.values(allocations).reduce((acc, val) => acc + (val || 0), 0);
@@ -357,15 +364,19 @@ export function PaymentCollectionPage() {
 
               <div>
                 <label className="font-semibold text-slate-700 block mb-1">Payment Method *</label>
-                <select
+                <Select
                   value={paymentMethod}
-                  onChange={(e) => setPaymentMethod(e.target.value as PaymentMethod)}
-                  className="w-full text-xs h-9 px-3 rounded-md border border-slate-300 bg-white"
+                  onValueChange={(val) => setPaymentMethod(val as PaymentMethod)}
                 >
-                  <option value="CASH">Cash Settlement</option>
-                  <option value="CHEQUE">Cheque (PDC / Current)</option>
-                  <option value="BANK_TRANSFER">Direct Bank Transfer</option>
-                </select>
+                  <SelectTrigger className="w-full text-xs h-9 px-3 rounded-md border border-slate-300 bg-white">
+                    <SelectValue placeholder="Select Payment Method" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="CASH">Cash Settlement</SelectItem>
+                    <SelectItem value="CHEQUE">Cheque (PDC / Current)</SelectItem>
+                    <SelectItem value="BANK_TRANSFER">Direct Bank Transfer</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               <div>

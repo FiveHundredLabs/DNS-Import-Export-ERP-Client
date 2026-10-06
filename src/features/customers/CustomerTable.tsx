@@ -3,8 +3,12 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '.
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import { formatCurrency } from '../../utils/formatters';
-import { Phone, MessageSquare, ChevronRight, MapPin, User, AlertCircle, ArrowUpRight } from 'lucide-react';
+import { Phone, MessageSquare, ChevronRight, MapPin, User, AlertCircle, ArrowUpRight, Trash2 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
+
+function cleanPhoneForWhatsApp(phone?: string): string {
+  return phone ? phone.replace(/[^0-9]/g, '') : '';
+}
 
 interface CustomerTableProps {
   customers: Customer[];

@@ -1,5 +1,12 @@
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../../components/ui/select';
 import { MapPin, Building2, Trophy, Download } from 'lucide-react';
 import { AreaPerformanceReport } from '../../types/reports';
 import { User } from '../../types/auth';
@@ -54,17 +61,21 @@ export function AreaPerformanceTab({
           {!isAreaLocked && (
             <div className="flex items-center gap-2">
               <span className="text-xs font-semibold text-slate-600">Switch Territory:</span>
-              <select
+              <Select
                 value={selectedAreaId}
-                onChange={(e) => onAreaSelect(e.target.value)}
-                className="h-9 rounded-md border border-slate-200 bg-white px-3 py-1 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary"
+                onValueChange={(val) => onAreaSelect(val)}
               >
-                {MOCK_AREAS.map((a) => (
-                  <option key={a.id} value={a.id}>
-                    {a.name} ({a.code})
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger className="h-9 rounded-md border border-slate-200 bg-white px-3 py-1 text-xs text-slate-900 min-w-44">
+                  <SelectValue placeholder="Select Territory" />
+                </SelectTrigger>
+                <SelectContent>
+                  {MOCK_AREAS.map((a) => (
+                    <SelectItem key={a.id} value={a.id}>
+                      {a.name} ({a.code})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           )}
           {isAreaLocked && (

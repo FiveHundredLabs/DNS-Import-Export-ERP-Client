@@ -22,6 +22,13 @@ import {
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Badge } from '../../components/ui/badge';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../../components/ui/select';
 
 export function POSTransactionHistoryPage() {
   const { transactions, loading, refund, refresh } = usePOS();
@@ -185,32 +192,40 @@ export function POSTransactionHistoryPage() {
 
         <div className="flex items-center gap-2">
           {/* Status Filter */}
-          <select
+          <Select
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value as any)}
-            className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 focus:outline-none focus:ring-1 focus:ring-primary"
+            onValueChange={(val) => setStatusFilter(val as any)}
           >
-            <option value="ALL">All Statuses</option>
-            <option value="COMPLETED">Completed</option>
-            <option value="REFUNDED">Refunded</option>
-          </select>
+            <SelectTrigger className="rounded-md border border-slate-300 bg-white px-3 h-9 text-xs font-semibold text-slate-700 min-w-32">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">All Statuses</SelectItem>
+              <SelectItem value="COMPLETED">Completed</SelectItem>
+              <SelectItem value="REFUNDED">Refunded</SelectItem>
+            </SelectContent>
+          </Select>
 
           {/* Payment Method Filter */}
-          <select
+          <Select
             value={methodFilter}
-            onChange={(e) => setMethodFilter(e.target.value)}
-            className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 focus:outline-none focus:ring-1 focus:ring-primary"
+            onValueChange={(val) => setMethodFilter(val)}
           >
-            <option value="ALL">All Payment Methods</option>
-            <option value="CASH">Cash Only</option>
-            <option value="CARD">Card Only</option>
-            <option value="CHEQUE">Cheque Only</option>
-          </select>
+            <SelectTrigger className="rounded-md border border-slate-300 bg-white px-3 h-9 text-xs font-semibold text-slate-700 min-w-36">
+              <SelectValue placeholder="Payment Method" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">All Payment Methods</SelectItem>
+              <SelectItem value="CASH">Cash Only</SelectItem>
+              <SelectItem value="CARD">Card Only</SelectItem>
+              <SelectItem value="CHEQUE">Cheque Only</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
       {/* Transactions Table */}
-      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xs">
+      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xs">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead className="border-b border-slate-200 bg-slate-50 font-semibold uppercase tracking-wider text-slate-500 text-xs">

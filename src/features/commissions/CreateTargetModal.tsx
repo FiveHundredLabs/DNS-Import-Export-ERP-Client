@@ -2,6 +2,13 @@ import { useState } from 'react';
 import { Dialog, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../../components/ui/select';
 import { Alert, AlertDescription } from '../../components/ui/alert';
 import { commissionService } from '../../services/CommissionService';
 import { useAuth } from '../../hooks/useAuth';
@@ -84,31 +91,39 @@ export function CreateTargetModal({ open, onOpenChange, onSuccess }: CreateTarge
           <label className="block font-semibold text-slate-700 mb-1">
             Sales Representative <span className="text-rose-500">*</span>
           </label>
-          <select
+          <Select
             value={salesRepId}
-            onChange={(e) => setSalesRepId(e.target.value)}
-            className="w-full rounded-md border border-slate-300 p-2 text-xs bg-white text-slate-900 focus:outline-none focus:ring-1 focus:ring-primary"
+            onValueChange={(val) => setSalesRepId(val)}
           >
-            {salesReps.map((r) => (
-              <option key={r.id} value={r.id}>
-                {r.name} ({r.role})
-              </option>
-            ))}
-          </select>
+            <SelectTrigger className="w-full rounded-md border border-slate-300 h-9 px-3 text-xs bg-white text-slate-900">
+              <SelectValue placeholder="Select Representative" />
+            </SelectTrigger>
+            <SelectContent>
+              {salesReps.map((r) => (
+                <SelectItem key={r.id} value={r.id}>
+                  {r.name} ({r.role})
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="block font-semibold text-slate-700 mb-1">Period Cycle</label>
-            <select
+            <Select
               value={periodType}
-              onChange={(e) => setPeriodType(e.target.value as TargetPeriodType)}
-              className="w-full rounded-md border border-slate-300 p-2 text-xs bg-white text-slate-900 focus:outline-none focus:ring-1 focus:ring-primary"
+              onValueChange={(val) => setPeriodType(val as TargetPeriodType)}
             >
-              <option value="MONTHLY">Monthly</option>
-              <option value="WEEKLY">Weekly</option>
-              <option value="CUSTOM">Custom Range</option>
-            </select>
+              <SelectTrigger className="w-full rounded-md border border-slate-300 h-9 px-3 text-xs bg-white text-slate-900">
+                <SelectValue placeholder="Period Cycle" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="MONTHLY">Monthly</SelectItem>
+                <SelectItem value="WEEKLY">Weekly</SelectItem>
+                <SelectItem value="CUSTOM">Custom Range</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           <div>
             <label className="block font-semibold text-slate-700 mb-1">

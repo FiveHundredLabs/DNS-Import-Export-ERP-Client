@@ -10,6 +10,13 @@ import { QuotationConvertModal } from './QuotationConvertModal';
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../../components/ui/select';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../../components/ui/table';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 import { whatsAppService } from '../../services/WhatsAppService';
@@ -221,19 +228,22 @@ export function QuotationListPage() {
 
             <div className="flex flex-wrap sm:flex-nowrap gap-2 shrink-0">
               <div className="relative min-w-48">
-                <select
-                  aria-label="Filter by Customer"
-                  value={filters.customerId || ''}
-                  onChange={(e) => handleCustomerFilter(e.target.value)}
-                  className="w-full h-9 rounded-md border border-slate-200 bg-white px-3 py-1 text-xs text-slate-700 focus:outline-hidden focus:ring-1 focus:ring-primary"
+                <Select
+                  value={filters.customerId || '__all__'}
+                  onValueChange={(val) => handleCustomerFilter(val === '__all__' ? '' : val)}
                 >
-                  <option value="">All Customers / Dealers</option>
-                  {customers.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name} ({c.code})
-                    </option>
-                  ))}
-                </select>
+                  <SelectTrigger aria-label="Filter by Customer" className="w-full h-9 rounded-md border border-slate-200 bg-white px-3 py-1 text-xs text-slate-700">
+                    <SelectValue placeholder="All Customers / Dealers" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__all__">All Customers / Dealers</SelectItem>
+                    {customers.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.name} ({c.code})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <Button
@@ -256,7 +266,7 @@ export function QuotationListPage() {
                 <button
                   key={f.value}
                   onClick={() => handleStatusFilter(f.value)}
-                  className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors whitespace-nowrap ${
+                  className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors whitespace-nowrap ${
                     isActive
                       ? 'bg-primary text-primary-foreground shadow-xs'
                       : 'bg-slate-100 text-slate-600 hover:bg-slate-200'

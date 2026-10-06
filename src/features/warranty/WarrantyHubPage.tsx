@@ -3,6 +3,13 @@ import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/ca
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Badge } from '../../components/ui/badge';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../../components/ui/select';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../../components/ui/tabs';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../../components/ui/table';
 import { WarrantyRecord, WarrantyClaim, ShopWarrantyFollowUp } from '../../types/warranty';
@@ -248,16 +255,20 @@ export function WarrantyHubPage() {
                     className="pl-8 text-xs h-8"
                   />
                 </div>
-                <select
+                <Select
                   value={recordStatusFilter}
-                  onChange={(e) => setRecordStatusFilter(e.target.value)}
-                  className="rounded-md border border-slate-300 text-xs h-8 px-2 bg-white text-slate-700"
+                  onValueChange={(val) => setRecordStatusFilter(val)}
                 >
-                  <option value="ALL">All Statuses</option>
-                  <option value="ACTIVE">Active</option>
-                  <option value="EXPIRED">Expired</option>
-                  <option value="CLAIMED">Claimed</option>
-                </select>
+                  <SelectTrigger className="rounded-md border border-slate-300 text-xs h-8 px-2 bg-white text-slate-700 min-w-32">
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ALL">All Statuses</SelectItem>
+                    <SelectItem value="ACTIVE">Active</SelectItem>
+                    <SelectItem value="EXPIRED">Expired</SelectItem>
+                    <SelectItem value="CLAIMED">Claimed</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </CardHeader>
             <CardContent>
@@ -368,19 +379,23 @@ export function WarrantyHubPage() {
                     className="pl-8 text-xs h-8"
                   />
                 </div>
-                <select
+                <Select
                   value={claimStatusFilter}
-                  onChange={(e) => setClaimStatusFilter(e.target.value)}
-                  className="rounded-md border border-slate-300 text-xs h-8 px-2 bg-white text-slate-700"
+                  onValueChange={(val) => setClaimStatusFilter(val)}
                 >
-                  <option value="ALL">All Statuses</option>
-                  <option value="SUBMITTED">Submitted</option>
-                  <option value="IN_INSPECTION">In Inspection</option>
-                  <option value="APPROVED">Approved</option>
-                  <option value="REPLACED">Replaced</option>
-                  <option value="REPAIRED">Repaired</option>
-                  <option value="REJECTED">Rejected</option>
-                </select>
+                  <SelectTrigger className="w-auto min-w-[130px] text-xs h-8">
+                    <SelectValue placeholder="All Statuses" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ALL">All Statuses</SelectItem>
+                    <SelectItem value="SUBMITTED">Submitted</SelectItem>
+                    <SelectItem value="IN_INSPECTION">In Inspection</SelectItem>
+                    <SelectItem value="APPROVED">Approved</SelectItem>
+                    <SelectItem value="REPLACED">Replaced</SelectItem>
+                    <SelectItem value="REPAIRED">Repaired</SelectItem>
+                    <SelectItem value="REJECTED">Rejected</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </CardHeader>
             <CardContent>

@@ -5,6 +5,13 @@ import { useGRN } from '../../hooks/useGRN';
 import { useAuth } from '../../hooks/useAuth';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../../components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
 import { MOCK_PRODUCTS } from '../../mock/mockProducts';
@@ -192,7 +199,7 @@ export function GRNCreateEditPage() {
                       key={s.id}
                       type="button"
                       onClick={() => setSupplierName(s.name)}
-                      className="text-xs px-2 py-0.5 border rounded-full hover:bg-muted transition-colors"
+                      className="text-xs px-2 py-0.5 border rounded-md hover:bg-muted transition-colors"
                     >
                       {s.name}
                     </button>
@@ -205,15 +212,21 @@ export function GRNCreateEditPage() {
               <label className="text-sm font-medium">
                 Receiving Warehouse <span className="text-red-500">*</span>
               </label>
-              <select
+              <Select
                 value={warehouseId}
-                onChange={e => setWarehouseId(e.target.value)}
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                onValueChange={(val) => setWarehouseId(val)}
               >
-                {LOCATIONS.map(l => (
-                  <option key={l.value} value={l.value}>{l.label}</option>
-                ))}
-              </select>
+                <SelectTrigger className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
+                  <SelectValue placeholder="Select Warehouse" />
+                </SelectTrigger>
+                <SelectContent>
+                  {LOCATIONS.map((l) => (
+                    <SelectItem key={l.value} value={l.value}>
+                      {l.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </CardContent>

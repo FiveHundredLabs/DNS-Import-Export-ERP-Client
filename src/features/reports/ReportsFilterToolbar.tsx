@@ -1,6 +1,13 @@
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Badge } from '../../components/ui/badge';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../../components/ui/select';
 import { Printer, RotateCcw, MapPin, UserCheck } from 'lucide-react';
 import { ReportFilter } from '../../types/reports';
 import { User } from '../../types/auth';
@@ -104,42 +111,56 @@ export function ReportsFilterToolbar({
           <label className="block text-[11px] font-semibold uppercase tracking-wider text-slate-500 mb-1">
             Territory / Area
           </label>
-          <select
-            aria-label="Filter by Territory"
-            data-testid="area-filter-select"
-            value={filter.areaId || ''}
+          <Select
+            value={filter.areaId || '__all__'}
             disabled={isAreaLocked}
-            onChange={(e) => onFilterChange({ areaId: e.target.value || undefined })}
-            className="w-full h-9 rounded-md border border-slate-200 bg-white px-3 py-1 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary disabled:bg-slate-100 disabled:cursor-not-allowed"
+            onValueChange={(val) => onFilterChange({ areaId: val === '__all__' ? undefined : val })}
           >
-            <option value="">All Territories</option>
-            {MOCK_AREAS.map((a) => (
-              <option key={a.id} value={a.id}>
-                {a.name} ({a.code})
-              </option>
-            ))}
-          </select>
+            <SelectTrigger
+              aria-label="Filter by Territory"
+              data-testid="area-filter-select"
+              disabled={isAreaLocked}
+              className="w-full h-9 rounded-md border border-slate-200 bg-white px-3 py-1 text-xs text-slate-900 disabled:bg-slate-100 disabled:cursor-not-allowed"
+            >
+              <SelectValue placeholder="All Territories" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__all__">All Territories</SelectItem>
+              {MOCK_AREAS.map((a) => (
+                <SelectItem key={a.id} value={a.id}>
+                  {a.name} ({a.code})
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         <div>
           <label className="block text-[11px] font-semibold uppercase tracking-wider text-slate-500 mb-1">
             Sales Representative
           </label>
-          <select
-            aria-label="Filter by Sales Representative"
-            data-testid="sales-rep-filter-select"
-            value={filter.salesRepId || ''}
+          <Select
+            value={filter.salesRepId || '__all__'}
             disabled={isRepLocked}
-            onChange={(e) => onFilterChange({ salesRepId: e.target.value || undefined })}
-            className="w-full h-9 rounded-md border border-slate-200 bg-white px-3 py-1 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary disabled:bg-slate-100 disabled:cursor-not-allowed"
+            onValueChange={(val) => onFilterChange({ salesRepId: val === '__all__' ? undefined : val })}
           >
-            <option value="">All Sales Reps</option>
-            {reps.map((r) => (
-              <option key={r.id} value={r.id}>
-                {r.name}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger
+              aria-label="Filter by Sales Representative"
+              data-testid="sales-rep-filter-select"
+              disabled={isRepLocked}
+              className="w-full h-9 rounded-md border border-slate-200 bg-white px-3 py-1 text-xs text-slate-900 disabled:bg-slate-100 disabled:cursor-not-allowed"
+            >
+              <SelectValue placeholder="All Sales Reps" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__all__">All Sales Reps</SelectItem>
+              {reps.map((r) => (
+                <SelectItem key={r.id} value={r.id}>
+                  {r.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         <div className="flex items-end">
