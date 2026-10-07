@@ -37,6 +37,11 @@ export { ErrorState } from './common/ErrorState';
 export { LoadingSkeleton } from './common/LoadingSkeleton';
 export { ModulePlaceholder } from './common/ModulePlaceholder';
 export { ProtectedRoute } from './common/ProtectedRoute';
+export { FullscreenButton } from './header/FullscreenButton';
+export { UserProfileMenu } from './header/UserProfileMenu';
+export { CurrencyConverterPopover } from './header/CurrencyConverterPopover';
+export { CalculatorPopover } from './header/CalculatorPopover';
+export { NotificationsPopover } from './header/NotificationsPopover';
 
 // 3. Reusable Entity Selectors & Summary Cards
 export { CustomerSelector } from './selectors/CustomerSelector';
