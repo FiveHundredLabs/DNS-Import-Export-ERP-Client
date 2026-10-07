@@ -13,6 +13,7 @@ import { Dialog, DialogHeader, DialogTitle, DialogDescription, DialogFooter } fr
 import { Textarea } from '../../../../components/ui/textarea';
 import { formatCurrency, formatDate } from '../../../../utils/formatters';
 import Decimal from 'decimal.js';
+import { DoubleEntryHoverBadge } from '../../components/DoubleEntryHoverBadge';
 import {
   RotateCcw,
   CheckCircle2,
@@ -24,11 +25,13 @@ import {
   Package,
   Layers,
   ArrowRight,
+  ArrowLeft,
   Landmark,
   ShieldCheck,
   ChevronRight,
   SlidersHorizontal,
   X,
+  FileText,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -155,10 +158,45 @@ export function CustomerCreditNotesPage() {
     };
   }, [lineItems]);
 
-  const handleAddLineItem = () => {
+  const handleLoadFromInvoice = () => {
+    const inv = customerOpenInvoices.find((i) => i.id === selectedInvoiceId);
+    if (!inv) {
+      toast.error('Please select an invoice first.');
+      return;
+    }
+    if (inv.items && inv.items.length > 0) {
+      const mapped: CustomerCreditNoteLineItem[] = inv.items.map((item, idx) => {
+        const subtotal = item.unitPrice;
+        const taxRate = item.taxRate ?? 0.18;
+        const vat = Number(new Decimal(subtotal).times(taxRate).toFixed(2));
+        return {
+          id: `inv-li-${Date.now()}-${idx}`,
+          productId: item.productId,
+          productName: item.productName,
+          sku: item.sku,
+          returnedQuantity: 1,
+          unitPrice: item.unitPrice,
+          unitCost: item.unitCost,
+          taxRate,
+          subtotal,
+          vatAmount: vat,
+          lineTotal: subtotal + vat,
+          costTotal: item.unitCost,
+          condition: 'GOOD_RETURN_TO_STOCK',
+          reason: `Returned from invoice ${inv.invoiceNumber}`,
+        };
+      });
+      setLineItems(mapped);
+      toast.success(`Loaded ${mapped.length} item(s) from invoice ${inv.invoiceNumber}`);
+    } else {
+      toast.error('No line item breakdown found on selected invoice.');
+    }
+  };
+
+  const handleAddCatalogItem = () => {
     const firstProd = MOCK_PRODUCTS[0];
-    const unitPrice = firstProd ? firstProd.price : 50000;
-    const unitCost = firstProd ? firstProd.costPrice || 35000 : 35000;
+    const unitPrice = firstProd?.pricing?.currentSellingPrice ?? 50000;
+    const unitCost = firstProd?.pricing?.costPrice ?? 35000;
     const subtotal = unitPrice;
     const vat = Number(new Decimal(subtotal).times(0.18).toFixed(2));
 
@@ -181,6 +219,26 @@ export function CustomerCreditNotesPage() {
     setLineItems([...lineItems, newLine]);
   };
 
+  const handleAddCustomItem = () => {
+    const newLine: CustomerCreditNoteLineItem = {
+      id: `custom-li-${Date.now()}`,
+      productId: `custom-${Date.now()}`,
+      productName: 'Custom Returned Item',
+      sku: 'CUSTOM-01',
+      returnedQuantity: 1,
+      unitPrice: 10000,
+      unitCost: 7000,
+      taxRate: 0.18,
+      subtotal: 10000,
+      vatAmount: 1800,
+      lineTotal: 11800,
+      costTotal: 7000,
+      condition: 'GOOD_RETURN_TO_STOCK',
+      reason: 'Non-catalog return or custom adjustment',
+    };
+    setLineItems([...lineItems, newLine]);
+  };
+
   const handleRemoveLineItem = (index: number) => {
     setLineItems(lineItems.filter((_, idx) => idx !== index));
   };
@@ -193,8 +251,8 @@ export function CustomerCreditNotesPage() {
       prev.map((item, idx) => {
         if (idx !== index) return item;
         const qty = item.returnedQuantity || 1;
-        const price = prod.price;
-        const cost = prod.costPrice || price * 0.7;
+        const price = prod.pricing?.currentSellingPrice ?? 50000;
+        const cost = prod.pricing?.costCost ?? prod.pricing?.costPrice ?? price * 0.7;
         const sub = qty * price;
         const vat = Number(new Decimal(sub).times(item.taxRate || 0.18).toFixed(2));
         return {
@@ -215,7 +273,7 @@ export function CustomerCreditNotesPage() {
 
   const handleLineChange = (
     index: number,
-    field: 'returnedQuantity' | 'unitPrice' | 'unitCost' | 'taxRate' | 'reason',
+    field: 'returnedQuantity' | 'unitPrice' | 'unitCost' | 'taxRate' | 'reason' | 'productName' | 'sku' | 'productId',
     value: number | string
   ) => {
     setLineItems((prev) =>
@@ -297,6 +355,27 @@ export function CustomerCreditNotesPage() {
         </div>
 
         <div className="flex items-center gap-2">
+          {activeTab === 'REGISTRY' ? (
+            <Button
+              size="sm"
+              onClick={() => setActiveTab('CREATE')}
+              className="text-xs gap-1.5 bg-primary hover:bg-primary-hover text-white shadow-xs font-semibold"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              <span>Issue Credit Note</span>
+            </Button>
+          ) : (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setActiveTab('REGISTRY')}
+              className="text-xs gap-1.5"
+            >
+              <ArrowLeft className="h-3.5 w-3.5" />
+              <span>Back to Registry</span>
+            </Button>
+          )}
+
           <Button
             variant="outline"
             size="sm"
@@ -467,7 +546,25 @@ export function CustomerCreditNotesPage() {
                         className="hover:bg-slate-50/70 transition-colors cursor-pointer"
                       >
                         <td className="px-4 py-3 font-mono font-bold text-primary">
-                          {cn.creditNoteNumber}
+                          <div className="flex items-center gap-1.5">
+                            <span>{cn.creditNoteNumber}</span>
+                            <DoubleEntryHoverBadge
+                              lines={[
+                                { accountCode: '4010', accountName: 'Sales Revenue', type: 'DEBIT', amount: cn.subtotal },
+                                ...(cn.vatAmount > 0
+                                  ? [{ accountCode: '2020', accountName: 'VAT Payable (Output)', type: 'DEBIT' as const, amount: cn.vatAmount }]
+                                  : []),
+                                { accountCode: '1020', accountName: `Accounts Receivable (${cn.customerName})`, type: 'CREDIT', amount: cn.totalAmount },
+                                ...(cn.returnToInventory && (cn.totalCostAmount || 0) > 0
+                                  ? [
+                                      { accountCode: '1100', accountName: 'Merchandise Inventory', type: 'DEBIT' as const, amount: cn.totalCostAmount || 0 },
+                                      { accountCode: '5010', accountName: 'Cost of Goods Sold', type: 'CREDIT' as const, amount: cn.totalCostAmount || 0 },
+                                    ]
+                                  : []),
+                              ]}
+                              title={`Credit Note ${cn.creditNoteNumber} GL Postings`}
+                            />
+                          </div>
                         </td>
                         <td className="px-4 py-3">
                           <div className="font-semibold text-slate-900">{cn.customerName}</div>
@@ -651,16 +748,37 @@ export function CustomerCreditNotesPage() {
 
       {/* CREATE TAB: Issue Customer Credit Note Form */}
       {activeTab === 'CREATE' && (
-        <div className="space-y-6 max-w-4xl">
+        <div className="space-y-4 max-w-4xl">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setActiveTab('REGISTRY')}
+            className="text-xs gap-1.5 text-slate-600 hover:text-slate-900"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" />
+            <span>Back to Credit Notes Registry</span>
+          </Button>
+
           <Card className="p-6 border-slate-200 shadow-2xs space-y-5">
-            <div className="border-b border-slate-200 pb-3">
-              <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                <RotateCcw className="h-4 w-4 text-primary" />
-                <span>Issue Customer Credit Note & Return Stock</span>
-              </h2>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Execute formal sales return accounting: debit revenue and tax, credit customer A/R balance, and restock physical inventory.
-              </p>
+            <div className="border-b border-slate-200 pb-3 flex items-start justify-between">
+              <div>
+                <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                  <RotateCcw className="h-4 w-4 text-primary" />
+                  <span>Issue Customer Credit Note & Return Stock</span>
+                </h2>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Execute formal sales return accounting: debit revenue and tax, credit customer A/R balance, and restock physical inventory.
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setActiveTab('REGISTRY')}
+                className="text-xs gap-1"
+              >
+                <ArrowLeft className="h-3.5 w-3.5" />
+                <span>Back</span>
+              </Button>
             </div>
 
             {/* Header Fields */}
@@ -671,7 +789,10 @@ export function CustomerCreditNotesPage() {
                 </label>
                 <select
                   value={selectedCustomerId}
-                  onChange={(e) => setSelectedCustomerId(e.target.value)}
+                  onChange={(e) => {
+                    setSelectedCustomerId(e.target.value);
+                    setSelectedInvoiceId('');
+                  }}
                   className="w-full h-9 text-xs rounded-md border border-slate-300 px-2.5 bg-white text-slate-800"
                 >
                   {MOCK_CUSTOMERS.map((c) => (
@@ -683,9 +804,21 @@ export function CustomerCreditNotesPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Linked Sales Invoice (Optional)
-                </label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-xs font-semibold text-slate-700">
+                    Linked Sales Invoice
+                  </label>
+                  {selectedInvoiceId && (
+                    <button
+                      type="button"
+                      onClick={handleLoadFromInvoice}
+                      className="text-[11px] text-primary hover:underline font-medium flex items-center gap-1"
+                    >
+                      <Package className="h-3 w-3" />
+                      Load Lines
+                    </button>
+                  )}
+                </div>
                 <select
                   value={selectedInvoiceId}
                   onChange={(e) => setSelectedInvoiceId(e.target.value)}
@@ -698,6 +831,20 @@ export function CustomerCreditNotesPage() {
                     </option>
                   ))}
                 </select>
+                {selectedInvoiceId && (
+                  <div className="mt-1 flex items-center gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      type="button"
+                      onClick={handleLoadFromInvoice}
+                      className="text-[11px] h-6 px-2 gap-1 text-primary border-primary-border bg-primary-light/40"
+                    >
+                      <Package className="h-3 w-3" />
+                      <span>Load Items from Invoice</span>
+                    </Button>
+                  </div>
+                )}
               </div>
 
               <div>
@@ -746,26 +893,51 @@ export function CustomerCreditNotesPage() {
 
             {/* Line Items Table */}
             <div className="space-y-3 pt-2">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-wrap items-center justify-between gap-2">
                 <span className="text-xs font-bold text-slate-900">
                   Returned Merchandise Line Items ({lineItems.length})
                 </span>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={handleAddLineItem}
-                  className="text-xs h-7 gap-1"
-                >
-                  <Plus className="h-3 w-3" />
-                  <span>Add Item Line</span>
-                </Button>
+                <div className="flex items-center gap-2">
+                  {selectedInvoiceId && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      type="button"
+                      onClick={handleLoadFromInvoice}
+                      className="text-xs h-7 gap-1 text-primary border-primary-border bg-primary-light/40"
+                    >
+                      <Package className="h-3 w-3" />
+                      <span>Load Invoice Items</span>
+                    </Button>
+                  )}
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    type="button"
+                    onClick={handleAddCatalogItem}
+                    className="text-xs h-7 gap-1"
+                  >
+                    <Plus className="h-3 w-3" />
+                    <span>Add from Catalog</span>
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    type="button"
+                    onClick={handleAddCustomItem}
+                    className="text-xs h-7 gap-1 text-slate-700"
+                  >
+                    <SlidersHorizontal className="h-3 w-3" />
+                    <span>Add Custom Line</span>
+                  </Button>
+                </div>
               </div>
 
               <div className="border border-slate-200 rounded-lg overflow-hidden bg-white">
                 <table className="w-full text-xs">
                   <thead className="bg-slate-50 border-b border-slate-200 text-[11px] text-slate-600">
                     <tr>
-                      <th className="p-2.5 text-left">Product Selection</th>
+                      <th className="p-2.5 text-left">Product Selection / Description</th>
                       <th className="p-2.5 text-center w-20">Return Qty</th>
                       <th className="p-2.5 text-right w-28">Selling Price</th>
                       <th className="p-2.5 text-right w-28">Unit Cost</th>
@@ -775,19 +947,60 @@ export function CustomerCreditNotesPage() {
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {lineItems.map((item, index) => (
-                      <tr key={index}>
+                      <tr key={item.id || index}>
                         <td className="p-2.5">
-                          <select
-                            value={item.productId}
-                            onChange={(e) => handleProductChange(index, e.target.value)}
-                            className="w-full h-8 text-xs rounded border border-slate-300 px-2 bg-white text-slate-800"
-                          >
-                            {MOCK_PRODUCTS.map((p) => (
-                              <option key={p.id} value={p.id}>
-                                {p.name} ({p.sku})
-                              </option>
-                            ))}
-                          </select>
+                          {item.productId.startsWith('custom-') ? (
+                            <div className="space-y-1">
+                              <Input
+                                placeholder="Custom Product / Description"
+                                value={item.productName}
+                                onChange={(e) => handleLineChange(index, 'productName', e.target.value)}
+                                className="h-8 text-xs font-medium"
+                              />
+                              <div className="flex items-center gap-2">
+                                <Input
+                                  placeholder="SKU / Code"
+                                  value={item.sku}
+                                  onChange={(e) => handleLineChange(index, 'sku', e.target.value)}
+                                  className="h-6 text-[10px] font-mono w-28"
+                                />
+                                <Badge variant="outline" className="text-[10px] text-slate-500 py-0 px-1.5">
+                                  Custom Item
+                                </Badge>
+                                <button
+                                  type="button"
+                                  onClick={() => handleProductChange(index, MOCK_PRODUCTS[0]?.id || 'prod-001')}
+                                  className="text-[10px] text-primary hover:underline"
+                                >
+                                  Switch to Catalog
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="space-y-1">
+                              <select
+                                value={item.productId}
+                                onChange={(e) => {
+                                  if (e.target.value === 'CUSTOM') {
+                                    handleLineChange(index, 'productId', `custom-${Date.now()}`);
+                                  } else {
+                                    handleProductChange(index, e.target.value);
+                                  }
+                                }}
+                                className="w-full h-8 text-xs rounded border border-slate-300 px-2 bg-white text-slate-800"
+                              >
+                                {MOCK_PRODUCTS.map((p) => (
+                                  <option key={p.id} value={p.id}>
+                                    {p.name} ({p.sku})
+                                  </option>
+                                ))}
+                                <option value="CUSTOM">+ Custom / Non-Catalog Product...</option>
+                              </select>
+                              <div className="flex items-center gap-2 pl-1">
+                                <span className="font-mono text-[10px] text-slate-400">{item.sku}</span>
+                              </div>
+                            </div>
+                          )}
                         </td>
                         <td className="p-2.5">
                           <Input
@@ -912,15 +1125,33 @@ export function CustomerCreditNotesPage() {
               >
                 Cancel
               </Button>
-              <Button
-                size="sm"
-                onClick={handleSubmitCreditNote}
-                disabled={submitting}
-                className="bg-primary hover:bg-primary-hover text-white gap-1.5"
-              >
-                <CheckCircle2 className="h-4 w-4" />
-                <span>Issue Credit Note & Commit Ledger</span>
-              </Button>
+              <div className="flex items-center gap-2">
+                <DoubleEntryHoverBadge
+                  lines={[
+                    { accountCode: '4010', accountName: 'Sales Revenue', type: 'DEBIT', amount: formTotals.subtotal },
+                    ...(formTotals.vatAmount > 0
+                      ? [{ accountCode: '2020', accountName: 'VAT Payable (Output)', type: 'DEBIT' as const, amount: formTotals.vatAmount }]
+                      : []),
+                    { accountCode: '1020', accountName: `Accounts Receivable (${selectedCustomer?.name || 'Customer'})`, type: 'CREDIT', amount: formTotals.totalAmount },
+                    ...(returnToInventory && formTotals.totalCostAmount > 0
+                      ? [
+                          { accountCode: '1100', accountName: 'Merchandise Inventory', type: 'DEBIT' as const, amount: formTotals.totalCostAmount },
+                          { accountCode: '5010', accountName: 'Cost of Goods Sold', type: 'CREDIT' as const, amount: formTotals.totalCostAmount },
+                        ]
+                      : []),
+                  ]}
+                  title="Credit Note Double-Entry Impact"
+                />
+                <Button
+                  size="sm"
+                  onClick={handleSubmitCreditNote}
+                  disabled={submitting}
+                  className="bg-primary hover:bg-primary-hover text-white gap-1.5 font-semibold"
+                >
+                  <CheckCircle2 className="h-4 w-4" />
+                  <span>Issue Credit Note & Commit Ledger</span>
+                </Button>
+              </div>
             </div>
           </Card>
         </div>

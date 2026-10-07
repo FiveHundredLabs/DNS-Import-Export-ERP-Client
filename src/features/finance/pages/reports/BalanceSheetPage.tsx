@@ -144,8 +144,9 @@ export function BalanceSheetPage() {
         </div>
       </div>
 
-      {/* Corporate Report Header */}
+      {/* Corporate Report Header (Statutory Legal Header - Active in Print / PDF view) */}
       <CorporateReportHeader
+        showInWebPreview={false}
         title="Statement of Financial Position (Balance Sheet)"
         subtitle="Real-time balance sheet proving standard accounting fundamental equation (Assets = Liabilities + Equity)."
         periodLabel={`As of: ${asOfDate}${comparePrior ? ` | Prior As of: ${priorAsOfDate}` : ''}`}

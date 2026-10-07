@@ -10,6 +10,8 @@ import { Card } from '../../../../components/ui/card';
 import { Dialog, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../../../../components/ui/dialog';
 import { Textarea } from '../../../../components/ui/textarea';
 import { formatCurrency, formatDate } from '../../../../utils/formatters';
+import { MOCK_CUSTOMERS } from '../../../../mock/mockCustomers';
+import { DoubleEntryHoverBadge } from '../../components/DoubleEntryHoverBadge';
 import {
   Clock,
   Landmark,
@@ -25,6 +27,7 @@ import {
   Layers,
   ChevronRight,
   Coins,
+  Plus,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -47,11 +50,62 @@ export function PDCVaultPage() {
   const [bounceReason, setBounceReason] = useState<string>('');
   const [bounceProcessing, setBounceProcessing] = useState(false);
 
+  // Register Cheque Modal State
+  const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
+  const [newCustomerId, setNewCustomerId] = useState(MOCK_CUSTOMERS[0]?.id || '');
+  const [newChequeNumber, setNewChequeNumber] = useState('');
+  const [newDrawerBank, setNewDrawerBank] = useState('Commercial Bank of Ceylon');
+  const [newChequeDate, setNewChequeDate] = useState(new Date().toISOString().slice(0, 10));
+  const [newAmount, setNewAmount] = useState<number | ''>('');
+  const [newNotes, setNewNotes] = useState('');
+
   // Selected for Details Sheet
   const [selectedCheque, setSelectedCheque] = useState<PostDatedCheque | null>(null);
 
   const refreshCheques = () => {
     setCheques(pdcVaultService.getPDCs());
+  };
+
+  const handleRegisterCheque = (e: React.FormEvent) => {
+    e.preventDefault();
+    const cust = MOCK_CUSTOMERS.find((c) => c.id === newCustomerId);
+    if (!cust) {
+      toast.error('Please select a customer.');
+      return;
+    }
+    if (!newChequeNumber.trim()) {
+      toast.error('Cheque number is required.');
+      return;
+    }
+    const amt = Number(newAmount);
+    if (!amt || amt <= 0) {
+      toast.error('Please enter a valid cheque amount.');
+      return;
+    }
+
+    try {
+      pdcVaultService.registerCheque({
+        chequeNumber: newChequeNumber.trim(),
+        customerId: cust.id,
+        customerName: cust.name,
+        customerCode: cust.code,
+        drawerBank: newDrawerBank.trim() || 'Commercial Bank of Ceylon',
+        chequeDate: newChequeDate,
+        amount: amt,
+        notes: newNotes.trim() || 'Direct cashier PDC receipt',
+      });
+
+      toast.success(
+        `Cheque ${newChequeNumber.trim().toUpperCase()} registered into 1018 PDC Vault custody!`
+      );
+      refreshCheques();
+      setIsRegisterModalOpen(false);
+      setNewChequeNumber('');
+      setNewAmount('');
+      setNewNotes('');
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Failed to register cheque');
+    }
   };
 
   const todayStr = new Date().toISOString().slice(0, 10);
@@ -161,6 +215,15 @@ export function PDCVaultPage() {
         </div>
 
         <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            onClick={() => setIsRegisterModalOpen(true)}
+            className="bg-primary hover:bg-primary-hover text-white text-xs gap-1.5 shadow-xs font-semibold"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            <span>Register Received PDC</span>
+          </Button>
+
           <Button
             variant="outline"
             size="sm"
@@ -417,14 +480,35 @@ export function PDCVaultPage() {
                         <div className="inline-flex items-center gap-1 justify-end">
                           {isInHand && (
                             <>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleOpenBounce(cheque)}
-                                className="h-7 px-2 text-rose-600 hover:bg-rose-50 border-rose-200 text-xs"
-                              >
-                                Dishonor
-                              </Button>
+                              <div className="flex items-center gap-1">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleOpenBounce(cheque)}
+                                  className="h-7 px-2 text-rose-600 hover:bg-rose-50 border-rose-200 text-xs"
+                                >
+                                  Dishonor
+                                </Button>
+                                <DoubleEntryHoverBadge
+                                  align="right"
+                                  title="Cheque Dishonor GL Impact"
+                                  description="Marking cheque dishonored reinstates Accounts Receivable and relieves vault:"
+                                  lines={[
+                                    {
+                                      accountCode: '1020',
+                                      accountName: `Accounts Receivable (${cheque.customerName})`,
+                                      type: 'DEBIT',
+                                      amount: cheque.amount,
+                                    },
+                                    {
+                                      accountCode: '1018',
+                                      accountName: 'Cheques in Hand (PDC Vault Reversal)',
+                                      type: 'CREDIT',
+                                      amount: cheque.amount,
+                                    },
+                                  ]}
+                                />
+                              </div>
                               <Button
                                 size="sm"
                                 onClick={() => handleOpenClear(cheque)}
@@ -433,6 +517,25 @@ export function PDCVaultPage() {
                                 <CheckCircle2 className="h-3.5 w-3.5" />
                                 <span>Clear to Bank</span>
                               </Button>
+
+                              <DoubleEntryHoverBadge
+                                title="Cheque Realization Impact"
+                                description="Clearing this matured cheque transfers funds from Vault custody to Bank Account:"
+                                lines={[
+                                  {
+                                    accountCode: '1010',
+                                    accountName: 'Operating Bank Account (Cash Inflow)',
+                                    type: 'DEBIT',
+                                    amount: cheque.amount,
+                                  },
+                                  {
+                                    accountCode: '1018',
+                                    accountName: 'Cheques in Hand (PDC Vault Release)',
+                                    type: 'CREDIT',
+                                    amount: cheque.amount,
+                                  },
+                                ]}
+                              />
                             </>
                           )}
                           <Button
@@ -559,7 +662,7 @@ export function PDCVaultPage() {
           </div>
         )}
 
-        <DialogFooter>
+        <DialogFooter className="flex items-center justify-end gap-2">
           <Button
             variant="outline"
             size="sm"
@@ -576,6 +679,27 @@ export function PDCVaultPage() {
             <CheckCircle2 className="h-3.5 w-3.5" />
             <span>Confirm Bank Clearance</span>
           </Button>
+          {clearingCheque && (
+            <DoubleEntryHoverBadge
+              align="right"
+              title="Bank Clearance GL Impact"
+              description="Realizing this cheque moves funds from Vault custody to Bank Account:"
+              lines={[
+                {
+                  accountCode: bankAccounts.find((a) => a.id === targetBankAccountId)?.code || '1010',
+                  accountName: bankAccounts.find((a) => a.id === targetBankAccountId)?.name || 'Bank Account',
+                  type: 'DEBIT',
+                  amount: clearingCheque.amount,
+                },
+                {
+                  accountCode: '1018',
+                  accountName: 'Cheques in Hand (Vault Release)',
+                  type: 'CREDIT',
+                  amount: clearingCheque.amount,
+                },
+              ]}
+            />
+          )}
         </DialogFooter>
       </Dialog>
 
@@ -620,7 +744,7 @@ export function PDCVaultPage() {
           </div>
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="flex items-center justify-end gap-2">
           <Button variant="outline" size="sm" onClick={() => setBouncingCheque(null)}>
             Cancel
           </Button>
@@ -632,7 +756,169 @@ export function PDCVaultPage() {
           >
             Confirm Cheque Dishonor
           </Button>
+          {bouncingCheque && (
+            <DoubleEntryHoverBadge
+              align="right"
+              title="Cheque Dishonor GL Reversal"
+              description="Dishonoring this cheque reinstates A/R and reverses PDC Vault holding:"
+              lines={[
+                {
+                  accountCode: '1020',
+                  accountName: `Accounts Receivable (${bouncingCheque.customerName})`,
+                  type: 'DEBIT',
+                  amount: bouncingCheque.amount,
+                },
+                {
+                  accountCode: '1018',
+                  accountName: 'Cheques in Hand (PDC Vault Release)',
+                  type: 'CREDIT',
+                  amount: bouncingCheque.amount,
+                },
+              ]}
+            />
+          )}
         </DialogFooter>
+      </Dialog>
+
+      {/* Register Received PDC Modal */}
+      <Dialog open={isRegisterModalOpen} onOpenChange={setIsRegisterModalOpen}>
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-slate-900">
+            <Clock className="h-5 w-5 text-amber-600" />
+            <span>Register Received Customer Cheque (PDC Vault)</span>
+          </DialogTitle>
+          <DialogDescription className="text-xs text-slate-500">
+            Log physical custody of customer post-dated cheque under GL Asset 1018 (Cheques in Hand).
+          </DialogDescription>
+        </DialogHeader>
+
+        <form onSubmit={handleRegisterCheque} className="space-y-4 py-2 text-xs">
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">
+              Customer / Dealer <span className="text-rose-500">*</span>
+            </label>
+            <select
+              value={newCustomerId}
+              onChange={(e) => setNewCustomerId(e.target.value)}
+              className="w-full h-9 text-xs rounded-md border border-slate-300 px-2.5 bg-white text-slate-800"
+              required
+            >
+              {MOCK_CUSTOMERS.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name} ({c.code})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Cheque Number <span className="text-rose-500">*</span>
+              </label>
+              <Input
+                value={newChequeNumber}
+                onChange={(e) => setNewChequeNumber(e.target.value)}
+                placeholder="e.g. CHQ-991204"
+                className="h-9 text-xs font-mono"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Drawer Bank <span className="text-rose-500">*</span>
+              </label>
+              <Input
+                value={newDrawerBank}
+                onChange={(e) => setNewDrawerBank(e.target.value)}
+                placeholder="e.g. Commercial Bank of Ceylon"
+                className="h-9 text-xs"
+                required
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Cheque Realization Date <span className="text-rose-500">*</span>
+              </label>
+              <Input
+                type="date"
+                value={newChequeDate}
+                onChange={(e) => setNewChequeDate(e.target.value)}
+                className="h-9 text-xs"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Cheque Amount (LKR) <span className="text-rose-500">*</span>
+              </label>
+              <Input
+                type="number"
+                min="1"
+                step="0.01"
+                value={newAmount}
+                onChange={(e) => setNewAmount(e.target.value === '' ? '' : parseFloat(e.target.value) || 0)}
+                placeholder="e.g. 500000.00"
+                className="h-9 text-xs font-mono font-bold"
+                required
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">
+              Custody Notes / Receipt Reference
+            </label>
+            <Textarea
+              value={newNotes}
+              onChange={(e) => setNewNotes(e.target.value)}
+              placeholder="e.g. Post-dated cheque collected by counter cashier for showroom delivery..."
+              rows={2}
+              className="text-xs"
+            />
+          </div>
+
+          <div className="p-3 rounded-lg bg-amber-50/70 border border-amber-200 text-amber-900 text-[11px] font-mono space-y-1">
+            <span className="font-bold block font-sans">GL Asset Custody Holding:</span>
+            <div className="flex justify-between">
+              <span>Holding Account: 1018 Cheques in Hand (Safe Custody)</span>
+              <span>{typeof newAmount === 'number' && newAmount > 0 ? formatCurrency(newAmount) : 'Pending'}</span>
+            </div>
+          </div>
+
+          <DialogFooter className="flex items-center justify-end gap-2">
+            <Button type="button" variant="outline" size="sm" onClick={() => setIsRegisterModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" size="sm" className="bg-primary hover:bg-primary-hover text-white">
+              Register into PDC Vault
+            </Button>
+            <DoubleEntryHoverBadge
+              align="right"
+              title="PDC Vault Registration GL Impact"
+              description="Taking physical custody of cheque moves amount to Asset 1018:"
+              lines={[
+                {
+                  accountCode: '1018',
+                  accountName: 'Cheques in Hand (PDC Vault Custody)',
+                  type: 'DEBIT',
+                  amount: typeof newAmount === 'number' && newAmount > 0 ? newAmount : 'Cheque Amount',
+                },
+                {
+                  accountCode: '1020',
+                  accountName: `Accounts Receivable (${MOCK_CUSTOMERS.find((c) => c.id === newCustomerId)?.name || 'Selected Customer'})`,
+                  type: 'CREDIT',
+                  amount: typeof newAmount === 'number' && newAmount > 0 ? newAmount : 'Cheque Amount',
+                },
+              ]}
+            />
+          </DialogFooter>
+        </form>
       </Dialog>
     </div>
   );

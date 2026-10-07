@@ -5,7 +5,9 @@ import { useFinanceLedger } from '../../hooks/useFinanceLedger';
 import { financeRepository } from '../../api';
 import { JournalEntry, JournalEntryStatus } from '../../api/types';
 import { CurrencyInput } from '../../components/CurrencyInput';
+import { DoubleEntryHoverBadge } from '../../components/DoubleEntryHoverBadge';
 import { Button } from '../../../../components/ui/button';
+import { cn } from '../../../../utils/cn';
 import { Input } from '../../../../components/ui/input';
 import { Select } from '../../../../components/ui/select';
 import { Badge } from '../../../../components/ui/badge';
@@ -840,34 +842,35 @@ export function ManualJournalPage() {
               )}
             </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead className="border-b border-slate-200 bg-slate-50 text-[11px] font-bold uppercase tracking-wider text-slate-600">
-                  <tr>
-                    <th className="px-3 py-2.5 w-72">Account</th>
-                    <th className="px-3 py-2.5">Line Memo & Sub-Ledger Tag</th>
-                    <th className="px-3 py-2.5 text-right w-40">Debit (Dr LKR)</th>
-                    <th className="px-3 py-2.5 text-right w-40">Credit (Cr LKR)</th>
-                    <th className="px-3 py-2.5 text-right w-12">Action</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {lines.map((line) => {
-                    const matchedAccount = accounts.find((a) => a.id === line.accountId);
-                    const isArLine = matchedAccount?.code === '1020';
-                    const isApLine = matchedAccount?.code === '2010';
+            {/* Spacious Line Items Block Container */}
+            <div className="space-y-3">
+              {lines.map((line, idx) => {
+                const matchedAccount = accounts.find((a) => a.id === line.accountId);
+                const isArLine = matchedAccount?.code === '1020';
+                const isApLine = matchedAccount?.code === '2010';
 
-                    return (
-                      <tr key={line.id} className="hover:bg-slate-50/50">
-                        {/* Searchable Account combobox/select */}
-                        <td className="px-3 py-2 align-top">
+                return (
+                  <div
+                    key={line.id}
+                    className="p-3.5 rounded-lg border border-slate-200 bg-white hover:border-slate-300 shadow-2xs space-y-3 transition-all"
+                  >
+                    {/* Top Tier: Line Index, Account Selector, Debit, Credit, Remove */}
+                    <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3">
+                      <div className="flex items-center gap-2 flex-1 min-w-0">
+                        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-100 text-[10px] font-bold text-slate-600 font-mono">
+                          #{idx + 1}
+                        </span>
+                        <div className="flex-1 min-w-0">
+                          <label className="block text-[10.5px] font-semibold text-slate-500 uppercase tracking-wider mb-1">
+                            GL Account <span className="text-rose-500">*</span>
+                          </label>
                           <Select
                             value={line.accountId}
                             onChange={(e) =>
                               handleUpdateLine(line.id, 'accountId', e.target.value)
                             }
                             disabled={isAuditLocked}
-                            className="h-9 text-xs"
+                            className="h-9 text-xs w-full"
                           >
                             <option value="">Select GL Account...</option>
                             {activeAccounts.map((a) => (
@@ -876,114 +879,122 @@ export function ManualJournalPage() {
                               </option>
                             ))}
                           </Select>
-                        </td>
+                        </div>
+                      </div>
 
-                        {/* Line Description & Entity Tagging */}
-                        <td className="px-3 py-2 align-top space-y-1.5">
-                          <Input
-                            value={line.description}
-                            onChange={(e) =>
-                              handleUpdateLine(line.id, 'description', e.target.value)
-                            }
+                      {/* Debit (Dr) Input */}
+                      <div className="w-full md:w-44 shrink-0">
+                        <label className="block text-[10.5px] font-semibold text-primary uppercase tracking-wider mb-1">
+                          Debit (Dr LKR)
+                        </label>
+                        <CurrencyInput
+                          value={line.debit || ''}
+                          onChange={(val) => handleUpdateLine(line.id, 'debit', val)}
+                          placeholder="0.00"
+                          disabled={submitting || isAuditLocked}
+                        />
+                      </div>
+
+                      {/* Credit (Cr) Input */}
+                      <div className="w-full md:w-44 shrink-0">
+                        <label className="block text-[10.5px] font-semibold text-emerald-700 uppercase tracking-wider mb-1">
+                          Credit (Cr LKR)
+                        </label>
+                        <CurrencyInput
+                          value={line.credit || ''}
+                          onChange={(val) => handleUpdateLine(line.id, 'credit', val)}
+                          placeholder="0.00"
+                          disabled={submitting || isAuditLocked}
+                        />
+                      </div>
+
+                      {/* Delete Action */}
+                      <div className="flex items-end justify-end md:self-end pb-0.5 shrink-0">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          type="button"
+                          onClick={() => handleRemoveLine(line.id)}
+                          disabled={lines.length <= 2 || isAuditLocked}
+                          className="h-8 w-8 p-0 text-slate-400 hover:text-rose-600 hover:bg-rose-50 disabled:opacity-30"
+                          title="Remove line"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Bottom Tier: Line Narrative & Sub-Ledger Dimensions with ample room */}
+                    <div className="grid grid-cols-1 md:grid-cols-12 gap-3 pt-2 border-t border-slate-100 items-center">
+                      <div className={cn('space-y-1', (isArLine || isApLine) ? 'md:col-span-7' : 'md:col-span-12')}>
+                        <Input
+                          value={line.description}
+                          onChange={(e) =>
+                            handleUpdateLine(line.id, 'description', e.target.value)
+                          }
+                          disabled={isAuditLocked}
+                          placeholder="Line explanation / narrative memo..."
+                          className="h-8 text-xs bg-slate-50/50"
+                        />
+                      </div>
+
+                      {/* 1020 A/R Customer Tag */}
+                      {isArLine && (
+                        <div className="md:col-span-5 flex items-center gap-2 p-1.5 rounded-md bg-blue-50/70 border border-blue-200">
+                          <span className="text-[10px] font-bold text-blue-700 uppercase shrink-0">
+                            Customer *:
+                          </span>
+                          <select
+                            value={line.customerId || ''}
+                            onChange={(e) => {
+                              const cId = e.target.value;
+                              const cust = MOCK_CUSTOMERS.find((c) => c.id === cId);
+                              handleUpdateLine(line.id, 'customerId', cId);
+                              handleUpdateLine(line.id, 'customerName', cust?.name || cId);
+                            }}
                             disabled={isAuditLocked}
-                            placeholder="Line memo..."
-                            className="h-9 text-xs"
-                          />
-
-                          {/* 1020 A/R Customer Tag */}
-                          {isArLine && (
-                            <div className="flex items-center gap-1.5 p-1 rounded bg-blue-50 border border-blue-200">
-                              <span className="text-[10px] font-bold text-blue-700 uppercase shrink-0">
-                                Customer *:
-                              </span>
-                              <select
-                                value={line.customerId || ''}
-                                onChange={(e) => {
-                                  const cId = e.target.value;
-                                  const cust = MOCK_CUSTOMERS.find((c) => c.id === cId);
-                                  handleUpdateLine(line.id, 'customerId', cId);
-                                  handleUpdateLine(line.id, 'customerName', cust?.name || cId);
-                                }}
-                                disabled={isAuditLocked}
-                                className="h-7 w-full text-[11px] rounded border border-blue-300 bg-white px-1.5 focus:border-blue-500"
-                              >
-                                <option value="">Select Customer ID *</option>
-                                {MOCK_CUSTOMERS.map((c) => (
-                                  <option key={c.id} value={c.id}>
-                                    {c.code} - {c.name}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
-                          )}
-
-                          {/* 2010 A/P Supplier Tag */}
-                          {isApLine && (
-                            <div className="flex items-center gap-1.5 p-1 rounded bg-amber-50 border border-amber-200">
-                              <span className="text-[10px] font-bold text-amber-700 uppercase shrink-0">
-                                Supplier *:
-                              </span>
-                              <select
-                                value={line.supplierId || ''}
-                                onChange={(e) => {
-                                  const sId = e.target.value;
-                                  const sup = suppliers.find((s) => s.id === sId);
-                                  handleUpdateLine(line.id, 'supplierId', sId);
-                                  handleUpdateLine(line.id, 'supplierName', sup?.name || sId);
-                                }}
-                                disabled={isAuditLocked}
-                                className="h-7 w-full text-[11px] rounded border border-amber-300 bg-white px-1.5 focus:border-amber-500"
-                              >
-                                <option value="">Select Supplier ID *</option>
-                                {suppliers.map((s) => (
-                                  <option key={s.id} value={s.id}>
-                                    {s.code} - {s.name}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
-                          )}
-                        </td>
-
-                        {/* Debit (Currency Input) */}
-                        <td className="px-3 py-2 text-right align-top">
-                          <CurrencyInput
-                            value={line.debit || ''}
-                            onChange={(val) => handleUpdateLine(line.id, 'debit', val)}
-                            placeholder="0.00"
-                            disabled={submitting || isAuditLocked}
-                          />
-                        </td>
-
-                        {/* Credit (Currency Input) */}
-                        <td className="px-3 py-2 text-right align-top">
-                          <CurrencyInput
-                            value={line.credit || ''}
-                            onChange={(val) => handleUpdateLine(line.id, 'credit', val)}
-                            placeholder="0.00"
-                            disabled={submitting || isAuditLocked}
-                          />
-                        </td>
-
-                        {/* Delete Line */}
-                        <td className="px-3 py-2 text-right align-top">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            type="button"
-                            onClick={() => handleRemoveLine(line.id)}
-                            className="h-8 w-8 p-0 text-slate-400 hover:text-rose-600"
-                            disabled={lines.length <= 2 || isAuditLocked}
-                            title="Remove line"
+                            className="h-7 w-full text-[11px] rounded border border-blue-300 bg-white px-2 focus:border-blue-500 font-medium"
                           >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                            <option value="">Select Customer Sub-Ledger *</option>
+                            {MOCK_CUSTOMERS.map((c) => (
+                              <option key={c.id} value={c.id}>
+                                {c.code} - {c.name}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
+
+                      {/* 2010 A/P Supplier Tag */}
+                      {isApLine && (
+                        <div className="md:col-span-5 flex items-center gap-2 p-1.5 rounded-md bg-amber-50/70 border border-amber-200">
+                          <span className="text-[10px] font-bold text-amber-700 uppercase shrink-0">
+                            Supplier *:
+                          </span>
+                          <select
+                            value={line.supplierId || ''}
+                            onChange={(e) => {
+                              const sId = e.target.value;
+                              const sup = suppliers.find((s) => s.id === sId);
+                              handleUpdateLine(line.id, 'supplierId', sId);
+                              handleUpdateLine(line.id, 'supplierName', sup?.name || sId);
+                            }}
+                            disabled={isAuditLocked}
+                            className="h-7 w-full text-[11px] rounded border border-amber-300 bg-white px-2 focus:border-amber-500 font-medium"
+                          >
+                            <option value="">Select Supplier Sub-Ledger *</option>
+                            {suppliers.map((s) => (
+                              <option key={s.id} value={s.id}>
+                                {s.code} - {s.name}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
 
             {/* Live Impact Preview */}
@@ -1127,6 +1138,23 @@ export function ManualJournalPage() {
                         <Send className="h-3.5 w-3.5" />
                         <span>{submitting ? 'Posting...' : 'Post Journal'}</span>
                       </Button>
+                    )}
+
+                    {lines.some((l) => l.accountId && (l.debit > 0 || l.credit > 0)) && (
+                      <DoubleEntryHoverBadge
+                        title="Voucher General Ledger Impact"
+                        lines={lines
+                          .filter((l) => l.accountId && (l.debit > 0 || l.credit > 0))
+                          .map((l) => {
+                            const acc = accounts.find((a) => a.id === l.accountId);
+                            return {
+                              accountCode: acc?.code || 'GL',
+                              accountName: acc?.name || 'Account',
+                              type: l.debit > 0 ? ('DEBIT' as const) : ('CREDIT' as const),
+                              amount: l.debit > 0 ? l.debit : l.credit,
+                            };
+                          })}
+                      />
                     )}
                   </>
                 )}

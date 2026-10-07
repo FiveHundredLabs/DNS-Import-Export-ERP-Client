@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { apService, VendorBill } from '../../services/apService';
 import { useFinanceLedger } from '../../hooks/useFinanceLedger';
 import { CurrencyInput } from '../../components/CurrencyInput';
+import { DoubleEntryHoverBadge } from '../../components/DoubleEntryHoverBadge';
 import { Button } from '../../../../components/ui/button';
 import { Input } from '../../../../components/ui/input';
 import { Select } from '../../../../components/ui/select';
@@ -107,11 +108,19 @@ export function BatchSupplierPaymentPage() {
     return total.minus(applied).toNumber();
   }, [totalPaymentAmount, totalApplied]);
 
-  // Validation: sum of all Amount to Apply inputs must exactly equal Total Payment Amount
   const isAllocationBalanced = useMemo(() => {
     if (totalPaymentAmount <= 0) return false;
     return Math.abs(difference) <= 0.01;
   }, [totalPaymentAmount, difference]);
+
+  const selectedSupplier = useMemo(
+    () => suppliers.find((s) => s.id === selectedSupplierId),
+    [suppliers, selectedSupplierId]
+  );
+  const selectedBank = useMemo(
+    () => accounts.find((a) => a.id === bankAccountId),
+    [accounts, bankAccountId]
+  );
 
   const isFormValid = useMemo(() => {
     if (!selectedSupplierId) return false;
@@ -155,9 +164,13 @@ export function BatchSupplierPaymentPage() {
       toast.success(
         `Batch Supplier Payment of ${formatCurrency(
           totalPaymentAmount
-        )} successfully posted and allocated!`
+        )} successfully posted and allocated to bills!`
       );
-      navigate('/finance/desk');
+      // Reset form to ready state for next payment instead of directing to journal entry
+      setSelectedSupplierId('');
+      setAllocations({});
+      setPaymentReference('');
+      setTotalPaymentAmount(0);
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : 'Failed to post batch payment');
     } finally {
@@ -405,6 +418,25 @@ export function BatchSupplierPaymentPage() {
               <FileCheck className="h-4 w-4" />
               <span>{submitting ? 'Posting Payment...' : 'Post Payment'}</span>
             </Button>
+
+            <DoubleEntryHoverBadge
+              title="AP Payment Double-Entry Impact"
+              description="Posting this supplier payment commits balancing GL lines:"
+              lines={[
+                {
+                  accountCode: '2010',
+                  accountName: `Accounts Payable (${selectedSupplier?.name || 'Selected Supplier'})`,
+                  type: 'DEBIT',
+                  amount: totalPaymentAmount > 0 ? totalPaymentAmount : 'Payment Total',
+                },
+                {
+                  accountCode: selectedBank?.code || '1010',
+                  accountName: selectedBank?.name || 'Operating Bank Account',
+                  type: 'CREDIT',
+                  amount: totalPaymentAmount > 0 ? totalPaymentAmount : 'Payment Total',
+                },
+              ]}
+            />
           </div>
         </div>
       </div>

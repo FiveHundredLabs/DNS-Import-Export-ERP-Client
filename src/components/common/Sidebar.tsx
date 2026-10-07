@@ -28,7 +28,15 @@ import {
   LucideIcon,
   Landmark,
   Zap,
+  Coins,
+  Undo2,
+  RotateCcw,
+  Clock,
+  Lock,
+  SlidersHorizontal,
+  CheckCircle2,
 } from 'lucide-react';
+import { useEffect } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { useFavorites } from '../../hooks/useFavorites';
 import { cn } from '../../utils/cn';
@@ -69,12 +77,19 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const [activeCategory, setActiveCategory] = useState<RailCategory>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
+  // Automatically activate finance category when navigating within finance module
+  useEffect(() => {
+    if (location.pathname.startsWith('/finance')) {
+      setActiveCategory('finance');
+    }
+  }, [location.pathname]);
+
   // 1. Procurement, Orders & Approvals
   const procurementItems: SidebarItem[] = [
-    { id: 'suppliers', name: 'Suppliers', path: '/finance/suppliers', icon: Store, category: 'finance' },
     { id: 'quotations', name: 'Quotations', path: '/quotations', icon: FileSpreadsheet, category: 'sales' },
     { id: 'orders', name: 'Sales Orders', path: '/orders', icon: ShoppingCart, category: 'sales' },
     { id: 'approvals', name: 'Approvals Engine', path: '/approvals', icon: CheckCircle, category: 'approvals' },
+    { id: 'warranty', name: 'Warranty Hub', path: '/warranty', icon: ShieldCheck, category: 'approvals' },
   ];
 
   // 2. Customers, Invoices, Payments & POS
@@ -92,12 +107,23 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     { id: 'transfers', name: 'Stock Transfers', path: '/inventory/transfers', icon: ArrowLeftRight, category: 'inventory' },
   ];
 
-  // 4. Finance, Banking, Ledger & Warranty
+  // 4. Finance, Banking & Ledger Core
   const financeItems: SidebarItem[] = [
+    { id: 'finance', name: 'Finance Command Hub', path: '/finance/dashboard', icon: LayoutGrid, category: 'finance', exact: true },
+    { id: 'journal', name: 'Journal Entry Voucher', path: '/finance/journal/new', icon: Zap, category: 'finance' },
     { id: 'accounts', name: 'Chart of Accounts', path: '/finance/accounts', icon: BookOpen, category: 'finance' },
+    { id: 'ap-bills', name: 'Vendor Bill Costing (AP)', path: '/finance/ap/bills/new', icon: Receipt, category: 'finance' },
+    { id: 'ap-advances', name: 'Advance Prepayments (AP)', path: '/finance/ap/advances', icon: Coins, category: 'finance' },
+    { id: 'ap-debit-notes', name: 'Supplier Debit Notes', path: '/finance/ap/debit-notes', icon: Undo2, category: 'finance' },
+    { id: 'ap-payments', name: 'Batch Supplier Payments', path: '/finance/ap/payments/new', icon: CreditCard, category: 'finance' },
+    { id: 'ar-approvals', name: 'Receipt Approval Queue (AR)', path: '/finance/ar/approvals', icon: CheckCircle2, category: 'finance' },
+    { id: 'ar-allocate', name: 'AR Collection Allocation', path: '/finance/ar/allocate', icon: SlidersHorizontal, category: 'finance' },
+    { id: 'ar-pdc', name: 'PDC Vault (Cheques in Hand)', path: '/finance/ar/pdc-vault', icon: Clock, category: 'finance' },
+    { id: 'ar-credit-notes', name: 'Customer Credit Notes', path: '/finance/ar/credit-notes', icon: RotateCcw, category: 'finance' },
     { id: 'reconciliation', name: 'Bank Reconciliation', path: '/finance/reconciliation', icon: Landmark, category: 'finance' },
-    { id: 'finance', name: 'Finance & Ledger', path: '/finance', icon: DollarSign, category: 'finance', exact: true },
-    { id: 'warranty', name: 'Warranty Hub', path: '/warranty', icon: ShieldCheck, category: 'approvals' },
+    { id: 'suppliers', name: 'Suppliers', path: '/finance/suppliers', icon: Store, category: 'finance' },
+    { id: 'closing', name: 'Period Closing Lock', path: '/finance/settings/closing', icon: Lock, category: 'finance' },
+    { id: 'reports-hub', name: 'Financial Reports Hub', path: '/finance/reports', icon: BarChart3, category: 'finance' },
     { id: 'commissions', name: 'Sales Commission', path: '/commissions', icon: Award, category: 'finance' },
   ];
 

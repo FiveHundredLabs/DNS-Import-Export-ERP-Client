@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { arService, AROpenInvoice } from '../../services/arService';
 import { CurrencyInput } from '../../components/CurrencyInput';
+import { DoubleEntryHoverBadge } from '../../components/DoubleEntryHoverBadge';
 import { Button } from '../../../../components/ui/button';
 import { Select } from '../../../../components/ui/select';
 import { Badge } from '../../../../components/ui/badge';
@@ -14,6 +15,7 @@ import {
   AlertTriangle,
   SlidersHorizontal,
   FileCheck,
+  ArrowLeft,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -130,22 +132,32 @@ export function ARCollectionAllocationPage() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-slate-200 pb-4">
         <div>
           <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => navigate('/finance/ar/approvals')}
+              className="gap-1.5 text-xs mr-1"
+            >
+              <ArrowLeft className="h-3.5 w-3.5" />
+              <span>Back to Approvals</span>
+            </Button>
             <h1 className="text-2xl font-bold tracking-tight text-slate-900">
               AR Batch Collection Allocation
             </h1>
             <Badge variant="outline" className="bg-primary-light text-primary-text border-primary-border text-xs">
-              Accounts Receivable
+              Sub-Ledger Invoices
             </Badge>
           </div>
           <p className="text-sm text-slate-500 mt-1">
-            Apply a single received customer collection across open sales invoices via Auto-FIFO or manual distribution.
+            Detailed invoice allocation desk: Distribute customer collection receipts across unpaid sales invoices (Defaults to Auto-FIFO, or customize manually).
           </p>
         </div>
 
         {/* Selected Customer Payment Selector */}
         <div className="flex items-center gap-3">
           <label className="text-xs font-semibold text-slate-600 whitespace-nowrap">
-            Select Payment Receipt:
+            Select Receipt to Allocate:
           </label>
           <Select
             value={selectedReceiptId}
@@ -344,6 +356,29 @@ export function ARCollectionAllocationPage() {
               <FileCheck className="h-4 w-4" />
               <span>{submitting ? 'Applying...' : 'Commit Allocation'}</span>
             </Button>
+
+            {selectedReceipt && (
+              <DoubleEntryHoverBadge
+                title="Invoice Allocation Settlement Impact"
+                description="Committing this invoice allocation marks specific invoices as paid/settled in AR sub-ledger:"
+                lines={[
+                  {
+                    accountCode: '1020',
+                    accountName: `AR Sub-Ledger (${selectedReceipt.customerName})`,
+                    type: 'CREDIT',
+                    amount: totalApplied,
+                    note: 'Applied to selected invoice balances',
+                  },
+                  {
+                    accountCode: '1020',
+                    accountName: `Unapplied Customer Cash Balance`,
+                    type: 'DEBIT',
+                    amount: totalApplied,
+                    note: 'Deducted from customer unallocated receipt buffer',
+                  },
+                ]}
+              />
+            )}
           </div>
         </div>
       </div>

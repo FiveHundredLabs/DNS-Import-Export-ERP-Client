@@ -32,6 +32,16 @@ export interface ARReceiptItem {
   allocations?: Record<string, number>;
 }
 
+export interface AROpenInvoiceItem {
+  productId: string;
+  productName: string;
+  sku: string;
+  quantity: number;
+  unitPrice: number;
+  unitCost: number;
+  taxRate?: number;
+}
+
 export interface AROpenInvoice {
   id: string;
   invoiceNumber: string;
@@ -40,11 +50,13 @@ export interface AROpenInvoice {
   customerName: string;
   originalAmount: number;
   balanceDue: number;
+  items?: AROpenInvoiceItem[];
 }
 
 export interface ApproveReceiptOptions {
   depositAccountId?: string;
   autoFIFO?: boolean;
+  allocations?: Record<string, number>;
   chequeDetails?: {
     chequeNumber: string;
     drawerBank: string;
@@ -152,6 +164,26 @@ const MOCK_OPEN_INVOICES: AROpenInvoice[] = [
     customerName: 'Lanka Electrical & Hardware Superstore',
     originalAmount: 1500000.0,
     balanceDue: 1500000.0,
+    items: [
+      {
+        productId: 'prod-001',
+        productName: 'Schneider Acti9 32A Double Pole MCB',
+        sku: 'DNS-MCB-32A-2P',
+        quantity: 300,
+        unitPrice: 3250.0,
+        unitCost: 2200.0,
+        taxRate: 0.18,
+      },
+      {
+        productId: 'prod-002',
+        productName: 'Schneider Acti9 63A Triple Pole MCB',
+        sku: 'DNS-MCB-63A-3P',
+        quantity: 50,
+        unitPrice: 8400.0,
+        unitCost: 5800.0,
+        taxRate: 0.18,
+      },
+    ],
   },
   {
     id: 'inv-002',
@@ -161,6 +193,17 @@ const MOCK_OPEN_INVOICES: AROpenInvoice[] = [
     customerName: 'Lanka Electrical & Hardware Superstore',
     originalAmount: 2000000.0,
     balanceDue: 1800000.0,
+    items: [
+      {
+        productId: 'prod-001',
+        productName: 'Hybrid Solar Inverter 5kW Pure Sine',
+        sku: 'INV-5KW-HYB',
+        quantity: 25,
+        unitPrice: 60000.0,
+        unitCost: 42000.0,
+        taxRate: 0.18,
+      },
+    ],
   },
   {
     id: 'inv-003',
@@ -170,6 +213,17 @@ const MOCK_OPEN_INVOICES: AROpenInvoice[] = [
     customerName: 'Lanka Electrical & Hardware Superstore',
     originalAmount: 1200000.0,
     balanceDue: 1200000.0,
+    items: [
+      {
+        productId: 'prod-002',
+        productName: 'Schneider Acti9 63A Triple Pole MCB',
+        sku: 'DNS-MCB-63A-3P',
+        quantity: 120,
+        unitPrice: 8400.0,
+        unitCost: 5800.0,
+        taxRate: 0.18,
+      },
+    ],
   },
   {
     id: 'inv-004',
@@ -179,6 +233,17 @@ const MOCK_OPEN_INVOICES: AROpenInvoice[] = [
     customerName: 'Muthurajawela Engineering Enterprises',
     originalAmount: 212400.0,
     balanceDue: 212400.0,
+    items: [
+      {
+        productId: 'prod-001',
+        productName: 'Schneider Acti9 32A Double Pole MCB',
+        sku: 'DNS-MCB-32A-2P',
+        quantity: 50,
+        unitPrice: 3250.0,
+        unitCost: 2200.0,
+        taxRate: 0.18,
+      },
+    ],
   },
   {
     id: 'inv-005',
@@ -188,6 +253,17 @@ const MOCK_OPEN_INVOICES: AROpenInvoice[] = [
     customerName: 'Southern Solar & Electric Centre',
     originalAmount: 600000.0,
     balanceDue: 531000.0,
+    items: [
+      {
+        productId: 'prod-002',
+        productName: 'MPPT Solar Charge Controller 60A',
+        sku: 'MPPT-60A-150V',
+        quantity: 12,
+        unitPrice: 38000.0,
+        unitCost: 26500.0,
+        taxRate: 0.18,
+      },
+    ],
   },
 ];
 
@@ -396,8 +472,15 @@ class ARCollectionService {
       receipt.pdcId = pdc.id;
     }
 
-    // Inline Settlement: Apply via Auto-FIFO if requested
-    if (opts.autoFIFO) {
+    // Inline Settlement: Apply custom allocations if provided, or Auto-FIFO if requested
+    if (opts.allocations && Object.keys(opts.allocations).length > 0) {
+      this.applyCollectionAllocation(receipt.id, opts.allocations);
+      const totalAllocated = Object.values(opts.allocations).reduce((sum, val) => sum + val, 0);
+
+      receipt.isAllocated = true;
+      receipt.allocatedAmount = totalAllocated;
+      receipt.allocations = opts.allocations;
+    } else if (opts.autoFIFO) {
       const fifoAllocations = this.calculateAutoFIFO(receipt.customerId, receipt.amount);
       this.applyCollectionAllocation(receipt.id, fifoAllocations);
       const totalAllocated = Object.values(fifoAllocations).reduce((sum, val) => sum + val, 0);

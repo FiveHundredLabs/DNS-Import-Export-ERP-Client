@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../../hooks/useAuth';
 import { apService, VendorBillLineItem } from '../../services/apService';
 import { CurrencyInput } from '../../components/CurrencyInput';
+import { DoubleEntryHoverBadge } from '../../components/DoubleEntryHoverBadge';
 import { Button } from '../../../../components/ui/button';
 import { Input } from '../../../../components/ui/input';
 import { Select } from '../../../../components/ui/select';
@@ -259,7 +260,7 @@ export function VendorBillCostingPage() {
       toast.success(
         `Vendor Bill ${bill.billNumber} posted successfully! True landed cost recorded and debited to 1025 Input VAT Receivable.`
       );
-      navigate('/finance/desk');
+      navigate('/finance/dashboard');
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : 'Failed to post vendor bill');
     } finally {
@@ -275,7 +276,7 @@ export function VendorBillCostingPage() {
       toast.success(
         `Vendor Bill ${existingBill?.billNumber || ''} voided and reversed successfully! GRN returned to APPROVED status.`
       );
-      navigate('/finance/desk');
+      navigate('/finance/dashboard');
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : 'Failed to void vendor bill');
     } finally {
@@ -822,7 +823,7 @@ export function VendorBillCostingPage() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => navigate('/finance/desk')}
+                onClick={() => navigate('/finance/dashboard')}
               >
                 Cancel
               </Button>
@@ -847,14 +848,45 @@ export function VendorBillCostingPage() {
                   )}
                 </div>
               ) : (
-                <Button
-                  onClick={handlePostVendorBill}
-                  disabled={!isFormValid || submitting}
-                  className="gap-2 bg-primary hover:bg-primary-hover text-white shadow-xs font-semibold"
-                >
-                  <CheckCircle2 className="h-4 w-4" />
-                  <span>{submitting ? 'Posting Double-Entry...' : 'Post Vendor Bill'}</span>
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    onClick={handlePostVendorBill}
+                    disabled={!isFormValid || submitting}
+                    className="gap-2 bg-primary hover:bg-primary-hover text-white shadow-xs font-semibold"
+                  >
+                    <CheckCircle2 className="h-4 w-4" />
+                    <span>{submitting ? 'Posting Double-Entry...' : 'Post Vendor Bill'}</span>
+                  </Button>
+
+                  <DoubleEntryHoverBadge
+                    title="GRN Vendor Bill Costing Impact"
+                    description="Posting this vendor bill commits landed cost & VAT to General Ledger:"
+                    lines={[
+                      {
+                        accountCode: '1100',
+                        accountName: 'Merchandise Inventory (Landed Cost)',
+                        type: 'DEBIT',
+                        amount: subtotal + (freightCharges || 0) + (otherLandingCosts || 0),
+                      },
+                      ...(vatTotal > 0
+                        ? [
+                            {
+                              accountCode: '1025',
+                              accountName: 'Input VAT Receivable (18%)',
+                              type: 'DEBIT' as const,
+                              amount: vatTotal,
+                            },
+                          ]
+                        : []),
+                      {
+                        accountCode: '2010',
+                        accountName: `Accounts Payable (${selectedGRN?.supplierName || 'Trade Creditors'})`,
+                        type: 'CREDIT',
+                        amount: grandTotal,
+                      },
+                    ]}
+                  />
+                </div>
               )}
             </div>
           </Card>

@@ -147,8 +147,9 @@ export function ProfitLossPage() {
         </div>
       </div>
 
-      {/* Corporate Report Header */}
+      {/* Corporate Report Header (Statutory Legal Header - Active in Print / PDF view) */}
       <CorporateReportHeader
+        showInWebPreview={false}
         title="Statement of Comprehensive Income (Profit & Loss)"
         subtitle="Real-time financial performance statement showing gross revenues, landed COGS, and true net operating profits."
         periodLabel={`Current Period: ${dateFilter.startDate} to ${dateFilter.endDate}${
@@ -156,40 +157,99 @@ export function ProfitLossPage() {
         }`}
       />
 
-      {/* Action Controls & Compare Toggle Bar */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3 bg-white border border-slate-200 rounded-lg shadow-2xs print:hidden">
-        <div className="flex items-center gap-4">
-          <label className="flex items-center gap-2 text-xs font-semibold text-slate-700 cursor-pointer select-none">
+      {/* Unified Date Filtering, Comparison & Print Toolbar */}
+      <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-3 p-3 bg-white border border-slate-200 rounded-lg shadow-2xs print:hidden">
+        {/* Presets and Main Date Range */}
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex rounded-md border border-slate-200 bg-slate-50 p-0.5 text-xs">
+            {(['THIS_MONTH', 'THIS_QUARTER', 'THIS_YEAR', 'CUSTOM'] as const).map((p) => (
+              <button
+                key={p}
+                type="button"
+                onClick={() => {
+                  const today = new Date();
+                  const yyyy = today.getFullYear();
+                  const mm = String(today.getMonth() + 1).padStart(2, '0');
+                  const dd = String(today.getDate()).padStart(2, '0');
+                  const todayStr = `${yyyy}-${mm}-${dd}`;
+                  if (p === 'THIS_MONTH') {
+                    setDateFilter({ preset: p, startDate: `${yyyy}-${mm}-01`, endDate: todayStr });
+                  } else if (p === 'THIS_QUARTER') {
+                    const qStartMonth = Math.floor(today.getMonth() / 3) * 3 + 1;
+                    setDateFilter({ preset: p, startDate: `${yyyy}-${String(qStartMonth).padStart(2, '0')}-01`, endDate: todayStr });
+                  } else if (p === 'THIS_YEAR') {
+                    setDateFilter({ preset: p, startDate: `${yyyy}-01-01`, endDate: todayStr });
+                  } else {
+                    setDateFilter({ ...dateFilter, preset: 'CUSTOM' });
+                  }
+                }}
+                className={`rounded px-2.5 py-1 font-medium transition-colors ${
+                  dateFilter.preset === p
+                    ? 'bg-white text-primary font-semibold shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                {p === 'THIS_MONTH'
+                  ? 'This Month'
+                  : p === 'THIS_QUARTER'
+                  ? 'This Quarter'
+                  : p === 'THIS_YEAR'
+                  ? 'This Year'
+                  : 'Custom'}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex items-center gap-1.5 text-xs">
+            <Input
+              type="date"
+              value={dateFilter.startDate}
+              onChange={(e) => setDateFilter({ ...dateFilter, preset: 'CUSTOM', startDate: e.target.value })}
+              className="h-8 w-32 text-xs"
+            />
+            <span className="text-slate-400">to</span>
+            <Input
+              type="date"
+              value={dateFilter.endDate}
+              onChange={(e) => setDateFilter({ ...dateFilter, preset: 'CUSTOM', endDate: e.target.value })}
+              className="h-8 w-32 text-xs"
+            />
+          </div>
+        </div>
+
+        {/* Prior Period Comparison */}
+        <div className="flex flex-wrap items-center gap-2">
+          <label className="flex items-center gap-1.5 text-xs font-semibold text-slate-700 cursor-pointer select-none bg-slate-50 border border-slate-200 px-2.5 py-1.5 rounded-md">
             <input
               type="checkbox"
               checked={comparePrior}
               onChange={(e) => setComparePrior(e.target.checked)}
-              className="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary cursor-pointer"
+              className="h-3.5 w-3.5 rounded border-slate-300 text-primary focus:ring-primary cursor-pointer"
             />
-            <GitCompare className="h-4 w-4 text-primary" />
+            <GitCompare className="h-3.5 w-3.5 text-primary" />
             <span>Compare with Prior Period</span>
           </label>
 
           {comparePrior && (
-            <div className="flex items-center gap-2 text-xs text-slate-600 animate-in fade-in-50">
-              <span className="text-[11px] font-medium text-slate-400">Prior:</span>
+            <div className="flex items-center gap-1 text-xs text-slate-600 animate-in fade-in-50">
               <Input
                 type="date"
                 value={priorDateFilter.startDate}
                 onChange={(e) => setPriorDateFilter((p) => ({ ...p, startDate: e.target.value }))}
-                className="h-7 text-xs w-32"
+                className="h-7 text-xs w-28"
               />
               <span className="text-slate-400">to</span>
               <Input
                 type="date"
                 value={priorDateFilter.endDate}
                 onChange={(e) => setPriorDateFilter((p) => ({ ...p, endDate: e.target.value }))}
-                className="h-7 text-xs w-32"
+                className="h-7 text-xs w-28"
               />
             </div>
           )}
         </div>
 
+        {/* Export and Print Actions */}
         <div className="flex items-center gap-2">
           <Button
             type="button"
@@ -199,27 +259,19 @@ export function ProfitLossPage() {
             className="h-8 gap-1.5 text-xs text-slate-700 font-semibold"
           >
             <Printer className="h-3.5 w-3.5" />
-            <span>Print Statement</span>
+            <span>Print</span>
           </Button>
           <Button
             type="button"
             size="sm"
             onClick={handlePrint}
-            className="h-8 gap-1.5 text-xs bg-primary hover:bg-primary-hover text-white font-semibold"
+            className="h-8 gap-1.5 text-xs bg-primary hover:bg-primary-hover text-white font-semibold shadow-xs"
           >
             <FileDown className="h-3.5 w-3.5" />
-            <span>Export Native PDF</span>
+            <span>Export PDF</span>
           </Button>
         </div>
       </div>
-
-      {/* Standard Date Filter Bar */}
-      <ReportDateFilterBar
-        filter={dateFilter}
-        onChange={setDateFilter}
-        onPrint={handlePrint}
-        reportTitle="Profit_and_Loss_Statement"
-      />
 
       {/* Summary KPI Cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">

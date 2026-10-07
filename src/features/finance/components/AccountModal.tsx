@@ -66,12 +66,53 @@ export function AccountModal({
   const handleClassChange = (newClass: AccountClass) => {
     if (isLockedSystemAccount) return;
     setAccountClass(newClass);
+    setParentId('');
     if (newClass === 'ASSET') setAccountSubClass('CURRENT_ASSET');
     else if (newClass === 'LIABILITY') setAccountSubClass('CURRENT_LIABILITY');
     else if (newClass === 'EQUITY') setAccountSubClass('EQUITY');
     else if (newClass === 'INCOME') setAccountSubClass('REVENUE');
     else if (newClass === 'EXPENSE') setAccountSubClass('OPERATING_EXPENSE');
   };
+
+  const groupOptionsByClass: Record<AccountClass, { value: AccountSubClass; label: string }[]> = {
+    ASSET: [
+      { value: 'CURRENT_ASSET', label: 'Current Assets (Cash, Receivables, Stock)' },
+      { value: 'NON_CURRENT_ASSET', label: 'Non-Current Assets (Fixed Assets, Equipment)' },
+    ],
+    LIABILITY: [
+      { value: 'CURRENT_LIABILITY', label: 'Current Liabilities (Payables, Accruals)' },
+      { value: 'NON_CURRENT_LIABILITY', label: 'Long-Term Liabilities (Loans, Notes)' },
+    ],
+    EQUITY: [
+      { value: 'EQUITY', label: 'Equity & Retained Earnings' },
+    ],
+    INCOME: [
+      { value: 'REVENUE', label: 'Sales & Operating Revenue' },
+    ],
+    EXPENSE: [
+      { value: 'DIRECT_COST', label: 'Cost of Goods Sold (Direct Costs)' },
+      { value: 'OPERATING_EXPENSE', label: 'Operating Expenses (Overheads)' },
+    ],
+  };
+
+  const handleParentSelectChange = (val: string) => {
+    if (val.startsWith('acc:')) {
+      const parentAccId = val.replace('acc:', '');
+      const parentAcc = existingAccounts.find((a) => a.id === parentAccId);
+      setParentId(parentAccId);
+      if (parentAcc) {
+        setAccountSubClass(parentAcc.accountSubClass);
+      }
+    } else if (val.startsWith('group:')) {
+      const subClass = val.replace('group:', '') as AccountSubClass;
+      setParentId('');
+      setAccountSubClass(subClass);
+    }
+  };
+
+  const currentParentSelectionValue = parentId
+    ? `acc:${parentId}`
+    : `group:${accountSubClass}`;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -193,39 +234,42 @@ export function AccountModal({
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1">
-              Sub-Category Group
+              Parent Group / Account <span className="text-rose-500">*</span>
             </label>
             <Select
-              value={accountSubClass}
-              onChange={(e) => setAccountSubClass(e.target.value as AccountSubClass)}
+              value={currentParentSelectionValue}
+              onChange={(e) => handleParentSelectChange(e.target.value)}
               disabled={isLockedSystemAccount}
             >
-              {accountClass === 'ASSET' && (
-                <>
-                  <option value="CURRENT_ASSET">Current Asset</option>
-                  <option value="NON_CURRENT_ASSET">Non-Current Asset / Fixed Asset</option>
-                </>
-              )}
-              {accountClass === 'LIABILITY' && (
-                <>
-                  <option value="CURRENT_LIABILITY">Current Liability</option>
-                  <option value="NON_CURRENT_LIABILITY">Long-Term Liability</option>
-                </>
-              )}
-              {accountClass === 'EQUITY' && <option value="EQUITY">Equity & Reserves</option>}
-              {accountClass === 'INCOME' && <option value="REVENUE">Sales & Operating Revenue</option>}
-              {accountClass === 'EXPENSE' && (
-                <>
-                  <option value="DIRECT_COST">Cost of Goods Sold (Direct Cost)</option>
-                  <option value="OPERATING_EXPENSE">Operating Expense (Overhead)</option>
-                </>
+              <optgroup label="Account Category Groups (Top-Level)">
+                {(groupOptionsByClass[accountClass] || []).map((grp) => (
+                  <option key={`group:${grp.value}`} value={`group:${grp.value}`}>
+                    {grp.label}
+                  </option>
+                ))}
+              </optgroup>
+              {existingAccounts
+                .filter((a) => a.accountClass === accountClass && (!accountToEdit || a.id !== accountToEdit.id))
+                .length > 0 && (
+                <optgroup label="Or Nest Under Existing Parent Account">
+                  {existingAccounts
+                    .filter((a) => a.accountClass === accountClass && (!accountToEdit || a.id !== accountToEdit.id))
+                    .map((a) => (
+                      <option key={`acc:${a.id}`} value={`acc:${a.id}`}>
+                        {a.code} - {a.name}
+                      </option>
+                    ))}
+                </optgroup>
               )}
             </Select>
+            <p className="text-[10.5px] text-slate-400 mt-1">
+              Select category tier or parent ledger account.
+            </p>
           </div>
 
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1">
-              Account Sub-Type (Tier 3)
+              Account Sub-Type (Tier 3 Tag)
             </label>
             <Input
               value={accountSubType}
@@ -233,27 +277,10 @@ export function AccountModal({
               placeholder="e.g. Cash & Cash Equivalents, Trade Payables..."
               disabled={isLockedSystemAccount}
             />
+            <p className="text-[10.5px] text-slate-400 mt-1">
+              Granular tag for financial statements and audits.
+            </p>
           </div>
-        </div>
-
-        <div>
-          <label className="block text-xs font-semibold text-slate-700 mb-1">
-            Parent Account (Optional)
-          </label>
-          <Select
-            value={parentId}
-            onChange={(e) => setParentId(e.target.value)}
-            disabled={isLockedSystemAccount}
-          >
-            <option value="">None (Top-Level in Group)</option>
-            {existingAccounts
-              .filter((a) => a.accountClass === accountClass && (!accountToEdit || a.id !== accountToEdit.id))
-              .map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.code} - {a.name}
-                </option>
-              ))}
-          </Select>
         </div>
 
         <div>

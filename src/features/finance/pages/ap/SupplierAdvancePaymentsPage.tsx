@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { apService, VendorBill } from '../../services/apService';
 import { useFinanceLedger } from '../../hooks/useFinanceLedger';
 import { CurrencyInput } from '../../components/CurrencyInput';
+import { DoubleEntryHoverBadge } from '../../components/DoubleEntryHoverBadge';
 import { Button } from '../../../../components/ui/button';
 import { Input } from '../../../../components/ui/input';
 import { Badge } from '../../../../components/ui/badge';
@@ -453,15 +454,35 @@ export function SupplierAdvancePaymentsPage() {
               >
                 Cancel
               </Button>
-              <Button
-                type="submit"
-                size="sm"
-                disabled={submitting || advanceAmount <= 0}
-                className="bg-primary hover:bg-primary-hover text-white gap-2 font-semibold"
-              >
-                <CheckCircle2 className="h-4 w-4" />
-                <span>{submitting ? 'Recording...' : 'Post Advance Payment'}</span>
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button
+                  type="submit"
+                  size="sm"
+                  disabled={submitting || advanceAmount <= 0}
+                  className="bg-primary hover:bg-primary-hover text-white gap-2 font-semibold"
+                >
+                  <CheckCircle2 className="h-4 w-4" />
+                  <span>{submitting ? 'Recording...' : 'Post Advance Payment'}</span>
+                </Button>
+                <DoubleEntryHoverBadge
+                  title="Supplier Advance Prepayment GL Impact"
+                  description="Disbursing this advance payment creates balancing GL postings:"
+                  lines={[
+                    {
+                      accountCode: '1050',
+                      accountName: 'Advance to Suppliers (Current Asset)',
+                      type: 'DEBIT',
+                      amount: advanceAmount || 0,
+                    },
+                    {
+                      accountCode: accounts.find((a) => a.id === bankAccountId)?.code || '1010',
+                      accountName: accounts.find((a) => a.id === bankAccountId)?.name || 'Bank Account',
+                      type: 'CREDIT',
+                      amount: advanceAmount || 0,
+                    },
+                  ]}
+                />
+              </div>
             </div>
           </form>
         </Card>
@@ -715,16 +736,36 @@ export function SupplierAdvancePaymentsPage() {
             >
               Cancel
             </Button>
-            <Button
-              type="button"
-              size="sm"
-              onClick={handleApplyMapping}
-              disabled={submitting || mapAmount <= 0}
-              className="bg-primary hover:bg-primary-hover text-white gap-1.5"
-            >
-              <Check className="h-4 w-4" />
-              <span>{submitting ? 'Mapping...' : 'Confirm Allocation'}</span>
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                size="sm"
+                onClick={handleApplyMapping}
+                disabled={submitting || mapAmount <= 0}
+                className="bg-primary hover:bg-primary-hover text-white gap-1.5"
+              >
+                <Check className="h-4 w-4" />
+                <span>{submitting ? 'Mapping...' : 'Confirm Allocation'}</span>
+              </Button>
+              <DoubleEntryHoverBadge
+                title="Advance Allocation GL Impact"
+                description="Applying advance prepayment offsets accounts payable liability:"
+                lines={[
+                  {
+                    accountCode: '2010',
+                    accountName: 'Accounts Payable',
+                    type: 'DEBIT',
+                    amount: mapAmount || 0,
+                  },
+                  {
+                    accountCode: '1050',
+                    accountName: 'Advance to Suppliers',
+                    type: 'CREDIT',
+                    amount: mapAmount || 0,
+                  },
+                ]}
+              />
+            </div>
           </DialogFooter>
         </div>
       </Dialog>

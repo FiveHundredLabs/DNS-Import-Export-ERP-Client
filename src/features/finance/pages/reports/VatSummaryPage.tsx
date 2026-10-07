@@ -126,8 +126,9 @@ export function VatSummaryPage() {
         </div>
       </div>
 
-      {/* Corporate Report Header */}
+      {/* Corporate Report Header (Statutory Legal Header - Active in Print / PDF view) */}
       <CorporateReportHeader
+        showInWebPreview={false}
         title="Statutory VAT Return & RAMIS Tax Filing Statement"
         subtitle="Inland Revenue Department (IRD) statutory compliance report under Value Added Tax Act No. 14 of 2002 (as amended)."
         periodLabel={`Tax Assessment Period: ${dateFilter.startDate} to ${dateFilter.endDate}`}

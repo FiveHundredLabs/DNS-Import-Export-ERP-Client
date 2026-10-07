@@ -15,6 +15,7 @@ import {
 } from '../../../../components/ui/dialog';
 import { formatCurrency, formatDate } from '../../../../utils/formatters';
 import Decimal from 'decimal.js';
+import { DoubleEntryHoverBadge } from '../../components/DoubleEntryHoverBadge';
 import {
   Landmark,
   CheckCircle2,
@@ -708,6 +709,100 @@ export function BankReconciliationPage() {
         </div>
       </div>
 
+      {/* 3-Step Reconciliation Workflow Progress Guide */}
+      <div className="bg-white rounded-lg border border-slate-200 p-3 shadow-2xs">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          {/* Step 1: Setup */}
+          <div
+            onClick={() => {
+              if (isWorkspaceActive) setIsWorkspaceActive(false);
+            }}
+            className={`flex items-center gap-3 p-3 rounded-lg transition-all cursor-pointer ${
+              !isWorkspaceActive
+                ? 'bg-primary-light border-2 border-primary text-primary-text shadow-2xs'
+                : 'bg-slate-50 border border-slate-200 text-slate-700 hover:bg-slate-100/70'
+            }`}
+          >
+            <div
+              className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
+                !isWorkspaceActive
+                  ? 'bg-primary text-white shadow-xs'
+                  : 'bg-emerald-600 text-white'
+              }`}
+            >
+              {!isWorkspaceActive ? '1' : <CheckCircle2 className="h-4 w-4" />}
+            </div>
+            <div className="min-w-0">
+              <div className="text-xs font-bold truncate">Step 1: Setup & Statement</div>
+              <div className="text-[11px] text-slate-500 truncate mt-0.5">
+                {selectedBankAccount ? `${selectedBankAccount.code} • Statement Opening` : 'Account & Opening Balances'}
+              </div>
+            </div>
+          </div>
+
+          {/* Step 2: Match & Clear */}
+          <div
+            onClick={() => {
+              if (!isWorkspaceActive) handleStartReconciliation();
+            }}
+            className={`flex items-center gap-3 p-3 rounded-lg transition-all cursor-pointer ${
+              isWorkspaceActive && !isReconciled
+                ? 'bg-primary-light border-2 border-primary text-primary-text shadow-2xs'
+                : isWorkspaceActive && isReconciled
+                ? 'bg-slate-50 border border-slate-200 text-slate-700 hover:bg-slate-100/70'
+                : 'bg-slate-50/50 border border-slate-200/60 text-slate-400'
+            }`}
+          >
+            <div
+              className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
+                isWorkspaceActive && isReconciled
+                  ? 'bg-emerald-600 text-white'
+                  : isWorkspaceActive
+                  ? 'bg-primary text-white shadow-xs'
+                  : 'bg-slate-200 text-slate-500'
+              }`}
+            >
+              {isWorkspaceActive && isReconciled ? <CheckCircle2 className="h-4 w-4" /> : '2'}
+            </div>
+            <div className="min-w-0">
+              <div className="text-xs font-bold truncate">Step 2: Match & Clear</div>
+              <div className="text-[11px] text-slate-500 truncate mt-0.5">
+                {isWorkspaceActive
+                  ? `${systemTransactions.filter((t) => t.isCleared).length} cleared • Variance Matching`
+                  : 'Auto-Match & Pair Transactions'}
+              </div>
+            </div>
+          </div>
+
+          {/* Step 3: Finalize & Adjust */}
+          <div
+            className={`flex items-center gap-3 p-3 rounded-lg transition-all ${
+              isWorkspaceActive && isReconciled
+                ? 'bg-emerald-50 border-2 border-emerald-500 text-emerald-950 shadow-2xs'
+                : 'bg-slate-50/50 border border-slate-200/60 text-slate-400'
+            }`}
+          >
+            <div
+              className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
+                isWorkspaceActive && isReconciled
+                  ? 'bg-emerald-600 text-white shadow-xs animate-pulse'
+                  : 'bg-slate-200 text-slate-500'
+              }`}
+            >
+              3
+            </div>
+            <div className="min-w-0">
+              <div className="text-xs font-bold truncate">Step 3: Finalize & Adjust</div>
+              <div className="text-[11px] text-slate-500 truncate mt-0.5">
+                {isWorkspaceActive && isReconciled
+                  ? 'Balanced 0.00 • Lock Period'
+                  : 'Bank Fees / Interest & Close'}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* 6.1 Reconciliation Setup Modal / Form */}
       {!isWorkspaceActive ? (
         <Card className="max-w-2xl mx-auto p-6 border-slate-200 shadow-sm bg-white space-y-6">
@@ -890,32 +985,42 @@ export function BankReconciliationPage() {
             </div>
           </Card>
 
-          {/* Matching Control Toolbar */}
+          {/* De-cluttered Matching Control Toolbar */}
           <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 bg-white p-3 rounded-lg border border-slate-200 shadow-2xs">
+            {/* Left Cluster: Matching Tools & Statement Import */}
             <div className="flex flex-wrap items-center gap-2">
-              {/* Heuristic Auto-Match Button */}
-              <Button
-                size="sm"
-                onClick={handleRunAutoMatch}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white gap-1.5 text-xs font-semibold shadow-xs"
-              >
-                <Sparkles className="h-3.5 w-3.5" />
-                <span>Auto-Match (Heuristic)</span>
-              </Button>
-
-              {/* Tolerance Selector */}
-              <div className="flex items-center gap-1.5 text-xs text-slate-600 bg-slate-50 px-2.5 py-1 rounded-md border border-slate-200">
-                <span className="text-[11px] font-medium text-slate-500">Date Window:</span>
-                <Select
-                  value={dateToleranceDays.toString()}
-                  onChange={(e) => setDateToleranceDays(parseInt(e.target.value, 10))}
-                  className="h-6 text-xs border-0 bg-transparent py-0 px-1 font-semibold text-slate-700 focus:ring-0"
+              <div className="flex items-center bg-slate-50 p-1 rounded-md border border-slate-200 gap-1.5">
+                <Button
+                  size="sm"
+                  onClick={handleRunAutoMatch}
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white gap-1.5 text-xs font-semibold h-7 px-2.5 shadow-2xs"
                 >
-                  <option value="0">Exact Date (±0d)</option>
-                  <option value="1">±1 Day</option>
-                  <option value="3">±3 Days (Standard)</option>
-                  <option value="7">±7 Days (Relaxed)</option>
-                </Select>
+                  <Sparkles className="h-3.5 w-3.5" />
+                  <span>Auto-Match (Heuristic)</span>
+                </Button>
+
+                <div className="flex items-center gap-1 text-xs text-slate-600 px-1.5">
+                  <span className="text-[10px] font-medium text-slate-400 uppercase">Window:</span>
+                  <Select
+                    value={dateToleranceDays.toString()}
+                    onChange={(e) => setDateToleranceDays(parseInt(e.target.value, 10))}
+                    className="h-6 text-xs border-0 bg-transparent py-0 px-1 font-semibold text-slate-700 focus:ring-0"
+                  >
+                    <option value="0">±0d Exact</option>
+                    <option value="1">±1d</option>
+                    <option value="3">±3d Standard</option>
+                    <option value="7">±7d Relaxed</option>
+                  </Select>
+                </div>
+
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleResetMatches}
+                  className="h-7 px-2 text-[11px] text-slate-500 hover:text-slate-800"
+                >
+                  Reset
+                </Button>
               </div>
 
               {/* Upload Statement Button */}
@@ -923,45 +1028,74 @@ export function BankReconciliationPage() {
                 variant="outline"
                 size="sm"
                 onClick={() => setIsUploadModalOpen(true)}
-                className="gap-1.5 text-xs text-slate-700 border-slate-300"
+                className="gap-1.5 text-xs text-slate-700 border-slate-300 h-8"
               >
                 <Upload className="h-3.5 w-3.5 text-primary" />
-                <span>Upload Statement (CSV / MT940)</span>
-              </Button>
-
-              {/* Unmatch / Reset Matches */}
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleResetMatches}
-                className="text-xs text-slate-500 hover:text-slate-800"
-              >
-                Reset Matches
+                <span>Upload Statement</span>
               </Button>
             </div>
 
-            <div className="flex items-center gap-2">
-              {/* 6.3 Inline Adjustment Tool Button */}
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => setIsAdjustmentModalOpen(true)}
-                className="gap-1.5 text-xs text-primary border-primary-border hover:bg-primary-light"
-              >
-                <Plus className="h-3.5 w-3.5" />
-                <span>+ Add Adjustment (Bank Fee/Interest)</span>
-              </Button>
+            {/* Right Cluster: Adjustments & Completion */}
+            <div className="flex flex-wrap items-center gap-2">
+              {/* 6.3 Inline Adjustment Tool Button with DoubleEntryHoverBadge */}
+              <div className="flex items-center gap-1.5">
+                <DoubleEntryHoverBadge
+                  lines={[
+                    {
+                      accountCode: '6030',
+                      accountName: 'Bank Service Charges & Fees',
+                      type: 'DEBIT',
+                      amount: 500,
+                    },
+                    {
+                      accountCode: selectedBankAccount?.code || '1010',
+                      accountName: selectedBankAccount?.name || 'Bank Account',
+                      type: 'CREDIT',
+                      amount: 500,
+                    },
+                  ]}
+                  title="Fee Adjustment Preview: Dr 6030 / Cr 1010"
+                />
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setIsAdjustmentModalOpen(true)}
+                  className="gap-1.5 text-xs text-primary border-primary-border hover:bg-primary-light h-8"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  <span>+ Add Adjustment (Fee/Interest)</span>
+                </Button>
+              </div>
 
               {/* Completion Action Button: Strictly disabled unless Difference === 0.00 */}
-              <Button
-                size="sm"
-                onClick={handleFinishReconciliation}
-                disabled={!isReconciled}
-                className="gap-1.5 bg-primary hover:bg-primary-hover text-white text-xs font-semibold shadow-xs disabled:opacity-50"
-              >
-                <ShieldCheck className="h-4 w-4" />
-                <span>Reconcile Account</span>
-              </Button>
+              <div className="flex items-center gap-1.5">
+                <DoubleEntryHoverBadge
+                  lines={[
+                    {
+                      accountCode: selectedBankAccount?.code || '1010',
+                      accountName: `${selectedBankAccount?.name || 'Bank Account'} (Closing Target)`,
+                      type: 'DEBIT',
+                      amount: targetStatementBalance,
+                    },
+                    {
+                      accountCode: '1010',
+                      accountName: 'Reconciled Ledger Balance',
+                      type: 'CREDIT',
+                      amount: clearedBalance,
+                    },
+                  ]}
+                  title="Reconciliation Audit Period Lock"
+                />
+                <Button
+                  size="sm"
+                  onClick={handleFinishReconciliation}
+                  disabled={!isReconciled}
+                  className="gap-1.5 bg-primary hover:bg-primary-hover text-white text-xs font-semibold shadow-xs disabled:opacity-50 h-8"
+                >
+                  <ShieldCheck className="h-4 w-4" />
+                  <span>Reconcile Account</span>
+                </Button>
+              </div>
             </div>
           </div>
 
@@ -1070,7 +1204,45 @@ export function BankReconciliationPage() {
                               {formatDate(tx.date)}
                             </td>
                             <td className="px-3 py-2 font-mono font-semibold text-slate-800">
-                              {tx.reference}
+                              <div className="flex items-center gap-1">
+                                <span>{tx.reference}</span>
+                                {tx.reference.startsWith('ADJ-') && (
+                                  <DoubleEntryHoverBadge
+                                    lines={
+                                      tx.type === 'PAYMENT'
+                                        ? [
+                                            {
+                                              accountCode: '6030',
+                                              accountName: 'Bank Fee Expense',
+                                              type: 'DEBIT',
+                                              amount: tx.amount,
+                                            },
+                                            {
+                                              accountCode: selectedBankAccount?.code || '1010',
+                                              accountName: selectedBankAccount?.name || 'Bank Account',
+                                              type: 'CREDIT',
+                                              amount: tx.amount,
+                                            },
+                                          ]
+                                        : [
+                                            {
+                                              accountCode: selectedBankAccount?.code || '1010',
+                                              accountName: selectedBankAccount?.name || 'Bank Account',
+                                              type: 'DEBIT',
+                                              amount: tx.amount,
+                                            },
+                                            {
+                                              accountCode: '4010',
+                                              accountName: 'Interest Income',
+                                              type: 'CREDIT',
+                                              amount: tx.amount,
+                                            },
+                                          ]
+                                    }
+                                    title="Bank Adjustment GL Posting"
+                                  />
+                                )}
+                              </div>
                             </td>
                             <td className="px-3 py-2 text-slate-700 max-w-[180px] truncate" title={tx.description}>
                               {tx.description}
@@ -1346,7 +1518,7 @@ export function BankReconciliationPage() {
           </div>
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="flex items-center justify-between sm:justify-between w-full">
           <Button
             variant="outline"
             size="sm"
@@ -1354,14 +1526,50 @@ export function BankReconciliationPage() {
           >
             Cancel
           </Button>
-          <Button
-            size="sm"
-            onClick={handleSaveAdjustment}
-            disabled={adjustmentAmount <= 0 || submittingAdjustment}
-            className="bg-primary hover:bg-primary-hover text-white"
-          >
-            {submittingAdjustment ? 'Posting...' : 'Save & Cleared to Reconciliation'}
-          </Button>
+          <div className="flex items-center gap-2">
+            <DoubleEntryHoverBadge
+              lines={
+                adjustmentType === 'FEE'
+                  ? [
+                      {
+                        accountCode: accounts.find((a) => a.id === offsetAccountId)?.code || '6030',
+                        accountName: accounts.find((a) => a.id === offsetAccountId)?.name || 'Bank Service Charge Expense',
+                        type: 'DEBIT',
+                        amount: adjustmentAmount || 0,
+                      },
+                      {
+                        accountCode: selectedBankAccount?.code || '1010',
+                        accountName: selectedBankAccount?.name || 'Bank Account',
+                        type: 'CREDIT',
+                        amount: adjustmentAmount || 0,
+                      },
+                    ]
+                  : [
+                      {
+                        accountCode: selectedBankAccount?.code || '1010',
+                        accountName: selectedBankAccount?.name || 'Bank Account',
+                        type: 'DEBIT',
+                        amount: adjustmentAmount || 0,
+                      },
+                      {
+                        accountCode: accounts.find((a) => a.id === offsetAccountId)?.code || '4010',
+                        accountName: accounts.find((a) => a.id === offsetAccountId)?.name || 'Interest Income',
+                        type: 'CREDIT',
+                        amount: adjustmentAmount || 0,
+                      },
+                    ]
+              }
+              title="Adjustment Double-Entry GL Impact"
+            />
+            <Button
+              size="sm"
+              onClick={handleSaveAdjustment}
+              disabled={adjustmentAmount <= 0 || submittingAdjustment}
+              className="bg-primary hover:bg-primary-hover text-white font-semibold"
+            >
+              {submittingAdjustment ? 'Posting...' : 'Save & Cleared to Reconciliation'}
+            </Button>
+          </div>
         </DialogFooter>
       </Dialog>
 

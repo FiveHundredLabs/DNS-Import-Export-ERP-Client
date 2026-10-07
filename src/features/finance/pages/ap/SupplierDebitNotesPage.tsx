@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { apService, VendorBill } from '../../services/apService';
 import { useFinanceLedger } from '../../hooks/useFinanceLedger';
 import { CurrencyInput } from '../../components/CurrencyInput';
+import { DoubleEntryHoverBadge } from '../../components/DoubleEntryHoverBadge';
 import { Button } from '../../../../components/ui/button';
 import { Input } from '../../../../components/ui/input';
 import { Badge } from '../../../../components/ui/badge';
@@ -591,15 +592,35 @@ export function SupplierDebitNotesPage() {
               >
                 Cancel
               </Button>
-              <Button
-                type="submit"
-                size="sm"
-                disabled={submitting || totalDebitNoteAmount <= 0}
-                className="bg-primary hover:bg-primary-hover text-white gap-2 font-semibold"
-              >
-                <CheckCircle2 className="h-4 w-4" />
-                <span>{submitting ? 'Posting...' : 'Issue Debit Note & Post GL'}</span>
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button
+                  type="submit"
+                  size="sm"
+                  disabled={submitting || totalDebitNoteAmount <= 0}
+                  className="bg-primary hover:bg-primary-hover text-white gap-2 font-semibold"
+                >
+                  <CheckCircle2 className="h-4 w-4" />
+                  <span>{submitting ? 'Posting...' : 'Issue Debit Note & Post GL'}</span>
+                </Button>
+                <DoubleEntryHoverBadge
+                  title="Supplier Debit Note Double-Entry Impact"
+                  description="Issuing this debit note reduces accounts payable and stock valuation:"
+                  lines={[
+                    {
+                      accountCode: '2010',
+                      accountName: 'Accounts Payable (Liability Reduction)',
+                      type: 'DEBIT',
+                      amount: totalDebitNoteAmount,
+                    },
+                    {
+                      accountCode: '1100',
+                      accountName: 'Merchandise Inventory (Stock Return)',
+                      type: 'CREDIT',
+                      amount: totalDebitNoteAmount,
+                    },
+                  ]}
+                />
+              </div>
             </div>
           </form>
         </Card>
