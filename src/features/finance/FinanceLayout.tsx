@@ -15,6 +15,8 @@ import {
   FileText,
   SlidersHorizontal,
   LayoutDashboard,
+  Coins,
+  Undo2,
 } from 'lucide-react';
 import { InnerSidebarLayout } from '../../components/layout/InnerSidebarLayout';
 import { InnerNavItem } from '../../components/common/InnerSidebar';
@@ -46,6 +48,16 @@ const FINANCE_NAV_ITEMS: InnerNavItem[] = [
     name: 'Vendor Bill Costing (AP)',
     path: '/finance/ap/bills/new',
     icon: Receipt,
+  },
+  {
+    name: 'Advance Prepayments (AP)',
+    path: '/finance/ap/advances',
+    icon: Coins,
+  },
+  {
+    name: 'Supplier Debit Notes',
+    path: '/finance/ap/debit-notes',
+    icon: Undo2,
   },
   {
     name: 'Batch Supplier Payments',

@@ -8,6 +8,13 @@ import { Input } from '../../../../components/ui/input';
 import { Select } from '../../../../components/ui/select';
 import { Badge } from '../../../../components/ui/badge';
 import { Card } from '../../../../components/ui/card';
+import {
+  Dialog,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '../../../../components/ui/dialog';
 import { formatCurrency, formatDate } from '../../../../utils/formatters';
 import Decimal from 'decimal.js';
 import {
@@ -16,6 +23,12 @@ import {
   CheckCircle2,
   Lock,
   RotateCcw,
+  Calculator,
+  Percent,
+  Sliders,
+  Landmark,
+  Scale,
+  Sparkles,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -55,8 +68,24 @@ export function VendorBillCostingPage() {
   const [otherLandingCosts, setOtherLandingCosts] = useState<number>(0);
   const [submitting, setSubmitting] = useState(false);
 
-  // Initialize line items whenever selected GRN changes
-  // Initialize line items and header whenever selected GRN changes
+  // Landed Cost Engine Modal State
+  const [showApportionModal, setShowApportionModal] = useState(false);
+  const [apportionBulkFreight, setApportionBulkFreight] = useState<number>(0);
+  const [apportionMethod, setApportionMethod] = useState<'BY_VALUE' | 'BY_QUANTITY'>('BY_VALUE');
+
+  // Advance Prepayments integration
+  const unappliedAdvances = useMemo(() => {
+    if (!selectedGRN) return [];
+    return apService.getUnappliedAdvancesForSupplier(
+      selectedGRN.supplierId || selectedGRN.supplierName
+    );
+  }, [selectedGRN]);
+
+  const [applyAdvanceEnabled, setApplyAdvanceEnabled] = useState(false);
+  const [selectedAdvanceId, setSelectedAdvanceId] = useState<string>('');
+  const [advanceAmountToApply, setAdvanceAmountToApply] = useState<number>(0);
+
+  // Auto-initialize line items & auto-pull historical purchase price from Supplier Master
   useEffect(() => {
     if (existingBill) {
       setVendorInvoiceNumber(existingBill.vendorInvoiceNumber);
@@ -69,10 +98,15 @@ export function VendorBillCostingPage() {
       setVendorInvoiceNumber('');
       setInvoiceDate(new Date().toISOString().slice(0, 10));
       const items: VendorBillLineItem[] = selectedGRN.items.map((item, idx) => {
-        const draftCost = item.unitCostSnapshot || 0;
+        // Auto-pull last known historical purchase price from Supplier Master
+        const histPrice = apService.getHistoricalPurchasePrice(
+          selectedGRN.supplierId || selectedGRN.supplierName,
+          item.productId
+        );
+        const actualCost = histPrice > 0 ? histPrice : (item.unitCostSnapshot || 0);
         const qty = item.receivedQuantity || 1;
         const discount = 0;
-        const net = new Decimal(qty).times(draftCost).minus(discount);
+        const net = new Decimal(qty).times(actualCost).minus(discount);
         const vat = net.times(0.18).toNumber();
 
         return {
@@ -81,19 +115,35 @@ export function VendorBillCostingPage() {
           productName: item.productNameSnapshot,
           sku: item.skuSnapshot,
           receivedQuantity: qty,
-          draftUnitCost: draftCost,
-          unitCost: draftCost,
+          draftUnitCost: item.unitCostSnapshot || actualCost,
+          unitCost: actualCost,
+          historicalPurchasePrice: histPrice,
           lineDiscount: 0,
           vatCode: 'STANDARD_18',
           vatAmount: vat,
           lineTotal: net.plus(vat).toNumber(),
+          apportionedFreight: 0,
+          landedUnitCost: actualCost,
         };
       });
       setLineItems(items);
       setFreightCharges(0);
       setOtherLandingCosts(0);
+      setApportionBulkFreight(0);
     }
   }, [selectedGRN, existingBill]);
+
+  // Update advance selection when unapplied advances change
+  useEffect(() => {
+    if (unappliedAdvances.length > 0) {
+      setSelectedAdvanceId(unappliedAdvances[0].id);
+      setAdvanceAmountToApply(unappliedAdvances[0].unappliedBalance);
+    } else {
+      setSelectedAdvanceId('');
+      setAdvanceAmountToApply(0);
+      setApplyAdvanceEnabled(false);
+    }
+  }, [unappliedAdvances]);
 
   // Handler for line item updates
   const updateLineItem = (index: number, field: keyof VendorBillLineItem, val: any) => {
@@ -111,9 +161,25 @@ export function VendorBillCostingPage() {
       current.vatAmount = vat.toNumber();
       current.lineTotal = net.plus(vat).toNumber();
 
+      // Recalculate landed unit cost if apportioned freight is present
+      const lineFreight = new Decimal(current.apportionedFreight || 0);
+      current.landedUnitCost = qty.isZero()
+        ? 0
+        : net.plus(lineFreight).dividedBy(qty).toDecimalPlaces(2).toNumber();
+
       next[index] = current;
       return next;
     });
+  };
+
+  // Reset line item to historical purchase price from Supplier Master
+  const resetToHistoricalCost = (index: number) => {
+    if (isAuditLocked) return;
+    const hist = lineItems[index]?.historicalPurchasePrice;
+    if (hist && hist > 0) {
+      updateLineItem(index, 'unitCost', hist);
+      toast.info(`Reset ${lineItems[index].productName} to historical master price of ${formatCurrency(hist)}`);
+    }
   };
 
   // Calculations for summary totals
@@ -140,6 +206,27 @@ export function VendorBillCostingPage() {
     };
   }, [lineItems, freightCharges, otherLandingCosts]);
 
+  // Landed Cost Apportionment Engine
+  const previewApportionment = useMemo(() => {
+    return apService.apportionFreight(lineItems, apportionBulkFreight, apportionMethod);
+  }, [lineItems, apportionBulkFreight, apportionMethod]);
+
+  const handleApplyApportionment = () => {
+    if (apportionBulkFreight < 0) {
+      toast.error('Bulk freight amount cannot be negative');
+      return;
+    }
+    const apportionedItems = apService.apportionFreight(lineItems, apportionBulkFreight, apportionMethod);
+    setLineItems(apportionedItems);
+    setFreightCharges(apportionBulkFreight);
+    setShowApportionModal(false);
+    toast.success(
+      `Freight of ${formatCurrency(apportionBulkFreight)} successfully apportioned across ${lineItems.length} line items by ${
+        apportionMethod === 'BY_VALUE' ? 'Net Line Value' : 'Received Quantity'
+      }. True landed unit costs calculated.`
+    );
+  };
+
   // Validation: header inputs required, valid costs
   const isFormValid = useMemo(() => {
     if (!selectedGRN) return false;
@@ -165,10 +252,12 @@ export function VendorBillCostingPage() {
         lineItems,
         freightCharges,
         otherLandingCosts,
+        applyAdvanceId: applyAdvanceEnabled ? selectedAdvanceId : undefined,
+        advanceAmountToApply: applyAdvanceEnabled ? advanceAmountToApply : undefined,
       });
 
       toast.success(
-        `Vendor Bill ${bill.billNumber} posted successfully! GRN marked as COSTED and GL double-entry recorded.`
+        `Vendor Bill ${bill.billNumber} posted successfully! True landed cost recorded and debited to 1025 Input VAT Receivable.`
       );
       navigate('/finance/desk');
     } catch (err: unknown) {
@@ -212,22 +301,44 @@ export function VendorBillCostingPage() {
           </p>
         </div>
 
-        {/* GRN Selection Queue Dropdown */}
-        <div className="flex items-center gap-3">
-          <label className="text-xs font-semibold text-slate-600 whitespace-nowrap">
-            Select Inbound GRN:
-          </label>
-          <Select
-            value={selectedGRNId}
-            onChange={(e) => setSelectedGRNId(e.target.value)}
-            className="text-xs h-9 min-w-56"
+        <div className="flex flex-wrap items-center gap-3">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigate('/finance/ap/advances')}
+            className="gap-1.5 text-xs border-emerald-300 text-emerald-800 hover:bg-emerald-50"
           >
-            {availableGRNs.map((g) => (
-              <option key={g.id} value={g.id}>
-                {g.grnNumber} - {g.supplierName} ({g.status})
-              </option>
-            ))}
-          </Select>
+            <Landmark className="h-3.5 w-3.5 text-emerald-600" />
+            <span>Supplier Advances</span>
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigate('/finance/ap/debit-notes')}
+            className="gap-1.5 text-xs border-rose-300 text-rose-800 hover:bg-rose-50"
+          >
+            <RotateCcw className="h-3.5 w-3.5 text-rose-600" />
+            <span>Supplier Debit Notes</span>
+          </Button>
+
+          {/* GRN Selection Queue Dropdown */}
+          <div className="flex items-center gap-2">
+            <label className="text-xs font-semibold text-slate-600 whitespace-nowrap">
+              Inbound GRN:
+            </label>
+            <Select
+              value={selectedGRNId}
+              onChange={(e) => setSelectedGRNId(e.target.value)}
+              className="text-xs h-9 min-w-56"
+            >
+              {availableGRNs.map((g) => (
+                <option key={g.id} value={g.id}>
+                  {g.grnNumber} - {g.supplierName} ({g.status})
+                </option>
+              ))}
+            </Select>
+          </div>
         </div>
       </div>
 
@@ -307,16 +418,10 @@ export function VendorBillCostingPage() {
                         <div className="flex items-center justify-between text-[11px] text-slate-500 font-mono">
                           <span>SKU: {item.skuSnapshot}</span>
                           {item.damagedQuantity > 0 && (
-                            <span className="text-rose-600">
+                            <span className="text-rose-600 font-semibold">
                               Damaged: {item.damagedQuantity}
                             </span>
                           )}
-                        </div>
-                        <div className="text-[11px] text-slate-500 pt-1 border-t border-slate-100 flex items-center justify-between">
-                          <span>Draft Unit Cost (Stock Keeper Ref):</span>
-                          <span className="font-mono font-medium text-slate-700 tabular-nums">
-                            {formatCurrency(item.unitCostSnapshot || 0)}
-                          </span>
                         </div>
                       </div>
                     ))}
@@ -412,81 +517,173 @@ export function VendorBillCostingPage() {
               </div>
             </div>
 
-            {/* Line Items Dynamic Form Array: Unit Cost, Line Discount, VAT Code */}
+            {/* Line Items Dynamic Form Array */}
             <div className="space-y-3">
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                Costing Breakdown per Item
-              </span>
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                  Costing Breakdown per Item
+                </span>
+                <span className="text-[11px] text-slate-400">
+                  Historical prices auto-pulled from Supplier Master
+                </span>
+              </div>
 
               <div className="space-y-3">
-                {lineItems.map((item, index) => (
-                  <div
-                    key={item.id}
-                    className="rounded-lg border border-slate-200 bg-slate-50/50 p-3 space-y-3"
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-slate-800">
-                        {item.productName} ({item.receivedQuantity} Qty)
-                      </span>
-                      <span className="text-xs font-mono font-bold text-slate-900 tabular-nums">
-                        Total: {formatCurrency(item.lineTotal)}
-                      </span>
+                {lineItems.map((item, index) => {
+                  const hist = item.historicalPurchasePrice || 0;
+                  const priceDiff = item.unitCost - hist;
+                  const hasVariance = hist > 0 && Math.abs(priceDiff) > 0.01;
+
+                  return (
+                    <div
+                      key={item.id}
+                      className="rounded-lg border border-slate-200 bg-slate-50/50 p-3.5 space-y-3"
+                    >
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-bold text-slate-800">
+                              {item.productName}
+                            </span>
+                            <Badge variant="outline" className="text-[10px] bg-slate-100 font-mono">
+                              {item.sku}
+                            </Badge>
+                          </div>
+                          {/* Historical price auto-pull display */}
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="text-[11px] text-slate-500 font-medium">
+                              Last Historical Price:
+                            </span>
+                            <span className="text-[11px] font-mono font-semibold text-primary">
+                              {hist > 0 ? formatCurrency(hist) : 'No prior history'}
+                            </span>
+                            <span className="text-[10px] text-slate-400">(Supplier Master)</span>
+
+                            {hasVariance && (
+                              <div className="flex items-center gap-1.5 ml-2">
+                                <Badge
+                                  variant="outline"
+                                  className={`text-[10px] py-0 px-1.5 ${
+                                    priceDiff > 0
+                                      ? 'bg-amber-50 text-amber-700 border-amber-300'
+                                      : 'bg-emerald-50 text-emerald-700 border-emerald-300'
+                                  }`}
+                                >
+                                  {priceDiff > 0 ? `+${formatCurrency(priceDiff)}` : formatCurrency(priceDiff)}
+                                </Badge>
+                                {!isAuditLocked && (
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => resetToHistoricalCost(index)}
+                                    className="h-5 text-[10px] px-1 text-primary hover:text-primary-hover hover:underline"
+                                  >
+                                    Reset to Master
+                                  </Button>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="text-right">
+                          <span className="text-xs font-mono font-bold text-slate-900 tabular-nums block">
+                            Total: {formatCurrency(item.lineTotal)}
+                          </span>
+                          <span className="text-[10px] text-slate-500">
+                            {item.receivedQuantity} received units
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div>
+                          <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                            Base Unit Cost <span className="text-rose-500">*</span>
+                          </label>
+                          <CurrencyInput
+                            value={item.unitCost}
+                            onChange={(val) => updateLineItem(index, 'unitCost', val)}
+                            placeholder="0.00"
+                            disabled={isAuditLocked || submitting}
+                            readOnly={isAuditLocked}
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                            Line Discount (LKR)
+                          </label>
+                          <CurrencyInput
+                            value={item.lineDiscount}
+                            onChange={(val) => updateLineItem(index, 'lineDiscount', val)}
+                            placeholder="0.00"
+                            disabled={isAuditLocked || submitting}
+                            readOnly={isAuditLocked}
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                            VAT Code
+                          </label>
+                          <Select
+                            value={item.vatCode}
+                            onChange={(e) =>
+                              updateLineItem(index, 'vatCode', e.target.value)
+                            }
+                            disabled={isAuditLocked || submitting}
+                            className="h-9 text-xs"
+                          >
+                            <option value="STANDARD_18">Standard VAT (18%)</option>
+                            <option value="EXEMPT">Exempt / Zero-Rated</option>
+                          </Select>
+                        </div>
+                      </div>
+
+                      {/* Landed Cost Breakdown Display if freight is apportioned */}
+                      {(item.apportionedFreight || 0) > 0 && (
+                        <div className="pt-2 border-t border-slate-200/70 flex items-center justify-between text-xs bg-slate-100/60 rounded px-2.5 py-1.5 font-mono">
+                          <span className="text-slate-600 text-[11px]">
+                            Apportioned Freight: +{formatCurrency(item.apportionedFreight || 0)} (+{formatCurrency((item.apportionedFreight || 0) / (item.receivedQuantity || 1))}/unit)
+                          </span>
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-semibold text-slate-700 text-[11px]">True Landed Unit Cost:</span>
+                            <span className="font-bold text-primary text-xs">
+                              {formatCurrency(item.landedUnitCost || item.unitCost)}
+                            </span>
+                          </div>
+                        </div>
+                      )}
                     </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                      <div>
-                        <label className="block text-[11px] font-semibold text-slate-600 mb-1">
-                          Actual Unit Cost <span className="text-rose-500">*</span>
-                        </label>
-                        <CurrencyInput
-                          value={item.unitCost}
-                          onChange={(val) => updateLineItem(index, 'unitCost', val)}
-                          placeholder="0.00"
-                          disabled={isAuditLocked || submitting}
-                          readOnly={isAuditLocked}
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-[11px] font-semibold text-slate-600 mb-1">
-                          Line Discount (LKR)
-                        </label>
-                        <CurrencyInput
-                          value={item.lineDiscount}
-                          onChange={(val) => updateLineItem(index, 'lineDiscount', val)}
-                          placeholder="0.00"
-                          disabled={isAuditLocked || submitting}
-                          readOnly={isAuditLocked}
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-[11px] font-semibold text-slate-600 mb-1">
-                          VAT Code
-                        </label>
-                        <Select
-                          value={item.vatCode}
-                          onChange={(e) =>
-                            updateLineItem(index, 'vatCode', e.target.value)
-                          }
-                          disabled={isAuditLocked || submitting}
-                          className="h-9 text-xs"
-                        >
-                          <option value="STANDARD_18">Standard VAT (18%)</option>
-                          <option value="EXEMPT">Exempt / Zero-Rated</option>
-                        </Select>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
 
-            {/* Totals Section: Freight Charges and Other Landing Costs */}
+            {/* Landed Cost Engine: Apportion Freight Tool & Additional Landing Costs */}
             <div className="rounded-lg border border-slate-200 bg-slate-50/70 p-4 space-y-3">
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-600 block">
-                Additional Landed Charges (Capitalized to Inventory)
-              </span>
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-700 block">
+                  Additional Landed Charges (Landed Cost Engine - Capitalized to Inventory)
+                </span>
+                {!isAuditLocked && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setApportionBulkFreight(freightCharges || 0);
+                      setShowApportionModal(true);
+                    }}
+                    className="h-7 text-xs gap-1.5 bg-primary-light text-primary-text border-primary-border hover:bg-primary-light/80 font-semibold"
+                  >
+                    <Calculator className="h-3.5 w-3.5" />
+                    <span>Apportion Freight Tool</span>
+                  </Button>
+                )}
+              </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
@@ -495,11 +692,21 @@ export function VendorBillCostingPage() {
                   </label>
                   <CurrencyInput
                     value={freightCharges}
-                    onChange={(val) => setFreightCharges(val)}
+                    onChange={(val) => {
+                      setFreightCharges(val);
+                      // Auto distribute if freight is directly edited
+                      if (val > 0) {
+                        const apportioned = apService.apportionFreight(lineItems, val, apportionMethod);
+                        setLineItems(apportioned);
+                      }
+                    }}
                     placeholder="0.00"
                     disabled={isAuditLocked || submitting}
                     readOnly={isAuditLocked}
                   />
+                  <span className="text-[10px] text-slate-400 mt-1 block">
+                    Use Apportion Freight tool above to distribute across line items
+                  </span>
                 </div>
 
                 <div>
@@ -517,6 +724,53 @@ export function VendorBillCostingPage() {
               </div>
             </div>
 
+            {/* Advance Prepayments Application Banner */}
+            {unappliedAdvances.length > 0 && !isAuditLocked && (
+              <div className="rounded-lg border border-emerald-200 bg-emerald-50/60 p-4 space-y-3 animate-in fade-in-50">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Landmark className="h-4 w-4 text-emerald-700" />
+                    <span className="text-xs font-bold text-emerald-900">
+                      Supplier Advance Prepayment Available
+                    </span>
+                  </div>
+                  <Badge variant="outline" className="bg-white text-emerald-800 border-emerald-300 text-[11px] font-mono">
+                    Unapplied: {formatCurrency(unappliedAdvances[0].unappliedBalance)}
+                  </Badge>
+                </div>
+
+                <p className="text-xs text-emerald-800">
+                  Prepayment {unappliedAdvances[0].advanceNumber} (Ref: {unappliedAdvances[0].reference}) can be drawn down to offset this vendor bill commitment.
+                </p>
+
+                <div className="flex items-center gap-4 pt-1">
+                  <label className="flex items-center gap-2 text-xs font-medium text-emerald-950 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={applyAdvanceEnabled}
+                      onChange={(e) => setApplyAdvanceEnabled(e.target.checked)}
+                      className="rounded border-emerald-400 text-emerald-600 focus:ring-emerald-500"
+                    />
+                    <span>Apply Advance Prepayment to this Bill</span>
+                  </label>
+
+                  {applyAdvanceEnabled && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-emerald-800 font-semibold">Amount to Draw:</span>
+                      <div className="w-36">
+                        <CurrencyInput
+                          value={advanceAmountToApply}
+                          onChange={(val) => setAdvanceAmountToApply(Math.min(val, unappliedAdvances[0].unappliedBalance))}
+                          max={unappliedAdvances[0].unappliedBalance}
+                          className="h-8 text-xs bg-white"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Financial Summary Box */}
             <div className="rounded-lg border border-primary-border/60 bg-primary-light/40 p-4 space-y-2 text-xs">
               <div className="flex justify-between text-slate-600">
@@ -532,7 +786,7 @@ export function VendorBillCostingPage() {
                 </span>
               </div>
               <div className="flex justify-between text-slate-600">
-                <span>VAT Total (Input VAT):</span>
+                <span>1025 Input VAT Receivable (Asset):</span>
                 <span className="font-mono font-semibold tabular-nums text-slate-800">
                   {formatCurrency(vatTotal)}
                 </span>
@@ -543,6 +797,24 @@ export function VendorBillCostingPage() {
                   {formatCurrency(grandTotal)}
                 </span>
               </div>
+
+              {applyAdvanceEnabled && advanceAmountToApply > 0 && (
+                <div className="pt-2 border-t border-emerald-200 flex justify-between text-xs font-bold text-emerald-900">
+                  <span>Less Prepayment Advance Drawn:</span>
+                  <span className="font-mono text-emerald-700 tabular-nums">
+                    -{formatCurrency(advanceAmountToApply)}
+                  </span>
+                </div>
+              )}
+
+              {applyAdvanceEnabled && advanceAmountToApply > 0 && (
+                <div className="flex justify-between text-xs font-bold text-slate-900">
+                  <span>Net Payable Balance Due to Supplier:</span>
+                  <span className="font-mono text-slate-900 tabular-nums">
+                    {formatCurrency(Math.max(0, grandTotal - advanceAmountToApply))}
+                  </span>
+                </div>
+              )}
             </div>
 
             {/* Footer Action: Void/Reverse button if Audit Locked; Post Vendor Bill if New/Editable */}
@@ -588,6 +860,106 @@ export function VendorBillCostingPage() {
           </Card>
         </div>
       </div>
+
+      {/* Landed Cost Engine: Apportion Freight Modal */}
+      <Dialog open={showApportionModal} onOpenChange={setShowApportionModal}>
+        <div className="space-y-4">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-slate-900">
+              <Calculator className="h-5 w-5 text-primary" />
+              <span>Landed Cost Engine: Apportion Freight</span>
+            </DialogTitle>
+            <DialogDescription className="text-xs text-slate-500">
+              Distribute bulk shipping and freight charges across line items to establish true landed unit cost.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-50 p-3 rounded-lg border border-slate-200">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Bulk Freight Amount (LKR)
+                </label>
+                <CurrencyInput
+                  value={apportionBulkFreight}
+                  onChange={(val) => setApportionBulkFreight(val)}
+                  placeholder="0.00"
+                  className="bg-white h-9 text-xs"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Apportionment Method
+                </label>
+                <Select
+                  value={apportionMethod}
+                  onChange={(e) => setApportionMethod(e.target.value as 'BY_VALUE' | 'BY_QUANTITY')}
+                  className="bg-white h-9 text-xs"
+                >
+                  <option value="BY_VALUE">By Line Value (Proportional to Net Value)</option>
+                  <option value="BY_QUANTITY">By Quantity (Proportional to Units)</option>
+                </Select>
+              </div>
+            </div>
+
+            {/* Live Distribution Preview Table */}
+            <div className="border border-slate-200 rounded-lg overflow-hidden">
+              <table className="w-full text-xs">
+                <thead className="bg-slate-100 text-slate-600 font-semibold border-b border-slate-200">
+                  <tr>
+                    <th className="py-2 px-3 text-left">Item</th>
+                    <th className="py-2 px-2 text-right">Units</th>
+                    <th className="py-2 px-2 text-right">Base Cost</th>
+                    <th className="py-2 px-2 text-right">Apportioned Freight</th>
+                    <th className="py-2 px-3 text-right">True Landed Cost</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {previewApportionment.map((item) => (
+                    <tr key={item.id} className="hover:bg-slate-50/80">
+                      <td className="py-2 px-3">
+                        <span className="font-semibold text-slate-800 block truncate max-w-[160px]">
+                          {item.productName}
+                        </span>
+                        <span className="text-[10px] text-slate-400 font-mono">{item.sku}</span>
+                      </td>
+                      <td className="py-2 px-2 text-right font-mono font-medium">{item.receivedQuantity}</td>
+                      <td className="py-2 px-2 text-right font-mono">{formatCurrency(item.unitCost)}</td>
+                      <td className="py-2 px-2 text-right font-mono text-primary font-semibold">
+                        +{formatCurrency(item.apportionedFreight || 0)}
+                      </td>
+                      <td className="py-2 px-3 text-right font-mono font-bold text-slate-900">
+                        {formatCurrency(item.landedUnitCost || item.unitCost)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <DialogFooter className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setShowApportionModal(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              onClick={handleApplyApportionment}
+              className="bg-primary hover:bg-primary-hover text-white gap-1.5"
+            >
+              <CheckCircle2 className="h-4 w-4" />
+              <span>Apply Apportionment</span>
+            </Button>
+          </DialogFooter>
+        </div>
+      </Dialog>
     </div>
   );
 }

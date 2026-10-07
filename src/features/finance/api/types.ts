@@ -44,8 +44,65 @@ export interface Supplier {
   status: 'ACTIVE' | 'INACTIVE';
   balance: number;
   currency: string;
+  historicalPrices?: Record<string, number>; // productId -> last known historical purchase price
   createdAt: string;
   updatedAt: string;
+}
+
+export interface SupplierAdvanceApplication {
+  id: string;
+  billId?: string;
+  billNumber?: string;
+  grnId?: string;
+  grnNumber?: string;
+  appliedAmount: number;
+  appliedAt: string;
+  journalEntryId?: string;
+}
+
+export interface SupplierAdvance {
+  id: string;
+  advanceNumber: string;
+  supplierId: string;
+  supplierName: string;
+  paymentDate: string;
+  bankAccountId: string;
+  bankAccountCode: string;
+  reference: string;
+  amount: number;
+  unappliedBalance: number;
+  status: 'UNAPPLIED' | 'PARTIALLY_APPLIED' | 'APPLIED' | 'VOIDED';
+  notes?: string;
+  journalEntryId?: string;
+  appliedTo?: SupplierAdvanceApplication[];
+  createdAt: string;
+}
+
+export interface SupplierDebitNoteLineItem {
+  id?: string;
+  productId: string;
+  productName: string;
+  sku: string;
+  damagedQuantity: number;
+  unitCost: number;
+  lineTotal: number;
+  reason?: string;
+}
+
+export interface SupplierDebitNote {
+  id: string;
+  debitNoteNumber: string;
+  supplierId: string;
+  supplierName: string;
+  grnId?: string;
+  grnNumber?: string;
+  date: string;
+  reason: string;
+  lineItems: SupplierDebitNoteLineItem[];
+  totalAmount: number;
+  status: 'ISSUED' | 'SETTLED' | 'VOIDED';
+  journalEntryId?: string;
+  createdAt: string;
 }
 
 export interface JournalLine {

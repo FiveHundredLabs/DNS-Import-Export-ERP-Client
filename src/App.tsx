@@ -47,6 +47,8 @@ import { TrialBalancePage } from './features/finance/pages/reports/TrialBalanceP
 import { GeneralLedgerPage } from './features/finance/pages/reports/GeneralLedgerPage';
 import { VatSummaryPage } from './features/finance/pages/reports/VatSummaryPage';
 import { VendorBillCostingPage } from './features/finance/pages/ap/VendorBillCostingPage';
+import { SupplierAdvancePaymentsPage } from './features/finance/pages/ap/SupplierAdvancePaymentsPage';
+import { SupplierDebitNotesPage } from './features/finance/pages/ap/SupplierDebitNotesPage';
 import { BatchSupplierPaymentPage } from './features/finance/pages/ap/BatchSupplierPaymentPage';
 import { ReceiptApprovalQueuePage } from './features/finance/pages/ar/ReceiptApprovalQueuePage';
 import { ARCollectionAllocationPage } from './features/finance/pages/ar/ARCollectionAllocationPage';
@@ -401,6 +403,8 @@ export function App() {
 
           {/* Accounts Payable (AP) Workflows */}
           <Route path="ap/bills/new" element={<VendorBillCostingPage />} />
+          <Route path="ap/advances" element={<SupplierAdvancePaymentsPage />} />
+          <Route path="ap/debit-notes" element={<SupplierDebitNotesPage />} />
           <Route path="ap/payments/new" element={<BatchSupplierPaymentPage />} />
 
           {/* Accounts Receivable (AR) & Collections */}

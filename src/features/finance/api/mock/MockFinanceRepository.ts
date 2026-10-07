@@ -55,8 +55,10 @@ export const DEFAULT_SYSTEM_ACCOUNTS: Account[] = [
   // Current Assets
   createAccountRecord('acc-1010', '1010', 'Bank Account', 'ASSET', 'CURRENT_ASSET', 'Cash & Cash Equivalents', 'Primary corporate operating checking account', true, 2500000.0),
   createAccountRecord('acc-1020', '1020', 'Accounts Receivable', 'ASSET', 'CURRENT_ASSET', 'Trade Receivables (A/R Control)', 'Trade receivables from customers and dealers', true, 850000.0),
+  createAccountRecord('acc-1025', '1025', 'Input VAT Receivable', 'ASSET', 'CURRENT_ASSET', 'Tax Assets', 'Input Value Added Tax paid on purchases claimable from Inland Revenue Department', false, 0.0),
   createAccountRecord('acc-1030', '1030', 'Inventory', 'ASSET', 'CURRENT_ASSET', 'Merchandise Inventory', 'Valuation of finished goods and stock in warehouses', true, 4200000.0),
   createAccountRecord('acc-1040', '1040', 'Cash in Hand', 'ASSET', 'CURRENT_ASSET', 'Petty Cash Float', 'Showroom petty cash and drawer float', false, 75000.0),
+  createAccountRecord('acc-1050', '1050', 'Advance to Suppliers', 'ASSET', 'CURRENT_ASSET', 'Prepayments & Advances', 'Prepayments and advance deposits paid to suppliers prior to billing', false, 0.0),
   createAccountRecord('acc-1510', '1510', 'Office Equipment & Vehicles', 'ASSET', 'NON_CURRENT_ASSET', 'Fixed & Capital Assets', 'Fixed assets and capital equipment', false, 1200000.0),
 
   // Current Liabilities
@@ -92,6 +94,11 @@ export const DEFAULT_SUPPLIERS: Supplier[] = [
     status: 'ACTIVE',
     balance: 850000.0,
     currency: 'LKR',
+    historicalPrices: {
+      'prod-001': 2200,
+      'prod-002': 5800,
+      'prod-003': 18000,
+    },
     createdAt: '2026-01-15T08:30:00.000Z',
     updatedAt: '2026-01-15T08:30:00.000Z',
   },
@@ -108,6 +115,10 @@ export const DEFAULT_SUPPLIERS: Supplier[] = [
     status: 'ACTIVE',
     balance: 420000.0,
     currency: 'LKR',
+    historicalPrices: {
+      'prod-003': 18500,
+      'prod-004': 14200,
+    },
     createdAt: '2026-02-01T10:00:00.000Z',
     updatedAt: '2026-02-01T10:00:00.000Z',
   },
@@ -124,6 +135,10 @@ export const DEFAULT_SUPPLIERS: Supplier[] = [
     status: 'ACTIVE',
     balance: 0.0,
     currency: 'LKR',
+    historicalPrices: {
+      'prod-001': 2150,
+      'prod-002': 5700,
+    },
     createdAt: '2026-02-15T11:20:00.000Z',
     updatedAt: '2026-02-15T11:20:00.000Z',
   },
@@ -140,6 +155,10 @@ export const DEFAULT_SUPPLIERS: Supplier[] = [
     status: 'ACTIVE',
     balance: 380000.0,
     currency: 'LKR',
+    historicalPrices: {
+      'prod-003': 18200,
+      'prod-004': 14000,
+    },
     createdAt: '2026-03-01T09:15:00.000Z',
     updatedAt: '2026-03-01T09:15:00.000Z',
   },
@@ -1127,12 +1146,26 @@ export class MockFinanceRepository implements IFinanceRepository {
       }
     }
 
+    // Input VAT paid on purchases (Debited to 1025 Input VAT Receivable)
+    let vatPaidOnPurchases = 0;
+    const purchaseJournals = this.journals.filter(
+      (j) => j.date >= startDate && j.date <= endDate && (j.source === 'GRN' || j.source === 'MANUAL' || j.source === 'SYSTEM')
+    );
+    for (const j of purchaseJournals) {
+      const inputVatLine = j.lines.find((l) => l.accountCode === '1025');
+      if (inputVatLine && inputVatLine.debit > 0) {
+        vatPaidOnPurchases += inputVatLine.debit;
+      }
+    }
+
+    const netVatPayable = vatCollected - vatPaidOnPurchases;
+
     return {
       dateRange: { start: startDate, end: endDate },
       taxableSales: Number(taxableSales.toFixed(2)),
       vatCollected: Number(vatCollected.toFixed(2)),
-      vatPaidOnPurchases: 0.0,
-      netVatPayable: Number(vatCollected.toFixed(2)),
+      vatPaidOnPurchases: Number(vatPaidOnPurchases.toFixed(2)),
+      netVatPayable: Number(netVatPayable.toFixed(2)),
       transactions,
     };
   }

@@ -106,6 +106,10 @@ export function GRNDetailPage() {
 
   const totalValue = grn.items?.reduce((acc: number, item: any) => acc + ((item.unitCostSnapshot ?? item.unitCost ?? 0) * (item.receivedQuantity - (item.damagedQuantity || 0))), 0) || 0;
 
+  const isStockKeeper = user?.role === 'STOCK_KEEPER';
+  const hasDamagedStock = grn.items?.some((i: any) => (i.damagedQuantity || 0) > 0);
+  const totalUnits = grn.items?.reduce((acc: number, item: any) => acc + (item.receivedQuantity - (item.damagedQuantity || 0)), 0) || 0;
+
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
@@ -114,12 +118,22 @@ export function GRNDetailPage() {
           <Badge className={`${getStatusColor(grn.status)} text-white border-0`}>{grn.status}</Badge>
         </div>
         <div className="flex items-center gap-2">
-          {grn.status === 'APPROVED' && (
+          {grn.status === 'APPROVED' && !isStockKeeper && (
             <Button
               onClick={() => navigate(`/finance/ap/bills/new?grnId=${grn.id}`)}
               className="bg-primary hover:bg-primary-hover text-white text-xs"
             >
               Cost in Finance (Create Vendor Bill)
+            </Button>
+          )}
+          {hasDamagedStock && !isStockKeeper && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate(`/finance/ap/debit-notes?grnId=${grn.id}`)}
+              className="border-rose-200 text-rose-700 hover:bg-rose-50 text-xs"
+            >
+              Return Damaged Stock (Debit Note)
             </Button>
           )}
           <Button variant="outline" size="sm" onClick={() => navigate('/inventory/grn')}>
@@ -168,8 +182,8 @@ export function GRNDetailPage() {
                 <TableHead className="text-right">Received Qty</TableHead>
                 <TableHead className="text-right">Damaged Qty</TableHead>
                 <TableHead className="text-right">Good Qty</TableHead>
-                <TableHead className="text-right">Unit Cost</TableHead>
-                <TableHead className="text-right">Line Value</TableHead>
+                {!isStockKeeper && <TableHead className="text-right">Unit Cost</TableHead>}
+                {!isStockKeeper && <TableHead className="text-right">Line Value</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -186,15 +200,21 @@ export function GRNDetailPage() {
                     <TableCell className="text-right">{item.receivedQuantity}</TableCell>
                     <TableCell className="text-right">{item.damagedQuantity || 0}</TableCell>
                     <TableCell className="text-right">{goodQty}</TableCell>
-                    <TableCell className="text-right">{formatCurrency(unitCost)}</TableCell>
-                    <TableCell className="text-right">{formatCurrency(lineValue)}</TableCell>
+                    {!isStockKeeper && (
+                      <TableCell className="text-right">{formatCurrency(unitCost)}</TableCell>
+                    )}
+                    {!isStockKeeper && (
+                      <TableCell className="text-right">{formatCurrency(lineValue)}</TableCell>
+                    )}
                   </TableRow>
                 );
               })}
             </TableBody>
           </Table>
           <div className="flex justify-end mt-4 text-lg font-bold">
-            Total Value: {formatCurrency(totalValue)}
+            {isStockKeeper
+              ? `Total Accepted Units: ${totalUnits}`
+              : `Total Value: ${formatCurrency(totalValue)}`}
           </div>
         </CardContent>
       </Card>
