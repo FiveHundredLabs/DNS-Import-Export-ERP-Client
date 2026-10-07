@@ -694,36 +694,36 @@ export function CustomerCreditNotesPage() {
             </div>
 
             {/* Universal Journal Entry Breakdown */}
-            <div className="p-4 rounded-lg bg-slate-900 text-slate-100 space-y-2.5 font-mono text-[11px]">
-              <div className="text-[10px] uppercase font-bold font-sans text-slate-400 flex items-center gap-1.5">
+            <div className="p-4 rounded-lg bg-slate-50 border border-slate-200 text-slate-800 space-y-2.5 font-mono text-[11px]">
+              <div className="text-[10px] uppercase font-bold font-sans text-slate-500 flex items-center gap-1.5">
                 <Landmark className="h-3.5 w-3.5 text-primary" />
                 Double-Entry Accounting Voucher Lines
               </div>
 
-              <div className="space-y-1.5 pt-1 border-t border-slate-800">
-                <div className="flex justify-between text-rose-300">
+              <div className="space-y-1.5 pt-1 border-t border-slate-200">
+                <div className="flex justify-between text-rose-700 font-medium">
                   <span>Dr 4010 Sales Revenue (Net Reversal)</span>
-                  <span>{formatCurrency(selectedCN.subtotal)}</span>
+                  <span className="tabular-nums">{formatCurrency(selectedCN.subtotal)}</span>
                 </div>
                 {selectedCN.vatAmount > 0 && (
-                  <div className="flex justify-between text-amber-300">
+                  <div className="flex justify-between text-amber-700 font-medium">
                     <span>Dr 2020 VAT Payable (18% Tax Reversal)</span>
-                    <span>{formatCurrency(selectedCN.vatAmount)}</span>
+                    <span className="tabular-nums">{formatCurrency(selectedCN.vatAmount)}</span>
                   </div>
                 )}
-                <div className="flex justify-between text-blue-300">
+                <div className="flex justify-between text-blue-700 font-medium">
                   <span>Cr 1020 Accounts Receivable ({selectedCN.customerName})</span>
-                  <span>{formatCurrency(selectedCN.totalAmount)}</span>
+                  <span className="tabular-nums">{formatCurrency(selectedCN.totalAmount)}</span>
                 </div>
                 {selectedCN.returnToInventory && selectedCN.totalCostAmount > 0 && (
                   <>
-                    <div className="flex justify-between text-emerald-400 pt-1 border-t border-slate-800">
+                    <div className="flex justify-between text-emerald-700 font-medium pt-1 border-t border-slate-200">
                       <span>Dr 1100 Merchandise Inventory (Physical Stock)</span>
-                      <span>{formatCurrency(selectedCN.totalCostAmount)}</span>
+                      <span className="tabular-nums">{formatCurrency(selectedCN.totalCostAmount)}</span>
                     </div>
-                    <div className="flex justify-between text-teal-300">
+                    <div className="flex justify-between text-teal-700 font-medium">
                       <span>Cr 5010 Cost of Goods Sold (COGS Reversal)</span>
-                      <span>{formatCurrency(selectedCN.totalCostAmount)}</span>
+                      <span className="tabular-nums">{formatCurrency(selectedCN.totalCostAmount)}</span>
                     </div>
                   </>
                 )}
@@ -1082,34 +1082,34 @@ export function CustomerCreditNotesPage() {
               </div>
 
               {/* Universal Ledger Double-Entry Preview */}
-              <div className="p-4 rounded-lg bg-slate-900 text-slate-100 text-[11px] font-mono space-y-1.5">
-                <div className="font-sans font-bold text-[10px] text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+              <div className="p-4 rounded-lg bg-slate-50 border border-slate-200 text-slate-800 text-[11px] font-mono space-y-1.5">
+                <div className="font-sans font-bold text-[10px] text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
                   <Landmark className="h-3.5 w-3.5 text-primary" />
                   Live Double-Entry GL Ledger Effect
                 </div>
-                <div className="flex justify-between text-rose-300">
+                <div className="flex justify-between text-rose-700 font-medium">
                   <span>Dr 4010 Sales Revenue</span>
-                  <span>+{formatCurrency(formTotals.subtotal)}</span>
+                  <span className="tabular-nums">+{formatCurrency(formTotals.subtotal)}</span>
                 </div>
                 {formTotals.vatAmount > 0 && (
-                  <div className="flex justify-between text-amber-300">
+                  <div className="flex justify-between text-amber-700 font-medium">
                     <span>Dr 2020 VAT Payable (18%)</span>
-                    <span>+{formatCurrency(formTotals.vatAmount)}</span>
+                    <span className="tabular-nums">+{formatCurrency(formTotals.vatAmount)}</span>
                   </div>
                 )}
-                <div className="flex justify-between text-blue-300">
+                <div className="flex justify-between text-blue-700 font-medium">
                   <span>Cr 1020 Accounts Receivable</span>
-                  <span>-{formatCurrency(formTotals.totalAmount)}</span>
+                  <span className="tabular-nums">-{formatCurrency(formTotals.totalAmount)}</span>
                 </div>
                 {returnToInventory && formTotals.totalCostAmount > 0 && (
                   <>
-                    <div className="flex justify-between text-emerald-400 pt-1 border-t border-slate-800">
+                    <div className="flex justify-between text-emerald-700 font-medium pt-1 border-t border-slate-200">
                       <span>Dr 1100 Merchandise Inventory</span>
-                      <span>+{formatCurrency(formTotals.totalCostAmount)}</span>
+                      <span className="tabular-nums">+{formatCurrency(formTotals.totalCostAmount)}</span>
                     </div>
-                    <div className="flex justify-between text-teal-300">
+                    <div className="flex justify-between text-teal-700 font-medium">
                       <span>Cr 5010 Cost of Goods Sold</span>
-                      <span>-{formatCurrency(formTotals.totalCostAmount)}</span>
+                      <span className="tabular-nums">-{formatCurrency(formTotals.totalCostAmount)}</span>
                     </div>
                   </>
                 )}

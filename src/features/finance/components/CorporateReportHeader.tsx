@@ -26,7 +26,7 @@ export const CorporateReportHeader: React.FC<CorporateReportHeaderProps> = ({
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         {/* Company Identity */}
         <div className="flex items-center gap-3">
-          <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-slate-900 text-white font-bold text-xl tracking-wider shadow-sm">
+          <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold text-xl tracking-wider shadow-sm">
             DNS
           </div>
           <div>

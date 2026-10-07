@@ -207,42 +207,43 @@ export function FinanceManagerDashboard() {
   return (
     <div className="space-y-6 pb-12">
       {/* Top Banner & Authentication Context */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white p-6 rounded-2xl border border-slate-800 shadow-md">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-xs">
         <div>
           <div className="flex items-center gap-2 mb-2">
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold tracking-wide uppercase bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold tracking-wide uppercase bg-emerald-50 text-emerald-700 border border-emerald-200">
               <ShieldCheck className="h-3.5 w-3.5" /> Finance Controller Workspace
             </span>
             {periodLock.enabled && (
-              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-500/20 text-amber-300 border border-amber-500/30">
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">
                 <Lock className="h-3 w-3" /> Period Locked: {formatDate(periodLock.lockDate || '')}
               </span>
             )}
           </div>
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white">
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
             Finance Command Dashboard
           </h1>
-          <p className="text-xs text-slate-300 mt-1">
-            Logged in as <span className="font-semibold text-white">{currentUser.name}</span> • Commercial Banking, Double-Entry GL & Receivables/Payables Clearing
+          <p className="text-xs text-slate-500 mt-1">
+            Logged in as <span className="font-semibold text-slate-700">{currentUser.name}</span> • Commercial Banking, Double-Entry GL & Receivables/Payables Clearing
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5 shrink-0">
           <Link to="/finance/journal/new">
-            <Button size="sm" variant="secondary" className="gap-1.5 text-xs bg-slate-800 hover:bg-slate-700 text-slate-100 border-slate-700">
+            <Button size="sm" variant="outline" className="gap-1.5 text-xs border-slate-200 text-slate-700 hover:bg-slate-50">
               <PlusCircle className="h-3.5 w-3.5 text-primary" /> New Journal Voucher
             </Button>
           </Link>
           <Link to="/finance/ar/approvals">
             <Button
               size="sm"
-              className="gap-1.5 text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-sm"
+              variant="outline"
+              className="gap-1.5 text-xs border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-semibold shadow-2xs"
             >
               <CheckCircle2 className="h-3.5 w-3.5" /> Verify Receipts ({pendingReceipts.length})
             </Button>
           </Link>
           <Link to="/finance/desk">
-            <Button size="sm" className="gap-1.5 text-xs bg-primary hover:bg-primary-hover text-primary-foreground font-semibold shadow-sm">
+            <Button size="sm" className="gap-1.5 text-xs bg-primary hover:bg-primary-hover text-primary-foreground font-semibold shadow-xs">
               <Zap className="h-3.5 w-3.5" /> Finance Desk
             </Button>
           </Link>
@@ -449,7 +450,7 @@ export function FinanceManagerDashboard() {
                   <XAxis dataKey="month" stroke="#94A3B8" fontSize={11} tickLine={false} />
                   <YAxis stroke="#94A3B8" fontSize={11} tickLine={false} tickFormatter={(v) => `${v}k`} />
                   <Tooltip
-                    contentStyle={{ backgroundColor: '#0F172A', borderRadius: '8px', color: '#fff', fontSize: '12px' }}
+                    contentStyle={{ backgroundColor: '#ffffff', borderColor: '#e2e8f0', borderRadius: '8px', color: '#0f172a', fontSize: '12px', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
                     formatter={(val: any) => [`LKR ${Number(val).toLocaleString()}k`, '']}
                   />
                   <Area type="monotone" dataKey="inflows" stroke="#10B981" strokeWidth={2.5} fillOpacity={1} fill="url(#colorInflows)" />
@@ -482,7 +483,7 @@ export function FinanceManagerDashboard() {
                     ))}
                   </Pie>
                   <Tooltip
-                    contentStyle={{ backgroundColor: '#0F172A', borderRadius: '8px', color: '#fff', fontSize: '12px' }}
+                    contentStyle={{ backgroundColor: '#ffffff', borderColor: '#e2e8f0', borderRadius: '8px', color: '#0f172a', fontSize: '12px', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
                     formatter={(val: any) => [formatCurrency(Number(val)), '']}
                   />
                 </RechartsPieChart>

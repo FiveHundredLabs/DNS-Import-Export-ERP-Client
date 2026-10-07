@@ -89,10 +89,10 @@ export function SalesManagerDashboard() {
   const CustomLineTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       return (
-        <div className="bg-slate-900 text-white px-3 py-2 rounded-xl text-xs shadow-lg border border-slate-700 flex flex-col gap-1.5 animate-in fade-in zoom-in-95">
-          <span className="font-bold text-slate-200">{label}</span>
+        <div className="bg-white text-slate-900 px-3 py-2 rounded-xl text-xs shadow-md border border-slate-200 flex flex-col gap-1.5 animate-in fade-in zoom-in-95">
+          <span className="font-bold text-slate-800">{label}</span>
           {payload.map((entry: any, index: number) => (
-            <div key={index} className="flex items-center gap-1.5 font-semibold">
+            <div key={index} className="flex items-center gap-1.5 font-semibold text-slate-700">
               <span className="h-2 w-2 rounded-full" style={{ backgroundColor: entry.color }} />
               <span>{entry.name}: LKR {entry.value}M</span>
             </div>

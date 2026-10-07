@@ -124,20 +124,20 @@ export function AreaManagerDashboard() {
   return (
     <div className="space-y-4 max-w-5xl mx-auto pb-4">
       {/* 1. Mobile Header & Territory Banner */}
-      <div className="rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white p-4 sm:p-6 shadow-md border border-slate-800">
+      <div className="rounded-2xl bg-white text-slate-900 p-4 sm:p-6 shadow-xs border border-slate-200">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <div className="flex items-center gap-2">
-              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold tracking-wide uppercase bg-primary/20 text-primary-light border border-primary/30">
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold tracking-wide uppercase bg-primary-light text-primary-text border border-primary-border">
                 <MapPin className="h-3 w-3 text-primary" />
                 {currentUser.areaName || 'Western Province Area'}
               </span>
-              <span className="text-[11px] text-slate-400">Area Manager Hub</span>
+              <span className="text-[11px] text-slate-500 font-medium">Area Manager Hub</span>
             </div>
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white mt-1">
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 mt-1">
               {greeting}, {currentUser.name.split(' ')[0]}
             </h1>
-            <p className="text-xs text-slate-300 mt-0.5">
+            <p className="text-xs text-slate-500 mt-0.5">
               4 Active Route Sectors • 6 Field Officers Deployed
             </p>
           </div>
@@ -155,9 +155,9 @@ export function AreaManagerDashboard() {
               <Button
                 size="sm"
                 variant="outline"
-                className="w-full gap-1.5 text-xs bg-slate-800/80 hover:bg-slate-700 text-slate-100 border-slate-700 h-9 px-3.5 rounded-xl"
+                className="w-full gap-1.5 text-xs border-slate-200 text-slate-700 hover:bg-slate-50 h-9 px-3.5 rounded-xl"
               >
-                <CreditCard className="h-4 w-4 text-emerald-400" /> Collect
+                <CreditCard className="h-4 w-4 text-emerald-600" /> Collect
               </Button>
             </Link>
           </div>

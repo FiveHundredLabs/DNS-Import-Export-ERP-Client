@@ -22,24 +22,24 @@ export function SalesRepDashboard() {
   return (
     <div className="space-y-6 pb-16 md:pb-0">
       {/* Mobile-first Header Banner */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white p-6 rounded-2xl border border-slate-800 shadow-md">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-xs">
         <div>
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium tracking-wide uppercase bg-primary/20 text-white border border-primary/30 mb-2">
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold tracking-wide uppercase bg-primary-light text-primary-text border border-primary-border mb-2">
             Field Representative Hub
           </span>
-          <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-white">Good Day, Kasun</h1>
-          <p className="text-xs text-slate-300 mt-0.5">
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">Good Day, Kasun</h1>
+          <p className="text-xs text-slate-500 mt-0.5">
             Colombo Central Territory • 14 Assigned Dealers • Active Cycle
           </p>
         </div>
         <div className="flex items-center gap-2.5 shrink-0">
           <Link to="/customers">
-            <Button size="sm" variant="secondary" className="gap-1.5 text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700">
+            <Button size="sm" variant="outline" className="gap-1.5 text-xs border-slate-200 text-slate-700 hover:bg-slate-50">
               <Users className="h-3.5 w-3.5 text-primary" /> Customer Hub
             </Button>
           </Link>
           <Link to="/orders">
-            <Button size="sm" className="gap-1.5 text-xs bg-primary hover:bg-primary-hover text-primary-foreground font-medium shadow-md">
+            <Button size="sm" className="gap-1.5 text-xs bg-primary hover:bg-primary-hover text-primary-foreground font-semibold shadow-xs">
               <PlusCircle className="h-3.5 w-3.5" /> New Order
             </Button>
           </Link>

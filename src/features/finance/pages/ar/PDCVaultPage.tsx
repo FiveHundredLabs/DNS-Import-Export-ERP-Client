@@ -643,20 +643,20 @@ export function PDCVaultPage() {
             </div>
 
             {/* Accounting Voucher Preview */}
-            <div className="p-3 rounded-lg bg-slate-900 text-slate-100 text-[11px] space-y-1.5 font-mono">
-              <div className="text-[10px] uppercase tracking-wider text-slate-400 font-sans font-bold flex items-center gap-1.5">
+            <div className="p-3 rounded-lg bg-slate-50 border border-slate-200 text-slate-800 text-[11px] space-y-1.5 font-mono">
+              <div className="text-[10px] uppercase tracking-wider text-slate-500 font-sans font-bold flex items-center gap-1.5">
                 <Landmark className="h-3.5 w-3.5 text-primary" />
                 Transfer Journal Entry (PDC Realization)
               </div>
-              <div className="flex justify-between text-emerald-400">
+              <div className="flex justify-between text-emerald-700 font-medium">
                 <span>
                   Dr {bankAccounts.find((a) => a.id === targetBankAccountId)?.code || '1010'} {bankAccounts.find((a) => a.id === targetBankAccountId)?.name || 'Bank Account'}
                 </span>
-                <span>+{formatCurrency(clearingCheque.amount)}</span>
+                <span className="tabular-nums">+{formatCurrency(clearingCheque.amount)}</span>
               </div>
-              <div className="flex justify-between text-amber-400">
+              <div className="flex justify-between text-amber-700 font-medium">
                 <span>Cr 1018 Cheques in Hand (Relieve Vault)</span>
-                <span>-{formatCurrency(clearingCheque.amount)}</span>
+                <span className="tabular-nums">-{formatCurrency(clearingCheque.amount)}</span>
               </div>
             </div>
           </div>

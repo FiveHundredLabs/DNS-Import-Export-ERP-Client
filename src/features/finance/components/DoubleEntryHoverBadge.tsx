@@ -1,5 +1,6 @@
-import { useState, useRef, useEffect } from 'react';
-import { AlertCircle, Scale } from 'lucide-react';
+import { useState, useRef, useEffect, useLayoutEffect } from 'react';
+import { createPortal } from 'react-dom';
+import { Scale } from 'lucide-react';
 import { formatCurrency } from '../../../utils/formatters';
 import { cn } from '../../../utils/cn';
 
@@ -31,21 +32,100 @@ export function DoubleEntryHoverBadge({
   align = 'center',
 }: DoubleEntryHoverBadgeProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [coords, setCoords] = useState<{ top: number; left: number; placement: 'top' | 'bottom' }>({
+    top: 0,
+    left: 0,
+    placement: 'top',
+  });
   const containerRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const popoverRef = useRef<HTMLDivElement>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const activeLines = lines || entries || [];
 
-  // Close on outside click
+  const updatePosition = () => {
+    if (!triggerRef.current) return;
+    const triggerRect = triggerRef.current.getBoundingClientRect();
+    const popoverWidth = 320;
+    const popoverHeight = popoverRef.current ? popoverRef.current.offsetHeight : 180;
+
+    const spaceAbove = triggerRect.top;
+    const spaceBelow = window.innerHeight - triggerRect.bottom;
+
+    // Prefer top if space allows; otherwise bottom
+    const placement = spaceAbove >= popoverHeight + 12 || spaceAbove >= spaceBelow ? 'top' : 'bottom';
+
+    let top = placement === 'top'
+      ? triggerRect.top - popoverHeight - 8
+      : triggerRect.bottom + 8;
+
+    // Vertical boundary guard
+    if (top < 8) top = 8;
+    if (top + popoverHeight > window.innerHeight - 8) {
+      top = Math.max(8, window.innerHeight - popoverHeight - 8);
+    }
+
+    // Horizontal calculation based on align prop
+    let left = triggerRect.left + triggerRect.width / 2 - popoverWidth / 2;
+    if (align === 'left') {
+      left = triggerRect.left;
+    } else if (align === 'right') {
+      left = triggerRect.right - popoverWidth;
+    }
+
+    // Clamp horizontally to always stay within viewport
+    const minLeft = 12;
+    const maxLeft = Math.max(12, window.innerWidth - popoverWidth - 12);
+    left = Math.max(minLeft, Math.min(left, maxLeft));
+
+    setCoords({ top, left, placement });
+  };
+
+  useLayoutEffect(() => {
+    if (isOpen) {
+      updatePosition();
+    }
+  }, [isOpen]);
+
   useEffect(() => {
+    if (!isOpen) return;
+
+    function handleScrollOrResize() {
+      updatePosition();
+    }
+
     function handleClickOutside(event: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+      const target = event.target as Node;
+      if (
+        containerRef.current && !containerRef.current.contains(target) &&
+        popoverRef.current && !popoverRef.current.contains(target)
+      ) {
         setIsOpen(false);
       }
     }
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
-    }
+
+    window.addEventListener('scroll', handleScrollOrResize, true);
+    window.addEventListener('resize', handleScrollOrResize);
+    document.addEventListener('mousedown', handleClickOutside);
+
+    return () => {
+      window.removeEventListener('scroll', handleScrollOrResize, true);
+      window.removeEventListener('resize', handleScrollOrResize);
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
   }, [isOpen]);
+
+  const handleMouseEnter = () => {
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    setIsOpen(true);
+  };
+
+  const handleMouseLeave = () => {
+    timeoutRef.current = setTimeout(() => {
+      setIsOpen(false);
+    }, 120);
+  };
 
   const sizeClasses = size === 'xs'
     ? 'h-4 w-4 text-[10px]'
@@ -55,11 +135,12 @@ export function DoubleEntryHoverBadge({
     <div
       ref={containerRef}
       className={cn('relative inline-flex items-center shrink-0', className)}
-      onMouseEnter={() => setIsOpen(true)}
-      onMouseLeave={() => setIsOpen(false)}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
     >
       {/* Exclamation badge trigger */}
       <button
+        ref={triggerRef}
         type="button"
         aria-label={title}
         title={title}
@@ -77,33 +158,36 @@ export function DoubleEntryHoverBadge({
         !
       </button>
 
-      {/* Popover on hover / focus */}
-      {isOpen && (
+      {/* Popover portaled to document.body to prevent clipping by overflow-hidden or z-index */}
+      {isOpen && typeof document !== 'undefined' && createPortal(
         <div
+          ref={popoverRef}
           role="tooltip"
-          className={cn(
-            'absolute z-50 bottom-full mb-2 w-72 sm:w-80 rounded-lg bg-slate-900 text-slate-100 p-3 shadow-xl border border-slate-700/80 animate-in fade-in-50 zoom-in-95 pointer-events-none',
-            align === 'right'
-              ? 'right-0 left-auto translate-x-0'
-              : align === 'left'
-              ? 'left-0 right-auto translate-x-0'
-              : 'left-1/2 -translate-x-1/2'
-          )}
+          style={{
+            position: 'fixed',
+            top: `${coords.top}px`,
+            left: `${coords.left}px`,
+            width: '320px',
+            maxWidth: 'calc(100vw - 24px)',
+          }}
+          className="z-[9999] rounded-xl bg-white text-slate-900 p-3.5 shadow-xl border border-slate-200 ring-1 ring-slate-900/5 animate-in fade-in-50 zoom-in-95 pointer-events-auto"
+          onMouseEnter={handleMouseEnter}
+          onMouseLeave={handleMouseLeave}
         >
           {/* Header */}
-          <div className="flex items-center gap-1.5 pb-1.5 border-b border-slate-800">
-            <Scale className="h-3.5 w-3.5 text-primary-light shrink-0" />
-            <span className="font-bold text-xs text-white truncate">{title}</span>
+          <div className="flex items-center gap-1.5 pb-2 border-b border-slate-100">
+            <Scale className="h-4 w-4 text-primary shrink-0" />
+            <span className="font-bold text-xs text-slate-900 truncate">{title}</span>
           </div>
 
           {description && (
-            <p className="text-[10px] text-slate-300 mt-1 leading-snug">
+            <p className="text-[11px] text-slate-500 mt-1.5 leading-snug">
               {description}
             </p>
           )}
 
           {/* Ledger table */}
-          <div className="mt-2 space-y-1 font-mono text-[11px]">
+          <div className="mt-2.5 space-y-1.5 font-mono text-[11px]">
             {activeLines.map((line, idx) => {
               const isDr = line.type === 'DEBIT';
               const amtStr = typeof line.amount === 'number'
@@ -114,19 +198,26 @@ export function DoubleEntryHoverBadge({
                 <div
                   key={idx}
                   className={cn(
-                    'flex items-center justify-between py-0.5 px-1.5 rounded text-[10.5px]',
-                    isDr ? 'bg-indigo-950/60 text-indigo-200' : 'bg-emerald-950/60 text-emerald-200'
+                    'flex items-center justify-between py-1 px-2 rounded-md border text-[11px]',
+                    isDr
+                      ? 'bg-blue-50/70 text-blue-950 border-blue-200/80'
+                      : 'bg-emerald-50/70 text-emerald-950 border-emerald-200/80'
                   )}
                 >
-                  <div className="flex items-center gap-1 min-w-0">
-                    <span className={cn('font-bold shrink-0', isDr ? 'text-indigo-400' : 'text-emerald-400')}>
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <span
+                      className={cn(
+                        'font-bold px-1 py-0.5 rounded text-[10px] shrink-0',
+                        isDr ? 'bg-blue-100 text-blue-800' : 'bg-emerald-100 text-emerald-800'
+                      )}
+                    >
                       {isDr ? 'Dr.' : 'Cr.'}
                     </span>
-                    <span className="font-semibold text-slate-200 shrink-0">{line.accountCode}</span>
-                    <span className="truncate text-slate-300 text-[10px]">{line.accountName}</span>
+                    <span className="font-semibold text-slate-800 shrink-0">{line.accountCode}</span>
+                    <span className="truncate text-slate-600 text-[10px]">{line.accountName}</span>
                   </div>
                   {amtStr && (
-                    <span className="font-semibold tabular-nums text-white shrink-0 ml-1.5">
+                    <span className="font-bold tabular-nums text-slate-900 shrink-0 ml-2">
                       {amtStr}
                     </span>
                   )}
@@ -136,26 +227,15 @@ export function DoubleEntryHoverBadge({
           </div>
 
           {/* Balanced footer */}
-          <div className="mt-2 pt-1.5 border-t border-slate-800 flex items-center justify-between text-[10px] text-slate-400">
-            <span className="flex items-center gap-1 text-emerald-400 font-medium">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 inline-block" />
+          <div className="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-500">
+            <span className="inline-flex items-center gap-1 text-emerald-700 font-semibold bg-emerald-50 border border-emerald-200/80 px-1.5 py-0.5 rounded">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-600 inline-block" />
               Balanced Entry (Dr = Cr)
             </span>
-            <span className="text-[9px] uppercase tracking-wider text-slate-400">General Ledger Core</span>
+            <span className="text-[9px] uppercase tracking-wider font-semibold text-slate-400">General Ledger Core</span>
           </div>
-
-          {/* Tooltip pointer arrow */}
-          <div
-            className={cn(
-              'absolute top-full -mt-1 border-4 border-transparent border-t-slate-900',
-              align === 'right'
-                ? 'right-3'
-                : align === 'left'
-                ? 'left-3'
-                : 'left-1/2 -translate-x-1/2'
-            )}
-          />
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

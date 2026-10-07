@@ -546,7 +546,7 @@ export function ReceiptApprovalQueuePage() {
               </span>
 
               {selectedReceipt.attachmentUrl ? (
-                <div className="rounded-lg border border-slate-200 overflow-hidden bg-slate-900/5 group relative">
+                <div className="rounded-lg border border-slate-200 overflow-hidden bg-slate-50 group relative">
                   <img
                     src={selectedReceipt.attachmentUrl}
                     alt="Deposit slip or cheque proof"
@@ -870,20 +870,20 @@ export function ReceiptApprovalQueuePage() {
             </div>
 
             {/* Accounting Voucher Preview */}
-            <div className="p-3 rounded-lg bg-slate-900 text-slate-100 text-[11px] space-y-1.5 font-mono">
-              <div className="text-[10px] uppercase tracking-wider text-slate-400 font-sans font-bold flex items-center gap-1.5">
+            <div className="p-3 rounded-lg bg-slate-50 border border-slate-200 text-slate-800 text-[11px] space-y-1.5 font-mono">
+              <div className="text-[10px] uppercase tracking-wider text-slate-500 font-sans font-bold flex items-center gap-1.5">
                 <Landmark className="h-3.5 w-3.5 text-primary" />
                 Universal Journal Entry Voucher Preview
               </div>
-              <div className="flex justify-between text-emerald-400">
+              <div className="flex justify-between text-emerald-700 font-medium">
                 <span>
                   Dr {approvingItem.paymentMethod === 'CHEQUE' ? '1018 Cheques in Hand (Vault)' : '1010 Bank / Cash Account'}
                 </span>
-                <span>{formatCurrency(approvingItem.amount)}</span>
+                <span className="tabular-nums">{formatCurrency(approvingItem.amount)}</span>
               </div>
-              <div className="flex justify-between text-blue-400">
+              <div className="flex justify-between text-blue-700 font-medium">
                 <span>Cr 1020 Accounts Receivable ({approvingItem.customerName})</span>
-                <span>{formatCurrency(approvingItem.amount)}</span>
+                <span className="tabular-nums">{formatCurrency(approvingItem.amount)}</span>
               </div>
             </div>
           </div>
