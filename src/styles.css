@@ -42,15 +42,16 @@
 @layer base {
   :root {
     /* Centralized Dynamic Primary Palette (Set dynamically via ThemeService) */
-    --primary: #6AAED3;
-    --primary-hover: #559EC7;
-    --primary-active: #468CB3;
+    --primary: #263183;
+    --primary-hover: #1D2667;
+    --primary-active: #161D4F;
     --primary-foreground: #FFFFFF;
-    --primary-light: #F0F7FB;
-    --primary-border: #BEE0F0;
+    --primary-foreground-rgb: 255 255 255;
+    --primary-light: #EEF1F9;
+    --primary-border: #C5CBEC;
     --primary-color: var(--primary);
-    --primary-text: #24658B;
-    --primary-ring: rgba(106, 174, 211, 0.35);
+    --primary-text: #263183;
+    --primary-ring: rgba(38, 49, 131, 0.35);
 
     /* Neutral & Background Canvas */
     --background: 204 27% 97%;       /* #F4F7F9 */

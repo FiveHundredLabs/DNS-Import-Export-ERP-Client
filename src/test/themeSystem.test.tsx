@@ -16,42 +16,42 @@ describe('Configurable Primary Color System Audit', () => {
   });
 
   describe('1. Available Primary Colors & Defaults', () => {
-    it('provides exactly the 5 predefined color options', () => {
+    it('provides exactly the 3 predefined color options (Dark Blue, Red, Black)', () => {
       const colors = themeService.getAllPrimaryColors();
-      expect(colors).toHaveLength(5);
+      expect(colors).toHaveLength(3);
 
       const hexes = colors.map((c) => c.hex.toUpperCase());
-      expect(hexes).toContain('#FA8223'); // Orange
       expect(hexes).toContain('#263183'); // Dark Blue
       expect(hexes).toContain('#EC1B27'); // Red
-      expect(hexes).toContain('#6AAED3'); // Light Blue
       expect(hexes).toContain('#161511'); // Black
+      expect(hexes).not.toContain('#FA8223'); // Orange removed
+      expect(hexes).not.toContain('#6AAED3'); // Light Blue removed
     });
 
-    it('sets Light Blue (#6AAED3) as the initial default color', () => {
+    it('sets Dark Blue (#263183) as the initial default color', () => {
       localStorage.clear();
       // Instantiate fresh service logic check
       const current = themeService.getPrimaryColor();
-      expect(current.hex.toUpperCase()).toBe('#6AAED3');
-      expect(current.name).toBe('Light Blue');
+      expect(current.hex.toUpperCase()).toBe('#263183');
+      expect(current.name).toBe('Dark Blue');
     });
 
     it('generates appropriate hover, active, light, and accessible text tokens', () => {
-      const orange = PRIMARY_COLOR_OPTIONS.find((c) => c.id === 'orange')!;
-      expect(orange.hover).toBeDefined();
-      expect(orange.active).toBeDefined();
-      expect(orange.light).toBeDefined();
-      expect(orange.border).toBeDefined();
-      expect(orange.text).toBeDefined();
-      expect(orange.foreground).toBe('#FFFFFF');
+      const darkBlue = PRIMARY_COLOR_OPTIONS.find((c) => c.id === 'dark-blue')!;
+      expect(darkBlue.hover).toBeDefined();
+      expect(darkBlue.active).toBeDefined();
+      expect(darkBlue.light).toBeDefined();
+      expect(darkBlue.border).toBeDefined();
+      expect(darkBlue.text).toBeDefined();
+      expect(darkBlue.foreground).toBe('#FFFFFF');
     });
   });
 
   describe('2. Security & Role Permissions', () => {
     it('allows DIRECTOR role to set primary color', () => {
-      const res = themeService.setPrimaryColor('#FA8223', 'DIRECTOR');
+      const res = themeService.setPrimaryColor('#EC1B27', 'DIRECTOR');
       expect(res.success).toBe(true);
-      expect(themeService.getPrimaryColor().hex).toBe('#FA8223');
+      expect(themeService.getPrimaryColor().hex).toBe('#EC1B27');
     });
 
     it('strictly forbids other roles (MANAGER, SALES_REP, etc.) from updating primary color', () => {
@@ -67,10 +67,16 @@ describe('Configurable Primary Color System Audit', () => {
       expect(themeService.getPrimaryColor().hex).not.toBe('#EC1B27');
     });
 
-    it('rejects arbitrary, non-approved color hex codes', () => {
+    it('rejects arbitrary, non-approved color hex codes and removed colors (Orange, Light Blue)', () => {
       const res = themeService.setPrimaryColor('#123456', 'DIRECTOR');
       expect(res.success).toBe(false);
       expect(res.error).toMatch(/invalid color value/i);
+
+      // Verify orange and light blue are also rejected
+      const orangeRes = themeService.setPrimaryColor('#FA8223', 'DIRECTOR');
+      expect(orangeRes.success).toBe(false);
+      const lightBlueRes = themeService.setPrimaryColor('#6AAED3', 'DIRECTOR');
+      expect(lightBlueRes.success).toBe(false);
     });
   });
 
@@ -103,7 +109,7 @@ describe('Configurable Primary Color System Audit', () => {
   });
 
   describe('4. Director Dashboard Appearance Settings Component', () => {
-    it('renders all 5 circular color swatches with names and live preview for Director', () => {
+    it('renders all 3 circular color swatches with names and live preview for Director', () => {
       render(
         <MemoryRouter>
           <AppearanceSettings />
@@ -114,12 +120,14 @@ describe('Configurable Primary Color System Audit', () => {
       expect(screen.getByText(/primary color system/i)).toBeInTheDocument();
       expect(screen.getByText(/appearance/i)).toBeInTheDocument();
 
-      // Check all 5 colors are rendered
-      expect(screen.getByText('Orange')).toBeInTheDocument();
-      expect(screen.getByText('Dark Blue')).toBeInTheDocument();
+      // Check all 3 approved colors are rendered
+      expect(screen.getAllByText('Dark Blue').length).toBeGreaterThanOrEqual(1);
       expect(screen.getByText('Red')).toBeInTheDocument();
-      expect(screen.getAllByText('Light Blue').length).toBeGreaterThanOrEqual(1);
       expect(screen.getByText('Black')).toBeInTheDocument();
+
+      // Check removed colors are NOT rendered
+      expect(screen.queryByText('Orange')).not.toBeInTheDocument();
+      expect(screen.queryByText('Light Blue')).not.toBeInTheDocument();
 
       // Check Save Changes button
       const saveBtn = screen.getByRole('button', { name: /save changes/i });
@@ -136,9 +144,9 @@ describe('Configurable Primary Color System Audit', () => {
         </MemoryRouter>
       );
 
-      // Click the Orange swatch
-      const orangeSwatch = screen.getByRole('button', { name: /select orange/i });
-      fireEvent.click(orangeSwatch);
+      // Click the Red swatch
+      const redSwatch = screen.getByRole('button', { name: /select red/i });
+      fireEvent.click(redSwatch);
 
       // Click Save Changes
       const saveBtn = screen.getByRole('button', { name: /save changes/i });
@@ -150,8 +158,8 @@ describe('Configurable Primary Color System Audit', () => {
         ).toBeInTheDocument();
       });
 
-      // Verify global theme is now Orange
-      expect(themeService.getPrimaryColor().hex).toBe('#FA8223');
+      // Verify global theme is now Red
+      expect(themeService.getPrimaryColor().hex).toBe('#EC1B27');
     });
 
     it('immediately updates global CSS variables and localStorage upon clicking a swatch', () => {
@@ -161,17 +169,17 @@ describe('Configurable Primary Color System Audit', () => {
         </MemoryRouter>
       );
 
-      // Click Dark Blue swatch
-      const darkBlueSwatch = screen.getByRole('button', { name: /select dark blue/i });
-      fireEvent.click(darkBlueSwatch);
+      // Click Black swatch
+      const blackSwatch = screen.getByRole('button', { name: /select black/i });
+      fireEvent.click(blackSwatch);
 
       // Verify immediate update without needing to click save
-      expect(localStorage.getItem('erp-primary-color')).toBe('#263183');
-      expect(document.documentElement.style.getPropertyValue('--primary')).toBe('#263183');
-      expect(themeService.getPrimaryColor().hex).toBe('#263183');
+      expect(localStorage.getItem('erp-primary-color')).toBe('#161511');
+      expect(document.documentElement.style.getPropertyValue('--primary')).toBe('#161511');
+      expect(themeService.getPrimaryColor().hex).toBe('#161511');
     });
 
-    it('tests all five primary colors switching reactively across the application', () => {
+    it('tests all three primary colors switching reactively across the application', () => {
       render(
         <MemoryRouter>
           <AppearanceSettings />
@@ -179,10 +187,8 @@ describe('Configurable Primary Color System Audit', () => {
       );
 
       const colorTests = [
-        { name: /select orange/i, hex: '#FA8223' },
         { name: /select dark blue/i, hex: '#263183' },
         { name: /select red/i, hex: '#EC1B27' },
-        { name: /select light blue/i, hex: '#6AAED3' },
         { name: /select black/i, hex: '#161511' },
       ];
 

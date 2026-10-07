@@ -76,13 +76,13 @@ export function Header({ onToggleSidebar }: HeaderProps) {
      'DNS ERP Workspace');
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 w-full items-center justify-between border-b border-slate-200/80 bg-white px-4 sm:px-6 backdrop-blur-md transition-all shrink-0">
+    <header className="sticky top-0 z-30 flex h-16 w-full items-center justify-between bg-primary text-primary-foreground px-4 sm:px-6 backdrop-blur-md transition-all shrink-0">
       {/* Left: Mobile Toggle & Enterprise Brand / Page Title */}
       <div className="flex items-center gap-2.5 sm:gap-4 min-w-0">
         {location.pathname !== '/' ? (
           <button
             onClick={() => navigate(-1)}
-            className="rounded-md p-2 text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors focus:outline-none focus:ring-2 focus:ring-primary md:hidden shrink-0"
+            className="rounded-md p-2 text-primary-foreground/90 hover:bg-primary-foreground/15 hover:text-primary-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-primary-foreground md:hidden shrink-0"
             aria-label="Go back"
           >
             <ArrowLeft className="h-5 w-5" />
@@ -90,7 +90,7 @@ export function Header({ onToggleSidebar }: HeaderProps) {
         ) : (
           <button
             onClick={onToggleSidebar}
-            className="rounded-md p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-900 transition-colors focus:outline-none focus:ring-2 focus:ring-primary md:hidden shrink-0"
+            className="rounded-md p-2 text-primary-foreground/90 hover:bg-primary-foreground/15 hover:text-primary-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-primary-foreground md:hidden shrink-0"
             aria-label="Toggle navigation menu"
           >
             <Menu className="h-5 w-5" />
@@ -99,14 +99,14 @@ export function Header({ onToggleSidebar }: HeaderProps) {
 
         {location.pathname === '/' ? (
           <Link to="/" className="flex items-center gap-2.5 min-w-0 group">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground font-semibold text-sm shadow-md group-hover:bg-primary-hover transition-colors">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary-foreground text-primary font-semibold text-sm shadow-sm transition-colors">
               <Layers className="h-5 w-5" />
             </div>
             <div className="min-w-0">
-              <h1 className="text-sm sm:text-lg md:text-xl font-bold text-slate-900 tracking-tight truncate leading-tight">
+              <h1 className="text-sm sm:text-lg md:text-xl font-bold text-primary-foreground tracking-tight truncate leading-tight">
                 LabsCore ERP
               </h1>
-              <span className="text-[10.5px] sm:text-[11.5px] text-primary font-semibold block uppercase tracking-wider -mt-0.5 truncate">
+              <span className="text-[10.5px] sm:text-[11.5px] text-primary-foreground/80 font-semibold block uppercase tracking-wider -mt-0.5 truncate">
                 DNS Distribution
               </span>
             </div>
@@ -114,15 +114,15 @@ export function Header({ onToggleSidebar }: HeaderProps) {
         ) : (
           <div className="flex items-center gap-2 min-w-0">
             <Link to="/" className="hidden md:flex items-center gap-2 shrink-0 group" title="DNS ERP Dashboard">
-              <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary text-primary-foreground font-semibold text-xs shadow-md group-hover:bg-primary-hover transition-colors">
+              <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary-foreground text-primary font-semibold text-xs shadow-sm transition-colors">
                 <Layers className="h-4 w-4" />
               </div>
-              <span className="font-semibold text-slate-900 tracking-tight text-base">
+              <span className="font-semibold text-primary-foreground tracking-tight text-base">
                 DNS ERP
               </span>
             </Link>
-            <span className="text-slate-300 font-light hidden md:inline">/</span>
-            <h1 className="text-sm sm:text-base md:text-lg font-bold text-slate-900 tracking-tight truncate">
+            <span className="text-primary-foreground/50 font-light hidden md:inline">/</span>
+            <h1 className="text-sm sm:text-base md:text-lg font-bold text-primary-foreground tracking-tight truncate">
               {currentTitle}
             </h1>
           </div>
@@ -132,13 +132,13 @@ export function Header({ onToggleSidebar }: HeaderProps) {
       {/* Center: Search Bar */}
       <div className="hidden md:flex flex-1 max-w-md mx-6 justify-center">
         <div className="relative w-full">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-primary-foreground/70" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search orders, products, dealers..."
-            className="w-full pl-9 pr-4 py-2 bg-slate-50/80 hover:bg-slate-50 focus:bg-white border border-slate-200/90 rounded-md text-sm font-normal text-slate-900 placeholder:text-slate-400 placeholder:text-[13px] focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all shadow-[0_1px_2px_rgba(0,0,0,0.02)]"
+            className="w-full pl-9 pr-4 py-2 bg-primary-foreground/15 hover:bg-primary-foreground/20 focus:bg-white border border-primary-foreground/25 focus:border-white rounded-md text-sm font-normal text-primary-foreground focus:text-slate-900 placeholder:text-primary-foreground/70 focus:placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-foreground/40 transition-all shadow-xs"
           />
         </div>
       </div>
@@ -147,21 +147,21 @@ export function Header({ onToggleSidebar }: HeaderProps) {
       <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
         {/* In-place Role Switcher Dropdown (No separate login page needed) */}
         <div className="hidden sm:flex items-center">
-          <RoleSwitcher />
+          <RoleSwitcher triggerClassName="bg-primary-foreground/15 border-primary-foreground/25 text-primary-foreground hover:bg-primary-foreground/25 hover:text-primary-foreground shadow-none" />
         </div>
 
-        <div className="h-6 w-px bg-slate-200 hidden sm:block" />
+        <div className="h-6 w-px bg-primary-foreground/25 hidden sm:block" />
 
         {/* User Profile Menu */}
         <div className="relative" ref={profileRef}>
           <button
             onClick={() => setProfileOpen((prev) => !prev)}
-            className="flex items-center gap-2.5 p-1 rounded-md hover:bg-slate-50 transition-colors focus:outline-none focus:ring-2 focus:ring-primary"
+            className="flex items-center gap-2.5 p-1 rounded-md hover:bg-primary-foreground/15 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-foreground"
             aria-expanded={profileOpen}
             aria-label="User profile menu"
           >
             {/* Avatar Circle */}
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground font-bold text-xs shadow-sm ring-2 ring-white">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-foreground text-primary font-bold text-xs shadow-sm ring-2 ring-primary-foreground/30">
               {currentUser.name
                 .split(' ')
                 .map((n) => n[0])
@@ -170,17 +170,17 @@ export function Header({ onToggleSidebar }: HeaderProps) {
 
             {/* Name & Role Text */}
             <div className="hidden sm:block text-left">
-              <div className="text-xs font-bold text-slate-800 leading-tight flex items-center gap-1">
+              <div className="text-xs font-bold text-primary-foreground leading-tight flex items-center gap-1">
                 {currentUser.name}
               </div>
-              <div className="text-[11px] text-slate-500 font-medium">
+              <div className="text-[11px] text-primary-foreground/80 font-medium">
                 {formatRole(currentUser.role)}
               </div>
             </div>
 
             <ChevronDown
-              className={`h-3.5 w-3.5 text-slate-400 hidden sm:block transition-transform duration-200 ${
-                profileOpen ? 'rotate-180 text-primary' : ''
+              className={`h-3.5 w-3.5 text-primary-foreground/80 hidden sm:block transition-transform duration-200 ${
+                profileOpen ? 'rotate-180 text-primary-foreground' : ''
               }`}
             />
           </button>
