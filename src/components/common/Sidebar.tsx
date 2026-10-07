@@ -109,7 +109,6 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
 
   // 4. Finance, Banking & Ledger Core
   const financeItems: SidebarItem[] = [
-    { id: 'finance', name: 'Finance Command Hub', path: '/finance/dashboard', icon: LayoutGrid, category: 'finance', exact: true },
     { id: 'journal', name: 'Journal Entry Voucher', path: '/finance/journal/new', icon: Zap, category: 'finance' },
     { id: 'accounts', name: 'Chart of Accounts', path: '/finance/accounts', icon: BookOpen, category: 'finance' },
     { id: 'ap-bills', name: 'Vendor Bill Costing (AP)', path: '/finance/ap/bills/new', icon: Receipt, category: 'finance' },
