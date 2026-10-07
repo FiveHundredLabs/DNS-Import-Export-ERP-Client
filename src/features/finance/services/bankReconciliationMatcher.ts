@@ -70,12 +70,14 @@ export function calculateMatchScore(
   // 1. Direction check:
   // System DEPOSIT (Dr Bank) <-> Bank DEPOSIT (Cr Bank)
   // System PAYMENT (Cr Bank) <-> Bank PAYMENT (Dr Bank)
-  if (sys.type !== stmt.type) {
+  if ((sys.type || '').toUpperCase() !== (stmt.type || '').toUpperCase()) {
     return null;
   }
 
   // 2. Amount check
-  const amountDiff = new Decimal(sys.amount).minus(new Decimal(stmt.amount)).abs().toNumber();
+  const sysAmt = typeof sys.amount === 'number' ? Math.abs(sys.amount) : Math.abs(Number(sys.amount) || 0);
+  const stmtAmt = typeof stmt.amount === 'number' ? Math.abs(stmt.amount) : Math.abs(Number(stmt.amount) || 0);
+  const amountDiff = new Decimal(sysAmt).minus(new Decimal(stmtAmt)).abs().toNumber();
   if (amountDiff > amountTolerance) {
     return null;
   }
@@ -99,24 +101,29 @@ export function calculateMatchScore(
 
   // 4. Reference & Text heuristics
   let refBonus = 0;
-  let reason = `Exact amount match (LKR ${sys.amount.toLocaleString()}) with ${daysDiff} day(s) date difference`;
+  let reason = `Exact amount match (LKR ${sysAmt.toLocaleString()}) with ${daysDiff} day(s) date difference`;
 
-  const sysRefClean = sys.reference.trim().toUpperCase();
-  const stmtRefClean = stmt.reference.trim().toUpperCase();
+  const sysRefClean = (sys.reference || '').trim().toUpperCase();
+  const stmtRefClean = (stmt.reference || '').trim().toUpperCase();
+  const sysDescUpper = (sys.description || '').toUpperCase();
+  const stmtDescUpper = (stmt.description || '').toUpperCase();
 
-  if (sysRefClean && stmtRefClean && sysRefClean === stmtRefClean) {
+  const isGenericSysRef = !sysRefClean || sysRefClean === 'NONREF' || sysRefClean === 'N/A' || /^STMT-\d+$/.test(sysRefClean);
+  const isGenericStmtRef = !stmtRefClean || stmtRefClean === 'NONREF' || stmtRefClean === 'N/A' || /^STMT-\d+$/.test(stmtRefClean);
+
+  if (sysRefClean && stmtRefClean && sysRefClean === stmtRefClean && !isGenericSysRef && !isGenericStmtRef) {
     refBonus += 60;
     reason += ` and identical reference (${sys.reference})`;
   } else if (
-    (sysRefClean && stmt.description.toUpperCase().includes(sysRefClean)) ||
-    (stmtRefClean && sys.description.toUpperCase().includes(stmtRefClean))
+    (!isGenericSysRef && stmtDescUpper.includes(sysRefClean)) ||
+    (!isGenericStmtRef && sysDescUpper.includes(stmtRefClean))
   ) {
     refBonus += 45;
     reason += ` and reference token found in statement description`;
   } else {
     // Check keyword token overlap
-    const sysTokens = extractKeyTokens(sys.description);
-    const stmtTokens = extractKeyTokens(stmt.description);
+    const sysTokens = extractKeyTokens(sysDescUpper);
+    const stmtTokens = extractKeyTokens(stmtDescUpper);
     const commonTokens = sysTokens.filter((t) => stmtTokens.includes(t));
     if (commonTokens.length > 0) {
       refBonus += Math.min(30, commonTokens.length * 10);
@@ -126,7 +133,7 @@ export function calculateMatchScore(
 
   const totalScore = baseScore + refBonus;
   let confidence: 'EXACT' | 'DATE_TOLERANCE' | 'FUZZY' = 'FUZZY';
-  if (totalScore >= 140) {
+  if (totalScore >= 140 || (daysDiff === 0 && totalScore >= 100)) {
     confidence = 'EXACT';
   } else if (totalScore >= 80) {
     confidence = 'DATE_TOLERANCE';

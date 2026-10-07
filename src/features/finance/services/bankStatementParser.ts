@@ -35,17 +35,41 @@ export interface ParseBankStatementResult {
 export function normalizeDate(dateStr: string): string {
   const clean = dateStr.trim();
 
-  // YYYY-MM-DD
-  if (/^\d{4}-\d{2}-\d{2}$/.test(clean)) {
-    return clean;
+  // YYYY-MM-DD, YYYY/MM/DD, YYYY.MM.DD
+  const ymdMatch = clean.match(/^(\d{4})[/.-](\d{1,2})[/.-](\d{1,2})$/);
+  if (ymdMatch) {
+    const year = ymdMatch[1];
+    const month = String(parseInt(ymdMatch[2], 10)).padStart(2, '0');
+    const day = String(parseInt(ymdMatch[3], 10)).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   }
 
-  // DD/MM/YYYY or MM/DD/YYYY with slash or hyphen
-  const slashMatch = clean.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/);
-  if (slashMatch) {
-    const n1 = parseInt(slashMatch[1], 10);
-    const n2 = parseInt(slashMatch[2], 10);
-    const year = slashMatch[3];
+  // DD-Mon-YYYY or DD Mon YYYY (e.g. 02-Sep-2026, 15 Aug 2026, 05-Sep-26)
+  const monthMap: Record<string, string> = {
+    jan: '01', feb: '02', mar: '03', apr: '04', may: '05', jun: '06',
+    jul: '07', aug: '08', sep: '09', oct: '10', nov: '11', dec: '12',
+  };
+  const dMonYMatch = clean.match(/^(\d{1,2})[-/ ]([A-Za-z]{3})[-/ ](\d{2,4})$/);
+  if (dMonYMatch) {
+    const day = String(parseInt(dMonYMatch[1], 10)).padStart(2, '0');
+    const monStr = dMonYMatch[2].toLowerCase();
+    const month = monthMap[monStr];
+    if (month) {
+      let yr = dMonYMatch[3];
+      if (yr.length === 2) {
+        const yy = parseInt(yr, 10);
+        yr = yy >= 70 ? `19${yy}` : `20${String(yy).padStart(2, '0')}`;
+      }
+      return `${yr}-${month}-${day}`;
+    }
+  }
+
+  // DD/MM/YYYY, DD.MM.YYYY, DD-MM-YYYY, or MM/DD/YYYY
+  const dmyMatch = clean.match(/^(\d{1,2})[/.-](\d{1,2})[/.-](\d{4})$/);
+  if (dmyMatch) {
+    const n1 = parseInt(dmyMatch[1], 10);
+    const n2 = parseInt(dmyMatch[2], 10);
+    const year = dmyMatch[3];
 
     // If n2 > 12, it must be MM/DD/YYYY
     if (n2 > 12) {
@@ -58,6 +82,26 @@ export function normalizeDate(dateStr: string): string {
       const month = String(n2).padStart(2, '0');
       return `${year}-${month}-${day}`;
     }
+  }
+
+  // 2-digit year: DD/MM/YY, DD.MM.YY, DD-MM-YY
+  const dmy2Match = clean.match(/^(\d{1,2})[/.-](\d{1,2})[/.-](\d{2})$/);
+  if (dmy2Match) {
+    const n1 = parseInt(dmy2Match[1], 10);
+    const n2 = parseInt(dmy2Match[2], 10);
+    const yy = parseInt(dmy2Match[3], 10);
+    const year = yy >= 70 ? `19${yy}` : `20${String(yy).padStart(2, '0')}`;
+    const day = String(n1).padStart(2, '0');
+    const month = String(n2).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  // YYYYMMDD (8-digit ISO)
+  if (/^\d{8}$/.test(clean)) {
+    const year = clean.substring(0, 4);
+    const mm = clean.substring(4, 6);
+    const dd = clean.substring(6, 8);
+    return `${year}-${mm}-${dd}`;
   }
 
   // YYMMDD (SWIFT MT940 format)
@@ -73,7 +117,8 @@ export function normalizeDate(dateStr: string): string {
 }
 
 /**
- * Parses numeric currency strings (removes commas, handles European decimals like 1.234,56 or 1234,56)
+ * Parses numeric currency strings (removes commas, handles European decimals like 1.234,56 or 1234,56,
+ * and preserves thousands commas like 450,000 or 1,250,000).
  */
 export function parseAmount(val: string | number): number {
   if (typeof val === 'number') return Math.abs(val);
@@ -81,24 +126,36 @@ export function parseAmount(val: string | number): number {
 
   let cleaned = val.toString().trim().replace(/[LKR$€£]/gi, '').trim();
 
-  // Handle parenthesized negative: (100.50) -> -100.50
-  let isNegative = false;
+  // Handle parenthesized negative: (100.50) -> 100.50
   if (cleaned.startsWith('(') && cleaned.endsWith(')')) {
-    isNegative = true;
     cleaned = cleaned.slice(1, -1);
   }
 
-  // If comma is decimal separator (e.g. 1250,50 or 1.250,50)
-  if (cleaned.includes(',') && !cleaned.includes('.')) {
-    cleaned = cleaned.replace(',', '.');
-  } else if (cleaned.includes('.') && cleaned.includes(',')) {
-    // e.g. 1,250.50 vs 1.250,50
-    if (cleaned.indexOf(',') < cleaned.indexOf('.')) {
-      // 1,250.50
+  // Both dot and comma present
+  if (cleaned.includes('.') && cleaned.includes(',')) {
+    if (cleaned.lastIndexOf(',') < cleaned.lastIndexOf('.')) {
+      // 1,250,000.50 or 1,250.50 -> comma is thousand separator
       cleaned = cleaned.replace(/,/g, '');
     } else {
-      // 1.250,50
+      // 1.250.000,50 or 1.250,50 -> dot is thousand separator, comma is decimal
       cleaned = cleaned.replace(/\./g, '').replace(',', '.');
+    }
+  } else if (cleaned.includes(',')) {
+    // Only comma(s) present, no dot
+    const commaCount = (cleaned.match(/,/g) || []).length;
+    // If multiple commas (e.g. 1,250,000) or single comma followed by 3 digits (e.g. 450,000)
+    if (commaCount > 1 || /^\d+,\d{3}$/.test(cleaned)) {
+      cleaned = cleaned.replace(/,/g, '');
+    } else {
+      // European/SWIFT decimal e.g. 1250,50 or 885000,00
+      cleaned = cleaned.replace(',', '.');
+    }
+  } else if (cleaned.includes('.')) {
+    // Only dot(s) present, no comma
+    const dotCount = (cleaned.match(/\./g) || []).length;
+    if (dotCount > 1) {
+      // European thousand separator e.g. 1.250.000
+      cleaned = cleaned.replace(/\./g, '');
     }
   }
 
@@ -146,22 +203,65 @@ export function parseCSVBankStatement(content: string): ParseBankStatementResult
     };
   }
 
+  // Find header row: scan first 10 lines for line containing date and amount/debit/credit/type
+  let headerLineIdx = 0;
+  let metadataAccount: string | undefined;
+
+  for (let l = 0; l < Math.min(10, lines.length); l++) {
+    const rawTokens = parseCSVRow(lines[l]).map((h) => h.toLowerCase().replace(/["']/g, ''));
+    if (lines[l].toLowerCase().includes('account') && lines[l].includes(':')) {
+      const parts = lines[l].split(':');
+      metadataAccount = parts[1]?.trim();
+    }
+    const hasDate = rawTokens.some((h) => h.includes('date'));
+    const hasAmountOrDebitCredit = rawTokens.some(
+      (h) =>
+        h.includes('amount') ||
+        h.includes('debit') ||
+        h.includes('credit') ||
+        h.includes('balance') ||
+        h.includes('withdrawal') ||
+        h.includes('deposit')
+    );
+    if (hasDate && hasAmountOrDebitCredit) {
+      headerLineIdx = l;
+      break;
+    }
+  }
+
   // Parse header line with quote-aware row tokenizer
-  const headerTokens = parseCSVRow(lines[0])
+  const headerTokens = parseCSVRow(lines[headerLineIdx])
     .map((h) => h.toLowerCase().replace(/["']/g, ''));
 
   const dateIdx = headerTokens.findIndex((h) => h.includes('date'));
   const refIdx = headerTokens.findIndex(
-    (h) => h.includes('ref') || h.includes('cheque') || h.includes('check') || h.includes('trans id')
+    (h) =>
+      h.includes('ref') ||
+      h.includes('cheque') ||
+      h.includes('check') ||
+      h.includes('chq') ||
+      h.includes('trans id') ||
+      h.includes('txn') ||
+      h.includes('doc')
   );
   const descIdx = headerTokens.findIndex(
-    (h) => h.includes('desc') || h.includes('particular') || h.includes('narrat') || h.includes('detail')
+    (h) =>
+      h.includes('desc') ||
+      h.includes('particular') ||
+      h.includes('narrat') ||
+      h.includes('detail') ||
+      h.includes('memo') ||
+      h.includes('remark')
   );
   const debitIdx = headerTokens.findIndex(
-    (h) => (h.includes('debit') || h.includes('withdrawal') || h.includes('outflow') || h.includes('payment')) && !h.includes('credit')
+    (h) =>
+      /\b(debit|debits|withdrawal|withdrawals|outflow|paid out|money out|payment|payments|dr)\b/i.test(h) &&
+      !/\b(credit|credits|inflow|paid in|money in|receipt|receipts|cr)\b/i.test(h)
   );
   const creditIdx = headerTokens.findIndex(
-    (h) => (h.includes('credit') || h.includes('deposit') || h.includes('inflow')) && !h.includes('debit')
+    (h) =>
+      /\b(credit|credits|deposit|deposits|inflow|paid in|money in|receipt|receipts|cr)\b/i.test(h) &&
+      !/\b(debit|debits|outflow|paid out|money out|payment|payments|dr)\b/i.test(h)
   );
   const amountIdx = headerTokens.findIndex(
     (h) => h.includes('amount') || h.includes('total')
@@ -174,7 +274,7 @@ export function parseCSVBankStatement(content: string): ParseBankStatementResult
     errors.push('Could not identify a "Date" column in CSV header.');
   }
 
-  for (let i = 1; i < lines.length; i++) {
+  for (let i = headerLineIdx + 1; i < lines.length; i++) {
     const line = lines[i];
     if (!line) continue;
 
@@ -210,10 +310,22 @@ export function parseCSVBankStatement(content: string): ParseBankStatementResult
       const parsed = parseAmount(rawAmt);
       amount = parsed;
 
-      const rawType = typeIdx !== -1 ? cols[typeIdx]?.toUpperCase() : '';
+      const rawType = (typeIdx !== -1 ? cols[typeIdx]?.trim().toUpperCase() : '') || '';
       const isNegative = rawAmt.includes('-') || (rawAmt.startsWith('(') && rawAmt.endsWith(')'));
 
-      if (rawType.includes('CR') || rawType.includes('DEP') || (!isNegative && typeIdx === -1)) {
+      const isDepositType =
+        /\b(cr|credit|dep|deposit|deposits|inflow|receipt|receipts|received|income|transfer in|collection)\b/i.test(rawType) ||
+        rawType === 'C' ||
+        rawType.includes('CR') ||
+        rawType.includes('DEP');
+
+      const isPaymentType =
+        /\b(dr|debit|withdrawal|withdrawals|payment|payments|paid|outflow|charge|fee|expense|transfer out)\b/i.test(rawType) ||
+        rawType === 'D' ||
+        rawType.includes('DR') ||
+        rawType.includes('WITH');
+
+      if (isDepositType || (!isNegative && !isPaymentType && typeIdx === -1)) {
         type = 'DEPOSIT';
         credit = amount;
       } else {
@@ -243,6 +355,7 @@ export function parseCSVBankStatement(content: string): ParseBankStatementResult
     transactions,
     metadata: {
       format: 'CSV',
+      accountNumber: metadataAccount,
       totalTransactions: transactions.length,
     },
     errors,
@@ -272,35 +385,47 @@ export function parseMT940BankStatement(content: string): ParseBankStatementResu
 
   let currentTx: Partial<ParsedStatementTransaction> | null = null;
   let txCounter = 0;
+  let lastTag = '';
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
 
     // Tag :20: Statement Reference Number
     if (line.startsWith(':20:')) {
+      lastTag = ':20:';
+      if (currentTx && currentTx.date && currentTx.amount) {
+        transactions.push(currentTx as ParsedStatementTransaction);
+        currentTx = null;
+      }
       metadata.statementNumber = line.substring(4).trim();
       continue;
     }
 
     // Tag :25: Account Identification
     if (line.startsWith(':25:')) {
+      lastTag = ':25:';
       metadata.accountNumber = line.substring(4).trim();
       continue;
     }
 
     // Tag :60F: or :60M: Opening Balance
-    // Format: :60F:C260901LKR2500000,00
+    // Format: :60F:C260901LKR2500000,00 or :60F:CR260901LKR2500000,00
     if (line.startsWith(':60F:') || line.startsWith(':60M:')) {
+      lastTag = ':60:';
       const payload = line.substring(5).trim();
-      const mark = payload.charAt(0); // C or D
-      const rawDate = payload.substring(1, 7); // YYMMDD
-      const currency = payload.substring(7, 10); // LKR
-      const amountStr = payload.substring(10);
-      const amount = parseAmount(amountStr);
+      const balMatch = payload.match(/^([CD]R?|R[CD])(\d{6})([A-Z]{3})([0-9,.]+)/i);
+      if (balMatch) {
+        const mark = balMatch[1].toUpperCase();
+        const rawDate = balMatch[2];
+        const currency = balMatch[3];
+        const amountStr = balMatch[4];
+        const amount = parseAmount(amountStr);
+        const isDebit = mark === 'D' || mark === 'DR' || mark === 'RD';
 
-      metadata.openingDate = normalizeDate(rawDate);
-      metadata.currency = currency;
-      metadata.openingBalance = mark === 'D' ? -amount : amount;
+        metadata.openingDate = normalizeDate(rawDate);
+        metadata.currency = currency;
+        metadata.openingBalance = isDebit ? -amount : amount;
+      }
       continue;
     }
 
@@ -308,6 +433,7 @@ export function parseMT940BankStatement(content: string): ParseBankStatementResu
     // Format: :61:2609020902CD885000,00NTRFDEP-8841//NONREF
     // or :61:260902C885000,00NTRFDEP-8841
     if (line.startsWith(':61:')) {
+      lastTag = ':61:';
       if (currentTx && currentTx.date && currentTx.amount) {
         transactions.push(currentTx as ParsedStatementTransaction);
       }
@@ -326,12 +452,12 @@ export function parseMT940BankStatement(content: string): ParseBankStatementResu
         rest = rest.substring(4);
       }
 
-      // Debit/Credit mark: C (Credit), D (Debit), RC (Reversal Credit), RD (Reversal Debit)
+      // Debit/Credit mark: C (Credit), D (Debit), RC (Reversal Credit), RD (Reversal Debit), CR, DR
       let isCredit = true;
-      if (rest.startsWith('RC')) {
+      if (rest.startsWith('RC') || rest.startsWith('CR')) {
         isCredit = true;
         rest = rest.substring(2);
-      } else if (rest.startsWith('RD')) {
+      } else if (rest.startsWith('RD') || rest.startsWith('DR')) {
         isCredit = false;
         rest = rest.substring(2);
       } else if (rest.startsWith('C')) {
@@ -356,16 +482,25 @@ export function parseMT940BankStatement(content: string): ParseBankStatementResu
       }
 
       // Transaction type (3-4 chars, e.g. NTRF, NCHQ, FMSC, etc.)
-      // and Reference (e.g. DEP-8841//NONREF)
+      // and Reference (e.g. DEP-8841//NONREF or NTRF//TXN-9988)
       let reference = `STMT-${txCounter}`;
       if (rest.length > 0) {
-        // Strip 4-letter transaction code e.g. NTRF, NCHQ
+        // Strip 4-letter transaction code e.g. NTRF, NCHQ or 3-letter code
         if (/^[A-Z]{4}/.test(rest)) {
           rest = rest.substring(4);
+        } else if (/^[A-Z]{3}\b/.test(rest)) {
+          rest = rest.substring(3);
         }
-        const refParts = rest.split('//')[0].trim();
-        if (refParts) {
-          reference = refParts;
+        const parts = rest.split('//');
+        const primaryRef = parts[0]?.trim();
+        const secondaryRef = parts[1]?.trim();
+
+        if (primaryRef && primaryRef !== 'NONREF') {
+          reference = primaryRef;
+        } else if (secondaryRef && secondaryRef !== 'NONREF') {
+          reference = secondaryRef;
+        } else if (primaryRef) {
+          reference = primaryRef;
         }
       }
 
@@ -387,31 +522,62 @@ export function parseMT940BankStatement(content: string): ParseBankStatementResu
 
     // Tag :86: Information to Account Owner (Narrative / Description)
     if (line.startsWith(':86:')) {
-      const narrative = line.substring(4).trim();
+      lastTag = ':86:';
+      let narrative = line.substring(4).trim();
+      // Clean up common subfield code tags like ?00 or ?20
+      narrative = narrative.replace(/\?[0-9]{2}/g, ' ').trim();
       if (currentTx) {
-        currentTx.description = narrative;
+        // If currentTx reference is still generic (STMT-x or NONREF), see if narrative has a ref tag
+        if (currentTx.reference?.startsWith('STMT-') || currentTx.reference === 'NONREF') {
+          const refMatch = narrative.match(/(?:\/REFR?\/|\bREF:?\s*|\bCHQ:?\s*)([A-Za-z0-9-_]+)/i);
+          if (refMatch) {
+            currentTx.reference = refMatch[1];
+          }
+        }
+
+        const fallbackPrefix = currentTx.type === 'DEPOSIT' ? 'Deposit / Credit' : 'Payment / Debit';
+        if (currentTx.description?.startsWith(fallbackPrefix)) {
+          currentTx.description = narrative;
+        } else if (currentTx.description) {
+          currentTx.description = `${currentTx.description} ${narrative}`;
+        } else {
+          currentTx.description = narrative;
+        }
       }
       continue;
     }
 
     // Tag :62F: or :62M: Closing Balance
-    // Format: :62F:C260930LKR2360400,00
+    // Format: :62F:C260930LKR2360400,00 or :62F:CR260930LKR2360400,00
     if (line.startsWith(':62F:') || line.startsWith(':62M:')) {
+      lastTag = ':62:';
       if (currentTx && currentTx.date && currentTx.amount) {
         transactions.push(currentTx as ParsedStatementTransaction);
         currentTx = null;
       }
 
       const payload = line.substring(5).trim();
-      const mark = payload.charAt(0);
-      const rawDate = payload.substring(1, 7);
-      const currency = payload.substring(7, 10);
-      const amountStr = payload.substring(10);
-      const amount = parseAmount(amountStr);
+      const balMatch = payload.match(/^([CD]R?|R[CD])(\d{6})([A-Z]{3})([0-9,.]+)/i);
+      if (balMatch) {
+        const mark = balMatch[1].toUpperCase();
+        const rawDate = balMatch[2];
+        const currency = balMatch[3];
+        const amountStr = balMatch[4];
+        const amount = parseAmount(amountStr);
+        const isDebit = mark === 'D' || mark === 'DR' || mark === 'RD';
 
-      metadata.closingDate = normalizeDate(rawDate);
-      metadata.currency = currency;
-      metadata.closingBalance = mark === 'D' ? -amount : amount;
+        metadata.closingDate = normalizeDate(rawDate);
+        metadata.currency = currency;
+        metadata.closingBalance = isDebit ? -amount : amount;
+      }
+      continue;
+    }
+
+    // Multiline continuation for narrative :86: or unlabelled SWIFT lines
+    if (!line.startsWith(':') && line !== '-') {
+      if (lastTag === ':86:' && currentTx) {
+        currentTx.description = currentTx.description ? `${currentTx.description} ${line.trim()}` : line.trim();
+      }
       continue;
     }
   }

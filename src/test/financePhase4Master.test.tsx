@@ -493,4 +493,142 @@ describe('Phase 4 Master Test Suite: Bank Reconciliation Workspace', () => {
       expect(history[0].difference).toBe(0);
     });
   });
+
+  describe('5. Robustness & Deep Verification Edge Cases', () => {
+    it('correctly parses integer thousand amounts without cents and European/SWIFT separators', () => {
+      // Critical bug fix verification: 450,000 must NOT become 450!
+      expect(parseAmount('450,000')).toBe(450000);
+      expect(parseAmount('1,250,000')).toBe(1250000);
+      expect(parseAmount('(450,000)')).toBe(450000);
+      expect(parseAmount('1,250,000.00')).toBe(1250000);
+      expect(parseAmount('1.250.000,50')).toBe(1250000.5);
+      expect(parseAmount('1250,50')).toBe(1250.5);
+      expect(parseAmount('885000,00')).toBe(885000);
+    });
+
+    it('normalizes 8-digit ISO dates and alphanumeric month dates', () => {
+      expect(normalizeDate('20260902')).toBe('2026-09-02');
+      expect(normalizeDate('02-Sep-2026')).toBe('2026-09-02');
+      expect(normalizeDate('15 Aug 2026')).toBe('2026-08-15');
+      expect(normalizeDate('05-Oct-26')).toBe('2026-10-05');
+    });
+
+    it('parses CSV bank statements with metadata pre-headers and plural column names', () => {
+      const csvWithPreHeader = `Bank Name: Commercial Bank of Ceylon PLC
+Account Number: 1010-009283-001
+Date Range: 01/09/2026 to 30/09/2026
+Date,Chq No,Remarks,Debits,Credits
+2026-09-02,DEP-8841,Customer payment received,0,"450,000"
+2026-09-05,CHQ-1049,Vendor payment Kelani Cables,"125,000",0`;
+
+      const result = parseCSVBankStatement(csvWithPreHeader);
+      expect(result.success).toBe(true);
+      expect(result.metadata.accountNumber).toBe('1010-009283-001');
+      expect(result.transactions.length).toBe(2);
+
+      expect(result.transactions[0].amount).toBe(450000);
+      expect(result.transactions[0].type).toBe('DEPOSIT');
+      expect(result.transactions[0].reference).toBe('DEP-8841');
+      expect(result.transactions[0].description).toBe('Customer payment received');
+
+      expect(result.transactions[1].amount).toBe(125000);
+      expect(result.transactions[1].type).toBe('PAYMENT');
+      expect(result.transactions[1].reference).toBe('CHQ-1049');
+    });
+
+    it('parses MT940 statements extracting secondary references and narrative tags', () => {
+      const mt940SecondaryRef = `:20:STMT-SEP-02
+:25:1010-009283-001
+:60F:C260901LKR1000000,00
+:61:260902C500000,00NTRFNONREF//DEP-SPECIAL
+:86:?00Transfer payment?20/REFR/SPECIAL-TXN
+:62F:C260930LKR1500000,00
+-`;
+
+      const result = parseMT940BankStatement(mt940SecondaryRef);
+      expect(result.success).toBe(true);
+      expect(result.transactions.length).toBe(1);
+      const tx = result.transactions[0];
+      expect(tx.amount).toBe(500000);
+      expect(tx.type).toBe('DEPOSIT');
+      expect(['DEP-SPECIAL', 'SPECIAL-TXN']).toContain(tx.reference);
+      expect(tx.description).not.toContain('?00');
+    });
+
+    it('handles undefined/nullish references and descriptions in calculateMatchScore without throwing', () => {
+      const txA: any = {
+        id: 'a',
+        date: '2026-09-02',
+        reference: undefined,
+        description: undefined,
+        type: 'DEPOSIT',
+        amount: 50000,
+        debit: 50000,
+        credit: 0,
+        isCleared: false,
+      };
+
+      const txB: any = {
+        id: 'b',
+        date: '2026-09-02',
+        reference: null,
+        description: null,
+        type: 'DEPOSIT',
+        amount: 50000,
+        debit: 0,
+        credit: 50000,
+        isCleared: false,
+      };
+
+      // Must not throw TypeError
+      expect(() => {
+        const score = calculateMatchScore(txA, txB);
+        expect(score).not.toBeNull();
+        expect(score?.score).toBeGreaterThanOrEqual(100);
+      }).not.toThrow();
+    });
+
+    it('handles drag-and-drop file upload on statement upload modal', async () => {
+      render(
+        <MemoryRouter>
+          <BankReconciliationPage />
+        </MemoryRouter>
+      );
+
+      // Start reconciliation
+      fireEvent.click(screen.getByRole('button', { name: /start reconciliation/i }));
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /upload statement/i })).toBeDefined();
+      });
+
+      // Open upload modal
+      fireEvent.click(screen.getByRole('button', { name: /upload statement/i }));
+
+      await waitFor(() => {
+        expect(screen.getByText('Upload Electronic Bank Statement')).toBeDefined();
+      });
+
+      // Locate dropzone
+      const dropzone = screen.getByText(/Choose or Drag & Drop Statement File/i).closest('div');
+      expect(dropzone).toBeDefined();
+
+      // Trigger dragOver
+      fireEvent.dragOver(dropzone!);
+
+      // Quick load preset in modal and verify preview badge
+      fireEvent.click(screen.getByRole('button', { name: /load sample csv/i }));
+
+      await waitFor(() => {
+        expect(screen.getByText(/Successfully parsed 5 transactions \(CSV format\)/i)).toBeDefined();
+      });
+
+      // Import to workspace
+      fireEvent.click(screen.getByRole('button', { name: /import to workspace/i }));
+
+      await waitFor(() => {
+        expect(screen.queryByText('Upload Electronic Bank Statement')).toBeNull();
+      });
+    });
+  });
 });

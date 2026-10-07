@@ -199,9 +199,15 @@ export function BankReconciliationPage() {
   const [isWorkspaceActive, setIsWorkspaceActive] = useState<boolean>(false);
 
   // Locked Prior Balance State
-  const [beginningBalance, setBeginningBalance] = useState<number>(2500000.0);
-  const [isLockedFromPrior, setIsLockedFromPrior] = useState<boolean>(true);
-  const [priorReconciledPeriod, setPriorReconciledPeriod] = useState<ReconciliationPeriod | null>(null);
+  const [beginningBalance, setBeginningBalance] = useState<number>(() => {
+    return bankReconciliationService.getBeginningBalance('acc-1010', 0).balance;
+  });
+  const [isLockedFromPrior, setIsLockedFromPrior] = useState<boolean>(() => {
+    return bankReconciliationService.getBeginningBalance('acc-1010', 0).isLockedFromPrior;
+  });
+  const [priorReconciledPeriod, setPriorReconciledPeriod] = useState<ReconciliationPeriod | null>(() => {
+    return bankReconciliationService.getBeginningBalance('acc-1010', 0).priorPeriod;
+  });
 
   // Split-Pane Transactions
   const [systemTransactions, setSystemTransactions] = useState<BankStatementTransaction[]>(
@@ -243,7 +249,7 @@ export function BankReconciliationPage() {
     const acc = bankAccounts.find((b) => b.id === selectedAccountId || b.code === selectedAccountId) || bankAccounts[0];
     const accId = acc ? acc.id : selectedAccountId || 'acc-1010';
 
-    const begBalInfo = bankReconciliationService.getBeginningBalance(accId, 2500000);
+    const begBalInfo = bankReconciliationService.getBeginningBalance(accId, 0);
     setBeginningBalance(begBalInfo.balance);
     setIsLockedFromPrior(begBalInfo.isLockedFromPrior);
     setPriorReconciledPeriod(begBalInfo.priorPeriod);
@@ -447,6 +453,20 @@ export function BankReconciliationPage() {
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadedFileName(file.name);
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const content = event.target?.result as string;
+      handleParseInput(content, file.name);
+    };
+    reader.readAsText(file);
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    const file = e.dataTransfer?.files?.[0];
     if (!file) return;
 
     setUploadedFileName(file.name);
@@ -1383,17 +1403,21 @@ export function BankReconciliationPage() {
             </div>
           </div>
 
-          {/* File Picker */}
-          <div>
+          {/* File Picker with Drag & Drop */}
+          <div
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={handleDrop}
+            className="p-3 border-2 border-dashed border-slate-200 rounded-lg hover:border-primary/50 transition-colors bg-slate-50/50"
+          >
             <label className="block text-xs font-semibold text-slate-700 mb-1">
-              Choose Statement File (.csv, .940, .sta, .txt)
+              Choose or Drag & Drop Statement File (.csv, .940, .sta, .txt)
             </label>
             <input
               type="file"
               ref={fileInputRef}
               onChange={handleFileUpload}
               accept=".csv,.940,.sta,.txt"
-              className="block w-full text-xs text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-primary file:text-white hover:file:bg-primary-hover cursor-pointer border border-slate-200 rounded-md p-1"
+              className="block w-full text-xs text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-primary file:text-white hover:file:bg-primary-hover cursor-pointer border border-slate-200 rounded-md p-1 bg-white"
             />
             {uploadedFileName && (
               <span className="text-[11px] text-slate-500 mt-1 block">
@@ -1431,6 +1455,21 @@ export function BankReconciliationPage() {
                     <CheckCircle2 className="h-4 w-4 text-emerald-600" />
                     <span>Successfully parsed {parsedPreview.transactions.length} transactions ({parsedPreview.metadata.format} format)</span>
                   </div>
+                  {parsedPreview.metadata.openingBalance !== undefined && (
+                    <div className="flex flex-wrap items-center gap-1 text-[11px] text-slate-700">
+                      <span>Statement Opening Balance:</span>
+                      <span className="font-mono font-bold">{formatCurrency(parsedPreview.metadata.openingBalance)}</span>
+                      {Math.abs(parsedPreview.metadata.openingBalance - beginningBalance) > 0.01 ? (
+                        <Badge variant="outline" className="bg-amber-50 text-amber-800 border-amber-300 text-[10px] ml-1">
+                          Differs from locked prior balance ({formatCurrency(beginningBalance)})
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="bg-emerald-50 text-emerald-800 border-emerald-300 text-[10px] ml-1">
+                          Matches locked prior balance
+                        </Badge>
+                      )}
+                    </div>
+                  )}
                   {parsedPreview.metadata.closingBalance !== undefined && (
                     <p className="text-[11px] text-emerald-800">
                       Statement Ending Balance detected: <span className="font-mono font-bold">{formatCurrency(parsedPreview.metadata.closingBalance)}</span>
