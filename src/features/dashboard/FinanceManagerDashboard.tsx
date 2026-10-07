@@ -74,12 +74,13 @@ export function FinanceManagerDashboard() {
     async function loadData() {
       try {
         const [pnl, bs] = await Promise.all([getProfitLoss(), getBalanceSheet()]);
-        setNetProfit(pnl.netOperatingProfit);
-        setGrossMargin(pnl.grossProfitMargin);
-        setTotalRevenue(pnl.revenue.grossRevenue);
-        setTotalAssets(bs.totalAssets);
-        setTotalLiabilities(bs.totalLiabilities);
-        setTotalEquity(bs.totalEquity);
+        setNetProfit(pnl?.netOperatingProfit ?? 0);
+        const margin = pnl && pnl.totalRevenue > 0 ? (pnl.grossProfit / pnl.totalRevenue) * 100 : 0;
+        setGrossMargin(margin);
+        setTotalRevenue(pnl?.totalRevenue ?? 0);
+        setTotalAssets(bs?.totalAssets ?? 0);
+        setTotalLiabilities(bs?.totalLiabilities ?? 0);
+        setTotalEquity(bs?.totalEquity ?? 0);
 
         const receipts = arService.getPendingReceipts();
         setPendingReceipts(receipts);
@@ -274,8 +275,8 @@ export function FinanceManagerDashboard() {
         />
         <StatCard
           title="Net Operating Profit"
-          value={formatCurrency(netProfit)}
-          subtitle={`Gross Margin: ${grossMargin.toFixed(1)}% | Revenue: ${formatCurrency(totalRevenue)}`}
+          value={formatCurrency(netProfit || 0)}
+          subtitle={`Gross Margin: ${(grossMargin || 0).toFixed(1)}% | Revenue: ${formatCurrency(totalRevenue || 0)}`}
           icon={PieChart}
           trend={{ value: 'Balanced Ledger', isPositive: true }}
           variant="success"
