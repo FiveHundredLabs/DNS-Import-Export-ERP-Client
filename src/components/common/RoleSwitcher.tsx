@@ -41,15 +41,15 @@ export function RoleSwitcher({ className, triggerClassName, showIcon = true }: R
         <SelectTrigger
           aria-label="Switch User Role"
           className={cn(
-            'h-8 text-xs font-medium bg-slate-50 border-slate-200/90 hover:bg-slate-100 text-slate-700 rounded-md gap-1.5 px-2.5 shadow-2xs transition-colors',
+            'h-8 text-xs font-medium bg-slate-50 border-slate-200/90 hover:bg-slate-100 text-slate-800 rounded-md gap-1.5 px-2.5 shadow-2xs transition-colors',
             triggerClassName
           )}
         >
           <div className="flex items-center gap-1.5 truncate">
-            {showIcon && <ShieldCheck className="h-3.5 w-3.5 text-primary shrink-0" />}
-            <span className="text-slate-400 font-normal hidden lg:inline">Role:</span>
+            {showIcon && <ShieldCheck className="h-3.5 w-3.5 opacity-80 shrink-0" />}
+            <span className="font-normal opacity-75 hidden lg:inline">Role:</span>
             <SelectValue placeholder="Select Role">
-              <span className="font-semibold text-slate-800">
+              <span className="font-semibold">
                 {currentRoleObj?.shortLabel || currentUser.role}
               </span>
             </SelectValue>

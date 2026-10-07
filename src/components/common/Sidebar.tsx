@@ -28,6 +28,7 @@ import {
   LucideIcon,
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
+import { useFavorites } from '../../hooks/useFavorites';
 import { cn } from '../../utils/cn';
 
 interface SidebarProps {
@@ -37,7 +38,15 @@ interface SidebarProps {
   onToggleCollapse?: () => void;
 }
 
-type RailCategory = 'all' | 'sales' | 'customers' | 'inventory' | 'finance' | 'approvals' | 'reports' | 'admin';
+type RailCategory =
+  | 'all'
+  | 'sales'
+  | 'customers'
+  | 'inventory'
+  | 'finance'
+  | 'approvals'
+  | 'reports'
+  | 'admin';
 
 interface SidebarItem {
   id: string;
@@ -45,66 +54,66 @@ interface SidebarItem {
   path: string;
   icon: LucideIcon;
   category: RailCategory;
-  groupColor: 'green' | 'purple' | 'brown' | 'blue' | 'orange';
   exact?: boolean;
   directorOnly?: boolean;
 }
 
 export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const { canAccessRoute, currentUser } = useAuth();
+  const { isFavorite, toggleFavorite } = useFavorites();
   const location = useLocation();
   const navigate = useNavigate();
 
   const [activeCategory, setActiveCategory] = useState<RailCategory>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
-  // 1. Emerald / Green Group — Procurement, Orders & Approvals
-  const greenItems: SidebarItem[] = [
-    { id: 'suppliers', name: 'Suppliers', path: '/finance/suppliers', icon: Store, category: 'finance', groupColor: 'green' },
-    { id: 'quotations', name: 'Quotations', path: '/quotations', icon: FileSpreadsheet, category: 'sales', groupColor: 'green' },
-    { id: 'orders', name: 'Sales Orders', path: '/orders', icon: ShoppingCart, category: 'sales', groupColor: 'green' },
-    { id: 'approvals', name: 'Approvals Engine', path: '/approvals', icon: CheckCircle, category: 'approvals', groupColor: 'green' },
+  // 1. Procurement, Orders & Approvals
+  const procurementItems: SidebarItem[] = [
+    { id: 'suppliers', name: 'Suppliers', path: '/finance/suppliers', icon: Store, category: 'finance' },
+    { id: 'quotations', name: 'Quotations', path: '/quotations', icon: FileSpreadsheet, category: 'sales' },
+    { id: 'orders', name: 'Sales Orders', path: '/orders', icon: ShoppingCart, category: 'sales' },
+    { id: 'approvals', name: 'Approvals Engine', path: '/approvals', icon: CheckCircle, category: 'approvals' },
   ];
 
-  // 2. Purple / Violet Group — Customers, Invoices, Payments & POS
-  const purpleItems: SidebarItem[] = [
-    { id: 'customers', name: 'Customer Master', path: '/customers', icon: Users2, category: 'customers', groupColor: 'purple' },
-    { id: 'invoices', name: 'Invoices', path: '/invoices', icon: Receipt, category: 'sales', groupColor: 'purple' },
-    { id: 'payments', name: 'Payments', path: '/payments', icon: CreditCard, category: 'finance', groupColor: 'purple' },
-    { id: 'pos', name: 'Showroom POS', path: '/pos', icon: Store, category: 'sales', groupColor: 'purple' },
+  // 2. Customers, Invoices, Payments & POS
+  const customerItems: SidebarItem[] = [
+    { id: 'customers', name: 'Customer Master', path: '/customers', icon: Users2, category: 'customers' },
+    { id: 'invoices', name: 'Invoices', path: '/invoices', icon: Receipt, category: 'sales' },
+    { id: 'payments', name: 'Payments', path: '/payments', icon: CreditCard, category: 'finance' },
+    { id: 'pos', name: 'Showroom POS', path: '/pos', icon: Store, category: 'sales' },
   ];
 
-  // 3. Brown / Bronze / Amber Group — Products & Inventory
-  const brownItems: SidebarItem[] = [
-    { id: 'products', name: 'Product Master', path: '/products', icon: Package, category: 'inventory', groupColor: 'brown' },
-    { id: 'inventory', name: 'Inventory & GRN', path: '/inventory', icon: Boxes, category: 'inventory', groupColor: 'brown', exact: true },
-    { id: 'transfers', name: 'Stock Transfers', path: '/inventory/transfers', icon: ArrowLeftRight, category: 'inventory', groupColor: 'brown' },
+  // 3. Products & Inventory
+  const inventoryItems: SidebarItem[] = [
+    { id: 'products', name: 'Product Master', path: '/products', icon: Package, category: 'inventory' },
+    { id: 'inventory', name: 'Inventory & GRN', path: '/inventory', icon: Boxes, category: 'inventory', exact: true },
+    { id: 'transfers', name: 'Stock Transfers', path: '/inventory/transfers', icon: ArrowLeftRight, category: 'inventory' },
   ];
 
-  // 4. Blue Group — Finance, Banking, Ledger & Warranty
-  const blueItems: SidebarItem[] = [
-    { id: 'accounts', name: 'Chart of Accounts', path: '/finance/accounts', icon: BookOpen, category: 'finance', groupColor: 'blue' },
-    { id: 'finance', name: 'Finance & Ledger', path: '/finance', icon: DollarSign, category: 'finance', groupColor: 'blue', exact: true },
-    { id: 'warranty', name: 'Warranty Hub', path: '/warranty', icon: ShieldCheck, category: 'approvals', groupColor: 'blue' },
-    { id: 'commissions', name: 'Sales Commission', path: '/commissions', icon: Award, category: 'finance', groupColor: 'blue' },
+  // 4. Finance, Banking, Ledger & Warranty
+  const financeItems: SidebarItem[] = [
+    { id: 'accounts', name: 'Chart of Accounts', path: '/finance/accounts', icon: BookOpen, category: 'finance' },
+    { id: 'finance', name: 'Finance & Ledger', path: '/finance', icon: DollarSign, category: 'finance', exact: true },
+    { id: 'warranty', name: 'Warranty Hub', path: '/warranty', icon: ShieldCheck, category: 'approvals' },
+    { id: 'commissions', name: 'Sales Commission', path: '/commissions', icon: Award, category: 'finance' },
   ];
 
-  // 5. Orange / Gold Group — Administration, Field Management & Intelligence
-  const orangeItems: SidebarItem[] = [
-    { id: 'teams', name: 'Team Management', path: '/teams', icon: Users, category: 'admin', groupColor: 'orange' },
-    { id: 'areas', name: 'Area Management', path: '/areas', icon: Compass, category: 'admin', groupColor: 'orange' },
-    { id: 'reports', name: 'Enterprise Reports', path: '/reports', icon: BarChart3, category: 'reports', groupColor: 'orange' },
-    { id: 'theme', name: 'Theme & Appearance', path: '/?tab=settings', icon: Settings, category: 'admin', groupColor: 'orange', directorOnly: true },
-    { id: 'role-portal', name: 'Role Switcher Portal', path: '/login', icon: Users, category: 'admin', groupColor: 'orange' },
+  // 5. Administration, Field Management & Intelligence
+  const adminItems: SidebarItem[] = [
+    { id: 'teams', name: 'Team Management', path: '/teams', icon: Users, category: 'admin' },
+    { id: 'areas', name: 'Area Management', path: '/areas', icon: Compass, category: 'admin' },
+    { id: 'reports', name: 'Enterprise Reports', path: '/reports', icon: BarChart3, category: 'reports' },
+    { id: 'theme', name: 'Theme & Appearance', path: '/?tab=settings', icon: Settings, category: 'admin', directorOnly: true },
+    { id: 'role-portal', name: 'Role Switcher Portal', path: '/login', icon: Users, category: 'admin' },
   ];
 
   // Combined item list in canonical Quick Links order
   const allRawItems: SidebarItem[] = [
-    ...greenItems,
-    ...purpleItems,
-    ...brownItems,
-    ...blueItems,
-    ...orangeItems,
+    ...procurementItems,
+    ...customerItems,
+    ...inventoryItems,
+    ...financeItems,
+    ...adminItems,
   ];
 
   // Filter items by role permission and director exclusivity
@@ -115,7 +124,12 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       }
       return canAccessRoute(item.path.split('?')[0]);
     });
-  }, [canAccessRoute, currentUser.role]);
+  }, [allRawItems, canAccessRoute, currentUser.role]);
+
+  // Authorized favorite items
+  const authorizedFavoriteItems = useMemo(() => {
+    return authorizedItems.filter((item) => isFavorite(item.id));
+  }, [authorizedItems, isFavorite]);
 
   // Filter items based on active category and search input
   const displayedItems = useMemo(() => {
@@ -136,31 +150,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     return items;
   }, [authorizedItems, activeCategory, searchQuery]);
 
-  // Color styles configuration matching the reference image exactly
-  const colorStyles: Record<SidebarItem['groupColor'], { text: string; star: string }> = {
-    green: {
-      text: 'text-emerald-700',
-      star: 'text-emerald-600 fill-emerald-600',
-    },
-    purple: {
-      text: 'text-purple-700',
-      star: 'text-purple-600 fill-purple-600',
-    },
-    brown: {
-      text: 'text-amber-800',
-      star: 'text-amber-700 fill-amber-700',
-    },
-    blue: {
-      text: 'text-blue-700',
-      star: 'text-blue-600 fill-blue-600',
-    },
-    orange: {
-      text: 'text-amber-600',
-      star: 'text-amber-500 fill-amber-500',
-    },
-  };
-
-  // Rail category definition matching reference image icons exactly
+  // Rail category definition (No separate favorites rail item)
   const railItems = [
     { id: 'all' as RailCategory, label: 'Dashboard & Quick Links', icon: LayoutGrid },
     { id: 'sales' as RailCategory, label: 'Sales & Orders', icon: Calendar },
@@ -206,6 +196,74 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
 
   const isDashboardActive = location.pathname === '/' && !location.search.includes('tab=settings');
 
+  // Check if a sidebar item's route is currently active
+  const isItemActive = (item: SidebarItem) => {
+    if (item.path.includes('?')) {
+      return location.pathname + location.search === item.path;
+    }
+    if (item.exact) {
+      return location.pathname === item.path;
+    }
+    if (item.path === '/') {
+      return location.pathname === '/' && !location.search.includes('tab=settings');
+    }
+    return location.pathname === item.path || location.pathname.startsWith(item.path + '/');
+  };
+
+  // Reusable item row renderer with clean neutral content-page styling and enlarged icons
+  const renderItemRow = (item: SidebarItem) => {
+    const Icon = item.icon;
+    const itemIsFav = isFavorite(item.id);
+    const active = isItemActive(item);
+
+    return (
+      <div
+        key={item.id}
+        className={cn(
+          'group flex items-center justify-between rounded-md text-[13px] transition-all',
+          active
+            ? 'bg-slate-100 font-semibold text-slate-900 shadow-2xs'
+            : 'font-medium text-slate-700 hover:bg-slate-50 hover:text-slate-900'
+        )}
+      >
+        {/* Left: Slate Gray Menu Item Icon (Small: h-3.5 w-3.5) + Item Name */}
+        <NavLink
+          to={item.path}
+          end={item.exact}
+          onClick={onClose}
+          className="flex items-center gap-2 min-w-0 flex-1 px-2 py-1.5 focus:outline-none"
+        >
+          <Icon className={cn('h-3.5 w-3.5 shrink-0 transition-colors text-slate-500 group-hover:text-slate-700', active && 'text-slate-900')} />
+          <span className="truncate">{item.name}</span>
+        </NavLink>
+
+        {/* Right: Interactive Star Toggle Button (Clean Gray, Small) */}
+        <button
+          type="button"
+          onClick={(e) => toggleFavorite(item.id, item.name, e)}
+          aria-label={itemIsFav ? `Remove ${item.name} from favorites` : `Add ${item.name} to favorites`}
+          title={itemIsFav ? `Remove ${item.name} from favorites` : `Add ${item.name} to favorites`}
+          className={cn(
+            'flex items-center justify-center h-6 w-6 rounded-md mr-1 transition-all',
+            'focus:outline-none focus:ring-1 focus:ring-slate-300',
+            itemIsFav
+              ? 'text-slate-600 hover:bg-slate-200/60'
+              : 'text-slate-300 hover:text-slate-500 hover:bg-slate-100'
+          )}
+        >
+          <Star
+            className={cn(
+              'h-3.5 w-3.5 shrink-0 transition-all duration-150',
+              itemIsFav
+                ? 'text-slate-600 fill-slate-500 scale-105'
+                : 'text-slate-300 fill-none group-hover:text-slate-400 hover:text-slate-600 hover:scale-110'
+            )}
+          />
+        </button>
+      </div>
+    );
+  };
+
   return (
     <>
       {/* Mobile Backdrop */}
@@ -225,13 +283,12 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         )}
       >
         {/* ========================================================================= */}
-        {/* COLUMN 1: LEFT ICON RAIL (DOCK) */}
+        {/* COLUMN 1: LEFT ICON RAIL (DOCK - MATCHES TOP HEADER) */}
         {/* ========================================================================= */}
-        <div className="flex w-13 sm:w-14 flex-col items-center justify-between border-r border-slate-200/90 bg-[#f8f9fa] py-3 shrink-0 z-10">
-          {/* Top Rail Stack: Avatar + Module Category Icons */}
-          <div className="flex flex-col items-center w-full gap-2.5">
-            {/* Vertical Stack of Category Navigation Icons */}
-            <div className="flex flex-col items-center gap-1.5 w-full px-1.5">
+        <div className="flex w-14 sm:w-16 flex-col items-center justify-between border-r border-black/10 bg-primary text-primary-foreground py-3 shrink-0 z-10 select-none">
+          {/* Top Rail Stack: Module Category Navigation Icons */}
+          <div className="flex flex-col items-center w-full">
+            <div className="flex flex-col items-center gap-1.5 sm:gap-2 w-full px-2">
               {railItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = activeCategory === item.id;
@@ -241,6 +298,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                     key={item.id}
                     type="button"
                     onClick={() => {
+                      setSearchQuery('');
                       if (item.id === 'all') {
                         setActiveCategory('all');
                         navigate('/');
@@ -253,13 +311,20 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                     title={item.label}
                     aria-label={item.label}
                     className={cn(
-                      'flex h-8 w-8 items-center justify-center rounded-md transition-all duration-150',
+                      'relative flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center rounded-xl transition-all duration-150 group',
                       isActive
-                        ? 'bg-neutral-900 text-white shadow-xs'
-                        : 'text-slate-500 hover:bg-slate-200/70 hover:text-slate-800'
+                        ? 'bg-primary-foreground/20 text-primary-foreground shadow-xs font-semibold'
+                        : 'text-primary-foreground/70 hover:bg-primary-foreground/12 hover:text-primary-foreground'
                     )}
                   >
-                    <Icon className="h-3.5 w-3.5 shrink-0" />
+                    {/* Clean Left Active Indicator Strip */}
+                    {isActive && (
+                      <span
+                        className="absolute -left-2 top-1/2 -translate-y-1/2 w-1 h-5 sm:h-6 rounded-r-full bg-primary-foreground shadow-xs"
+                        aria-hidden="true"
+                      />
+                    )}
+                    <Icon className="h-5 w-5 shrink-0 transition-transform duration-150 group-hover:scale-105" />
                   </button>
                 );
               })}
@@ -267,7 +332,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
           </div>
 
           {/* Bottom Rail: Help & Support / Role Portal */}
-          <div className="flex flex-col items-center gap-2 pt-2">
+          <div className="flex flex-col items-center gap-2 w-full px-2 pt-2 border-t border-primary-foreground/15">
             <NavLink
               to="/login"
               onClick={onClose}
@@ -275,23 +340,33 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
               aria-label="Help & Role Portal"
               className={({ isActive }) =>
                 cn(
-                  'flex h-8 w-8 items-center justify-center rounded-md transition-colors',
+                  'relative flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center rounded-xl transition-all duration-150 group',
                   isActive
-                    ? 'bg-neutral-900 text-white'
-                    : 'text-slate-400 hover:bg-slate-200/70 hover:text-slate-700'
+                    ? 'bg-primary-foreground/20 text-primary-foreground shadow-xs'
+                    : 'text-primary-foreground/70 hover:bg-primary-foreground/12 hover:text-primary-foreground'
                 )
               }
             >
-              <HelpCircle className="h-3.5 w-3.5" />
+              {({ isActive }) => (
+                <>
+                  {isActive && (
+                    <span
+                      className="absolute -left-2 top-1/2 -translate-y-1/2 w-1 h-5 sm:h-6 rounded-r-full bg-primary-foreground shadow-xs"
+                      aria-hidden="true"
+                    />
+                  )}
+                  <HelpCircle className="h-5 w-5 shrink-0 transition-transform duration-150 group-hover:scale-105" />
+                </>
+              )}
             </NavLink>
           </div>
         </div>
 
         {/* ========================================================================= */}
-        {/* COLUMN 2: EXPANDED SUB-NAVIGATION FLYOUT PANEL */}
+        {/* COLUMN 2: EXPANDED SUB-NAVIGATION FLYOUT PANEL (CONTENT PAGE SHADE) */}
         {/* ========================================================================= */}
-        <div className="flex w-58 sm:w-62 flex-col border-r border-slate-200/90 bg-white">
-          {/* Mobile Close Bar Header (Required for Mobile UX & Accessibility Tests) */}
+        <div className="flex w-60 sm:w-64 flex-col border-r border-slate-200/90 bg-white">
+          {/* Mobile Close Bar Header */}
           <div className="flex items-center justify-between px-4 py-2.5 border-b border-slate-100 md:hidden">
             <span className="text-xs font-semibold text-slate-500 tracking-wider uppercase">Navigation</span>
             <button
@@ -303,8 +378,8 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
             </button>
           </div>
 
-          {/* Panel Header: Active Section Title & Search Input */}
-          <div className="p-3.5 pb-2.5 space-y-2.5 border-b border-slate-100/80">
+          {/* Panel Header: Active Section Title & Optional Dashboard Search Input */}
+          <div className="p-3.5 pb-2.5 space-y-2.5 border-b border-slate-100/90">
             {/* Panel Title */}
             <div className="flex items-center justify-between">
               <h2 className="text-[15px] font-bold text-slate-900 tracking-tight">
@@ -313,108 +388,138 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
               {activeCategory !== 'all' && (
                 <button
                   type="button"
-                  onClick={() => setActiveCategory('all')}
-                  className="text-[11px] font-medium text-slate-400 hover:text-primary transition-colors"
+                  onClick={() => {
+                    setActiveCategory('all');
+                    setSearchQuery('');
+                  }}
+                  className="text-[11px] font-medium text-slate-400 hover:text-slate-700 transition-colors"
                 >
-                  Show All
+                  Dashboard
                 </button>
               )}
             </div>
 
-            {/* Real-time Search Input */}
-            <div className="relative w-full">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 pointer-events-none" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search..."
-                className="w-full h-8 pl-8 pr-7 rounded-md bg-slate-50 border border-slate-200/90 text-[13px] text-slate-800 placeholder:text-slate-400 focus:bg-white focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-300 transition-all"
-              />
-              {searchQuery && (
-                <button
-                  type="button"
-                  onClick={() => setSearchQuery('')}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                  aria-label="Clear search"
-                >
-                  <X className="h-3.5 w-3.5" />
-                </button>
-              )}
-            </div>
+            {/* Real-time Search Input: ONLY rendered on Dashboard inner sidebar */}
+            {activeCategory === 'all' && (
+              <div className="relative w-full">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 pointer-events-none" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search..."
+                  className="w-full h-8 pl-8 pr-7 rounded-md bg-slate-50 border border-slate-200/90 text-[13px] text-slate-800 placeholder:text-slate-400 focus:bg-white focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-300 transition-all"
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                    aria-label="Clear search"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Semantic Navigation Landmark */}
           <nav aria-label="Sidebar Navigation" className="flex-1 overflow-y-auto px-2.5 py-2 space-y-2.5">
-            {/* Top Dashboard Pill: Only shown on Dashboard overview, NOT on category sub-menus */}
-            {activeCategory === 'all' && !searchQuery.trim() && (
-              <NavLink
-                to="/"
-                end
-                onClick={onClose}
-                className={cn(
-                  'flex items-center gap-2.5 w-full rounded-md px-3 py-2 text-[13px] font-medium transition-colors',
-                  isDashboardActive
-                    ? 'bg-[#d4d4d8] text-slate-900 font-semibold shadow-2xs'
-                    : 'bg-slate-100/80 text-slate-700 hover:bg-slate-200/70 hover:text-slate-900'
-                )}
-              >
-                <LayoutGrid className="h-4 w-4 shrink-0 text-slate-700" />
-                <span className="truncate">Dashboard</span>
-              </NavLink>
-            )}
-
-            {/* Sub-navigation Items Section */}
-            <div>
-              <div className="flex items-center justify-between px-2 pt-1 pb-1">
-                <span className="text-[10.5px] font-bold text-slate-400 uppercase tracking-wider">
-                  {activeCategory === 'all' ? 'Quick Links' : panelTitle}
-                </span>
-                <span className="text-[10px] text-slate-400 font-mono">
-                  {displayedItems.length}
-                </span>
-              </div>
-
-              {/* Grouped Items List */}
-              <div className="space-y-0.5">
-                {displayedItems.length === 0 ? (
-                  <div className="px-3 py-4 text-center text-xs text-slate-400">
-                    No matching modules found
+            {activeCategory === 'all' ? (
+              searchQuery.trim() ? (
+                /* Search Results (displayed when user searches in Dashboard search bar) */
+                <div className="space-y-0.5">
+                  <div className="flex items-center justify-between px-2 pt-1 pb-1">
+                    <span className="text-[10.5px] font-bold text-slate-400 uppercase tracking-wider">
+                      Search Results
+                    </span>
+                    <span className="text-[10px] text-slate-400 font-mono font-medium">
+                      {displayedItems.length}
+                    </span>
                   </div>
-                ) : (
-                  displayedItems.map((item) => {
-                    const Icon = item.icon;
-                    const style = colorStyles[item.groupColor];
+                  <div className="space-y-0.5">
+                    {displayedItems.length === 0 ? (
+                      <div className="px-3 py-6 text-center text-xs text-slate-400">
+                        No matching modules found
+                      </div>
+                    ) : (
+                      displayedItems.map((item) => renderItemRow(item))
+                    )}
+                  </div>
+                </div>
+              ) : (
+                /* Dashboard Overview: Dashboard shortcut + Favorites ONLY (No "ALL MODULES") */
+                <>
+                  {/* Top Dashboard Pill */}
+                  <NavLink
+                    to="/"
+                    end
+                    onClick={onClose}
+                    className={cn(
+                      'flex items-center gap-2.5 w-full rounded-md px-2.5 py-2 text-[13px] font-medium transition-colors',
+                      isDashboardActive
+                        ? 'bg-slate-200 text-slate-900 font-semibold shadow-2xs'
+                        : 'bg-slate-100/80 text-slate-700 hover:bg-slate-200/70 hover:text-slate-900'
+                    )}
+                  >
+                    <LayoutGrid className="h-4 w-4 shrink-0 text-slate-700" />
+                    <span className="truncate">Dashboard</span>
+                  </NavLink>
 
-                    return (
-                      <NavLink
-                        key={item.id}
-                        to={item.path}
-                        end={item.exact}
-                        onClick={onClose}
-                        className={({ isActive }) =>
-                          cn(
-                            'group flex items-center justify-between rounded-md px-2.5 py-1.5 text-[13px] transition-all',
-                            isActive
-                              ? 'bg-slate-100 font-semibold text-slate-900 shadow-2xs'
-                              : 'font-medium text-slate-700 hover:bg-slate-50 hover:text-slate-900'
-                          )
-                        }
-                      >
-                        {/* Left: Group Colored Icon + Item Name */}
-                        <div className="flex items-center gap-2.5 min-w-0 pr-1">
-                          <Icon className={cn('h-4 w-4 shrink-0 transition-colors', style.text)} />
-                          <span className="truncate">{item.name}</span>
+                  {/* Favorites section (ONLY list rendered in dashboard submenu) */}
+                  <div className="space-y-0.5 pt-1">
+                    <div className="flex items-center justify-between px-2 pt-1 pb-1">
+                      <div className="flex items-center gap-1.5">
+                        <Star className="h-3.5 w-3.5 text-slate-500 fill-slate-500" />
+                        <span className="text-[10.5px] font-bold text-slate-600 uppercase tracking-wider">
+                          Favorites
+                        </span>
+                      </div>
+                      <span className="text-[10px] text-slate-400 font-mono font-medium">
+                        {authorizedFavoriteItems.length}
+                      </span>
+                    </div>
+
+                    <div className="space-y-0.5">
+                      {authorizedFavoriteItems.length === 0 ? (
+                        <div className="px-3 py-6 text-center text-xs text-slate-400 border border-dashed border-slate-200 rounded-md">
+                          <Star className="h-4 w-4 mx-auto mb-1.5 text-slate-300 fill-none" />
+                          No favorite items yet
+                          <p className="mt-1 text-[11px] text-slate-500">
+                            Click the star on any module in category tabs to pin it here.
+                          </p>
                         </div>
+                      ) : (
+                        authorizedFavoriteItems.map((item) => renderItemRow(item))
+                      )}
+                    </div>
+                  </div>
+                </>
+              )
+            ) : (
+              /* Category Sub-navigation (Sales, Customers, Inventory, Finance, Approvals, Reports, Admin) */
+              <div className="space-y-0.5">
+                <div className="flex items-center justify-between px-2 pt-1 pb-1">
+                  <span className="text-[10.5px] font-bold text-slate-400 uppercase tracking-wider">
+                    {panelTitle}
+                  </span>
+                  <span className="text-[10px] text-slate-400 font-mono font-medium">
+                    {displayedItems.length}
+                  </span>
+                </div>
 
-                        {/* Right: Solid Star Matching the Group Color */}
-                        <Star className={cn('h-3.5 w-3.5 shrink-0 transition-transform group-hover:scale-110', style.star)} />
-                      </NavLink>
-                    );
-                  })
-                )}
+                <div className="space-y-0.5">
+                  {displayedItems.length === 0 ? (
+                    <div className="px-3 py-6 text-center text-xs text-slate-400">
+                      No modules available
+                    </div>
+                  ) : (
+                    displayedItems.map((item) => renderItemRow(item))
+                  )}
+                </div>
               </div>
-            </div>
+            )}
           </nav>
         </div>
       </aside>

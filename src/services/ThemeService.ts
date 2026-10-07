@@ -10,7 +10,8 @@ export const PRIMARY_COLOR_OPTIONS: PrimaryColorOption[] = [
     light: '#FFF6EE',
     border: '#FED7AA',
     text: '#C25304',
-    foreground: '#FFFFFF',
+    foreground: '#0F172A',
+    foregroundRgb: '15 23 42',
     ring: 'rgba(250, 130, 35, 0.35)',
   },
   {
@@ -23,6 +24,7 @@ export const PRIMARY_COLOR_OPTIONS: PrimaryColorOption[] = [
     border: '#C5CBEC',
     text: '#263183',
     foreground: '#FFFFFF',
+    foregroundRgb: '255 255 255',
     ring: 'rgba(38, 49, 131, 0.35)',
   },
   {
@@ -35,6 +37,7 @@ export const PRIMARY_COLOR_OPTIONS: PrimaryColorOption[] = [
     border: '#FECACA',
     text: '#BE121C',
     foreground: '#FFFFFF',
+    foregroundRgb: '255 255 255',
     ring: 'rgba(236, 27, 39, 0.35)',
   },
   {
@@ -46,7 +49,8 @@ export const PRIMARY_COLOR_OPTIONS: PrimaryColorOption[] = [
     light: '#F0F7FB',
     border: '#BEE0F0',
     text: '#24658B',
-    foreground: '#FFFFFF',
+    foreground: '#0F172A',
+    foregroundRgb: '15 23 42',
     ring: 'rgba(106, 174, 211, 0.35)',
   },
   {
@@ -59,6 +63,7 @@ export const PRIMARY_COLOR_OPTIONS: PrimaryColorOption[] = [
     border: '#D5D4D2',
     text: '#161511',
     foreground: '#FFFFFF',
+    foregroundRgb: '255 255 255',
     ring: 'rgba(22, 21, 17, 0.35)',
   },
 ];
@@ -150,11 +155,15 @@ export class ThemeService {
     if (typeof document === 'undefined') return;
     const root = document.documentElement;
 
+    const fg = color.foreground || '#FFFFFF';
+    const fgRgb = color.foregroundRgb || (fg === '#0F172A' ? '15 23 42' : '255 255 255');
+
     // Central primary theme variables required by specification
     root.style.setProperty('--primary', color.hex);
     root.style.setProperty('--primary-hover', color.hover);
     root.style.setProperty('--primary-active', color.active);
-    root.style.setProperty('--primary-foreground', color.foreground);
+    root.style.setProperty('--primary-foreground', fg);
+    root.style.setProperty('--primary-foreground-rgb', fgRgb);
     root.style.setProperty('--primary-light', color.light);
     root.style.setProperty('--primary-border', color.border);
 

@@ -45,7 +45,8 @@
     --primary: #6AAED3;
     --primary-hover: #559EC7;
     --primary-active: #468CB3;
-    --primary-foreground: #FFFFFF;
+    --primary-foreground: #0F172A;
+    --primary-foreground-rgb: 15 23 42;
     --primary-light: #F0F7FB;
     --primary-border: #BEE0F0;
     --primary-color: var(--primary);
