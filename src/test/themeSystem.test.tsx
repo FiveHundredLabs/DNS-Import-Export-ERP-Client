@@ -43,7 +43,7 @@ describe('Configurable Primary Color System Audit', () => {
       expect(orange.light).toBeDefined();
       expect(orange.border).toBeDefined();
       expect(orange.text).toBeDefined();
-      expect(orange.foreground).toBe('#FFFFFF');
+      expect(orange.foreground).toBe('#0F172A');
     });
   });
 

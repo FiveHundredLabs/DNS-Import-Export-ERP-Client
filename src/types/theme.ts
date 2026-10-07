@@ -10,6 +10,7 @@ export interface PrimaryColorOption {
   border: string;
   text: string;
   foreground: string;
+  foregroundRgb?: string;
   ring: string;
 }
 
