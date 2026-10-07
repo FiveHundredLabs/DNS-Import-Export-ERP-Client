@@ -406,3 +406,41 @@ export const createJournalEntrySchema = z.object({
 }, {
   message: 'The Double-Entry Invariant violated: Total debits must equal total credits to the cent',
 });
+
+// ==========================================
+// PHASE 4: Bank Reconciliation Workspace Types
+// ==========================================
+
+export interface BankReconciliationLine {
+  id: string;
+  date: string;
+  reference: string;
+  description: string;
+  type: 'DEPOSIT' | 'PAYMENT';
+  amount: number;
+  debit: number;
+  credit: number;
+  isCleared: boolean;
+  matchedLineId?: string;
+  matchConfidence?: 'EXACT' | 'DATE_TOLERANCE' | 'FUZZY' | 'MANUAL';
+}
+
+export interface BankReconciliationRecord {
+  id: string;
+  accountId: string;
+  accountCode: string;
+  accountName: string;
+  statementEndingDate: string;
+  beginningBalance: number; // Dynamically locked to prior period ending balance
+  endingBalance: number;    // Physical/electronic statement target balance
+  clearedDeposits: number;
+  clearedPayments: number;
+  clearedBalance: number;
+  difference: number;       // Strict 0.00
+  clearedCount: number;
+  status: 'RECONCILED' | 'IN_PROGRESS';
+  reconciledBy: string;
+  reconciledAt: string;
+  notes?: string;
+}
+
