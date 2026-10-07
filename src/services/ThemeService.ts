@@ -1,52 +1,67 @@
-import { PrimaryColorOption, CompanySettings } from '../types/theme';
+import { PrimaryColorOption, CompanySettings } from "../types/theme";
 
 export const PRIMARY_COLOR_OPTIONS: PrimaryColorOption[] = [
   {
-    id: 'dark-blue',
-    name: 'Dark Blue',
-    hex: '#263183',
-    hover: '#1D2667',
-    active: '#161D4F',
-    light: '#EEF1F9',
-    border: '#C5CBEC',
-    text: '#263183',
-    foreground: '#FFFFFF',
-    foregroundRgb: '255 255 255',
-    ring: 'rgba(38, 49, 131, 0.35)',
+    id: "black",
+    name: "Black",
+    hex: "#161511",
+    hover: "#282723",
+    active: "#0D0C0A",
+    light: "#F4F4F3",
+    border: "#D5D4D2",
+    text: "#161511",
+    foreground: "#FFFFFF",
+    foregroundRgb: "255 255 255",
+    ring: "rgba(22, 21, 17, 0.35)",
   },
   {
-    id: 'red',
-    name: 'Red',
-    hex: '#EC1B27',
-    hover: '#D40F1B',
-    active: '#B60A14',
-    light: '#FEF2F2',
-    border: '#FECACA',
-    text: '#BE121C',
-    foreground: '#FFFFFF',
-    foregroundRgb: '255 255 255',
-    ring: 'rgba(236, 27, 39, 0.35)',
+    id: "dark-blue",
+    name: "Dark Blue",
+    hex: "#263183",
+    hover: "#1D2667",
+    active: "#161D4F",
+    light: "#EEF1F9",
+    border: "#C5CBEC",
+    text: "#263183",
+    foreground: "#FFFFFF",
+    foregroundRgb: "255 255 255",
+    ring: "rgba(38, 49, 131, 0.35)",
   },
   {
-    id: 'black',
-    name: 'Black',
-    hex: '#161511',
-    hover: '#282723',
-    active: '#0D0C0A',
-    light: '#F4F4F3',
-    border: '#D5D4D2',
-    text: '#161511',
-    foreground: '#FFFFFF',
-    foregroundRgb: '255 255 255',
-    ring: 'rgba(22, 21, 17, 0.35)',
+    id: "red",
+    name: "Red",
+    hex: "#EC1B27",
+    hover: "#D40F1B",
+    active: "#B60A14",
+    light: "#FEF2F2",
+    border: "#FECACA",
+    text: "#BE121C",
+    foreground: "#FFFFFF",
+    foregroundRgb: "255 255 255",
+    ring: "rgba(236, 27, 39, 0.35)",
+  },
+  {
+    id: "orange",
+    name: "Deep Burnt Orange",
+    hex: "#C2410C",
+    hover: "#9A3412",
+    active: "#7C2D12",
+    light: "#FFF7ED",
+    border: "#FED7AA",
+    text: "#C2410C",
+    foreground: "#FFFFFF",
+    foregroundRgb: "255 255 255",
+    ring: "rgba(194, 65, 12, 0.35)",
   },
 ];
 
-export const DEFAULT_PRIMARY_COLOR = PRIMARY_COLOR_OPTIONS.find((c) => c.hex === '#263183')!;
+export const DEFAULT_PRIMARY_COLOR = PRIMARY_COLOR_OPTIONS.find(
+  (c) => c.hex === "#263183",
+)!;
 
-export const ERP_PRIMARY_COLOR_STORAGE_KEY = 'erp-primary-color';
-const COMPANY_SETTINGS_STORAGE_KEY = 'dns_erp_company_settings';
-const THEME_CHANGE_EVENT = 'dns_erp_theme_changed';
+export const ERP_PRIMARY_COLOR_STORAGE_KEY = "erp-primary-color";
+const COMPANY_SETTINGS_STORAGE_KEY = "dns_erp_company_settings";
+const THEME_CHANGE_EVENT = "dns_erp_theme_changed";
 
 type ThemeListener = (color: PrimaryColorOption) => void;
 
@@ -66,7 +81,7 @@ export class ThemeService {
       const savedHex = localStorage.getItem(ERP_PRIMARY_COLOR_STORAGE_KEY);
       if (savedHex) {
         const match = PRIMARY_COLOR_OPTIONS.find(
-          (c) => c.hex.toLowerCase() === savedHex.trim().toLowerCase()
+          (c) => c.hex.toLowerCase() === savedHex.trim().toLowerCase(),
         );
         if (match) {
           return match;
@@ -79,7 +94,7 @@ export class ThemeService {
         const parsed: CompanySettings = JSON.parse(raw);
         if (parsed && parsed.primaryColor) {
           const match = PRIMARY_COLOR_OPTIONS.find(
-            (c) => c.hex.toLowerCase() === parsed.primaryColor.toLowerCase()
+            (c) => c.hex.toLowerCase() === parsed.primaryColor.toLowerCase(),
           );
           if (match) {
             // Migrate to canonical key
@@ -89,15 +104,18 @@ export class ThemeService {
         }
       }
     } catch (e) {
-      console.warn('Failed to parse primary color from storage:', e);
+      console.warn("Failed to parse primary color from storage:", e);
     }
     return DEFAULT_PRIMARY_COLOR;
   }
 
   private initSync() {
-    if (typeof window !== 'undefined') {
-      window.addEventListener('storage', (event) => {
-        if (event.key === ERP_PRIMARY_COLOR_STORAGE_KEY || event.key === COMPANY_SETTINGS_STORAGE_KEY) {
+    if (typeof window !== "undefined") {
+      window.addEventListener("storage", (event) => {
+        if (
+          event.key === ERP_PRIMARY_COLOR_STORAGE_KEY ||
+          event.key === COMPANY_SETTINGS_STORAGE_KEY
+        ) {
           const newColor = this.loadSavedColor();
           if (newColor.hex !== this.currentColor.hex) {
             this.currentColor = newColor;
@@ -110,7 +128,7 @@ export class ThemeService {
       window.addEventListener(THEME_CHANGE_EVENT, (event: any) => {
         if (event.detail && event.detail.hex) {
           const match = PRIMARY_COLOR_OPTIONS.find(
-            (c) => c.hex.toLowerCase() === event.detail.hex.toLowerCase()
+            (c) => c.hex.toLowerCase() === event.detail.hex.toLowerCase(),
           );
           if (match && match.hex !== this.currentColor.hex) {
             this.currentColor = match;
@@ -126,25 +144,26 @@ export class ThemeService {
    * Applies CSS variables to document.documentElement
    */
   public applyTheme(color: PrimaryColorOption) {
-    if (typeof document === 'undefined') return;
+    if (typeof document === "undefined") return;
     const root = document.documentElement;
 
-    const fg = color.foreground || '#FFFFFF';
-    const fgRgb = color.foregroundRgb || (fg === '#0F172A' ? '15 23 42' : '255 255 255');
+    const fg = color.foreground || "#FFFFFF";
+    const fgRgb =
+      color.foregroundRgb || (fg === "#0F172A" ? "15 23 42" : "255 255 255");
 
     // Central primary theme variables required by specification
-    root.style.setProperty('--primary', color.hex);
-    root.style.setProperty('--primary-hover', color.hover);
-    root.style.setProperty('--primary-active', color.active);
-    root.style.setProperty('--primary-foreground', fg);
-    root.style.setProperty('--primary-foreground-rgb', fgRgb);
-    root.style.setProperty('--primary-light', color.light);
-    root.style.setProperty('--primary-border', color.border);
+    root.style.setProperty("--primary", color.hex);
+    root.style.setProperty("--primary-hover", color.hover);
+    root.style.setProperty("--primary-active", color.active);
+    root.style.setProperty("--primary-foreground", fg);
+    root.style.setProperty("--primary-foreground-rgb", fgRgb);
+    root.style.setProperty("--primary-light", color.light);
+    root.style.setProperty("--primary-border", color.border);
 
     // Aliases for comprehensive cross-component compatibility
-    root.style.setProperty('--primary-color', color.hex);
-    root.style.setProperty('--primary-text', color.text);
-    root.style.setProperty('--primary-ring', color.ring);
+    root.style.setProperty("--primary-color", color.hex);
+    root.style.setProperty("--primary-text", color.text);
+    root.style.setProperty("--primary-ring", color.ring);
   }
 
   public getPrimaryColor(): PrimaryColorOption {
@@ -161,25 +180,26 @@ export class ThemeService {
    */
   public setPrimaryColor(
     hex: string,
-    userRole?: string
+    userRole?: string,
   ): { success: boolean; error?: string; color?: PrimaryColorOption } {
     // 1. Role permission enforcement
-    if (userRole !== 'DIRECTOR') {
+    if (userRole !== "DIRECTOR") {
       return {
         success: false,
-        error: 'Access denied: Only users with the Director role can modify the primary color.',
+        error:
+          "Access denied: Only users with the Director role can modify the primary color.",
       };
     }
 
     // 2. Validate against the 5 predefined colors
     const matched = PRIMARY_COLOR_OPTIONS.find(
-      (c) => c.hex.toLowerCase() === hex.trim().toLowerCase()
+      (c) => c.hex.toLowerCase() === hex.trim().toLowerCase(),
     );
 
     if (!matched) {
       return {
         success: false,
-        error: `Invalid color value. Must be one of: ${PRIMARY_COLOR_OPTIONS.map((c) => `${c.name} (${c.hex})`).join(', ')}.`,
+        error: `Invalid color value. Must be one of: ${PRIMARY_COLOR_OPTIONS.map((c) => `${c.name} (${c.hex})`).join(", ")}.`,
       };
     }
 
@@ -187,17 +207,20 @@ export class ThemeService {
     const settings: CompanySettings = {
       primaryColor: matched.hex,
       updatedAt: new Date().toISOString(),
-      updatedBy: 'DIRECTOR',
+      updatedBy: "DIRECTOR",
     };
 
     try {
       localStorage.setItem(ERP_PRIMARY_COLOR_STORAGE_KEY, matched.hex);
-      localStorage.setItem(COMPANY_SETTINGS_STORAGE_KEY, JSON.stringify(settings));
+      localStorage.setItem(
+        COMPANY_SETTINGS_STORAGE_KEY,
+        JSON.stringify(settings),
+      );
     } catch (e) {
-      console.error('Failed to save theme settings to storage:', e);
+      console.error("Failed to save theme settings to storage:", e);
       return {
         success: false,
-        error: 'Storage failure: Unable to persist theme settings.',
+        error: "Storage failure: Unable to persist theme settings.",
       };
     }
 
@@ -208,11 +231,11 @@ export class ThemeService {
     // 5. Notify listeners and dispatch custom event for instant cross-component updates
     this.notify();
 
-    if (typeof window !== 'undefined') {
+    if (typeof window !== "undefined") {
       window.dispatchEvent(
         new CustomEvent(THEME_CHANGE_EVENT, {
           detail: { hex: matched.hex, id: matched.id },
-        })
+        }),
       );
     }
 
@@ -234,7 +257,7 @@ export class ThemeService {
       try {
         listener(this.currentColor);
       } catch (err) {
-        console.error('Error in theme listener:', err);
+        console.error("Error in theme listener:", err);
       }
     });
   }
