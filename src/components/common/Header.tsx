@@ -3,7 +3,6 @@ import { useLocation, Link, useNavigate } from 'react-router-dom';
 import {
   Menu,
   Search,
-  Layers,
   ArrowLeft,
 } from 'lucide-react';
 import { FullscreenButton } from '../header/FullscreenButton';
@@ -72,23 +71,31 @@ export function Header({ onToggleSidebar }: HeaderProps) {
 
         {location.pathname === '/' ? (
           <Link to="/" className="flex items-center gap-2.5 min-w-0 group">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary-foreground text-primary font-semibold text-sm shadow-sm transition-colors">
-              <Layers className="h-5 w-5" />
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-white p-0.5 shadow-sm ring-1 ring-white/20 transition-transform group-hover:scale-105 overflow-hidden">
+              <img
+                src="/logo.png"
+                alt="DNS IMPORT & EXPORT"
+                className="h-full w-full object-contain"
+              />
             </div>
             <div className="min-w-0">
               <h1 className="text-sm sm:text-lg md:text-xl font-bold text-primary-foreground tracking-tight truncate leading-tight">
                 LabsCore ERP
               </h1>
               <span className="text-[10.5px] sm:text-[11.5px] text-primary-foreground/80 font-semibold block uppercase tracking-wider -mt-0.5 truncate">
-                DNS IMPORT & EXPORT (PVT) LTD
+                DNS IMPORT & EXPORT (PVT) LTD.
               </span>
             </div>
           </Link>
         ) : (
           <div className="flex items-center gap-2 min-w-0">
             <Link to="/" className="hidden md:flex items-center gap-2 shrink-0 group" title="DNS ERP Dashboard">
-              <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary-foreground text-primary font-semibold text-xs shadow-sm transition-colors">
-                <Layers className="h-4 w-4" />
+              <div className="flex h-8 w-8 items-center justify-center rounded-md bg-white p-0.5 shadow-sm ring-1 ring-white/20 transition-transform group-hover:scale-105 overflow-hidden">
+                <img
+                  src="/logo.png"
+                  alt="DNS Logo"
+                  className="h-full w-full object-contain"
+                />
               </div>
               <span className="font-semibold text-primary-foreground tracking-tight text-base">
                 DNS ERP
