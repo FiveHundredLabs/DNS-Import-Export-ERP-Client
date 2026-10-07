@@ -95,6 +95,17 @@ export function AccountModal({
     ],
   };
 
+  const defaultSubTypeForSubClass: Record<AccountSubClass, string> = {
+    CURRENT_ASSET: 'Cash, Receivables & Current Assets',
+    NON_CURRENT_ASSET: 'Fixed & Capital Assets',
+    CURRENT_LIABILITY: 'Trade Payables & Current Liabilities',
+    NON_CURRENT_LIABILITY: 'Long-Term Notes & Loans',
+    EQUITY: 'Share Capital & Reserves',
+    REVENUE: 'Operating Trade Revenue',
+    DIRECT_COST: 'Cost of Sales & Direct Costs',
+    OPERATING_EXPENSE: 'General & Administrative Overheads',
+  };
+
   const handleParentSelectChange = (val: string) => {
     if (val.startsWith('acc:')) {
       const parentAccId = val.replace('acc:', '');
@@ -102,11 +113,19 @@ export function AccountModal({
       setParentId(parentAccId);
       if (parentAcc) {
         setAccountSubClass(parentAcc.accountSubClass);
+        // Auto-infer sub-type from parent account if empty or previously auto-set
+        if (parentAcc.accountSubType) {
+          setAccountSubType(parentAcc.accountSubType);
+        } else {
+          setAccountSubType(parentAcc.name);
+        }
       }
     } else if (val.startsWith('group:')) {
       const subClass = val.replace('group:', '') as AccountSubClass;
       setParentId('');
       setAccountSubClass(subClass);
+      // Auto-populate intelligent default sub-type based on category group
+      setAccountSubType(defaultSubTypeForSubClass[subClass] || '');
     }
   };
 
@@ -268,17 +287,20 @@ export function AccountModal({
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">
-              Account Sub-Type (Tier 3 Tag)
-            </label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-xs font-semibold text-slate-700">
+                Account Sub-Type (Category Tag)
+              </label>
+              <span className="text-[10px] text-emerald-600 font-medium">Auto-derived</span>
+            </div>
             <Input
               value={accountSubType}
               onChange={(e) => setAccountSubType(e.target.value)}
-              placeholder="e.g. Cash & Cash Equivalents, Trade Payables..."
+              placeholder="Auto-inferred from parent group (editable if needed)"
               disabled={isLockedSystemAccount}
             />
             <p className="text-[10.5px] text-slate-400 mt-1">
-              Granular tag for financial statements and audits.
+              Automatically determined by your parent selection. You do not need to type this manually.
             </p>
           </div>
         </div>
