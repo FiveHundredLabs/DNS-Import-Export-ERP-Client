@@ -1,3 +1,4 @@
+import Decimal from 'decimal.js';
 import {
   Account,
   Supplier,
@@ -16,228 +17,65 @@ import {
 import { IFinanceRepository } from '../finance.repository';
 import { periodLockService } from '../../services/periodLockService';
 
-// 11 Non-deletable default system accounts
+// Helper to construct normalized 3-Tier accounts
+function createAccountRecord(
+  id: string,
+  code: string,
+  name: string,
+  classification: Account['classification'],
+  accountType: string,
+  accountSubType: string,
+  description: string,
+  isSystem: boolean,
+  currentBalance: number,
+  parentId?: string
+): Account {
+  return {
+    id,
+    code,
+    name,
+    classification,
+    accountClass: classification,
+    accountType,
+    accountSubClass: accountType as Account['accountSubClass'],
+    accountSubType,
+    description,
+    isSystem,
+    isActive: true,
+    parentId,
+    currentBalance,
+    currency: 'LKR',
+    createdAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: '2026-01-01T00:00:00.000Z',
+  };
+}
+
+// 11 Non-deletable default system accounts + core initial accounts
 export const DEFAULT_SYSTEM_ACCOUNTS: Account[] = [
   // Current Assets
-  {
-    id: 'acc-1010',
-    code: '1010',
-    name: 'Bank Account',
-    accountClass: 'ASSET',
-    accountSubClass: 'CURRENT_ASSET',
-    description: 'Primary corporate operating checking account',
-    isSystem: true,
-    isActive: true,
-    currentBalance: 2500000.0,
-    currency: 'LKR',
-    createdAt: '2026-01-01T00:00:00.000Z',
-    updatedAt: '2026-01-01T00:00:00.000Z',
-  },
-  {
-    id: 'acc-1020',
-    code: '1020',
-    name: 'Accounts Receivable',
-    accountClass: 'ASSET',
-    accountSubClass: 'CURRENT_ASSET',
-    description: 'Trade receivables from customers and dealers',
-    isSystem: true,
-    isActive: true,
-    currentBalance: 850000.0,
-    currency: 'LKR',
-    createdAt: '2026-01-01T00:00:00.000Z',
-    updatedAt: '2026-01-01T00:00:00.000Z',
-  },
-  {
-    id: 'acc-1030',
-    code: '1030',
-    name: 'Inventory',
-    accountClass: 'ASSET',
-    accountSubClass: 'CURRENT_ASSET',
-    description: 'Valuation of finished goods and stock in warehouses',
-    isSystem: true,
-    isActive: true,
-    currentBalance: 4200000.0,
-    currency: 'LKR',
-    createdAt: '2026-01-01T00:00:00.000Z',
-    updatedAt: '2026-01-01T00:00:00.000Z',
-  },
-  // Additional helpful asset accounts (non-locked)
-  {
-    id: 'acc-1040',
-    code: '1040',
-    name: 'Cash in Hand',
-    accountClass: 'ASSET',
-    accountSubClass: 'CURRENT_ASSET',
-    description: 'Showroom petty cash and drawer float',
-    isSystem: false,
-    isActive: true,
-    currentBalance: 75000.0,
-    currency: 'LKR',
-    createdAt: '2026-01-01T00:00:00.000Z',
-    updatedAt: '2026-01-01T00:00:00.000Z',
-  },
-  {
-    id: 'acc-1510',
-    code: '1510',
-    name: 'Office Equipment & Vehicles',
-    accountClass: 'ASSET',
-    accountSubClass: 'NON_CURRENT_ASSET',
-    description: 'Fixed assets and capital equipment',
-    isSystem: false,
-    isActive: true,
-    currentBalance: 1200000.0,
-    currency: 'LKR',
-    createdAt: '2026-01-01T00:00:00.000Z',
-    updatedAt: '2026-01-01T00:00:00.000Z',
-  },
+  createAccountRecord('acc-1010', '1010', 'Bank Account', 'ASSET', 'CURRENT_ASSET', 'Cash & Cash Equivalents', 'Primary corporate operating checking account', true, 2500000.0),
+  createAccountRecord('acc-1020', '1020', 'Accounts Receivable', 'ASSET', 'CURRENT_ASSET', 'Trade Receivables (A/R Control)', 'Trade receivables from customers and dealers', true, 850000.0),
+  createAccountRecord('acc-1030', '1030', 'Inventory', 'ASSET', 'CURRENT_ASSET', 'Merchandise Inventory', 'Valuation of finished goods and stock in warehouses', true, 4200000.0),
+  createAccountRecord('acc-1040', '1040', 'Cash in Hand', 'ASSET', 'CURRENT_ASSET', 'Petty Cash Float', 'Showroom petty cash and drawer float', false, 75000.0),
+  createAccountRecord('acc-1510', '1510', 'Office Equipment & Vehicles', 'ASSET', 'NON_CURRENT_ASSET', 'Fixed & Capital Assets', 'Fixed assets and capital equipment', false, 1200000.0),
 
   // Current Liabilities
-  {
-    id: 'acc-2010',
-    code: '2010',
-    name: 'Accounts Payable',
-    accountClass: 'LIABILITY',
-    accountSubClass: 'CURRENT_LIABILITY',
-    description: 'Trade payables to suppliers and vendors',
-    isSystem: true,
-    isActive: true,
-    currentBalance: 1650000.0,
-    currency: 'LKR',
-    createdAt: '2026-01-01T00:00:00.000Z',
-    updatedAt: '2026-01-01T00:00:00.000Z',
-  },
-  {
-    id: 'acc-2020',
-    code: '2020',
-    name: 'VAT Payable (18%)',
-    accountClass: 'LIABILITY',
-    accountSubClass: 'CURRENT_LIABILITY',
-    description: 'Value Added Tax collected on sales payable to Inland Revenue Department',
-    isSystem: true,
-    isActive: true,
-    currentBalance: 320000.0,
-    currency: 'LKR',
-    createdAt: '2026-01-01T00:00:00.000Z',
-    updatedAt: '2026-01-01T00:00:00.000Z',
-  },
-  {
-    id: 'acc-2030',
-    code: '2030',
-    name: 'Commission Payable',
-    accountClass: 'LIABILITY',
-    accountSubClass: 'CURRENT_LIABILITY',
-    description: 'Sales representative and dealer commissions accrued but unpaid',
-    isSystem: true,
-    isActive: true,
-    currentBalance: 185000.0,
-    currency: 'LKR',
-    createdAt: '2026-01-01T00:00:00.000Z',
-    updatedAt: '2026-01-01T00:00:00.000Z',
-  },
+  createAccountRecord('acc-2010', '2010', 'Accounts Payable', 'LIABILITY', 'CURRENT_LIABILITY', 'Trade Payables (A/P Control)', 'Trade payables to suppliers and vendors', true, 1650000.0),
+  createAccountRecord('acc-2020', '2020', 'VAT Payable (18%)', 'LIABILITY', 'CURRENT_LIABILITY', 'Statutory Tax Liabilities', 'Value Added Tax collected on sales payable to Inland Revenue Department', true, 320000.0),
+  createAccountRecord('acc-2030', '2030', 'Commission Payable', 'LIABILITY', 'CURRENT_LIABILITY', 'Accrued Operating Liabilities', 'Sales representative and dealer commissions accrued but unpaid', true, 185000.0),
 
   // Equity
-  {
-    id: 'acc-3010',
-    code: '3010',
-    name: "Owner's Equity",
-    accountClass: 'EQUITY',
-    accountSubClass: 'EQUITY',
-    description: 'Paid-in shareholder capital and initial owner investment',
-    isSystem: true,
-    isActive: true,
-    currentBalance: 5000000.0,
-    currency: 'LKR',
-    createdAt: '2026-01-01T00:00:00.000Z',
-    updatedAt: '2026-01-01T00:00:00.000Z',
-  },
-  {
-    id: 'acc-3020',
-    code: '3020',
-    name: 'Retained Earnings',
-    accountClass: 'EQUITY',
-    accountSubClass: 'EQUITY',
-    description: 'Accumulated prior-year operating profits and reserves',
-    isSystem: true,
-    isActive: true,
-    currentBalance: 1120000.0,
-    currency: 'LKR',
-    createdAt: '2026-01-01T00:00:00.000Z',
-    updatedAt: '2026-01-01T00:00:00.000Z',
-  },
+  createAccountRecord('acc-3010', '3010', "Owner's Equity", 'EQUITY', 'EQUITY', 'Share Capital', 'Paid-in shareholder capital and initial owner investment', true, 5000000.0),
+  createAccountRecord('acc-3020', '3020', 'Retained Earnings', 'EQUITY', 'EQUITY', 'Opening Balance Equity & Retained Earnings', 'Accumulated prior-year operating profits and reserves', true, 1120000.0),
 
   // Income
-  {
-    id: 'acc-4010',
-    code: '4010',
-    name: 'Sales Revenue',
-    accountClass: 'INCOME',
-    accountSubClass: 'REVENUE',
-    description: 'Gross wholesale and retail sales revenue before tax',
-    isSystem: true,
-    isActive: true,
-    currentBalance: 3250000.0,
-    currency: 'LKR',
-    createdAt: '2026-01-01T00:00:00.000Z',
-    updatedAt: '2026-01-01T00:00:00.000Z',
-  },
+  createAccountRecord('acc-4010', '4010', 'Sales Revenue', 'INCOME', 'REVENUE', 'Operating Trade Revenue', 'Gross wholesale and retail sales revenue before tax', true, 3250000.0),
 
   // Expense
-  {
-    id: 'acc-5010',
-    code: '5010',
-    name: 'Cost of Goods Sold (COGS)',
-    accountClass: 'EXPENSE',
-    accountSubClass: 'DIRECT_COST',
-    description: 'Direct landed cost of goods sold during operational periods',
-    isSystem: true,
-    isActive: true,
-    currentBalance: 1950000.0,
-    currency: 'LKR',
-    createdAt: '2026-01-01T00:00:00.000Z',
-    updatedAt: '2026-01-01T00:00:00.000Z',
-  },
-  {
-    id: 'acc-6010',
-    code: '6010',
-    name: 'Commission Expense',
-    accountClass: 'EXPENSE',
-    accountSubClass: 'OPERATING_EXPENSE',
-    description: 'Commission payouts and incentive fees',
-    isSystem: true,
-    isActive: true,
-    currentBalance: 185000.0,
-    currency: 'LKR',
-    createdAt: '2026-01-01T00:00:00.000Z',
-    updatedAt: '2026-01-01T00:00:00.000Z',
-  },
-  {
-    id: 'acc-6020',
-    code: '6020',
-    name: 'Delivery Van Fuel & Maintenance',
-    accountClass: 'EXPENSE',
-    accountSubClass: 'OPERATING_EXPENSE',
-    description: 'Vehicle fueling, service, and transport logistics',
-    isSystem: false,
-    isActive: true,
-    currentBalance: 95000.0,
-    currency: 'LKR',
-    createdAt: '2026-01-01T00:00:00.000Z',
-    updatedAt: '2026-01-01T00:00:00.000Z',
-  },
-  {
-    id: 'acc-6030',
-    code: '6030',
-    name: 'Office Rent & Utilities',
-    accountClass: 'EXPENSE',
-    accountSubClass: 'OPERATING_EXPENSE',
-    description: 'Monthly head office lease, electricity, and water',
-    isSystem: false,
-    isActive: true,
-    currentBalance: 240000.0,
-    currency: 'LKR',
-    createdAt: '2026-01-01T00:00:00.000Z',
-    updatedAt: '2026-01-01T00:00:00.000Z',
-  },
+  createAccountRecord('acc-5010', '5010', 'Cost of Goods Sold (COGS)', 'EXPENSE', 'DIRECT_COST', 'Cost of Sales', 'Direct landed cost of goods sold during operational periods', true, 1950000.0),
+  createAccountRecord('acc-6010', '6010', 'Commission Expense', 'EXPENSE', 'OPERATING_EXPENSE', 'Sales & Distribution Expense', 'Commission payouts and incentive fees', true, 185000.0),
+  createAccountRecord('acc-6020', '6020', 'Delivery Van Fuel & Maintenance', 'EXPENSE', 'OPERATING_EXPENSE', 'Transport & Logistics Overhead', 'Vehicle fueling, service, and transport logistics', false, 95000.0),
+  createAccountRecord('acc-6030', '6030', 'Office Rent & Utilities', 'EXPENSE', 'OPERATING_EXPENSE', 'General & Administrative Overhead', 'Monthly head office lease, electricity, and water', false, 240000.0),
 ];
 
 export const DEFAULT_SUPPLIERS: Supplier[] = [
@@ -530,12 +368,27 @@ export class MockFinanceRepository implements IFinanceRepository {
       throw new Error(`Account with code ${dto.code} already exists`);
     }
 
+    if (dto.parentId) {
+      const parent = this.accounts.find((a) => a.id === dto.parentId);
+      if (!parent) {
+        throw new Error(`Parent account with ID ${dto.parentId} does not exist`);
+      }
+    }
+
+    const classification = dto.classification || dto.accountClass || 'EXPENSE';
+    const accountSubClass = dto.accountSubClass || (dto.accountType as Account['accountSubClass']) || 'OPERATING_EXPENSE';
+    const accountType = dto.accountType || accountSubClass;
+    const accountSubType = dto.accountSubType || dto.name.trim();
+
     const newAccount: Account = {
       id: `acc-${Date.now()}`,
       code: dto.code.trim(),
       name: dto.name.trim(),
-      accountClass: dto.accountClass,
-      accountSubClass: dto.accountSubClass,
+      classification,
+      accountClass: classification,
+      accountType,
+      accountSubClass,
+      accountSubType,
       description: dto.description?.trim(),
       isSystem: false,
       isActive: true,
@@ -568,9 +421,29 @@ export class MockFinanceRepository implements IFinanceRepository {
       throw new Error('System accounts cannot be deactivated');
     }
 
+    if (dto.parentId !== undefined && dto.parentId !== current.parentId) {
+      if (dto.parentId === id) {
+        throw new Error('An account cannot be set as its own parent');
+      }
+      if (dto.parentId) {
+        const parent = this.accounts.find((a) => a.id === dto.parentId);
+        if (!parent) {
+          throw new Error(`Parent account with ID ${dto.parentId} does not exist`);
+        }
+        let currAncestor: Account | undefined = parent;
+        while (currAncestor && currAncestor.parentId) {
+          if (currAncestor.parentId === id) {
+            throw new Error('Circular parent reference detected');
+          }
+          currAncestor = this.accounts.find((a) => a.id === currAncestor!.parentId);
+        }
+      }
+    }
+
     const updated: Account = {
       ...current,
       name: dto.name?.trim() ?? current.name,
+      accountSubType: dto.accountSubType?.trim() ?? current.accountSubType,
       description: dto.description !== undefined ? dto.description.trim() : current.description,
       parentId: dto.parentId !== undefined ? dto.parentId : current.parentId,
       isActive: dto.isActive !== undefined ? dto.isActive : current.isActive,
@@ -726,30 +599,73 @@ export class MockFinanceRepository implements IFinanceRepository {
     // Validate period lock
     periodLockService.assertNotLocked(dto.date);
 
+    // Prevent duplicate Opening Balance Wizard posting
+    if (dto.reference?.trim().toUpperCase() === 'SETUP-OB-INIT') {
+      const existingOb = this.journals.find((j) => j.reference?.trim().toUpperCase() === 'SETUP-OB-INIT');
+      if (existingOb) {
+        throw new Error('Opening balance setup (SETUP-OB-INIT) has already been posted and is permanently locked against duplication.');
+      }
+    }
+
     // Validate schema & invariant
     createJournalEntrySchema.parse(dto);
 
-    const totalDebit = Number(dto.lines.reduce((s, l) => s + (l.debit || 0), 0).toFixed(2));
-    const totalCredit = Number(dto.lines.reduce((s, l) => s + (l.credit || 0), 0).toFixed(2));
+    // Calculate debits and credits using Decimal
+    let debSum = new Decimal(0);
+    let credSum = new Decimal(0);
+    for (const l of dto.lines) {
+      debSum = debSum.plus(new Decimal(l.debit || 0));
+      credSum = credSum.plus(new Decimal(l.credit || 0));
+    }
 
-    if (Math.abs(totalDebit - totalCredit) > 0.001) {
-      throw new Error(`Double-Entry Invariant Violation: Debits (${totalDebit}) must equal Credits (${totalCredit})`);
+    const diff = debSum.minus(credSum).abs();
+    if (diff.greaterThan(0.001)) {
+      throw new Error(`Double-Entry Invariant Violation: Debits (${debSum.toFixed(2)}) must equal Credits (${credSum.toFixed(2)})`);
+    }
+
+    const totalDebit = debSum.toNumber();
+    const totalCredit = credSum.toNumber();
+
+    // Validate Sub-Ledger Control Account tagging:
+    // Block direct manual posting to 1020 A/R or 2010 A/P unless customer or supplier tagged
+    for (const line of dto.lines) {
+      const acc = this.accounts.find((a) => a.id === line.accountId);
+      if (!acc) throw new Error(`Account ID ${line.accountId} not found`);
+
+      const isManual = !dto.source || dto.source === 'MANUAL';
+      const isObInit = dto.reference?.trim().toUpperCase() === 'SETUP-OB-INIT';
+      if (acc.code === '1020' && isManual && !isObInit) {
+        if (!line.customerId) {
+          throw new Error('Direct posting to 1020 Accounts Receivable requires tagging a valid Customer ID on the ledger line.');
+        }
+      }
+
+      if (acc.code === '2010' && isManual && !isObInit) {
+        if (!line.supplierId) {
+          throw new Error('Direct posting to 2010 Accounts Payable requires tagging a valid Supplier ID on the ledger line.');
+        }
+      }
     }
 
     const entryNumber = `JE-${this.nextJournalSeq++}`;
     const journalLines = dto.lines.map((l, index) => {
-      const acc = this.accounts.find((a) => a.id === l.accountId);
-      if (!acc) throw new Error(`Account ID ${l.accountId} not found`);
+      const acc = this.accounts.find((a) => a.id === l.accountId)!;
       return {
         id: `jel-${Date.now()}-${index}`,
         accountId: acc.id,
         accountCode: acc.code,
         accountName: acc.name,
-        debit: Number(l.debit.toFixed(2)),
-        credit: Number(l.credit.toFixed(2)),
+        debit: Number(new Decimal(l.debit || 0).toFixed(2)),
+        credit: Number(new Decimal(l.credit || 0).toFixed(2)),
         description: l.description?.trim(),
+        customerId: l.customerId,
+        customerName: l.customerName,
+        supplierId: l.supplierId,
+        supplierName: l.supplierName,
       };
     });
+
+    const status = dto.status || 'POSTED';
 
     const newJournal: JournalEntry = {
       id: `je-${Date.now()}`,
@@ -758,7 +674,7 @@ export class MockFinanceRepository implements IFinanceRepository {
       description: dto.description.trim(),
       reference: dto.reference?.trim(),
       source: dto.source || 'MANUAL',
-      status: 'POSTED',
+      status,
       lines: journalLines,
       totalDebit,
       totalCredit,
@@ -766,22 +682,100 @@ export class MockFinanceRepository implements IFinanceRepository {
       createdAt: new Date().toISOString(),
     };
 
-    // Apply ledger mutations to accounts
-    for (const line of journalLines) {
-      const acc = this.accounts.find((a) => a.id === line.accountId);
-      if (acc) {
-        if (acc.accountClass === 'ASSET' || acc.accountClass === 'EXPENSE') {
-          acc.currentBalance = Number((acc.currentBalance + line.debit - line.credit).toFixed(2));
-        } else {
-          // LIABILITIES, EQUITY, INCOME
-          acc.currentBalance = Number((acc.currentBalance + line.credit - line.debit).toFixed(2));
+    // Apply ledger mutations to accounts only if status is POSTED
+    if (status === 'POSTED') {
+      for (const line of journalLines) {
+        const acc = this.accounts.find((a) => a.id === line.accountId);
+        if (acc) {
+          const lineDeb = new Decimal(line.debit);
+          const lineCred = new Decimal(line.credit);
+          let bal = new Decimal(acc.currentBalance);
+          if (acc.accountClass === 'ASSET' || acc.accountClass === 'EXPENSE') {
+            bal = bal.plus(lineDeb).minus(lineCred);
+          } else {
+            bal = bal.plus(lineCred).minus(lineDeb);
+          }
+          acc.currentBalance = bal.toNumber();
+          acc.updatedAt = new Date().toISOString();
         }
-        acc.updatedAt = new Date().toISOString();
       }
     }
 
     this.journals.unshift(newJournal);
     return newJournal;
+  }
+
+  async approveJournalEntry(id: string, approverName?: string): Promise<JournalEntry> {
+    await this.delay();
+    const journal = this.journals.find((j) => j.id === id);
+    if (!journal) {
+      throw new Error(`Journal entry ${id} not found`);
+    }
+
+    if (journal.status === 'POSTED') {
+      throw new Error(`Journal entry ${journal.entryNumber} is already posted.`);
+    }
+
+    if (journal.status === 'VOIDED') {
+      throw new Error(`Cannot approve a voided journal entry.`);
+    }
+
+    // Period closing control
+    periodLockService.assertNotLocked(journal.date);
+
+    // Verify double-entry invariant before approving
+    let debSum = new Decimal(0);
+    let credSum = new Decimal(0);
+    for (const l of journal.lines) {
+      debSum = debSum.plus(new Decimal(l.debit || 0));
+      credSum = credSum.plus(new Decimal(l.credit || 0));
+    }
+    const diff = debSum.minus(credSum).abs();
+    if (diff.greaterThan(0.001) || debSum.isZero()) {
+      throw new Error(`Cannot approve unbalanced journal entry: Debits (${debSum.toFixed(2)}) must equal Credits (${credSum.toFixed(2)})`);
+    }
+
+    // Verify sub-ledger control tagging rules before approving
+    for (const line of journal.lines) {
+      const acc = this.accounts.find((a) => a.id === line.accountId);
+      if (!acc) throw new Error(`Account ID ${line.accountId} not found`);
+
+      const isManual = !journal.source || journal.source === 'MANUAL';
+      const isObInit = journal.reference?.trim().toUpperCase() === 'SETUP-OB-INIT';
+      if (acc.code === '1020' && isManual && !isObInit) {
+        if (!line.customerId) {
+          throw new Error('Direct posting to 1020 Accounts Receivable requires tagging a valid Customer ID on the ledger line.');
+        }
+      }
+
+      if (acc.code === '2010' && isManual && !isObInit) {
+        if (!line.supplierId) {
+          throw new Error('Direct posting to 2010 Accounts Payable requires tagging a valid Supplier ID on the ledger line.');
+        }
+      }
+    }
+
+    // Apply ledger mutations
+    for (const line of journal.lines) {
+      const acc = this.accounts.find((a) => a.id === line.accountId);
+      if (acc) {
+        const lineDeb = new Decimal(line.debit);
+        const lineCred = new Decimal(line.credit);
+        let bal = new Decimal(acc.currentBalance);
+        if (acc.accountClass === 'ASSET' || acc.accountClass === 'EXPENSE') {
+          bal = bal.plus(lineDeb).minus(lineCred);
+        } else {
+          bal = bal.plus(lineCred).minus(lineDeb);
+        }
+        acc.currentBalance = bal.toNumber();
+        acc.updatedAt = new Date().toISOString();
+      }
+    }
+
+    journal.status = 'POSTED';
+    journal.approvedBy = approverName || 'Finance Manager';
+    journal.approvedAt = new Date().toISOString();
+    return journal;
   }
 
   async voidJournalEntry(id: string, reason?: string): Promise<JournalEntry> {
@@ -795,21 +789,32 @@ export class MockFinanceRepository implements IFinanceRepository {
       throw new Error(`Journal entry ${journal.entryNumber} is already voided.`);
     }
 
+    // Permanently lock SETUP-OB-INIT against voiding or deletion
+    if (journal.reference?.trim().toUpperCase() === 'SETUP-OB-INIT') {
+      throw new Error('Opening balance initiation voucher (SETUP-OB-INIT) is permanently locked and cannot be voided or duplicated.');
+    }
+
     // Period closing control: Hard error if transaction date is in closed period
     periodLockService.assertNotLocked(journal.date);
 
-    // Revert account balances
-    for (const line of journal.lines) {
-      const acc = this.accounts.find((a) => a.id === line.accountId);
-      if (acc) {
-        if (acc.accountClass === 'ASSET' || acc.accountClass === 'EXPENSE') {
-          // Revert: subtract what was debited, add what was credited
-          acc.currentBalance = Number((acc.currentBalance - line.debit + line.credit).toFixed(2));
-        } else {
-          // Revert: subtract what was credited, add what was debited
-          acc.currentBalance = Number((acc.currentBalance - line.credit + line.debit).toFixed(2));
+    // Revert account balances only if previously POSTED
+    if (journal.status === 'POSTED' || journal.status === 'CLEARED') {
+      for (const line of journal.lines) {
+        const acc = this.accounts.find((a) => a.id === line.accountId);
+        if (acc) {
+          const lineDeb = new Decimal(line.debit);
+          const lineCred = new Decimal(line.credit);
+          let bal = new Decimal(acc.currentBalance);
+          if (acc.accountClass === 'ASSET' || acc.accountClass === 'EXPENSE') {
+            // Revert: subtract what was debited, add what was credited
+            bal = bal.minus(lineDeb).plus(lineCred);
+          } else {
+            // Revert: subtract what was credited, add what was debited
+            bal = bal.minus(lineCred).plus(lineDeb);
+          }
+          acc.currentBalance = bal.toNumber();
+          acc.updatedAt = new Date().toISOString();
         }
-        acc.updatedAt = new Date().toISOString();
       }
     }
 

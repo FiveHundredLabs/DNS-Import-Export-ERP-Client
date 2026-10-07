@@ -178,6 +178,8 @@ export function FinanceDeskPage() {
           debit: 250000,
           credit: 0,
           description: 'Reduce Accounts Payable for supplier bill',
+          supplierId: 'sup-1',
+          supplierName: 'DNS Global Logistics & Electronics Ltd',
         },
         {
           id: 'row-preset-2',
@@ -266,6 +268,10 @@ export function FinanceDeskPage() {
           debit: Number(l.debit) || 0,
           credit: Number(l.credit) || 0,
           description: l.description.trim() || undefined,
+          customerId: l.customerId,
+          customerName: l.customerName,
+          supplierId: l.supplierId,
+          supplierName: l.supplierName,
         })),
       });
 

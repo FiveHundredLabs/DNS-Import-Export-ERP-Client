@@ -300,6 +300,8 @@ class AccountsPayableService {
         debit: 0,
         credit: totalBillCredit.toNumber(),
         description: `Trade Payable to ${grn.supplierName} - Inv #${params.vendorInvoiceNumber}`,
+        supplierId: grn.supplierId,
+        supplierName: grn.supplierName,
       },
     ];
 

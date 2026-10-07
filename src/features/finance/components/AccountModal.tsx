@@ -36,6 +36,7 @@ export function AccountModal({
   const [name, setName] = useState('');
   const [accountClass, setAccountClass] = useState<AccountClass>(defaultClass);
   const [accountSubClass, setAccountSubClass] = useState<AccountSubClass>(defaultSubClass);
+  const [accountSubType, setAccountSubType] = useState('');
   const [description, setDescription] = useState('');
   const [parentId, setParentId] = useState<string>('');
   const [submitting, setSubmitting] = useState(false);
@@ -47,6 +48,7 @@ export function AccountModal({
       setName(accountToEdit.name);
       setAccountClass(accountToEdit.accountClass);
       setAccountSubClass(accountToEdit.accountSubClass);
+      setAccountSubType(accountToEdit.accountSubType || '');
       setDescription(accountToEdit.description || '');
       setParentId(accountToEdit.parentId || '');
     } else {
@@ -54,6 +56,7 @@ export function AccountModal({
       setName('');
       setAccountClass(defaultClass);
       setAccountSubClass(defaultSubClass);
+      setAccountSubType('');
       setDescription('');
       setParentId('');
     }
@@ -92,14 +95,18 @@ export function AccountModal({
         await onUpdate(accountToEdit.id, {
           name: name.trim(),
           description: description.trim() || undefined,
+          accountSubType: accountSubType.trim() || undefined,
           ...(!isLockedSystemAccount ? { accountClass, accountSubClass, parentId: parentId || undefined } : {}),
         });
       } else {
         await onCreate({
           code: code.trim(),
           name: name.trim(),
+          classification: accountClass,
           accountClass,
+          accountType: accountSubClass,
           accountSubClass,
+          accountSubType: accountSubType.trim() || undefined,
           description: description.trim() || undefined,
           parentId: parentId || undefined,
         });
@@ -218,23 +225,35 @@ export function AccountModal({
 
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1">
-              Parent Account (Optional)
+              Account Sub-Type (Tier 3)
             </label>
-            <Select
-              value={parentId}
-              onChange={(e) => setParentId(e.target.value)}
+            <Input
+              value={accountSubType}
+              onChange={(e) => setAccountSubType(e.target.value)}
+              placeholder="e.g. Cash & Cash Equivalents, Trade Payables..."
               disabled={isLockedSystemAccount}
-            >
-              <option value="">None (Top-Level in Group)</option>
-              {existingAccounts
-                .filter((a) => a.accountClass === accountClass && (!accountToEdit || a.id !== accountToEdit.id))
-                .map((a) => (
-                  <option key={a.id} value={a.id}>
-                    {a.code} - {a.name}
-                  </option>
-                ))}
-            </Select>
+            />
           </div>
+        </div>
+
+        <div>
+          <label className="block text-xs font-semibold text-slate-700 mb-1">
+            Parent Account (Optional)
+          </label>
+          <Select
+            value={parentId}
+            onChange={(e) => setParentId(e.target.value)}
+            disabled={isLockedSystemAccount}
+          >
+            <option value="">None (Top-Level in Group)</option>
+            {existingAccounts
+              .filter((a) => a.accountClass === accountClass && (!accountToEdit || a.id !== accountToEdit.id))
+              .map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.code} - {a.name}
+                </option>
+              ))}
+          </Select>
         </div>
 
         <div>

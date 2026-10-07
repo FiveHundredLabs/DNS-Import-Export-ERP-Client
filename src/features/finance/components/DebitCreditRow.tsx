@@ -12,6 +12,10 @@ export interface JournalLineItemState {
   debit: number;
   credit: number;
   description: string;
+  customerId?: string;
+  customerName?: string;
+  supplierId?: string;
+  supplierName?: string;
 }
 
 interface DebitCreditRowProps {
@@ -24,6 +28,8 @@ interface DebitCreditRowProps {
   canRemove: boolean;
   suggestedAmount?: number;
   suggestedType?: 'debit' | 'credit';
+  suppliers?: { id: string; name: string; code: string }[];
+  customers?: { id: string; name: string; code: string }[];
 }
 
 export function DebitCreditRow({
@@ -36,7 +42,19 @@ export function DebitCreditRow({
   canRemove,
   suggestedAmount: _suggestedAmount,
   suggestedType: _suggestedType,
+  suppliers = [],
+  customers = [],
 }: DebitCreditRowProps) {
+  const supplierList = suppliers.length > 0 ? suppliers : [
+    { id: 'sup-1', code: 'SUP-001', name: 'DNS Global Logistics & Electronics Ltd' },
+    { id: 'sup-2', code: 'SUP-002', name: 'Lanka Component Importers PLC' },
+    { id: 'sup-3', code: 'SUP-003', name: 'Tokyo Direct Auto Parts Co.' },
+  ];
+  const customerList = customers.length > 0 ? customers : [
+    { id: 'cust-1', code: 'CUST-001', name: 'Colombo Retailers Ltd' },
+    { id: 'cust-2', code: 'CUST-002', name: 'Kandy Trade Center' },
+  ];
+
   const handleAccountChange = (acc: Account) => {
     onChange(index, {
       accountId: acc.id,
@@ -84,8 +102,8 @@ export function DebitCreditRow({
         </div>
       </div>
 
-      {/* 2. Line Item Memo / Description (Col 3 of 12) */}
-      <div className="col-span-12 md:col-span-3">
+      {/* 2. Line Item Memo / Description & Sub-ledger entity tag (Col 3 of 12) */}
+      <div className="col-span-12 md:col-span-3 space-y-1">
         <Input
           type="text"
           value={line.description}
@@ -93,6 +111,50 @@ export function DebitCreditRow({
           placeholder="Line explanation / memo..."
           className="h-9 text-xs"
         />
+        {line.accountCode === '1020' && (
+          <div className="flex items-center gap-1">
+            <span className="text-[10px] font-bold text-rose-600 uppercase shrink-0">Customer*:</span>
+            <select
+              value={line.customerId || ''}
+              onChange={(e) => {
+                const cId = e.target.value;
+                const cust = customerList.find((c) => c.id === cId);
+                onChange(index, { customerId: cId, customerName: cust?.name || cId });
+              }}
+              className="h-7 w-full text-[11px] rounded border border-rose-300 bg-rose-50/60 px-1.5 text-slate-800 focus:border-rose-500"
+              required
+            >
+              <option value="">Select Customer ID *</option>
+              {customerList.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.code} - {c.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+        {line.accountCode === '2010' && (
+          <div className="flex items-center gap-1">
+            <span className="text-[10px] font-bold text-rose-600 uppercase shrink-0">Supplier*:</span>
+            <select
+              value={line.supplierId || ''}
+              onChange={(e) => {
+                const sId = e.target.value;
+                const sup = supplierList.find((s) => s.id === sId);
+                onChange(index, { supplierId: sId, supplierName: sup?.name || sId });
+              }}
+              className="h-7 w-full text-[11px] rounded border border-rose-300 bg-rose-50/60 px-1.5 text-slate-800 focus:border-rose-500"
+              required
+            >
+              <option value="">Select Supplier ID *</option>
+              {supplierList.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.code} - {s.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
       </div>
 
       {/* 3. Debit (Dr) Input (Col 2 of 12) */}

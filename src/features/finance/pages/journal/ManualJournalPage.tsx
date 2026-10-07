@@ -3,14 +3,15 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../../../hooks/useAuth';
 import { useFinanceLedger } from '../../hooks/useFinanceLedger';
 import { financeRepository } from '../../api';
-import { JournalEntry } from '../../api/types';
+import { JournalEntry, JournalEntryStatus } from '../../api/types';
 import { CurrencyInput } from '../../components/CurrencyInput';
 import { Button } from '../../../../components/ui/button';
 import { Input } from '../../../../components/ui/input';
 import { Select } from '../../../../components/ui/select';
 import { Badge } from '../../../../components/ui/badge';
 import { Card } from '../../../../components/ui/card';
-import { formatCurrency } from '../../../../utils/formatters';
+import { formatCurrency, formatDate } from '../../../../utils/formatters';
+import { MOCK_CUSTOMERS } from '../../../../mock/mockCustomers';
 import Decimal from 'decimal.js';
 import {
   Plus,
@@ -22,6 +23,14 @@ import {
   Sparkles,
   Lock,
   RotateCcw,
+  Zap,
+  Receipt,
+  Building2,
+  ArrowRight,
+  Info,
+  Clock,
+  ShieldCheck,
+  UserCheck,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -31,6 +40,10 @@ export interface ManualJournalLine {
   description: string;
   debit: number;
   credit: number;
+  customerId?: string;
+  customerName?: string;
+  supplierId?: string;
+  supplierName?: string;
 }
 
 interface JournalTemplate {
@@ -54,7 +67,7 @@ const TEMPLATES: JournalTemplate[] = [
     memo: 'Monthly straight-line depreciation on plant and vehicles',
     lines: [
       {
-        accountCode: '6010', // Or general expense
+        accountCode: '6010',
         accountName: 'Depreciation Expense',
         description: 'Monthly depreciation expense on capital assets',
         isDebit: true,
@@ -74,8 +87,8 @@ const TEMPLATES: JournalTemplate[] = [
     memo: 'Monthly utilities and telecoms accrual',
     lines: [
       {
-        accountCode: '6010',
-        accountName: 'Operating Expense (Utilities)',
+        accountCode: '6030',
+        accountName: 'Office Rent & Utilities',
         description: 'Office electricity & internet bill',
         isDebit: true,
       },
@@ -95,14 +108,14 @@ const TEMPLATES: JournalTemplate[] = [
     lines: [
       {
         accountCode: '6010',
-        accountName: 'Operating Expense (Salaries & EPF/ETF)',
+        accountName: 'Commission / Staff Expense',
         description: 'Staff monthly gross compensation',
         isDebit: true,
       },
       {
-        accountCode: '2010',
-        accountName: 'Accrued Payroll Liabilities',
-        description: 'Net salaries and EPF payable',
+        accountCode: '2030',
+        accountName: 'Commission / Payroll Payable',
+        description: 'Net salaries and compensation payable',
         isDebit: false,
       },
     ],
@@ -114,14 +127,14 @@ const TEMPLATES: JournalTemplate[] = [
     memo: 'Monthly amortization of prepaid insurance',
     lines: [
       {
-        accountCode: '6010',
+        accountCode: '6030',
         accountName: 'Operating Expense (Insurance)',
         description: 'Insurance expense portion for current month',
         isDebit: true,
       },
       {
         accountCode: '1010',
-        accountName: 'Prepaid Insurance & Assets',
+        accountName: 'Bank Account (Prepaid Cash)',
         description: 'Reduction of prepaid insurance asset',
         isDebit: false,
       },
@@ -138,7 +151,15 @@ export function ManualJournalPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { currentUser } = useAuth();
-  const { accounts, postJournalEntry, voidJournalEntry } = useFinanceLedger();
+  const {
+    accounts,
+    suppliers,
+    journals,
+    postJournalEntry,
+    approveJournalEntry,
+    voidJournalEntry,
+    fetchAccounts,
+  } = useFinanceLedger();
 
   const journalIdParam = searchParams.get('id');
   const [loadedJournal, setLoadedJournal] = useState<JournalEntry | null>(null);
@@ -157,6 +178,10 @@ export function ManualJournalPage() {
   const [isTemplatesOpen, setIsTemplatesOpen] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
+  // Role Governance: Only Finance Managers, Managers, and Directors can approve/post directly
+  const isFinanceManager =
+    !currentUser || ['FINANCE_MANAGER', 'MANAGER', 'DIRECTOR'].includes(currentUser.role);
+
   // Load existing journal if ID is passed
   useEffect(() => {
     if (journalIdParam) {
@@ -173,6 +198,10 @@ export function ManualJournalPage() {
               description: l.description || '',
               debit: l.debit,
               credit: l.credit,
+              customerId: l.customerId,
+              customerName: l.customerName,
+              supplierId: l.supplierId,
+              supplierName: l.supplierName,
             }))
           );
         }
@@ -183,7 +212,8 @@ export function ManualJournalPage() {
   const isAuditLocked = Boolean(
     loadedJournal && (loadedJournal.status === 'POSTED' || loadedJournal.status === 'CLEARED')
   );
-  const isAuthorizedForVoid = !currentUser || ['FINANCE_MANAGER', 'MANAGER', 'DIRECTOR'].includes(currentUser.role);
+  const isPendingApproval = Boolean(loadedJournal && loadedJournal.status === 'PENDING_APPROVAL');
+  const isAuthorizedForVoid = isFinanceManager;
 
   // Active accounts
   const activeAccounts = useMemo(() => {
@@ -235,30 +265,169 @@ export function ManualJournalPage() {
           };
         }
 
+        // When account changes, sync default description or clear tags if no longer 1020/2010
+        if (field === 'accountId') {
+          const acc = accounts.find((a) => a.id === val);
+          return {
+            ...l,
+            accountId: val,
+            customerId: acc?.code === '1020' ? l.customerId : undefined,
+            customerName: acc?.code === '1020' ? l.customerName : undefined,
+            supplierId: acc?.code === '2010' ? l.supplierId : undefined,
+            supplierName: acc?.code === '2010' ? l.supplierName : undefined,
+          };
+        }
+
         return { ...l, [field]: val };
       })
     );
   };
 
-  const handleVoidJournal = async () => {
-    if (!loadedJournal) return;
-    try {
-      setSubmitting(true);
-      await voidJournalEntry(loadedJournal.id);
-      navigate('/finance/desk');
-    } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : 'Failed to void journal entry');
-    } finally {
-      setSubmitting(false);
+  const handleResetForm = () => {
+    setLoadedJournal(null);
+    setJournalDate(new Date().toISOString().slice(0, 10));
+    setReferenceNumber('');
+    setMemo('');
+    setLines(DEFAULT_LINES);
+  };
+
+  // Smart Auto-Balance Handler using Decimal.js
+  const handleAutoBalance = () => {
+    const diff = totalDebit - totalCredit;
+    if (Math.abs(diff) < 0.001) return;
+
+    const emptyRow = lines.find((l) => l.debit === 0 && l.credit === 0);
+    if (diff > 0) {
+      if (emptyRow) {
+        handleUpdateLine(emptyRow.id, 'credit', diff);
+      } else {
+        setLines((prev) => [
+          ...prev,
+          {
+            id: `line-${Date.now()}`,
+            accountId: '',
+            description: 'Balancing credit adjustment',
+            debit: 0,
+            credit: diff,
+          },
+        ]);
+      }
+      toast.info(`Auto-balanced with Credit of ${formatCurrency(diff)}`);
+    } else {
+      const absDiff = Math.abs(diff);
+      if (emptyRow) {
+        handleUpdateLine(emptyRow.id, 'debit', absDiff);
+      } else {
+        setLines((prev) => [
+          ...prev,
+          {
+            id: `line-${Date.now()}`,
+            accountId: '',
+            description: 'Balancing debit adjustment',
+            debit: absDiff,
+            credit: 0,
+          },
+        ]);
+      }
+      toast.info(`Auto-balanced with Debit of ${formatCurrency(absDiff)}`);
     }
   };
 
-  // Clicking a template instantly overwrites the Line Items Grid
+  // One-Click Presets from the merged Finance Desk
+  const applyPreset = async (type: 'SUPPLIER_PAYMENT' | 'ASSET_PURCHASE' | 'OFFICE_OVERHEAD') => {
+    if (isAuditLocked) return;
+    let currentAccounts = accounts;
+    if (currentAccounts.length === 0) {
+      currentAccounts = await fetchAccounts();
+    }
+    const bankAcc = currentAccounts.find((a) => a.code === '1010');
+    const apAcc = currentAccounts.find((a) => a.code === '2010');
+    const assetAcc =
+      currentAccounts.find((a) => a.code === '1510') ||
+      currentAccounts.find((a) => a.accountSubClass === 'NON_CURRENT_ASSET');
+    const overheadAcc =
+      currentAccounts.find((a) => a.code === '6030') ||
+      currentAccounts.find((a) => a.accountSubClass === 'OPERATING_EXPENSE');
+
+    if (!bankAcc) {
+      toast.error('Bank Account (1010) not found in Chart of Accounts');
+      return;
+    }
+
+    if (type === 'SUPPLIER_PAYMENT') {
+      if (!apAcc) return;
+      const defaultSupplier = suppliers[0];
+      setMemo('Settlement of vendor trade payable invoice');
+      setReferenceNumber(`PAY-SUP-${Math.floor(100 + Math.random() * 900)}`);
+      setLines([
+        {
+          id: 'line-preset-1',
+          accountId: apAcc.id,
+          description: 'Reduce Accounts Payable for supplier bill',
+          debit: 250000,
+          credit: 0,
+          supplierId: defaultSupplier ? defaultSupplier.id : undefined,
+          supplierName: defaultSupplier ? defaultSupplier.name : undefined,
+        },
+        {
+          id: 'line-preset-2',
+          accountId: bankAcc.id,
+          description: 'Bank payment remittance transfer',
+          debit: 0,
+          credit: 250000,
+        },
+      ]);
+      toast.info('Applied preset: Pay Supplier Bill (Dr 2010 A/P / Cr 1010 Bank)');
+    } else if (type === 'ASSET_PURCHASE') {
+      if (!assetAcc) return;
+      setMemo('Purchase of capital equipment / delivery van asset');
+      setReferenceNumber(`CAPEX-${Math.floor(1000 + Math.random() * 9000)}`);
+      setLines([
+        {
+          id: 'line-preset-1',
+          accountId: assetAcc.id,
+          description: 'Capitalize office equipment / vehicle asset',
+          debit: 450000,
+          credit: 0,
+        },
+        {
+          id: 'line-preset-2',
+          accountId: bankAcc.id,
+          description: 'Bank transfer settlement for capital purchase',
+          debit: 0,
+          credit: 450000,
+        },
+      ]);
+      toast.info('Applied preset: Buy Company Asset (Dr 1510 Fixed Asset / Cr 1010 Bank)');
+    } else if (type === 'OFFICE_OVERHEAD') {
+      if (!overheadAcc) return;
+      setMemo('Monthly office lease, utilities, and general facility overhead');
+      setReferenceNumber(`EXP-RENT-${new Date().toISOString().slice(0, 7)}`);
+      setLines([
+        {
+          id: 'line-preset-1',
+          accountId: overheadAcc.id,
+          description: 'Monthly office rent & utility expenses',
+          debit: 120000,
+          credit: 0,
+        },
+        {
+          id: 'line-preset-2',
+          accountId: bankAcc.id,
+          description: 'Bank transfer payment for facility overhead',
+          debit: 0,
+          credit: 120000,
+        },
+      ]);
+      toast.info('Applied preset: Record Office Overhead (Dr 6030 Operating Expense / Cr 1010 Bank)');
+    }
+  };
+
+  // Apply Sidebar Template
   const handleApplyTemplate = (tmpl: JournalTemplate) => {
     if (isAuditLocked) return;
     setMemo(tmpl.memo);
     const newLines: ManualJournalLine[] = tmpl.lines.map((tl, idx) => {
-      // Find matching account by code or partial name
       const matched =
         accounts.find((a) => a.code === tl.accountCode) ||
         accounts.find((a) => a.name.toLowerCase().includes(tl.accountName.toLowerCase())) ||
@@ -271,6 +440,8 @@ export function ManualJournalPage() {
         description: tl.description,
         debit: 0,
         credit: 0,
+        supplierId: matched?.code === '2010' && suppliers[0] ? suppliers[0].id : undefined,
+        supplierName: matched?.code === '2010' && suppliers[0] ? suppliers[0].name : undefined,
       };
     });
 
@@ -278,7 +449,7 @@ export function ManualJournalPage() {
     toast.success(`Applied template: "${tmpl.name}". Enter line amounts to balance.`);
   };
 
-  // Compute Total Debits and Total Credits with decimal.js
+  // Compute Total Debits and Total Credits using decimal.js
   const { totalDebit, totalCredit, difference, differenceAbs } = useMemo(() => {
     let deb = new Decimal(0);
     let cred = new Decimal(0);
@@ -302,44 +473,109 @@ export function ManualJournalPage() {
     return Math.abs(difference) <= 0.001;
   }, [totalDebit, totalCredit, difference]);
 
-  // Form validity: required fields, non-empty accounts, debits = credits
+  // Sub-ledger Control Account Rule: Check if 1020 or 2010 lines are missing customer/supplier tags
+  const missingTagLines = useMemo(() => {
+    return lines.filter((l) => {
+      const acc = accounts.find((a) => a.id === l.accountId);
+      if (!acc) return false;
+      if (acc.code === '1020' && !l.customerId && !l.customerName) return true;
+      if (acc.code === '2010' && !l.supplierId && !l.supplierName) return true;
+      return false;
+    });
+  }, [lines, accounts]);
+
+  const hasMissingEntityTags = missingTagLines.length > 0;
+
+  // Form validity
   const isFormValid = useMemo(() => {
     if (!journalDate || !memo.trim()) return false;
     if (lines.length < 2) return false;
     const allAccountsSelected = lines.every((l) => Boolean(l.accountId));
     if (!allAccountsSelected) return false;
+    if (hasMissingEntityTags) return false;
     return isBalanced;
-  }, [journalDate, memo, lines, isBalanced]);
+  }, [journalDate, memo, lines, isBalanced, hasMissingEntityTags]);
 
-  const handlePostJournal = async () => {
-    if (!isFormValid) {
-      toast.error('Validation Error: Debits must equal Credits and required fields must be populated.');
+  // Maker-Checker Submission: Post directly (Manager) or Save Draft / Submit for Approval (Clerk)
+  const handleSaveEntry = async (status: JournalEntryStatus = 'POSTED') => {
+    if (!isFormValid && (status === 'POSTED' || status === 'PENDING_APPROVAL')) {
+      toast.error('Validation Error: Debits must equal Credits and sub-ledger tags must be selected.');
+      return;
+    }
+    if (!memo.trim()) {
+      toast.error('Voucher description/memo is required.');
       return;
     }
 
     try {
       setSubmitting(true);
-      await postJournalEntry({
+      const entry = await postJournalEntry({
         date: journalDate,
         reference: referenceNumber.trim() || undefined,
         description: memo.trim(),
         source: 'MANUAL',
+        status,
         lines: lines.map((l) => ({
           accountId: l.accountId,
-          debit: l.debit,
-          credit: l.credit,
+          debit: Number(new Decimal(l.debit || 0).toFixed(2)),
+          credit: Number(new Decimal(l.credit || 0).toFixed(2)),
           description: l.description.trim() || undefined,
+          customerId: l.customerId,
+          customerName: l.customerName,
+          supplierId: l.supplierId,
+          supplierName: l.supplierName,
         })),
       });
 
-      toast.success('Manual Journal Entry successfully committed to the General Ledger!');
-      navigate('/finance/desk');
+      if (status === 'POSTED') {
+        toast.success(`Journal Voucher ${entry.entryNumber} successfully committed to the General Ledger!`);
+      } else if (status === 'PENDING_APPROVAL') {
+        toast.success(`Journal Voucher ${entry.entryNumber} submitted for Finance Manager review!`);
+      } else {
+        toast.success(`Draft Voucher ${entry.entryNumber} saved.`);
+      }
+
+      handleResetForm();
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : 'Failed to post journal entry');
+      toast.error(err instanceof Error ? err.message : 'Failed to save journal voucher');
     } finally {
       setSubmitting(false);
     }
   };
+
+  // Manager Approval for Pending Entries
+  const handleApprovePending = async () => {
+    if (!loadedJournal) return;
+    try {
+      setSubmitting(true);
+      await approveJournalEntry(loadedJournal.id, currentUser?.name || 'Finance Manager');
+      setLoadedJournal((prev) => (prev ? { ...prev, status: 'POSTED' } : null));
+      toast.success(`Journal Entry ${loadedJournal.entryNumber} approved and posted to General Ledger!`);
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Failed to approve journal entry');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // Void / Reversal
+  const handleVoidJournal = async () => {
+    if (!loadedJournal) return;
+    try {
+      setSubmitting(true);
+      await voidJournalEntry(loadedJournal.id);
+      handleResetForm();
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Failed to void journal entry');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // Active Debit / Credit lines for live narrative
+  const activeDebitLines = lines.filter((l) => l.accountId && l.debit > 0);
+  const activeCreditLines = lines.filter((l) => l.accountId && l.credit > 0);
+  const hasActiveEntries = activeDebitLines.length > 0 || activeCreditLines.length > 0;
 
   return (
     <div className="space-y-6">
@@ -351,16 +587,24 @@ export function ManualJournalPage() {
               Manual Journal Entry
             </h1>
             <Badge variant="outline" className="bg-primary-light text-primary-text border-primary-border text-xs">
-              Universal Ledger
+              Universal Journal Desk
             </Badge>
             {isAuditLocked && (
-              <Badge variant={loadedJournal?.status === 'VOIDED' ? 'destructive' : 'secondary'} className="text-xs font-mono">
+              <Badge
+                variant={loadedJournal?.status === 'VOIDED' ? 'destructive' : 'secondary'}
+                className="text-xs font-mono"
+              >
                 {loadedJournal?.status === 'VOIDED' ? 'VOIDED' : 'AUDIT LOCKED (POSTED)'}
+              </Badge>
+            )}
+            {isPendingApproval && (
+              <Badge variant="outline" className="text-xs font-mono bg-amber-50 text-amber-700 border-amber-300">
+                PENDING APPROVAL (MAKER-CHECKER)
               </Badge>
             )}
           </div>
           <p className="text-sm text-slate-500 mt-1">
-            Universal double-entry voucher screen for manual journal adjustments, accruals, and ledger corrections.
+            Universal double-entry voucher screen for manual adjustments, accruals, overheads, and Maker-Checker approvals.
           </p>
         </div>
 
@@ -379,6 +623,50 @@ export function ManualJournalPage() {
         )}
       </div>
 
+      {/* Quick Journal Presets Bar (Merged from The Finance Desk) */}
+      {!isAuditLocked && (
+        <Card className="p-3 bg-gradient-to-r from-primary-light/60 via-white to-slate-50 border-slate-200 shadow-2xs">
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <Zap className="h-4 w-4 text-primary shrink-0" />
+              <span className="text-xs font-bold text-slate-800">Quick Journal Presets:</span>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+              <button
+                type="button"
+                onClick={() => applyPreset('SUPPLIER_PAYMENT')}
+                className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-2xs hover:border-primary-border hover:bg-primary-light/60 hover:text-primary-text transition-colors"
+                title="Dr Accounts Payable (2010) with Supplier | Cr Bank Account (1010)"
+              >
+                <Receipt className="h-3.5 w-3.5 text-primary" />
+                <span>Pay Supplier Bill</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => applyPreset('ASSET_PURCHASE')}
+                className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-2xs hover:border-emerald-300 hover:bg-emerald-50/60 hover:text-emerald-700 transition-colors"
+                title="Dr Capital Asset (1510) | Cr Bank Account (1010)"
+              >
+                <Building2 className="h-3.5 w-3.5 text-emerald-600" />
+                <span>Buy Company Asset</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => applyPreset('OFFICE_OVERHEAD')}
+                className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-2xs hover:border-amber-300 hover:bg-amber-50/60 hover:text-amber-700 transition-colors"
+                title="Dr Operating Expense (6030) | Cr Bank Account (1010)"
+              >
+                <Sparkles className="h-3.5 w-3.5 text-amber-600" />
+                <span>Record Office Overhead</span>
+              </button>
+            </div>
+          </div>
+        </Card>
+      )}
+
       {/* Audit Lock Warning Banner */}
       {isAuditLocked && (
         <div className="rounded-lg bg-amber-50 border border-amber-200 p-4 text-amber-800 flex items-center justify-between">
@@ -389,7 +677,7 @@ export function ManualJournalPage() {
                 Audit Lock Active — Read Only ({loadedJournal?.status})
               </span>
               <span className="text-xs text-amber-700">
-                Rule 1.4: Posted and cleared financial transactions are permanently locked against direct editing to safeguard the general ledger audit trail.
+                Posted financial transactions are permanently locked against direct editing to safeguard the general ledger audit trail.
                 {loadedJournal?.status === 'POSTED' && ' Authorized personnel may void/reverse this entry.'}
               </span>
             </div>
@@ -406,6 +694,49 @@ export function ManualJournalPage() {
               <span>Void / Reverse</span>
             </Button>
           )}
+        </div>
+      )}
+
+      {/* Pending Approval Banner (Maker-Checker) */}
+      {isPendingApproval && (
+        <div className="rounded-lg bg-blue-50 border border-blue-200 p-4 text-blue-900 flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <Clock className="h-5 w-5 text-blue-600 shrink-0" />
+            <div>
+              <span className="font-bold text-xs uppercase tracking-wider block">
+                Maker-Checker: Pending Finance Manager Approval
+              </span>
+              <span className="text-xs text-blue-700">
+                Created by junior clerk <span className="font-semibold">{loadedJournal?.createdBy}</span>. Awaiting Manager review before committing to General Ledger.
+              </span>
+            </div>
+          </div>
+          {isFinanceManager && (
+            <Button
+              size="sm"
+              onClick={handleApprovePending}
+              disabled={submitting}
+              className="gap-1.5 text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shrink-0"
+            >
+              <CheckCircle2 className="h-3.5 w-3.5" />
+              <span>Approve & Post to GL</span>
+            </Button>
+          )}
+        </div>
+      )}
+
+      {/* Sub-Ledger Control Tag Warning */}
+      {hasMissingEntityTags && (
+        <div className="rounded-lg bg-rose-50 border border-rose-200 p-3.5 text-rose-800 flex items-center gap-2.5 animate-in fade-in-50">
+          <AlertTriangle className="h-5 w-5 text-rose-600 shrink-0" />
+          <div className="text-xs">
+            <span className="font-bold block uppercase tracking-wider">
+              Sub-Ledger Entity Tagging Required
+            </span>
+            <span>
+              Lines posting to <span className="font-mono font-bold">1020 Accounts Receivable</span> must be tagged with a valid Customer ID, and lines posting to <span className="font-mono font-bold">2010 Accounts Payable</span> must be tagged with a valid Supplier ID.
+            </span>
+          </div>
         </div>
       )}
 
@@ -437,7 +768,7 @@ export function ManualJournalPage() {
                   value={referenceNumber}
                   onChange={(e) => setReferenceNumber(e.target.value)}
                   disabled={isAuditLocked}
-                  placeholder="e.g. ADJ-2026-009"
+                  placeholder="e.g. ADJ-2026-009 or CHQ-9912"
                   className="h-9 text-xs font-mono"
                 />
               </div>
@@ -450,7 +781,7 @@ export function ManualJournalPage() {
                   value={memo}
                   onChange={(e) => setMemo(e.target.value)}
                   disabled={isAuditLocked}
-                  placeholder="e.g. Monthly depreciation accrual..."
+                  placeholder="e.g. Monthly utilities, showroom expenses, or adjustments..."
                   className="h-9 text-xs"
                   required
                 />
@@ -472,10 +803,21 @@ export function ManualJournalPage() {
                   </span>
                 </div>
               </div>
+
+              <Button
+                size="sm"
+                variant="outline"
+                type="button"
+                onClick={handleAutoBalance}
+                className="text-xs bg-white text-rose-700 border-rose-300 hover:bg-rose-100/50 shrink-0 gap-1 font-semibold"
+              >
+                <span>Auto-Balance</span>
+                <ArrowRight className="h-3.5 w-3.5" />
+              </Button>
             </div>
           )}
 
-          {/* Line Items Grid: Dynamic array where users can + Add Line */}
+          {/* Line Items Grid */}
           <Card className="p-5 border-slate-200 shadow-xs bg-white space-y-4">
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold uppercase tracking-wider text-slate-600">
@@ -483,16 +825,18 @@ export function ManualJournalPage() {
               </span>
 
               {!isAuditLocked && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  type="button"
-                  onClick={handleAddLine}
-                  className="gap-1.5 text-xs text-primary hover:bg-primary-light"
-                >
-                  <Plus className="h-3.5 w-3.5" />
-                  <span>+ Add Line</span>
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    type="button"
+                    onClick={handleAddLine}
+                    className="gap-1.5 text-xs text-primary hover:bg-primary-light"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    <span>+ Add Line</span>
+                  </Button>
+                </div>
               )}
             </div>
 
@@ -501,88 +845,200 @@ export function ManualJournalPage() {
                 <thead className="border-b border-slate-200 bg-slate-50 text-[11px] font-bold uppercase tracking-wider text-slate-600">
                   <tr>
                     <th className="px-3 py-2.5 w-72">Account</th>
-                    <th className="px-3 py-2.5">Line Description</th>
-                    <th className="px-3 py-2.5 text-right w-44">Debit (Dr LKR)</th>
-                    <th className="px-3 py-2.5 text-right w-44">Credit (Cr LKR)</th>
+                    <th className="px-3 py-2.5">Line Memo & Sub-Ledger Tag</th>
+                    <th className="px-3 py-2.5 text-right w-40">Debit (Dr LKR)</th>
+                    <th className="px-3 py-2.5 text-right w-40">Credit (Cr LKR)</th>
                     <th className="px-3 py-2.5 text-right w-12">Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {lines.map((line) => (
-                    <tr key={line.id} className="hover:bg-slate-50/50">
-                      {/* Searchable Account combobox/select */}
-                      <td className="px-3 py-2">
-                        <Select
-                          value={line.accountId}
-                          onChange={(e) =>
-                            handleUpdateLine(line.id, 'accountId', e.target.value)
-                          }
-                          disabled={isAuditLocked}
-                          className="h-9 text-xs"
-                        >
-                          <option value="">Select GL Account...</option>
-                          {activeAccounts.map((a) => (
-                            <option key={a.id} value={a.id}>
-                              {a.code} - {a.name} ({a.accountClass})
-                            </option>
-                          ))}
-                        </Select>
-                      </td>
+                  {lines.map((line) => {
+                    const matchedAccount = accounts.find((a) => a.id === line.accountId);
+                    const isArLine = matchedAccount?.code === '1020';
+                    const isApLine = matchedAccount?.code === '2010';
 
-                      {/* Line Description */}
-                      <td className="px-3 py-2">
-                        <Input
-                          value={line.description}
-                          onChange={(e) =>
-                            handleUpdateLine(line.id, 'description', e.target.value)
-                          }
-                          disabled={isAuditLocked}
-                          placeholder="Line memo..."
-                          className="h-9 text-xs"
-                        />
-                      </td>
+                    return (
+                      <tr key={line.id} className="hover:bg-slate-50/50">
+                        {/* Searchable Account combobox/select */}
+                        <td className="px-3 py-2 align-top">
+                          <Select
+                            value={line.accountId}
+                            onChange={(e) =>
+                              handleUpdateLine(line.id, 'accountId', e.target.value)
+                            }
+                            disabled={isAuditLocked}
+                            className="h-9 text-xs"
+                          >
+                            <option value="">Select GL Account...</option>
+                            {activeAccounts.map((a) => (
+                              <option key={a.id} value={a.id}>
+                                {a.code} - {a.name} ({a.accountClass})
+                              </option>
+                            ))}
+                          </Select>
+                        </td>
 
-                      {/* Debit (Currency Input) */}
-                      <td className="px-3 py-2 text-right">
-                        <CurrencyInput
-                          value={line.debit || ''}
-                          onChange={(val) => handleUpdateLine(line.id, 'debit', val)}
-                          placeholder="0.00"
-                          disabled={submitting || isAuditLocked}
-                        />
-                      </td>
+                        {/* Line Description & Entity Tagging */}
+                        <td className="px-3 py-2 align-top space-y-1.5">
+                          <Input
+                            value={line.description}
+                            onChange={(e) =>
+                              handleUpdateLine(line.id, 'description', e.target.value)
+                            }
+                            disabled={isAuditLocked}
+                            placeholder="Line memo..."
+                            className="h-9 text-xs"
+                          />
 
-                      {/* Credit (Currency Input) */}
-                      <td className="px-3 py-2 text-right">
-                        <CurrencyInput
-                          value={line.credit || ''}
-                          onChange={(val) => handleUpdateLine(line.id, 'credit', val)}
-                          placeholder="0.00"
-                          disabled={submitting || isAuditLocked}
-                        />
-                      </td>
+                          {/* 1020 A/R Customer Tag */}
+                          {isArLine && (
+                            <div className="flex items-center gap-1.5 p-1 rounded bg-blue-50 border border-blue-200">
+                              <span className="text-[10px] font-bold text-blue-700 uppercase shrink-0">
+                                Customer *:
+                              </span>
+                              <select
+                                value={line.customerId || ''}
+                                onChange={(e) => {
+                                  const cId = e.target.value;
+                                  const cust = MOCK_CUSTOMERS.find((c) => c.id === cId);
+                                  handleUpdateLine(line.id, 'customerId', cId);
+                                  handleUpdateLine(line.id, 'customerName', cust?.name || cId);
+                                }}
+                                disabled={isAuditLocked}
+                                className="h-7 w-full text-[11px] rounded border border-blue-300 bg-white px-1.5 focus:border-blue-500"
+                              >
+                                <option value="">Select Customer ID *</option>
+                                {MOCK_CUSTOMERS.map((c) => (
+                                  <option key={c.id} value={c.id}>
+                                    {c.code} - {c.name}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                          )}
 
-                      {/* Delete Line */}
-                      <td className="px-3 py-2 text-right">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          type="button"
-                          onClick={() => handleRemoveLine(line.id)}
-                          className="h-8 w-8 p-0 text-slate-400 hover:text-rose-600"
-                          disabled={lines.length <= 2 || isAuditLocked}
-                          title="Remove line"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      </td>
-                    </tr>
-                  ))}
+                          {/* 2010 A/P Supplier Tag */}
+                          {isApLine && (
+                            <div className="flex items-center gap-1.5 p-1 rounded bg-amber-50 border border-amber-200">
+                              <span className="text-[10px] font-bold text-amber-700 uppercase shrink-0">
+                                Supplier *:
+                              </span>
+                              <select
+                                value={line.supplierId || ''}
+                                onChange={(e) => {
+                                  const sId = e.target.value;
+                                  const sup = suppliers.find((s) => s.id === sId);
+                                  handleUpdateLine(line.id, 'supplierId', sId);
+                                  handleUpdateLine(line.id, 'supplierName', sup?.name || sId);
+                                }}
+                                disabled={isAuditLocked}
+                                className="h-7 w-full text-[11px] rounded border border-amber-300 bg-white px-1.5 focus:border-amber-500"
+                              >
+                                <option value="">Select Supplier ID *</option>
+                                {suppliers.map((s) => (
+                                  <option key={s.id} value={s.id}>
+                                    {s.code} - {s.name}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                          )}
+                        </td>
+
+                        {/* Debit (Currency Input) */}
+                        <td className="px-3 py-2 text-right align-top">
+                          <CurrencyInput
+                            value={line.debit || ''}
+                            onChange={(val) => handleUpdateLine(line.id, 'debit', val)}
+                            placeholder="0.00"
+                            disabled={submitting || isAuditLocked}
+                          />
+                        </td>
+
+                        {/* Credit (Currency Input) */}
+                        <td className="px-3 py-2 text-right align-top">
+                          <CurrencyInput
+                            value={line.credit || ''}
+                            onChange={(val) => handleUpdateLine(line.id, 'credit', val)}
+                            placeholder="0.00"
+                            disabled={submitting || isAuditLocked}
+                          />
+                        </td>
+
+                        {/* Delete Line */}
+                        <td className="px-3 py-2 text-right align-top">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            type="button"
+                            onClick={() => handleRemoveLine(line.id)}
+                            className="h-8 w-8 p-0 text-slate-400 hover:text-rose-600"
+                            disabled={lines.length <= 2 || isAuditLocked}
+                            title="Remove line"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
 
-            {/* Bottom Total Debits and Total Credits Labels */}
+            {/* Live Impact Preview */}
+            {hasActiveEntries && (
+              <div className="rounded-lg border border-slate-200 bg-slate-50/70 p-3.5 text-xs space-y-1.5">
+                <div className="flex items-center gap-1.5 font-semibold text-slate-700">
+                  <Info className="h-3.5 w-3.5 text-primary" />
+                  <span>Live Ledger Impact Preview:</span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-slate-600 text-[11px]">
+                  <div>
+                    <span className="font-semibold text-primary-text">Debiting (Dr):</span>
+                    {activeDebitLines.length === 0 ? (
+                      <span className="text-slate-400 italic ml-1">None entered</span>
+                    ) : (
+                      <ul className="list-disc list-inside mt-0.5 space-y-0.5">
+                        {activeDebitLines.map((l) => {
+                          const acc = accounts.find((a) => a.id === l.accountId);
+                          return (
+                            <li key={l.id}>
+                              <span className="font-mono font-bold text-slate-800">{acc?.code}</span> ({acc?.name}):{' '}
+                              <span className="font-bold text-primary-text">{formatCurrency(l.debit)}</span>
+                              {l.customerId && <span className="ml-1 text-[10px] text-blue-600">[Cust: {l.customerName}]</span>}
+                              {l.supplierId && <span className="ml-1 text-[10px] text-amber-600">[Sup: {l.supplierName}]</span>}
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    )}
+                  </div>
+                  <div>
+                    <span className="font-semibold text-emerald-700">Crediting (Cr):</span>
+                    {activeCreditLines.length === 0 ? (
+                      <span className="text-slate-400 italic ml-1">None entered</span>
+                    ) : (
+                      <ul className="list-disc list-inside mt-0.5 space-y-0.5">
+                        {activeCreditLines.map((l) => {
+                          const acc = accounts.find((a) => a.id === l.accountId);
+                          return (
+                            <li key={l.id}>
+                              <span className="font-mono font-bold text-slate-800">{acc?.code}</span> ({acc?.name}):{' '}
+                              <span className="font-bold text-emerald-700">{formatCurrency(l.credit)}</span>
+                              {l.customerId && <span className="ml-1 text-[10px] text-blue-600">[Cust: {l.customerName}]</span>}
+                              {l.supplierId && <span className="ml-1 text-[10px] text-amber-600">[Sup: {l.supplierName}]</span>}
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Bottom Total Debits, Total Credits, and Actions */}
             <div className="pt-4 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4">
               <div className="flex items-center gap-6 text-xs">
                 <div>
@@ -619,34 +1075,62 @@ export function ManualJournalPage() {
                 </div>
               </div>
 
-              {/* Action Button: Post Journal OR Void / Reverse Journal */}
-              {isAuditLocked ? (
-                loadedJournal?.status === 'POSTED' && isAuthorizedForVoid ? (
-                  <Button
-                    variant="destructive"
-                    onClick={handleVoidJournal}
-                    disabled={submitting}
-                    className="font-semibold gap-1.5 shadow-xs"
-                  >
-                    <RotateCcw className="h-4 w-4" />
-                    <span>{submitting ? 'Voiding...' : 'Void / Reverse Journal'}</span>
-                  </Button>
+              {/* Action Buttons: Maker-Checker Routing */}
+              <div className="flex items-center gap-2">
+                {isAuditLocked ? (
+                  loadedJournal?.status === 'POSTED' && isAuthorizedForVoid ? (
+                    <Button
+                      variant="destructive"
+                      onClick={handleVoidJournal}
+                      disabled={submitting}
+                      className="font-semibold gap-1.5 shadow-xs"
+                    >
+                      <RotateCcw className="h-4 w-4" />
+                      <span>{submitting ? 'Voiding...' : 'Void / Reverse Journal'}</span>
+                    </Button>
+                  ) : (
+                    <Badge variant="outline" className="px-3 py-1.5 text-xs text-slate-500 border-slate-300">
+                      <Lock className="h-3.5 w-3.5 mr-1" />
+                      {loadedJournal?.status === 'VOIDED' ? 'Transaction Voided' : 'Audit Locked'}
+                    </Badge>
+                  )
                 ) : (
-                  <Badge variant="outline" className="px-3 py-1.5 text-xs text-slate-500 border-slate-300">
-                    <Lock className="h-3.5 w-3.5 mr-1" />
-                    {loadedJournal?.status === 'VOIDED' ? 'Transaction Voided' : 'Audit Locked'}
-                  </Badge>
-                )
-              ) : (
-                <Button
-                  onClick={handlePostJournal}
-                  disabled={!isFormValid || submitting}
-                  className="bg-primary hover:bg-primary-hover text-white shadow-xs font-semibold gap-1.5"
-                >
-                  <Send className="h-4 w-4" />
-                  <span>{submitting ? 'Posting...' : 'Post Journal'}</span>
-                </Button>
-              )}
+                  <>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleSaveEntry('DRAFT')}
+                      disabled={submitting || !memo.trim()}
+                      className="text-xs text-slate-700"
+                    >
+                      Save Draft
+                    </Button>
+
+                    {!isFinanceManager ? (
+                      <Button
+                        size="sm"
+                        onClick={() => handleSaveEntry('PENDING_APPROVAL')}
+                        disabled={!isFormValid || submitting}
+                        className="bg-amber-600 hover:bg-amber-700 text-white shadow-xs font-semibold gap-1.5 text-xs"
+                        title="Junior clerks submit vouchers for Manager approval"
+                      >
+                        <Clock className="h-3.5 w-3.5" />
+                        <span>Submit for Approval</span>
+                      </Button>
+                    ) : (
+                      <Button
+                        size="sm"
+                        onClick={() => handleSaveEntry('POSTED')}
+                        disabled={!isFormValid || submitting}
+                        className="bg-primary hover:bg-primary-hover text-white shadow-xs font-semibold gap-1.5 text-xs"
+                      >
+                        <Send className="h-3.5 w-3.5" />
+                        <span>{submitting ? 'Posting...' : 'Post Journal'}</span>
+                      </Button>
+                    )}
+                  </>
+                )}
+              </div>
             </div>
           </Card>
         </div>
@@ -689,6 +1173,109 @@ export function ManualJournalPage() {
             </Card>
           </div>
         )}
+      </div>
+
+      {/* Maker-Checker & General Journal Vouchers Queue */}
+      <div className="space-y-3 pt-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <ShieldCheck className="h-4 w-4 text-primary" />
+            <h2 className="text-base font-bold text-slate-900">
+              Journal Vouchers & Maker-Checker Queue
+            </h2>
+          </div>
+        </div>
+
+        <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-2xs">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead className="border-b border-slate-200 bg-slate-50 text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                <tr>
+                  <th className="px-4 py-3">Voucher #</th>
+                  <th className="px-4 py-3">Date</th>
+                  <th className="px-4 py-3">Description & Reference</th>
+                  <th className="px-4 py-3 text-right">Debit Total</th>
+                  <th className="px-4 py-3 text-right">Credit Total</th>
+                  <th className="px-4 py-3 text-center">Status</th>
+                  <th className="px-4 py-3 text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 text-slate-700">
+                {journals.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="p-6 text-center text-slate-400">
+                      No journals recorded.
+                    </td>
+                  </tr>
+                ) : (
+                  journals.slice(0, 8).map((je) => (
+                    <tr key={je.id} className="hover:bg-slate-50/60 transition-colors">
+                      <td className="px-4 py-3 font-mono font-bold text-primary">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            navigate(`/finance/journal/new?id=${je.id}`);
+                          }}
+                          className="hover:underline flex items-center gap-1"
+                        >
+                          {je.status === 'POSTED' && <Lock className="h-3 w-3 text-slate-400" />}
+                          {je.status === 'PENDING_APPROVAL' && <Clock className="h-3 w-3 text-amber-500" />}
+                          <span>{je.entryNumber}</span>
+                        </button>
+                      </td>
+                      <td className="px-4 py-3 text-slate-600">{formatDate(je.date)}</td>
+                      <td className="px-4 py-3">
+                        <div className="font-semibold text-slate-900">{je.description}</div>
+                        {je.reference && (
+                          <div className="font-mono text-[11px] text-slate-400">Ref: {je.reference}</div>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-right font-mono font-semibold text-slate-900">
+                        {formatCurrency(je.totalDebit)}
+                      </td>
+                      <td className="px-4 py-3 text-right font-mono font-semibold text-slate-900">
+                        {formatCurrency(je.totalCredit)}
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        {je.status === 'POSTED' && (
+                          <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[10px]">
+                            <CheckCircle2 className="h-3 w-3 mr-1" />
+                            <span>Posted</span>
+                          </Badge>
+                        )}
+                        {je.status === 'PENDING_APPROVAL' && (
+                          <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-300 text-[10px]">
+                            <Clock className="h-3 w-3 mr-1" />
+                            <span>Pending</span>
+                          </Badge>
+                        )}
+                        {je.status === 'DRAFT' && (
+                          <Badge variant="secondary" className="text-[10px]">
+                            Draft
+                          </Badge>
+                        )}
+                        {je.status === 'VOIDED' && (
+                          <Badge variant="destructive" className="text-[10px]">
+                            Voided
+                          </Badge>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <button
+                          type="button"
+                          onClick={() => navigate(`/finance/journal/new?id=${je.id}`)}
+                          className="text-xs text-primary font-semibold hover:underline"
+                        >
+                          View / Review
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
     </div>
   );

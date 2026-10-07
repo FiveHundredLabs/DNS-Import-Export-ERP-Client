@@ -128,14 +128,14 @@ export function OpeningBalanceWizard({ accounts, onSave, onClose }: OpeningBalan
           lines.push({
             accountId: equityAccount.id,
             debit: 0,
-            credit: differenceAbs,
+            credit: Number(new Decimal(differenceAbs).toFixed(2)),
             description: 'Automatic Balancing Allocation to Opening Balance Equity',
           });
         } else {
           // Credits > Debits -> Debit 3020 by difference
           lines.push({
             accountId: equityAccount.id,
-            debit: differenceAbs,
+            debit: Number(new Decimal(differenceAbs).toFixed(2)),
             credit: 0,
             description: 'Automatic Balancing Allocation to Opening Balance Equity',
           });

@@ -1,9 +1,10 @@
-import { useState, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useFinanceLedger } from '../hooks/useFinanceLedger';
 import { Account, AccountClass, AccountSubClass } from '../api/types';
 import { AccountModal } from '../components/AccountModal';
 import { OpeningBalanceWizard } from '../components/OpeningBalanceWizard';
 import { formatCurrency } from '../../../utils/formatters';
+import { cn } from '../../../utils/cn';
 import {
   Plus,
   Lock,
@@ -83,9 +84,10 @@ export function ChartOfAccountsPage() {
   const [targetClass, setTargetClass] = useState<AccountClass>('EXPENSE');
   const [targetSubClass, setTargetSubClass] = useState<AccountSubClass>('OPERATING_EXPENSE');
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
+  const [collapsedParents, setCollapsedParents] = useState<Record<string, boolean>>({});
   const [openActionMenuId, setOpenActionMenuId] = useState<string | null>(null);
 
-  // Opening Balance Wizard State
+  // Opening Balance Wizard State & Permanent Lock Check
   const [showWizard, setShowWizard] = useState(false);
   const [openingBalancesCompleted, setOpeningBalancesCompleted] = useState(() => {
     try {
@@ -95,8 +97,17 @@ export function ChartOfAccountsPage() {
     }
   });
 
+  const { journals } = useFinanceLedger();
+  const isObInitLocked = useMemo(() => {
+    return openingBalancesCompleted || journals.some((j) => j.reference?.trim().toUpperCase() === 'SETUP-OB-INIT');
+  }, [openingBalancesCompleted, journals]);
+
   const toggleGroup = (groupId: string) => {
     setCollapsedGroups((prev) => ({ ...prev, [groupId]: !prev[groupId] }));
+  };
+
+  const toggleParent = (parentId: string) => {
+    setCollapsedParents((prev) => ({ ...prev, [parentId]: !prev[parentId] }));
   };
 
   const openCreateForGroup = (cat: ClassificationGroup) => {
@@ -192,8 +203,8 @@ export function ChartOfAccountsPage() {
 
   return (
     <div className="space-y-6">
-      {/* 2.2 Opening Balance Setup Banner (hidden once completed) */}
-      {!openingBalancesCompleted && (
+      {/* 2.2 Opening Balance Setup Banner (hidden once completed or SETUP-OB-INIT locked) */}
+      {!isObInitLocked && (
         <div className="rounded-xl border border-primary-border bg-gradient-to-r from-primary-light via-white to-sky-50 p-4 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 animate-in fade-in-50">
           <div className="flex items-start sm:items-center gap-3">
             <div className="p-2 rounded-lg bg-primary text-white shrink-0 mt-0.5 sm:mt-0">
@@ -250,7 +261,7 @@ export function ChartOfAccountsPage() {
         </div>
 
         <div className="flex items-center gap-2">
-          {!openingBalancesCompleted && (
+          {!isObInitLocked ? (
             <Button
               variant="outline"
               size="sm"
@@ -260,6 +271,11 @@ export function ChartOfAccountsPage() {
               <Sparkles className="h-3.5 w-3.5 text-primary" />
               <span>Opening Balances</span>
             </Button>
+          ) : (
+            <Badge variant="outline" className="gap-1.5 text-xs text-emerald-700 bg-emerald-50 border-emerald-200 py-1.5 px-2.5 font-medium">
+              <Lock className="h-3.5 w-3.5 text-emerald-600" />
+              <span>Opening Balances Locked (SETUP-OB-INIT)</span>
+            </Badge>
           )}
 
           <Button
@@ -421,114 +437,172 @@ export function ChartOfAccountsPage() {
                           </td>
                         </tr>
                       ) : (
-                        groupAccounts.map((account) => {
-                          return (
-                            <tr
-                              key={account.id}
-                              className="hover:bg-slate-50/70 transition-colors"
-                            >
-                              {/* Account Code */}
-                              <td className="px-4 py-3 font-mono font-bold text-primary">
-                                <span className="bg-primary-light px-2 py-0.5 rounded border border-primary-border/40">
-                                  {account.code}
-                                </span>
-                              </td>
+                        (() => {
+                          const topLevelAccounts = groupAccounts.filter(
+                            (a) => !a.parentId || !groupAccounts.some((p) => p.id === a.parentId)
+                          );
+                          const getChildAccounts = (parentId: string) =>
+                            groupAccounts.filter((a) => a.parentId === parentId);
 
-                              {/* Name */}
-                              <td className="px-4 py-3">
-                                <div className="flex items-center gap-2">
-                                  <span className="font-semibold text-slate-900">{account.name}</span>
-                                  {account.isSystem && (
-                                    <Badge
-                                      variant="secondary"
-                                      className="gap-1 bg-amber-50 text-amber-700 border-amber-200 text-[10px] font-semibold py-0"
-                                      title="System control account (Classification locked)"
-                                    >
-                                      <Lock className="h-2.5 w-2.5" />
-                                      <span>System</span>
+                          const renderAccountRow = (account: Account, depth = 0) => {
+                            const isChild = depth > 0;
+                            const children = getChildAccounts(account.id);
+                            const hasChildren = children.length > 0;
+                            const isParentCollapsed = !!collapsedParents[account.id];
+
+                            return (
+                              <tr
+                                key={account.id}
+                                className={cn(
+                                  "hover:bg-slate-50/70 transition-colors",
+                                  isChild && "bg-slate-50/40 border-l-2 border-primary/40"
+                                )}
+                              >
+                                {/* Account Code */}
+                                <td
+                                  className={cn("py-3 font-mono font-bold text-primary", isChild ? "pr-4" : "px-4")}
+                                  style={depth > 0 ? { paddingLeft: `${16 + depth * 16}px` } : undefined}
+                                >
+                                  <div className="flex items-center gap-1.5">
+                                    {isChild && <span className="text-slate-400 text-xs select-none">↳</span>}
+                                    <span className="bg-primary-light px-2 py-0.5 rounded border border-primary-border/40">
+                                      {account.code}
+                                    </span>
+                                  </div>
+                                </td>
+
+                                {/* Name */}
+                                <td className="px-4 py-3">
+                                  <div className="flex items-center gap-2">
+                                    {hasChildren && (
+                                      <button
+                                        type="button"
+                                        onClick={() => toggleParent(account.id)}
+                                        className="p-0.5 hover:bg-slate-200 rounded text-slate-500 hover:text-primary transition-colors"
+                                        title={isParentCollapsed ? "Expand sub-accounts" : "Collapse sub-accounts"}
+                                      >
+                                        {isParentCollapsed ? (
+                                          <ChevronRight className="h-3.5 w-3.5 text-primary" />
+                                        ) : (
+                                          <ChevronDown className="h-3.5 w-3.5 text-primary" />
+                                        )}
+                                      </button>
+                                    )}
+                                    <span className={cn("font-semibold", isChild ? "text-slate-800" : "text-slate-900")}>
+                                      {account.name}
+                                    </span>
+                                    {hasChildren && (
+                                      <Badge variant="outline" className="text-[10px] text-slate-500 py-0">
+                                        {children.length} sub-account{children.length > 1 ? 's' : ''}
+                                      </Badge>
+                                    )}
+                                    {account.isSystem && (
+                                      <Badge
+                                        variant="secondary"
+                                        className="gap-1 bg-amber-50 text-amber-700 border-amber-200 text-[10px] font-semibold py-0"
+                                        title="System control account (Classification locked)"
+                                      >
+                                        <Lock className="h-2.5 w-2.5" />
+                                        <span>System</span>
+                                      </Badge>
+                                    )}
+                                  </div>
+                                  {account.description && (
+                                    <p className={cn("text-[11px] text-slate-400 truncate mt-0.5 max-w-sm", isChild && "ml-4")}>
+                                      {account.description}
+                                    </p>
+                                  )}
+                                </td>
+
+                                {/* Account Type */}
+                                <td className="px-4 py-3 text-slate-600 font-medium">
+                                  {account.accountType || account.accountSubClass}
+                                </td>
+
+                                {/* Sub-Type */}
+                                <td className="px-4 py-3 text-slate-500 font-mono text-[11px]">
+                                  {account.accountSubType || '-'}
+                                </td>
+
+                                {/* Current Balance (Read-Only, right-aligned) */}
+                                <td className="px-4 py-3 text-right font-mono font-semibold tabular-nums text-slate-900">
+                                  {formatCurrency(account.currentBalance || 0)}
+                                </td>
+
+                                {/* Status Badge (Active/Inactive) */}
+                                <td className="px-4 py-3 text-center">
+                                  {account.isActive !== false ? (
+                                    <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[10px]">
+                                      Active
+                                    </Badge>
+                                  ) : (
+                                    <Badge variant="outline" className="bg-slate-100 text-slate-500 border-slate-200 text-[10px]">
+                                      Inactive
                                     </Badge>
                                   )}
-                                </div>
-                                {account.description && (
-                                  <p className="text-[11px] text-slate-400 truncate mt-0.5 max-w-sm">
-                                    {account.description}
-                                  </p>
-                                )}
-                              </td>
+                                </td>
 
-                              {/* Account Type */}
-                              <td className="px-4 py-3 text-slate-600 font-medium">
-                                {account.accountClass}
-                              </td>
-
-                              {/* Sub-Type */}
-                              <td className="px-4 py-3 text-slate-500 font-mono text-[11px]">
-                                {account.accountSubClass}
-                              </td>
-
-                              {/* Current Balance (Read-Only, right-aligned) */}
-                              <td className="px-4 py-3 text-right font-mono font-semibold tabular-nums text-slate-900">
-                                {formatCurrency(account.currentBalance || 0)}
-                              </td>
-
-                              {/* Status Badge (Active/Inactive) */}
-                              <td className="px-4 py-3 text-center">
-                                {account.isActive !== false ? (
-                                  <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[10px]">
-                                    Active
-                                  </Badge>
-                                ) : (
-                                  <Badge variant="outline" className="bg-slate-100 text-slate-500 border-slate-200 text-[10px]">
-                                    Inactive
-                                  </Badge>
-                                )}
-                              </td>
-
-                              {/* Action Menu (per row): Edit Name & Toggle Inactive (hidden for system accounts) */}
-                              <td className="px-4 py-3 text-right relative">
-                                <div className="inline-flex items-center gap-1 justify-end">
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => handleEditAccount(account)}
-                                    className="h-7 px-2 text-xs text-slate-600 hover:text-primary"
-                                    title="Edit Name"
-                                  >
-                                    <Edit2 className="h-3.5 w-3.5" />
-                                  </Button>
-
-                                  {!account.isSystem && (
+                                {/* Action Menu (per row): Edit Name & Toggle Inactive (hidden for system accounts) */}
+                                <td className="px-4 py-3 text-right relative">
+                                  <div className="inline-flex items-center gap-1 justify-end">
                                     <Button
                                       variant="ghost"
                                       size="sm"
-                                      onClick={() => handleToggleInactive(account)}
-                                      className={`h-7 px-2 text-xs ${
-                                        account.isActive !== false
-                                          ? 'text-slate-400 hover:text-amber-600'
-                                          : 'text-emerald-600 hover:text-emerald-700'
-                                      }`}
-                                      title={account.isActive !== false ? 'Mark Inactive' : 'Mark Active'}
+                                      onClick={() => handleEditAccount(account)}
+                                      className="h-7 px-2 text-xs text-slate-600 hover:text-primary"
+                                      title="Edit Name"
                                     >
-                                      <Power className="h-3.5 w-3.5" />
+                                      <Edit2 className="h-3.5 w-3.5" />
                                     </Button>
-                                  )}
 
-                                  {!account.isSystem && (
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={() => deleteAccount(account.id)}
-                                      className="h-7 px-2 text-xs text-slate-400 hover:text-rose-600"
-                                      title="Delete Custom Sub-Account"
-                                    >
-                                      <Trash2 className="h-3.5 w-3.5" />
-                                    </Button>
-                                  )}
-                                </div>
-                              </td>
-                            </tr>
-                          );
-                        })
+                                    {!account.isSystem && (
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => handleToggleInactive(account)}
+                                        className={`h-7 px-2 text-xs ${
+                                          account.isActive !== false
+                                            ? 'text-slate-400 hover:text-amber-600'
+                                            : 'text-emerald-600 hover:text-emerald-700'
+                                        }`}
+                                        title={account.isActive !== false ? 'Mark Inactive' : 'Mark Active'}
+                                      >
+                                        <Power className="h-3.5 w-3.5" />
+                                      </Button>
+                                    )}
+
+                                    {!account.isSystem && (
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => deleteAccount(account.id)}
+                                        className="h-7 px-2 text-xs text-slate-400 hover:text-rose-600"
+                                        title="Delete Custom Sub-Account"
+                                      >
+                                        <Trash2 className="h-3.5 w-3.5" />
+                                      </Button>
+                                    )}
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          };
+
+                          const renderAccountNode = (account: Account, depth = 0): React.ReactNode => {
+                            const children = getChildAccounts(account.id);
+                            const isParentCollapsed = !!collapsedParents[account.id];
+
+                            return (
+                              <React.Fragment key={account.id}>
+                                {renderAccountRow(account, depth)}
+                                {!isParentCollapsed &&
+                                  children.map((child) => renderAccountNode(child, depth + 1))}
+                              </React.Fragment>
+                            );
+                          };
+
+                          return topLevelAccounts.map((parent) => renderAccountNode(parent, 0));
+                        })()
                       )}
                     </tbody>
                   </table>

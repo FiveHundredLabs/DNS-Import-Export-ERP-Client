@@ -16,8 +16,11 @@ export interface Account {
   id: string;
   code: string;
   name: string;
-  accountClass: AccountClass;
-  accountSubClass: AccountSubClass;
+  classification: AccountClass; // Tier 1: Classification
+  accountClass: AccountClass; // Backwards-compatible alias
+  accountType: string; // Tier 2: Account Type (e.g. Current Asset, Operating Expense)
+  accountSubClass: AccountSubClass; // Backwards-compatible alias
+  accountSubType: string; // Tier 3: Sub-Type (e.g. Bank & Cash, Accounts Receivable)
   description?: string;
   isSystem: boolean; // 11 non-deletable default system accounts
   isActive: boolean;
@@ -53,9 +56,15 @@ export interface JournalLine {
   debit: number;
   credit: number;
   description?: string;
+  customerId?: string; // Sub-ledger tagging for 1020 A/R
+  customerName?: string;
+  supplierId?: string; // Sub-ledger tagging for 2010 A/P
+  supplierName?: string;
 }
 
 export type JournalSource = 'MANUAL' | 'PAYMENT' | 'GRN' | 'SALES' | 'COMMISSION' | 'SYSTEM';
+
+export type JournalEntryStatus = 'DRAFT' | 'PENDING_APPROVAL' | 'POSTED' | 'VOIDED' | 'CLEARED';
 
 export interface JournalEntry {
   id: string;
@@ -64,12 +73,14 @@ export interface JournalEntry {
   description: string;
   reference?: string;
   source: JournalSource;
-  status: 'POSTED' | 'DRAFT' | 'VOIDED' | 'CLEARED';
+  status: JournalEntryStatus;
   lines: JournalLine[];
   totalDebit: number;
   totalCredit: number;
   createdBy: string;
   createdAt: string;
+  approvedBy?: string;
+  approvedAt?: string;
   voidedAt?: string;
   voidedBy?: string;
   voidReason?: string;
@@ -78,8 +89,11 @@ export interface JournalEntry {
 export interface CreateAccountDTO {
   code: string;
   name: string;
-  accountClass: AccountClass;
-  accountSubClass: AccountSubClass;
+  classification?: AccountClass;
+  accountClass?: AccountClass;
+  accountType?: string;
+  accountSubClass?: AccountSubClass;
+  accountSubType?: string;
   description?: string;
   parentId?: string;
 }
@@ -100,6 +114,10 @@ export interface CreateJournalLineDTO {
   debit: number;
   credit: number;
   description?: string;
+  customerId?: string;
+  customerName?: string;
+  supplierId?: string;
+  supplierName?: string;
 }
 
 export interface CreateJournalEntryDTO {
@@ -107,6 +125,7 @@ export interface CreateJournalEntryDTO {
   description: string;
   reference?: string;
   source?: JournalSource;
+  status?: JournalEntryStatus;
   lines: CreateJournalLineDTO[];
 }
 
@@ -211,7 +230,8 @@ export interface VatReport {
 export const createAccountSchema = z.object({
   code: z.string().min(2, 'Account code must be at least 2 characters'),
   name: z.string().min(2, 'Account name must be at least 2 characters'),
-  accountClass: z.enum(['ASSET', 'LIABILITY', 'EQUITY', 'INCOME', 'EXPENSE']),
+  accountClass: z.enum(['ASSET', 'LIABILITY', 'EQUITY', 'INCOME', 'EXPENSE']).optional(),
+  classification: z.enum(['ASSET', 'LIABILITY', 'EQUITY', 'INCOME', 'EXPENSE']).optional(),
   accountSubClass: z.enum([
     'CURRENT_ASSET',
     'NON_CURRENT_ASSET',
@@ -221,9 +241,13 @@ export const createAccountSchema = z.object({
     'REVENUE',
     'DIRECT_COST',
     'OPERATING_EXPENSE',
-  ]),
+  ]).optional(),
+  accountType: z.string().optional(),
+  accountSubType: z.string().optional(),
   description: z.string().optional(),
   parentId: z.string().optional(),
+  currency: z.string().optional(),
+  openingBalance: z.number().optional(),
 });
 
 export const createSupplierSchema = z.object({
@@ -242,6 +266,10 @@ export const journalLineSchema = z.object({
   debit: z.number().min(0, 'Debit must be non-negative'),
   credit: z.number().min(0, 'Credit must be non-negative'),
   description: z.string().optional(),
+  customerId: z.string().optional(),
+  customerName: z.string().optional(),
+  supplierId: z.string().optional(),
+  supplierName: z.string().optional(),
 }).refine((line) => (line.debit > 0 && line.credit === 0) || (line.credit > 0 && line.debit === 0), {
   message: 'Each line must have either a debit or a credit amount, but not both or zero',
 });
@@ -251,6 +279,7 @@ export const createJournalEntrySchema = z.object({
   description: z.string().min(3, 'Description must be at least 3 characters'),
   reference: z.string().optional(),
   source: z.enum(['MANUAL', 'PAYMENT', 'GRN', 'SALES', 'COMMISSION', 'SYSTEM']).default('MANUAL'),
+  status: z.enum(['DRAFT', 'PENDING_APPROVAL', 'POSTED', 'VOIDED', 'CLEARED']).optional(),
   lines: z.array(journalLineSchema).min(2, 'A journal entry must contain at least 2 lines'),
 }).refine((data) => {
   const totalDebit = Math.round(data.lines.reduce((sum, l) => sum + (l.debit || 0), 0) * 100);

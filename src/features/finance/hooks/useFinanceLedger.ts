@@ -168,6 +168,19 @@ export function useFinanceLedger() {
     }
   };
 
+  const approveJournalEntry = async (id: string, approverName?: string): Promise<JournalEntry> => {
+    try {
+      const entry = await financeRepository.approveJournalEntry(id, approverName);
+      await Promise.all([fetchJournals(), fetchAccounts()]);
+      toast.success(`Journal entry ${entry.entryNumber} approved and posted to General Ledger!`);
+      return entry;
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to approve journal entry';
+      toast.error(msg);
+      throw err;
+    }
+  };
+
   const voidJournalEntry = async (id: string, reason?: string): Promise<JournalEntry> => {
     try {
       const entry = await financeRepository.voidJournalEntry(id, reason);
@@ -222,6 +235,7 @@ export function useFinanceLedger() {
     updateSupplier,
     deleteSupplier,
     postJournalEntry,
+    approveJournalEntry,
     voidJournalEntry,
     getProfitLoss,
     getBalanceSheet,

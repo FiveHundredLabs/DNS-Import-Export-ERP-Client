@@ -46,6 +46,7 @@ export interface IFinanceRepository {
   }): Promise<JournalEntry[]>;
   getJournalEntryById(id: string): Promise<JournalEntry | null>;
   createJournalEntry(dto: CreateJournalEntryDTO): Promise<JournalEntry>;
+  approveJournalEntry(id: string, approverName?: string): Promise<JournalEntry>;
   voidJournalEntry(id: string, reason?: string): Promise<JournalEntry>;
 
   // Reports

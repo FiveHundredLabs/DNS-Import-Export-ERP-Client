@@ -379,7 +379,7 @@ export function App() {
         />
         </Route>
 
-        {/* Phase 9: Finance & Accounting Module with Direct Extended Navigation */}
+        {/* Phase 1: Finance & Accounting Module Executive Navigation */}
         <Route
           path="finance"
           element={
@@ -388,9 +388,14 @@ export function App() {
             </ProtectedRoute>
           }
         >
-          {/* Initial Screen: 1 - Journal Entry (The Finance Desk) */}
-          <Route index element={<FinanceDeskPage />} />
-          <Route path="desk" element={<FinanceDeskPage />} />
+          {/* Executive Dashboard as central landing page */}
+          <Route index element={<FinanceDashboardPage />} />
+          <Route path="dashboard" element={<FinanceDashboardPage />} />
+
+          {/* Legacy route redirections to unified workflows */}
+          <Route path="desk" element={<Navigate to="/finance/journal/new" replace />} />
+          <Route path="payment-approvals" element={<Navigate to="/finance/ar/approvals" replace />} />
+
           <Route path="journal/new" element={<ManualJournalPage />} />
           <Route path="accounts" element={<ChartOfAccountsPage />} />
 
@@ -399,7 +404,6 @@ export function App() {
           <Route path="ap/payments/new" element={<BatchSupplierPaymentPage />} />
 
           {/* Accounts Receivable (AR) & Collections */}
-          <Route path="payment-approvals" element={<PaymentApprovalPage />} />
           <Route path="ar/approvals" element={<ReceiptApprovalQueuePage />} />
           <Route path="ar/allocate" element={<ARCollectionAllocationPage />} />
 
@@ -411,7 +415,6 @@ export function App() {
 
           <Route path="suppliers" element={<SuppliersPage />} />
           <Route path="commissions" element={<FinanceCommissionsPage />} />
-          <Route path="dashboard" element={<FinanceDashboardPage />} />
 
           {/* 5 - Reports and sub-reports with easy backward navigation */}
           <Route path="reports" element={<FinanceReportsHubPage />} />
