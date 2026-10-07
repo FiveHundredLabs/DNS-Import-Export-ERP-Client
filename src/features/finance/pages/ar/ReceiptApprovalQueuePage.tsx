@@ -1,12 +1,12 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { arService, ARReceiptItem } from '../../services/arService';
+import { arService, ARReceiptItem, AROpenInvoice } from '../../services/arService';
 import { Button } from '../../../../components/ui/button';
 import { Input } from '../../../../components/ui/input';
 import { Badge } from '../../../../components/ui/badge';
 import { Dialog, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../../../../components/ui/dialog';
 import { Textarea } from '../../../../components/ui/textarea';
-import { formatCurrency } from '../../../../utils/formatters';
+import { formatCurrency, formatDate } from '../../../../utils/formatters';
 import {
   Search,
   ExternalLink,
@@ -16,6 +16,12 @@ import {
   Image as ImageIcon,
   SlidersHorizontal,
   ArrowRight,
+  Landmark,
+  Wallet,
+  CheckCircle2,
+  FileText,
+  AlertCircle,
+  Clock,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -27,6 +33,14 @@ export function ReceiptApprovalQueuePage() {
 
   // Selected item for Side Sheet Detail View
   const [selectedReceipt, setSelectedReceipt] = useState<ARReceiptItem | null>(null);
+
+  // Approve Modal State (Inline Settlement)
+  const [approvingItem, setApprovingItem] = useState<ARReceiptItem | null>(null);
+  const [autoFIFO, setAutoFIFO] = useState<boolean>(true);
+  const [depositAccountId, setDepositAccountId] = useState<string>('acc-1010');
+  const [chequeNumber, setChequeNumber] = useState<string>('');
+  const [drawerBank, setDrawerBank] = useState<string>('Commercial Bank of Ceylon');
+  const [chequeDate, setChequeDate] = useState<string>(new Date().toISOString().slice(0, 10));
 
   // Reject Modal State
   const [rejectingItem, setRejectingItem] = useState<ARReceiptItem | null>(null);
@@ -57,17 +71,67 @@ export function ReceiptApprovalQueuePage() {
   const approvedCount = receipts.filter((r) => r.status === 'APPROVED').length;
   const rejectedCount = receipts.filter((r) => r.status === 'REJECTED').length;
 
-  const handleApprove = async (receipt: ARReceiptItem) => {
+  // Open Invoices & FIFO preview for the receipt being approved
+  const customerOpenInvoices: AROpenInvoice[] = useMemo(() => {
+    if (!approvingItem) return [];
+    return arService.getOpenInvoicesForCustomer(approvingItem.customerId);
+  }, [approvingItem]);
+
+  const fifoAllocations: Record<string, number> = useMemo(() => {
+    if (!approvingItem) return {};
+    return arService.calculateAutoFIFO(approvingItem.customerId, approvingItem.amount);
+  }, [approvingItem]);
+
+  const totalFIFOAllocated = useMemo(() => {
+    return Object.values(fifoAllocations).reduce((sum, v) => sum + v, 0);
+  }, [fifoAllocations]);
+
+  const handleOpenApprove = (receipt: ARReceiptItem) => {
+    setApprovingItem(receipt);
+    setAutoFIFO(true);
+    if (receipt.paymentMethod === 'CHEQUE') {
+      setChequeNumber(receipt.chequeNumber || `CHQ-${Math.floor(100000 + Math.random() * 900000)}`);
+      setDrawerBank(receipt.drawerBank || 'Commercial Bank of Ceylon');
+      setChequeDate(receipt.chequeDate || new Date().toISOString().slice(0, 10));
+      setDepositAccountId('acc-1018');
+    } else if (receipt.paymentMethod === 'CASH') {
+      setDepositAccountId('acc-1040');
+    } else {
+      setDepositAccountId('acc-1010');
+    }
+  };
+
+  const handleConfirmApprove = async () => {
+    if (!approvingItem) return;
     try {
-      setProcessingId(receipt.id);
-      await arService.approveReceipt(receipt.id);
+      setProcessingId(approvingItem.id);
+      await arService.approveReceipt(approvingItem.id, {
+        depositAccountId,
+        autoFIFO,
+        chequeDetails:
+          approvingItem.paymentMethod === 'CHEQUE'
+            ? {
+                chequeNumber,
+                drawerBank,
+                chequeDate,
+              }
+            : undefined,
+      });
+
+      const methodMsg =
+        approvingItem.paymentMethod === 'CHEQUE'
+          ? 'Cheque routed to 1018 Cheques in Hand (PDC Vault)'
+          : 'Bank deposit verified';
+      const fifoMsg = autoFIFO ? 'and settled oldest unpaid invoices via Auto-FIFO' : '';
+
       toast.success(
-        `Receipt ${receipt.receiptNumber} approved! Posted Dr Bank / Cr A/R and restored ${receipt.customerName}'s available credit limit.`
+        `Receipt ${approvingItem.receiptNumber} approved! ${methodMsg} ${fifoMsg}, customer credit limit restored.`
       );
       refreshReceipts();
-      if (selectedReceipt?.id === receipt.id) {
-        setSelectedReceipt(arService.getReceiptById(receipt.id));
+      if (selectedReceipt?.id === approvingItem.id) {
+        setSelectedReceipt(arService.getReceiptById(approvingItem.id));
       }
+      setApprovingItem(null);
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : 'Approval failed');
     } finally {
@@ -114,11 +178,31 @@ export function ReceiptApprovalQueuePage() {
             </Badge>
           </div>
           <p className="text-sm text-slate-500 mt-1">
-            Finance verification of field collections by sales representatives before ledger commitment and customer credit restoration.
+            Finance verification of field collections by sales representatives with inline Auto-FIFO settlement and PDC Vault custody.
           </p>
         </div>
 
         <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigate('/finance/ar/pdc-vault')}
+            className="text-xs gap-1.5 border-amber-300 bg-amber-50/50 text-amber-800 hover:bg-amber-100/60"
+          >
+            <Clock className="h-3.5 w-3.5 text-amber-700" />
+            <span>PDC Vault (1018)</span>
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigate('/finance/ar/credit-notes')}
+            className="text-xs gap-1.5"
+          >
+            <FileText className="h-3.5 w-3.5 text-primary" />
+            <span>Credit Notes</span>
+          </Button>
+
           <Button
             variant="outline"
             size="sm"
@@ -242,9 +326,23 @@ export function ReceiptApprovalQueuePage() {
                         {receipt.collectorName}
                       </td>
                       <td className="px-4 py-3">
-                        <Badge variant="outline" className="text-[10px] font-mono">
-                          {receipt.paymentMethod}
-                        </Badge>
+                        <div className="flex items-center gap-1.5">
+                          <Badge
+                            variant="outline"
+                            className={`text-[10px] font-mono ${
+                              receipt.paymentMethod === 'CHEQUE'
+                                ? 'border-amber-300 bg-amber-50 text-amber-800'
+                                : receipt.paymentMethod === 'CASH'
+                                ? 'border-emerald-300 bg-emerald-50 text-emerald-800'
+                                : 'border-blue-300 bg-blue-50 text-blue-800'
+                            }`}
+                          >
+                            {receipt.paymentMethod}
+                          </Badge>
+                          {receipt.paymentMethod === 'CHEQUE' && (
+                            <span className="text-[10px] text-amber-700 font-medium">PDC 1018</span>
+                          )}
+                        </div>
                       </td>
                       <td className="px-4 py-3 text-right font-mono font-bold tabular-nums text-slate-900">
                         {formatCurrency(receipt.amount)}
@@ -274,11 +372,12 @@ export function ReceiptApprovalQueuePage() {
                               </Button>
                               <Button
                                 size="sm"
-                                onClick={() => handleApprove(receipt)}
+                                onClick={() => handleOpenApprove(receipt)}
                                 disabled={processingId === receipt.id}
-                                className="h-7 px-2.5 bg-primary hover:bg-primary-hover text-white text-xs"
+                                className="h-7 px-2.5 bg-primary hover:bg-primary-hover text-white text-xs gap-1"
                               >
-                                Approve
+                                <CheckCircle2 className="h-3.5 w-3.5" />
+                                <span>Approve</span>
                               </Button>
                             </>
                           )}
@@ -355,6 +454,18 @@ export function ReceiptApprovalQueuePage() {
                   <span className="font-semibold text-slate-800">{selectedReceipt.collectorName}</span>
                 </div>
               </div>
+
+              {selectedReceipt.paymentMethod === 'CHEQUE' && (
+                <div className="p-2.5 rounded-md bg-amber-50 border border-amber-200 text-amber-900 space-y-1">
+                  <div className="font-semibold text-[11px] flex items-center gap-1.5">
+                    <Clock className="h-3.5 w-3.5 text-amber-700" />
+                    <span>PDC Vault Asset Account 1018 Routing</span>
+                  </div>
+                  <p className="text-[11px] text-amber-800">
+                    Cheques are kept in 1018 Cheques in Hand custody until maturity and realization into 1010 Bank cash.
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* Attached Deposit Slip / Cheque Image Preview */}
@@ -425,7 +536,7 @@ export function ReceiptApprovalQueuePage() {
               </Button>
 
               <Button
-                onClick={() => handleApprove(selectedReceipt)}
+                onClick={() => handleOpenApprove(selectedReceipt)}
                 disabled={processingId === selectedReceipt.id}
                 className="bg-primary hover:bg-primary-hover text-white text-xs font-semibold shadow-xs"
               >
@@ -436,6 +547,235 @@ export function ReceiptApprovalQueuePage() {
           )}
         </div>
       )}
+
+      {/* Unified Receipt Approval Modal with Inline Auto-FIFO Settlement */}
+      <Dialog
+        open={Boolean(approvingItem)}
+        onOpenChange={(open) => !open && setApprovingItem(null)}
+      >
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <ShieldCheck className="h-5 w-5 text-emerald-600" />
+            <span>Verify & Approve Customer Collection Receipt</span>
+          </DialogTitle>
+          <DialogDescription>
+            Confirm receipt verification, ledger account routing, and perform inline Auto-FIFO invoice settlement.
+          </DialogDescription>
+        </DialogHeader>
+
+        {approvingItem && (
+          <div className="space-y-4 py-2 text-xs max-h-[75vh] overflow-y-auto">
+            {/* Receipt Summary Card */}
+            <div className="p-3 rounded-lg bg-slate-50 border border-slate-200 space-y-2">
+              <div className="flex justify-between items-center">
+                <div>
+                  <span className="font-mono font-bold text-primary">{approvingItem.receiptNumber}</span>
+                  <div className="font-semibold text-slate-800">{approvingItem.customerName}</div>
+                </div>
+                <div className="text-right">
+                  <div className="text-[11px] text-slate-500 uppercase font-semibold">Amount</div>
+                  <div className="text-base font-bold font-mono text-emerald-700 tabular-nums">
+                    {formatCurrency(approvingItem.amount)}
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center justify-between text-[11px] text-slate-600 pt-2 border-t border-slate-200/80">
+                <span>Collector: {approvingItem.collectorName}</span>
+                <Badge variant="outline" className="font-mono text-[10px]">
+                  Method: {approvingItem.paymentMethod}
+                </Badge>
+              </div>
+            </div>
+
+            {/* Cheque Specific Fields (PDC Vault Rule) */}
+            {approvingItem.paymentMethod === 'CHEQUE' ? (
+              <div className="p-3.5 rounded-lg border border-amber-200 bg-amber-50/60 space-y-3">
+                <div className="flex items-center gap-1.5 text-amber-900 font-semibold">
+                  <Clock className="h-4 w-4 text-amber-700" />
+                  <span>Post-Dated Cheque (PDC) Vault Routing</span>
+                </div>
+                <p className="text-[11px] text-amber-800 leading-relaxed">
+                  Per Phase 3 accounting controls, un-cleared cheques are routed to{' '}
+                  <strong className="font-mono font-bold text-slate-900">1018 Cheques in Hand</strong> (Debit) instead of{' '}
+                  <span className="font-mono line-through text-slate-500">1010 Bank</span> cash. Transfer to Bank will occur upon manual realization in the PDC Vault.
+                </p>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                      Cheque Number <span className="text-rose-500">*</span>
+                    </label>
+                    <Input
+                      value={chequeNumber}
+                      onChange={(e) => setChequeNumber(e.target.value)}
+                      placeholder="e.g. CHQ-88201"
+                      className="h-8 text-xs font-mono bg-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                      Drawer Bank
+                    </label>
+                    <Input
+                      value={drawerBank}
+                      onChange={(e) => setDrawerBank(e.target.value)}
+                      placeholder="e.g. Commercial Bank"
+                      className="h-8 text-xs bg-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                      Realization Date
+                    </label>
+                    <Input
+                      type="date"
+                      value={chequeDate}
+                      onChange={(e) => setChequeDate(e.target.value)}
+                      className="h-8 text-xs bg-white"
+                    />
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="p-3 rounded-lg border border-slate-200 bg-white space-y-2">
+                <label className="block text-xs font-semibold text-slate-700">
+                  Target Deposit Account (Cash / Bank)
+                </label>
+                <select
+                  value={depositAccountId}
+                  onChange={(e) => setDepositAccountId(e.target.value)}
+                  className="w-full text-xs rounded-md border border-slate-300 p-2 bg-white text-slate-800"
+                >
+                  <option value="acc-1010">1010 - Bank Account (Corporate Checking)</option>
+                  <option value="acc-1040">1040 - Cash in Hand (Showroom Petty Cash Float)</option>
+                </select>
+              </div>
+            )}
+
+            {/* Inline Settlement Section with Auto-FIFO Checkbox */}
+            <div className="p-3.5 rounded-lg border border-primary-border bg-primary-light/40 space-y-3">
+              <div className="flex items-start gap-2.5">
+                <input
+                  type="checkbox"
+                  id="auto-fifo-checkbox"
+                  checked={autoFIFO}
+                  onChange={(e) => setAutoFIFO(e.target.checked)}
+                  className="h-4 w-4 mt-0.5 rounded border-slate-300 text-primary focus:ring-primary cursor-pointer"
+                />
+                <div className="flex-1">
+                  <label
+                    htmlFor="auto-fifo-checkbox"
+                    className="font-bold text-slate-900 cursor-pointer block text-xs"
+                  >
+                    Apply via Auto-FIFO (Instant Invoice Settlement & Credit Restoration)
+                  </label>
+                  <p className="text-[11px] text-slate-600 mt-0.5">
+                    Finance Manager single-click settlement: verifies bank deposit, restores customer available credit limit, and automatically settles the oldest unpaid invoices sequentially without navigating to a separate allocation screen.
+                  </p>
+                </div>
+              </div>
+
+              {autoFIFO && (
+                <div className="pt-2 border-t border-primary-border/60 space-y-2">
+                  <div className="flex justify-between items-center text-[11px]">
+                    <span className="font-semibold text-slate-700">
+                      Open Invoices for {approvingItem.customerName} ({customerOpenInvoices.length}):
+                    </span>
+                    <span className="font-mono font-bold text-primary">
+                      Auto-FIFO Settling: {formatCurrency(totalFIFOAllocated)}
+                    </span>
+                  </div>
+
+                  {customerOpenInvoices.length === 0 ? (
+                    <div className="p-3 rounded bg-white/70 border border-slate-200 text-slate-500 text-center text-[11px]">
+                      No open overdue invoices found for this dealer. Full receipt amount will be credited to customer A/R balance.
+                    </div>
+                  ) : (
+                    <div className="border border-slate-200 rounded-md bg-white overflow-hidden">
+                      <table className="w-full text-left text-[11px]">
+                        <thead className="bg-slate-50 text-[10px] text-slate-600 border-b border-slate-200">
+                          <tr>
+                            <th className="p-2">Invoice #</th>
+                            <th className="p-2">Date</th>
+                            <th className="p-2 text-right">Balance Due</th>
+                            <th className="p-2 text-right text-emerald-700">Auto-FIFO Applied</th>
+                            <th className="p-2 text-right">New Balance</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 font-mono">
+                          {customerOpenInvoices.map((inv) => {
+                            const applied = fifoAllocations[inv.id] || 0;
+                            const newBal = Math.max(0, inv.balanceDue - applied);
+                            return (
+                              <tr key={inv.id} className="hover:bg-slate-50/50">
+                                <td className="p-2 font-bold text-slate-800">{inv.invoiceNumber}</td>
+                                <td className="p-2 text-slate-500 font-sans">{formatDate(inv.date)}</td>
+                                <td className="p-2 text-right text-slate-700">{formatCurrency(inv.balanceDue)}</td>
+                                <td className="p-2 text-right font-bold text-emerald-600">
+                                  {applied > 0 ? `-${formatCurrency(applied)}` : 'LKR 0.00'}
+                                </td>
+                                <td className="p-2 text-right font-semibold text-slate-900">
+                                  {formatCurrency(newBal)}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+
+                  {approvingItem.amount > totalFIFOAllocated && customerOpenInvoices.length > 0 && (
+                    <div className="p-2 bg-emerald-50 border border-emerald-200 rounded text-emerald-800 text-[11px] flex items-center justify-between">
+                      <span>Overpayment / Remaining Credit to A/R:</span>
+                      <strong className="font-mono">
+                        {formatCurrency(approvingItem.amount - totalFIFOAllocated)}
+                      </strong>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Accounting Voucher Preview */}
+            <div className="p-3 rounded-lg bg-slate-900 text-slate-100 text-[11px] space-y-1.5 font-mono">
+              <div className="text-[10px] uppercase tracking-wider text-slate-400 font-sans font-bold flex items-center gap-1.5">
+                <Landmark className="h-3.5 w-3.5 text-primary" />
+                Universal Journal Entry Voucher Preview
+              </div>
+              <div className="flex justify-between text-emerald-400">
+                <span>
+                  Dr {approvingItem.paymentMethod === 'CHEQUE' ? '1018 Cheques in Hand (Vault)' : '1010 Bank / Cash Account'}
+                </span>
+                <span>{formatCurrency(approvingItem.amount)}</span>
+              </div>
+              <div className="flex justify-between text-blue-400">
+                <span>Cr 1020 Accounts Receivable ({approvingItem.customerName})</span>
+                <span>{formatCurrency(approvingItem.amount)}</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <DialogFooter className="gap-2 sm:gap-0">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setApprovingItem(null)}
+          >
+            Cancel
+          </Button>
+          <Button
+            size="sm"
+            onClick={handleConfirmApprove}
+            disabled={processingId !== null}
+            className="bg-primary hover:bg-primary-hover text-white gap-1"
+          >
+            <CheckCircle2 className="h-3.5 w-3.5" />
+            <span>Confirm Approval & Inline Settle</span>
+          </Button>
+        </DialogFooter>
+      </Dialog>
 
       {/* Reject Reason Modal */}
       <Dialog open={Boolean(rejectingItem)} onOpenChange={(open) => !open && setRejectingItem(null)}>

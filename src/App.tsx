@@ -52,6 +52,8 @@ import { SupplierDebitNotesPage } from './features/finance/pages/ap/SupplierDebi
 import { BatchSupplierPaymentPage } from './features/finance/pages/ap/BatchSupplierPaymentPage';
 import { ReceiptApprovalQueuePage } from './features/finance/pages/ar/ReceiptApprovalQueuePage';
 import { ARCollectionAllocationPage } from './features/finance/pages/ar/ARCollectionAllocationPage';
+import { PDCVaultPage } from './features/finance/pages/ar/PDCVaultPage';
+import { CustomerCreditNotesPage } from './features/finance/pages/ar/CustomerCreditNotesPage';
 import { ManualJournalPage } from './features/finance/pages/journal/ManualJournalPage';
 import { BankReconciliationPage } from './features/finance/pages/reconciliation/BankReconciliationPage';
 import { FinancialPeriodLockPage } from './features/finance/pages/settings/FinancialPeriodLockPage';
@@ -410,6 +412,8 @@ export function App() {
           {/* Accounts Receivable (AR) & Collections */}
           <Route path="ar/approvals" element={<ReceiptApprovalQueuePage />} />
           <Route path="ar/allocate" element={<ARCollectionAllocationPage />} />
+          <Route path="ar/pdc-vault" element={<PDCVaultPage />} />
+          <Route path="ar/credit-notes" element={<CustomerCreditNotesPage />} />
 
           {/* Bank Reconciliation Workspace */}
           <Route path="reconciliation" element={<BankReconciliationPage />} />

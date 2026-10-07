@@ -54,11 +54,13 @@ function createAccountRecord(
 export const DEFAULT_SYSTEM_ACCOUNTS: Account[] = [
   // Current Assets
   createAccountRecord('acc-1010', '1010', 'Bank Account', 'ASSET', 'CURRENT_ASSET', 'Cash & Cash Equivalents', 'Primary corporate operating checking account', true, 2500000.0),
+  createAccountRecord('acc-1018', '1018', 'Cheques in Hand', 'ASSET', 'CURRENT_ASSET', 'Cash & Cash Equivalents', 'Post-dated and un-cleared cheques in hand awaiting bank clearing', false, 0.0),
   createAccountRecord('acc-1020', '1020', 'Accounts Receivable', 'ASSET', 'CURRENT_ASSET', 'Trade Receivables (A/R Control)', 'Trade receivables from customers and dealers', true, 850000.0),
   createAccountRecord('acc-1025', '1025', 'Input VAT Receivable', 'ASSET', 'CURRENT_ASSET', 'Tax Assets', 'Input Value Added Tax paid on purchases claimable from Inland Revenue Department', false, 0.0),
   createAccountRecord('acc-1030', '1030', 'Inventory', 'ASSET', 'CURRENT_ASSET', 'Merchandise Inventory', 'Valuation of finished goods and stock in warehouses', true, 4200000.0),
   createAccountRecord('acc-1040', '1040', 'Cash in Hand', 'ASSET', 'CURRENT_ASSET', 'Petty Cash Float', 'Showroom petty cash and drawer float', false, 75000.0),
   createAccountRecord('acc-1050', '1050', 'Advance to Suppliers', 'ASSET', 'CURRENT_ASSET', 'Prepayments & Advances', 'Prepayments and advance deposits paid to suppliers prior to billing', false, 0.0),
+  createAccountRecord('acc-1100', '1100', 'Merchandise Inventory Asset', 'ASSET', 'CURRENT_ASSET', 'Merchandise Inventory', 'Valuation of merchandise stock in warehouse and returned goods', false, 0.0),
   createAccountRecord('acc-1510', '1510', 'Office Equipment & Vehicles', 'ASSET', 'NON_CURRENT_ASSET', 'Fixed & Capital Assets', 'Fixed assets and capital equipment', false, 1200000.0),
 
   // Current Liabilities

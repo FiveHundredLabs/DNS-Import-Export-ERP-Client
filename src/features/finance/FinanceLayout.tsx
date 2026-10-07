@@ -17,6 +17,8 @@ import {
   LayoutDashboard,
   Coins,
   Undo2,
+  Clock,
+  RotateCcw,
 } from 'lucide-react';
 import { InnerSidebarLayout } from '../../components/layout/InnerSidebarLayout';
 import { InnerNavItem } from '../../components/common/InnerSidebar';
@@ -78,6 +80,16 @@ const FINANCE_NAV_ITEMS: InnerNavItem[] = [
     name: 'AR Collection Allocation',
     path: '/finance/ar/allocate',
     icon: SlidersHorizontal,
+  },
+  {
+    name: 'PDC Vault (Cheques in Hand)',
+    path: '/finance/ar/pdc-vault',
+    icon: Clock,
+  },
+  {
+    name: 'Customer Credit Notes',
+    path: '/finance/ar/credit-notes',
+    icon: RotateCcw,
   },
   {
     name: 'Bank Reconciliation',

@@ -105,6 +105,67 @@ export interface SupplierDebitNote {
   createdAt: string;
 }
 
+export interface PostDatedCheque {
+  id: string;
+  chequeNumber: string;
+  receiptId?: string;
+  receiptNumber?: string;
+  customerId: string;
+  customerName: string;
+  customerCode?: string;
+  drawerBank: string;
+  chequeDate: string; // Realization / maturity date (YYYY-MM-DD)
+  receivedDate: string; // Date received
+  amount: number;
+  status: 'IN_HAND' | 'CLEARED' | 'BOUNCED' | 'RETURNED';
+  holdingAccountCode: string; // '1018'
+  clearedAccountCode?: string; // '1010'
+  clearedAt?: string;
+  clearanceDate?: string;
+  journalEntryId?: string; // Initial GL entry (Dr 1018 / Cr 1020)
+  clearanceJournalId?: string; // Clearance GL entry (Dr 1010 / Cr 1018)
+  bounceReason?: string;
+  notes?: string;
+}
+
+export interface CustomerCreditNoteLineItem {
+  id?: string;
+  productId: string;
+  productName: string;
+  sku: string;
+  returnedQuantity: number;
+  unitPrice: number; // Selling price (reverses 4010 Sales Revenue)
+  unitCost: number; // Cost price (reverses 5010 COGS & restores 1100 Inventory)
+  taxRate?: number; // VAT rate (default 0.18 for 18% VAT or 0)
+  subtotal: number; // returnedQuantity * unitPrice
+  vatAmount: number; // subtotal * taxRate
+  lineTotal: number; // subtotal + vatAmount
+  costTotal: number; // returnedQuantity * unitCost
+  condition?: 'GOOD_RETURN_TO_STOCK' | 'DAMAGED_SCRAP' | 'REFURBISH';
+  reason?: string;
+}
+
+export interface CustomerCreditNote {
+  id: string;
+  creditNoteNumber: string; // e.g. CN-2026-001
+  customerId: string;
+  customerName: string;
+  customerCode?: string;
+  invoiceId?: string;
+  invoiceNumber?: string;
+  date: string;
+  reason: string;
+  lineItems: CustomerCreditNoteLineItem[];
+  subtotal: number; // Net sales revenue reversed (Dr 4010)
+  vatAmount: number; // Output VAT reversed (Dr 2020)
+  totalAmount: number; // Gross AR reversed (Cr 1020)
+  totalCostAmount: number; // COGS reversed & Inventory returned (Dr 1100, Cr 5010)
+  status: 'ISSUED' | 'APPLIED' | 'VOIDED';
+  returnToInventory: boolean;
+  journalEntryId?: string;
+  createdAt: string;
+}
+
 export interface JournalLine {
   id: string;
   accountId: string;

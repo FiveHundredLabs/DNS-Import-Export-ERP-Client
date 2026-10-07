@@ -1,5 +1,7 @@
 import { financeRepository } from '../api';
 import { periodLockService } from './periodLockService';
+import { pdcVaultService } from './pdcVaultService';
+import { MOCK_CUSTOMERS } from '../../../mock/mockCustomers';
 import Decimal from 'decimal.js';
 
 export interface ARReceiptItem {
@@ -17,6 +19,17 @@ export interface ARReceiptItem {
   rejectionReason?: string;
   approvedAt?: string;
   glJournalId?: string;
+  depositAccountId?: string;
+  depositAccountCode?: string; // e.g. '1010', '1018', '1040'
+  // Cheque details for PDC Vault
+  chequeNumber?: string;
+  drawerBank?: string;
+  chequeDate?: string;
+  pdcId?: string;
+  // Inline settlement & allocation tracking
+  isAllocated?: boolean;
+  allocatedAmount?: number;
+  allocations?: Record<string, number>;
 }
 
 export interface AROpenInvoice {
@@ -27,6 +40,17 @@ export interface AROpenInvoice {
   customerName: string;
   originalAmount: number;
   balanceDue: number;
+}
+
+export interface ApproveReceiptOptions {
+  depositAccountId?: string;
+  autoFIFO?: boolean;
+  chequeDetails?: {
+    chequeNumber: string;
+    drawerBank: string;
+    chequeDate: string;
+    notes?: string;
+  };
 }
 
 const AR_RECEIPTS_STORAGE_KEY = 'dns_finance_ar_receipts_queue';
@@ -67,6 +91,9 @@ const INITIAL_AR_RECEIPTS: ARReceiptItem[] = [
     collectorName: 'Pradeep Alwis (Sales Rep)',
     collectedAt: '2026-09-25T11:00:00.000Z',
     paymentMethod: 'CHEQUE',
+    chequeNumber: 'CHQ-772910',
+    drawerBank: 'Commercial Bank of Ceylon',
+    chequeDate: new Date().toISOString().slice(0, 10),
     amount: 531000.0,
     status: 'PENDING_APPROVAL',
     attachmentUrl: 'https://images.unsplash.com/photo-1580519542036-c47de6196ba5?auto=format&fit=crop&w=600&q=80',
@@ -84,6 +111,35 @@ const INITIAL_AR_RECEIPTS: ARReceiptItem[] = [
     status: 'APPROVED',
     attachmentUrl: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&w=600&q=80',
     approvedAt: '2026-09-22T15:30:00.000Z',
+  },
+  {
+    id: 'rcpt-405',
+    receiptNumber: 'REC-2026-0494',
+    customerName: 'Lanka Electrical & Hardware Superstore',
+    customerCode: 'DLR-COL-001',
+    customerId: 'cust-001',
+    collectorName: 'Kasun Wickramasinghe (Sales Rep)',
+    collectedAt: '2026-09-26T16:00:00.000Z',
+    paymentMethod: 'CHEQUE',
+    chequeNumber: 'CHQ-884021',
+    drawerBank: 'Sampath Bank PLC',
+    chequeDate: '2026-10-25',
+    amount: 1200000.0,
+    status: 'PENDING_APPROVAL',
+    attachmentUrl: 'https://images.unsplash.com/photo-1580519542036-c47de6196ba5?auto=format&fit=crop&w=600&q=80',
+  },
+  {
+    id: 'rcpt-406',
+    receiptNumber: 'REC-2026-0495',
+    customerName: 'Southern Solar & Electric Centre',
+    customerCode: 'DLR-GAL-003',
+    customerId: 'cust-003',
+    collectorName: 'Pradeep Alwis (Sales Rep)',
+    collectedAt: '2026-09-27T10:30:00.000Z',
+    paymentMethod: 'CASH',
+    amount: 150000.0,
+    status: 'PENDING_APPROVAL',
+    attachmentUrl: 'https://images.unsplash.com/photo-1559526324-4b87b5e36e44?auto=format&fit=crop&w=600&q=80',
   },
 ];
 
@@ -211,43 +267,85 @@ class ARCollectionService {
 
   /**
    * Approve Receipt:
-   * 1. Confirms bank clearing
-   * 2. Triggers GL entry: Dr Bank (1010), Cr A/R (1020)
-   * 3. Automatically restores customer's available credit limit
-   * 4. Updates status to APPROVED
+   * 1. If CHEQUE:
+   *    Stop recognizing un-cleared cheques as 1010 Bank cash!
+   *    Route collected cheques to 1018 Cheques in Hand asset account.
+   *    Registers cheque in PDC Vault for realization on its due date.
+   *    Dr 1018 Cheques in Hand / Cr 1020 A/R
+   * 2. If CASH or BANK_TRANSFER:
+   *    Dr 1010 Bank (or 1040 Cash in Hand) / Cr 1020 A/R
+   * 3. Inline Settlement (Auto-FIFO):
+   *    If autoFIFO option is enabled, immediately settles oldest open invoices sequentially.
+   * 4. Restores customer's credit limit / available credit.
    */
-  async approveReceipt(receiptId: string, depositAccountId?: string): Promise<ARReceiptItem> {
+  async approveReceipt(
+    receiptId: string,
+    options?: ApproveReceiptOptions | string
+  ): Promise<ARReceiptItem> {
     const idx = this.receipts.findIndex((r) => r.id === receiptId);
     if (idx === -1) throw new Error('Receipt not found');
     const receipt = this.receipts[idx];
 
-    const accounts = await financeRepository.getAccounts();
-    const bankAcc =
-      (depositAccountId && accounts.find((a) => a.id === depositAccountId)) ||
-      accounts.find((a) => a.code === '1010');
-    const arAcc = accounts.find((a) => a.code === '1020');
+    const opts: ApproveReceiptOptions =
+      typeof options === 'string' ? { depositAccountId: options } : options || {};
 
-    if (!bankAcc || !arAcc) {
-      throw new Error('Required GL Accounts (1010 Bank Account, 1020 Accounts Receivable) not found.');
+    const accounts = await financeRepository.getAccounts();
+    const arAcc = accounts.find((a) => a.code === '1020');
+    if (!arAcc) {
+      throw new Error('Required GL Account 1020 Accounts Receivable not found.');
     }
 
-    // Trigger GL entry (Dr Bank / Cr A/R)
+    let depositAcc = accounts.find((a) => a.code === '1010');
+    let entryDesc = '';
+    let lineDesc = '';
+
+    if (receipt.paymentMethod === 'CHEQUE') {
+      // PHASE 3 PDC Vault Rule:
+      // Route un-cleared cheque to 1018 Cheques in Hand instead of 1010 Bank cash
+      const chequesInHandAcc =
+        accounts.find((a) => a.code === '1018') ||
+        accounts.find((a) => a.name.toLowerCase().includes('cheques in hand'));
+
+      if (!chequesInHandAcc) {
+        throw new Error('Required GL Account 1018 Cheques in Hand not found.');
+      }
+      depositAcc = chequesInHandAcc;
+      entryDesc = `AR Cheque Receipt (PDC Vault): ${receipt.receiptNumber} (${receipt.customerName})`;
+      lineDesc = `Custody of un-cleared cheque from ${receipt.customerName} in PDC Vault`;
+    } else {
+      // CASH or BANK_TRANSFER
+      if (opts.depositAccountId) {
+        depositAcc = accounts.find((a) => a.id === opts.depositAccountId) || depositAcc;
+      } else if (receipt.paymentMethod === 'CASH') {
+        const cashAcc = accounts.find((a) => a.code === '1040');
+        if (cashAcc) depositAcc = cashAcc;
+      }
+      if (!depositAcc) {
+        throw new Error('Required GL Account 1010 Bank Account not found.');
+      }
+      entryDesc = `AR Receipt Approval: ${receipt.receiptNumber} (${receipt.customerName})`;
+      lineDesc = `Funds received via ${receipt.paymentMethod} from ${receipt.customerName}`;
+    }
+
+    // Trigger Double-Entry GL entry (Dr Deposit Account / Cr A/R)
     const journal = await financeRepository.createJournalEntry({
       date: new Date().toISOString().slice(0, 10),
-      description: `AR Receipt Approval: ${receipt.receiptNumber} (${receipt.customerName})`,
+      description: entryDesc,
       reference: receipt.receiptNumber,
       source: 'PAYMENT',
       lines: [
         {
-          accountId: bankAcc.id,
+          accountId: depositAcc.id,
           debit: receipt.amount,
           credit: 0,
-          description: `Bank deposit via ${receipt.paymentMethod} from ${receipt.customerName}`,
+          description: lineDesc,
         },
         {
           accountId: arAcc.id,
           debit: 0,
           credit: receipt.amount,
+          customerId: receipt.customerId,
+          customerName: receipt.customerName,
           description: `Clear customer Accounts Receivable for ${receipt.customerName}`,
         },
       ],
@@ -256,6 +354,68 @@ class ARCollectionService {
     receipt.status = 'APPROVED';
     receipt.approvedAt = new Date().toISOString();
     receipt.glJournalId = journal.id;
+    receipt.depositAccountId = depositAcc.id;
+    receipt.depositAccountCode = depositAcc.code;
+
+    // Register with PDC Vault if CHEQUE
+    if (receipt.paymentMethod === 'CHEQUE') {
+      const chqNum =
+        opts.chequeDetails?.chequeNumber ||
+        receipt.chequeNumber ||
+        `CHQ-${Math.floor(100000 + Math.random() * 900000)}`;
+      const bankName =
+        opts.chequeDetails?.drawerBank ||
+        receipt.drawerBank ||
+        'Commercial Bank of Ceylon';
+      const cDate =
+        opts.chequeDetails?.chequeDate ||
+        receipt.chequeDate ||
+        new Date(Date.now() + 14 * 86400000).toISOString().slice(0, 10);
+
+      receipt.chequeNumber = chqNum;
+      receipt.drawerBank = bankName;
+      receipt.chequeDate = cDate;
+
+      const pdc = pdcVaultService.registerCheque({
+        chequeNumber: chqNum,
+        receiptId: receipt.id,
+        receiptNumber: receipt.receiptNumber,
+        customerId: receipt.customerId,
+        customerName: receipt.customerName,
+        customerCode: receipt.customerCode,
+        drawerBank: bankName,
+        chequeDate: cDate,
+        amount: receipt.amount,
+        journalEntryId: journal.id,
+        notes: opts.chequeDetails?.notes || `Receipt ${receipt.receiptNumber}`,
+      });
+      receipt.pdcId = pdc.id;
+    }
+
+    // Inline Settlement: Apply via Auto-FIFO if requested
+    if (opts.autoFIFO) {
+      const fifoAllocations = this.calculateAutoFIFO(receipt.customerId, receipt.amount);
+      this.applyCollectionAllocation(receipt.id, fifoAllocations);
+      const totalAllocated = Object.values(fifoAllocations).reduce((sum, val) => sum + val, 0);
+
+      receipt.isAllocated = true;
+      receipt.allocatedAmount = totalAllocated;
+      receipt.allocations = fifoAllocations;
+    }
+
+    // Restore customer credit limit / update available credit
+    try {
+      const customer = MOCK_CUSTOMERS.find((c) => c.id === receipt.customerId);
+      if (customer) {
+        const newTotalOutstanding = Math.max(0, customer.financials.totalOutstanding - receipt.amount);
+        customer.financials.totalOutstanding = newTotalOutstanding;
+        customer.financials.availableCredit = Math.max(
+          0,
+          customer.commercialTerms.creditLimit - newTotalOutstanding
+        );
+      }
+    } catch {}
+
     this.receipts[idx] = receipt;
     this.save();
     return receipt;
