@@ -68,4 +68,69 @@ describe('DoubleEntryHoverBadge', () => {
     fireEvent.click(button);
     expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
   });
+
+  it('renders entries prop alias correctly', () => {
+    render(<DoubleEntryHoverBadge entries={sampleLines} />);
+    const button = screen.getByRole('button', { name: /Automated Double-Entry Impact/i });
+
+    fireEvent.click(button);
+    const tooltip = screen.getByRole('tooltip');
+    expect(tooltip).toBeInTheDocument();
+    expect(screen.getByText('1010')).toBeInTheDocument();
+    expect(screen.getByText('1020')).toBeInTheDocument();
+  });
+
+  it('closes popover on outside click', () => {
+    render(
+      <div>
+        <DoubleEntryHoverBadge lines={sampleLines} />
+        <div data-testid="outside-element">Outside</div>
+      </div>
+    );
+    const button = screen.getByRole('button', { name: /Automated Double-Entry Impact/i });
+
+    fireEvent.click(button);
+    expect(screen.getByRole('tooltip')).toBeInTheDocument();
+
+    fireEvent.mouseDown(screen.getByTestId('outside-element'));
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+  });
+
+  it('applies viewport overflow and max-height constraints to prevent cutoff', () => {
+    render(<DoubleEntryHoverBadge lines={sampleLines} />);
+    const button = screen.getByRole('button', { name: /Automated Double-Entry Impact/i });
+
+    fireEvent.click(button);
+    const tooltip = screen.getByRole('tooltip');
+    expect(tooltip.style.maxHeight).toBe('min(480px, calc(100vh - 24px))');
+    expect(tooltip.style.overflowY).toBe('auto');
+    expect(tooltip.style.position).toBe('fixed');
+  });
+
+  it('keeps popover open when hovering onto the popover body', () => {
+    render(<DoubleEntryHoverBadge lines={sampleLines} />);
+    const triggerContainer = screen.getByRole('button', { name: /Automated Double-Entry Impact/i }).parentElement!;
+
+    fireEvent.mouseEnter(triggerContainer);
+    const tooltip = screen.getByRole('tooltip');
+    expect(tooltip).toBeInTheDocument();
+
+    // Leave trigger, enter popover immediately
+    fireEvent.mouseLeave(triggerContainer);
+    fireEvent.mouseEnter(tooltip);
+
+    act(() => {
+      vi.advanceTimersByTime(200);
+    });
+
+    // Still in the document because user hovered the popover
+    expect(screen.getByRole('tooltip')).toBeInTheDocument();
+
+    // Now leave popover
+    fireEvent.mouseLeave(tooltip);
+    act(() => {
+      vi.advanceTimersByTime(200);
+    });
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+  });
 });

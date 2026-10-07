@@ -35,7 +35,7 @@ export function DoubleEntryHoverBadge({
   const [coords, setCoords] = useState<{ top: number; left: number; placement: 'top' | 'bottom' }>({
     top: 0,
     left: 0,
-    placement: 'top',
+    placement: 'bottom',
   });
   const containerRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -44,17 +44,25 @@ export function DoubleEntryHoverBadge({
 
   const activeLines = lines || entries || [];
 
-  const updatePosition = () => {
-    if (!triggerRef.current) return;
+  const calculatePosition = (): { top: number; left: number; placement: 'top' | 'bottom' } | null => {
+    if (!triggerRef.current) return null;
     const triggerRect = triggerRef.current.getBoundingClientRect();
-    const popoverWidth = 320;
+
+    // If trigger has been scrolled out of visible viewport, signal closed
+    if (triggerRect.bottom < 0 || triggerRect.top > window.innerHeight) {
+      return null;
+    }
+
+    const popoverWidth = popoverRef.current ? popoverRef.current.offsetWidth : Math.min(320, window.innerWidth - 24);
     const popoverHeight = popoverRef.current ? popoverRef.current.offsetHeight : 180;
 
     const spaceAbove = triggerRect.top;
     const spaceBelow = window.innerHeight - triggerRect.bottom;
 
-    // Prefer top if space allows; otherwise bottom
-    const placement = spaceAbove >= popoverHeight + 12 || spaceAbove >= spaceBelow ? 'top' : 'bottom';
+    // Prefer bottom if space allows; otherwise top, or whichever side has more room
+    const fitsBelow = spaceBelow >= popoverHeight + 8;
+    const fitsAbove = spaceAbove >= popoverHeight + 8;
+    const placement: 'top' | 'bottom' = fitsBelow || spaceBelow >= spaceAbove ? 'bottom' : 'top';
 
     let top = placement === 'top'
       ? triggerRect.top - popoverHeight - 8
@@ -79,7 +87,35 @@ export function DoubleEntryHoverBadge({
     const maxLeft = Math.max(12, window.innerWidth - popoverWidth - 12);
     left = Math.max(minLeft, Math.min(left, maxLeft));
 
-    setCoords({ top, left, placement });
+    return { top, left, placement };
+  };
+
+  const updatePosition = () => {
+    const pos = calculatePosition();
+    if (!pos) {
+      setIsOpen(false);
+      return;
+    }
+    setCoords(pos);
+  };
+
+  const openPopover = () => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+    const initialPos = calculatePosition();
+    if (initialPos) {
+      setCoords(initialPos);
+    }
+    setIsOpen(true);
+  };
+
+  const closePopover = (delay = 150) => {
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    timeoutRef.current = setTimeout(() => {
+      setIsOpen(false);
+    }, delay);
   };
 
   useLayoutEffect(() => {
@@ -101,6 +137,7 @@ export function DoubleEntryHoverBadge({
         containerRef.current && !containerRef.current.contains(target) &&
         popoverRef.current && !popoverRef.current.contains(target)
       ) {
+        if (timeoutRef.current) clearTimeout(timeoutRef.current);
         setIsOpen(false);
       }
     }
@@ -117,14 +154,11 @@ export function DoubleEntryHoverBadge({
   }, [isOpen]);
 
   const handleMouseEnter = () => {
-    if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    setIsOpen(true);
+    openPopover();
   };
 
   const handleMouseLeave = () => {
-    timeoutRef.current = setTimeout(() => {
-      setIsOpen(false);
-    }, 120);
+    closePopover(150);
   };
 
   const sizeClasses = size === 'xs'
@@ -146,7 +180,12 @@ export function DoubleEntryHoverBadge({
         title={title}
         onClick={(e) => {
           e.stopPropagation();
-          setIsOpen((prev) => !prev);
+          if (isOpen) {
+            if (timeoutRef.current) clearTimeout(timeoutRef.current);
+            setIsOpen(false);
+          } else {
+            openPopover();
+          }
         }}
         className={cn(
           'inline-flex items-center justify-center rounded-full font-bold transition-all shadow-2xs select-none',
@@ -169,9 +208,16 @@ export function DoubleEntryHoverBadge({
             left: `${coords.left}px`,
             width: '320px',
             maxWidth: 'calc(100vw - 24px)',
+            maxHeight: 'min(480px, calc(100vh - 24px))',
+            overflowY: 'auto',
           }}
           className="z-[9999] rounded-xl bg-white text-slate-900 p-3.5 shadow-xl border border-slate-200 ring-1 ring-slate-900/5 animate-in fade-in-50 zoom-in-95 pointer-events-auto"
-          onMouseEnter={handleMouseEnter}
+          onMouseEnter={() => {
+            if (timeoutRef.current) {
+              clearTimeout(timeoutRef.current);
+              timeoutRef.current = null;
+            }
+          }}
           onMouseLeave={handleMouseLeave}
         >
           {/* Header */}
@@ -187,7 +233,7 @@ export function DoubleEntryHoverBadge({
           )}
 
           {/* Ledger table */}
-          <div className="mt-2.5 space-y-1.5 font-mono text-[11px]">
+          <div className="mt-2.5 space-y-1.5 font-mono text-[11px] max-h-48 overflow-y-auto pr-0.5">
             {activeLines.map((line, idx) => {
               const isDr = line.type === 'DEBIT';
               const amtStr = typeof line.amount === 'number'

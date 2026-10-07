@@ -489,12 +489,13 @@ export function DirectorDashboard() {
                   <Tooltip
                     formatter={(val: any) => [`LKR ${val}k`, 'Average Value']}
                     contentStyle={{
-                      backgroundColor: '#1E293B',
-                      borderColor: '#334155',
+                      backgroundColor: '#ffffff',
+                      borderColor: '#e2e8f0',
                       borderRadius: '0.75rem',
-                      color: '#fff',
+                      color: '#0f172a',
                       fontSize: '12px',
                       fontWeight: 500,
+                      boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
                     }}
                   />
                   <Area

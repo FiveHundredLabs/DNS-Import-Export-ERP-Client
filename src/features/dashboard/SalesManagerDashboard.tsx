@@ -401,12 +401,13 @@ export function SalesManagerDashboard() {
                   <Tooltip
                     formatter={(val: any) => [`LKR ${val}M`, 'Collected']}
                     contentStyle={{
-                      backgroundColor: '#1E293B',
-                      borderColor: '#334155',
+                      backgroundColor: '#ffffff',
+                      borderColor: '#e2e8f0',
                       borderRadius: '0.75rem',
-                      color: '#fff',
+                      color: '#0f172a',
                       fontSize: '11px',
                       fontWeight: 600,
+                      boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
                     }}
                   />
                   <Area
