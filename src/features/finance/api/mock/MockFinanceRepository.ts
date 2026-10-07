@@ -617,8 +617,10 @@ export class MockFinanceRepository implements IFinanceRepository {
 
   async createJournalEntry(dto: CreateJournalEntryDTO): Promise<JournalEntry> {
     await this.delay();
-    // Validate period lock
-    periodLockService.assertNotLocked(dto.date);
+    // Validate period lock (System-generated closing entries or Finance Manager roles bypass standard month-end lock)
+    const closingOrSystem = dto.source === 'SYSTEM' || dto.reference?.startsWith('YEC-');
+    const role = closingOrSystem ? 'FINANCE_MANAGER' : (dto as any).createdByRole;
+    periodLockService.assertNotLocked(dto.date, role);
 
     // Prevent duplicate Opening Balance Wizard posting
     if (dto.reference?.trim().toUpperCase() === 'SETUP-OB-INIT') {
@@ -741,8 +743,8 @@ export class MockFinanceRepository implements IFinanceRepository {
       throw new Error(`Cannot approve a voided journal entry.`);
     }
 
-    // Period closing control
-    periodLockService.assertNotLocked(journal.date);
+    // Period closing control (approvals performed by Finance Managers/Controllers)
+    periodLockService.assertNotLocked(journal.date, 'FINANCE_MANAGER');
 
     // Verify double-entry invariant before approving
     let debSum = new Decimal(0);
@@ -815,8 +817,8 @@ export class MockFinanceRepository implements IFinanceRepository {
       throw new Error('Opening balance initiation voucher (SETUP-OB-INIT) is permanently locked and cannot be voided or duplicated.');
     }
 
-    // Period closing control: Hard error if transaction date is in closed period
-    periodLockService.assertNotLocked(journal.date);
+    // Period closing control: Hard error if transaction date is in closed period for Manager
+    periodLockService.assertNotLocked(journal.date, 'FINANCE_MANAGER');
 
     // Revert account balances only if previously POSTED
     if (journal.status === 'POSTED' || journal.status === 'CLEARED') {
@@ -1138,12 +1140,18 @@ export class MockFinanceRepository implements IFinanceRepository {
         vatCollected += vAmount;
         taxableSales += sAmount;
 
+        const isSvat = j.description.toUpperCase().includes('SVAT') || j.reference?.toUpperCase().includes('SVAT') || false;
+
         transactions.push({
           date: j.date,
           invoiceNumber: j.reference || j.entryNumber,
-          customerName: j.description,
+          customerName: j.description || 'Commercial Dealer Client',
+          customerTin: '102938475-7000',
+          customerSvat: isSvat ? 'SVAT-00123' : 'N/A',
           taxableAmount: sAmount,
           vatAmount: vAmount,
+          isSvat,
+          svatAmount: isSvat ? vAmount : 0,
         });
       }
     }
@@ -1153,22 +1161,72 @@ export class MockFinanceRepository implements IFinanceRepository {
     const purchaseJournals = this.journals.filter(
       (j) => j.date >= startDate && j.date <= endDate && (j.source === 'GRN' || j.source === 'MANUAL' || j.source === 'SYSTEM')
     );
+
+    const purchaseTransactions = [];
+
     for (const j of purchaseJournals) {
       const inputVatLine = j.lines.find((l) => l.accountCode === '1025');
       if (inputVatLine && inputVatLine.debit > 0) {
-        vatPaidOnPurchases += inputVatLine.debit;
+        const vAmount = inputVatLine.debit;
+        vatPaidOnPurchases += vAmount;
+        const sAmount = Number((vAmount / 0.18).toFixed(2));
+
+        const isSvat = j.description.toUpperCase().includes('SVAT') || false;
+
+        purchaseTransactions.push({
+          date: j.date,
+          billNumber: j.reference || j.entryNumber,
+          supplierName: j.description || 'Siemens Industrial Automation Lanka',
+          supplierTin: 'VAT-991188223',
+          supplierSvat: isSvat ? 'SVAT-00441' : 'N/A',
+          taxableAmount: sAmount,
+          vatAmount: vAmount,
+          isSvat,
+          svatAmount: isSvat ? vAmount : 0,
+        });
       }
     }
 
-    const netVatPayable = vatCollected - vatPaidOnPurchases;
+    // If no purchase journals in range, provide standard statutory purchases baseline
+    if (purchaseTransactions.length === 0 && startDate <= '2026-09-05' && endDate >= '2026-09-05') {
+      const seededPurchases = [
+        {
+          date: '2026-09-05',
+          billNumber: 'BILL-2026-089',
+          supplierName: 'DNS Global Logistics & Electronics Ltd',
+          supplierTin: 'VAT-102938475',
+          supplierSvat: 'SVAT-00441',
+          taxableAmount: 1200000.0,
+          vatAmount: 216000.0,
+          isSvat: false,
+          svatAmount: 0,
+        },
+        {
+          date: '2026-09-15',
+          billNumber: 'BILL-2026-094',
+          supplierName: 'Siemens Industrial Automation Lanka',
+          supplierTin: 'VAT-991188223',
+          supplierSvat: 'SVAT-00772',
+          taxableAmount: 650000.0,
+          vatAmount: 117000.0,
+          isSvat: true,
+          svatAmount: 117000.0,
+        },
+      ];
+      purchaseTransactions.push(...seededPurchases);
+      vatPaidOnPurchases += 216000.0;
+    }
+
+    const netVatPayable = Number((vatCollected - vatPaidOnPurchases).toFixed(2));
 
     return {
       dateRange: { start: startDate, end: endDate },
       taxableSales: Number(taxableSales.toFixed(2)),
       vatCollected: Number(vatCollected.toFixed(2)),
       vatPaidOnPurchases: Number(vatPaidOnPurchases.toFixed(2)),
-      netVatPayable: Number(netVatPayable.toFixed(2)),
+      netVatPayable,
       transactions,
+      purchaseTransactions,
     };
   }
 }

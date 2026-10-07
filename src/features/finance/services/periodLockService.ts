@@ -1,14 +1,27 @@
-interface PeriodLockConfig {
+export interface PeriodLockConfig {
   enabled: boolean;
-  lockDate: string | null;
+  lockDate: string | null; // Backwards-compatible alias to standardLockDate
+  standardLockDate: string | null; // Blocks sales/warehouse/AP clerks at month-end
+  adminLockDate: string | null; // Allows Finance Managers extra days to post adjusting entries before fully locking the period
 }
 
 const STORAGE_KEY = 'dns_finance_period_lock';
 
-class PeriodLockService {
+const FINANCE_MANAGER_ROLES = new Set([
+  'FINANCE_MANAGER',
+  'DIRECTOR',
+  'ADMIN',
+  'MANAGER',
+  'FINANCIAL_CONTROLLER',
+  'AUDITOR',
+]);
+
+export class PeriodLockService {
   private config: PeriodLockConfig = {
     enabled: false,
     lockDate: null,
+    standardLockDate: null,
+    adminLockDate: null,
   };
 
   constructor() {
@@ -20,10 +33,16 @@ class PeriodLockService {
       if (typeof window !== 'undefined' && window.localStorage) {
         const stored = localStorage.getItem(STORAGE_KEY);
         if (stored) {
-          this.config = JSON.parse(stored);
+          const parsed = JSON.parse(stored);
+          this.config = {
+            enabled: !!parsed.enabled,
+            lockDate: parsed.lockDate || parsed.standardLockDate || null,
+            standardLockDate: parsed.standardLockDate || parsed.lockDate || null,
+            adminLockDate: parsed.adminLockDate || parsed.lockDate || null,
+          };
         }
       }
-    } catch (e) {
+    } catch {
       // fallback to memory
     }
   }
@@ -33,7 +52,7 @@ class PeriodLockService {
       if (typeof window !== 'undefined' && window.localStorage) {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(this.config));
       }
-    } catch (e) {
+    } catch {
       // fallback to memory
     }
   }
@@ -42,43 +61,103 @@ class PeriodLockService {
     return { ...this.config };
   }
 
-  setConfig(enabled: boolean, lockDate: string | null): PeriodLockConfig {
+  /**
+   * Sets the period lock configuration.
+   * Supports standard month-end cut-off and finance manager administrative cut-off.
+   */
+  setConfig(
+    enabled: boolean,
+    standardLockDate: string | null,
+    adminLockDate?: string | null
+  ): PeriodLockConfig {
+    const std = enabled ? standardLockDate : null;
+    const adm = enabled
+      ? adminLockDate !== undefined
+        ? adminLockDate
+        : standardLockDate
+      : null;
+
     this.config = {
       enabled,
-      lockDate: enabled ? lockDate : null,
+      lockDate: std,
+      standardLockDate: std,
+      adminLockDate: adm,
     };
     this.saveToStorage();
     return { ...this.config };
   }
 
   /**
-   * Validates if a transaction date is allowed under the current period lock.
-   * Hard error thrown/returned if transaction date <= lockDate when lock is enabled.
+   * Dedicated dual lock configuration method.
    */
-  assertNotLocked(transactionDate: string): void {
-    if (!this.config.enabled || !this.config.lockDate) {
+  setDualConfig(
+    enabled: boolean,
+    standardLockDate: string | null,
+    adminLockDate: string | null
+  ): PeriodLockConfig {
+    return this.setConfig(enabled, standardLockDate, adminLockDate);
+  }
+
+  isFinanceManagerRole(role?: string): boolean {
+    if (!role) return false;
+    return FINANCE_MANAGER_ROLES.has(role.toUpperCase());
+  }
+
+  /**
+   * Validates if a transaction date is allowed under the dual period lock.
+   * - standardLockDate: blocks sales/warehouse/AP clerks at month-end.
+   * - adminLockDate: allows Finance Managers extra days to post adjusting entries before fully locking the period.
+   * Throws Error if transaction is within a locked period for the given role.
+   */
+  assertNotLocked(transactionDate: string, role?: string): void {
+    if (!this.config.enabled) {
       return;
     }
 
     const txDate = transactionDate.slice(0, 10);
-    const lock = this.config.lockDate.slice(0, 10);
+    const isManager = this.isFinanceManagerRole(role);
 
-    if (txDate <= lock) {
-      throw new Error('Transaction date is in a closed financial period.');
+    if (isManager) {
+      // Finance Manager: only blocked if transaction date <= adminLockDate (fully locked)
+      if (this.config.adminLockDate) {
+        const adminLock = this.config.adminLockDate.slice(0, 10);
+        if (txDate <= adminLock) {
+          throw new Error('Transaction date is in a closed financial period. (Admin lock enforced)');
+        }
+      }
+    } else {
+      // Standard clerk / operator / default:
+      // Blocked if transaction date <= standardLockDate
+      const stdLock = this.config.standardLockDate?.slice(0, 10) || this.config.lockDate?.slice(0, 10);
+      if (stdLock && txDate <= stdLock) {
+        throw new Error('Transaction date is in a closed financial period.');
+      }
+      // Also blocked if transaction date <= adminLockDate
+      if (this.config.adminLockDate) {
+        const adminLock = this.config.adminLockDate.slice(0, 10);
+        if (txDate <= adminLock) {
+          throw new Error('Transaction date is in a closed financial period.');
+        }
+      }
     }
   }
 
-  isDateLocked(transactionDate: string): boolean {
-    if (!this.config.enabled || !this.config.lockDate) {
+  isDateLocked(transactionDate: string, role?: string): boolean {
+    try {
+      this.assertNotLocked(transactionDate, role);
       return false;
+    } catch {
+      return true;
     }
-    const txDate = transactionDate.slice(0, 10);
-    const lock = this.config.lockDate.slice(0, 10);
-    return txDate <= lock;
   }
 
   reset(): void {
-    this.config = { enabled: false, lockDate: null };
+    this.config = {
+      enabled: false,
+      lockDate: null,
+      standardLockDate: null,
+      adminLockDate: null,
+    };
     this.saveToStorage();
   }
 }

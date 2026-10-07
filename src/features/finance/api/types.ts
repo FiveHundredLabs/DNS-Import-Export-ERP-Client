@@ -329,19 +329,40 @@ export interface GeneralLedgerAccountReport {
   totalCredits: number;
 }
 
+export interface VatSalesTransaction {
+  date: string;
+  invoiceNumber: string;
+  customerName: string;
+  customerId?: string;
+  customerTin?: string;
+  customerSvat?: string;
+  taxableAmount: number;
+  vatAmount: number;
+  isSvat?: boolean;
+  svatAmount?: number;
+}
+
+export interface VatPurchaseTransaction {
+  date: string;
+  billNumber: string;
+  supplierName: string;
+  supplierId?: string;
+  supplierTin?: string;
+  supplierSvat?: string;
+  taxableAmount: number;
+  vatAmount: number;
+  isSvat?: boolean;
+  svatAmount?: number;
+}
+
 export interface VatReport {
   dateRange: { start: string; end: string };
   taxableSales: number;
   vatCollected: number; // 18%
   vatPaidOnPurchases: number;
   netVatPayable: number;
-  transactions: {
-    date: string;
-    invoiceNumber: string;
-    customerName: string;
-    taxableAmount: number;
-    vatAmount: number;
-  }[];
+  transactions: VatSalesTransaction[];
+  purchaseTransactions?: VatPurchaseTransaction[];
 }
 
 // Zod Validation Schemas
