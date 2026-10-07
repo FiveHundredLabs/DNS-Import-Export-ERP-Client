@@ -80,7 +80,7 @@ export function Header({ onToggleSidebar }: HeaderProps) {
                 LabsCore ERP
               </h1>
               <span className="text-[10.5px] sm:text-[11.5px] text-primary-foreground/80 font-semibold block uppercase tracking-wider -mt-0.5 truncate">
-                DNS Distribution
+                DNS IMPORT & EXPORT (PVT) LTD
               </span>
             </div>
           </Link>
