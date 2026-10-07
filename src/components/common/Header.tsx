@@ -76,7 +76,7 @@ export function Header({ onToggleSidebar }: HeaderProps) {
      'DNS ERP Workspace');
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 w-full items-center justify-between border-b border-black/10 bg-primary text-primary-foreground px-4 sm:px-6 backdrop-blur-md transition-all shrink-0">
+    <header className="sticky top-0 z-30 flex h-16 w-full items-center justify-between bg-primary text-primary-foreground px-4 sm:px-6 backdrop-blur-md transition-all shrink-0">
       {/* Left: Mobile Toggle & Enterprise Brand / Page Title */}
       <div className="flex items-center gap-2.5 sm:gap-4 min-w-0">
         {location.pathname !== '/' ? (
