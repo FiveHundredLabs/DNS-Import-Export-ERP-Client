@@ -1,6 +1,7 @@
 import { PostDatedCheque } from '../api/types';
 import { financeRepository } from '../api';
 import { periodLockService } from './periodLockService';
+import { MOCK_CUSTOMERS } from '../../../mock/mockCustomers';
 
 const PDC_STORAGE_KEY = 'dns_finance_ar_pdc_vault';
 
@@ -231,7 +232,8 @@ class PDCVaultService {
 
   /**
    * Bounce / Dishonor Cheque:
-   * Reverses from 1018 Cheques in Hand back to 1020 A/R
+   * Reverses from 1018 Cheques in Hand back to 1020 A/R, reinstates customer balance,
+   * and notifies AR service to reverse any invoice allocations.
    */
   async bounceCheque(chequeId: string, reason: string): Promise<PostDatedCheque> {
     if (!reason.trim()) throw new Error('Reason is required to mark cheque as bounced');
@@ -272,8 +274,48 @@ class PDCVaultService {
       });
     }
 
+    // Reinstate customer outstanding & reduce available credit in MOCK_CUSTOMERS
+    try {
+      const customer = MOCK_CUSTOMERS.find((c) => c.id === cheque.customerId);
+      if (customer) {
+        const newTotalOutstanding = customer.financials.totalOutstanding + cheque.amount;
+        customer.financials.totalOutstanding = newTotalOutstanding;
+        customer.financials.availableCredit = Math.max(
+          0,
+          customer.commercialTerms.creditLimit - newTotalOutstanding
+        );
+      }
+    } catch {}
+
+    // Notify AR Service to reverse receipt status and reopen settled invoices
+    if (cheque.receiptId) {
+      try {
+        const { arService } = await import('./arService');
+        arService.handleChequeBounce(cheque.receiptId, reason);
+      } catch {}
+    }
+
     cheque.status = 'BOUNCED';
     cheque.bounceReason = reason.trim();
+    this.cheques[idx] = cheque;
+    this.save();
+    return cheque;
+  }
+
+  /**
+   * Invalidate / Void Cheque when parent AR receipt is voided
+   */
+  voidCheque(chequeId: string, reason?: string): PostDatedCheque {
+    const idx = this.cheques.findIndex((c) => c.id === chequeId);
+    if (idx === -1) throw new Error('Cheque not found in PDC vault');
+    const cheque = this.cheques[idx];
+
+    if (cheque.status === 'CLEARED') {
+      throw new Error(`Cheque ${cheque.chequeNumber} has already been cleared to bank and cannot be voided.`);
+    }
+
+    cheque.status = 'VOIDED';
+    cheque.notes = reason ? `${cheque.notes || ''} [Voided: ${reason}]`.trim() : `${cheque.notes || ''} [Voided]`.trim();
     this.cheques[idx] = cheque;
     this.save();
     return cheque;

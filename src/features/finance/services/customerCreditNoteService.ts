@@ -2,6 +2,8 @@ import Decimal from 'decimal.js';
 import { CustomerCreditNote, CustomerCreditNoteLineItem } from '../api/types';
 import { financeRepository } from '../api';
 import { periodLockService } from './periodLockService';
+import { arService } from './arService';
+import { MOCK_CUSTOMERS } from '../../../mock/mockCustomers';
 
 const CREDIT_NOTES_STORAGE_KEY = 'dns_finance_ar_credit_notes';
 
@@ -197,7 +199,8 @@ class CustomerCreditNoteService {
     const vatPayableAcc = accounts.find((a) => a.code === '2020');
     const arAcc = accounts.find((a) => a.code === '1020');
     const inventoryAcc =
-      accounts.find((a) => a.code === '1100' || a.code === '1030') ||
+      accounts.find((a) => a.code === '1100') ||
+      accounts.find((a) => a.code === '1030') ||
       accounts.find((a) => a.name.toLowerCase().includes('inventory'));
     const cogsAcc = accounts.find((a) => a.code === '5010');
 
@@ -294,9 +297,74 @@ class CustomerCreditNoteService {
       createdAt: new Date().toISOString(),
     };
 
+    // Restore customer credit limit / reduce outstanding AR in MOCK_CUSTOMERS
+    try {
+      const customer = MOCK_CUSTOMERS.find((c) => c.id === params.customerId);
+      if (customer) {
+        const newTotalOutstanding = Math.max(0, customer.financials.totalOutstanding - totalAmount);
+        customer.financials.totalOutstanding = newTotalOutstanding;
+        customer.financials.availableCredit = Math.max(
+          0,
+          customer.commercialTerms.creditLimit - newTotalOutstanding
+        );
+      }
+    } catch {}
+
+    // Apply credit against open invoice balance if specified
+    if (params.invoiceId) {
+      try {
+        arService.applyInvoiceCredit(params.invoiceId, totalAmount);
+      } catch {}
+    }
+
     this.creditNotes.unshift(newCreditNote);
     this.save();
     return newCreditNote;
+  }
+
+  /**
+   * Void / Reverse a customer credit note
+   */
+  async voidCustomerCreditNote(creditNoteId: string, reason?: string): Promise<CustomerCreditNote> {
+    const idx = this.creditNotes.findIndex((cn) => cn.id === creditNoteId);
+    if (idx === -1) throw new Error('Credit note not found');
+    const cn = this.creditNotes[idx];
+
+    if (cn.status === 'VOIDED') {
+      throw new Error(`Credit note ${cn.creditNoteNumber} is already voided.`);
+    }
+
+    // Enforce period closing lock
+    periodLockService.assertNotLocked(cn.date);
+
+    if (cn.journalEntryId) {
+      await financeRepository.voidJournalEntry(cn.journalEntryId, reason);
+    }
+
+    // Reinstate customer outstanding balance & reduce available credit
+    try {
+      const customer = MOCK_CUSTOMERS.find((c) => c.id === cn.customerId);
+      if (customer) {
+        const newTotalOutstanding = customer.financials.totalOutstanding + cn.totalAmount;
+        customer.financials.totalOutstanding = newTotalOutstanding;
+        customer.financials.availableCredit = Math.max(
+          0,
+          customer.commercialTerms.creditLimit - newTotalOutstanding
+        );
+      }
+    } catch {}
+
+    // Revert invoice credit if linked
+    if (cn.invoiceId) {
+      try {
+        arService.revertInvoiceCredit(cn.invoiceId, cn.totalAmount);
+      } catch {}
+    }
+
+    cn.status = 'VOIDED';
+    this.creditNotes[idx] = cn;
+    this.save();
+    return cn;
   }
 
   getMetrics() {

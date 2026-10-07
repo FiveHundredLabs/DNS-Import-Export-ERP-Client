@@ -286,6 +286,10 @@ class ARCollectionService {
     if (idx === -1) throw new Error('Receipt not found');
     const receipt = this.receipts[idx];
 
+    if (receipt.amount <= 0) {
+      throw new Error('Receipt amount must be greater than zero to approve');
+    }
+
     const opts: ApproveReceiptOptions =
       typeof options === 'string' ? { depositAccountId: options } : options || {};
 
@@ -462,10 +466,93 @@ class ARCollectionService {
       await financeRepository.voidJournalEntry(receipt.glJournalId, reason);
     }
 
+    // Invalidate PDC in Vault if payment was CHEQUE
+    if (receipt.pdcId) {
+      try {
+        pdcVaultService.voidCheque(receipt.pdcId, reason || `Receipt ${receipt.receiptNumber} voided`);
+      } catch {}
+    }
+
+    // Revert Auto-FIFO allocations to open invoices
+    if (receipt.isAllocated && receipt.allocations) {
+      for (const [invId, amt] of Object.entries(receipt.allocations)) {
+        if (amt > 0) {
+          const inv = this.openInvoices.find((i) => i.id === invId);
+          if (inv) {
+            inv.balanceDue = Number(new Decimal(inv.balanceDue).plus(amt).toFixed(2));
+          }
+        }
+      }
+      receipt.isAllocated = false;
+      receipt.allocatedAmount = 0;
+    }
+
+    // Re-increase customer total outstanding and reduce available credit
+    try {
+      const customer = MOCK_CUSTOMERS.find((c) => c.id === receipt.customerId);
+      if (customer) {
+        const newTotalOutstanding = customer.financials.totalOutstanding + receipt.amount;
+        customer.financials.totalOutstanding = newTotalOutstanding;
+        customer.financials.availableCredit = Math.max(
+          0,
+          customer.commercialTerms.creditLimit - newTotalOutstanding
+        );
+      }
+    } catch {}
+
     receipt.status = 'VOIDED';
     this.receipts[idx] = receipt;
     this.save();
     return receipt;
+  }
+
+  /**
+   * Handle Dishonored / Bounced Cheque from PDC Vault:
+   * Sets receipt to REJECTED, notes the bounce, and reopens settled invoices.
+   */
+  handleChequeBounce(receiptId: string, reason: string): void {
+    const idx = this.receipts.findIndex((r) => r.id === receiptId);
+    if (idx === -1) return;
+    const receipt = this.receipts[idx];
+
+    receipt.status = 'REJECTED';
+    receipt.rejectionReason = `Cheque Bounced: ${reason}`;
+
+    if (receipt.isAllocated && receipt.allocations) {
+      for (const [invId, amt] of Object.entries(receipt.allocations)) {
+        if (amt > 0) {
+          const inv = this.openInvoices.find((i) => i.id === invId);
+          if (inv) {
+            inv.balanceDue = Number(new Decimal(inv.balanceDue).plus(amt).toFixed(2));
+          }
+        }
+      }
+      receipt.isAllocated = false;
+      receipt.allocatedAmount = 0;
+    }
+
+    this.receipts[idx] = receipt;
+    this.save();
+  }
+
+  /**
+   * Apply credit note reduction to open invoice balance
+   */
+  applyInvoiceCredit(invoiceId: string, creditAmount: number): void {
+    const inv = this.openInvoices.find((i) => i.id === invoiceId);
+    if (inv) {
+      inv.balanceDue = Math.max(0, Number(new Decimal(inv.balanceDue).minus(creditAmount).toFixed(2)));
+    }
+  }
+
+  /**
+   * Revert credit note reduction if credit note is voided
+   */
+  revertInvoiceCredit(invoiceId: string, creditAmount: number): void {
+    const inv = this.openInvoices.find((i) => i.id === invoiceId);
+    if (inv) {
+      inv.balanceDue = Number(new Decimal(inv.balanceDue).plus(creditAmount).toFixed(2));
+    }
   }
 
   /**

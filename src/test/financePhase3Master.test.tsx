@@ -9,10 +9,27 @@ import { arService } from '../features/finance/services/arService';
 import { pdcVaultService } from '../features/finance/services/pdcVaultService';
 import { customerCreditNoteService } from '../features/finance/services/customerCreditNoteService';
 import { periodLockService } from '../features/finance/services/periodLockService';
+import { MOCK_CUSTOMERS } from '../mock/mockCustomers';
 
 import { ReceiptApprovalQueuePage } from '../features/finance/pages/ar/ReceiptApprovalQueuePage';
 import { PDCVaultPage } from '../features/finance/pages/ar/PDCVaultPage';
 import { CustomerCreditNotesPage } from '../features/finance/pages/ar/CustomerCreditNotesPage';
+
+const INITIAL_CUSTOMER_FINANCIALS = MOCK_CUSTOMERS.map((c) => ({
+  id: c.id,
+  totalOutstanding: c.financials.totalOutstanding,
+  availableCredit: c.financials.availableCredit,
+}));
+
+function resetCustomerFinancials() {
+  for (const init of INITIAL_CUSTOMER_FINANCIALS) {
+    const cust = MOCK_CUSTOMERS.find((c) => c.id === init.id);
+    if (cust) {
+      cust.financials.totalOutstanding = init.totalOutstanding;
+      cust.financials.availableCredit = init.availableCredit;
+    }
+  }
+}
 
 describe('Phase 3 Master Test Suite: AR, Collections, PDC Vault & Credit Notes', () => {
   beforeEach(async () => {
@@ -21,6 +38,7 @@ describe('Phase 3 Master Test Suite: AR, Collections, PDC Vault & Credit Notes',
     pdcVaultService.reset();
     customerCreditNoteService.reset();
     periodLockService.setConfig(false, null);
+    resetCustomerFinancials();
   });
 
   describe('1. Unified Receipt Approval & Inline Auto-FIFO Settlement (/finance/ar/approvals)', () => {
@@ -124,10 +142,29 @@ describe('Phase 3 Master Test Suite: AR, Collections, PDC Vault & Credit Notes',
         expect(rcpt?.rejectionReason).toBe('Bank rubber stamp missing signature');
       });
     });
+
+    it('voids an approved cheque receipt, cancelling PDC in vault and reverting Auto-FIFO invoice balances', async () => {
+      // Approve rcpt-403 (cheque for Southern Solar cust-003, LKR 531,000)
+      const approved = await arService.approveReceipt('rcpt-403', { autoFIFO: true });
+      expect(approved.status).toBe('APPROVED');
+      expect(approved.pdcId).toBeDefined();
+
+      const pdcBefore = pdcVaultService.getPDCById(approved.pdcId!);
+      expect(pdcBefore?.status).toBe('IN_HAND');
+
+      // Void the receipt
+      const voided = await arService.voidReceipt('rcpt-403', 'Customer stopped cheque before clearing');
+      expect(voided.status).toBe('VOIDED');
+
+      // Verify PDC in Vault is VOIDED and cannot be cleared
+      const pdcAfter = pdcVaultService.getPDCById(approved.pdcId!);
+      expect(pdcAfter?.status).toBe('VOIDED');
+      await expect(pdcVaultService.clearCheque(approved.pdcId!)).rejects.toThrow();
+    });
   });
 
   describe('2. Post-Dated Cheque (PDC) Vault & GL 1018 Account (/finance/ar/pdc-vault)', () => {
-    it('seeds GL 1018 Cheques in Hand system asset account in Chart of Accounts', async () => {
+    it('seeds GL 1018 Cheques in Hand and GL 1100 Merchandise Inventory Asset in Chart of Accounts', async () => {
       const accounts = await financeRepository.getAccounts();
       const chq1018 = accounts.find((a) => a.code === '1018');
       expect(chq1018).toBeDefined();
@@ -135,6 +172,11 @@ describe('Phase 3 Master Test Suite: AR, Collections, PDC Vault & Credit Notes',
       expect(chq1018?.classification).toBe('ASSET');
       expect(chq1018?.accountSubClass).toBe('CURRENT_ASSET');
       expect(chq1018?.isActive).toBe(true);
+
+      const inv1100 = accounts.find((a) => a.code === '1100');
+      expect(inv1100).toBeDefined();
+      expect(inv1100?.name).toBe('Merchandise Inventory Asset');
+      expect(inv1100?.isActive).toBe(true);
     });
 
     it('stops recognizing un-cleared cheques as 1010 Bank cash, routing collected cheques to 1018 Cheques in Hand', async () => {
@@ -210,7 +252,10 @@ describe('Phase 3 Master Test Suite: AR, Collections, PDC Vault & Credit Notes',
       expect(chqCredit?.credit).toBe(531000);
     });
 
-    it('dishonors/bounces a cheque and reinstates Accounts Receivable (Dr 1020 A/R, Cr 1018)', async () => {
+    it('dishonors/bounces a cheque and reinstates Accounts Receivable (Dr 1020 A/R, Cr 1018), restoring customer debt', async () => {
+      const custBefore = MOCK_CUSTOMERS.find((c) => c.id === 'cust-001')!;
+      const debtBefore = custBefore.financials.totalOutstanding;
+
       const bounced = await pdcVaultService.bounceCheque('pdc-002', 'Payment stopped by drawer');
       expect(bounced.status).toBe('BOUNCED');
       expect(bounced.bounceReason).toBe('Payment stopped by drawer');
@@ -223,6 +268,10 @@ describe('Phase 3 Master Test Suite: AR, Collections, PDC Vault & Credit Notes',
       const chqCredit = bounceJournal?.lines.find((l) => l.accountCode === '1018');
       expect(arDebit?.debit).toBe(1200000);
       expect(chqCredit?.credit).toBe(1200000);
+
+      // Verify customer debt reinstated in MOCK_CUSTOMERS
+      const custAfter = MOCK_CUSTOMERS.find((c) => c.id === 'cust-001')!;
+      expect(custAfter.financials.totalOutstanding).toBe(debtBefore + 1200000);
     });
   });
 
@@ -241,7 +290,7 @@ describe('Phase 3 Master Test Suite: AR, Collections, PDC Vault & Credit Notes',
       expect(screen.getByText('Stock Restored (1100/5010)')).toBeDefined();
     });
 
-    it('posts a customer return, reversing revenue (Dr 4010), tax (Dr 2020), crediting AR (Cr 1020), and returning goods to inventory (Dr 1100, Cr 5010)', async () => {
+    it('posts a customer return, reversing revenue (Dr 4010), tax (Dr 2020), crediting AR (Cr 1020), and returning goods to inventory strictly to GL 1100', async () => {
       const createdCN = await customerCreditNoteService.postCustomerCreditNote({
         customerId: 'cust-001',
         customerName: 'Lanka Electrical & Hardware Superstore',
@@ -293,9 +342,14 @@ describe('Phase 3 Master Test Suite: AR, Collections, PDC Vault & Credit Notes',
       expect(arLine?.credit).toBe(141600);
       expect(arLine?.customerId).toBe('cust-001');
 
-      // 4. Dr 1100 or 1030 Merchandise Inventory (80,000)
-      const inventoryLine = cnJournal?.lines.find((l) => l.accountCode === '1100' || l.accountCode === '1030');
+      // 4. Dr 1100 Merchandise Inventory (80,000) - STRICTLY 1100
+      const inventoryLine = cnJournal?.lines.find((l) => l.accountCode === '1100');
+      expect(inventoryLine).toBeDefined();
       expect(inventoryLine?.debit).toBe(80000);
+
+      // Verify 1030 is NOT used
+      const oldInvLine = cnJournal?.lines.find((l) => l.accountCode === '1030');
+      expect(oldInvLine).toBeUndefined();
 
       // 5. Cr 5010 Cost of Goods Sold (80,000)
       const cogsLine = cnJournal?.lines.find((l) => l.accountCode === '5010');
@@ -306,6 +360,59 @@ describe('Phase 3 Master Test Suite: AR, Collections, PDC Vault & Credit Notes',
       // Total Credits = 141,600 + 80,000 = 221,600
       expect(cnJournal?.totalDebit).toBe(221600);
       expect(cnJournal?.totalCredit).toBe(221600);
+
+      // Verify customer outstanding debt reduced and available credit restored
+      const custAfter = MOCK_CUSTOMERS.find((c) => c.id === 'cust-001')!;
+      expect(custAfter.financials.totalOutstanding).toBe(1450000 - 141600);
+
+      // Verify open invoice balance was reduced
+      const openInvs = arService.getOpenInvoicesForCustomer('cust-001');
+      const linkedInv = openInvs.find((i) => i.id === 'inv-001');
+      expect(linkedInv?.balanceDue).toBe(1500000 - 141600);
+    });
+
+    it('voids a customer credit note, reversing GL journal, reinstating customer debt, and restoring invoice balance', async () => {
+      const createdCN = await customerCreditNoteService.postCustomerCreditNote({
+        customerId: 'cust-001',
+        customerName: 'Lanka Electrical',
+        invoiceId: 'inv-001',
+        invoiceNumber: 'INV-2026-0035',
+        date: new Date().toISOString().slice(0, 10),
+        reason: 'Incorrect return submitted by mistake',
+        lineItems: [
+          {
+            productId: 'prod-001',
+            productName: 'Hybrid Solar Inverter',
+            sku: 'INV-5KW',
+            returnedQuantity: 1,
+            unitPrice: 50000,
+            unitCost: 35000,
+            taxRate: 0.18,
+            subtotal: 50000,
+            vatAmount: 9000,
+            lineTotal: 59000,
+            costTotal: 35000,
+          },
+        ],
+      });
+
+      expect(createdCN.status).toBe('ISSUED');
+
+      // Void the credit note
+      const voided = await customerCreditNoteService.voidCustomerCreditNote(createdCN.id, 'Entered by mistake');
+      expect(voided.status).toBe('VOIDED');
+
+      // Verify journal entry was marked VOIDED
+      const journals = await financeRepository.getJournalEntries();
+      const cnJournal = journals.find((j) => j.reference === createdCN.creditNoteNumber);
+      expect(cnJournal?.status).toBe('VOIDED');
+
+      // Verify customer balance and invoice balance were restored
+      const cust = MOCK_CUSTOMERS.find((c) => c.id === 'cust-001')!;
+      expect(cust.financials.totalOutstanding).toBe(1450000);
+
+      const inv = arService.getOpenInvoicesForCustomer('cust-001').find((i) => i.id === 'inv-001');
+      expect(inv?.balanceDue).toBe(1500000);
     });
 
     it('enforces financial period lock preventing posting customer returns into locked periods', async () => {

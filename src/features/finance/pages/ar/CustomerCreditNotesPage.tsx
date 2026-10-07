@@ -88,6 +88,17 @@ export function CustomerCreditNotesPage() {
     setCreditNotes(customerCreditNoteService.getCreditNotes());
   };
 
+  const handleVoidCreditNote = async (cn: CustomerCreditNote) => {
+    try {
+      await customerCreditNoteService.voidCustomerCreditNote(cn.id, 'Voided by Finance Manager');
+      toast.success(`Customer Credit Note ${cn.creditNoteNumber} voided and balances restored.`);
+      refreshCreditNotes();
+      setSelectedCN(customerCreditNoteService.getCreditNoteById(cn.id));
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Failed to void credit note');
+    }
+  };
+
   const metrics = useMemo(() => {
     return customerCreditNoteService.getMetrics();
   }, [creditNotes]);
@@ -621,6 +632,19 @@ export function CustomerCreditNotesPage() {
                 )}
               </div>
             </div>
+
+            {selectedCN.status === 'ISSUED' && (
+              <div className="pt-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleVoidCreditNote(selectedCN)}
+                  className="w-full border-rose-200 text-rose-600 hover:bg-rose-50 text-xs"
+                >
+                  Void Credit Note & Reverse Entries
+                </Button>
+              </div>
+            )}
           </div>
         </div>
       )}

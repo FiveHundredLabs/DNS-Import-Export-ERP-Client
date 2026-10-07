@@ -117,7 +117,7 @@ export interface PostDatedCheque {
   chequeDate: string; // Realization / maturity date (YYYY-MM-DD)
   receivedDate: string; // Date received
   amount: number;
-  status: 'IN_HAND' | 'CLEARED' | 'BOUNCED' | 'RETURNED';
+  status: 'IN_HAND' | 'CLEARED' | 'BOUNCED' | 'RETURNED' | 'VOIDED';
   holdingAccountCode: string; // '1018'
   clearedAccountCode?: string; // '1010'
   clearedAt?: string;

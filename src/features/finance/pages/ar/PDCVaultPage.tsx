@@ -81,7 +81,7 @@ export function PDCVaultPage() {
   const handleOpenClear = (cheque: PostDatedCheque) => {
     setClearingCheque(cheque);
     setClearingDate(cheque.chequeDate <= todayStr ? todayStr : cheque.chequeDate);
-    setTargetBankAccountId('acc-1010');
+    setTargetBankAccountId(bankAccounts[0]?.id || 'acc-1010');
     setClearingNotes(`Realization of Cheque #${cheque.chequeNumber} for ${cheque.customerName}`);
   };
 
@@ -546,7 +546,9 @@ export function PDCVaultPage() {
                 Transfer Journal Entry (PDC Realization)
               </div>
               <div className="flex justify-between text-emerald-400">
-                <span>Dr 1010 Bank Account</span>
+                <span>
+                  Dr {bankAccounts.find((a) => a.id === targetBankAccountId)?.code || '1010'} {bankAccounts.find((a) => a.id === targetBankAccountId)?.name || 'Bank Account'}
+                </span>
                 <span>+{formatCurrency(clearingCheque.amount)}</span>
               </div>
               <div className="flex justify-between text-amber-400">
