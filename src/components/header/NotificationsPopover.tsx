@@ -111,18 +111,17 @@ export function NotificationsPopover({ className }: NotificationsPopoverProps) {
         type="button"
         onClick={() => setIsOpen((prev) => !prev)}
         className={cn(
-          'relative flex h-9 w-9 items-center justify-center rounded-md text-primary-foreground/90 hover:bg-primary-foreground/15 hover:text-primary-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-primary-foreground shrink-0 cursor-pointer',
+          'relative flex h-9 w-9 items-center justify-center rounded-lg text-primary-foreground/80 hover:bg-primary-foreground/15 hover:text-primary-foreground transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-primary-foreground shrink-0 cursor-pointer',
           isOpen && 'bg-primary-foreground/20 text-primary-foreground'
         )}
         title="Notifications"
         aria-label="Notifications"
         aria-expanded={isOpen}
       >
-        <Bell className="h-4.5 w-4.5 transition-transform duration-150 hover:scale-110" />
+        <Bell className="h-[17px] w-[17px] transition-transform duration-150 hover:scale-105" strokeWidth={1.5} />
         {unreadCount > 0 && (
-          <span className="absolute top-1.5 right-1.5 flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75" />
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500 ring-1 ring-primary" />
+          <span className="absolute top-2 right-2 flex h-1.5 w-1.5">
+            <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-rose-400 ring-2 ring-primary" />
           </span>
         )}
       </button>

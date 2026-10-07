@@ -13,6 +13,36 @@ interface CalculatorPopoverProps {
   className?: string;
 }
 
+function CalculatorIcon({ className = 'h-[17px] w-[17px]' }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+    >
+      {/* Outer casing */}
+      <rect x="4.5" y="2.5" width="15" height="19" rx="3" />
+      {/* LCD display screen */}
+      <line x1="8" y1="6.5" x2="16" y2="6.5" />
+      {/* Plus */}
+      <line x1="8.5" y1="11" x2="8.5" y2="13" />
+      <line x1="7.5" y1="12" x2="9.5" y2="12" />
+      {/* Minus */}
+      <line x1="14.5" y1="12" x2="16.5" y2="12" />
+      {/* Multiply */}
+      <line x1="7.6" y1="16.1" x2="9.4" y2="17.9" />
+      <line x1="9.4" y1="16.1" x2="7.6" y2="17.9" />
+      {/* Equals */}
+      <line x1="14.5" y1="16" x2="16.5" y2="16" />
+      <line x1="14.5" y1="18" x2="16.5" y2="18" />
+    </svg>
+  );
+}
+
 export function CalculatorPopover({ className }: CalculatorPopoverProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [displayValue, setDisplayValue] = useState<string>('0');
@@ -177,14 +207,14 @@ export function CalculatorPopover({ className }: CalculatorPopoverProps) {
         type="button"
         onClick={() => setIsOpen((prev) => !prev)}
         className={cn(
-          'flex h-9 w-9 items-center justify-center rounded-md text-primary-foreground/90 hover:bg-primary-foreground/15 hover:text-primary-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-primary-foreground shrink-0 cursor-pointer',
+          'flex h-9 w-9 items-center justify-center rounded-lg text-primary-foreground/80 hover:bg-primary-foreground/15 hover:text-primary-foreground transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-primary-foreground shrink-0 cursor-pointer',
           isOpen && 'bg-primary-foreground/20 text-primary-foreground'
         )}
         title="Calculator"
         aria-label="Calculator"
         aria-expanded={isOpen}
       >
-        <CalcIcon className="h-4.5 w-4.5 transition-transform duration-150 hover:scale-110" />
+        <CalculatorIcon className="h-[17px] w-[17px] transition-transform duration-150 hover:scale-105" />
       </button>
 
       {/* Popover Card */}
@@ -193,7 +223,7 @@ export function CalculatorPopover({ className }: CalculatorPopoverProps) {
           <div className="flex items-center justify-between pb-2.5 border-b border-slate-100">
             <div className="flex items-center gap-2">
               <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                <CalcIcon className="h-4 w-4" />
+                <CalculatorIcon className="h-4 w-4" />
               </div>
               <h3 className="text-xs font-bold text-slate-900 tracking-tight">
                 ERP Utility Calculator

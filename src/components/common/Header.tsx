@@ -132,7 +132,7 @@ export function Header({ onToggleSidebar }: HeaderProps) {
         <FullscreenButton />
 
         {/* Subtle Separator */}
-        <div className="h-5 w-px bg-primary-foreground/25 mx-0.5 sm:mx-1" aria-hidden="true" />
+        <div className="h-4.5 w-px bg-white/20 mx-1 sm:mx-1.5" aria-hidden="true" />
 
         {/* User Profile / Avatar (Far-right) */}
         <UserProfileMenu />

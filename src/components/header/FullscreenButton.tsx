@@ -87,16 +87,16 @@ export function FullscreenButton({ className }: FullscreenButtonProps) {
       type="button"
       onClick={toggleFullscreen}
       className={cn(
-        'flex h-9 w-9 items-center justify-center rounded-md text-primary-foreground/90 hover:bg-primary-foreground/15 hover:text-primary-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-primary-foreground shrink-0 cursor-pointer',
+        'flex h-9 w-9 items-center justify-center rounded-lg text-primary-foreground/80 hover:bg-primary-foreground/15 hover:text-primary-foreground transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-primary-foreground shrink-0 cursor-pointer',
         className
       )}
       title={label}
       aria-label={label}
     >
       {isFullscreen ? (
-        <Minimize2 className="h-4.5 w-4.5 transition-transform duration-150 hover:scale-110" />
+        <Minimize2 className="h-[17px] w-[17px] transition-transform duration-150 hover:scale-105" strokeWidth={1.5} />
       ) : (
-        <Maximize2 className="h-4.5 w-4.5 transition-transform duration-150 hover:scale-110" />
+        <Maximize2 className="h-[17px] w-[17px] transition-transform duration-150 hover:scale-105" strokeWidth={1.5} />
       )}
     </button>
   );

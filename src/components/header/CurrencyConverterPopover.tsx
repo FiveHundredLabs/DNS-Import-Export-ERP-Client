@@ -23,8 +23,22 @@ export const EXCHANGE_RATES: Record<string, { name: string; symbol: string; rate
   AUD: { name: 'Australian Dollar', symbol: 'A$', rateAgainstUSD: 1.53 },
 };
 
-interface CurrencyConverterPopoverProps {
-  className?: string;
+function CurrencyIcon({ className = 'h-[17px] w-[17px]' }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+    >
+      <circle cx="12" cy="12" r="9.5" />
+      <path d="M14.5 9.2h-3.2a1.6 1.6 0 0 0 0 3.2h2.4a1.6 1.6 0 0 1 0 3.2H9.5" />
+      <path d="M12 7.5v9" />
+    </svg>
+  );
 }
 
 export function CurrencyConverterPopover({ className }: CurrencyConverterPopoverProps) {
@@ -95,14 +109,14 @@ export function CurrencyConverterPopover({ className }: CurrencyConverterPopover
         type="button"
         onClick={() => setIsOpen((prev) => !prev)}
         className={cn(
-          'flex h-9 w-9 items-center justify-center rounded-md text-primary-foreground/90 hover:bg-primary-foreground/15 hover:text-primary-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-primary-foreground shrink-0 cursor-pointer',
+          'flex h-9 w-9 items-center justify-center rounded-lg text-primary-foreground/80 hover:bg-primary-foreground/15 hover:text-primary-foreground transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-primary-foreground shrink-0 cursor-pointer',
           isOpen && 'bg-primary-foreground/20 text-primary-foreground'
         )}
         title="Currency Converter"
         aria-label="Currency Converter"
         aria-expanded={isOpen}
       >
-        <Coins className="h-4.5 w-4.5 transition-transform duration-150 hover:scale-110" />
+        <CurrencyIcon className="h-[17px] w-[17px] transition-transform duration-150 hover:scale-105" />
       </button>
 
       {/* Popover Card */}
@@ -111,7 +125,7 @@ export function CurrencyConverterPopover({ className }: CurrencyConverterPopover
           <div className="flex items-center justify-between pb-3 border-b border-slate-100">
             <div className="flex items-center gap-2">
               <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                <Coins className="h-4 w-4" />
+                <CurrencyIcon className="h-4 w-4" />
               </div>
               <h3 className="text-xs font-bold text-slate-900 tracking-tight">
                 Currency Converter
