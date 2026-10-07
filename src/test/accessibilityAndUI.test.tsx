@@ -45,6 +45,72 @@ describe('Phase 12 — Accessibility, Responsive UI & Form Validation Audit (Sec
       const profileBtn = screen.getByRole('button', { name: /user profile menu/i });
       expect(profileBtn).toBeInTheDocument();
       expect(profileBtn).toHaveAttribute('aria-label', 'User profile menu');
+
+      // Full Screen button renders with accessible label at top-right
+      const fullscreenBtn = screen.getByRole('button', { name: /full screen/i });
+      expect(fullscreenBtn).toBeInTheDocument();
+      expect(fullscreenBtn).toHaveAttribute('aria-label', 'Full Screen');
+    });
+
+    it('toggles native Fullscreen API and updates button label/icon between Full Screen and Exit Full Screen', async () => {
+      const requestFullscreenMock = vi.fn().mockResolvedValue(undefined);
+      const exitFullscreenMock = vi.fn().mockResolvedValue(undefined);
+
+      // Mock native fullscreen methods on document/documentElement
+      Object.defineProperty(document.documentElement, 'requestFullscreen', {
+        value: requestFullscreenMock,
+        writable: true,
+        configurable: true,
+      });
+      Object.defineProperty(document, 'exitFullscreen', {
+        value: exitFullscreenMock,
+        writable: true,
+        configurable: true,
+      });
+
+      render(
+        <MemoryRouter>
+          <Header onToggleSidebar={vi.fn()} />
+        </MemoryRouter>
+      );
+
+      const fullscreenBtn = screen.getByRole('button', { name: /full screen/i });
+      expect(fullscreenBtn).toHaveAttribute('aria-label', 'Full Screen');
+      expect(fullscreenBtn).toHaveAttribute('title', 'Full Screen');
+
+      // Click to enter fullscreen
+      fireEvent.click(fullscreenBtn);
+      expect(requestFullscreenMock).toHaveBeenCalledTimes(1);
+
+      // Simulate browser entering fullscreen mode
+      Object.defineProperty(document, 'fullscreenElement', {
+        value: document.documentElement,
+        writable: true,
+        configurable: true,
+      });
+      fireEvent(document, new Event('fullscreenchange'));
+
+      await waitFor(() => {
+        expect(fullscreenBtn).toHaveAttribute('aria-label', 'Exit Full Screen');
+        expect(fullscreenBtn).toHaveAttribute('title', 'Exit Full Screen');
+      });
+
+      // Click again to exit fullscreen
+      fireEvent.click(fullscreenBtn);
+      expect(exitFullscreenMock).toHaveBeenCalledTimes(1);
+
+      // Simulate browser exiting fullscreen mode
+      Object.defineProperty(document, 'fullscreenElement', {
+        value: null,
+        writable: true,
+        configurable: true,
+      });
+      fireEvent(document, new Event('fullscreenchange'));
+
+      await waitFor(() => {
+        expect(fullscreenBtn).toHaveAttribute('aria-label', 'Full Screen');
+        expect(fullscreenBtn).toHaveAttribute('title', 'Full Screen');
+      });
     });
 
     it('renders accessible semantic navigation landmark and close button in Sidebar', () => {
