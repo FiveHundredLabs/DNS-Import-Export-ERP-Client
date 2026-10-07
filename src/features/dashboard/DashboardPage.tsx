@@ -3,6 +3,7 @@ import { DirectorDashboard } from './DirectorDashboard';
 import { SalesRepDashboard } from './SalesRepDashboard';
 import { AreaManagerDashboard } from './AreaManagerDashboard';
 import { SalesManagerDashboard } from './SalesManagerDashboard';
+import { FinanceManagerDashboard } from './FinanceManagerDashboard';
 import { StatCard } from '../../components/common/StatCard';
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/card';
 import { CheckCircle2 } from 'lucide-react';
@@ -17,6 +18,10 @@ export function DashboardPage() {
 
   if (role === 'SALES_MANAGER') {
     return <SalesManagerDashboard />;
+  }
+
+  if (role === 'FINANCE_MANAGER') {
+    return <FinanceManagerDashboard />;
   }
 
   if (role === 'SALES_REP') {

@@ -26,6 +26,8 @@ import {
   Compass,
   CheckCircle,
   LucideIcon,
+  Landmark,
+  Zap,
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { cn } from '../../utils/cn';
@@ -83,7 +85,9 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
 
   // 4. Blue Group — Finance, Banking, Ledger & Warranty
   const blueItems: SidebarItem[] = [
+    { id: 'finance-desk', name: 'Finance Desk', path: '/finance/desk', icon: Zap, category: 'finance', groupColor: 'blue' },
     { id: 'accounts', name: 'Chart of Accounts', path: '/finance/accounts', icon: BookOpen, category: 'finance', groupColor: 'blue' },
+    { id: 'reconciliation', name: 'Bank Reconciliation', path: '/finance/reconciliation', icon: Landmark, category: 'finance', groupColor: 'blue' },
     { id: 'finance', name: 'Finance & Ledger', path: '/finance', icon: DollarSign, category: 'finance', groupColor: 'blue', exact: true },
     { id: 'warranty', name: 'Warranty Hub', path: '/warranty', icon: ShieldCheck, category: 'approvals', groupColor: 'blue' },
     { id: 'commissions', name: 'Sales Commission', path: '/commissions', icon: Award, category: 'finance', groupColor: 'blue' },

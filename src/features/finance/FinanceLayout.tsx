@@ -14,11 +14,18 @@ import {
   Lock,
   FileText,
   SlidersHorizontal,
+  LayoutDashboard,
 } from 'lucide-react';
 import { InnerSidebarLayout } from '../../components/layout/InnerSidebarLayout';
 import { InnerNavItem } from '../../components/common/InnerSidebar';
 
 const FINANCE_NAV_ITEMS: InnerNavItem[] = [
+  {
+    name: 'Finance Command Hub',
+    path: '/finance/dashboard',
+    icon: LayoutDashboard,
+    exact: true,
+  },
   {
     name: 'Journal Entry (Finance Desk)',
     path: '/finance/desk',
