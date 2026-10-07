@@ -285,7 +285,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         {/* ========================================================================= */}
         {/* COLUMN 1: LEFT ICON RAIL (DOCK - MATCHES TOP HEADER) */}
         {/* ========================================================================= */}
-        <div className="flex w-14 sm:w-16 flex-col items-center justify-between border-r border-black/10 bg-primary text-primary-foreground py-3 shrink-0 z-10 select-none">
+        <div className="flex w-14 sm:w-16 flex-col items-center justify-between bg-primary text-primary-foreground py-3 shrink-0 z-10 select-none">
           {/* Top Rail Stack: Module Category Navigation Icons */}
           <div className="flex flex-col items-center w-full">
             <div className="flex flex-col items-center gap-1.5 sm:gap-2 w-full px-2">
@@ -365,7 +365,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         {/* ========================================================================= */}
         {/* COLUMN 2: EXPANDED SUB-NAVIGATION FLYOUT PANEL (CONTENT PAGE SHADE) */}
         {/* ========================================================================= */}
-        <div className="flex w-60 sm:w-64 flex-col border-r border-slate-200/90 bg-white">
+        <div className="flex w-60 sm:w-64 flex-col border-r border-slate-200/90 bg-white rounded-tl-2xl md:rounded-tl-[20px] overflow-hidden">
           {/* Mobile Close Bar Header */}
           <div className="flex items-center justify-between px-4 py-2.5 border-b border-slate-100 md:hidden">
             <span className="text-xs font-semibold text-slate-500 tracking-wider uppercase">Navigation</span>

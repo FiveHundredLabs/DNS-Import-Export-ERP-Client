@@ -1,4 +1,4 @@
-export type PrimaryColorId = 'orange' | 'dark-blue' | 'red' | 'light-blue' | 'black';
+export type PrimaryColorId = 'dark-blue' | 'red' | 'black';
 
 export interface PrimaryColorOption {
   id: PrimaryColorId;
