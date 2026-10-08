@@ -3,6 +3,7 @@ import { useFinanceLedger } from '../../hooks/useFinanceLedger';
 import { GeneralLedgerAccountReport } from '../../api/types';
 import { CoaTreeSelect } from '../../components/CoaTreeSelect';
 import { ReportDateFilterBar, DateFilterState } from './ReportDateFilterBar';
+import { reportPdfService } from '../../services/reportPdfService';
 import { ReportHeaderNav } from './ReportHeaderNav';
 import { formatCurrency, formatDate } from '../../../../utils/formatters';
 import { BookOpen, DollarSign, ArrowDownLeft, ArrowUpRight, Search } from 'lucide-react';
@@ -38,6 +39,15 @@ export function GeneralLedgerPage() {
   }, [loadReport]);
 
   const selectedAccount = accounts.find((a) => a.id === selectedAccountId);
+
+  const handlePrint = () => {
+    if (!report) {
+      reportPdfService.triggerPrint(`General_Ledger_${selectedAccount?.code || ''}`);
+      return;
+    }
+    const html = reportPdfService.generateGeneralLedgerHtml(report);
+    reportPdfService.printReportHtml(html, `General_Ledger_${selectedAccount?.code || ''}_${dateFilter.startDate}_to_${dateFilter.endDate}`);
+  };
 
   return (
     <div className="space-y-6">
@@ -76,6 +86,7 @@ export function GeneralLedgerPage() {
           <ReportDateFilterBar
             filter={dateFilter}
             onChange={setDateFilter}
+            onPrint={handlePrint}
             reportTitle={`General_Ledger_${selectedAccount?.code || ''}`}
           />
         </div>

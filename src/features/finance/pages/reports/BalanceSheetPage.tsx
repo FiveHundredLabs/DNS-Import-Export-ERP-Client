@@ -85,7 +85,12 @@ export function BalanceSheetPage() {
   }, [loadReport]);
 
   const handlePrint = () => {
-    reportPdfService.triggerPrint(`DNS_Balance_Sheet_${asOfDate}`);
+    if (!report) {
+      reportPdfService.triggerPrint(`DNS_Balance_Sheet_${asOfDate}`);
+      return;
+    }
+    const html = reportPdfService.generateBalanceSheetHtml(report, comparePrior ? priorReport : null);
+    reportPdfService.printReportHtml(html, `DNS_Balance_Sheet_${asOfDate}`);
   };
 
   // Helper lookups for prior balances
