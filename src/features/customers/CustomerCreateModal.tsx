@@ -3,7 +3,7 @@ import { Dialog, DialogHeader, DialogTitle, DialogDescription, DialogFooter } fr
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Select } from '../../components/ui/select';
-import { Customer, CustomerType } from '../../types/customer';
+import { Customer, CustomerType, CustomerLoyaltyLevel } from '../../types/customer';
 import { useAreas } from '../../hooks/useAreas';
 import { useUsers } from '../../hooks/useUsers';
 
@@ -28,6 +28,7 @@ export function CustomerCreateModal({
   const [code, setCode] = useState('');
   const [name, setName] = useState('');
   const [type, setType] = useState<CustomerType>('DEALER');
+  const [loyaltyLevel, setLoyaltyLevel] = useState<CustomerLoyaltyLevel>('NEW');
   const [contactPerson, setContactPerson] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
@@ -45,6 +46,14 @@ export function CustomerCreateModal({
         setCode(editingCustomer.code);
         setName(editingCustomer.name);
         setType(editingCustomer.type);
+        setLoyaltyLevel(
+          editingCustomer.loyaltyLevel ||
+            (editingCustomer.loyaltyTier === 'PLATINUM'
+              ? 'PLATINUM'
+              : editingCustomer.loyaltyTier === 'GOLD' || editingCustomer.loyaltyTier === 'SILVER'
+              ? 'PREMIUM'
+              : 'NEW')
+        );
         setContactPerson(editingCustomer.contactPerson);
         setPhone(editingCustomer.phone);
         setEmail(editingCustomer.email || '');
@@ -55,6 +64,7 @@ export function CustomerCreateModal({
         setCode('');
         setName('');
         setType('DEALER');
+        setLoyaltyLevel('NEW');
         setContactPerson('');
         setPhone('');
         setEmail('');
