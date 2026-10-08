@@ -33,6 +33,9 @@ export function ProductCreateModal({
   const [maxDiscountPercentage, setMaxDiscountPercentage] = useState<number>(10);
   const [warrantyMonths, setWarrantyMonths] = useState<number>(12);
   const [isPromotional, setIsPromotional] = useState(false);
+  const [discLevel1, setDiscLevel1] = useState<string>('');
+  const [discLevel2, setDiscLevel2] = useState<string>('');
+  const [discLevel3, setDiscLevel3] = useState<string>('');
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
 
@@ -41,6 +44,12 @@ export function ProductCreateModal({
 
     const selectedCategory = categories.find((c) => c.id === (categoryId || categories[0]?.id));
     const selectedUOM = uoms.find((u) => u.id === (uomId || uoms[0]?.id));
+
+    // Parse and order up to 3 optional discount levels lowest to highest
+    const rawLevels = [discLevel1, discLevel2, discLevel3]
+      .map((v) => (v.trim() !== '' ? Number(v) : null))
+      .filter((v): v is number => v !== null && !isNaN(v) && v >= 0 && v <= 100);
+    const discountLevels = Array.from(new Set(rawLevels)).sort((a, b) => a - b);
 
     const productPayload = {
       sku,
@@ -57,7 +66,9 @@ export function ProductCreateModal({
         minimumSellingPrice: Number(minSellingPrice || costPrice),
         maxDiscountPercentage: Number(maxDiscountPercentage),
         taxRatePercentage: 18,
+        discountLevels,
       },
+      discountLevels,
       isPromotional,
       warrantyPeriodMonths: Number(warrantyMonths),
       status: 'ACTIVE' as const,
@@ -206,7 +217,7 @@ export function ProductCreateModal({
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">Max Disc Allowed (%)</label>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">Max Ceiling Discount (%)</label>
             <Input
               type="number"
               value={maxDiscountPercentage}
@@ -220,6 +231,60 @@ export function ProductCreateModal({
               value={warrantyMonths}
               onChange={(e) => setWarrantyMonths(Number(e.target.value))}
             />
+          </div>
+        </div>
+
+        {/* Product Discount Levels (Up to 3 Optional Levels) */}
+        <div className="rounded-lg border border-slate-200 bg-slate-50/70 p-3 space-y-2">
+          <div className="flex items-center justify-between">
+            <label className="block text-xs font-semibold text-slate-800">
+              Product Discount Levels (Up to 3 Optional Levels)
+            </label>
+            <span className="text-[10px] text-slate-500 font-medium">Lowest to Highest</span>
+          </div>
+          <p className="text-[11px] text-slate-500 leading-tight">
+            Configure up to 3 optional discount levels. Customer loyalty determines accessible levels (New = Level 1, Premium = Levels 1 & 2, Platinum = All 3). Leave blank for 0 levels (requires approval for any discount).
+          </p>
+          <div className="grid grid-cols-3 gap-2 pt-1">
+            <div>
+              <label className="block text-[10px] font-semibold text-slate-600 mb-1">Level 1 (%)</label>
+              <Input
+                type="number"
+                min="0"
+                max="100"
+                step="0.5"
+                placeholder="e.g. 5"
+                value={discLevel1}
+                onChange={(e) => setDiscLevel1(e.target.value)}
+                className="h-8 text-xs font-mono"
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] font-semibold text-slate-600 mb-1">Level 2 (%)</label>
+              <Input
+                type="number"
+                min="0"
+                max="100"
+                step="0.5"
+                placeholder="e.g. 10"
+                value={discLevel2}
+                onChange={(e) => setDiscLevel2(e.target.value)}
+                className="h-8 text-xs font-mono"
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] font-semibold text-slate-600 mb-1">Level 3 (%)</label>
+              <Input
+                type="number"
+                min="0"
+                max="100"
+                step="0.5"
+                placeholder="e.g. 15"
+                value={discLevel3}
+                onChange={(e) => setDiscLevel3(e.target.value)}
+                className="h-8 text-xs font-mono"
+              />
+            </div>
           </div>
         </div>
 
