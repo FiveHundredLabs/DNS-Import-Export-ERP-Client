@@ -911,6 +911,14 @@ export class OrderService {
       issuedQuantity: 0,
       requiresSpecialApproval: item.requiresApproval,
       specialApprovalReason: item.approvalReason,
+      discountApprovalStatus:
+        item.discountApprovalStatus ||
+        (item.requiresApproval ? 'APPROVED' : 'NOT_REQUIRED'),
+      discountAllowedPercentage: item.discountAllowedPercentage,
+      discountApprovedById: item.discountApprovedById,
+      discountApprovedByName: item.discountApprovedByName,
+      discountApprovedAt: item.discountApprovedAt,
+      discountApprovalNote: item.discountApprovalNote,
     }));
 
     const requestedCreditDays =

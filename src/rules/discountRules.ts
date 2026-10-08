@@ -403,8 +403,10 @@ export function calculateLineTotal(
   subtotal: number;
   discountAmount: number;
   netAmount: number;
+  netAfterDiscount: number;
   taxAmount: number;
   total: number;
+  lineTotal: number;
 } {
   const safeQty = Math.max(0, quantity);
   const safePrice = Math.max(0, unitPrice);
@@ -417,5 +419,13 @@ export function calculateLineTotal(
   const taxAmount = Number(((netAmount * safeTaxRate) / 100).toFixed(2));
   const total = Number((netAmount + taxAmount).toFixed(2));
 
-  return { subtotal, discountAmount, netAmount, taxAmount, total };
+  return {
+    subtotal,
+    discountAmount,
+    netAmount,
+    netAfterDiscount: netAmount,
+    taxAmount,
+    total,
+    lineTotal: total,
+  };
 }

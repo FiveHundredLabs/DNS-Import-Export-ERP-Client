@@ -415,7 +415,22 @@ export function QuotationDetailPage() {
                       {formatCurrency(it.unitPriceSnapshot)}
                     </TableCell>
                     <TableCell className="text-right font-mono text-[13px] text-slate-700 tabular-nums">
-                      {it.discountPercentage}%
+                      <div>{it.discountPercentage}%</div>
+                      {it.discountApprovalStatus === 'PENDING_APPROVAL' && (
+                        <span className="inline-block text-[10px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5 mt-0.5 whitespace-nowrap">
+                          Pending Management Approval
+                        </span>
+                      )}
+                      {it.discountApprovalStatus === 'APPROVED' && (
+                        <span className="inline-block text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded px-1.5 py-0.5 mt-0.5 whitespace-nowrap">
+                          Discount Approved
+                        </span>
+                      )}
+                      {it.discountApprovalStatus === 'REJECTED' && (
+                        <span className="inline-block text-[10px] font-semibold text-rose-700 bg-rose-50 border border-rose-200 rounded px-1.5 py-0.5 mt-0.5 whitespace-nowrap">
+                          Discount Rejected
+                        </span>
+                      )}
                     </TableCell>
                     <TableCell className="text-right font-mono text-[13px] text-slate-500 tabular-nums">
                       {formatCurrency(it.taxAmount)}

@@ -15,7 +15,13 @@ import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Badge } from '../../components/ui/badge';
 import { formatCurrency } from '../../utils/formatters';
-import { evaluateDiscount } from '../../rules/discountRules';
+import {
+  evaluateDiscount,
+  getProductDiscountLevels,
+  getAllowedDiscountLevels,
+  getMaxAllowedDiscount,
+  normalizeCustomerLoyaltyLevel,
+} from '../../rules/discountRules';
 import {
   FileSpreadsheet,
   Plus,
@@ -203,6 +209,10 @@ export function QuotationCreateEditPage() {
       const taxAmount = effectiveTaxEnabled ? Math.round(((net * effectiveTaxRate) / 100) * 100) / 100 : 0;
       const total = net + taxAmount;
 
+      const configuredLevels = getProductDiscountLevels(it.product);
+      const availableLevels = getAllowedDiscountLevels(it.product, selectedCustomer);
+      const maxAllowed = getMaxAllowedDiscount(it.product, selectedCustomer);
+
       const evalResult = evaluateDiscount({
         requestedDiscountPercentage: discountRate,
         repMaxDiscountPercentage: repAuthority,
@@ -210,6 +220,8 @@ export function QuotationCreateEditPage() {
         productMaxDiscountPercentage: it.product.pricing.maxDiscountPercentage || 15,
         isPromotional: it.product.isPromotional,
         promotionalDiscountPercentage: it.product.pricing.promotionalDiscountPercentage,
+        product: it.product,
+        customer: selectedCustomer,
       });
 
       return {
@@ -221,6 +233,9 @@ export function QuotationCreateEditPage() {
         taxAmount,
         total,
         evalResult,
+        configuredLevels,
+        availableLevels,
+        maxAllowed,
       };
     });
   }, [items, selectedCustomer, currentUser]);
@@ -352,6 +367,18 @@ export function QuotationCreateEditPage() {
                       <h4 className="font-semibold text-slate-900 text-sm flex items-center gap-2">
                         {selectedCustomer.name}
                         <Badge variant="outline">{selectedCustomer.type}</Badge>
+                        <Badge
+                          variant={
+                            normalizeCustomerLoyaltyLevel(selectedCustomer) === 'PLATINUM'
+                              ? 'purple'
+                              : normalizeCustomerLoyaltyLevel(selectedCustomer) === 'PREMIUM'
+                              ? 'info'
+                              : 'secondary'
+                          }
+                          className="font-medium"
+                        >
+                          Loyalty: {normalizeCustomerLoyaltyLevel(selectedCustomer)}
+                        </Badge>
                       </h4>
                       <p className="text-slate-500 mt-0.5">
                         Code: <span className="font-mono">{selectedCustomer.code}</span> | Contact: {selectedCustomer.contactPerson} ({selectedCustomer.phone})
@@ -485,7 +512,7 @@ export function QuotationCreateEditPage() {
                         </div>
 
                         {/* Quantity and Discount Fields */}
-                        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mt-3 pt-3 border-t border-slate-100 items-end">
+                        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mt-3 pt-3 border-t border-slate-100 items-start">
                           <div>
                             <label className="block text-xs font-medium text-slate-500 mb-1">
                               Quantity
@@ -509,9 +536,16 @@ export function QuotationCreateEditPage() {
                           </div>
 
                           <div>
-                            <label className="block text-xs font-medium text-slate-500 mb-1">
-                              Discount %
-                            </label>
+                            <div className="flex items-center justify-between mb-1">
+                              <label className="block text-xs font-medium text-slate-500">
+                                Discount %
+                              </label>
+                              {it.configuredLevels.length > 0 && (
+                                <span className="text-[10px] text-slate-400 font-mono">
+                                  Allowed: {it.maxAllowed}%
+                                </span>
+                              )}
+                            </div>
                             <Input
                               type="number"
                               min="0"
@@ -522,9 +556,63 @@ export function QuotationCreateEditPage() {
                                 handleUpdateItem(idx, 'discountPercentage', parseFloat(e.target.value) || 0)
                               }
                               className={`h-8 text-xs font-mono tabular-nums ${
-                                isExcessDiscount ? 'border-amber-400 focus:ring-amber-500' : ''
+                                isExcessDiscount ? 'border-amber-400 focus:ring-amber-500 bg-amber-50/50' : ''
                               }`}
                             />
+
+                            {/* Available Discounts UI based on loyalty rules */}
+                            {it.configuredLevels.length > 0 ? (
+                              <div className="mt-1 flex flex-wrap gap-1 items-center">
+                                <span className="text-[10px] text-slate-400 font-medium">Available:</span>
+                                <button
+                                  type="button"
+                                  onClick={() => handleUpdateItem(idx, 'discountPercentage', 0)}
+                                  className={`px-1.5 py-0.5 text-[10px] rounded font-medium transition-colors ${
+                                    it.discountPercentage === 0
+                                      ? 'bg-slate-700 text-white'
+                                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                                  }`}
+                                >
+                                  0%
+                                </button>
+                                {it.availableLevels.map((lvl) => (
+                                  <button
+                                    key={lvl}
+                                    type="button"
+                                    onClick={() => handleUpdateItem(idx, 'discountPercentage', lvl)}
+                                    className={`px-1.5 py-0.5 text-[10px] rounded font-medium transition-colors ${
+                                      it.discountPercentage === lvl
+                                        ? 'bg-emerald-600 text-white'
+                                        : 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100'
+                                    }`}
+                                    title={`Available discount for ${normalizeCustomerLoyaltyLevel(selectedCustomer)} loyalty`}
+                                  >
+                                    {lvl}%
+                                  </button>
+                                ))}
+                                {it.configuredLevels
+                                  .filter((lvl) => !it.availableLevels.includes(lvl))
+                                  .map((lvl) => (
+                                    <button
+                                      key={lvl}
+                                      type="button"
+                                      onClick={() => handleUpdateItem(idx, 'discountPercentage', lvl)}
+                                      className={`px-1.5 py-0.5 text-[10px] rounded font-medium transition-colors ${
+                                        it.discountPercentage === lvl
+                                          ? 'bg-amber-600 text-white'
+                                          : 'bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100'
+                                      }`}
+                                      title="Exceeds customer loyalty level — Requires Management Approval"
+                                    >
+                                      {lvl}% (Req. Approval)
+                                    </button>
+                                  ))}
+                              </div>
+                            ) : (
+                              <div className="mt-1 text-[10px] text-amber-700 bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5 leading-tight">
+                                No discount is available for this product. Management approval is required to apply a discount.
+                              </div>
+                            )}
                           </div>
 
                           <div>
@@ -551,7 +639,7 @@ export function QuotationCreateEditPage() {
                           <div className="mt-2.5 rounded bg-amber-100/70 border border-amber-300 p-2 text-xs text-amber-900 flex items-center gap-1.5">
                             <ShieldAlert className="h-3.5 w-3.5 text-amber-600 shrink-0" />
                             <span>
-                              <strong>Approval Required:</strong> {it.evalResult.reason}
+                              <strong>Management Approval Required:</strong> {it.evalResult.reason || '⚠️ This discount exceeds the customer\'s allowed discount level. Management approval is required.'}
                             </span>
                           </div>
                         )}

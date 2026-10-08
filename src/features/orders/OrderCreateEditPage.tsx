@@ -17,6 +17,12 @@ import { Badge } from '../../components/ui/badge';
 import { formatCurrency } from '../../utils/formatters';
 import { evaluateOrderApproval } from '../../rules/orderRules';
 import {
+  getProductDiscountLevels,
+  getAllowedDiscountLevels,
+  getMaxAllowedDiscount,
+  normalizeCustomerLoyaltyLevel,
+} from '../../rules/discountRules';
+import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -491,7 +497,21 @@ export function OrderCreateEditPage() {
           <CardContent className="p-4 space-y-3">
             {selectedCustomer ? (
               <div className="space-y-2">
-                <div className="font-semibold text-sm text-slate-900">{selectedCustomer.name}</div>
+                <div className="flex items-center justify-between gap-1">
+                  <div className="font-semibold text-sm text-slate-900">{selectedCustomer.name}</div>
+                  <Badge
+                    variant={
+                      normalizeCustomerLoyaltyLevel(selectedCustomer) === 'PLATINUM'
+                        ? 'purple'
+                        : normalizeCustomerLoyaltyLevel(selectedCustomer) === 'PREMIUM'
+                        ? 'info'
+                        : 'secondary'
+                    }
+                    className="font-medium text-[11px]"
+                  >
+                    Loyalty: {normalizeCustomerLoyaltyLevel(selectedCustomer)}
+                  </Badge>
+                </div>
                 <div className="text-xs text-slate-500 font-mono">Code: {selectedCustomer.code}</div>
                 <div className="text-xs text-slate-600">{selectedCustomer.phone}</div>
                 <div className="text-xs text-slate-600">{selectedCustomer.email}</div>
@@ -653,7 +673,14 @@ export function OrderCreateEditPage() {
                     const effectiveRate = taxEnabled ? taxRate : 0;
                     const tax = ((sub - disc) * effectiveRate) / 100;
                     const total = sub - disc + tax;
-                    const isExcessDisc = it.discountPercentage > 5;
+
+                    const configuredLevels = getProductDiscountLevels(it.product);
+                    const availableLevels = getAllowedDiscountLevels(it.product, selectedCustomer);
+                    const maxAllowed = getMaxAllowedDiscount(it.product, selectedCustomer);
+                    const isExcessDisc =
+                      configuredLevels.length === 0
+                        ? it.discountPercentage > 0
+                        : it.discountPercentage > maxAllowed;
 
                     return (
                       <tr key={it.id} className="hover:bg-slate-50/60">
@@ -677,25 +704,82 @@ export function OrderCreateEditPage() {
                             className="w-16 h-7 text-xs text-center mx-auto tabular-nums"
                           />
                         </td>
-                        <td className="py-3 px-3 text-center">
+                        <td className="py-3 px-3 text-center align-top">
                           <div className="flex items-center justify-center gap-1">
                             <Input
                               type="number"
                               min={0}
                               max={100}
+                              step="0.5"
                               value={it.discountPercentage}
                               onChange={(e) =>
                                 handleUpdateItem(idx, 'discountPercentage', parseFloat(e.target.value) || 0)
                               }
-                              className={`w-14 h-7 text-xs text-center tabular-nums ${
+                              className={`w-16 h-7 text-xs text-center tabular-nums ${
                                 isExcessDisc ? 'border-amber-500 font-semibold text-amber-700 bg-amber-50' : ''
                               }`}
                             />
                             <span className="text-slate-400">%</span>
                           </div>
+
+                          {configuredLevels.length > 0 ? (
+                            <div className="flex flex-wrap justify-center gap-1 mt-1 max-w-[140px] mx-auto">
+                              <button
+                                type="button"
+                                onClick={() => handleUpdateItem(idx, 'discountPercentage', 0)}
+                                className={`px-1 py-0.5 text-[10px] rounded font-medium ${
+                                  it.discountPercentage === 0
+                                    ? 'bg-slate-700 text-white'
+                                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                                }`}
+                              >
+                                0%
+                              </button>
+                              {availableLevels.map((lvl) => (
+                                <button
+                                  key={lvl}
+                                  type="button"
+                                  onClick={() => handleUpdateItem(idx, 'discountPercentage', lvl)}
+                                  className={`px-1 py-0.5 text-[10px] rounded font-medium ${
+                                    it.discountPercentage === lvl
+                                      ? 'bg-emerald-600 text-white'
+                                      : 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100'
+                                  }`}
+                                  title={`Available for ${normalizeCustomerLoyaltyLevel(selectedCustomer)}`}
+                                >
+                                  {lvl}%
+                                </button>
+                              ))}
+                              {configuredLevels
+                                .filter((lvl) => !availableLevels.includes(lvl))
+                                .map((lvl) => (
+                                  <button
+                                    key={lvl}
+                                    type="button"
+                                    onClick={() => handleUpdateItem(idx, 'discountPercentage', lvl)}
+                                    className={`px-1 py-0.5 text-[10px] rounded font-medium ${
+                                      it.discountPercentage === lvl
+                                        ? 'bg-amber-600 text-white'
+                                        : 'bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100'
+                                    }`}
+                                    title="Exceeds customer loyalty level — Requires Management Approval"
+                                  >
+                                    {lvl}%*
+                                  </button>
+                                ))}
+                            </div>
+                          ) : (
+                            <span className="text-[10px] text-amber-700 block mt-1 leading-tight max-w-[130px] mx-auto">
+                              No discount available (Approval Req.)
+                            </span>
+                          )}
+
                           {isExcessDisc && (
-                            <span className="text-xs text-amber-700 font-medium block mt-0.5">
-                              &gt; 5% Rep Limit
+                            <span
+                              className="text-[10px] text-amber-700 font-medium block mt-1 leading-tight max-w-[130px] mx-auto"
+                              title="⚠️ This discount exceeds the customer's allowed discount level. Management approval is required."
+                            >
+                              ⚠️ Approval Req.
                             </span>
                           )}
                         </td>

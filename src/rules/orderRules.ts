@@ -132,9 +132,21 @@ export function evaluateOrderApproval(
       productMaxDiscountPercentage: productMaxDisc,
       isPromotional: item.product?.isPromotional,
       promotionalDiscountPercentage: item.product?.pricing?.promotionalDiscountPercentage,
+      product: item.product,
+      customer,
     });
 
-    if (item.discountPercentage > repMaxDiscount) {
+    if (discEval.requiresSpecialApproval) {
+      discountBreached = true;
+      reasons.push(
+        `Item "${item.productNameSnapshot || item.productId}": ${discEval.reason}`
+      );
+      if (item.discountPercentage > productMaxDisc || item.discountPercentage > 15) {
+        hasDirectorDiscount = true;
+      } else {
+        hasManagerDiscount = true;
+      }
+    } else if (item.discountPercentage > repMaxDiscount) {
       discountBreached = true;
       reasons.push(
         `Item "${item.productNameSnapshot || item.productId}" discount (${item.discountPercentage}%) exceeds sales rep authority limit (${repMaxDiscount}%).`

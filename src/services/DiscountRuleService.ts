@@ -27,12 +27,15 @@ export interface DiscountApprovalRecord {
   allowedDiscountPercentage: number;
   requestedById: string;
   requestedByName: string;
+  requestedByUserName?: string;
   requestedAt: string;
   status: 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED';
   approvedById?: string;
   approvedByName?: string;
+  approvedByUserName?: string;
   approvedAt?: string;
   approvalNote?: string;
+  rejectionReason?: string;
 }
 
 export class DiscountRuleService {
@@ -139,7 +142,8 @@ export class DiscountRuleService {
   async submitDiscountApprovalRequest(params: {
     documentType: 'QUOTATION' | 'ORDER' | 'INVOICE';
     documentId: string;
-    documentReferenceNumber: string;
+    documentReferenceNumber?: string;
+    documentNumber?: string;
     productId: string;
     productName: string;
     customerId: string;
@@ -147,16 +151,23 @@ export class DiscountRuleService {
     customerLoyaltyLevel: CustomerLoyaltyLevel;
     requestedDiscountPercentage: number;
     allowedDiscountPercentage: number;
-    initiator: User;
+    initiator?: User;
+    requestedByUserId?: string;
+    requestedByUserName?: string;
+    requestedByUserRole?: UserRole;
     note?: string;
   }): Promise<DiscountApprovalRecord> {
     const recordId = `dar-${Date.now().toString().slice(-6)}-${Math.floor(Math.random() * 1000)}`;
+    const docRef = params.documentReferenceNumber || params.documentNumber || params.documentId;
+    const requestedById = params.initiator?.id || params.requestedByUserId || 'system';
+    const requestedByName = params.initiator?.name || params.requestedByUserName || 'System User';
+    const requestedByRole = params.initiator?.role || params.requestedByUserRole || 'SALES_REP';
 
     const record: DiscountApprovalRecord = {
       id: recordId,
       documentType: params.documentType,
       documentId: params.documentId,
-      documentReferenceNumber: params.documentReferenceNumber,
+      documentReferenceNumber: docRef,
       productId: params.productId,
       productName: params.productName,
       customerId: params.customerId,
@@ -164,8 +175,8 @@ export class DiscountRuleService {
       customerLoyaltyLevel: params.customerLoyaltyLevel,
       requestedDiscountPercentage: params.requestedDiscountPercentage,
       allowedDiscountPercentage: params.allowedDiscountPercentage,
-      requestedById: params.initiator.id,
-      requestedByName: params.initiator.name,
+      requestedById,
+      requestedByName,
       requestedAt: new Date().toISOString(),
       status: 'PENDING_APPROVAL',
       approvalNote: params.note,
@@ -183,12 +194,12 @@ export class DiscountRuleService {
             ? 'SPECIAL_SALES_ORDER'
             : 'QUOTATION_DISCOUNT',
         documentId: params.documentId,
-        documentReferenceNumber: params.documentReferenceNumber,
+        documentReferenceNumber: docRef,
         title: `Discount Approval Request: ${params.requestedDiscountPercentage}% on ${params.productName}`,
         description: `Customer "${params.customerName}" (${params.customerLoyaltyLevel} Loyalty) permitted up to ${params.allowedDiscountPercentage}%. Requested discount: ${params.requestedDiscountPercentage}%.`,
-        initiatorId: params.initiator.id,
-        initiatorName: params.initiator.name,
-        initiatorRole: params.initiator.role,
+        initiatorId: requestedById,
+        initiatorName: requestedByName,
+        initiatorRole: requestedByRole,
         currentApproverRole: 'SALES_MANAGER',
         targetApproverRole: params.requestedDiscountPercentage > 15 ? 'DIRECTOR' : 'SALES_MANAGER',
         isSpecialScenario: true,
@@ -198,9 +209,9 @@ export class DiscountRuleService {
           {
             id: `h-disc-${Date.now()}`,
             stepNumber: 1,
-            actorId: params.initiator.id,
-            actorName: params.initiator.name,
-            actorRole: params.initiator.role,
+            actorId: requestedById,
+            actorName: requestedByName,
+            actorRole: requestedByRole,
             action: 'APPROVE',
             fromStatus: 'DRAFT',
             toStatus: 'PENDING',
@@ -221,15 +232,31 @@ export class DiscountRuleService {
    */
   approveDiscount(
     recordId: string,
-    approver: User,
-    approvalNote?: string
+    approver: User | string,
+    approverNameOrNote?: string,
+    note?: string
   ): DiscountApprovalRecord | null {
     const record = this.approvalRecords.get(recordId);
     if (!record) return null;
 
+    let approverId: string;
+    let approverName: string;
+    let approvalNote: string | undefined;
+
+    if (typeof approver === 'object' && approver !== null) {
+      approverId = approver.id;
+      approverName = approver.name;
+      approvalNote = approverNameOrNote;
+    } else {
+      approverId = approver;
+      approverName = approverNameOrNote || 'Manager';
+      approvalNote = note;
+    }
+
     record.status = 'APPROVED';
-    record.approvedById = approver.id;
-    record.approvedByName = approver.name;
+    record.approvedById = approverId;
+    record.approvedByName = approverName;
+    record.approvedByUserName = approverName;
     record.approvedAt = new Date().toISOString();
     record.approvalNote = approvalNote || record.approvalNote || 'Discount Approved by Management';
 
@@ -241,17 +268,33 @@ export class DiscountRuleService {
    */
   rejectDiscount(
     recordId: string,
-    rejector: User,
-    rejectionReason: string
+    rejecter: User | string,
+    rejecterNameOrReason?: string,
+    reason?: string
   ): DiscountApprovalRecord | null {
     const record = this.approvalRecords.get(recordId);
     if (!record) return null;
 
+    let rejecterId: string;
+    let rejecterName: string;
+    let rejectionReason: string | undefined;
+
+    if (typeof rejecter === 'object' && rejecter !== null) {
+      rejecterId = rejecter.id;
+      rejecterName = rejecter.name;
+      rejectionReason = rejecterNameOrReason;
+    } else {
+      rejecterId = rejecter;
+      rejecterName = rejecterNameOrReason || 'Manager';
+      rejectionReason = reason;
+    }
+
     record.status = 'REJECTED';
-    record.approvedById = rejector.id;
-    record.approvedByName = rejector.name;
+    record.approvedById = rejecterId;
+    record.approvedByName = rejecterName;
+    record.approvedByUserName = rejecterName;
     record.approvedAt = new Date().toISOString();
-    record.approvalNote = rejectionReason;
+    record.rejectionReason = rejectionReason || 'Discount Rejected by Management';
 
     return record;
   }

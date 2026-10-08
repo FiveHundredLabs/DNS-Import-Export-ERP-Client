@@ -236,7 +236,22 @@ export function InvoiceDetailPage() {
                       {formatCurrency(item.unitPriceSnapshot)}
                     </TableCell>
                     <TableCell className="text-right font-mono text-xs tabular-nums text-slate-600">
-                      {item.discountPercentage > 0 ? `${item.discountPercentage}%` : '-'}
+                      <div>{item.discountPercentage > 0 ? `${item.discountPercentage}%` : '-'}</div>
+                      {item.discountApprovalStatus === 'PENDING_APPROVAL' && (
+                        <span className="inline-block text-[10px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5 mt-0.5 whitespace-nowrap">
+                          Pending Management Approval
+                        </span>
+                      )}
+                      {item.discountApprovalStatus === 'APPROVED' && (
+                        <span className="inline-block text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded px-1.5 py-0.5 mt-0.5 whitespace-nowrap">
+                          Discount Approved
+                        </span>
+                      )}
+                      {item.discountApprovalStatus === 'REJECTED' && (
+                        <span className="inline-block text-[10px] font-semibold text-rose-700 bg-rose-50 border border-rose-200 rounded px-1.5 py-0.5 mt-0.5 whitespace-nowrap">
+                          Discount Rejected
+                        </span>
+                      )}
                     </TableCell>
                     <TableCell className="text-right font-mono text-xs tabular-nums text-slate-600">
                       {item.taxPercentage}%
