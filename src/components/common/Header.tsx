@@ -13,6 +13,7 @@ import { UserProfileMenu } from '../header/UserProfileMenu';
 import { CurrencyConverterPopover } from '../header/CurrencyConverterPopover';
 import { CalculatorPopover } from '../header/CalculatorPopover';
 import { NotificationsPopover } from '../header/NotificationsPopover';
+import { useAuth } from '../../hooks/useAuth';
 
 interface HeaderProps {
   onToggleSidebar: () => void;
@@ -39,11 +40,15 @@ const ROUTE_TITLES: Record<string, string> = {
 export function Header({ onToggleSidebar }: HeaderProps) {
   const location = useLocation();
   const navigate = useNavigate();
+  const { role } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [overflowOpen, setOverflowOpen] = useState(false);
   const [mobileCurrencyOpen, setMobileCurrencyOpen] = useState(false);
   const [mobileCalculatorOpen, setMobileCalculatorOpen] = useState(false);
   const overflowRef = useRef<HTMLDivElement>(null);
+
+  // Sales Rep & Area Manager use the bottom nav on mobile — no hamburger/sidebar needed
+  const isMobileNavRole = role === 'SALES_REP' || role === 'AREA_MANAGER';
 
   useEffect(() => {
     function handlePointerDown(e: MouseEvent) {
@@ -80,6 +85,9 @@ export function Header({ onToggleSidebar }: HeaderProps) {
           >
             <ArrowLeft className="h-5 w-5" />
           </button>
+        ) : isMobileNavRole ? (
+          // Sales Rep / Area Manager: no hamburger on mobile — bottom nav handles all navigation
+          null
         ) : (
           <button
             onClick={onToggleSidebar}

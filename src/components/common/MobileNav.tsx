@@ -21,6 +21,7 @@ import {
   ChevronRight,
   Clock,
   Layers,
+  Receipt,
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { cn } from '../../utils/cn';
@@ -68,6 +69,7 @@ export function MobileNav() {
     location.pathname.startsWith('/inventory') ||
     location.pathname.startsWith('/commissions') ||
     location.pathname.startsWith('/reports') ||
+    location.pathname.startsWith('/invoices') ||
     location.pathname.startsWith('/approvals');
 
   const handleNavClick = (path: string) => {
@@ -86,29 +88,42 @@ export function MobileNav() {
       {/* 1. Fixed Bottom Navigation Bar (5 Items) */}
       <nav
         aria-label="Mobile Navigation"
-        className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-xl border-t border-slate-200/80 shadow-[0_-4px_20px_rgba(0,0,0,0.04)] md:hidden pb-[env(safe-area-inset-bottom)]"
+        className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-2xl border-t border-slate-200/80 shadow-[0_-8px_30px_rgba(0,0,0,0.06)] md:hidden rounded-t-[20px] pb-[calc(0.4rem+env(safe-area-inset-bottom,0px))]"
       >
-        <div className="grid grid-cols-5 h-16 items-center px-1">
+        <div className="grid grid-cols-5 h-[66px] items-center px-1">
           {/* 1. Dashboard */}
           <NavLink
             to="/"
             end
             className={({ isActive }) =>
               cn(
-                'flex flex-col items-center justify-center min-h-[50px] py-1 px-1 transition-all rounded-xl active:scale-95',
-                isActive
-                  ? 'text-primary font-bold'
-                  : 'text-slate-500 hover:text-slate-800'
+                'group flex flex-col items-center justify-center h-full py-1 transition-all select-none active:scale-95',
+                isActive ? 'text-primary' : 'text-slate-400 hover:text-slate-700'
               )
             }
           >
-            <div className={cn('relative p-1.5 rounded-xl transition-all', isDashboardActive && 'bg-primary-light text-primary shadow-2xs')}>
-              <LayoutDashboard className="h-5 w-5" />
-              {isDashboardActive && (
-                <span className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 h-1 w-1 rounded-full bg-primary" />
-              )}
-            </div>
-            <span className="text-[10.5px] font-semibold tracking-tight mt-0.5">Dashboard</span>
+            {({ isActive }) => (
+              <>
+                <div
+                  className={cn(
+                    'flex h-8 w-12 items-center justify-center rounded-full transition-all duration-200',
+                    isActive
+                      ? 'bg-primary-light text-primary font-bold shadow-2xs'
+                      : 'text-slate-400 group-hover:bg-slate-100 group-hover:text-slate-600'
+                  )}
+                >
+                  <LayoutDashboard className={cn('h-5 w-5 transition-transform', isActive && 'scale-105 stroke-[2.2]')} />
+                </div>
+                <span
+                  className={cn(
+                    'text-[10.5px] tracking-tight mt-0.5 transition-colors',
+                    isActive ? 'font-bold text-primary' : 'font-medium text-slate-500'
+                  )}
+                >
+                  Dashboard
+                </span>
+              </>
+            )}
           </NavLink>
 
           {/* 2. Customers */}
@@ -116,44 +131,62 @@ export function MobileNav() {
             to="/customers"
             className={({ isActive }) =>
               cn(
-                'flex flex-col items-center justify-center min-h-[50px] py-1 px-1 transition-all rounded-xl active:scale-95',
-                isActive || isCustomersActive
-                  ? 'text-primary font-bold'
-                  : 'text-slate-500 hover:text-slate-800'
+                'group flex flex-col items-center justify-center h-full py-1 transition-all select-none active:scale-95',
+                isActive || isCustomersActive ? 'text-primary' : 'text-slate-400 hover:text-slate-700'
               )
             }
           >
-            <div className={cn('relative p-1.5 rounded-xl transition-all', isCustomersActive && 'bg-primary-light text-primary shadow-2xs')}>
-              <Users className="h-5 w-5" />
-              {isCustomersActive && (
-                <span className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 h-1 w-1 rounded-full bg-primary" />
-              )}
-            </div>
-            <span className="text-[10.5px] font-semibold tracking-tight mt-0.5">Customers</span>
+            {() => {
+              const active = isCustomersActive;
+              return (
+                <>
+                  <div
+                    className={cn(
+                      'flex h-8 w-12 items-center justify-center rounded-full transition-all duration-200',
+                      active
+                        ? 'bg-primary-light text-primary font-bold shadow-2xs'
+                        : 'text-slate-400 group-hover:bg-slate-100 group-hover:text-slate-600'
+                    )}
+                  >
+                    <Users className={cn('h-5 w-5 transition-transform', active && 'scale-105 stroke-[2.2]')} />
+                  </div>
+                  <span
+                    className={cn(
+                      'text-[10.5px] tracking-tight mt-0.5 transition-colors',
+                      active ? 'font-bold text-primary' : 'font-medium text-slate-500'
+                    )}
+                  >
+                    Customers
+                  </span>
+                </>
+              );
+            }}
           </NavLink>
 
-          {/* 3. Center Elevated Floating Action Button (FAB) for Orders (Inspired by Reference Screenshot) */}
+          {/* 3. Center Elevated Floating Action Button (FAB) for Orders */}
           <NavLink
             to="/orders"
             aria-label="Orders & Quick Sales"
-            className={({ isActive }) =>
-              cn(
-                'flex flex-col items-center justify-center -mt-6 group transition-all',
-                isActive || isOrdersActive ? 'text-primary font-bold' : 'text-slate-600'
-              )
-            }
+            className="group relative flex flex-col items-center justify-center -mt-6 select-none active:scale-90 transition-transform"
           >
             <div
               className={cn(
-                'flex h-13 w-13 items-center justify-center rounded-full shadow-lg ring-4 ring-white active:scale-90 transition-transform cursor-pointer',
+                'flex h-[52px] w-[52px] items-center justify-center rounded-full shadow-[0_8px_20px_rgba(0,0,0,0.18)] ring-4 ring-white transition-all duration-200 cursor-pointer',
                 isOrdersActive
-                  ? 'bg-gradient-to-tr from-primary to-primary-hover text-primary-foreground shadow-primary/35'
-                  : 'bg-primary text-primary-foreground shadow-primary/25 hover:bg-primary-hover'
+                  ? 'bg-gradient-to-tr from-primary to-primary-hover text-white ring-primary/20 shadow-[0_10px_24px_rgba(0,0,0,0.28)] scale-105'
+                  : 'bg-primary text-white hover:brightness-105'
               )}
             >
-              <ShoppingCart className="h-6 w-6" />
+              <ShoppingCart className="h-6 w-6 stroke-[2.2] text-white" />
             </div>
-            <span className="text-[10px] font-bold tracking-tight mt-1 text-slate-700">Orders</span>
+            <span
+              className={cn(
+                'text-[10.5px] font-bold tracking-tight mt-1 transition-colors',
+                isOrdersActive ? 'text-primary' : 'text-slate-700 group-hover:text-primary'
+              )}
+            >
+              Orders
+            </span>
           </NavLink>
 
           {/* 4. Warranty */}
@@ -161,20 +194,36 @@ export function MobileNav() {
             to="/warranty"
             className={({ isActive }) =>
               cn(
-                'flex flex-col items-center justify-center min-h-[50px] py-1 px-1 transition-all rounded-xl active:scale-95',
-                isActive || isWarrantyActive
-                  ? 'text-primary font-bold'
-                  : 'text-slate-500 hover:text-slate-800'
+                'group flex flex-col items-center justify-center h-full py-1 transition-all select-none active:scale-95',
+                isActive || isWarrantyActive ? 'text-primary' : 'text-slate-400 hover:text-slate-700'
               )
             }
           >
-            <div className={cn('relative p-1.5 rounded-xl transition-all', isWarrantyActive && 'bg-primary-light text-primary shadow-2xs')}>
-              <ShieldCheck className="h-5 w-5" />
-              {isWarrantyActive && (
-                <span className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 h-1 w-1 rounded-full bg-primary" />
-              )}
-            </div>
-            <span className="text-[10.5px] font-semibold tracking-tight mt-0.5">Warranty</span>
+            {() => {
+              const active = isWarrantyActive;
+              return (
+                <>
+                  <div
+                    className={cn(
+                      'flex h-8 w-12 items-center justify-center rounded-full transition-all duration-200',
+                      active
+                        ? 'bg-primary-light text-primary font-bold shadow-2xs'
+                        : 'text-slate-400 group-hover:bg-slate-100 group-hover:text-slate-600'
+                    )}
+                  >
+                    <ShieldCheck className={cn('h-5 w-5 transition-transform', active && 'scale-105 stroke-[2.2]')} />
+                  </div>
+                  <span
+                    className={cn(
+                      'text-[10.5px] tracking-tight mt-0.5 transition-colors',
+                      active ? 'font-bold text-primary' : 'font-medium text-slate-500'
+                    )}
+                  >
+                    Warranty
+                  </span>
+                </>
+              );
+            }}
           </NavLink>
 
           {/* 5. More ⋯ (Opens Bottom Sheet) */}
@@ -184,19 +233,28 @@ export function MobileNav() {
             aria-expanded={moreOpen}
             aria-label="Open More features menu"
             className={cn(
-              'flex flex-col items-center justify-center min-h-[50px] py-1 px-1 transition-all rounded-xl active:scale-95 focus:outline-none',
-              moreOpen || isMoreRouteActive
-                ? 'text-primary font-bold'
-                : 'text-slate-500 hover:text-slate-800'
+              'group flex flex-col items-center justify-center h-full py-1 transition-all select-none active:scale-95 focus:outline-none',
+              moreOpen || isMoreRouteActive ? 'text-primary' : 'text-slate-400 hover:text-slate-700'
             )}
           >
-            <div className={cn('relative p-1.5 rounded-xl transition-all', (moreOpen || isMoreRouteActive) && 'bg-primary-light text-primary shadow-2xs')}>
-              <MoreHorizontal className="h-5 w-5" />
-              {(moreOpen || isMoreRouteActive) && (
-                <span className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 h-1 w-1 rounded-full bg-primary" />
+            <div
+              className={cn(
+                'flex h-8 w-12 items-center justify-center rounded-full transition-all duration-200',
+                moreOpen || isMoreRouteActive
+                  ? 'bg-primary-light text-primary font-bold shadow-2xs'
+                  : 'text-slate-400 group-hover:bg-slate-100 group-hover:text-slate-600'
               )}
+            >
+              <MoreHorizontal className={cn('h-5 w-5 transition-transform', (moreOpen || isMoreRouteActive) && 'scale-105 stroke-[2.2]')} />
             </div>
-            <span className="text-[10.5px] font-semibold tracking-tight mt-0.5">More ⋯</span>
+            <span
+              className={cn(
+                'text-[10.5px] tracking-tight mt-0.5 transition-colors',
+                moreOpen || isMoreRouteActive ? 'font-bold text-primary' : 'font-medium text-slate-500'
+              )}
+            >
+              More ⋯
+            </span>
           </button>
         </div>
       </nav>
@@ -336,6 +394,42 @@ export function MobileNav() {
               <div className="min-w-0">
                 <div className="text-xs font-semibold truncate">Shop Follow-ups</div>
                 <div className="text-[10.5px] text-slate-400 truncate">Pending Notes</div>
+              </div>
+            </button>
+
+            <button
+              onClick={() => handleNavClick('/invoices')}
+              className={cn(
+                'flex items-center gap-3 p-3 rounded-2xl border text-left transition-all',
+                location.pathname.startsWith('/invoices')
+                  ? 'border-primary bg-primary-light/50 text-primary-text font-semibold'
+                  : 'border-slate-200/80 bg-white hover:bg-slate-50 text-slate-700'
+              )}
+            >
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-violet-50 text-violet-600">
+                <Receipt className="h-4 w-4" />
+              </div>
+              <div className="min-w-0">
+                <div className="text-xs font-semibold truncate">Invoices</div>
+                <div className="text-[10.5px] text-slate-400 truncate">Tax &amp; Billing</div>
+              </div>
+            </button>
+
+            <button
+              onClick={() => handleNavClick('/approvals')}
+              className={cn(
+                'flex items-center gap-3 p-3 rounded-2xl border text-left transition-all',
+                location.pathname.startsWith('/approvals')
+                  ? 'border-primary bg-primary-light/50 text-primary-text font-semibold'
+                  : 'border-slate-200/80 bg-white hover:bg-slate-50 text-slate-700'
+              )}
+            >
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-rose-50 text-rose-600">
+                <CheckCircle className="h-4 w-4" />
+              </div>
+              <div className="min-w-0">
+                <div className="text-xs font-semibold truncate">Approvals</div>
+                <div className="text-[10.5px] text-slate-400 truncate">Engine Queue</div>
               </div>
             </button>
           </div>

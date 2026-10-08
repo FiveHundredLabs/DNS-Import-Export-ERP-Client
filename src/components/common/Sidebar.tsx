@@ -294,10 +294,13 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     );
   };
 
+  // Sales Rep & Area Manager use the bottom nav on mobile — no sidebar overlay needed for them
+  const isMobileNavRole = currentUser.role === 'SALES_REP' || currentUser.role === 'AREA_MANAGER';
+
   return (
     <>
-      {/* Mobile Backdrop */}
-      {isOpen && (
+      {/* Mobile Backdrop — hidden for mobile nav roles (they use the bottom nav instead) */}
+      {isOpen && !isMobileNavRole && (
         <div
           className="fixed inset-0 z-40 bg-slate-900/40 backdrop-blur-xs md:hidden"
           onClick={onClose}
@@ -309,7 +312,10 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       <aside
         className={cn(
           'fixed inset-y-0 left-0 z-50 flex h-full select-none transition-transform duration-200 ease-in-out md:static md:translate-x-0',
-          isOpen ? 'translate-x-0' : '-translate-x-full'
+          // On mobile, mobile nav roles always stay hidden (translate-x-full)
+          isMobileNavRole
+            ? 'md:translate-x-0 -translate-x-full'
+            : isOpen ? 'translate-x-0' : '-translate-x-full'
         )}
       >
         {/* ========================================================================= */}
