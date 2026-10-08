@@ -346,7 +346,7 @@ export function evaluateDiscount(
         isValid: true,
         requiresSpecialApproval: true,
         allowedDiscountPercentage: loyaltyEval.allowedDiscountPercentage,
-        reason: `Requested discount (${params.requestedDiscountPercentage}%) exceeds sales rep authority limit (${repLimit}%). Requires Management Approval.`,
+        reason: `Requested discount (${params.requestedDiscountPercentage}%) exceeds standard limit / sales rep authority limit (${repLimit}%). Requires Management Approval.`,
         status: 'REQUIRES_APPROVAL',
       };
     }
