@@ -22,7 +22,7 @@ export interface WarrantyNote extends BaseEntity {
   productId: string;
   productName: string;
   sku: string;
-  barcode?: string;
+  barcode?: string; // Unique barcode assigned to this specific individual unit
   serialNumber: string;
   distributorSaleDate: string; // Date distributor sold unit to end-customer (YYYY-MM-DD)
   receivedDate: string; // Date DNS ERP received the warranty note (YYYY-MM-DD)
@@ -45,7 +45,7 @@ export interface WarrantyRecord extends BaseEntity {
   productId: string;
   productName: string;
   sku: string;
-  barcode?: string;
+  barcode?: string; // Unique barcode assigned to this specific individual unit (not product-level)
   serialNumber?: string;
   saleDate: string; // ISO string or YYYY-MM-DD
   warrantyStartDate: string;

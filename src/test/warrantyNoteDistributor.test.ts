@@ -172,6 +172,57 @@ describe('Distributor Warranty Note Management & Sales Manager Validation', () =
       expect(updatedRecord?.endCustomerName).toBe('Aruna Jayasekera (Apex Towers Project)');
     });
 
+    it('tracks exact individual unit by its unique barcode (each unit has unique barcode)', async () => {
+      // Create two different units of the same product
+      const unit1 = await warrantyRepo.createRecord({
+        invoiceId: mockDistributorInvoice.id,
+        invoiceNumber: mockDistributorInvoice.invoiceNumber,
+        customerId: mockDistributorInvoice.customerId,
+        customerName: mockDistributorInvoice.customerName,
+        productId: 'prod-001',
+        productName: 'Schneider Acti9 32A Double Pole MCB',
+        sku: 'DNS-MCB-32A-2P',
+        barcode: 'BC-UNIT-SCH-001',
+        serialNumber: 'SN-SCH-001',
+        saleDate: '2025-01-10',
+        warrantyStartDate: '2025-01-10',
+        warrantyPeriodMonths: 24,
+        warrantyExpiryDate: '2027-01-10',
+        saleType: 'DEALER',
+        status: 'ACTIVE',
+        notesReceived: false,
+      });
+
+      const unit2 = await warrantyRepo.createRecord({
+        invoiceId: mockDistributorInvoice.id,
+        invoiceNumber: mockDistributorInvoice.invoiceNumber,
+        customerId: mockDistributorInvoice.customerId,
+        customerName: mockDistributorInvoice.customerName,
+        productId: 'prod-001',
+        productName: 'Schneider Acti9 32A Double Pole MCB',
+        sku: 'DNS-MCB-32A-2P',
+        barcode: 'BC-UNIT-SCH-002',
+        serialNumber: 'SN-SCH-002',
+        saleDate: '2025-01-10',
+        warrantyStartDate: '2025-01-10',
+        warrantyPeriodMonths: 24,
+        warrantyExpiryDate: '2027-01-10',
+        saleType: 'DEALER',
+        status: 'ACTIVE',
+        notesReceived: false,
+      });
+
+      // Tracking unit 1 by its unique barcode identifies unit 1
+      const found1 = await warrantySvc.getWarrantyByUnitBarcode('BC-UNIT-SCH-001');
+      expect(found1?.id).toBe(unit1.id);
+      expect(found1?.serialNumber).toBe('SN-SCH-001');
+
+      // Tracking unit 2 by its unique barcode identifies unit 2
+      const found2 = await warrantySvc.getWarrantyByUnitBarcode('BC-UNIT-SCH-002');
+      expect(found2?.id).toBe(unit2.id);
+      expect(found2?.serialNumber).toBe('SN-SCH-002');
+    });
+
     it('rejects unauthorized roles (e.g. SALES_REP) from entering distributor warranty notes', async () => {
       await expect(
         warrantySvc.recordWarrantyNote(

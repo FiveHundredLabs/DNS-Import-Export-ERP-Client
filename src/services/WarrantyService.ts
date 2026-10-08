@@ -194,6 +194,24 @@ export class WarrantyService {
   }
 
   /**
+   * Looks up a specific warranty unit by its unique individual unit barcode.
+   * Barcodes are assigned to each individual unit, not to the product itself.
+   */
+  async getWarrantyByUnitBarcode(barcode: string): Promise<WarrantyRecord | null> {
+    const term = barcode.trim().toLowerCase();
+    if (!term) return null;
+    const res = await this.repo.getAllRecords({ search: term, pageSize: 1000 });
+    const records = res.data || (res as any).items || [];
+    return (
+      records.find(
+        (r) =>
+          (r.barcode && r.barcode.toLowerCase() === term) ||
+          (r.serialNumber && r.serialNumber.toLowerCase() === term)
+      ) || null
+    );
+  }
+
+  /**
    * Lodges a new warranty claim against an active warranty record.
    * Enforces strict expiration check against complaint date.
    * Enforces validation based on distributor warranty note for dealer/distributor sales.

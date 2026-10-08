@@ -56,6 +56,7 @@ export class MockWarrantyRepository implements IWarrantyRepository {
           r.sku.toLowerCase().includes(q) ||
           r.customerName.toLowerCase().includes(q) ||
           r.invoiceNumber.toLowerCase().includes(q) ||
+          (r.barcode && r.barcode.toLowerCase().includes(q)) ||
           (r.serialNumber && r.serialNumber.toLowerCase().includes(q))
       );
     }
@@ -231,6 +232,7 @@ export class MockWarrantyRepository implements IWarrantyRepository {
           n.distributorName.toLowerCase().includes(q) ||
           n.productName.toLowerCase().includes(q) ||
           n.sku.toLowerCase().includes(q) ||
+          (n.barcode && n.barcode.toLowerCase().includes(q)) ||
           n.serialNumber.toLowerCase().includes(q) ||
           (n.endCustomerName && n.endCustomerName.toLowerCase().includes(q))
       );

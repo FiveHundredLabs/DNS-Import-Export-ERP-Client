@@ -139,7 +139,7 @@ export function RecordWarrantyNoteModal({
 
   const selectedRecord = availableRecords.find((r) => r.id === selectedRecordId);
 
-  // Track unit details through barcode number input
+  // Track unit details through unit's unique barcode number
   const trackByBarcode = (query: string) => {
     const term = query.trim().toLowerCase();
     if (!term) {
@@ -147,12 +147,12 @@ export function RecordWarrantyNoteModal({
       return;
     }
 
-    // Look through available distributor warranty records by barcode, serial number, or SKU
+    // Look through available distributor warranty records by unit's unique barcode or serial number.
+    // Barcode is assigned to each individual unit of the product, not the product itself.
     const matchedRecord = availableRecords.find((r) => {
       const matchBarcode = r.barcode && r.barcode.toLowerCase() === term;
       const matchSerial = r.serialNumber && r.serialNumber.toLowerCase() === term;
-      const matchSku = r.sku && r.sku.toLowerCase() === term;
-      return matchBarcode || matchSerial || matchSku;
+      return matchBarcode || matchSerial;
     });
 
     if (matchedRecord) {
@@ -163,7 +163,7 @@ export function RecordWarrantyNoteModal({
       }
       setBarcodeLookupMessage({
         type: 'success',
-        message: `Unit Located & Tracked via Barcode`,
+        message: `Unique Unit Located & Tracked via Unit Barcode`,
         details: {
           productName: matchedRecord.productName,
           sku: matchedRecord.sku,
@@ -178,7 +178,7 @@ export function RecordWarrantyNoteModal({
       return;
     }
 
-    // Partial substring match on barcode or serial
+    // Substring match on unique unit barcode or unit serial number
     const partialMatch = availableRecords.find(
       (r) =>
         (r.barcode && r.barcode.toLowerCase().includes(term)) ||
@@ -193,7 +193,7 @@ export function RecordWarrantyNoteModal({
       }
       setBarcodeLookupMessage({
         type: 'success',
-        message: `Unit Located & Tracked via Partial Match`,
+        message: `Unique Unit Located & Tracked via Partial Barcode Match`,
         details: {
           productName: partialMatch.productName,
           sku: partialMatch.sku,
@@ -210,7 +210,7 @@ export function RecordWarrantyNoteModal({
 
     setBarcodeLookupMessage({
       type: 'error',
-      message: `No distributor warranty record matches barcode "${query}". You can select the unit manually from the list below.`,
+      message: `No unit found with barcode "${query}". Each individual unit has its own unique barcode. Please verify the unit barcode sticker or select the unit from the list below.`,
     });
   };
 
@@ -342,17 +342,21 @@ export function RecordWarrantyNoteModal({
           </Alert>
         )}
 
-        {/* Barcode Number Auto-Tracker Card */}
+        {/* Unit Unique Barcode Auto-Tracker Card */}
         <div className="p-3.5 bg-indigo-50/60 rounded-xl border border-indigo-200 space-y-2.5">
           <div className="flex items-center justify-between">
             <label className="font-semibold text-indigo-950 flex items-center gap-1.5 text-xs">
               <Barcode className="h-4 w-4 text-indigo-600" />
-              Enter / Scan Barcode Number
+              Enter / Scan Unique Unit Barcode Number
             </label>
             <span className="text-[10px] text-indigo-600 font-medium">
-              Tracks product, distributor, invoice & serial
+              Unique per individual unit
             </span>
           </div>
+
+          <p className="text-[11px] text-indigo-900/80 leading-relaxed">
+            Each individual unit of the product has its own unique barcode sticker. Entering or scanning the unit barcode uniquely tracks all its details (product, model, serial, distributor & invoice).
+          </p>
 
           <div className="flex gap-2">
             <div className="relative flex-1">
@@ -367,7 +371,7 @@ export function RecordWarrantyNoteModal({
                     trackByBarcode(barcodeInput);
                   }
                 }}
-                placeholder="Scan barcode (e.g. 8901020304011) or type serial number..."
+                placeholder="Scan unique unit barcode (e.g. 8901020304011) or serial..."
                 className="pl-9 text-xs font-mono h-9 bg-white border-indigo-200 focus:border-indigo-500"
               />
             </div>
@@ -378,7 +382,7 @@ export function RecordWarrantyNoteModal({
               className="h-9 px-3 bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-xs gap-1.5 shrink-0 shadow-xs"
             >
               <ScanLine className="h-3.5 w-3.5" />
-              Track Details
+              Track Unit
             </Button>
           </div>
 
@@ -497,7 +501,7 @@ export function RecordWarrantyNoteModal({
               ) : (
                 filteredRecords.map((r) => (
                   <SelectItem key={r.id} value={r.id}>
-                    {r.productName} | SN: {r.serialNumber || 'N/A'} (Inv: {r.invoiceNumber} - {r.customerName})
+                    {r.productName} — Unit Barcode: {r.barcode || 'N/A'} (SN: {r.serialNumber || 'N/A'}, Inv: {r.invoiceNumber})
                   </SelectItem>
                 ))
               )}
@@ -505,6 +509,14 @@ export function RecordWarrantyNoteModal({
           </Select>
           {selectedRecord && !barcodeLookupMessage?.details && (
             <div className="mt-1.5 p-2 rounded-lg bg-slate-50 border border-slate-200 text-[11px] grid grid-cols-2 gap-2 text-slate-600">
+              <div>
+                <span className="text-slate-400 block text-[10px]">Unit Barcode:</span>
+                <span className="font-mono font-medium text-indigo-700">{selectedRecord.barcode || 'N/A'}</span>
+              </div>
+              <div>
+                <span className="text-slate-400 block text-[10px]">Serial Number:</span>
+                <span className="font-mono font-medium text-slate-800">{selectedRecord.serialNumber || 'N/A'}</span>
+              </div>
               <div>
                 <span className="text-slate-400 block text-[10px]">Product SKU:</span>
                 <span className="font-mono font-medium text-slate-800">{selectedRecord.sku}</span>
