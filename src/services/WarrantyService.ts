@@ -12,6 +12,9 @@ import {
   ClaimFilters,
   WarrantySaleType,
   ClaimResolutionType,
+  WarrantyNote,
+  WarrantyNoteFilters,
+  RecordWarrantyNoteDTO,
 } from '../types/warranty';
 import { Invoice, InvoiceItem } from '../types/invoice';
 import { User } from '../types/auth';
@@ -21,6 +24,7 @@ import {
   isWarrantyValid,
   calculatePendingWarrantyNotes,
   determineWarrantyStartDate,
+  canProcessWarrantyClaim,
 } from '../rules/warrantyRules';
 
 export interface CreateClaimDTO {
@@ -75,6 +79,15 @@ export class WarrantyService {
     const warrantyExpiryDate = calculateWarrantyExpiry(warrantyStartDate, periodMonths);
     const notesReceived = saleType === 'SHOWROOM' || !!dealerSoldDate;
 
+    let warrantyNoteId: string | undefined;
+    let warrantyNoteNumber: string | undefined;
+    let warrantyNoteStatus: 'PENDING_REVIEW' | 'VERIFIED' | 'REJECTED' | undefined;
+
+    if (saleType === 'DEALER' && dealerSoldDate) {
+      warrantyNoteNumber = `WN-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
+      warrantyNoteStatus = 'VERIFIED';
+    }
+
     const record = await this.repo.createRecord({
       invoiceId: invoice.id,
       invoiceNumber: invoice.invoiceNumber,
@@ -93,7 +106,42 @@ export class WarrantyService {
       dealerSoldDate,
       notesReceived,
       notesReceivedDate: notesReceived ? new Date().toISOString() : undefined,
+      warrantyNoteId,
+      warrantyNoteNumber,
+      warrantyNoteStatus,
     });
+
+    if (saleType === 'DEALER' && dealerSoldDate && warrantyNoteNumber) {
+      try {
+        const note = await this.repo.createWarrantyNote({
+          noteNumber: warrantyNoteNumber,
+          warrantyRecordId: record.id,
+          invoiceId: invoice.id,
+          invoiceNumber: invoice.invoiceNumber,
+          distributorId: invoice.customerId,
+          distributorName: invoice.customerName,
+          productId: item.productId,
+          productName: item.productNameSnapshot,
+          sku: item.skuSnapshot,
+          serialNumber: record.serialNumber || '',
+          distributorSaleDate: dealerSoldDate,
+          receivedDate: invoice.issueDate,
+          status: 'VERIFIED',
+          reviewNotes: 'Auto-verified with registered distributor delivery card.',
+          enteredByUserId: invoice.salesRepId || 'usr-system',
+          enteredByUserName: invoice.salesRepName || 'System / Field Sales',
+          reviewedByUserId: 'usr-103',
+          reviewedByUserName: 'Kamal Perera',
+          reviewedAt: new Date().toISOString(),
+        });
+        await this.repo.updateRecord(record.id, {
+          warrantyNoteId: note.id,
+        });
+        record.warrantyNoteId = note.id;
+      } catch (err) {
+        console.warn('Could not persist initial warranty note:', err);
+      }
+    }
 
     // Update shop follow-up tracking for dealer sales
     if (saleType === 'DEALER') {
@@ -148,11 +196,26 @@ export class WarrantyService {
   /**
    * Lodges a new warranty claim against an active warranty record.
    * Enforces strict expiration check against complaint date.
+   * Enforces validation based on distributor warranty note for dealer/distributor sales.
    */
   async createClaim(data: CreateClaimDTO, _user?: User): Promise<WarrantyClaim> {
     const record = await this.repo.getRecordById(data.warrantyRecordId);
     if (!record) {
       throw new Error(`Warranty record with ID ${data.warrantyRecordId} not found`);
+    }
+
+    // Distributor sales validation:
+    // Company sells to distributors, not direct end-customers. Therefore, warranty claims
+    // must be validated based on the warranty note received from the distributor.
+    if (record.saleType === 'DEALER') {
+      const claimCheck = canProcessWarrantyClaim(
+        record.saleType,
+        record.notesReceived,
+        record.warrantyNoteStatus
+      );
+      if (!claimCheck.allowed) {
+        throw new Error(claimCheck.reason);
+      }
     }
 
     const complaintDate = data.complaintDate || new Date().toISOString().split('T')[0];
@@ -188,6 +251,11 @@ export class WarrantyService {
       complaintDate,
       complaintReason: data.complaintReason,
       status: 'SUBMITTED',
+      warrantyNoteId: record.warrantyNoteId,
+      warrantyNoteNumber: record.warrantyNoteNumber,
+      distributorId: record.customerId,
+      distributorName: record.customerName,
+      endCustomerName: record.endCustomerName,
     });
 
     // Mark warranty record status as CLAIMED
@@ -225,12 +293,223 @@ export class WarrantyService {
     if (!claim) {
       throw new Error(`Warranty claim ${claimId} not found`);
     }
+
+    // Verify distributor note validation before approving
+    if (claim.warrantyRecordId) {
+      const record = await this.repo.getRecordById(claim.warrantyRecordId);
+      if (record && record.saleType === 'DEALER') {
+        const claimCheck = canProcessWarrantyClaim(
+          record.saleType,
+          record.notesReceived,
+          record.warrantyNoteStatus
+        );
+        if (!claimCheck.allowed) {
+          throw new Error(claimCheck.reason);
+        }
+      }
+    }
+
     return this.repo.updateClaim(claimId, {
       status: 'APPROVED',
       inspectedById: claim.inspectedById || user.id,
       resolutionNotes: notes ? (claim.resolutionNotes ? `${claim.resolutionNotes}\n${notes}` : notes) : claim.resolutionNotes,
     });
   }
+
+  // ================= Distributor Warranty Notes =================
+
+  /**
+   * Enters and records a distributor warranty note in the system.
+   * Specifically available for the Sales Manager (and authorized management: Manager/Director).
+   * Validates the distributor sale, recalculates warranty lifecycle dates, and links to master records.
+   */
+  async recordWarrantyNote(data: RecordWarrantyNoteDTO, user: User): Promise<WarrantyNote> {
+    const allowedRoles: string[] = ['SALES_MANAGER', 'MANAGER', 'DIRECTOR'];
+    if (!allowedRoles.includes(user.role)) {
+      throw new Error(
+        'Access denied: Only the Sales Manager or authorized management can enter and record distributor warranty notes.'
+      );
+    }
+
+    const record = await this.repo.getRecordById(data.warrantyRecordId);
+    if (!record) {
+      throw new Error(`Warranty record with ID ${data.warrantyRecordId} not found.`);
+    }
+
+    const noteNumber =
+      data.noteNumber?.trim() ||
+      `WN-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
+
+    const receivedDate = data.receivedDate || new Date().toISOString().split('T')[0];
+    const isVerified = data.verifyImmediately ?? false;
+    const status = isVerified ? 'VERIFIED' : 'PENDING_REVIEW';
+
+    const note = await this.repo.createWarrantyNote({
+      noteNumber,
+      warrantyRecordId: record.id,
+      invoiceId: record.invoiceId,
+      invoiceNumber: record.invoiceNumber,
+      distributorId: record.customerId,
+      distributorName: record.customerName,
+      productId: record.productId,
+      productName: record.productName,
+      sku: record.sku,
+      serialNumber: data.serialNumber || record.serialNumber || '',
+      distributorSaleDate: data.distributorSaleDate,
+      receivedDate,
+      endCustomerName: data.endCustomerName,
+      endCustomerPhone: data.endCustomerPhone,
+      endCustomerAddress: data.endCustomerAddress,
+      status,
+      reviewNotes: data.reviewNotes || (isVerified ? 'Verified upon entry by Sales Manager.' : undefined),
+      reviewedByUserId: isVerified ? user.id : undefined,
+      reviewedByUserName: isVerified ? user.name : undefined,
+      reviewedAt: isVerified ? new Date().toISOString() : undefined,
+      enteredByUserId: user.id,
+      enteredByUserName: user.name,
+    });
+
+    // Recalculate warranty start date & expiry date based on distributor sold date
+    const newStartDate = data.distributorSaleDate;
+    const newExpiryDate = calculateWarrantyExpiry(newStartDate, record.warrantyPeriodMonths);
+
+    await this.repo.updateRecord(record.id, {
+      dealerSoldDate: data.distributorSaleDate,
+      warrantyStartDate: newStartDate,
+      warrantyExpiryDate: newExpiryDate,
+      notesReceived: isVerified,
+      notesReceivedDate: isVerified ? receivedDate : undefined,
+      warrantyNoteId: note.id,
+      warrantyNoteNumber: note.noteNumber,
+      warrantyNoteStatus: note.status,
+      endCustomerName: data.endCustomerName,
+      serialNumber: data.serialNumber || record.serialNumber,
+    });
+
+    // Update shop follow-up tracking and Customer Master when note is verified
+    if (isVerified) {
+      try {
+        const existingFollowUp = await this.repo.getFollowUpByCustomerId(record.customerId);
+        const customer = await this.customerRepo.getById(record.customerId);
+
+        const baseSold = existingFollowUp?.totalUnitsSold ?? customer?.warrantyNotesExpected ?? 0;
+        const baseReceived = existingFollowUp?.warrantyNotesReceived ?? customer?.warrantyNotesReceived ?? 0;
+        const newReceived = baseReceived + 1;
+        const newPending = calculatePendingWarrantyNotes(baseSold, newReceived);
+
+        await this.repo.saveFollowUp({
+          customerId: record.customerId,
+          customerName: record.customerName,
+          totalUnitsSold: baseSold,
+          warrantyNotesReceived: newReceived,
+          pendingNotesCount: newPending,
+          lastFollowUpDate: receivedDate,
+          followUpNotes: existingFollowUp?.followUpNotes || [],
+        });
+
+        if (customer) {
+          await this.customerRepo.update(customer.id, {
+            warrantyNotesReceived: newReceived,
+          });
+        }
+      } catch (err) {
+        console.warn('Could not sync dealer follow-up stats for warranty note:', err);
+      }
+    }
+
+    return note;
+  }
+
+  /**
+   * Reviews and validates a warranty note received from a distributor.
+   * Performed by the Sales Manager prior to processing any warranty claims.
+   */
+  async reviewWarrantyNote(
+    noteId: string,
+    action: 'VERIFY' | 'REJECT',
+    reviewNotes: string,
+    user: User
+  ): Promise<WarrantyNote> {
+    const allowedRoles: string[] = ['SALES_MANAGER', 'MANAGER', 'DIRECTOR'];
+    if (!allowedRoles.includes(user.role)) {
+      throw new Error(
+        'Access denied: Only the Sales Manager or authorized management can review and validate distributor warranty notes.'
+      );
+    }
+
+    const note = await this.repo.getWarrantyNoteById(noteId);
+    if (!note) {
+      throw new Error(`Warranty note with ID ${noteId} not found.`);
+    }
+
+    const newStatus = action === 'VERIFY' ? 'VERIFIED' : 'REJECTED';
+    const updatedNote = await this.repo.updateWarrantyNote(noteId, {
+      status: newStatus,
+      reviewNotes: reviewNotes || (action === 'VERIFY' ? 'Validated by Sales Manager.' : 'Rejected by Sales Manager.'),
+      reviewedByUserId: user.id,
+      reviewedByUserName: user.name,
+      reviewedAt: new Date().toISOString(),
+    });
+
+    // Synchronize linked warranty record
+    if (note.warrantyRecordId) {
+      const record = await this.repo.getRecordById(note.warrantyRecordId);
+      if (record) {
+        await this.repo.updateRecord(record.id, {
+          warrantyNoteStatus: newStatus,
+          notesReceived: newStatus === 'VERIFIED',
+          notesReceivedDate: newStatus === 'VERIFIED' ? updatedNote.receivedDate : undefined,
+        });
+
+        if (newStatus === 'VERIFIED') {
+          try {
+            const customer = await this.customerRepo.getById(record.customerId);
+            const followUp = await this.repo.getFollowUpByCustomerId(record.customerId);
+            const baseReceived = followUp?.warrantyNotesReceived ?? customer?.warrantyNotesReceived ?? 0;
+            const baseSold = followUp?.totalUnitsSold ?? customer?.warrantyNotesExpected ?? 0;
+            const newReceived = baseReceived + 1;
+
+            await this.repo.saveFollowUp({
+              customerId: record.customerId,
+              customerName: record.customerName,
+              totalUnitsSold: baseSold,
+              warrantyNotesReceived: newReceived,
+              pendingNotesCount: calculatePendingWarrantyNotes(baseSold, newReceived),
+              lastFollowUpDate: updatedNote.receivedDate,
+              followUpNotes: followUp?.followUpNotes || [],
+            });
+
+            if (customer) {
+              await this.customerRepo.update(customer.id, {
+                warrantyNotesReceived: newReceived,
+              });
+            }
+          } catch (err) {
+            console.warn('Could not sync follow up stats during note verification:', err);
+          }
+        }
+      }
+    }
+
+    return updatedNote;
+  }
+
+  async getWarrantyNotes(filters?: WarrantyNoteFilters): Promise<PaginatedResult<WarrantyNote>> {
+    return this.repo.getAllWarrantyNotes(filters);
+  }
+
+  async getWarrantyNoteById(id: string): Promise<WarrantyNote | null> {
+    return this.repo.getWarrantyNoteById(id);
+  }
+
+  async getWarrantyNoteByRecordId(warrantyRecordId: string): Promise<WarrantyNote | null> {
+    return this.repo.getWarrantyNoteByRecordId(warrantyRecordId);
+  }
+
+  async getWarrantyNotesByDistributorId(distributorId: string): Promise<WarrantyNote[]> {
+    return this.repo.getWarrantyNotesByDistributorId(distributorId);
+  }
+
 
   /**
    * Resolves a warranty claim (REPLACE, REPAIR, or REJECT).

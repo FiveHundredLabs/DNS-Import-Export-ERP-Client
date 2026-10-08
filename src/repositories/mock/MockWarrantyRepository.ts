@@ -5,12 +5,15 @@ import {
   ShopWarrantyFollowUp,
   WarrantyFilters,
   ClaimFilters,
+  WarrantyNote,
+  WarrantyNoteFilters,
 } from '../../types/warranty';
 import { PaginatedResult } from '../../types/common';
 import {
   MOCK_WARRANTY_RECORDS,
   MOCK_WARRANTY_CLAIMS,
   MOCK_SHOP_FOLLOW_UPS,
+  MOCK_WARRANTY_NOTES,
 } from '../../mock/mockWarranty';
 import { MOCK_CUSTOMERS } from '../../mock/mockCustomers';
 
@@ -18,6 +21,7 @@ export class MockWarrantyRepository implements IWarrantyRepository {
   private records: WarrantyRecord[] = [...MOCK_WARRANTY_RECORDS];
   private claims: WarrantyClaim[] = [...MOCK_WARRANTY_CLAIMS];
   private followUps: ShopWarrantyFollowUp[] = [...MOCK_SHOP_FOLLOW_UPS];
+  private notes: WarrantyNote[] = [...MOCK_WARRANTY_NOTES];
 
   // ================= Warranty Records =================
 
@@ -195,6 +199,96 @@ export class MockWarrantyRepository implements IWarrantyRepository {
       updatedAt: new Date().toISOString(),
     };
     this.claims[idx] = updated;
+    return updated;
+  }
+
+  // ================= Distributor Warranty Notes =================
+
+  async getAllWarrantyNotes(filters?: WarrantyNoteFilters): Promise<PaginatedResult<WarrantyNote>> {
+    let filtered = [...this.notes];
+
+    if (filters?.status && filters.status !== 'ALL') {
+      filtered = filtered.filter((n) => n.status === filters.status);
+    }
+
+    if (filters?.distributorId) {
+      filtered = filtered.filter((n) => n.distributorId === filters.distributorId);
+    }
+
+    if (filters?.productId) {
+      filtered = filtered.filter((n) => n.productId === filters.productId);
+    }
+
+    if (filters?.warrantyRecordId) {
+      filtered = filtered.filter((n) => n.warrantyRecordId === filters.warrantyRecordId);
+    }
+
+    if (filters?.search) {
+      const q = filters.search.toLowerCase();
+      filtered = filtered.filter(
+        (n) =>
+          n.noteNumber.toLowerCase().includes(q) ||
+          n.distributorName.toLowerCase().includes(q) ||
+          n.productName.toLowerCase().includes(q) ||
+          n.sku.toLowerCase().includes(q) ||
+          n.serialNumber.toLowerCase().includes(q) ||
+          (n.endCustomerName && n.endCustomerName.toLowerCase().includes(q))
+      );
+    }
+
+    filtered.sort((a, b) => new Date(b.createdAt || b.receivedDate).getTime() - new Date(a.createdAt || a.receivedDate).getTime());
+
+    const page = filters?.page || 1;
+    const pageSize = filters?.pageSize || 10;
+    const startIndex = (page - 1) * pageSize;
+    const paginated = filtered.slice(startIndex, startIndex + pageSize);
+
+    return {
+      data: paginated,
+      total: filtered.length,
+      page,
+      pageSize,
+      totalPages: Math.ceil(filtered.length / pageSize),
+    };
+  }
+
+  async getWarrantyNoteById(id: string): Promise<WarrantyNote | null> {
+    return this.notes.find((n) => n.id === id) || null;
+  }
+
+  async getWarrantyNoteByRecordId(warrantyRecordId: string): Promise<WarrantyNote | null> {
+    return this.notes.find((n) => n.warrantyRecordId === warrantyRecordId) || null;
+  }
+
+  async getWarrantyNotesByDistributorId(distributorId: string): Promise<WarrantyNote[]> {
+    return this.notes.filter((n) => n.distributorId === distributorId);
+  }
+
+  async createWarrantyNote(
+    note: Omit<WarrantyNote, 'id' | 'createdAt' | 'updatedAt'>
+  ): Promise<WarrantyNote> {
+    const now = new Date().toISOString();
+    const newNote: WarrantyNote = {
+      ...note,
+      id: `wn-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+      createdAt: now,
+      updatedAt: now,
+    };
+    this.notes.unshift(newNote);
+    return newNote;
+  }
+
+  async updateWarrantyNote(id: string, updates: Partial<WarrantyNote>): Promise<WarrantyNote> {
+    const idx = this.notes.findIndex((n) => n.id === id);
+    if (idx === -1) {
+      throw new Error(`Warranty note with ID ${id} not found`);
+    }
+    const updated: WarrantyNote = {
+      ...this.notes[idx],
+      ...updates,
+      updatedAt: new Date().toISOString(),
+    };
+    this.notes[idx] = updated;
     return updated;
   }
 
