@@ -36,6 +36,7 @@ import {
   UserCheck,
   Filter,
   Building2,
+  ChevronRight,
 } from 'lucide-react';
 
 const STATUS_FILTERS: Array<{ label: string; value: QuotationStatus | 'ALL' }> = [
@@ -160,53 +161,53 @@ export function QuotationListPage() {
       )}
 
       {/* Metrics Row */}
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2.5 sm:gap-4 sm:grid-cols-4">
         <Card className="shadow-xs">
-          <CardContent className="p-4 flex items-center justify-between">
-            <div>
-              <p className="text-xs font-medium text-slate-500">Total Quotations</p>
-              <h3 className="text-xl font-bold text-slate-900 mt-1">{total}</h3>
+          <CardContent className="p-3 sm:p-4 flex items-center justify-between">
+            <div className="min-w-0 flex-1">
+              <p className="text-[11px] sm:text-xs font-medium text-slate-500 truncate">Total Quotes</p>
+              <h3 className="text-lg sm:text-xl font-bold text-slate-900 mt-0.5 sm:mt-1">{total}</h3>
             </div>
-            <div className="rounded-lg bg-primary-light p-2.5 text-primary">
-              <FileSpreadsheet className="h-5 w-5" />
+            <div className="rounded-lg bg-primary-light p-2 sm:p-2.5 text-primary shrink-0">
+              <FileSpreadsheet className="h-4 w-4 sm:h-5 sm:w-5" />
             </div>
           </CardContent>
         </Card>
 
         <Card className="shadow-xs">
-          <CardContent className="p-4 flex items-center justify-between">
-            <div>
-              <p className="text-xs font-medium text-slate-500">Pending Approval</p>
-              <h3 className="text-xl font-bold text-amber-600 mt-1">{pendingCount}</h3>
+          <CardContent className="p-3 sm:p-4 flex items-center justify-between">
+            <div className="min-w-0 flex-1">
+              <p className="text-[11px] sm:text-xs font-medium text-slate-500 truncate">Pending Approval</p>
+              <h3 className="text-lg sm:text-xl font-bold text-amber-600 mt-0.5 sm:mt-1">{pendingCount}</h3>
             </div>
-            <div className="rounded-lg bg-amber-50 p-2.5 text-amber-600">
-              <Clock className="h-5 w-5" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="shadow-xs">
-          <CardContent className="p-4 flex items-center justify-between">
-            <div>
-              <p className="text-xs font-medium text-slate-500">Converted Orders</p>
-              <h3 className="text-xl font-bold text-primary mt-1">{convertedCount}</h3>
-            </div>
-            <div className="rounded-lg bg-primary-light p-2.5 text-primary">
-              <ShoppingCart className="h-5 w-5" />
+            <div className="rounded-lg bg-amber-50 p-2 sm:p-2.5 text-amber-600 shrink-0">
+              <Clock className="h-4 w-4 sm:h-5 sm:w-5" />
             </div>
           </CardContent>
         </Card>
 
         <Card className="shadow-xs">
-          <CardContent className="p-4 flex items-center justify-between">
-            <div>
-              <p className="text-xs font-medium text-slate-500">Total Quoted Value</p>
-              <h3 className="text-xl font-bold text-emerald-700 mt-1">
+          <CardContent className="p-3 sm:p-4 flex items-center justify-between">
+            <div className="min-w-0 flex-1">
+              <p className="text-[11px] sm:text-xs font-medium text-slate-500 truncate">Converted Orders</p>
+              <h3 className="text-lg sm:text-xl font-bold text-primary mt-0.5 sm:mt-1">{convertedCount}</h3>
+            </div>
+            <div className="rounded-lg bg-primary-light p-2 sm:p-2.5 text-primary shrink-0">
+              <ShoppingCart className="h-4 w-4 sm:h-5 sm:w-5" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-xs col-span-2 sm:col-span-1">
+          <CardContent className="p-3 sm:p-4 flex items-center justify-between">
+            <div className="min-w-0 flex-1">
+              <p className="text-[11px] sm:text-xs font-medium text-slate-500 truncate">Pipeline Value</p>
+              <h3 className="text-sm sm:text-base lg:text-lg font-bold text-emerald-700 mt-0.5 sm:mt-1 truncate tabular-nums">
                 {formatCurrency(totalPipelineValue)}
               </h3>
             </div>
-            <div className="rounded-lg bg-emerald-50 p-2.5 text-emerald-600">
-              <DollarSign className="h-5 w-5" />
+            <div className="rounded-lg bg-emerald-50 p-2 sm:p-2.5 text-emerald-600 shrink-0">
+              <DollarSign className="h-4 w-4 sm:h-5 sm:w-5" />
             </div>
           </CardContent>
         </Card>
@@ -304,84 +305,73 @@ export function QuotationListPage() {
               </Button>
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-slate-50/80">
-                  <TableHead className="w-32">Quotation #</TableHead>
-                  <TableHead>Customer / Dealer</TableHead>
-                  <TableHead className="w-28">Date Issued</TableHead>
-                  <TableHead className="w-24 text-center">Items</TableHead>
-                  <TableHead className="w-32 text-right">Grand Total</TableHead>
-                  <TableHead className="w-32 text-center">Status</TableHead>
-                  <TableHead className="w-44 text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+            <>
+              {/* 1. Mobile Cards View (Visible on small screens, hidden on md+) */}
+              <div className="block md:hidden p-3 space-y-3">
                 {quotations.map((q) => (
-                  <TableRow
+                  <div
                     key={q.id}
-                    className="hover:bg-slate-50/70 cursor-pointer transition-colors focus:outline-hidden focus:bg-slate-50"
-                    tabIndex={0}
                     onClick={() => navigate(`/quotations/${q.id}`)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        navigate(`/quotations/${q.id}`);
-                      }
-                    }}
+                    className="rounded-2xl border border-slate-200/90 bg-white p-3.5 shadow-xs hover:border-primary/50 transition-all cursor-pointer active:scale-[0.99]"
                   >
-                    <TableCell className="font-mono text-xs font-bold text-primary">
-                      <span className="hover:underline text-left">
-                        {q.quotationNumber}
-                      </span>
-                      <div className="text-[10px] font-normal text-slate-400">
-                        Rep: {q.salesRepNameSnapshot}
+                    {/* Top Row: Quotation # & Status Badge */}
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-mono text-xs font-bold text-primary tabular-nums">
+                          {q.quotationNumber}
+                        </span>
+                        <span className="text-[10.5px] text-slate-400 font-mono">
+                          • {q.items.length} {q.items.length === 1 ? 'item' : 'items'}
+                        </span>
                       </div>
-                    </TableCell>
-
-                    <TableCell>
-                      <div className="font-semibold text-slate-900 text-xs truncate max-w-xs">
-                        {q.customerNameSnapshot}
-                      </div>
-                      <div className="text-[11px] text-slate-500">
-                        Code: {q.customerCodeSnapshot} | Exp: {q.validUntil}
-                      </div>
-                    </TableCell>
-
-                    <TableCell className="text-[13px] text-slate-600">
-                      {formatDate(q.createdAt)}
-                    </TableCell>
-
-                    <TableCell className="text-center text-[13px] text-slate-700 font-normal">
-                      {q.items.length} {q.items.length === 1 ? 'item' : 'items'}
-                    </TableCell>
-
-                    <TableCell className="text-right tabular-nums text-[13.5px] font-semibold text-slate-900">
-                      {formatCurrency(q.totalAmount)}
-                      {q.discountAmount > 0 && (
-                        <div className="text-xs text-emerald-600 font-normal mt-0.5">
-                          - {formatCurrency(q.discountAmount)} disc
-                        </div>
-                      )}
-                    </TableCell>
-
-                    <TableCell className="text-center">
                       <QuotationStatusBadge status={q.status} />
-                    </TableCell>
+                    </div>
 
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-1">
+                    {/* Customer Info */}
+                    <div className="mt-2">
+                      <h4 className="text-xs font-bold text-slate-900 leading-snug truncate">
+                        {q.customerNameSnapshot}
+                      </h4>
+                      <div className="flex items-center gap-1.5 text-[11px] text-slate-400 font-mono mt-0.5">
+                        <span>{q.customerCodeSnapshot}</span>
+                        <span>•</span>
+                        <span>Valid until {q.validUntil}</span>
+                      </div>
+                    </div>
+
+                    {/* Middle: Amount & Discount */}
+                    <div className="mt-2.5 pt-2.5 border-t border-slate-100 flex items-center justify-between">
+                      <div>
+                        <span className="text-[10px] uppercase font-semibold text-slate-400 block">Total Amount</span>
+                        <div className="text-sm font-bold text-slate-900 tabular-nums">
+                          {formatCurrency(q.totalAmount)}
+                        </div>
+                        {q.discountAmount > 0 && (
+                          <span className="text-[10.5px] text-emerald-600 font-medium">
+                            Saved {formatCurrency(q.discountAmount)}
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-right text-[11px] text-slate-400">
+                        <span>Issued: {formatDate(q.createdAt)}</span>
+                      </div>
+                    </div>
+
+                    {/* Bottom Actions: WhatsApp, Print, Convert */}
+                    <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-1.5">
                         <Button
-                          variant="ghost"
+                          variant="outline"
                           size="sm"
                           onClick={(e) => {
                             e.stopPropagation();
                             whatsAppService.shareQuotation(q);
                           }}
-                          className="h-8 w-8 p-0 text-emerald-600 hover:bg-emerald-50"
+                          className="h-8 px-2.5 text-xs text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border-emerald-200/80 gap-1 rounded-xl cursor-pointer"
                           title="Share via WhatsApp"
                         >
-                          <Share2 className="h-4 w-4" />
+                          <Share2 className="h-3.5 w-3.5 text-emerald-600" />
+                          <span>WhatsApp</span>
                         </Button>
 
                         <Button
@@ -391,33 +381,154 @@ export function QuotationListPage() {
                             e.stopPropagation();
                             printerService.printQuotation(q);
                           }}
-                          className="h-8 w-8 p-0 text-slate-600 hover:bg-slate-100"
+                          className="h-8 px-2 text-xs text-slate-600 hover:bg-slate-100 rounded-xl cursor-pointer"
                           title="Print Quotation"
                         >
-                          <Printer className="h-4 w-4" />
+                          <Printer className="h-3.5 w-3.5" />
                         </Button>
-
-                        {q.status === 'APPROVED' && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setConvertingQuotation(q);
-                            }}
-                            className="text-xs h-7 px-2.5 text-primary border-primary-border hover:bg-primary-light font-medium"
-                            title="Convert to Sales Order"
-                          >
-                            <ShoppingCart className="h-3 w-3 mr-1" />
-                            Order
-                          </Button>
-                        )}
                       </div>
-                    </TableCell>
-                  </TableRow>
+
+                      {q.status === 'APPROVED' ? (
+                        <Button
+                          variant="default"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setConvertingQuotation(q);
+                          }}
+                          className="h-8 px-3 text-xs bg-primary hover:bg-primary-hover text-primary-foreground font-semibold rounded-xl cursor-pointer gap-1"
+                        >
+                          <ShoppingCart className="h-3.5 w-3.5" />
+                          <span>Convert to SO</span>
+                        </Button>
+                      ) : (
+                        <span className="inline-flex items-center text-xs font-semibold text-primary gap-0.5">
+                          Details <ChevronRight className="h-3.5 w-3.5" />
+                        </span>
+                      )}
+                    </div>
+                  </div>
                 ))}
-              </TableBody>
-            </Table>
+              </div>
+
+              {/* 2. Desktop Full Table View (Hidden on mobile, block on md+) */}
+              <div className="hidden md:block overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-slate-50/80">
+                      <TableHead className="w-32">Quotation #</TableHead>
+                      <TableHead>Customer / Dealer</TableHead>
+                      <TableHead className="w-28">Date Issued</TableHead>
+                      <TableHead className="w-24 text-center">Items</TableHead>
+                      <TableHead className="w-32 text-right">Grand Total</TableHead>
+                      <TableHead className="w-32 text-center">Status</TableHead>
+                      <TableHead className="w-44 text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {quotations.map((q) => (
+                      <TableRow
+                        key={q.id}
+                        className="hover:bg-slate-50/70 cursor-pointer transition-colors focus:outline-hidden focus:bg-slate-50"
+                        tabIndex={0}
+                        onClick={() => navigate(`/quotations/${q.id}`)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            navigate(`/quotations/${q.id}`);
+                          }
+                        }}
+                      >
+                        <TableCell className="font-mono text-xs font-bold text-primary">
+                          <span className="hover:underline text-left">
+                            {q.quotationNumber}
+                          </span>
+                          <div className="text-[10px] font-normal text-slate-400">
+                            Rep: {q.salesRepNameSnapshot}
+                          </div>
+                        </TableCell>
+
+                        <TableCell>
+                          <div className="font-semibold text-slate-900 text-xs truncate max-w-xs">
+                            {q.customerNameSnapshot}
+                          </div>
+                          <div className="text-[11px] text-slate-500">
+                            Code: {q.customerCodeSnapshot} | Exp: {q.validUntil}
+                          </div>
+                        </TableCell>
+
+                        <TableCell className="text-[13px] text-slate-600">
+                          {formatDate(q.createdAt)}
+                        </TableCell>
+
+                        <TableCell className="text-center text-[13px] text-slate-700 font-normal">
+                          {q.items.length} {q.items.length === 1 ? 'item' : 'items'}
+                        </TableCell>
+
+                        <TableCell className="text-right tabular-nums text-[13.5px] font-semibold text-slate-900">
+                          {formatCurrency(q.totalAmount)}
+                          {q.discountAmount > 0 && (
+                            <div className="text-xs text-emerald-600 font-normal mt-0.5">
+                              - {formatCurrency(q.discountAmount)} disc
+                            </div>
+                          )}
+                        </TableCell>
+
+                        <TableCell className="text-center">
+                          <QuotationStatusBadge status={q.status} />
+                        </TableCell>
+
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                whatsAppService.shareQuotation(q);
+                              }}
+                              className="h-8 w-8 p-0 text-emerald-600 hover:bg-emerald-50"
+                              title="Share via WhatsApp"
+                            >
+                              <Share2 className="h-4 w-4" />
+                            </Button>
+
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                printerService.printQuotation(q);
+                              }}
+                              className="h-8 w-8 p-0 text-slate-600 hover:bg-slate-100"
+                              title="Print Quotation"
+                            >
+                              <Printer className="h-4 w-4" />
+                            </Button>
+
+                            {q.status === 'APPROVED' && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setConvertingQuotation(q);
+                                }}
+                                className="text-xs h-7 px-2.5 text-primary border-primary-border hover:bg-primary-light font-medium"
+                                title="Convert to Sales Order"
+                              >
+                                <ShoppingCart className="h-3 w-3 mr-1" />
+                                Order
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>

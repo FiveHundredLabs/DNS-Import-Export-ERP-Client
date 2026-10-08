@@ -337,24 +337,24 @@ export function OrderCreateEditPage() {
           )}
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center w-full sm:w-auto">
           <Button
             variant="outline"
             size="sm"
             onClick={() => handleSubmit(true)}
             disabled={isSubmitting}
-            className="text-xs gap-1.5 font-medium"
+            className="text-xs gap-1.5 font-medium h-11 sm:h-9 cursor-pointer"
           >
-            <Save className="h-3.5 w-3.5" />
+            <Save className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
             Save as Draft
           </Button>
           <Button
             size="sm"
             onClick={() => handleSubmit(false)}
             disabled={isSubmitting}
-            className="bg-primary hover:bg-primary-hover text-primary-foreground text-xs gap-1.5 font-medium shadow-xs"
+            className="bg-primary hover:bg-primary-hover text-primary-foreground text-xs gap-1.5 font-semibold shadow-xs h-11 sm:h-9 cursor-pointer"
           >
-            <Send className="h-3.5 w-3.5" />
+            <Send className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
             Submit Order
           </Button>
         </div>

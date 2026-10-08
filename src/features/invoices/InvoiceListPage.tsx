@@ -38,6 +38,7 @@ import {
   CreditCard,
   RefreshCw,
   Building2,
+  ChevronRight,
 } from 'lucide-react';
 
 export function InvoiceListPage() {
@@ -132,29 +133,31 @@ export function InvoiceListPage() {
       </div>
 
       {/* Metrics Row */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <Card className="border-slate-200">
-          <CardContent className="p-3.5">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 sm:gap-3">
+        <Card className="border-slate-200 col-span-2 sm:col-span-1">
+          <CardContent className="p-3 sm:p-3.5">
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-[13px] font-medium text-slate-600">Total Receivables</p>
-                <p className="text-lg font-semibold tabular-nums text-slate-900 mt-0.5">{formatCurrency(totalReceivables)}</p>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs sm:text-[13px] font-medium text-slate-600 truncate">Total Receivables</p>
+                <p className="text-base sm:text-lg font-bold tabular-nums text-slate-900 mt-0.5 truncate">{formatCurrency(totalReceivables)}</p>
               </div>
-              <div className="h-9 w-9 rounded-lg bg-primary-light text-primary flex items-center justify-center">
+              <div className="h-9 w-9 rounded-lg bg-primary-light text-primary flex items-center justify-center shrink-0">
                 <Receipt className="h-5 w-5" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-slate-200">
-          <CardContent className="p-3.5">
+        <Card className="border-slate-200 col-span-2 sm:col-span-1">
+          <CardContent className="p-3 sm:p-3.5">
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-[13px] font-medium text-slate-600">Overdue Invoices</p>
-                <p className="text-lg font-semibold tabular-nums text-rose-600 mt-0.5">{overdueCount} ({formatCurrency(overdueAmount)})</p>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs sm:text-[13px] font-medium text-slate-600 truncate">Overdue Invoices</p>
+                <p className="text-sm sm:text-base font-bold tabular-nums text-rose-600 mt-0.5 truncate">
+                  {overdueCount} ({formatCurrency(overdueAmount)})
+                </p>
               </div>
-              <div className="h-9 w-9 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center">
+              <div className="h-9 w-9 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center shrink-0">
                 <AlertTriangle className="h-5 w-5" />
               </div>
             </div>
@@ -162,15 +165,15 @@ export function InvoiceListPage() {
         </Card>
 
         <Card className="border-slate-200">
-          <CardContent className="p-3.5">
+          <CardContent className="p-3 sm:p-3.5">
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-[13px] font-medium text-slate-600">Active Pipeline</p>
-                <p className="text-lg font-semibold tabular-nums text-primary mt-0.5">
+              <div className="min-w-0 flex-1">
+                <p className="text-xs sm:text-[13px] font-medium text-slate-600 truncate">Active Invoices</p>
+                <p className="text-base sm:text-lg font-bold tabular-nums text-primary mt-0.5 truncate">
                   {invoices.filter((i) => i.status === 'ISSUED' || i.status === 'PARTIALLY_PAID').length} open
                 </p>
               </div>
-              <div className="h-9 w-9 rounded-lg bg-primary-light text-primary flex items-center justify-center">
+              <div className="h-9 w-9 rounded-lg bg-primary-light text-primary flex items-center justify-center shrink-0">
                 <Clock className="h-5 w-5" />
               </div>
             </div>
@@ -178,13 +181,13 @@ export function InvoiceListPage() {
         </Card>
 
         <Card className="border-slate-200">
-          <CardContent className="p-3.5">
+          <CardContent className="p-3 sm:p-3.5">
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-[13px] font-medium text-slate-600">Fully Settled</p>
-                <p className="text-lg font-semibold tabular-nums text-emerald-600 mt-0.5">{paidCount} Paid</p>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs sm:text-[13px] font-medium text-slate-600 truncate">Fully Settled</p>
+                <p className="text-base sm:text-lg font-bold tabular-nums text-emerald-600 mt-0.5 truncate">{paidCount} Paid</p>
               </div>
-              <div className="h-9 w-9 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+              <div className="h-9 w-9 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
                 <CheckCircle className="h-5 w-5" />
               </div>
             </div>
@@ -307,88 +310,80 @@ export function InvoiceListPage() {
               />
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Invoice #</TableHead>
-                    <TableHead>Order #</TableHead>
-                    <TableHead>Customer</TableHead>
-                    <TableHead>Issue Date</TableHead>
-                    <TableHead>Due Date</TableHead>
-                    <TableHead className="text-right">Total Amount</TableHead>
-                    <TableHead className="text-right">Paid Amount</TableHead>
-                    <TableHead className="text-right">Balance Due</TableHead>
-                    <TableHead className="text-center">Status</TableHead>
-                    <TableHead className="text-right w-44">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {invoices.map((inv) => (
-                    <TableRow
+            <>
+              {/* 1. Mobile Cards View (Visible on small screens, hidden on md+) */}
+              <div className="block md:hidden p-3 space-y-3">
+                {invoices.map((inv) => {
+                  const isOverdue = inv.status === 'OVERDUE';
+                  return (
+                    <div
                       key={inv.id}
-                      className="hover:bg-slate-50/80 cursor-pointer transition-colors focus:outline-hidden focus:bg-slate-50"
-                      tabIndex={0}
                       onClick={() => navigate(`/invoices/${inv.id}`)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.preventDefault();
-                          navigate(`/invoices/${inv.id}`);
-                        }
-                      }}
+                      className="rounded-2xl border border-slate-200/90 bg-white p-3.5 shadow-xs hover:border-primary/50 transition-all cursor-pointer active:scale-[0.99]"
                     >
-                      <TableCell className="font-mono text-xs font-semibold tabular-nums text-primary">
-                        <span className="hover:underline">
-                          {inv.invoiceNumber}
-                        </span>
-                      </TableCell>
-                      <TableCell className="font-mono text-xs text-slate-600">
-                        <Link
-                          to={`/orders/${inv.orderId}`}
-                          onClick={(e) => e.stopPropagation()}
-                          className="hover:underline"
-                        >
-                          {inv.orderNumber}
-                        </Link>
-                      </TableCell>
-                      <TableCell className="text-[13px]">
-                        <div className="font-semibold text-slate-900">{inv.customerName}</div>
-                        <div className="text-xs text-slate-400 font-mono mt-0.5">{inv.customerCode}</div>
-                      </TableCell>
-                      <TableCell className="text-[13px] text-slate-600 whitespace-nowrap">
-                        {formatDate(inv.issueDate)}
-                      </TableCell>
-                      <TableCell className="text-[13px] whitespace-nowrap">
-                        <span
-                          className={
-                            inv.status === 'OVERDUE'
-                              ? 'font-semibold text-rose-600'
-                              : 'text-slate-600'
-                          }
-                        >
-                          {formatDate(inv.dueDate)}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-right tabular-nums text-[13.5px] font-semibold text-slate-900">
-                        {formatCurrency(inv.totalAmount)}
-                      </TableCell>
-                      <TableCell className="text-right tabular-nums text-[13px] text-emerald-600 font-medium">
-                        {inv.paidAmount > 0 ? formatCurrency(inv.paidAmount) : '-'}
-                      </TableCell>
-                      <TableCell className="text-right tabular-nums text-[13.5px] font-semibold text-slate-900">
-                        {inv.balanceAmount > 0 ? (
-                          <span className={inv.status === 'OVERDUE' ? 'text-rose-600' : 'text-slate-900'}>
-                            {formatCurrency(inv.balanceAmount)}
+                      {/* Top: Invoice #, Order #, Status */}
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="font-mono text-xs font-bold text-primary tabular-nums">
+                            {inv.invoiceNumber}
                           </span>
-                        ) : (
-                          <span className="text-emerald-600 font-normal">Settled</span>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-center">
+                          <span className="text-[10.5px] text-slate-400 font-mono">
+                            • SO: {inv.orderNumber}
+                          </span>
+                        </div>
                         <InvoiceStatusBadge status={inv.status} />
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-1">
+                      </div>
+
+                      {/* Customer info */}
+                      <div className="mt-2">
+                        <h4 className="text-xs font-bold text-slate-900 leading-snug truncate">
+                          {inv.customerName}
+                        </h4>
+                        <span className="font-mono text-[11px] text-slate-400">
+                          {inv.customerCode}
+                        </span>
+                      </div>
+
+                      {/* Financial info box */}
+                      <div className="mt-2.5 rounded-xl bg-slate-50 p-2.5 border border-slate-100 grid grid-cols-2 gap-2">
+                        <div>
+                          <span className="text-[10px] uppercase font-semibold text-slate-400 block">Balance Due</span>
+                          <div className={`text-sm font-bold tabular-nums ${isOverdue ? 'text-rose-600' : inv.balanceAmount > 0 ? 'text-slate-900' : 'text-emerald-600'}`}>
+                            {inv.balanceAmount > 0 ? formatCurrency(inv.balanceAmount) : 'Settled'}
+                          </div>
+                          <span className="text-[10.5px] text-slate-400 block mt-0.5">
+                            Total: {formatCurrency(inv.totalAmount)}
+                          </span>
+                        </div>
+
+                        <div className="text-right">
+                          <span className="text-[10px] uppercase font-semibold text-slate-400 block">Due Date</span>
+                          <div className={`text-xs font-bold ${isOverdue ? 'text-rose-600' : 'text-slate-700'}`}>
+                            {formatDate(inv.dueDate)}
+                          </div>
+                          <span className="text-[10.5px] text-slate-400 block mt-0.5">
+                            Issued: {formatDate(inv.issueDate)}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Actions bar */}
+                      <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-1.5">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              whatsAppService.shareInvoice(inv);
+                            }}
+                            className="h-8 px-2.5 text-xs text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border-emerald-200/80 gap-1 rounded-xl cursor-pointer"
+                            title="Share via WhatsApp"
+                          >
+                            <Send className="h-3.5 w-3.5 text-emerald-600" />
+                            <span>WhatsApp</span>
+                          </Button>
+
                           <Button
                             variant="ghost"
                             size="sm"
@@ -396,11 +391,12 @@ export function InvoiceListPage() {
                               e.stopPropagation();
                               printerService.printInvoice(inv);
                             }}
-                            className="h-7 w-7 p-0 text-slate-500 hover:text-slate-900"
+                            className="h-8 px-2 text-xs text-slate-600 hover:bg-slate-100 rounded-xl cursor-pointer"
                             title="Print Invoice"
                           >
                             <Printer className="h-3.5 w-3.5" />
                           </Button>
+
                           <Button
                             variant="ghost"
                             size="sm"
@@ -408,44 +404,178 @@ export function InvoiceListPage() {
                               e.stopPropagation();
                               pdfService.downloadInvoicePdf(inv);
                             }}
-                            className="h-7 w-7 p-0 text-slate-500 hover:text-slate-900"
+                            className="h-8 px-2 text-xs text-slate-600 hover:bg-slate-100 rounded-xl cursor-pointer"
                             title="Download PDF"
                           >
                             <Download className="h-3.5 w-3.5" />
                           </Button>
+                        </div>
+
+                        {inv.balanceAmount > 0 ? (
                           <Button
-                            variant="ghost"
+                            variant="default"
                             size="sm"
                             onClick={(e) => {
                               e.stopPropagation();
-                              whatsAppService.shareInvoice(inv);
+                              navigate(`/payments/new?customerId=${inv.customerId}&invoiceId=${inv.id}`);
                             }}
-                            className="h-7 w-7 p-0 text-emerald-600 hover:text-emerald-700"
-                            title="Share via WhatsApp"
+                            className="h-8 px-3 text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl cursor-pointer gap-1"
                           >
-                            <Send className="h-3.5 w-3.5" />
+                            <CreditCard className="h-3.5 w-3.5" />
+                            <span>Collect</span>
                           </Button>
-                          {inv.balanceAmount > 0 && (
+                        ) : (
+                          <span className="inline-flex items-center text-xs font-semibold text-primary gap-0.5">
+                            Details <ChevronRight className="h-3.5 w-3.5" />
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* 2. Desktop Full Table View (Hidden on mobile, block on md+) */}
+              <div className="hidden md:block overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Invoice #</TableHead>
+                      <TableHead>Order #</TableHead>
+                      <TableHead>Customer</TableHead>
+                      <TableHead>Issue Date</TableHead>
+                      <TableHead>Due Date</TableHead>
+                      <TableHead className="text-right">Total Amount</TableHead>
+                      <TableHead className="text-right">Paid Amount</TableHead>
+                      <TableHead className="text-right">Balance Due</TableHead>
+                      <TableHead className="text-center">Status</TableHead>
+                      <TableHead className="text-right w-44">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {invoices.map((inv) => (
+                      <TableRow
+                        key={inv.id}
+                        className="hover:bg-slate-50/80 cursor-pointer transition-colors focus:outline-hidden focus:bg-slate-50"
+                        tabIndex={0}
+                        onClick={() => navigate(`/invoices/${inv.id}`)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            navigate(`/invoices/${inv.id}`);
+                          }
+                        }}
+                      >
+                        <TableCell className="font-mono text-xs font-semibold tabular-nums text-primary">
+                          <span className="hover:underline">
+                            {inv.invoiceNumber}
+                          </span>
+                        </TableCell>
+                        <TableCell className="font-mono text-xs text-slate-600">
+                          <Link
+                            to={`/orders/${inv.orderId}`}
+                            onClick={(e) => e.stopPropagation()}
+                            className="hover:underline"
+                          >
+                            {inv.orderNumber}
+                          </Link>
+                        </TableCell>
+                        <TableCell className="text-[13px]">
+                          <div className="font-semibold text-slate-900">{inv.customerName}</div>
+                          <div className="text-xs text-slate-400 font-mono mt-0.5">{inv.customerCode}</div>
+                        </TableCell>
+                        <TableCell className="text-[13px] text-slate-600 whitespace-nowrap">
+                          {formatDate(inv.issueDate)}
+                        </TableCell>
+                        <TableCell className="text-[13px] whitespace-nowrap">
+                          <span
+                            className={
+                              inv.status === 'OVERDUE'
+                                ? 'font-semibold text-rose-600'
+                                : 'text-slate-600'
+                            }
+                          >
+                            {formatDate(inv.dueDate)}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums text-[13.5px] font-semibold text-slate-900">
+                          {formatCurrency(inv.totalAmount)}
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums text-[13px] text-emerald-600 font-medium">
+                          {inv.paidAmount > 0 ? formatCurrency(inv.paidAmount) : '-'}
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums text-[13.5px] font-semibold text-slate-900">
+                          {inv.balanceAmount > 0 ? (
+                            <span className={inv.status === 'OVERDUE' ? 'text-rose-600' : 'text-slate-900'}>
+                              {formatCurrency(inv.balanceAmount)}
+                            </span>
+                          ) : (
+                            <span className="text-emerald-600 font-normal">Settled</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <InvoiceStatusBadge status={inv.status} />
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-1">
                             <Button
                               variant="ghost"
                               size="sm"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                navigate(`/payments/new?customerId=${inv.customerId}&invoiceId=${inv.id}`);
+                                printerService.printInvoice(inv);
                               }}
-                              className="h-7 w-7 p-0 text-emerald-700 hover:bg-emerald-50"
-                              title="Record Settlement"
+                              className="h-7 w-7 p-0 text-slate-500 hover:text-slate-900"
+                              title="Print Invoice"
                             >
-                              <CreditCard className="h-3.5 w-3.5" />
+                              <Printer className="h-3.5 w-3.5" />
                             </Button>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                pdfService.downloadInvoicePdf(inv);
+                              }}
+                              className="h-7 w-7 p-0 text-slate-500 hover:text-slate-900"
+                              title="Download PDF"
+                            >
+                              <Download className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                whatsAppService.shareInvoice(inv);
+                              }}
+                              className="h-7 w-7 p-0 text-emerald-600 hover:text-emerald-700"
+                              title="Share via WhatsApp"
+                            >
+                              <Send className="h-3.5 w-3.5" />
+                            </Button>
+                            {inv.balanceAmount > 0 && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  navigate(`/payments/new?customerId=${inv.customerId}&invoiceId=${inv.id}`);
+                                }}
+                                className="h-7 w-7 p-0 text-emerald-700 hover:bg-emerald-50"
+                                title="Record Settlement"
+                              >
+                                <CreditCard className="h-3.5 w-3.5" />
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </>
           )}
 
           {/* Pagination */}
