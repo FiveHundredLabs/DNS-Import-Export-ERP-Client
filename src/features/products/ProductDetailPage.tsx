@@ -21,6 +21,7 @@ import {
   Edit3,
   CheckCircle2,
   Save,
+  Info,
 } from 'lucide-react';
 import { TableLoadingSkeleton } from '../../components/common/LoadingSkeleton';
 import { toast } from 'sonner';
@@ -35,6 +36,7 @@ export function ProductDetailPage() {
   const [editL2, setEditL2] = useState('');
   const [editL3, setEditL3] = useState('');
   const [isSavingLevels, setIsSavingLevels] = useState(false);
+  const [showDiscountInfo, setShowDiscountInfo] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -312,16 +314,31 @@ export function ProductDetailPage() {
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 py-2">
-          <div className="rounded-lg bg-slate-50 border border-slate-200 p-3 text-xs text-slate-600 space-y-1">
-            <div className="font-semibold text-slate-800">Customer Loyalty Access Rules:</div>
-            <ul className="list-disc list-inside space-y-0.5 text-[11px] text-slate-500">
-              <li><strong>New Customer:</strong> Lowest available discount level only (Level 1)</li>
-              <li><strong>Premium Customer:</strong> Level 1 + Level 2</li>
-              <li><strong>Platinum Customer:</strong> All configured discount levels (Levels 1, 2, and 3)</li>
-              <li><strong>0 Levels:</strong> No direct discount allowed (Management Approval required)</li>
-            </ul>
+        <div className="space-y-3 py-2">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-slate-700">Loyalty Discount Levels</span>
+            <button
+              type="button"
+              onClick={() => setShowDiscountInfo(!showDiscountInfo)}
+              className="inline-flex items-center gap-1 text-[11px] text-indigo-600 hover:text-indigo-800 transition-colors p-1 rounded hover:bg-indigo-50 focus:outline-none"
+              title={showDiscountInfo ? 'Hide rule details' : 'Click to view loyalty rules'}
+            >
+              <Info className="h-3.5 w-3.5" />
+              <span>{showDiscountInfo ? 'Hide Note' : 'View Note'}</span>
+            </button>
           </div>
+
+          {showDiscountInfo && (
+            <div className="rounded-lg bg-slate-50 border border-slate-200 p-3 text-xs text-slate-600 space-y-1">
+              <div className="font-semibold text-slate-800">Customer Loyalty Access Rules:</div>
+              <ul className="list-disc list-inside space-y-0.5 text-[11px] text-slate-500">
+                <li><strong>New Customer:</strong> Lowest available discount level only (Level 1)</li>
+                <li><strong>Premium Customer:</strong> Level 1 + Level 2</li>
+                <li><strong>Platinum Customer:</strong> All configured discount levels (Levels 1, 2, and 3)</li>
+                <li><strong>0 Levels:</strong> No direct discount allowed (Management Approval required)</li>
+              </ul>
+            </div>
+          )}
 
           <div className="grid grid-cols-3 gap-3">
             <div>

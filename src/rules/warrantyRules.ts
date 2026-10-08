@@ -85,3 +85,27 @@ export function determineWarrantyStartDate(
   }
   return (dealerSoldDate || saleDate).split('T')[0];
 }
+
+/**
+ * Validates whether a warranty claim can be processed.
+ * Since the company sells to distributors rather than direct end-customers,
+ * any warranty claim for distributor products (DEALER) MUST be validated against
+ * a verified warranty note received from the distributor and reviewed by the Sales Manager.
+ */
+export function canProcessWarrantyClaim(
+  saleType: WarrantySaleType,
+  notesReceived: boolean,
+  noteStatus?: string
+): { allowed: boolean; reason?: string } {
+  if (saleType === 'DEALER') {
+    if (!notesReceived || noteStatus !== 'VERIFIED') {
+      return {
+        allowed: false,
+        reason:
+          'Warranty claim cannot be processed: Distributor sales require a valid warranty note reviewed and verified by the Sales Manager.',
+      };
+    }
+  }
+  return { allowed: true };
+}
+

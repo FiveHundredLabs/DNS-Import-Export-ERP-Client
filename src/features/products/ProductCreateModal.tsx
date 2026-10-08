@@ -5,6 +5,8 @@ import { Input } from '../../components/ui/input';
 import { Select } from '../../components/ui/select';
 import { Product, Category, UnitOfMeasure } from '../../types/product';
 import { validateProductData } from '../../rules/productRules';
+import { Percent, Info, Plus } from 'lucide-react';
+import { CategoryCreateModal } from './CategoryCreateModal';
 
 interface ProductCreateModalProps {
   open: boolean;
@@ -12,6 +14,7 @@ interface ProductCreateModalProps {
   categories: Category[];
   uoms: UnitOfMeasure[];
   onCreate: (product: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
+  onCreateCategory?: (category: Omit<Category, 'id' | 'createdAt' | 'updatedAt'>) => Promise<Category | void>;
 }
 
 export function ProductCreateModal({
@@ -20,17 +23,19 @@ export function ProductCreateModal({
   categories,
   uoms,
   onCreate,
+  onCreateCategory,
 }: ProductCreateModalProps) {
   const [sku, setSku] = useState('');
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [categoryId, setCategoryId] = useState(categories[0]?.id || '');
+  const [isAddCategoryOpen, setIsAddCategoryOpen] = useState(false);
   const [uomId, setUomId] = useState(uoms[0]?.id || '');
   const [barcode, setBarcode] = useState('');
   const [costPrice, setCostPrice] = useState<number>(0);
   const [sellingPrice, setSellingPrice] = useState<number>(0);
   const [minSellingPrice, setMinSellingPrice] = useState<number>(0);
-  const [maxDiscountPercentage, setMaxDiscountPercentage] = useState<number>(10);
+  const [showDiscountInfo, setShowDiscountInfo] = useState(false);
   const [warrantyMonths, setWarrantyMonths] = useState<number>(12);
   const [isPromotional, setIsPromotional] = useState(false);
   const [discLevel1, setDiscLevel1] = useState<string>('');
@@ -64,7 +69,7 @@ export function ProductCreateModal({
         costPrice: Number(costPrice),
         currentSellingPrice: Number(sellingPrice),
         minimumSellingPrice: Number(minSellingPrice || costPrice),
-        maxDiscountPercentage: Number(maxDiscountPercentage),
+        maxDiscountPercentage: discountLevels.length > 0 ? Math.max(...discountLevels) : 0,
         taxRatePercentage: 18,
         discountLevels,
       },
@@ -103,7 +108,7 @@ export function ProductCreateModal({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={onOpenChange} size="xl">
       <DialogHeader>
         <DialogTitle>Create Product Master Item</DialogTitle>
         <DialogDescription>
@@ -111,7 +116,7 @@ export function ProductCreateModal({
         </DialogDescription>
       </DialogHeader>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-4 max-h-[75vh] overflow-y-auto pr-1">
         {errors.form && (
           <div className="rounded-lg bg-rose-50 p-2 text-xs text-rose-700">{errors.form}</div>
         )}
@@ -153,9 +158,20 @@ export function ProductCreateModal({
           />
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">Category</label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-xs font-semibold text-slate-700">Category</label>
+              {onCreateCategory && (
+                <button
+                  type="button"
+                  onClick={() => setIsAddCategoryOpen(true)}
+                  className="text-[11px] text-indigo-600 hover:text-indigo-800 font-medium inline-flex items-center gap-0.5 hover:underline focus:outline-none"
+                >
+                  <Plus className="h-3 w-3" /> New
+                </button>
+              )}
+            </div>
             <Select
               value={categoryId || categories[0]?.id}
               onChange={(e) => setCategoryId(e.target.value)}
@@ -180,11 +196,22 @@ export function ProductCreateModal({
               ))}
             </Select>
           </div>
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">Warranty (Months)</label>
+            <Input
+              type="number"
+              value={warrantyMonths}
+              onChange={(e) => setWarrantyMonths(Number(e.target.value))}
+              placeholder="e.g. 12"
+            />
+          </div>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 border-t border-slate-100 pt-3">
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">Cost Price (LKR)</label>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">
+              Cost Price (LKR) <span className="text-rose-500">*</span>
+            </label>
             <Input
               type="number"
               value={costPrice || ''}
@@ -194,7 +221,9 @@ export function ProductCreateModal({
             />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">Selling Price (LKR)</label>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">
+              Selling Price (LKR) <span className="text-rose-500">*</span>
+            </label>
             <Input
               type="number"
               value={sellingPrice || ''}
@@ -204,7 +233,9 @@ export function ProductCreateModal({
             />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">Min Floor Price (LKR)</label>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">
+              Min Floor Price (LKR)
+            </label>
             <Input
               type="number"
               value={minSellingPrice || ''}
@@ -215,75 +246,124 @@ export function ProductCreateModal({
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">Max Ceiling Discount (%)</label>
-            <Input
-              type="number"
-              value={maxDiscountPercentage}
-              onChange={(e) => setMaxDiscountPercentage(Number(e.target.value))}
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">Warranty (Months)</label>
-            <Input
-              type="number"
-              value={warrantyMonths}
-              onChange={(e) => setWarrantyMonths(Number(e.target.value))}
-            />
-          </div>
-        </div>
+        {/* Product Discount Levels Card */}
+        <div className="rounded-xl border border-indigo-200/90 bg-indigo-50/40 p-4 space-y-3">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <div className="flex h-6 w-6 items-center justify-center rounded-md bg-indigo-100 text-indigo-700 shrink-0">
+                <Percent className="h-3.5 w-3.5" />
+              </div>
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="font-semibold text-xs text-slate-900">
+                  Product Discount Levels
+                </span>
+                <span className="text-[11px] text-slate-500 font-normal">
+                  (Up to 3 levels)
+                </span>
+              </div>
+            </div>
 
-        {/* Product Discount Levels (Up to 3 Optional Levels) */}
-        <div className="rounded-lg border border-slate-200 bg-slate-50/70 p-3 space-y-2">
-          <div className="flex items-center justify-between">
-            <label className="block text-xs font-semibold text-slate-800">
-              Product Discount Levels (Up to 3 Optional Levels)
-            </label>
-            <span className="text-[10px] text-slate-500 font-medium">Lowest to Highest</span>
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={() => setShowDiscountInfo((prev) => !prev)}
+                className="inline-flex items-center gap-1.5 text-[11px] font-medium text-indigo-700 bg-white hover:bg-indigo-50 px-2.5 py-1 rounded-md border border-indigo-200 transition-colors focus:outline-none shadow-xs"
+                title="Click to view customer loyalty tier discount rules"
+              >
+                <Info className="h-3.5 w-3.5 text-indigo-600" />
+                <span>{showDiscountInfo ? 'Hide note' : 'View note'}</span>
+              </button>
+              <span className="text-[10px] text-slate-500 font-medium bg-white px-2 py-1 rounded-md border border-slate-200 shadow-xs">
+                Lowest to highest
+              </span>
+            </div>
           </div>
-          <p className="text-[11px] text-slate-500 leading-tight">
-            Configure up to 3 optional discount levels. Customer loyalty determines accessible levels (New = Level 1, Premium = Levels 1 & 2, Platinum = All 3). Leave blank for 0 levels (requires approval for any discount).
-          </p>
-          <div className="grid grid-cols-3 gap-2 pt-1">
+
+          {showDiscountInfo && (
+            <div className="rounded-lg bg-white p-3 text-xs border border-indigo-200/80 shadow-xs space-y-2 animate-in fade-in-50 duration-150">
+              <p className="font-medium text-slate-800 text-[11.5px]">
+                Customer loyalty tier determines available discounts:
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                <div className="rounded-md bg-slate-50 p-2 border border-slate-200/80 text-[11px]">
+                  <span className="font-semibold text-slate-800 block">New Customer</span>
+                  <span className="text-slate-500 text-[10.5px]">Level 1 only</span>
+                </div>
+                <div className="rounded-md bg-slate-50 p-2 border border-slate-200/80 text-[11px]">
+                  <span className="font-semibold text-indigo-700 block">Premium</span>
+                  <span className="text-slate-500 text-[10.5px]">Level 1 & 2</span>
+                </div>
+                <div className="rounded-md bg-slate-50 p-2 border border-slate-200/80 text-[11px]">
+                  <span className="font-semibold text-amber-700 block">Platinum</span>
+                  <span className="text-slate-500 text-[10.5px]">All 3 levels</span>
+                </div>
+              </div>
+              <p className="text-[10.5px] text-slate-500 italic">
+                Leave empty for 0 levels (direct discounts disabled; requires management approval).
+              </p>
+            </div>
+          )}
+
+          <div className="grid grid-cols-3 gap-3 pt-0.5">
             <div>
-              <label className="block text-[10px] font-semibold text-slate-600 mb-1">Level 1 (%)</label>
-              <Input
-                type="number"
-                min="0"
-                max="100"
-                step="0.5"
-                placeholder="e.g. 5"
-                value={discLevel1}
-                onChange={(e) => setDiscLevel1(e.target.value)}
-                className="h-8 text-xs font-mono"
-              />
+              <label className="block text-[11px] font-medium text-slate-700 mb-1">
+                Discount Level 1
+              </label>
+              <div className="relative">
+                <Input
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.5"
+                  placeholder="e.g. 5"
+                  value={discLevel1}
+                  onChange={(e) => setDiscLevel1(e.target.value)}
+                  className="h-9 pr-7 text-xs font-mono font-semibold text-slate-800 bg-white"
+                />
+                <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">
+                  %
+                </span>
+              </div>
             </div>
             <div>
-              <label className="block text-[10px] font-semibold text-slate-600 mb-1">Level 2 (%)</label>
-              <Input
-                type="number"
-                min="0"
-                max="100"
-                step="0.5"
-                placeholder="e.g. 10"
-                value={discLevel2}
-                onChange={(e) => setDiscLevel2(e.target.value)}
-                className="h-8 text-xs font-mono"
-              />
+              <label className="block text-[11px] font-medium text-slate-700 mb-1">
+                Discount Level 2
+              </label>
+              <div className="relative">
+                <Input
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.5"
+                  placeholder="e.g. 10"
+                  value={discLevel2}
+                  onChange={(e) => setDiscLevel2(e.target.value)}
+                  className="h-9 pr-7 text-xs font-mono font-semibold text-slate-800 bg-white"
+                />
+                <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">
+                  %
+                </span>
+              </div>
             </div>
             <div>
-              <label className="block text-[10px] font-semibold text-slate-600 mb-1">Level 3 (%)</label>
-              <Input
-                type="number"
-                min="0"
-                max="100"
-                step="0.5"
-                placeholder="e.g. 15"
-                value={discLevel3}
-                onChange={(e) => setDiscLevel3(e.target.value)}
-                className="h-8 text-xs font-mono"
-              />
+              <label className="block text-[11px] font-medium text-slate-700 mb-1">
+                Discount Level 3
+              </label>
+              <div className="relative">
+                <Input
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.5"
+                  placeholder="e.g. 15"
+                  value={discLevel3}
+                  onChange={(e) => setDiscLevel3(e.target.value)}
+                  className="h-9 pr-7 text-xs font-mono font-semibold text-slate-800 bg-white"
+                />
+                <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">
+                  %
+                </span>
+              </div>
             </div>
           </div>
         </div>
@@ -297,6 +377,19 @@ export function ProductCreateModal({
           </Button>
         </DialogFooter>
       </form>
+
+      {onCreateCategory && (
+        <CategoryCreateModal
+          open={isAddCategoryOpen}
+          onOpenChange={setIsAddCategoryOpen}
+          onCreate={async (catData) => {
+            const created = await onCreateCategory(catData);
+            if (created && 'id' in created) {
+              setCategoryId(created.id);
+            }
+          }}
+        />
+      )}
     </Dialog>
   );
 }

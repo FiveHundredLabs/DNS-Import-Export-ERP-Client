@@ -1,4 +1,4 @@
-﻿export * from './InventoryDashboardPage';
+export * from './InventoryDashboardPage';
 export * from './GRNListPage';
 export * from './GRNCreateEditPage';
 export * from './GRNDetailPage';
@@ -6,4 +6,3 @@ export * from './StockBalancePage';
 export * from './StockMovementsPage';
 export * from './OrderPickingPage';
 export * from './DispatchPage';
-export * from './TransferListPage';
