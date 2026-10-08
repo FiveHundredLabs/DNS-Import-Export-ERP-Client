@@ -46,6 +46,7 @@ import { BalanceSheetPage } from './features/finance/pages/reports/BalanceSheetP
 import { TrialBalancePage } from './features/finance/pages/reports/TrialBalancePage';
 import { GeneralLedgerPage } from './features/finance/pages/reports/GeneralLedgerPage';
 import { VatSummaryPage } from './features/finance/pages/reports/VatSummaryPage';
+import { MonthlyTransactionsAuditPage } from './features/finance/pages/reports/MonthlyTransactionsAuditPage';
 import { VendorBillCostingPage } from './features/finance/pages/ap/VendorBillCostingPage';
 import { SupplierAdvancePaymentsPage } from './features/finance/pages/ap/SupplierAdvancePaymentsPage';
 import { SupplierDebitNotesPage } from './features/finance/pages/ap/SupplierDebitNotesPage';
@@ -426,6 +427,7 @@ export function App() {
 
           {/* 5 - Reports and sub-reports with easy backward navigation */}
           <Route path="reports" element={<FinanceReportsHubPage />} />
+          <Route path="reports/monthly-audit" element={<MonthlyTransactionsAuditPage />} />
           <Route path="reports/pnl" element={<ProfitLossPage />} />
           <Route path="reports/balance-sheet" element={<BalanceSheetPage />} />
           <Route path="reports/trial-balance" element={<TrialBalancePage />} />

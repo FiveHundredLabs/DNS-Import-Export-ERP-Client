@@ -31,6 +31,17 @@ interface ReportCardItem {
 
 const REPORT_CARDS: ReportCardItem[] = [
   {
+    id: 'monthly-audit',
+    title: 'Monthly Transactions & Double-Entry Audit',
+    category: 'Finance Manager Oversight',
+    description: 'Audit all automated and manual transactions for any month with double-entry lines and affected database tables.',
+    path: '/finance/reports/monthly-audit',
+    icon: FileText,
+    badge: 'Automated vs Manual Filter',
+    badgeColor: 'bg-primary-light text-primary-text border-primary-border',
+    features: ['Automated / Manual Filter', 'Double-Entry Postings', 'Affected DB Tables'],
+  },
+  {
     id: 'pnl',
     title: 'Profit & Loss Statement (P&L)',
     category: 'Financial Performance',
