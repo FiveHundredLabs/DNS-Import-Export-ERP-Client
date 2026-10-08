@@ -23,6 +23,12 @@ export interface InvoiceItem {
   lineTotal: number;
   quantity: number;
   uomSnapshot?: string;
+  discountApprovalStatus?: 'NOT_REQUIRED' | 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED';
+  discountAllowedPercentage?: number;
+  discountApprovedById?: string;
+  discountApprovedByName?: string;
+  discountApprovedAt?: string;
+  discountApprovalNote?: string;
 }
 
 export interface Invoice extends BaseEntity {
@@ -44,6 +50,8 @@ export interface Invoice extends BaseEntity {
   discountTotal: number;
   taxTotal: number;
   totalAmount: number;
+  taxEnabled?: boolean;
+  taxRatePercentage?: number;
   paidAmount: number;
   collectedAmount?: number;
   balanceAmount: number;

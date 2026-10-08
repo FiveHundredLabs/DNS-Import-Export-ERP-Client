@@ -605,7 +605,22 @@ export function OrderDetailPage() {
                       {it.issuedQuantity}
                     </td>
                     <td className="py-3 px-3 text-center font-medium tabular-nums">
-                      {it.discountPercentage}%
+                      <div>{it.discountPercentage}%</div>
+                      {it.discountApprovalStatus === 'PENDING_APPROVAL' && (
+                        <span className="inline-block text-[10px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5 mt-0.5 whitespace-nowrap">
+                          Pending Management Approval
+                        </span>
+                      )}
+                      {it.discountApprovalStatus === 'APPROVED' && (
+                        <span className="inline-block text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded px-1.5 py-0.5 mt-0.5 whitespace-nowrap">
+                          Discount Approved
+                        </span>
+                      )}
+                      {it.discountApprovalStatus === 'REJECTED' && (
+                        <span className="inline-block text-[10px] font-semibold text-rose-700 bg-rose-50 border border-rose-200 rounded px-1.5 py-0.5 mt-0.5 whitespace-nowrap">
+                          Discount Rejected
+                        </span>
+                      )}
                     </td>
                     <td className="py-3 px-3 text-right font-mono text-slate-600 tabular-nums">
                       - {formatCurrency(it.discountAmount)}
@@ -630,7 +645,11 @@ export function OrderDetailPage() {
               <span className="font-mono font-medium tabular-nums">- {formatCurrency(order.discountAmount)}</span>
             </div>
             <div className="flex justify-between w-64 text-slate-600">
-              <span>VAT (18%):</span>
+              <span>
+                {order.taxEnabled !== false && order.taxAmount > 0
+                  ? `VAT (${order.taxRatePercentage ?? 18}%):`
+                  : 'Tax:'}
+              </span>
               <span className="font-mono font-medium tabular-nums">{formatCurrency(order.taxAmount)}</span>
             </div>
             <div className="flex justify-between w-64 border-t-2 border-slate-900 pt-2 font-semibold text-sm text-slate-900">

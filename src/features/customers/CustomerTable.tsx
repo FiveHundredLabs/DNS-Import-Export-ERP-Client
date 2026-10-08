@@ -54,9 +54,9 @@ export function CustomerTable({
                     <Badge variant="outline" className="text-[10.5px] py-0">
                       {c.type}
                     </Badge>
-                    {c.loyaltyTier && (
-                      <Badge variant="warning" className="text-[10px] py-0">
-                        {c.loyaltyTier}
+                    {(c.loyaltyLevel || c.loyaltyTier) && (
+                      <Badge variant="warning" className="text-[10px] py-0 uppercase font-semibold">
+                        {c.loyaltyLevel || c.loyaltyTier}
                       </Badge>
                     )}
                     {onDelete && (
@@ -197,7 +197,11 @@ export function CustomerTable({
                   <TableCell>
                     <div className="font-semibold text-slate-900 flex items-center gap-1.5">
                       {c.name}
-                      {c.loyaltyTier && <Badge variant="warning">{c.loyaltyTier}</Badge>}
+                      {(c.loyaltyLevel || c.loyaltyTier) && (
+                        <Badge variant="warning" className="text-[10px] uppercase font-semibold">
+                          {c.loyaltyLevel || c.loyaltyTier}
+                        </Badge>
+                      )}
                     </div>
                     <div className="text-xs text-slate-500 mt-0.5">
                       <span className="font-mono text-slate-600">{c.code}</span> • {c.contactPerson} ({c.phone})

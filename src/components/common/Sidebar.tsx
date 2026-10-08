@@ -35,6 +35,7 @@ import {
   Lock,
   SlidersHorizontal,
   CheckCircle2,
+  Percent,
   Layers,
 } from 'lucide-react';
 import { useEffect } from 'react';
@@ -133,7 +134,8 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     { id: 'teams', name: 'Team Management', path: '/teams', icon: Users, category: 'admin' },
     { id: 'areas', name: 'Area Management', path: '/areas', icon: Compass, category: 'admin' },
     { id: 'reports', name: 'Enterprise Reports', path: '/reports', icon: BarChart3, category: 'reports' },
-    { id: 'theme', name: 'Theme & Appearance', path: '/?tab=settings', icon: Settings, category: 'admin', directorOnly: true },
+    { id: 'tax-settings', name: 'Global Tax Configuration', path: '/?tab=settings&section=tax', icon: Percent, category: 'admin', directorOnly: true },
+    { id: 'theme', name: 'Theme & Appearance', path: '/?tab=settings&section=appearance', icon: Settings, category: 'admin', directorOnly: true },
     { id: 'role-portal', name: 'Role Switcher Portal', path: '/login', icon: Users, category: 'admin' },
   ];
 

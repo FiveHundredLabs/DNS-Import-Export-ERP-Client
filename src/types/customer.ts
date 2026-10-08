@@ -30,6 +30,8 @@ export interface CustomerFinancials {
   lastPaymentAmount?: number;
 }
 
+export type CustomerLoyaltyLevel = 'NEW' | 'PREMIUM' | 'PLATINUM';
+
 export interface Customer extends BaseEntity {
   code: string;
   name: string;
@@ -50,6 +52,7 @@ export interface Customer extends BaseEntity {
   approvalStage: CustomerApprovalStage;
   status: CustomerStatus;
   loyaltyTier?: 'BRONZE' | 'SILVER' | 'GOLD' | 'PLATINUM';
+  loyaltyLevel?: CustomerLoyaltyLevel;
   warrantyNotesExpected: number;
   warrantyNotesReceived: number;
 }
