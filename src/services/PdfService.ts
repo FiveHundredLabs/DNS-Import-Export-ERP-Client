@@ -127,7 +127,7 @@ export class PdfService implements IPdfService {
               <td style="text-align: right; color: #16a34a; font-weight: 600;">- LKR ${quotation.discountAmount.toLocaleString()}</td>
             </tr>
             <tr>
-              <td style="color: #64748b;">VAT (18% Included):</td>
+              <td style="color: #64748b;">${quotation.taxEnabled !== false && quotation.taxAmount > 0 ? `VAT (${quotation.taxRatePercentage ?? 18}% Included):` : 'Tax:'}</td>
               <td style="text-align: right; font-weight: 600;">LKR ${quotation.taxAmount.toLocaleString()}</td>
             </tr>
             <tr class="grand-total-row">
@@ -270,7 +270,7 @@ export class PdfService implements IPdfService {
               <td style="text-align: right; color: #16a34a; font-weight: 600;">- LKR ${invoice.discountTotal.toLocaleString()}</td>
             </tr>
             <tr>
-              <td style="color: #64748b;">VAT (18% Included):</td>
+              <td style="color: #64748b;">${invoice.taxEnabled !== false && invoice.taxTotal > 0 ? `VAT (${invoice.taxRatePercentage ?? 18}% Included):` : 'Tax:'}</td>
               <td style="text-align: right; font-weight: 600;">LKR ${invoice.taxTotal.toLocaleString()}</td>
             </tr>
             <tr class="grand-total-row">

@@ -282,7 +282,11 @@ export function InvoiceDetailPage() {
                 <span className="font-mono font-semibold tabular-nums">- {formatCurrency(invoice.discountTotal)}</span>
               </div>
               <div className="flex justify-between py-1 text-slate-600 border-b border-slate-100 pb-2">
-                <span>VAT (18% Included):</span>
+                <span>
+                  {invoice.taxEnabled !== false && invoice.taxTotal > 0
+                    ? `VAT (${invoice.taxRatePercentage ?? 18}% Included):`
+                    : 'Tax:'}
+                </span>
                 <span className="font-mono font-semibold tabular-nums text-slate-800">{formatCurrency(invoice.taxTotal)}</span>
               </div>
               <div className="flex justify-between py-2 border-b-2 border-slate-900 text-sm font-semibold text-slate-900">

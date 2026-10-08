@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { useQuotations } from '../../hooks/useQuotations';
+import { useTax } from '../../hooks/useTax';
 import { customerService } from '../../services/CustomerService';
 import { productService } from '../../services/ProductService';
 import { Customer } from '../../types/customer';
@@ -43,6 +44,7 @@ export function QuotationCreateEditPage() {
   const [searchParams] = useSearchParams();
   const { currentUser } = useAuth();
   const { createQuotation, updateQuotation } = useQuotations();
+  const { taxEnabled, taxRate, taxName } = useTax();
 
   const isEdit = Boolean(id);
 
@@ -50,6 +52,7 @@ export function QuotationCreateEditPage() {
   const [isCustomerSelectorOpen, setIsCustomerSelectorOpen] = useState(false);
   const [items, setItems] = useState<LocalItem[]>([]);
   const [isProductSelectorOpen, setIsProductSelectorOpen] = useState(false);
+  const [savedTaxConfig, setSavedTaxConfig] = useState<{ taxEnabled: boolean; taxRate: number } | null>(null);
   const [validDays, setValidDays] = useState(30);
   const [validUntil, setValidUntil] = useState(
     new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0]
@@ -79,6 +82,13 @@ export function QuotationCreateEditPage() {
           if (existing.status !== 'DRAFT') {
             setFormError(`Only DRAFT quotations can be edited. Current status is ${existing.status}`);
             return;
+          }
+
+          if (existing.taxEnabled !== undefined) {
+            setSavedTaxConfig({
+              taxEnabled: existing.taxEnabled,
+              taxRate: existing.taxRatePercentage ?? (existing.taxEnabled ? 18 : 0),
+            });
           }
 
           const cust = await customerService.getCustomer(existing.customerId);
@@ -175,6 +185,11 @@ export function QuotationCreateEditPage() {
     setItems(items.filter((_, i) => i !== index));
   };
 
+  const effectiveTaxEnabled = isEdit && savedTaxConfig !== null ? savedTaxConfig.taxEnabled : taxEnabled;
+  const effectiveTaxRate = isEdit && savedTaxConfig !== null
+    ? (savedTaxConfig.taxEnabled ? savedTaxConfig.taxRate : 0)
+    : (taxEnabled ? taxRate : 0);
+
   // Calculations & Validations per line item
   const calculatedItems = useMemo(() => {
     const repAuthority = currentUser.role === 'SALES_REP' ? 5 : 15;
@@ -185,8 +200,7 @@ export function QuotationCreateEditPage() {
       const discountRate = Math.max(0, Math.min(100, it.discountPercentage || 0));
       const discountAmount = (subtotal * discountRate) / 100;
       const net = subtotal - discountAmount;
-      const taxRate = it.product.pricing.taxRatePercentage ?? 18;
-      const taxAmount = (net * taxRate) / 100;
+      const taxAmount = effectiveTaxEnabled ? Math.round(((net * effectiveTaxRate) / 100) * 100) / 100 : 0;
       const total = net + taxAmount;
 
       const evalResult = evaluateDiscount({
@@ -515,10 +529,10 @@ export function QuotationCreateEditPage() {
 
                           <div>
                             <label className="block text-xs font-medium text-slate-500 mb-1">
-                              VAT (18%)
+                              {effectiveTaxEnabled ? `${taxName || 'VAT'} (${effectiveTaxRate}%)` : 'Tax (0%)'}
                             </label>
                             <div className="h-8 flex items-center font-mono text-slate-500 text-xs tabular-nums">
-                              {formatCurrency(it.taxAmount)}
+                              {effectiveTaxEnabled ? formatCurrency(it.taxAmount) : formatCurrency(0)}
                             </div>
                           </div>
 
@@ -618,8 +632,15 @@ export function QuotationCreateEditPage() {
                 </div>
 
                 <div className="flex justify-between text-slate-600">
-                  <span>18% VAT:</span>
-                  <span className="font-mono tabular-nums font-medium">{formatCurrency(totals.totalTax)}</span>
+                  <span className="flex items-center gap-1">
+                    <span>{effectiveTaxEnabled ? `${effectiveTaxRate}% ${taxName || 'VAT'}:` : 'Tax:'}</span>
+                    {!effectiveTaxEnabled && (
+                      <span className="text-[10px] text-slate-400 font-medium">(0%)</span>
+                    )}
+                  </span>
+                  <span className="font-mono tabular-nums font-medium">
+                    {effectiveTaxEnabled ? formatCurrency(totals.totalTax) : formatCurrency(0)}
+                  </span>
                 </div>
 
                 <div className="border-t border-slate-300 pt-2 flex justify-between font-semibold text-sm text-slate-900">

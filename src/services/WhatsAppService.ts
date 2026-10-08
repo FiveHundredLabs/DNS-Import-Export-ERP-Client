@@ -46,7 +46,9 @@ export class WhatsAppService {
       `*Items:*\n${itemList}\n\n` +
       `*Subtotal:* LKR ${quotation.subtotal.toLocaleString()}\n` +
       `*Discount:* LKR ${quotation.discountAmount.toLocaleString()}\n` +
-      `*VAT (18%):* LKR ${quotation.taxAmount.toLocaleString()}\n` +
+      (quotation.taxEnabled !== false && quotation.taxAmount > 0
+        ? `*VAT (${quotation.taxRatePercentage ?? 18}%):* LKR ${quotation.taxAmount.toLocaleString()}\n`
+        : `*Tax:* LKR 0\n`) +
       `*GRAND TOTAL:* LKR ${quotation.totalAmount.toLocaleString()}\n\n` +
       `View or download your quotation:\n` +
       `https://portal.dnserp.com/quotations/${quotation.quotationNumber}\n\n` +
@@ -76,7 +78,9 @@ export class WhatsAppService {
       `*Items:*\n${itemList}\n\n` +
       `*Subtotal:* LKR ${invoice.subtotal.toLocaleString()}\n` +
       `*Discount:* LKR ${invoice.discountTotal.toLocaleString()}\n` +
-      `*Tax (18% VAT):* LKR ${invoice.taxTotal.toLocaleString()}\n` +
+      (invoice.taxEnabled !== false && invoice.taxTotal > 0
+        ? `*Tax (${invoice.taxRatePercentage ?? 18}% VAT):* LKR ${invoice.taxTotal.toLocaleString()}\n`
+        : `*Tax:* LKR 0\n`) +
       `*Total Amount:* LKR ${invoice.totalAmount.toLocaleString()}\n` +
       `*Paid to Date:* LKR ${invoice.paidAmount.toLocaleString()}\n` +
       `*BALANCE DUE:* LKR ${invoice.balanceAmount.toLocaleString()}\n\n` +

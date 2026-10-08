@@ -5,20 +5,24 @@ import { User } from '../types/auth';
 import { PaginatedResult } from '../types/common';
 import { orderService, OrderService } from './OrderService';
 import { customerService, CustomerService } from './CustomerService';
+import { taxService, TaxService } from './TaxService';
 
 export class InvoiceService {
   private repo: IInvoiceRepository;
   private orderSvc: OrderService;
   private customerSvc: CustomerService;
+  private taxSvc: TaxService;
 
   constructor(
     repo?: IInvoiceRepository,
     orderSvc?: OrderService,
-    customerSvc?: CustomerService
+    customerSvc?: CustomerService,
+    taxSvc?: TaxService
   ) {
     this.repo = repo || new MockInvoiceRepository();
     this.orderSvc = orderSvc || orderService;
     this.customerSvc = customerSvc || customerService;
+    this.taxSvc = taxSvc || taxService;
   }
 
   async getInvoices(filters?: InvoiceFilters): Promise<PaginatedResult<Invoice>> {
@@ -65,6 +69,10 @@ export class InvoiceService {
       );
     }
 
+    // Global Tax Configuration enforcement
+    const taxConfig = this.taxSvc.getTaxConfig();
+    const effectiveTaxRate = taxConfig.taxEnabled ? taxConfig.taxRate : 0;
+
     // Preserve immutable product snapshots on invoice line items
     let calculatedSubtotal = 0;
     let calculatedDiscountTotal = 0;
@@ -82,7 +90,7 @@ export class InvoiceService {
       const lineSubtotal = Math.round(item.unitPriceSnapshot * qty * 100) / 100;
       const lineDiscount = Math.round(lineSubtotal * (item.discountPercentage / 100) * 100) / 100;
       const afterDiscount = lineSubtotal - lineDiscount;
-      const lineTax = Math.round(afterDiscount * (item.taxPercentage / 100) * 100) / 100;
+      const lineTax = taxConfig.taxEnabled ? Math.round(afterDiscount * (effectiveTaxRate / 100) * 100) / 100 : 0;
       const lineTotal = afterDiscount + lineTax;
 
       calculatedSubtotal += lineSubtotal;
@@ -98,7 +106,7 @@ export class InvoiceService {
         unitPriceSnapshot: item.unitPriceSnapshot,
         discountPercentage: item.discountPercentage,
         discountAmount: lineDiscount,
-        taxPercentage: item.taxPercentage,
+        taxPercentage: effectiveTaxRate,
         taxAmount: lineTax,
         lineTotal,
         quantity: qty,
@@ -141,6 +149,8 @@ export class InvoiceService {
       discountTotal: calculatedDiscountTotal,
       taxTotal: calculatedTaxTotal,
       totalAmount: calculatedGrandTotal,
+      taxEnabled: taxConfig.taxEnabled,
+      taxRatePercentage: effectiveTaxRate,
       paidAmount: 0,
       balanceAmount: calculatedGrandTotal,
       status: 'ISSUED',

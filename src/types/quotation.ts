@@ -28,6 +28,12 @@ export interface QuotationItem {
   lineTotal: number;
   requiresApproval?: boolean;
   approvalReason?: string;
+  discountApprovalStatus?: 'NOT_REQUIRED' | 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED';
+  discountAllowedPercentage?: number;
+  discountApprovedById?: string;
+  discountApprovedByName?: string;
+  discountApprovedAt?: string;
+  discountApprovalNote?: string;
 }
 
 export interface Quotation extends BaseEntity {
@@ -44,6 +50,8 @@ export interface Quotation extends BaseEntity {
   discountAmount: number;
   taxAmount: number;
   totalAmount: number;
+  taxEnabled?: boolean;
+  taxRatePercentage?: number;
   status: QuotationStatus;
   validUntil: string;
   notes?: string;
@@ -112,6 +120,8 @@ export interface ConvertedOrderPayload {
   discountAmount: number;
   taxAmount: number;
   totalAmount: number;
+  taxEnabled?: boolean;
+  taxRatePercentage?: number;
   deliveryAddress?: string;
   deliveryDate?: string;
   customerPoNumber?: string;

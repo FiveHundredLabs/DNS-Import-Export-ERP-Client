@@ -15,6 +15,7 @@ import { PaginatedResult } from '../types/common';
 import { productService, ProductService } from './ProductService';
 import { customerService, CustomerService } from './CustomerService';
 import { approvalService, ApprovalService } from './ApprovalService';
+import { taxService, TaxService } from './TaxService';
 import { evaluateDiscount } from '../rules/discountRules';
 import { generateOrderNumber } from '../rules/orderRules';
 
@@ -23,17 +24,20 @@ export class QuotationService {
   private productSvc: ProductService;
   private customerSvc: CustomerService;
   private approvalSvc: ApprovalService;
+  private taxSvc: TaxService;
 
   constructor(
     repo?: IQuotationRepository,
     productSvc?: ProductService,
     customerSvc?: CustomerService,
-    approvalSvc?: ApprovalService
+    approvalSvc?: ApprovalService,
+    taxSvc?: TaxService
   ) {
     this.repo = repo || new MockQuotationRepository();
     this.productSvc = productSvc || productService;
     this.customerSvc = customerSvc || customerService;
     this.approvalSvc = approvalSvc || approvalService;
+    this.taxSvc = taxSvc || taxService;
 
     // Listen to approvals engine actions so that approving in ApprovalsPage updates quotation
     this.approvalSvc.onAction(async (request, action, actorRole, comment) => {
@@ -85,7 +89,8 @@ export class QuotationService {
     quantity: number,
     requestedDiscountPercentage: number = 0,
     customer: Customer,
-    userRole: UserRole = 'SALES_REP'
+    userRole: UserRole = 'SALES_REP',
+    customTaxRate?: number
   ): Promise<QuotationItem> {
     if (quantity <= 0) {
       throw new Error(`Quantity must be greater than zero for product ${productId}`);
@@ -118,7 +123,15 @@ export class QuotationService {
     const discountAmount = Number(((subtotal * requestedDiscountPercentage) / 100).toFixed(2));
     const netAfterDiscount = Number((subtotal - discountAmount).toFixed(2));
 
-    const taxPercentage = product.pricing.taxRatePercentage ?? 18;
+    // Global Tax Configuration enforcement
+    const taxConfig = this.taxSvc.getTaxConfig();
+    const taxPercentage =
+      customTaxRate !== undefined
+        ? customTaxRate
+        : taxConfig.taxEnabled
+        ? taxConfig.taxRate
+        : 0;
+
     const taxAmount = Number(((netAfterDiscount * taxPercentage) / 100).toFixed(2));
     const lineTotal = Number((netAfterDiscount + taxAmount).toFixed(2));
 
@@ -162,6 +175,8 @@ export class QuotationService {
     }
 
     // 3. Process line items snapshots & check approval requirements
+    const taxConfig = this.taxSvc.getTaxConfig();
+    const effectiveTaxRate = taxConfig.taxEnabled ? taxConfig.taxRate : 0;
     const snapshotItems: QuotationItem[] = [];
     let quotationRequiresApproval = false;
     const approvalReasons: string[] = [];
@@ -172,7 +187,8 @@ export class QuotationService {
         itemInput.quantity,
         itemInput.requestedDiscountPercentage || 0,
         customer,
-        currentUser.role
+        currentUser.role,
+        effectiveTaxRate
       );
 
       snapshotItems.push(itemSnapshot);
@@ -229,6 +245,8 @@ export class QuotationService {
       discountAmount,
       taxAmount,
       totalAmount,
+      taxEnabled: taxConfig.taxEnabled,
+      taxRatePercentage: effectiveTaxRate,
       status,
       validUntil: validityDate,
       notes: input.notes,
@@ -311,6 +329,17 @@ export class QuotationService {
     let requiresApproval = false;
     const approvalReasons: string[] = [];
 
+    const preservedTaxRate =
+      existing.taxRatePercentage !== undefined
+        ? existing.taxRatePercentage
+        : existing.taxEnabled !== undefined
+        ? (existing.taxEnabled ? 18 : 0)
+        : (existing.taxAmount > 0 ? 18 : 0);
+    const preservedTaxEnabled =
+      existing.taxEnabled !== undefined
+        ? existing.taxEnabled
+        : existing.taxAmount > 0;
+
     if (updates.items && updates.items.length > 0) {
       const snapshotItems: QuotationItem[] = [];
       for (const itemInput of updates.items) {
@@ -319,7 +348,8 @@ export class QuotationService {
           itemInput.quantity,
           itemInput.requestedDiscountPercentage || 0,
           customer,
-          currentUser.role
+          currentUser.role,
+          preservedTaxRate
         );
         snapshotItems.push(itemSnapshot);
         if (itemSnapshot.requiresApproval) {
@@ -361,6 +391,8 @@ export class QuotationService {
       discountAmount,
       taxAmount,
       totalAmount,
+      taxEnabled: preservedTaxEnabled,
+      taxRatePercentage: preservedTaxRate,
       status,
       validUntil: updates.validUntil || existing.validUntil,
       notes: updates.notes ?? existing.notes,
@@ -617,6 +649,8 @@ export class QuotationService {
       discountAmount: quotation.discountAmount,
       taxAmount: quotation.taxAmount,
       totalAmount: quotation.totalAmount,
+      taxEnabled: quotation.taxEnabled ?? (quotation.taxAmount > 0),
+      taxRatePercentage: quotation.taxRatePercentage ?? (quotation.taxAmount > 0 ? 18 : 0),
       deliveryAddress: details?.deliveryAddress || quotation.customerAddressSnapshot,
       deliveryDate: details?.deliveryDate,
       customerPoNumber: details?.customerPoNumber,

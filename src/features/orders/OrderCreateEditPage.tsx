@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { useOrders } from '../../hooks/useOrders';
+import { useTax } from '../../hooks/useTax';
 import { customerService } from '../../services/CustomerService';
 import { productService } from '../../services/ProductService';
 import { quotationService } from '../../services/QuotationService';
@@ -53,6 +54,7 @@ export function OrderCreateEditPage() {
   const [searchParams] = useSearchParams();
   const { currentUser } = useAuth();
   const { createOrder, updateOrder } = useOrders();
+  const { taxEnabled, taxRate, taxName } = useTax();
 
   const isEdit = Boolean(id);
   const quotationId = searchParams.get('quotationId');
@@ -232,12 +234,13 @@ export function OrderCreateEditPage() {
         unitPriceSnapshot: i.product.pricing.currentSellingPrice,
         orderedQuantity: i.quantity,
         discountPercentage: i.discountPercentage,
+        taxPercentage: taxEnabled ? taxRate : 0,
         product: i.product,
       })),
       requestedCreditDays,
       userRole: currentUser.role,
     });
-  }, [selectedCustomer, items, requestedCreditDays, currentUser.role]);
+  }, [selectedCustomer, items, requestedCreditDays, currentUser.role, taxEnabled, taxRate]);
 
   const handleSubmit = async (saveAsDraft: boolean) => {
     try {
@@ -635,7 +638,9 @@ export function OrderCreateEditPage() {
                     <th className="py-2.5 px-3 text-center font-semibold w-[100px]">Qty</th>
                     <th className="py-2.5 px-3 text-center font-semibold w-[110px]">Disc %</th>
                     <th className="py-2.5 px-3 text-right font-semibold w-[120px]">Disc Amount</th>
-                    <th className="py-2.5 px-3 text-right font-semibold w-[100px]">VAT (18%)</th>
+                    <th className="py-2.5 px-3 text-right font-semibold w-[100px]">
+                      {taxEnabled ? `${taxName || 'VAT'} (${taxRate}%)` : 'Tax (0%)'}
+                    </th>
                     <th className="py-2.5 px-4 text-right font-semibold w-[130px]">Line Total</th>
                     <th className="py-2.5 px-2 text-center w-[50px]"></th>
                   </tr>
@@ -645,7 +650,8 @@ export function OrderCreateEditPage() {
                     const price = it.product.pricing.currentSellingPrice;
                     const sub = price * it.quantity;
                     const disc = (sub * it.discountPercentage) / 100;
-                    const tax = ((sub - disc) * (it.product.pricing.taxRatePercentage || 18)) / 100;
+                    const effectiveRate = taxEnabled ? taxRate : 0;
+                    const tax = ((sub - disc) * effectiveRate) / 100;
                     const total = sub - disc + tax;
                     const isExcessDisc = it.discountPercentage > 5;
 
@@ -731,7 +737,7 @@ export function OrderCreateEditPage() {
                 <span className="font-mono font-medium tabular-nums">- {formatCurrency(evaluation.discountAmount)}</span>
               </div>
               <div className="flex justify-between w-64 text-slate-600">
-                <span>VAT (18%):</span>
+                <span>{taxEnabled ? `${taxRate}% ${taxName || 'VAT'}:` : 'Tax:'}</span>
                 <span className="font-mono font-medium tabular-nums">{formatCurrency(evaluation.taxAmount)}</span>
               </div>
               <div className="flex justify-between w-64 border-t border-slate-300 pt-2 font-semibold text-sm text-slate-900">

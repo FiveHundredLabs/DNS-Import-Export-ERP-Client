@@ -630,7 +630,11 @@ export function OrderDetailPage() {
               <span className="font-mono font-medium tabular-nums">- {formatCurrency(order.discountAmount)}</span>
             </div>
             <div className="flex justify-between w-64 text-slate-600">
-              <span>VAT (18%):</span>
+              <span>
+                {order.taxEnabled !== false && order.taxAmount > 0
+                  ? `VAT (${order.taxRatePercentage ?? 18}%):`
+                  : 'Tax:'}
+              </span>
               <span className="font-mono font-medium tabular-nums">{formatCurrency(order.taxAmount)}</span>
             </div>
             <div className="flex justify-between w-64 border-t-2 border-slate-900 pt-2 font-semibold text-sm text-slate-900">

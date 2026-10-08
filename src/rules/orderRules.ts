@@ -57,6 +57,7 @@ export interface OrderEvaluationInput {
     unitPriceSnapshot: number;
     orderedQuantity: number;
     discountPercentage: number;
+    taxPercentage?: number;
     product?: Product;
   }>;
   requestedCreditDays: number;
@@ -113,7 +114,7 @@ export function evaluateOrderApproval(
     const lineSubtotal = Number((item.unitPriceSnapshot * safeQty).toFixed(2));
     const lineDiscount = Number(((lineSubtotal * item.discountPercentage) / 100).toFixed(2));
     const netLine = lineSubtotal - lineDiscount;
-    const taxRate = item.product?.pricing?.taxRatePercentage ?? 18;
+    const taxRate = item.taxPercentage !== undefined ? item.taxPercentage : (item.product?.pricing?.taxRatePercentage ?? 18);
     const lineTax = Number(((netLine * taxRate) / 100).toFixed(2));
 
     subtotal += lineSubtotal;

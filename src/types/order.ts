@@ -37,6 +37,12 @@ export interface SalesOrderItem {
   issuedQuantity: number;
   requiresSpecialApproval?: boolean;
   specialApprovalReason?: string;
+  discountApprovalStatus?: 'NOT_REQUIRED' | 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED';
+  discountAllowedPercentage?: number;
+  discountApprovedById?: string;
+  discountApprovedByName?: string;
+  discountApprovedAt?: string;
+  discountApprovalNote?: string;
 }
 
 export type OrderActionType =
@@ -106,6 +112,8 @@ export interface SalesOrder extends BaseEntity {
   discountAmount: number;
   taxAmount: number;
   totalAmount: number;
+  taxEnabled?: boolean;
+  taxRatePercentage?: number;
 
   // Status & Special Approval indicators
   status: OrderStatus;

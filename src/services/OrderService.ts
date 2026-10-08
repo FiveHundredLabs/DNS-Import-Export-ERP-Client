@@ -16,6 +16,7 @@ import { productService, ProductService } from './ProductService';
 import { customerService, CustomerService } from './CustomerService';
 import { approvalService, ApprovalService } from './ApprovalService';
 import { quotationService, QuotationService } from './QuotationService';
+import { taxService, TaxService } from './TaxService';
 import {
   evaluateOrderApproval,
   isValidOrderTransition,
@@ -32,19 +33,22 @@ export class OrderService {
   private customerSvc: CustomerService;
   private approvalSvc: ApprovalService;
   private quotationSvc: QuotationService;
+  private taxSvc: TaxService;
 
   constructor(
     repo?: ISalesOrderRepository,
     productSvc?: ProductService,
     customerSvc?: CustomerService,
     approvalSvc?: ApprovalService,
-    quotationSvc?: QuotationService
+    quotationSvc?: QuotationService,
+    taxSvc?: TaxService
   ) {
     this.repo = repo || new MockSalesOrderRepository();
     this.productSvc = productSvc || productService;
     this.customerSvc = customerSvc || customerService;
     this.approvalSvc = approvalSvc || approvalService;
     this.quotationSvc = quotationSvc || quotationService;
+    this.taxSvc = taxSvc || taxService;
 
     // Listen to global approvals engine actions for SPECIAL_SALES_ORDER documents
     this.approvalSvc.onAction(async (request, action, actorRole, comment) => {
@@ -182,7 +186,8 @@ export class OrderService {
       const subtotal = Number((unitPriceSnapshot * inputItem.orderedQuantity).toFixed(2));
       const discountAmount = Number(((subtotal * discountPercentage) / 100).toFixed(2));
       const netLine = Number((subtotal - discountAmount).toFixed(2));
-      const taxPercentage = product.pricing.taxRatePercentage ?? 18;
+      const taxConfig = this.taxSvc.getTaxConfig();
+      const taxPercentage = taxConfig.taxEnabled ? taxConfig.taxRate : 0;
       const taxAmount = Number(((netLine * taxPercentage) / 100).toFixed(2));
       const lineTotal = Number((netLine + taxAmount).toFixed(2));
 
@@ -217,6 +222,7 @@ export class OrderService {
         unitPriceSnapshot,
         orderedQuantity: inputItem.orderedQuantity,
         discountPercentage,
+        taxPercentage,
         product,
       });
     }
@@ -319,6 +325,8 @@ export class OrderService {
       discountAmount: evalResult.discountAmount,
       taxAmount: evalResult.taxAmount,
       totalAmount: evalResult.totalAmount,
+      taxEnabled: this.taxSvc.getTaxConfig().taxEnabled,
+      taxRatePercentage: this.taxSvc.getTaxConfig().taxEnabled ? this.taxSvc.getTaxConfig().taxRate : 0,
       status: initialStatus,
       isSpecialApproval: evalResult.isSpecialApproval,
       specialApprovalReasons: evalResult.specialApprovalReasons,
@@ -887,6 +895,7 @@ export class OrderService {
         unitPriceSnapshot: i.unitPriceSnapshot,
         orderedQuantity: i.orderedQuantity,
         discountPercentage: i.discountPercentage,
+        taxPercentage: i.taxPercentage,
       })),
       requestedCreditDays,
       userRole: currentUser.role,
@@ -940,6 +949,8 @@ export class OrderService {
       discountAmount: evalResult.discountAmount,
       taxAmount: evalResult.taxAmount,
       totalAmount: evalResult.totalAmount,
+      taxEnabled: payload.taxEnabled,
+      taxRatePercentage: payload.taxRatePercentage,
       status: initialStatus,
       isSpecialApproval: evalResult.isSpecialApproval,
       specialApprovalReasons: evalResult.specialApprovalReasons,

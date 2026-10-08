@@ -390,7 +390,11 @@ export function QuotationDetailPage() {
                   <TableHead className="w-20 text-center">Qty</TableHead>
                   <TableHead className="w-28 text-right">List Price</TableHead>
                   <TableHead className="w-20 text-right">Disc %</TableHead>
-                  <TableHead className="w-24 text-right">VAT (18%)</TableHead>
+                  <TableHead className="w-24 text-right">
+                    {quotation.taxEnabled !== false && quotation.taxAmount > 0
+                      ? `VAT (${quotation.taxRatePercentage ?? 18}%)`
+                      : 'Tax (0%)'}
+                  </TableHead>
                   <TableHead className="w-32 text-right">Line Total</TableHead>
                 </TableRow>
               </TableHeader>
@@ -457,7 +461,11 @@ export function QuotationDetailPage() {
               </div>
 
               <div className="flex justify-between text-slate-600 py-1">
-                <span>VAT (18% Included):</span>
+                <span>
+                  {quotation.taxEnabled !== false && quotation.taxAmount > 0
+                    ? `VAT (${quotation.taxRatePercentage ?? 18}% Included):`
+                    : 'Tax:'}
+                </span>
                 <span className="font-mono font-medium tabular-nums">{formatCurrency(quotation.taxAmount)}</span>
               </div>
 
