@@ -5,7 +5,8 @@ import { Input } from '../../components/ui/input';
 import { Select } from '../../components/ui/select';
 import { Product, Category, UnitOfMeasure } from '../../types/product';
 import { validateProductData } from '../../rules/productRules';
-import { Percent, Info } from 'lucide-react';
+import { Percent, Info, Plus } from 'lucide-react';
+import { CategoryCreateModal } from './CategoryCreateModal';
 
 interface ProductCreateModalProps {
   open: boolean;
@@ -13,6 +14,7 @@ interface ProductCreateModalProps {
   categories: Category[];
   uoms: UnitOfMeasure[];
   onCreate: (product: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
+  onCreateCategory?: (category: Omit<Category, 'id' | 'createdAt' | 'updatedAt'>) => Promise<Category | void>;
 }
 
 export function ProductCreateModal({
@@ -21,11 +23,13 @@ export function ProductCreateModal({
   categories,
   uoms,
   onCreate,
+  onCreateCategory,
 }: ProductCreateModalProps) {
   const [sku, setSku] = useState('');
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [categoryId, setCategoryId] = useState(categories[0]?.id || '');
+  const [isAddCategoryOpen, setIsAddCategoryOpen] = useState(false);
   const [uomId, setUomId] = useState(uoms[0]?.id || '');
   const [barcode, setBarcode] = useState('');
   const [costPrice, setCostPrice] = useState<number>(0);
@@ -156,7 +160,18 @@ export function ProductCreateModal({
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">Category</label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-xs font-semibold text-slate-700">Category</label>
+              {onCreateCategory && (
+                <button
+                  type="button"
+                  onClick={() => setIsAddCategoryOpen(true)}
+                  className="text-[11px] text-indigo-600 hover:text-indigo-800 font-medium inline-flex items-center gap-0.5 hover:underline focus:outline-none"
+                >
+                  <Plus className="h-3 w-3" /> New
+                </button>
+              )}
+            </div>
             <Select
               value={categoryId || categories[0]?.id}
               onChange={(e) => setCategoryId(e.target.value)}
@@ -362,6 +377,19 @@ export function ProductCreateModal({
           </Button>
         </DialogFooter>
       </form>
+
+      {onCreateCategory && (
+        <CategoryCreateModal
+          open={isAddCategoryOpen}
+          onOpenChange={setIsAddCategoryOpen}
+          onCreate={async (catData) => {
+            const created = await onCreateCategory(catData);
+            if (created && 'id' in created) {
+              setCategoryId(created.id);
+            }
+          }}
+        />
+      )}
     </Dialog>
   );
 }
