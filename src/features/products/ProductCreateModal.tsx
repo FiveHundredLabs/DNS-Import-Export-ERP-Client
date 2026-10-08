@@ -5,6 +5,7 @@ import { Input } from '../../components/ui/input';
 import { Select } from '../../components/ui/select';
 import { Product, Category, UnitOfMeasure } from '../../types/product';
 import { validateProductData } from '../../rules/productRules';
+import { Percent } from 'lucide-react';
 
 interface ProductCreateModalProps {
   open: boolean;
@@ -111,7 +112,7 @@ export function ProductCreateModal({
         </DialogDescription>
       </DialogHeader>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-4 max-h-[75vh] overflow-y-auto pr-1">
         {errors.form && (
           <div className="rounded-lg bg-rose-50 p-2 text-xs text-rose-700">{errors.form}</div>
         )}
@@ -235,19 +236,30 @@ export function ProductCreateModal({
         </div>
 
         {/* Product Discount Levels (Up to 3 Optional Levels) */}
-        <div className="rounded-lg border border-slate-200 bg-slate-50/70 p-3 space-y-2">
+        <div className="rounded-lg border-2 border-indigo-200 bg-indigo-50/50 p-3.5 space-y-2.5">
           <div className="flex items-center justify-between">
-            <label className="block text-xs font-semibold text-slate-800">
-              Product Discount Levels (Up to 3 Optional Levels)
-            </label>
-            <span className="text-[10px] text-slate-500 font-medium">Lowest to Highest</span>
+            <div className="flex items-center gap-1.5 font-semibold text-xs text-indigo-950">
+              <Percent className="h-4 w-4 text-indigo-600" />
+              <span>Product Discount Levels (Up to 3 Optional Levels)</span>
+            </div>
+            <span className="text-[10px] bg-indigo-100 text-indigo-800 font-semibold px-2 py-0.5 rounded-full border border-indigo-200">
+              Lowest to Highest
+            </span>
           </div>
-          <p className="text-[11px] text-slate-500 leading-tight">
-            Configure up to 3 optional discount levels. Customer loyalty determines accessible levels (New = Level 1, Premium = Levels 1 & 2, Platinum = All 3). Leave blank for 0 levels (requires approval for any discount).
+          <p className="text-[11px] text-slate-600 leading-tight">
+            Configure up to 3 optional discount levels. Customer loyalty tier determines available discounts:
+            <br />
+            • <strong>New Customer:</strong> Level 1 only &nbsp;|&nbsp; • <strong>Premium Customer:</strong> Level 1 & 2 &nbsp;|&nbsp; • <strong>Platinum Customer:</strong> All 3 levels
+            <br />
+            <span className="text-slate-500 italic mt-0.5 block">
+              Leave blank for 0 levels (direct discounts disabled; requires management approval).
+            </span>
           </p>
-          <div className="grid grid-cols-3 gap-2 pt-1">
+          <div className="grid grid-cols-3 gap-2.5 pt-1">
             <div>
-              <label className="block text-[10px] font-semibold text-slate-600 mb-1">Level 1 (%)</label>
+              <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                Discount Level 1 (%)
+              </label>
               <Input
                 type="number"
                 min="0"
@@ -256,11 +268,13 @@ export function ProductCreateModal({
                 placeholder="e.g. 5"
                 value={discLevel1}
                 onChange={(e) => setDiscLevel1(e.target.value)}
-                className="h-8 text-xs font-mono"
+                className="h-8 text-xs font-mono font-semibold text-slate-800 bg-white"
               />
             </div>
             <div>
-              <label className="block text-[10px] font-semibold text-slate-600 mb-1">Level 2 (%)</label>
+              <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                Discount Level 2 (%)
+              </label>
               <Input
                 type="number"
                 min="0"
@@ -269,11 +283,13 @@ export function ProductCreateModal({
                 placeholder="e.g. 10"
                 value={discLevel2}
                 onChange={(e) => setDiscLevel2(e.target.value)}
-                className="h-8 text-xs font-mono"
+                className="h-8 text-xs font-mono font-semibold text-slate-800 bg-white"
               />
             </div>
             <div>
-              <label className="block text-[10px] font-semibold text-slate-600 mb-1">Level 3 (%)</label>
+              <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                Discount Level 3 (%)
+              </label>
               <Input
                 type="number"
                 min="0"
@@ -282,7 +298,7 @@ export function ProductCreateModal({
                 placeholder="e.g. 15"
                 value={discLevel3}
                 onChange={(e) => setDiscLevel3(e.target.value)}
-                className="h-8 text-xs font-mono"
+                className="h-8 text-xs font-mono font-semibold text-slate-800 bg-white"
               />
             </div>
           </div>
