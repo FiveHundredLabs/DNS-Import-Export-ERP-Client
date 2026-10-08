@@ -2,29 +2,55 @@ import { useState, useEffect, useCallback } from 'react';
 import { useFinanceLedger } from '../../hooks/useFinanceLedger';
 import { TrialBalanceReport } from '../../api/types';
 import { ReportHeaderNav } from './ReportHeaderNav';
+import { ReportDateFilterBar, DateFilterState } from './ReportDateFilterBar';
 import { formatCurrency } from '../../../../utils/formatters';
-import { Scale, CheckCircle2, AlertTriangle, Printer, Calendar, ShieldCheck } from 'lucide-react';
+import { CheckCircle2, AlertTriangle } from 'lucide-react';
 import { Card } from '../../../../components/ui/card';
 import { Badge } from '../../../../components/ui/badge';
-import { Button } from '../../../../components/ui/button';
-import { Input } from '../../../../components/ui/input';
 
 export function TrialBalancePage() {
   const { getTrialBalance } = useFinanceLedger();
   const [report, setReport] = useState<TrialBalanceReport | null>(null);
-  const [asOfDate, setAsOfDate] = useState<string>(new Date().toISOString().slice(0, 10));
+  const [dateFilter, setDateFilter] = useState<DateFilterState>({
+    preset: 'THIS_MONTH',
+    startDate: `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-01`,
+    endDate: new Date().toISOString().slice(0, 10),
+  });
 
   const loadReport = useCallback(async () => {
-    const data = await getTrialBalance(asOfDate);
+    const data = await getTrialBalance(dateFilter.endDate);
     setReport(data);
-  }, [getTrialBalance, asOfDate]);
+  }, [getTrialBalance, dateFilter.endDate]);
 
   useEffect(() => {
     loadReport();
   }, [loadReport]);
 
-  const handlePrint = () => {
-    window.print();
+  const handleExportCsv = () => {
+    if (!report || !report.items) return;
+    const headers = ['Account Code', 'Account Name', 'Classification', 'Debit (LKR)', 'Credit (LKR)'];
+    const rows = report.items.map((i) => [
+      `"${i.code}"`,
+      `"${i.name.replace(/"/g, '""')}"`,
+      `"${i.accountSubClass}"`,
+      i.debit.toFixed(2),
+      i.credit.toFixed(2),
+    ]);
+    const summaryRow = [
+      '"TOTAL"',
+      '""',
+      '""',
+      report.totalDebit.toFixed(2),
+      report.totalCredit.toFixed(2),
+    ];
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map((r) => r.join(',')), summaryRow.join(',')].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `Trial_Balance_${dateFilter.endDate}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   return (
@@ -45,30 +71,15 @@ export function TrialBalancePage() {
             Complete account summary testing mathematical accuracy of the double-entry bookkeeping ledger.
           </p>
         </div>
-
-        <div className="flex items-center gap-3 print:hidden">
-          <div className="flex items-center gap-2 text-xs">
-            <Calendar className="h-4 w-4 text-slate-400" />
-            <span className="text-slate-600 font-medium">As of Date:</span>
-            <Input
-              type="date"
-              value={asOfDate}
-              onChange={(e) => setAsOfDate(e.target.value)}
-              className="h-8 w-36 text-xs"
-            />
-          </div>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={handlePrint}
-            className="h-8 gap-1 text-xs text-slate-700"
-          >
-            <Printer className="h-3.5 w-3.5" />
-            <span>Print / PDF</span>
-          </Button>
-        </div>
       </div>
+
+      {/* Date Filter & Export Bar */}
+      <ReportDateFilterBar
+        filter={dateFilter}
+        onChange={setDateFilter}
+        onExportCsv={handleExportCsv}
+        reportTitle="Trial_Balance_Statement"
+      />
 
       {/* Balancing Status Badge */}
       <Card

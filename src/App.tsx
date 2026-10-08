@@ -46,6 +46,17 @@ import { BalanceSheetPage } from './features/finance/pages/reports/BalanceSheetP
 import { TrialBalancePage } from './features/finance/pages/reports/TrialBalancePage';
 import { GeneralLedgerPage } from './features/finance/pages/reports/GeneralLedgerPage';
 import { VatSummaryPage } from './features/finance/pages/reports/VatSummaryPage';
+import { VendorBillCostingPage } from './features/finance/pages/ap/VendorBillCostingPage';
+import { SupplierAdvancePaymentsPage } from './features/finance/pages/ap/SupplierAdvancePaymentsPage';
+import { SupplierDebitNotesPage } from './features/finance/pages/ap/SupplierDebitNotesPage';
+import { BatchSupplierPaymentPage } from './features/finance/pages/ap/BatchSupplierPaymentPage';
+import { ReceiptApprovalQueuePage } from './features/finance/pages/ar/ReceiptApprovalQueuePage';
+import { ARCollectionAllocationPage } from './features/finance/pages/ar/ARCollectionAllocationPage';
+import { PDCVaultPage } from './features/finance/pages/ar/PDCVaultPage';
+import { CustomerCreditNotesPage } from './features/finance/pages/ar/CustomerCreditNotesPage';
+import { ManualJournalPage } from './features/finance/pages/journal/ManualJournalPage';
+import { BankReconciliationPage } from './features/finance/pages/reconciliation/BankReconciliationPage';
+import { FinancialPeriodLockPage } from './features/finance/pages/settings/FinancialPeriodLockPage';
 import { ReportsPage } from './features/reports/ReportsPage';
 import { ProtectedRoute } from './components/common/ProtectedRoute';
 import { LoginPage } from './features/auth/LoginPage';
@@ -372,7 +383,7 @@ export function App() {
         />
         </Route>
 
-        {/* Phase 9: Finance & Accounting Module with Direct Extended Navigation */}
+        {/* Phase 1: Finance & Accounting Module Executive Navigation */}
         <Route
           path="finance"
           element={
@@ -381,14 +392,37 @@ export function App() {
             </ProtectedRoute>
           }
         >
-          {/* Initial Screen: 1 - Journal Entry (The Finance Desk) */}
-          <Route index element={<FinanceDeskPage />} />
-          <Route path="desk" element={<FinanceDeskPage />} />
+          {/* Executive Dashboard as central landing page */}
+          <Route index element={<FinanceDashboardPage />} />
+          <Route path="dashboard" element={<FinanceDashboardPage />} />
+
+          {/* Legacy route redirections to unified workflows */}
+          <Route path="desk" element={<Navigate to="/finance/journal/new" replace />} />
+          <Route path="payment-approvals" element={<Navigate to="/finance/ar/approvals" replace />} />
+
+          <Route path="journal/new" element={<ManualJournalPage />} />
           <Route path="accounts" element={<ChartOfAccountsPage />} />
-          <Route path="payment-approvals" element={<PaymentApprovalPage />} />
+
+          {/* Accounts Payable (AP) Workflows */}
+          <Route path="ap/bills/new" element={<VendorBillCostingPage />} />
+          <Route path="ap/advances" element={<SupplierAdvancePaymentsPage />} />
+          <Route path="ap/debit-notes" element={<SupplierDebitNotesPage />} />
+          <Route path="ap/payments/new" element={<BatchSupplierPaymentPage />} />
+
+          {/* Accounts Receivable (AR) & Collections */}
+          <Route path="ar/approvals" element={<ReceiptApprovalQueuePage />} />
+          <Route path="ar/allocate" element={<ARCollectionAllocationPage />} />
+          <Route path="ar/pdc-vault" element={<PDCVaultPage />} />
+          <Route path="ar/credit-notes" element={<CustomerCreditNotesPage />} />
+
+          {/* Bank Reconciliation Workspace */}
+          <Route path="reconciliation" element={<BankReconciliationPage />} />
+
+          {/* Period Closing & Settings */}
+          <Route path="settings/closing" element={<FinancialPeriodLockPage />} />
+
           <Route path="suppliers" element={<SuppliersPage />} />
           <Route path="commissions" element={<FinanceCommissionsPage />} />
-          <Route path="dashboard" element={<FinanceDashboardPage />} />
 
           {/* 5 - Reports and sub-reports with easy backward navigation */}
           <Route path="reports" element={<FinanceReportsHubPage />} />

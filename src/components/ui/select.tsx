@@ -169,23 +169,62 @@ const Select = ({
 }: SelectProps) => {
   // Check if children contain a standard SelectTrigger
   let hasTrigger = false;
-  const optionList: { value: string; label: React.ReactNode }[] = [];
+  interface OptionItem {
+    type: 'item';
+    value: string;
+    label: React.ReactNode;
+  }
+  interface GroupItem {
+    type: 'group';
+    label: string;
+    options: { value: string; label: React.ReactNode }[];
+  }
+  type RenderItem = OptionItem | GroupItem;
 
-  React.Children.forEach(children, (child) => {
-    if (React.isValidElement(child)) {
-      if (
-        child.type === SelectTrigger ||
-        (child.type as { displayName?: string })?.displayName === 'SelectTrigger'
-      ) {
-        hasTrigger = true;
-      } else if (child.type === 'option') {
-        optionList.push({
-          value: String(child.props.value ?? ''),
-          label: child.props.children,
-        });
+  const renderItems: RenderItem[] = [];
+  const flatOptions: { value: string; label: React.ReactNode }[] = [];
+
+  const extractOptions = (nodeChildren: React.ReactNode) => {
+    React.Children.forEach(nodeChildren, (child) => {
+      if (React.isValidElement(child)) {
+        if (
+          child.type === SelectTrigger ||
+          (child.type as { displayName?: string })?.displayName === 'SelectTrigger'
+        ) {
+          hasTrigger = true;
+        } else if (child.type === 'optgroup') {
+          const groupLabel = String((child.props as { label?: string }).label || '');
+          const groupOptions: { value: string; label: React.ReactNode }[] = [];
+          React.Children.forEach((child.props as { children?: React.ReactNode }).children, (subChild) => {
+            if (React.isValidElement(subChild) && subChild.type === 'option') {
+              const val = String((subChild.props as { value?: unknown }).value ?? '');
+              const lbl = (subChild.props as { children?: React.ReactNode }).children;
+              groupOptions.push({ value: val, label: lbl });
+              flatOptions.push({ value: val, label: lbl });
+            }
+          });
+          if (groupOptions.length > 0) {
+            renderItems.push({
+              type: 'group',
+              label: groupLabel,
+              options: groupOptions,
+            });
+          }
+        } else if (child.type === 'option') {
+          const val = String((child.props as { value?: unknown }).value ?? '');
+          const lbl = (child.props as { children?: React.ReactNode }).children;
+          renderItems.push({
+            type: 'item',
+            value: val,
+            label: lbl,
+          });
+          flatOptions.push({ value: val, label: lbl });
+        }
       }
-    }
-  });
+    });
+  };
+
+  extractOptions(children);
 
   // Standard shadcn compound component usage
   if (hasTrigger) {
@@ -203,15 +242,15 @@ const Select = ({
     );
   }
 
-  // Automatic translation of <option> children into accessible Radix Select
+  // Automatic translation of <option> and <optgroup> children into accessible Radix Select
   const safeValue =
     value === '' || value === undefined
-      ? optionList.some((o) => o.value === '')
+      ? flatOptions.some((o) => o.value === '')
         ? '__empty_val__'
         : undefined
       : String(value);
 
-  const selectedOption = optionList.find(
+  const selectedOption = flatOptions.find(
     (o) =>
       o.value === (value ?? '') ||
       (safeValue === '__empty_val__' && o.value === '')
@@ -234,14 +273,31 @@ const Select = ({
           </SelectValue>
         </SelectTrigger>
         <SelectContent>
-          {optionList.map((opt, idx) => (
-            <SelectItem
-              key={opt.value ? opt.value : `empty-${idx}`}
-              value={opt.value === '' ? '__empty_val__' : opt.value}
-            >
-              {opt.label}
-            </SelectItem>
-          ))}
+          {renderItems.map((item, idx) => {
+            if (item.type === 'group') {
+              return (
+                <SelectGroup key={`grp-${idx}`}>
+                  {item.label && <SelectLabel>{item.label}</SelectLabel>}
+                  {item.options.map((opt, optIdx) => (
+                    <SelectItem
+                      key={opt.value ? opt.value : `grp-opt-${optIdx}`}
+                      value={opt.value === '' ? '__empty_val__' : opt.value}
+                    >
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              );
+            }
+            return (
+              <SelectItem
+                key={item.value ? item.value : `item-${idx}`}
+                value={item.value === '' ? '__empty_val__' : item.value}
+              >
+                {item.label}
+              </SelectItem>
+            );
+          })}
         </SelectContent>
       </SelectPrimitive.Root>
       {error && <p className="mt-1 text-[12.5px] font-medium text-rose-600 leading-normal">{error}</p>}

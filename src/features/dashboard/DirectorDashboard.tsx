@@ -89,8 +89,8 @@ export function DirectorDashboard() {
     if (active && payload && payload.length) {
       const topVal = payload[0].value;
       return (
-        <div className="bg-slate-900 text-white px-3 py-1.5 rounded-full text-xs font-bold shadow-lg border border-slate-700 flex items-center gap-1.5 animate-in fade-in zoom-in-95">
-          <span className="h-2 w-2 rounded-full bg-emerald-400" />
+        <div className="bg-white text-slate-900 px-3 py-1.5 rounded-full text-xs font-semibold shadow-md border border-slate-200 flex items-center gap-1.5 animate-in fade-in zoom-in-95">
+          <span className="h-2 w-2 rounded-full bg-emerald-500" />
           <span>{label}: LKR {topVal}k</span>
         </div>
       );
@@ -489,12 +489,13 @@ export function DirectorDashboard() {
                   <Tooltip
                     formatter={(val: any) => [`LKR ${val}k`, 'Average Value']}
                     contentStyle={{
-                      backgroundColor: '#1E293B',
-                      borderColor: '#334155',
+                      backgroundColor: '#ffffff',
+                      borderColor: '#e2e8f0',
                       borderRadius: '0.75rem',
-                      color: '#fff',
+                      color: '#0f172a',
                       fontSize: '12px',
                       fontWeight: 500,
+                      boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
                     }}
                   />
                   <Area

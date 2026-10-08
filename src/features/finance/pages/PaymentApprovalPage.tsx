@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useFinanceLedger } from '../hooks/useFinanceLedger';
+import { DoubleEntryHoverBadge } from '../components/DoubleEntryHoverBadge';
 import { formatCurrency, formatDate } from '../../../utils/formatters';
 import {
   CheckCircle,
@@ -424,6 +425,25 @@ export function PaymentApprovalPage() {
                             <Check className="h-3 w-3" />
                             <span>Approve</span>
                           </Button>
+                          <DoubleEntryHoverBadge
+                            align="right"
+                            title="Payment Approval GL Impact"
+                            description="Approving this payment records funds deposit and clears Accounts Receivable:"
+                            lines={[
+                              {
+                                accountCode: item.paymentMethod === 'CHEQUE' ? '1018' : item.paymentMethod === 'CASH' ? '1040' : '1010',
+                                accountName: item.paymentMethod === 'CHEQUE' ? 'Cheques in Hand (Vault)' : item.paymentMethod === 'CASH' ? 'Cash in Hand (Petty Cash)' : 'Bank Account',
+                                type: 'DEBIT',
+                                amount: item.totalAmount,
+                              },
+                              {
+                                accountCode: '1020',
+                                accountName: `Accounts Receivable (${item.customerName})`,
+                                type: 'CREDIT',
+                                amount: item.totalAmount,
+                              },
+                            ]}
+                          />
                           <Button
                             size="sm"
                             variant="outline"
@@ -511,7 +531,7 @@ export function PaymentApprovalPage() {
               </p>
             </div>
 
-            <DialogFooter>
+            <DialogFooter className="flex items-center justify-end gap-2">
               <Button type="button" variant="outline" size="sm" onClick={() => setApproveItem(null)}>
                 Cancel
               </Button>
@@ -524,6 +544,25 @@ export function PaymentApprovalPage() {
               >
                 {approving ? 'Posting Entry...' : 'Confirm & Post to Ledger'}
               </Button>
+              <DoubleEntryHoverBadge
+                align="right"
+                title="Payment GL Posting Impact"
+                description="Posting this approval executes balancing General Ledger entries:"
+                lines={[
+                  {
+                    accountCode: receivingAccounts.find((a) => a.id === selectedAccountId)?.code || '1010',
+                    accountName: receivingAccounts.find((a) => a.id === selectedAccountId)?.name || 'Receiving Account',
+                    type: 'DEBIT',
+                    amount: approveItem.totalAmount,
+                  },
+                  {
+                    accountCode: '1020',
+                    accountName: `Accounts Receivable (${approveItem.customerName})`,
+                    type: 'CREDIT',
+                    amount: approveItem.totalAmount,
+                  },
+                ]}
+              />
             </DialogFooter>
           </div>
         )}

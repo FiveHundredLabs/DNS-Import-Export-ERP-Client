@@ -160,6 +160,8 @@ export function GRNCreateEditPage() {
     }
   };
 
+  const isStockKeeper = user?.role === 'STOCK_KEEPER';
+
   return (
     <div className="p-6 space-y-6 max-w-5xl mx-auto">
       {/* Header */}
@@ -172,6 +174,16 @@ export function GRNCreateEditPage() {
         </div>
         <Button variant="outline" onClick={() => navigate('/inventory/grn')}>Cancel</Button>
       </div>
+
+      {/* Warehouse Isolation Alert for Stock Keeper */}
+      {isStockKeeper && (
+        <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-xs text-blue-800 flex items-center justify-between">
+          <div>
+            <span className="font-bold">Warehouse Isolation Mode Active:</span> Stock Keepers record physical quantities received and damaged only. All financial costing and GL postings are restricted to Finance Accounts Payable.
+          </div>
+          <Badge variant="outline" className="bg-white text-blue-700 border-blue-300">Warehouse Quantities Only</Badge>
+        </div>
+      )}
 
       {/* GRN Header Details */}
       <Card>
@@ -239,7 +251,7 @@ export function GRNCreateEditPage() {
             <div>
               <CardTitle>Line Items</CardTitle>
               <p className="text-sm text-muted-foreground mt-1">
-                {items.length} product(s) · {totalItems} total units · {formatCurrency(totalValue)} value
+                {items.length} product(s) · {totalItems} total units {!isStockKeeper && `· ${formatCurrency(totalValue)} value`}
               </p>
             </div>
             <Button type="button" onClick={() => setShowProductPicker(true)} size="sm">
@@ -286,7 +298,9 @@ export function GRNCreateEditPage() {
                           <p className="text-xs text-muted-foreground font-mono">{p.sku} · {p.categoryName}</p>
                         </div>
                         <div className="text-right ml-4">
-                          <p className="font-semibold">{formatCurrency(p.pricing.costPrice)}</p>
+                          {!isStockKeeper && (
+                            <p className="font-semibold">{formatCurrency(p.pricing.costPrice)}</p>
+                          )}
                           <p className="text-xs text-muted-foreground">Stock: {p.stockOnHand} {p.uomCode}</p>
                           {alreadyAdded && <Badge className="text-xs bg-green-100 text-green-700 border-0">Added</Badge>}
                         </div>
@@ -313,9 +327,13 @@ export function GRNCreateEditPage() {
                     <th className="pb-2 px-3 font-medium text-right">Expected Qty</th>
                     <th className="pb-2 px-3 font-medium text-right">Received Qty</th>
                     <th className="pb-2 px-3 font-medium text-right">Damaged Qty</th>
-                    <th className="pb-2 px-3 font-medium text-right">Unit Cost (LKR)</th>
+                    {!isStockKeeper && (
+                      <th className="pb-2 px-3 font-medium text-right">Unit Cost (LKR)</th>
+                    )}
                     <th className="pb-2 px-3 font-medium text-right">Good Qty</th>
-                    <th className="pb-2 px-3 font-medium text-right">Line Value</th>
+                    {!isStockKeeper && (
+                      <th className="pb-2 px-3 font-medium text-right">Line Value</th>
+                    )}
                     <th className="pb-2 pl-3 font-medium" />
                   </tr>
                 </thead>
@@ -352,20 +370,24 @@ export function GRNCreateEditPage() {
                             className={`text-right w-24 h-8 ${item.damagedQuantity > 0 ? 'border-orange-400 text-orange-600' : ''}`}
                           />
                         </td>
-                        <td className="py-2 px-3">
-                          <Input
-                            type="number" min="0" step="0.01"
-                            value={item.unitCost}
-                            onChange={e => updateItem(item._tempId, 'unitCost', parseFloat(e.target.value) || 0)}
-                            className="text-right w-28 h-8"
-                          />
-                        </td>
+                        {!isStockKeeper && (
+                          <td className="py-2 px-3">
+                            <Input
+                              type="number" min="0" step="0.01"
+                              value={item.unitCost}
+                              onChange={e => updateItem(item._tempId, 'unitCost', parseFloat(e.target.value) || 0)}
+                              className="text-right w-28 h-8"
+                            />
+                          </td>
+                        )}
                         <td className="py-2 px-3 text-right font-medium">
                           <span className={goodQty < 0 ? 'text-red-600' : ''}>{goodQty}</span>
                         </td>
-                        <td className="py-2 px-3 text-right font-semibold">
-                          {formatCurrency(item.lineValue)}
-                        </td>
+                        {!isStockKeeper && (
+                          <td className="py-2 px-3 text-right font-semibold">
+                            {formatCurrency(item.lineValue)}
+                          </td>
+                        )}
                         <td className="py-2 pl-3">
                           <Button
                             type="button"
@@ -383,11 +405,11 @@ export function GRNCreateEditPage() {
                 </tbody>
                 <tfoot>
                   <tr className="border-t-2">
-                    <td colSpan={6} className="pt-3 pr-3 text-right font-semibold text-muted-foreground">
-                      Total Value
+                    <td colSpan={isStockKeeper ? 4 : 6} className="pt-3 pr-3 text-right font-semibold text-muted-foreground">
+                      {isStockKeeper ? 'Total Units Received' : 'Total Value'}
                     </td>
                     <td className="pt-3 px-3 text-right font-bold text-lg">
-                      {formatCurrency(totalValue)}
+                      {isStockKeeper ? totalItems : formatCurrency(totalValue)}
                     </td>
                     <td />
                   </tr>

@@ -1,4 +1,4 @@
-﻿import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { GRNService } from '../services/GRNService';
 import { InventoryService } from '../services/InventoryService';
 import { MockGRNRepository } from '../repositories/mock/MockGRNRepository';
@@ -16,7 +16,7 @@ describe('Inventory Domain', () => {
 
   beforeEach(() => {
     grnRepo = new MockGRNRepository();
-    invRepo = new MockInventoryRepository();
+    invRepo = new MockInventoryRepository([], []);
     grnService = new GRNService(grnRepo, invRepo);
     invService = new InventoryService(invRepo);
   });
