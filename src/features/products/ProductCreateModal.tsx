@@ -5,7 +5,7 @@ import { Input } from '../../components/ui/input';
 import { Select } from '../../components/ui/select';
 import { Product, Category, UnitOfMeasure } from '../../types/product';
 import { validateProductData } from '../../rules/productRules';
-import { Percent } from 'lucide-react';
+import { Percent, Info } from 'lucide-react';
 
 interface ProductCreateModalProps {
   open: boolean;
@@ -31,7 +31,7 @@ export function ProductCreateModal({
   const [costPrice, setCostPrice] = useState<number>(0);
   const [sellingPrice, setSellingPrice] = useState<number>(0);
   const [minSellingPrice, setMinSellingPrice] = useState<number>(0);
-  const [maxDiscountPercentage, setMaxDiscountPercentage] = useState<number>(10);
+  const [showDiscountInfo, setShowDiscountInfo] = useState(false);
   const [warrantyMonths, setWarrantyMonths] = useState<number>(12);
   const [isPromotional, setIsPromotional] = useState(false);
   const [discLevel1, setDiscLevel1] = useState<string>('');
@@ -65,7 +65,7 @@ export function ProductCreateModal({
         costPrice: Number(costPrice),
         currentSellingPrice: Number(sellingPrice),
         minimumSellingPrice: Number(minSellingPrice || costPrice),
-        maxDiscountPercentage: Number(maxDiscountPercentage),
+        maxDiscountPercentage: discountLevels.length > 0 ? Math.max(...discountLevels) : 0,
         taxRatePercentage: 18,
         discountLevels,
       },
@@ -183,7 +183,7 @@ export function ProductCreateModal({
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 border-t border-slate-100 pt-3">
+        <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 border-t border-slate-100 pt-3">
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1">Cost Price (LKR)</label>
             <Input
@@ -214,17 +214,6 @@ export function ProductCreateModal({
               error={errors.minimumSellingPrice}
             />
           </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">Max Ceiling Discount (%)</label>
-            <Input
-              type="number"
-              value={maxDiscountPercentage}
-              onChange={(e) => setMaxDiscountPercentage(Number(e.target.value))}
-            />
-          </div>
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1">Warranty (Months)</label>
             <Input
@@ -241,20 +230,32 @@ export function ProductCreateModal({
             <div className="flex items-center gap-1.5 font-semibold text-xs text-indigo-950">
               <Percent className="h-4 w-4 text-indigo-600" />
               <span>Product Discount Levels (Up to 3 Optional Levels)</span>
+              <button
+                type="button"
+                onClick={() => setShowDiscountInfo((prev) => !prev)}
+                className="text-indigo-500 hover:text-indigo-700 p-0.5 rounded transition-colors hover:bg-indigo-100 focus:outline-none"
+                title={showDiscountInfo ? 'Hide loyalty discount details' : 'Click to view loyalty discount details'}
+              >
+                <Info className="h-3.5 w-3.5" />
+              </button>
             </div>
             <span className="text-[10px] bg-indigo-100 text-indigo-800 font-semibold px-2 py-0.5 rounded-full border border-indigo-200">
               Lowest to Highest
             </span>
           </div>
-          <p className="text-[11px] text-slate-600 leading-tight">
-            Configure up to 3 optional discount levels. Customer loyalty tier determines available discounts:
-            <br />
-            • <strong>New Customer:</strong> Level 1 only &nbsp;|&nbsp; • <strong>Premium Customer:</strong> Level 1 & 2 &nbsp;|&nbsp; • <strong>Platinum Customer:</strong> All 3 levels
-            <br />
-            <span className="text-slate-500 italic mt-0.5 block">
-              Leave blank for 0 levels (direct discounts disabled; requires management approval).
-            </span>
-          </p>
+          {showDiscountInfo && (
+            <div className="rounded bg-white/95 border border-indigo-200 p-2 text-[11px] text-slate-600 space-y-1">
+              <p className="leading-tight">
+                Configure up to 3 optional discount levels. Customer loyalty tier determines available discounts:
+              </p>
+              <div className="text-[10.5px] text-slate-700">
+                • <strong>New Customer:</strong> Level 1 only &nbsp;|&nbsp; • <strong>Premium Customer:</strong> Level 1 & 2 &nbsp;|&nbsp; • <strong>Platinum Customer:</strong> All 3 levels
+              </div>
+              <p className="text-slate-500 italic text-[10px]">
+                Leave blank for 0 levels (direct discounts disabled; requires management approval).
+              </p>
+            </div>
+          )}
           <div className="grid grid-cols-3 gap-2.5 pt-1">
             <div>
               <label className="block text-[11px] font-semibold text-slate-700 mb-1">
