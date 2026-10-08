@@ -225,14 +225,14 @@ export function WarrantyHubPage() {
 
       {/* Main Tabs Hub */}
       <Tabs value={activeTab} onValueChange={(v: any) => setActiveTab(v)}>
-        <TabsList className="bg-slate-100 p-1 border border-slate-200 rounded-xl flex overflow-x-auto max-w-full [scrollbar-width:none]">
-          <TabsTrigger value="records" className="text-xs font-semibold whitespace-nowrap shrink-0">
+        <TabsList className="bg-slate-100/90 p-1 border border-slate-200/80 rounded-xl">
+          <TabsTrigger value="records">
             Warranty Records
           </TabsTrigger>
-          <TabsTrigger value="claims" className="text-xs font-semibold whitespace-nowrap shrink-0">
+          <TabsTrigger value="claims">
             Warranty Claims ({pendingClaimsCount})
           </TabsTrigger>
-          <TabsTrigger value="followups" className="text-xs font-semibold whitespace-nowrap shrink-0">
+          <TabsTrigger value="followups">
             Field Follow-up ({totalPendingCards} Pending)
           </TabsTrigger>
         </TabsList>

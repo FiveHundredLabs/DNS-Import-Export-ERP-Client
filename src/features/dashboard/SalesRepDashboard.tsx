@@ -26,9 +26,11 @@ import {
   X,
   Filter,
   FileSpreadsheet,
+  LayoutGrid,
 } from 'lucide-react';
 import { formatCurrency, formatPercentage } from '../../utils/formatters';
 import { whatsAppService } from '../../services/WhatsAppService';
+import { cn } from '../../utils/cn';
 
 interface PendingAccount {
   id: string;
@@ -236,146 +238,159 @@ export function SalesRepDashboard() {
         </div>
       </div>
 
-      {/* 2. Quick Actions & Services Grid (Mobile Only - Inspired by Reference Screen 1) */}
-      <div className="block md:hidden bg-white rounded-3xl p-4 sm:p-5 border border-slate-200/80 shadow-xs">
-        <div className="flex items-center justify-between pb-3 px-1">
-          <span className="text-xs font-bold uppercase tracking-wider text-slate-700">
-            Field Services & Shortcuts
-          </span>
-          <span className="text-[11px] text-slate-400 font-medium">Quick Access</span>
-        </div>
-        <div className="grid grid-cols-4 gap-3 text-center">
-          {/* 1. Quick Order */}
-          <Link to="/orders" className="flex flex-col items-center group active:scale-95 transition-transform">
-            <div className="h-12 w-12 rounded-2xl bg-primary-light text-primary flex items-center justify-center shadow-2xs group-hover:bg-primary group-hover:text-white transition-colors">
-              <PlusCircle className="h-6 w-6" />
-            </div>
-            <span className="text-[11px] font-semibold text-slate-700 mt-1.5 group-hover:text-primary transition-colors">
-              Order Desk
-            </span>
-          </Link>
-
-          {/* 2. Dealer Directory */}
-          <Link to="/customers" className="flex flex-col items-center group active:scale-95 transition-transform">
-            <div className="h-12 w-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center shadow-2xs group-hover:bg-emerald-600 group-hover:text-white transition-colors">
-              <Users className="h-6 w-6" />
-            </div>
-            <span className="text-[11px] font-semibold text-slate-700 mt-1.5 group-hover:text-emerald-700 transition-colors">
-              Dealer Hub
-            </span>
-          </Link>
-
-          {/* 3. Collect Payment */}
-          <Link to="/payments" className="flex flex-col items-center group active:scale-95 transition-transform">
-            <div className="h-12 w-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center shadow-2xs group-hover:bg-blue-600 group-hover:text-white transition-colors">
-              <CreditCard className="h-6 w-6" />
-            </div>
-            <span className="text-[11px] font-semibold text-slate-700 mt-1.5 group-hover:text-blue-700 transition-colors">
-              Collections
-            </span>
-          </Link>
-
-          {/* 4. Warranty Desk */}
-          <Link to="/warranty" className="flex flex-col items-center group active:scale-95 transition-transform">
-            <div className="h-12 w-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center shadow-2xs group-hover:bg-amber-600 group-hover:text-white transition-colors">
-              <ShieldAlert className="h-6 w-6" />
-            </div>
-            <span className="text-[11px] font-semibold text-slate-700 mt-1.5 group-hover:text-amber-700 transition-colors">
-              Warranty
-            </span>
-          </Link>
-
-          {/* 5. Quotations */}
-          <Link to="/quotations" className="flex flex-col items-center group active:scale-95 transition-transform">
-            <div className="h-12 w-12 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center shadow-2xs group-hover:bg-purple-600 group-hover:text-white transition-colors">
-              <FileSpreadsheet className="h-6 w-6" />
-            </div>
-            <span className="text-[11px] font-semibold text-slate-700 mt-1.5 group-hover:text-purple-700 transition-colors">
-              Quotations
-            </span>
-          </Link>
-
-          {/* 6. Invoices */}
-          <Link to="/invoices" className="flex flex-col items-center group active:scale-95 transition-transform">
-            <div className="h-12 w-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center shadow-2xs group-hover:bg-indigo-600 group-hover:text-white transition-colors">
-              <FileCheck2 className="h-6 w-6" />
-            </div>
-            <span className="text-[11px] font-semibold text-slate-700 mt-1.5 group-hover:text-indigo-700 transition-colors">
-              Invoices
-            </span>
-          </Link>
-
-          {/* 7. Live Tracking */}
-          <button
-            type="button"
-            onClick={() => setMobileTab('orders')}
-            className="flex flex-col items-center group active:scale-95 transition-transform"
-          >
-            <div className="h-12 w-12 rounded-2xl bg-sky-50 text-sky-600 flex items-center justify-center shadow-2xs group-hover:bg-sky-600 group-hover:text-white transition-colors">
-              <Clock className="h-6 w-6" />
-            </div>
-            <span className="text-[11px] font-semibold text-slate-700 mt-1.5 group-hover:text-sky-700 transition-colors">
-              Tracking
-            </span>
-          </button>
-
-          {/* 8. Overdue Receivables */}
-          <button
-            type="button"
-            onClick={() => {
-              setMobileTab('receivables');
-              setReceivablesFilter('overdue');
-            }}
-            className="flex flex-col items-center group active:scale-95 transition-transform"
-          >
-            <div className="h-12 w-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center shadow-2xs group-hover:bg-rose-600 group-hover:text-white transition-colors">
-              <AlertCircle className="h-6 w-6" />
-            </div>
-            <span className="text-[11px] font-semibold text-slate-700 mt-1.5 group-hover:text-rose-700 transition-colors">
-              Overdue
-            </span>
-          </button>
-        </div>
-      </div>
-
-      {/* 2. Mobile App Navigation Bar (Segmented Switcher on Phone Screens) */}
-      <div className="block sm:hidden">
-        <div className="flex items-center p-1 rounded-2xl bg-slate-100 border border-slate-200/70 shadow-2xs">
+      {/* 2. Mobile Dashboard Tab Navigation (Sticky Top View Switcher for Field Reps) */}
+      <div className="block md:hidden sticky top-0 z-20 -mx-3.5 px-3.5 sm:-mx-5 sm:px-5 py-2.5 bg-canvas/95 backdrop-blur-md border-b border-slate-200/80 shadow-2xs">
+        <div className="flex items-center p-1 rounded-2xl bg-slate-200/70 border border-slate-200 shadow-inner">
           <button
             type="button"
             onClick={() => setMobileTab('all')}
-            className={`flex-1 py-2 text-center text-xs font-bold rounded-xl transition-all ${
+            aria-label="All Overview"
+            className={cn(
+              'flex-1 flex items-center justify-center gap-1.5 py-2 px-1 text-center text-xs font-bold rounded-xl transition-all select-none',
               mobileTab === 'all'
-                ? 'bg-white text-slate-900 shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
+                ? 'bg-white text-slate-900 shadow-xs scale-[1.02]'
+                : 'text-slate-600 hover:text-slate-900 active:scale-95'
+            )}
           >
-            All Overview
+            <LayoutGrid className={cn('h-3.5 w-3.5 shrink-0', mobileTab === 'all' ? 'text-primary' : 'text-slate-400')} />
+            <span className="truncate">All Overview</span>
           </button>
+
           <button
             type="button"
             onClick={() => setMobileTab('receivables')}
-            className={`flex-1 py-2 text-center text-xs font-bold rounded-xl transition-all ${
+            aria-label={`Receivables (${pendingAccounts.length})`}
+            className={cn(
+              'flex-1 flex items-center justify-center gap-1.5 py-2 px-1 text-center text-xs font-bold rounded-xl transition-all select-none',
               mobileTab === 'receivables'
-                ? 'bg-white text-emerald-700 shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
+                ? 'bg-white text-emerald-800 shadow-xs scale-[1.02]'
+                : 'text-slate-600 hover:text-slate-900 active:scale-95'
+            )}
           >
-            Receivables ({pendingAccounts.length})
+            <CreditCard className={cn('h-3.5 w-3.5 shrink-0', mobileTab === 'receivables' ? 'text-emerald-600' : 'text-slate-400')} />
+            <span className="truncate">Receivables ({pendingAccounts.length})</span>
           </button>
+
           <button
             type="button"
             onClick={() => setMobileTab('orders')}
-            className={`flex-1 py-2 text-center text-xs font-bold rounded-xl transition-all ${
+            aria-label={`Live Orders (${recentOrders.length})`}
+            className={cn(
+              'flex-1 flex items-center justify-center gap-1.5 py-2 px-1 text-center text-xs font-bold rounded-xl transition-all select-none',
               mobileTab === 'orders'
-                ? 'bg-white text-primary shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
+                ? 'bg-white text-primary shadow-xs scale-[1.02]'
+                : 'text-slate-600 hover:text-slate-900 active:scale-95'
+            )}
           >
-            Live Orders ({recentOrders.length})
+            <Clock className={cn('h-3.5 w-3.5 shrink-0', mobileTab === 'orders' ? 'text-primary' : 'text-slate-400')} />
+            <span className="truncate">Live Orders ({recentOrders.length})</span>
           </button>
         </div>
       </div>
+
+      {/* 3. Quick Actions & Services Grid (Mobile Only - shown on All Overview) */}
+      {mobileTab === 'all' && (
+        <div className="block md:hidden bg-white rounded-3xl p-4 sm:p-5 border border-slate-200/80 shadow-xs">
+          <div className="flex items-center justify-between pb-3 px-1">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-700">
+              Field Services & Shortcuts
+            </span>
+            <span className="text-[11px] text-slate-400 font-medium">Quick Access</span>
+          </div>
+          <div className="grid grid-cols-4 gap-3 text-center">
+            {/* 1. Quick Order */}
+            <Link to="/orders" className="flex flex-col items-center group active:scale-95 transition-transform">
+              <div className="h-12 w-12 rounded-2xl bg-primary-light text-primary flex items-center justify-center shadow-2xs group-hover:bg-primary group-hover:text-white transition-colors">
+                <PlusCircle className="h-6 w-6" />
+              </div>
+              <span className="text-[11px] font-semibold text-slate-700 mt-1.5 group-hover:text-primary transition-colors">
+                Order Desk
+              </span>
+            </Link>
+
+            {/* 2. Dealer Directory */}
+            <Link to="/customers" className="flex flex-col items-center group active:scale-95 transition-transform">
+              <div className="h-12 w-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center shadow-2xs group-hover:bg-emerald-600 group-hover:text-white transition-colors">
+                <Users className="h-6 w-6" />
+              </div>
+              <span className="text-[11px] font-semibold text-slate-700 mt-1.5 group-hover:text-emerald-700 transition-colors">
+                Dealer Hub
+              </span>
+            </Link>
+
+            {/* 3. Collect Payment */}
+            <Link to="/payments" className="flex flex-col items-center group active:scale-95 transition-transform">
+              <div className="h-12 w-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center shadow-2xs group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                <CreditCard className="h-6 w-6" />
+              </div>
+              <span className="text-[11px] font-semibold text-slate-700 mt-1.5 group-hover:text-blue-700 transition-colors">
+                Collections
+              </span>
+            </Link>
+
+            {/* 4. Warranty Desk */}
+            <Link to="/warranty" className="flex flex-col items-center group active:scale-95 transition-transform">
+              <div className="h-12 w-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center shadow-2xs group-hover:bg-amber-600 group-hover:text-white transition-colors">
+                <ShieldAlert className="h-6 w-6" />
+              </div>
+              <span className="text-[11px] font-semibold text-slate-700 mt-1.5 group-hover:text-amber-700 transition-colors">
+                Warranty
+              </span>
+            </Link>
+
+            {/* 5. Quotations */}
+            <Link to="/quotations" className="flex flex-col items-center group active:scale-95 transition-transform">
+              <div className="h-12 w-12 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center shadow-2xs group-hover:bg-purple-600 group-hover:text-white transition-colors">
+                <FileSpreadsheet className="h-6 w-6" />
+              </div>
+              <span className="text-[11px] font-semibold text-slate-700 mt-1.5 group-hover:text-purple-700 transition-colors">
+                Quotations
+              </span>
+            </Link>
+
+            {/* 6. Invoices */}
+            <Link to="/invoices" className="flex flex-col items-center group active:scale-95 transition-transform">
+              <div className="h-12 w-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center shadow-2xs group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                <FileCheck2 className="h-6 w-6" />
+              </div>
+              <span className="text-[11px] font-semibold text-slate-700 mt-1.5 group-hover:text-indigo-700 transition-colors">
+                Invoices
+              </span>
+            </Link>
+
+            {/* 7. Live Tracking */}
+            <button
+              type="button"
+              onClick={() => setMobileTab('orders')}
+              className="flex flex-col items-center group active:scale-95 transition-transform"
+            >
+              <div className="h-12 w-12 rounded-2xl bg-sky-50 text-sky-600 flex items-center justify-center shadow-2xs group-hover:bg-sky-600 group-hover:text-white transition-colors">
+                <Clock className="h-6 w-6" />
+              </div>
+              <span className="text-[11px] font-semibold text-slate-700 mt-1.5 group-hover:text-sky-700 transition-colors">
+                Tracking
+              </span>
+            </button>
+
+            {/* 8. Overdue Receivables */}
+            <button
+              type="button"
+              onClick={() => {
+                setMobileTab('receivables');
+                setReceivablesFilter('overdue');
+              }}
+              className="flex flex-col items-center group active:scale-95 transition-transform"
+            >
+              <div className="h-12 w-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center shadow-2xs group-hover:bg-rose-600 group-hover:text-white transition-colors">
+                <AlertCircle className="h-6 w-6" />
+              </div>
+              <span className="text-[11px] font-semibold text-slate-700 mt-1.5 group-hover:text-rose-700 transition-colors">
+                Overdue
+              </span>
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* 3. Mobile KPI Cards (Content-Aware Layout: Hero cards prevent currency clipping, distinct coordinated palettes) */}
       {(mobileTab === 'all' || mobileTab === 'receivables') && (
