@@ -96,11 +96,18 @@ export function UserProfileMenu({ className }: UserProfileMenuProps) {
 
       {/* Enterprise Profile Dropdown Popover */}
       {isOpen && (
-        <div
-          role="menu"
-          aria-label="User account actions"
-          className="absolute right-0 mt-2.5 w-76 rounded-2xl border border-slate-200/90 bg-white p-2 shadow-2xl shadow-slate-900/15 z-50 animate-in fade-in zoom-in-95 duration-150"
-        >
+        <>
+          {/* Mobile backdrop */}
+          <div
+            className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-40 md:hidden"
+            onClick={() => setIsOpen(false)}
+            aria-hidden="true"
+          />
+          <div
+            role="menu"
+            aria-label="User account actions"
+            className="fixed inset-x-3 sm:inset-x-6 top-16 max-w-xs mx-auto md:mx-0 md:absolute md:inset-x-auto md:top-auto md:right-0 md:mt-2.5 md:w-76 rounded-2xl border border-slate-200/90 bg-white p-2 shadow-2xl shadow-slate-900/20 z-50 animate-in fade-in zoom-in-95 duration-150"
+          >
           {/* User Information Card */}
           <div className="p-3.5 pb-3 border-b border-slate-100 bg-slate-50/60 rounded-xl mb-1.5">
             <div className="flex items-center gap-3">
@@ -185,6 +192,7 @@ export function UserProfileMenu({ className }: UserProfileMenuProps) {
             </p>
           </div>
         </div>
+        </>
       )}
     </div>
   );

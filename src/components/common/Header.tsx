@@ -1,9 +1,12 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useLocation, Link, useNavigate } from 'react-router-dom';
 import {
   Menu,
   Search,
   ArrowLeft,
+  MoreVertical,
+  Calculator,
+  Coins,
 } from 'lucide-react';
 import { FullscreenButton } from '../header/FullscreenButton';
 import { UserProfileMenu } from '../header/UserProfileMenu';
@@ -37,6 +40,24 @@ export function Header({ onToggleSidebar }: HeaderProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
+  const [overflowOpen, setOverflowOpen] = useState(false);
+  const [mobileCurrencyOpen, setMobileCurrencyOpen] = useState(false);
+  const [mobileCalculatorOpen, setMobileCalculatorOpen] = useState(false);
+  const overflowRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handlePointerDown(e: MouseEvent) {
+      if (overflowRef.current && !overflowRef.current.contains(e.target as Node)) {
+        setOverflowOpen(false);
+      }
+    }
+    if (overflowOpen) {
+      document.addEventListener('mousedown', handlePointerDown);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown);
+    };
+  }, [overflowOpen]);
 
   // Determine current page title
   const currentTitle =
@@ -79,10 +100,15 @@ export function Header({ onToggleSidebar }: HeaderProps) {
               />
             </div>
             <div className="min-w-0">
-              <h1 className="text-sm sm:text-lg md:text-xl font-bold text-primary-foreground tracking-tight truncate leading-tight">
-                LabsCore ERP
-              </h1>
-              <span className="text-[10.5px] sm:text-[11.5px] text-primary-foreground/80 font-semibold block uppercase tracking-wider -mt-0.5 truncate">
+              <div className="flex items-center gap-1.5">
+                <h1 className="text-sm sm:text-lg md:text-xl font-bold text-primary-foreground tracking-tight truncate leading-tight">
+                  LabsCore ERP
+                </h1>
+                <span className="sm:hidden text-[9px] bg-white/20 text-white font-bold px-1.5 py-0.2 rounded-full uppercase tracking-wider">
+                  Sales
+                </span>
+              </div>
+              <span className="hidden sm:block text-[10.5px] sm:text-[11.5px] text-primary-foreground/80 font-semibold uppercase tracking-wider -mt-0.5 truncate">
                 DNS IMPORT & EXPORT (PVT) LTD.
               </span>
             </div>
@@ -124,25 +150,82 @@ export function Header({ onToggleSidebar }: HeaderProps) {
       </div>
 
       {/* Right: Enterprise Utility Toolbar & Far-Right User Profile Avatar */}
-      {/* Strict Order: [ Notifications ] -> [ Currency Converter ] -> [ Calculator ] -> [ Fullscreen ] -> | -> [ User Avatar ] */}
       <div className="flex items-center gap-1 sm:gap-1.5 md:gap-2 shrink-0">
-        {/* Enterprise Notifications */}
+        {/* Enterprise Notifications (Always visible) */}
         <NotificationsPopover />
 
-        {/* Currency Converter */}
-        <CurrencyConverterPopover />
+        {/* Desktop-only secondary tools */}
+        <div className="hidden md:flex items-center gap-1.5 md:gap-2">
+          {/* Currency Converter */}
+          <CurrencyConverterPopover />
 
-        {/* ERP Calculator */}
-        <CalculatorPopover />
+          {/* ERP Calculator */}
+          <CalculatorPopover />
 
-        {/* Fullscreen Button (Immediately to the left of Profile Avatar) */}
-        <FullscreenButton />
+          {/* Fullscreen Button */}
+          <FullscreenButton />
+        </div>
+
+        {/* Mobile Overflow Menu */}
+        <div className="relative md:hidden" ref={overflowRef}>
+          <button
+            type="button"
+            onClick={() => setOverflowOpen((prev) => !prev)}
+            className="flex h-9 w-9 items-center justify-center rounded-lg text-primary-foreground/80 hover:bg-primary-foreground/15 hover:text-primary-foreground transition-colors cursor-pointer"
+            aria-label="More utilities"
+            aria-expanded={overflowOpen}
+          >
+            <MoreVertical className="h-5 w-5" />
+          </button>
+
+          {overflowOpen && (
+            <div className="absolute right-0 mt-2 w-48 rounded-xl border border-slate-200/90 bg-white p-1.5 shadow-xl shadow-slate-900/15 z-50 animate-in fade-in zoom-in-95 duration-150">
+              <div className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-100 mb-1">
+                Quick Tools
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setOverflowOpen(false);
+                  setMobileCalculatorOpen(true);
+                }}
+                className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-100 hover:text-slate-900 transition-colors text-left cursor-pointer"
+              >
+                <Calculator className="h-4 w-4 text-primary" />
+                <span>Field Calculator</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setOverflowOpen(false);
+                  setMobileCurrencyOpen(true);
+                }}
+                className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-100 hover:text-slate-900 transition-colors text-left cursor-pointer"
+              >
+                <Coins className="h-4 w-4 text-emerald-600" />
+                <span>Currency Converter</span>
+              </button>
+            </div>
+          )}
+        </div>
 
         {/* Subtle Separator */}
         <div className="h-4.5 w-px bg-white/20 mx-1 sm:mx-1.5" aria-hidden="true" />
 
         {/* User Profile / Avatar (Far-right) */}
         <UserProfileMenu />
+
+        {/* Mobile Dialog Modals for Tools */}
+        <CurrencyConverterPopover
+          hideTrigger
+          isOpen={mobileCurrencyOpen}
+          onOpenChange={setMobileCurrencyOpen}
+        />
+        <CalculatorPopover
+          hideTrigger
+          isOpen={mobileCalculatorOpen}
+          onOpenChange={setMobileCalculatorOpen}
+        />
       </div>
     </header>
   );

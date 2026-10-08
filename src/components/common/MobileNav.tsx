@@ -86,7 +86,7 @@ export function MobileNav() {
       {/* 1. Fixed Bottom Navigation Bar (5 Items) */}
       <nav
         aria-label="Mobile Navigation"
-        className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200/90 shadow-[0_-2px_10px_rgba(0,0,0,0.03)] md:hidden pb-[env(safe-area-inset-bottom)]"
+        className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-xl border-t border-slate-200/80 shadow-[0_-4px_20px_rgba(0,0,0,0.04)] md:hidden pb-[env(safe-area-inset-bottom)]"
       >
         <div className="grid grid-cols-5 h-16 items-center px-1">
           {/* 1. Dashboard */}
@@ -95,17 +95,20 @@ export function MobileNav() {
             end
             className={({ isActive }) =>
               cn(
-                'flex flex-col items-center justify-center min-h-[48px] py-1 px-1 transition-all rounded-md',
+                'flex flex-col items-center justify-center min-h-[50px] py-1 px-1 transition-all rounded-xl active:scale-95',
                 isActive
-                  ? 'text-primary font-semibold'
+                  ? 'text-primary font-bold'
                   : 'text-slate-500 hover:text-slate-800'
               )
             }
           >
-            <div className={cn('relative p-1 rounded-md transition-colors', isDashboardActive && 'bg-primary-light')}>
+            <div className={cn('relative p-1.5 rounded-xl transition-all', isDashboardActive && 'bg-primary-light text-primary shadow-2xs')}>
               <LayoutDashboard className="h-5 w-5" />
+              {isDashboardActive && (
+                <span className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 h-1 w-1 rounded-full bg-primary" />
+              )}
             </div>
-            <span className="text-[11px] font-medium tracking-tight mt-0.5">Dashboard</span>
+            <span className="text-[10.5px] font-semibold tracking-tight mt-0.5">Dashboard</span>
           </NavLink>
 
           {/* 2. Customers */}
@@ -113,35 +116,44 @@ export function MobileNav() {
             to="/customers"
             className={({ isActive }) =>
               cn(
-                'flex flex-col items-center justify-center min-h-[48px] py-1 px-1 transition-all rounded-md',
+                'flex flex-col items-center justify-center min-h-[50px] py-1 px-1 transition-all rounded-xl active:scale-95',
                 isActive || isCustomersActive
-                  ? 'text-primary font-semibold'
+                  ? 'text-primary font-bold'
                   : 'text-slate-500 hover:text-slate-800'
               )
             }
           >
-            <div className={cn('relative p-1 rounded-md transition-colors', isCustomersActive && 'bg-primary-light')}>
+            <div className={cn('relative p-1.5 rounded-xl transition-all', isCustomersActive && 'bg-primary-light text-primary shadow-2xs')}>
               <Users className="h-5 w-5" />
+              {isCustomersActive && (
+                <span className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 h-1 w-1 rounded-full bg-primary" />
+              )}
             </div>
-            <span className="text-[11px] font-medium tracking-tight mt-0.5">Customers</span>
+            <span className="text-[10.5px] font-semibold tracking-tight mt-0.5">Customers</span>
           </NavLink>
 
-          {/* 3. Orders */}
+          {/* 3. Center Elevated Floating Action Button (FAB) for Orders (Inspired by Reference Screenshot) */}
           <NavLink
             to="/orders"
+            aria-label="Orders & Quick Sales"
             className={({ isActive }) =>
               cn(
-                'flex flex-col items-center justify-center min-h-[48px] py-1 px-1 transition-all rounded-md',
-                isActive || isOrdersActive
-                  ? 'text-primary font-semibold'
-                  : 'text-slate-500 hover:text-slate-800'
+                'flex flex-col items-center justify-center -mt-6 group transition-all',
+                isActive || isOrdersActive ? 'text-primary font-bold' : 'text-slate-600'
               )
             }
           >
-            <div className={cn('relative p-1 rounded-md transition-colors', isOrdersActive && 'bg-primary-light')}>
-              <ShoppingCart className="h-5 w-5" />
+            <div
+              className={cn(
+                'flex h-13 w-13 items-center justify-center rounded-full shadow-lg ring-4 ring-white active:scale-90 transition-transform cursor-pointer',
+                isOrdersActive
+                  ? 'bg-gradient-to-tr from-primary to-primary-hover text-primary-foreground shadow-primary/35'
+                  : 'bg-primary text-primary-foreground shadow-primary/25 hover:bg-primary-hover'
+              )}
+            >
+              <ShoppingCart className="h-6 w-6" />
             </div>
-            <span className="text-[11px] font-medium tracking-tight mt-0.5">Orders</span>
+            <span className="text-[10px] font-bold tracking-tight mt-1 text-slate-700">Orders</span>
           </NavLink>
 
           {/* 4. Warranty */}
@@ -149,17 +161,20 @@ export function MobileNav() {
             to="/warranty"
             className={({ isActive }) =>
               cn(
-                'flex flex-col items-center justify-center min-h-[48px] py-1 px-1 transition-all rounded-md',
+                'flex flex-col items-center justify-center min-h-[50px] py-1 px-1 transition-all rounded-xl active:scale-95',
                 isActive || isWarrantyActive
-                  ? 'text-primary font-semibold'
+                  ? 'text-primary font-bold'
                   : 'text-slate-500 hover:text-slate-800'
               )
             }
           >
-            <div className={cn('relative p-1 rounded-md transition-colors', isWarrantyActive && 'bg-primary-light')}>
+            <div className={cn('relative p-1.5 rounded-xl transition-all', isWarrantyActive && 'bg-primary-light text-primary shadow-2xs')}>
               <ShieldCheck className="h-5 w-5" />
+              {isWarrantyActive && (
+                <span className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 h-1 w-1 rounded-full bg-primary" />
+              )}
             </div>
-            <span className="text-[11px] font-medium tracking-tight mt-0.5">Warranty</span>
+            <span className="text-[10.5px] font-semibold tracking-tight mt-0.5">Warranty</span>
           </NavLink>
 
           {/* 5. More ⋯ (Opens Bottom Sheet) */}
@@ -169,16 +184,19 @@ export function MobileNav() {
             aria-expanded={moreOpen}
             aria-label="Open More features menu"
             className={cn(
-              'flex flex-col items-center justify-center min-h-[48px] py-1 px-1 transition-all rounded-md focus:outline-none',
+              'flex flex-col items-center justify-center min-h-[50px] py-1 px-1 transition-all rounded-xl active:scale-95 focus:outline-none',
               moreOpen || isMoreRouteActive
-                ? 'text-primary font-semibold'
+                ? 'text-primary font-bold'
                 : 'text-slate-500 hover:text-slate-800'
             )}
           >
-            <div className={cn('relative p-1 rounded-md transition-colors', (moreOpen || isMoreRouteActive) && 'bg-primary-light')}>
+            <div className={cn('relative p-1.5 rounded-xl transition-all', (moreOpen || isMoreRouteActive) && 'bg-primary-light text-primary shadow-2xs')}>
               <MoreHorizontal className="h-5 w-5" />
+              {(moreOpen || isMoreRouteActive) && (
+                <span className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 h-1 w-1 rounded-full bg-primary" />
+              )}
             </div>
-            <span className="text-[11px] font-medium tracking-tight mt-0.5">More ⋯</span>
+            <span className="text-[10.5px] font-semibold tracking-tight mt-0.5">More ⋯</span>
           </button>
         </div>
       </nav>

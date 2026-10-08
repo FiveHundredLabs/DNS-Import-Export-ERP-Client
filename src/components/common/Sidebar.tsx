@@ -395,7 +395,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         {/* ========================================================================= */}
         {/* COLUMN 2: EXPANDED SUB-NAVIGATION FLYOUT PANEL (CONTENT PAGE SHADE) */}
         {/* ========================================================================= */}
-        <div className="flex w-60 sm:w-64 flex-col border-r border-slate-200/90 bg-white rounded-tl-2xl md:rounded-tl-[20px] overflow-hidden">
+        <div className="flex w-60 sm:w-64 flex-col border-r border-slate-200/90 bg-white rounded-tl-xl md:rounded-tl-[16px] overflow-hidden">
           {/* Mobile Close Bar Header */}
           <div className="flex items-center justify-between px-4 py-2.5 border-b border-slate-100 md:hidden">
             <span className="text-xs font-semibold text-slate-500 tracking-wider uppercase">Navigation</span>

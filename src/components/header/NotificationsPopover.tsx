@@ -128,18 +128,25 @@ export function NotificationsPopover({ className }: NotificationsPopoverProps) {
 
       {/* Notifications Popover */}
       {isOpen && (
-        <div className="absolute right-0 mt-2.5 w-84 rounded-2xl border border-slate-200/90 bg-white p-3 shadow-2xl shadow-slate-900/15 z-50 animate-in fade-in zoom-in-95 duration-150">
-          <div className="flex items-center justify-between pb-2.5 px-1 border-b border-slate-100">
-            <div className="flex items-center gap-2">
-              <h3 className="text-xs font-bold text-slate-900 tracking-tight">
-                ERP Activity & Alerts
-              </h3>
-              {unreadCount > 0 && (
-                <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-rose-100 text-rose-700 font-mono">
-                  {unreadCount} new
-                </span>
-              )}
-            </div>
+        <>
+          {/* Mobile backdrop */}
+          <div
+            className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-40 md:hidden"
+            onClick={() => setIsOpen(false)}
+            aria-hidden="true"
+          />
+          <div className="fixed inset-x-3 sm:inset-x-6 top-16 max-w-sm mx-auto md:mx-0 md:absolute md:inset-x-auto md:top-auto md:right-0 md:mt-2.5 md:w-84 rounded-2xl border border-slate-200/90 bg-white p-3 shadow-2xl shadow-slate-900/20 z-50 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between pb-2.5 px-1 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <h3 className="text-xs font-bold text-slate-900 tracking-tight">
+                  ERP Activity & Alerts
+                </h3>
+                {unreadCount > 0 && (
+                  <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-rose-100 text-rose-700 font-mono">
+                    {unreadCount} new
+                  </span>
+                )}
+              </div>
             {unreadCount > 0 && (
               <button
                 type="button"
@@ -182,6 +189,7 @@ export function NotificationsPopover({ className }: NotificationsPopoverProps) {
             ))}
           </div>
         </div>
+        </>
       )}
     </div>
   );
