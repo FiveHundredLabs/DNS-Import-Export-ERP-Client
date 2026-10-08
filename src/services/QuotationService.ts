@@ -108,10 +108,12 @@ export class QuotationService {
     const discountEval = evaluateDiscount({
       requestedDiscountPercentage,
       repMaxDiscountPercentage: repAuthority,
-      customerMaxDiscountPercentage: customer.commercialTerms.maxDiscountPercentage || 12,
+      customerMaxDiscountPercentage: customer.commercialTerms?.maxDiscountPercentage || 12,
       productMaxDiscountPercentage: product.pricing.maxDiscountPercentage || 15,
       isPromotional: product.isPromotional,
       promotionalDiscountPercentage: product.pricing.promotionalDiscountPercentage,
+      product,
+      customer,
     });
 
     if (!discountEval.isValid) {
@@ -150,6 +152,10 @@ export class QuotationService {
       lineTotal,
       requiresApproval: discountEval.requiresSpecialApproval,
       approvalReason: discountEval.reason,
+      discountApprovalStatus: discountEval.requiresSpecialApproval
+        ? 'PENDING_APPROVAL'
+        : 'NOT_REQUIRED',
+      discountAllowedPercentage: discountEval.allowedDiscountPercentage,
     };
   }
 
@@ -531,7 +537,22 @@ export class QuotationService {
       }
     }
 
+    const updatedItems = quotation.items.map((it) => {
+      if (it.requiresApproval || it.discountApprovalStatus === 'PENDING_APPROVAL') {
+        return {
+          ...it,
+          discountApprovalStatus: 'APPROVED' as const,
+          discountApprovedById: approverUser.id,
+          discountApprovedByName: approverUser.name,
+          discountApprovedAt: new Date().toISOString(),
+          discountApprovalNote: comment,
+        };
+      }
+      return it;
+    });
+
     return this.repo.update(id, {
+      items: updatedItems,
       status: 'APPROVED',
       approvedById: approverUser.id,
       approvedByName: approverUser.name,
@@ -573,7 +594,19 @@ export class QuotationService {
       }
     }
 
+    const updatedItems = quotation.items.map((it) => {
+      if (it.requiresApproval || it.discountApprovalStatus === 'PENDING_APPROVAL') {
+        return {
+          ...it,
+          discountApprovalStatus: 'REJECTED' as const,
+          discountApprovalNote: reason,
+        };
+      }
+      return it;
+    });
+
     return this.repo.update(id, {
+      items: updatedItems,
       status: 'REJECTED',
       rejectedById: approverUser.id,
       rejectedByName: approverUser.name,

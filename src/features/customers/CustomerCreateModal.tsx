@@ -107,6 +107,13 @@ export function CustomerCreateModal({
           code: code || editingCustomer.code,
           name,
           type,
+          loyaltyLevel,
+          loyaltyTier:
+            loyaltyLevel === 'PLATINUM'
+              ? 'PLATINUM'
+              : loyaltyLevel === 'PREMIUM'
+              ? 'GOLD'
+              : 'BRONZE',
           areaId: selectedArea?.id,
           areaName: selectedArea?.name,
           assignedRepId: rep?.id,
@@ -121,6 +128,13 @@ export function CustomerCreateModal({
           code: code || `CUST-${Date.now().toString().slice(-4)}`,
           name,
           type,
+          loyaltyLevel,
+          loyaltyTier:
+            loyaltyLevel === 'PLATINUM'
+              ? 'PLATINUM'
+              : loyaltyLevel === 'PREMIUM'
+              ? 'GOLD'
+              : 'BRONZE',
           areaId: selectedArea?.id || 'area-01',
           areaName: selectedArea?.name || 'Western Province Central',
           assignedRepId: rep?.id || 'usr-106',
@@ -162,7 +176,7 @@ export function CustomerCreateModal({
       <form onSubmit={handleSubmit} className="space-y-4">
         {error && <div className="p-2 rounded bg-rose-50 text-rose-700 text-xs">{error}</div>}
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div>
             <label className="block text-[13px] font-medium text-slate-700 mb-1.5">Customer Code</label>
             <Input
@@ -177,6 +191,14 @@ export function CustomerCreateModal({
               <option value="DEALER">Authorized Dealer</option>
               <option value="SHOWROOM">Showroom Outlet</option>
               <option value="DIRECT">Direct Contractor</option>
+            </Select>
+          </div>
+          <div>
+            <label className="block text-[13px] font-medium text-slate-700 mb-1.5">Loyalty Level</label>
+            <Select value={loyaltyLevel} onChange={(e) => setLoyaltyLevel(e.target.value as CustomerLoyaltyLevel)}>
+              <option value="NEW">New (Level 1 Discount)</option>
+              <option value="PREMIUM">Premium (Levels 1 & 2)</option>
+              <option value="PLATINUM">Platinum (All Levels)</option>
             </Select>
           </div>
         </div>

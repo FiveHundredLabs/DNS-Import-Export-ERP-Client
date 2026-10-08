@@ -111,6 +111,12 @@ export class InvoiceService {
         lineTotal,
         quantity: qty,
         uomSnapshot: item.uomSnapshot,
+        discountApprovalStatus: item.discountApprovalStatus,
+        discountAllowedPercentage: item.discountAllowedPercentage,
+        discountApprovedById: item.discountApprovedById,
+        discountApprovedByName: item.discountApprovedByName,
+        discountApprovedAt: item.discountApprovedAt,
+        discountApprovalNote: item.discountApprovalNote,
       };
     });
 

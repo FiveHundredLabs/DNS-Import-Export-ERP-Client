@@ -213,6 +213,8 @@ export class OrderService {
         issuedQuantity: 0,
         requiresSpecialApproval,
         specialApprovalReason,
+        discountApprovalStatus: requiresSpecialApproval ? 'PENDING_APPROVAL' : 'NOT_REQUIRED',
+        discountAllowedPercentage: customerAllowedDiscount,
       };
 
       result.push(salesItem);
@@ -590,7 +592,22 @@ export class OrderService {
       timestamp: new Date().toISOString(),
     };
 
+    const updatedItems = order.items.map((it) => {
+      if (it.requiresSpecialApproval || it.discountApprovalStatus === 'PENDING_APPROVAL') {
+        return {
+          ...it,
+          discountApprovalStatus: 'APPROVED' as const,
+          discountApprovedById: currentUser.id,
+          discountApprovedByName: currentUser.name,
+          discountApprovedAt: new Date().toISOString(),
+          discountApprovalNote: comment,
+        };
+      }
+      return it;
+    });
+
     return this.repo.update(id, {
+      items: updatedItems,
       status: 'APPROVED',
       approvedById: currentUser.id,
       approvedByName: currentUser.name,
@@ -646,7 +663,19 @@ export class OrderService {
       timestamp: new Date().toISOString(),
     };
 
+    const updatedItems = order.items.map((it) => {
+      if (it.requiresSpecialApproval || it.discountApprovalStatus === 'PENDING_APPROVAL') {
+        return {
+          ...it,
+          discountApprovalStatus: 'REJECTED' as const,
+          discountApprovalNote: reason,
+        };
+      }
+      return it;
+    });
+
     return this.repo.update(id, {
+      items: updatedItems,
       status: 'REJECTED',
       rejectedById: currentUser.id,
       rejectedByName: currentUser.name,
