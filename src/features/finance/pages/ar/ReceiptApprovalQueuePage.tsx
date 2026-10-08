@@ -622,6 +622,7 @@ export function ReceiptApprovalQueuePage() {
       <Dialog
         open={Boolean(approvingItem)}
         onOpenChange={(open) => !open && setApprovingItem(null)}
+        maxWidth="max-w-4xl"
       >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
