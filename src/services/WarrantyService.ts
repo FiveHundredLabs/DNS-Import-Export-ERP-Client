@@ -354,12 +354,12 @@ export class WarrantyService {
       productId: record.productId,
       productName: record.productName,
       sku: record.sku,
+      barcode: data.barcode || record.barcode,
       serialNumber: data.serialNumber || record.serialNumber || '',
       distributorSaleDate: data.distributorSaleDate,
       receivedDate,
       endCustomerName: data.endCustomerName,
       endCustomerPhone: data.endCustomerPhone,
-      endCustomerAddress: data.endCustomerAddress,
       status,
       reviewNotes: data.reviewNotes || (isVerified ? 'Verified upon entry by Sales Manager.' : undefined),
       reviewedByUserId: isVerified ? user.id : undefined,
@@ -383,6 +383,7 @@ export class WarrantyService {
       warrantyNoteNumber: note.noteNumber,
       warrantyNoteStatus: note.status,
       endCustomerName: data.endCustomerName,
+      barcode: data.barcode || record.barcode,
       serialNumber: data.serialNumber || record.serialNumber,
     });
 

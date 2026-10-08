@@ -15,7 +15,17 @@ import { warrantyService } from '../../services/WarrantyService';
 import { useAuth } from '../../hooks/useAuth';
 import { MOCK_CUSTOMERS } from '../../mock/mockCustomers';
 import { formatDate } from '../../utils/formatters';
-import { FileCheck2, AlertTriangle, ShieldCheck, Sparkles, Building2 } from 'lucide-react';
+import {
+  FileCheck2,
+  AlertTriangle,
+  ShieldCheck,
+  Sparkles,
+  Building2,
+  Barcode,
+  ScanLine,
+  CheckCircle2,
+  Info,
+} from 'lucide-react';
 
 interface RecordWarrantyNoteModalProps {
   open: boolean;
@@ -31,6 +41,22 @@ export function RecordWarrantyNoteModal({
   preselectedRecord,
 }: RecordWarrantyNoteModalProps) {
   const { currentUser } = useAuth();
+  const [barcodeInput, setBarcodeInput] = useState<string>('');
+  const [barcodeLookupMessage, setBarcodeLookupMessage] = useState<{
+    type: 'success' | 'error';
+    message: string;
+    details?: {
+      productName: string;
+      sku: string;
+      barcode?: string;
+      serialNumber?: string;
+      distributorName: string;
+      invoiceNumber: string;
+      saleDate: string;
+      warrantyPeriodMonths: number;
+    };
+  } | null>(null);
+
   const [distributorId, setDistributorId] = useState<string>('ALL');
   const [availableRecords, setAvailableRecords] = useState<WarrantyRecord[]>([]);
   const [selectedRecordId, setSelectedRecordId] = useState<string>('');
@@ -43,7 +69,6 @@ export function RecordWarrantyNoteModal({
   );
   const [endCustomerName, setEndCustomerName] = useState<string>('');
   const [endCustomerPhone, setEndCustomerPhone] = useState<string>('');
-  const [endCustomerAddress, setEndCustomerAddress] = useState<string>('');
   const [verifyImmediately, setVerifyImmediately] = useState<boolean>(true);
   const [reviewNotes, setReviewNotes] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
@@ -59,24 +84,40 @@ export function RecordWarrantyNoteModal({
   useEffect(() => {
     if (open) {
       setError(null);
+      setBarcodeLookupMessage(null);
       const today = new Date().toISOString().split('T')[0];
       setReceivedDate(today);
       setDistributorSaleDate(today);
       setNoteNumber(generateNoteNumber());
       setEndCustomerName('');
       setEndCustomerPhone('');
-      setEndCustomerAddress('');
       setReviewNotes('');
       setVerifyImmediately(true);
 
       if (preselectedRecord) {
+        setBarcodeInput(preselectedRecord.barcode || preselectedRecord.serialNumber || '');
         setDistributorId(preselectedRecord.customerId);
         setSelectedRecordId(preselectedRecord.id);
         setAvailableRecords([preselectedRecord]);
         if (preselectedRecord.dealerSoldDate) {
           setDistributorSaleDate(preselectedRecord.dealerSoldDate);
         }
+        setBarcodeLookupMessage({
+          type: 'success',
+          message: `Unit tracked: ${preselectedRecord.productName}`,
+          details: {
+            productName: preselectedRecord.productName,
+            sku: preselectedRecord.sku,
+            barcode: preselectedRecord.barcode,
+            serialNumber: preselectedRecord.serialNumber,
+            distributorName: preselectedRecord.customerName,
+            invoiceNumber: preselectedRecord.invoiceNumber,
+            saleDate: preselectedRecord.saleDate,
+            warrantyPeriodMonths: preselectedRecord.warrantyPeriodMonths,
+          },
+        });
       } else {
+        setBarcodeInput('');
         setDistributorId('ALL');
         warrantyService.getWarrantyRecords({ saleType: 'DEALER', pageSize: 100 }).then((res) => {
           setAvailableRecords(res.data);
@@ -98,6 +139,90 @@ export function RecordWarrantyNoteModal({
 
   const selectedRecord = availableRecords.find((r) => r.id === selectedRecordId);
 
+  // Track unit details through barcode number input
+  const trackByBarcode = (query: string) => {
+    const term = query.trim().toLowerCase();
+    if (!term) {
+      setBarcodeLookupMessage(null);
+      return;
+    }
+
+    // Look through available distributor warranty records by barcode, serial number, or SKU
+    const matchedRecord = availableRecords.find((r) => {
+      const matchBarcode = r.barcode && r.barcode.toLowerCase() === term;
+      const matchSerial = r.serialNumber && r.serialNumber.toLowerCase() === term;
+      const matchSku = r.sku && r.sku.toLowerCase() === term;
+      return matchBarcode || matchSerial || matchSku;
+    });
+
+    if (matchedRecord) {
+      setSelectedRecordId(matchedRecord.id);
+      setDistributorId(matchedRecord.customerId);
+      if (matchedRecord.dealerSoldDate) {
+        setDistributorSaleDate(matchedRecord.dealerSoldDate);
+      }
+      setBarcodeLookupMessage({
+        type: 'success',
+        message: `Unit Located & Tracked via Barcode`,
+        details: {
+          productName: matchedRecord.productName,
+          sku: matchedRecord.sku,
+          barcode: matchedRecord.barcode || term,
+          serialNumber: matchedRecord.serialNumber,
+          distributorName: matchedRecord.customerName,
+          invoiceNumber: matchedRecord.invoiceNumber,
+          saleDate: matchedRecord.saleDate,
+          warrantyPeriodMonths: matchedRecord.warrantyPeriodMonths,
+        },
+      });
+      return;
+    }
+
+    // Partial substring match on barcode or serial
+    const partialMatch = availableRecords.find(
+      (r) =>
+        (r.barcode && r.barcode.toLowerCase().includes(term)) ||
+        (r.serialNumber && r.serialNumber.toLowerCase().includes(term))
+    );
+
+    if (partialMatch) {
+      setSelectedRecordId(partialMatch.id);
+      setDistributorId(partialMatch.customerId);
+      if (partialMatch.dealerSoldDate) {
+        setDistributorSaleDate(partialMatch.dealerSoldDate);
+      }
+      setBarcodeLookupMessage({
+        type: 'success',
+        message: `Unit Located & Tracked via Partial Match`,
+        details: {
+          productName: partialMatch.productName,
+          sku: partialMatch.sku,
+          barcode: partialMatch.barcode || term,
+          serialNumber: partialMatch.serialNumber,
+          distributorName: partialMatch.customerName,
+          invoiceNumber: partialMatch.invoiceNumber,
+          saleDate: partialMatch.saleDate,
+          warrantyPeriodMonths: partialMatch.warrantyPeriodMonths,
+        },
+      });
+      return;
+    }
+
+    setBarcodeLookupMessage({
+      type: 'error',
+      message: `No distributor warranty record matches barcode "${query}". You can select the unit manually from the list below.`,
+    });
+  };
+
+  const handleBarcodeChange = (val: string) => {
+    setBarcodeInput(val);
+    if (val.trim().length >= 6) {
+      trackByBarcode(val);
+    } else if (!val.trim()) {
+      setBarcodeLookupMessage(null);
+    }
+  };
+
   const handleDistributorChange = (custId: string) => {
     setDistributorId(custId);
     const matching = custId === 'ALL'
@@ -108,15 +233,45 @@ export function RecordWarrantyNoteModal({
       if (matching[0].dealerSoldDate) {
         setDistributorSaleDate(matching[0].dealerSoldDate);
       }
+      if (matching[0].barcode) {
+        setBarcodeInput(matching[0].barcode);
+      }
     } else {
       setSelectedRecordId('');
+    }
+  };
+
+  const handleRecordChange = (recordId: string) => {
+    setSelectedRecordId(recordId);
+    const rec = availableRecords.find((r) => r.id === recordId);
+    if (rec) {
+      if (rec.barcode) {
+        setBarcodeInput(rec.barcode);
+      }
+      if (rec.customerId && distributorId === 'ALL') {
+        setDistributorId(rec.customerId);
+      }
+      setBarcodeLookupMessage({
+        type: 'success',
+        message: `Unit details loaded: ${rec.productName}`,
+        details: {
+          productName: rec.productName,
+          sku: rec.sku,
+          barcode: rec.barcode,
+          serialNumber: rec.serialNumber,
+          distributorName: rec.customerName,
+          invoiceNumber: rec.invoiceNumber,
+          saleDate: rec.saleDate,
+          warrantyPeriodMonths: rec.warrantyPeriodMonths,
+        },
+      });
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedRecordId) {
-      setError('Please select an eligible distributor product warranty record.');
+      setError('Please enter a barcode number or select an eligible sold unit record.');
       return;
     }
     if (!distributorSaleDate) {
@@ -136,11 +291,11 @@ export function RecordWarrantyNoteModal({
         {
           warrantyRecordId: selectedRecordId,
           noteNumber: noteNumber.trim(),
+          barcode: barcodeInput.trim() || selectedRecord?.barcode,
           distributorSaleDate,
           receivedDate,
           endCustomerName: endCustomerName.trim(),
           endCustomerPhone: endCustomerPhone.trim() || undefined,
-          endCustomerAddress: endCustomerAddress.trim() || undefined,
           serialNumber: selectedRecord?.serialNumber,
           reviewNotes: reviewNotes.trim() || (verifyImmediately ? 'Validated by Sales Manager upon receipt.' : undefined),
           verifyImmediately,
@@ -187,7 +342,96 @@ export function RecordWarrantyNoteModal({
           </Alert>
         )}
 
-        {/* Distributor Selection */}
+        {/* Barcode Number Auto-Tracker Card */}
+        <div className="p-3.5 bg-indigo-50/60 rounded-xl border border-indigo-200 space-y-2.5">
+          <div className="flex items-center justify-between">
+            <label className="font-semibold text-indigo-950 flex items-center gap-1.5 text-xs">
+              <Barcode className="h-4 w-4 text-indigo-600" />
+              Enter / Scan Barcode Number
+            </label>
+            <span className="text-[10px] text-indigo-600 font-medium">
+              Tracks product, distributor, invoice & serial
+            </span>
+          </div>
+
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <Barcode className="h-4 w-4 absolute left-2.5 top-2.5 text-indigo-400" />
+              <Input
+                type="text"
+                value={barcodeInput}
+                onChange={(e) => handleBarcodeChange(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    trackByBarcode(barcodeInput);
+                  }
+                }}
+                placeholder="Scan barcode (e.g. 8901020304011) or type serial number..."
+                className="pl-9 text-xs font-mono h-9 bg-white border-indigo-200 focus:border-indigo-500"
+              />
+            </div>
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => trackByBarcode(barcodeInput)}
+              className="h-9 px-3 bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-xs gap-1.5 shrink-0 shadow-xs"
+            >
+              <ScanLine className="h-3.5 w-3.5" />
+              Track Details
+            </Button>
+          </div>
+
+          {/* Barcode Tracking Feedback Box */}
+          {barcodeLookupMessage?.type === 'success' && barcodeLookupMessage.details && (
+            <div className="p-3 bg-white rounded-lg border border-emerald-200 text-[11px] space-y-2 shadow-2xs">
+              <div className="flex items-center justify-between text-emerald-800 font-semibold">
+                <span className="flex items-center gap-1.5">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                  {barcodeLookupMessage.message}
+                </span>
+                <span className="font-mono text-[10px] bg-emerald-50 px-2 py-0.5 rounded text-emerald-800 border border-emerald-200">
+                  Barcode: {barcodeLookupMessage.details.barcode || barcodeInput}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2.5 pt-1.5 border-t border-slate-100 text-slate-700">
+                <div>
+                  <span className="text-slate-400 block text-[10px] uppercase font-medium">Product / Model</span>
+                  <span className="font-semibold text-slate-900 block truncate">{barcodeLookupMessage.details.productName}</span>
+                  <span className="font-mono text-[10px] text-slate-500">SKU: {barcodeLookupMessage.details.sku}</span>
+                </div>
+
+                <div>
+                  <span className="text-slate-400 block text-[10px] uppercase font-medium">Distributor / Sold To</span>
+                  <span className="font-semibold text-slate-900 block truncate">{barcodeLookupMessage.details.distributorName}</span>
+                  <span className="font-mono text-[10px] text-primary">
+                    Invoice: {barcodeLookupMessage.details.invoiceNumber} ({formatDate(barcodeLookupMessage.details.saleDate)})
+                  </span>
+                </div>
+
+                <div>
+                  <span className="text-slate-400 block text-[10px] uppercase font-medium">Unit Serial Number</span>
+                  <span className="font-mono font-medium text-slate-800">{barcodeLookupMessage.details.serialNumber || 'N/A'}</span>
+                </div>
+
+                <div>
+                  <span className="text-slate-400 block text-[10px] uppercase font-medium">Warranty Coverage</span>
+                  <span className="font-semibold text-emerald-700">{barcodeLookupMessage.details.warrantyPeriodMonths} Months Official</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {barcodeLookupMessage?.type === 'error' && (
+            <div className="p-2.5 bg-rose-50 rounded-lg border border-rose-200 text-[11px] text-rose-800 flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 text-rose-600 shrink-0" />
+              <span>{barcodeLookupMessage.message}</span>
+            </div>
+          )}
+        </div>
+
+        {/* Distributor Selection & Warranty Note # */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label className="block font-semibold text-slate-700 mb-1 flex items-center gap-1">
@@ -241,7 +485,7 @@ export function RecordWarrantyNoteModal({
           <label className="block font-semibold text-slate-700 mb-1">
             Sold Unit / Warranty Record *
           </label>
-          <Select value={selectedRecordId} onValueChange={setSelectedRecordId}>
+          <Select value={selectedRecordId} onValueChange={handleRecordChange}>
             <SelectTrigger className="text-xs h-9">
               <SelectValue placeholder="Select Product / Unit" />
             </SelectTrigger>
@@ -259,7 +503,7 @@ export function RecordWarrantyNoteModal({
               )}
             </SelectContent>
           </Select>
-          {selectedRecord && (
+          {selectedRecord && !barcodeLookupMessage?.details && (
             <div className="mt-1.5 p-2 rounded-lg bg-slate-50 border border-slate-200 text-[11px] grid grid-cols-2 gap-2 text-slate-600">
               <div>
                 <span className="text-slate-400 block text-[10px]">Product SKU:</span>
@@ -308,7 +552,7 @@ export function RecordWarrantyNoteModal({
           </div>
         </div>
 
-        {/* End-Customer Information */}
+        {/* End-Customer Information (Address removed as requested) */}
         <div className="border-t border-slate-200 pt-3 space-y-3">
           <span className="font-semibold text-slate-800 block text-xs">
             Retail End-Customer Details (from Warranty Note)
@@ -341,19 +585,6 @@ export function RecordWarrantyNoteModal({
                 className="text-xs h-9"
               />
             </div>
-          </div>
-
-          <div>
-            <label className="block font-semibold text-slate-700 mb-1">
-              Customer Address / Site Location
-            </label>
-            <Input
-              type="text"
-              placeholder="e.g. 142 Galle Road, Colombo 03"
-              value={endCustomerAddress}
-              onChange={(e) => setEndCustomerAddress(e.target.value)}
-              className="text-xs h-9"
-            />
           </div>
         </div>
 

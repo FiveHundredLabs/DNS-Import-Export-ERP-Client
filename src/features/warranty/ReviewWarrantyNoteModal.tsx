@@ -117,12 +117,12 @@ export function ReviewWarrantyNoteModal({
 
           <div className="col-span-2 pt-1 border-t border-slate-200/60">
             <span className="text-[10px] text-slate-400 block uppercase font-medium">Retail End Customer</span>
-            <span className="font-semibold text-slate-900">{note.endCustomerName || 'Not specified'}</span>
+            <span className="font-semibold text-slate-900 block">{note.endCustomerName || 'Not specified'}</span>
             {note.endCustomerPhone && (
               <span className="text-[11px] text-slate-500 block">Phone: {note.endCustomerPhone}</span>
             )}
-            {note.endCustomerAddress && (
-              <span className="text-[11px] text-slate-500 block">Address: {note.endCustomerAddress}</span>
+            {note.barcode && (
+              <span className="text-[11px] font-mono text-indigo-700 block">Barcode: {note.barcode}</span>
             )}
           </div>
         </div>

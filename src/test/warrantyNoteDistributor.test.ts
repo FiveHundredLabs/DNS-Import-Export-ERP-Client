@@ -143,8 +143,7 @@ describe('Distributor Warranty Note Management & Sales Manager Validation', () =
           distributorSaleDate: '2025-01-28',
           receivedDate: '2025-01-30',
           endCustomerName: 'Aruna Jayasekera (Apex Towers Project)',
-          endCustomerPhone: '+94 77 999 1234',
-          endCustomerAddress: '55 Nawam Mawatha, Colombo 02',
+          barcode: '8901020304011',
           reviewNotes: 'Distributor stamp and end-customer invoice verified.',
           verifyImmediately: true,
         },
@@ -153,6 +152,7 @@ describe('Distributor Warranty Note Management & Sales Manager Validation', () =
 
       expect(note.id).toBeDefined();
       expect(note.noteNumber).toBe('WN-DIST-8801');
+      expect(note.barcode).toBe('8901020304011');
       expect(note.status).toBe('VERIFIED');
       expect(note.distributorName).toBe('Lanka Electrical & Hardware Superstore');
       expect(note.distributorSaleDate).toBe('2025-01-28');
@@ -163,6 +163,7 @@ describe('Distributor Warranty Note Management & Sales Manager Validation', () =
       // Linked warranty record lifecycle dates recalculated based on distributor sale date
       const updatedRecord = await warrantySvc.getWarrantyById(record.id);
       expect(updatedRecord?.dealerSoldDate).toBe('2025-01-28');
+      expect(updatedRecord?.barcode).toBe('8901020304011');
       expect(updatedRecord?.warrantyStartDate).toBe('2025-01-28');
       expect(updatedRecord?.warrantyExpiryDate).toBe('2027-01-28');
       expect(updatedRecord?.notesReceived).toBe(true);

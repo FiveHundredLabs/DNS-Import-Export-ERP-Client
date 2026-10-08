@@ -22,12 +22,12 @@ export interface WarrantyNote extends BaseEntity {
   productId: string;
   productName: string;
   sku: string;
+  barcode?: string;
   serialNumber: string;
   distributorSaleDate: string; // Date distributor sold unit to end-customer (YYYY-MM-DD)
   receivedDate: string; // Date DNS ERP received the warranty note (YYYY-MM-DD)
   endCustomerName?: string;
   endCustomerPhone?: string;
-  endCustomerAddress?: string;
   status: WarrantyNoteStatus; // 'PENDING_REVIEW' | 'VERIFIED' | 'REJECTED'
   reviewNotes?: string;
   reviewedByUserId?: string;
@@ -45,6 +45,7 @@ export interface WarrantyRecord extends BaseEntity {
   productId: string;
   productName: string;
   sku: string;
+  barcode?: string;
   serialNumber?: string;
   saleDate: string; // ISO string or YYYY-MM-DD
   warrantyStartDate: string;
@@ -130,11 +131,11 @@ export interface WarrantyNoteFilters {
 export interface RecordWarrantyNoteDTO {
   warrantyRecordId: string;
   noteNumber?: string;
+  barcode?: string;
   distributorSaleDate: string;
   receivedDate?: string;
   endCustomerName?: string;
   endCustomerPhone?: string;
-  endCustomerAddress?: string;
   serialNumber?: string;
   reviewNotes?: string;
   verifyImmediately?: boolean;
