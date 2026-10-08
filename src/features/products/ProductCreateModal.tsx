@@ -104,7 +104,7 @@ export function ProductCreateModal({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={onOpenChange} size="xl">
       <DialogHeader>
         <DialogTitle>Create Product Master Item</DialogTitle>
         <DialogDescription>
@@ -154,7 +154,7 @@ export function ProductCreateModal({
           />
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1">Category</label>
             <Select
@@ -181,11 +181,22 @@ export function ProductCreateModal({
               ))}
             </Select>
           </div>
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">Warranty (Months)</label>
+            <Input
+              type="number"
+              value={warrantyMonths}
+              onChange={(e) => setWarrantyMonths(Number(e.target.value))}
+              placeholder="e.g. 12"
+            />
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 border-t border-slate-100 pt-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 border-t border-slate-100 pt-3">
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">Cost Price (LKR)</label>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">
+              Cost Price (LKR) <span className="text-rose-500">*</span>
+            </label>
             <Input
               type="number"
               value={costPrice || ''}
@@ -195,7 +206,9 @@ export function ProductCreateModal({
             />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">Selling Price (LKR)</label>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">
+              Selling Price (LKR) <span className="text-rose-500">*</span>
+            </label>
             <Input
               type="number"
               value={sellingPrice || ''}
@@ -205,7 +218,9 @@ export function ProductCreateModal({
             />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">Min Floor Price (LKR)</label>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">
+              Min Floor Price (LKR)
+            </label>
             <Input
               type="number"
               value={minSellingPrice || ''}
@@ -214,93 +229,126 @@ export function ProductCreateModal({
               error={errors.minimumSellingPrice}
             />
           </div>
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">Warranty (Months)</label>
-            <Input
-              type="number"
-              value={warrantyMonths}
-              onChange={(e) => setWarrantyMonths(Number(e.target.value))}
-            />
-          </div>
         </div>
 
-        {/* Product Discount Levels (Up to 3 Optional Levels) */}
-        <div className="rounded-lg border-2 border-indigo-200 bg-indigo-50/50 p-3.5 space-y-2.5">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-1.5 font-semibold text-xs text-indigo-950">
-              <Percent className="h-4 w-4 text-indigo-600" />
-              <span>Product Discount Levels (Up to 3 Optional Levels)</span>
+        {/* Product Discount Levels Card */}
+        <div className="rounded-xl border border-indigo-200/90 bg-indigo-50/40 p-4 space-y-3">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <div className="flex h-6 w-6 items-center justify-center rounded-md bg-indigo-100 text-indigo-700 shrink-0">
+                <Percent className="h-3.5 w-3.5" />
+              </div>
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="font-semibold text-xs text-slate-900">
+                  Product Discount Levels
+                </span>
+                <span className="text-[11px] text-slate-500 font-normal">
+                  (Up to 3 levels)
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0">
               <button
                 type="button"
                 onClick={() => setShowDiscountInfo((prev) => !prev)}
-                className="text-indigo-500 hover:text-indigo-700 p-0.5 rounded transition-colors hover:bg-indigo-100 focus:outline-none"
-                title={showDiscountInfo ? 'Hide loyalty discount details' : 'Click to view loyalty discount details'}
+                className="inline-flex items-center gap-1.5 text-[11px] font-medium text-indigo-700 bg-white hover:bg-indigo-50 px-2.5 py-1 rounded-md border border-indigo-200 transition-colors focus:outline-none shadow-xs"
+                title="Click to view customer loyalty tier discount rules"
               >
-                <Info className="h-3.5 w-3.5" />
+                <Info className="h-3.5 w-3.5 text-indigo-600" />
+                <span>{showDiscountInfo ? 'Hide note' : 'View note'}</span>
               </button>
+              <span className="text-[10px] text-slate-500 font-medium bg-white px-2 py-1 rounded-md border border-slate-200 shadow-xs">
+                Lowest to highest
+              </span>
             </div>
-            <span className="text-[10px] bg-indigo-100 text-indigo-800 font-semibold px-2 py-0.5 rounded-full border border-indigo-200">
-              Lowest to Highest
-            </span>
           </div>
+
           {showDiscountInfo && (
-            <div className="rounded bg-white/95 border border-indigo-200 p-2 text-[11px] text-slate-600 space-y-1">
-              <p className="leading-tight">
-                Configure up to 3 optional discount levels. Customer loyalty tier determines available discounts:
+            <div className="rounded-lg bg-white p-3 text-xs border border-indigo-200/80 shadow-xs space-y-2 animate-in fade-in-50 duration-150">
+              <p className="font-medium text-slate-800 text-[11.5px]">
+                Customer loyalty tier determines available discounts:
               </p>
-              <div className="text-[10.5px] text-slate-700">
-                • <strong>New Customer:</strong> Level 1 only &nbsp;|&nbsp; • <strong>Premium Customer:</strong> Level 1 & 2 &nbsp;|&nbsp; • <strong>Platinum Customer:</strong> All 3 levels
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                <div className="rounded-md bg-slate-50 p-2 border border-slate-200/80 text-[11px]">
+                  <span className="font-semibold text-slate-800 block">New Customer</span>
+                  <span className="text-slate-500 text-[10.5px]">Level 1 only</span>
+                </div>
+                <div className="rounded-md bg-slate-50 p-2 border border-slate-200/80 text-[11px]">
+                  <span className="font-semibold text-indigo-700 block">Premium</span>
+                  <span className="text-slate-500 text-[10.5px]">Level 1 & 2</span>
+                </div>
+                <div className="rounded-md bg-slate-50 p-2 border border-slate-200/80 text-[11px]">
+                  <span className="font-semibold text-amber-700 block">Platinum</span>
+                  <span className="text-slate-500 text-[10.5px]">All 3 levels</span>
+                </div>
               </div>
-              <p className="text-slate-500 italic text-[10px]">
-                Leave blank for 0 levels (direct discounts disabled; requires management approval).
+              <p className="text-[10.5px] text-slate-500 italic">
+                Leave empty for 0 levels (direct discounts disabled; requires management approval).
               </p>
             </div>
           )}
-          <div className="grid grid-cols-3 gap-2.5 pt-1">
+
+          <div className="grid grid-cols-3 gap-3 pt-0.5">
             <div>
-              <label className="block text-[11px] font-semibold text-slate-700 mb-1">
-                Discount Level 1 (%)
+              <label className="block text-[11px] font-medium text-slate-700 mb-1">
+                Discount Level 1
               </label>
-              <Input
-                type="number"
-                min="0"
-                max="100"
-                step="0.5"
-                placeholder="e.g. 5"
-                value={discLevel1}
-                onChange={(e) => setDiscLevel1(e.target.value)}
-                className="h-8 text-xs font-mono font-semibold text-slate-800 bg-white"
-              />
+              <div className="relative">
+                <Input
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.5"
+                  placeholder="e.g. 5"
+                  value={discLevel1}
+                  onChange={(e) => setDiscLevel1(e.target.value)}
+                  className="h-9 pr-7 text-xs font-mono font-semibold text-slate-800 bg-white"
+                />
+                <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">
+                  %
+                </span>
+              </div>
             </div>
             <div>
-              <label className="block text-[11px] font-semibold text-slate-700 mb-1">
-                Discount Level 2 (%)
+              <label className="block text-[11px] font-medium text-slate-700 mb-1">
+                Discount Level 2
               </label>
-              <Input
-                type="number"
-                min="0"
-                max="100"
-                step="0.5"
-                placeholder="e.g. 10"
-                value={discLevel2}
-                onChange={(e) => setDiscLevel2(e.target.value)}
-                className="h-8 text-xs font-mono font-semibold text-slate-800 bg-white"
-              />
+              <div className="relative">
+                <Input
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.5"
+                  placeholder="e.g. 10"
+                  value={discLevel2}
+                  onChange={(e) => setDiscLevel2(e.target.value)}
+                  className="h-9 pr-7 text-xs font-mono font-semibold text-slate-800 bg-white"
+                />
+                <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">
+                  %
+                </span>
+              </div>
             </div>
             <div>
-              <label className="block text-[11px] font-semibold text-slate-700 mb-1">
-                Discount Level 3 (%)
+              <label className="block text-[11px] font-medium text-slate-700 mb-1">
+                Discount Level 3
               </label>
-              <Input
-                type="number"
-                min="0"
-                max="100"
-                step="0.5"
-                placeholder="e.g. 15"
-                value={discLevel3}
-                onChange={(e) => setDiscLevel3(e.target.value)}
-                className="h-8 text-xs font-mono font-semibold text-slate-800 bg-white"
-              />
+              <div className="relative">
+                <Input
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.5"
+                  placeholder="e.g. 15"
+                  value={discLevel3}
+                  onChange={(e) => setDiscLevel3(e.target.value)}
+                  className="h-9 pr-7 text-xs font-mono font-semibold text-slate-800 bg-white"
+                />
+                <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">
+                  %
+                </span>
+              </div>
             </div>
           </div>
         </div>
