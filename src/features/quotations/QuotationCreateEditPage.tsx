@@ -762,11 +762,11 @@ export function QuotationCreateEditPage() {
               )}
 
               {/* Action Buttons */}
-              <div className="space-y-2 pt-2">
+              <div className="space-y-2.5 pt-2">
                 <Button
                   onClick={() => handleSubmit(false)}
                   disabled={isSubmitting || !selectedCustomer || items.length === 0}
-                  className="w-full bg-primary hover:bg-primary-hover text-primary-foreground gap-2"
+                  className="w-full bg-primary hover:bg-primary-hover text-primary-foreground gap-2 h-11 sm:h-10 font-semibold cursor-pointer"
                 >
                   <Send className="h-4 w-4" />
                   {isSubmitting
@@ -780,7 +780,7 @@ export function QuotationCreateEditPage() {
                   variant="outline"
                   onClick={() => handleSubmit(true)}
                   disabled={isSubmitting || !selectedCustomer || items.length === 0}
-                  className="w-full text-slate-700 gap-2"
+                  className="w-full text-slate-700 gap-2 h-11 sm:h-10 font-medium cursor-pointer"
                 >
                   <Save className="h-4 w-4" />
                   Save as Draft
