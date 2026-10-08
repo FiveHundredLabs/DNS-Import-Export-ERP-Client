@@ -3,6 +3,7 @@ import { useFinanceLedger } from '../../hooks/useFinanceLedger';
 import { TrialBalanceReport } from '../../api/types';
 import { ReportHeaderNav } from './ReportHeaderNav';
 import { ReportDateFilterBar, DateFilterState } from './ReportDateFilterBar';
+import { reportPdfService } from '../../services/reportPdfService';
 import { formatCurrency } from '../../../../utils/formatters';
 import { CheckCircle2, AlertTriangle } from 'lucide-react';
 import { Card } from '../../../../components/ui/card';
@@ -53,6 +54,15 @@ export function TrialBalancePage() {
     document.body.removeChild(link);
   };
 
+  const handlePrint = () => {
+    if (!report) {
+      reportPdfService.triggerPrint(`Trial_Balance_${dateFilter.endDate}`);
+      return;
+    }
+    const html = reportPdfService.generateTrialBalanceHtml(report);
+    reportPdfService.printReportHtml(html, `Trial_Balance_${dateFilter.endDate}`);
+  };
+
   return (
     <div className="space-y-6">
       {/* Back and Report Navigation Bar */}
@@ -78,6 +88,7 @@ export function TrialBalancePage() {
         filter={dateFilter}
         onChange={setDateFilter}
         onExportCsv={handleExportCsv}
+        onPrint={handlePrint}
         reportTitle="Trial_Balance_Statement"
       />
 

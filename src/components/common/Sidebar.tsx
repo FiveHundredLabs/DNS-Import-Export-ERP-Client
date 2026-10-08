@@ -35,6 +35,7 @@ import {
   Lock,
   SlidersHorizontal,
   CheckCircle2,
+  Layers,
 } from 'lucide-react';
 import { useEffect } from 'react';
 import { useAuth } from '../../hooks/useAuth';
@@ -122,6 +123,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     { id: 'reconciliation', name: 'Bank Reconciliation', path: '/finance/reconciliation', icon: Landmark, category: 'finance' },
     { id: 'suppliers', name: 'Suppliers', path: '/finance/suppliers', icon: Store, category: 'finance' },
     { id: 'closing', name: 'Period Closing Lock', path: '/finance/settings/closing', icon: Lock, category: 'finance' },
+    { id: 'monthly-audit', name: 'Monthly Audit & Double Entry', path: '/finance/reports/monthly-audit', icon: Layers, category: 'finance' },
     { id: 'reports-hub', name: 'Financial Reports Hub', path: '/finance/reports', icon: BarChart3, category: 'finance' },
     { id: 'commissions', name: 'Sales Commission', path: '/commissions', icon: Award, category: 'finance' },
   ];

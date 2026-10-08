@@ -430,3 +430,96 @@ body,
   width: 0px;
   height: 0px;
 }
+
+/* ------------------------------------------------------------------------------
+ * 11. PROFESSIONAL STATUTORY FINANCIAL REPORT PRINT SPECIFICATIONS
+ * ------------------------------------------------------------------------------ */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 12mm 15mm 15mm 15mm;
+  }
+
+  html,
+  body {
+    background-color: #ffffff !important;
+    background: #ffffff !important;
+    color: #0f172a !important;
+    font-size: 11px !important;
+    line-height: 1.4 !important;
+    height: auto !important;
+    overflow: visible !important;
+    width: 100% !important;
+  }
+
+  /* Unconstrain application layout containers for full multi-page flow */
+  .h-screen,
+  .overflow-hidden,
+  .overflow-x-auto,
+  .overflow-y-auto,
+  main,
+  div[class*="overflow-"] {
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    position: static !important;
+  }
+
+  /* Hide application navigation, header, sidebar, popovers, mobile bar */
+  header,
+  aside,
+  nav,
+  .print\\:hidden,
+  [data-radix-popper-content-wrapper],
+  button {
+    display: none !important;
+  }
+
+  /* Cards & tabular formatting for clean paper printing */
+  .rounded-2xl,
+  .rounded-xl,
+  .rounded-lg {
+    border-radius: 4px !important;
+  }
+
+  .shadow-sm,
+  .shadow-md,
+  .shadow-lg,
+  .shadow-2xs,
+  .shadow-xs {
+    box-shadow: none !important;
+  }
+
+  .border,
+  .border-slate-200,
+  .border-slate-300 {
+    border-color: #cbd5e1 !important;
+  }
+
+  table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    font-size: 10.5px !important;
+  }
+
+  thead {
+    display: table-header-group !important;
+  }
+
+  tfoot {
+    display: table-footer-group !important;
+  }
+
+  tr {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  /* Ensure signature blocks and statutory seals do not break across pages */
+  .break-inside-avoid,
+  [data-testid="corporate-signature-block"],
+  [data-testid="corporate-report-header"] {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+}

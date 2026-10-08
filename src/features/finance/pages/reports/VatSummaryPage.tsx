@@ -98,7 +98,12 @@ export function VatSummaryPage() {
   };
 
   const handlePrint = () => {
-    reportPdfService.triggerPrint(`DNS_VAT_Summary_Report_${dateFilter.startDate}_to_${dateFilter.endDate}`);
+    if (!report) {
+      reportPdfService.triggerPrint(`DNS_VAT_Summary_Report_${dateFilter.startDate}_to_${dateFilter.endDate}`);
+      return;
+    }
+    const html = reportPdfService.generateVatReportHtml(report);
+    reportPdfService.printReportHtml(html, `DNS_VAT_Summary_Report_${dateFilter.startDate}_to_${dateFilter.endDate}`);
   };
 
   const salesList = report?.transactions || [];

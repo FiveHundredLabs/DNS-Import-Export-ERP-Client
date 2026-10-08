@@ -16,9 +16,21 @@ import { formatCurrency, formatDate } from '../../../../utils/formatters';
 import { MOCK_CUSTOMERS } from '../../../../mock/mockCustomers';
 import Decimal from 'decimal.js';
 import {
+  Dialog,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogContent,
+  DialogFooter,
+} from '../../../../components/ui/dialog';
+import {
   Plus,
   Trash2,
   Bookmark,
+  BookmarkPlus,
+  Search,
+  X,
+  Check,
   CheckCircle2,
   AlertTriangle,
   Send,
@@ -48,23 +60,53 @@ export interface ManualJournalLine {
   supplierName?: string;
 }
 
-interface JournalTemplate {
+export interface JournalTemplateLine {
+  accountCode: string;
+  accountName: string;
+  description: string;
+  isDebit: boolean;
+  customerId?: string;
+  customerName?: string;
+  supplierId?: string;
+  supplierName?: string;
+}
+
+export interface JournalTemplate {
   id: string;
   name: string;
+  category?: string;
   description: string;
   memo: string;
-  lines: {
-    accountCode: string;
-    accountName: string;
-    description: string;
-    isDebit: boolean;
-  }[];
+  lines: JournalTemplateLine[];
+  isCustom?: boolean;
+  createdAt?: string;
+}
+
+const TEMPLATES_STORAGE_KEY = 'dns_finance_journal_templates';
+
+function getStoredTemplates(): JournalTemplate[] {
+  try {
+    const raw = localStorage.getItem(TEMPLATES_STORAGE_KEY);
+    if (!raw) return [];
+    return JSON.parse(raw);
+  } catch {
+    return [];
+  }
+}
+
+function saveStoredTemplates(templates: JournalTemplate[]): void {
+  try {
+    localStorage.setItem(TEMPLATES_STORAGE_KEY, JSON.stringify(templates));
+  } catch (err) {
+    console.error('Failed to save templates to localStorage', err);
+  }
 }
 
 const TEMPLATES: JournalTemplate[] = [
   {
     id: 'depreciation',
     name: 'Monthly Depreciation',
+    category: 'Fixed Assets & Depreciation',
     description: 'Fixed asset straight-line depreciation allocation',
     memo: 'Monthly straight-line depreciation on plant and vehicles',
     lines: [
@@ -85,6 +127,7 @@ const TEMPLATES: JournalTemplate[] = [
   {
     id: 'utilities',
     name: 'Office Utilities Accrual',
+    category: 'Accruals & Provisions',
     description: 'Showroom electricity, water and telecoms accrual',
     memo: 'Monthly utilities and telecoms accrual',
     lines: [
@@ -105,6 +148,7 @@ const TEMPLATES: JournalTemplate[] = [
   {
     id: 'payroll',
     name: 'Payroll & Statutory Accrual',
+    category: 'Payroll & Statutory',
     description: 'Staff salaries, EPF 12% and ETF 3% accruals',
     memo: 'Monthly staff salaries and statutory contributions accrual',
     lines: [
@@ -125,6 +169,7 @@ const TEMPLATES: JournalTemplate[] = [
   {
     id: 'amortization',
     name: 'Prepaid Expense Amortization',
+    category: 'Prepayments & Amortization',
     description: 'Annual corporate insurance policy monthly amortization',
     memo: 'Monthly amortization of prepaid insurance',
     lines: [
@@ -178,6 +223,26 @@ export function ManualJournalPage() {
 
   // Sidebar Templates Collapsed state
   const [isTemplatesOpen, setIsTemplatesOpen] = useState(true);
+  const [customTemplates, setCustomTemplates] = useState<JournalTemplate[]>(() => getStoredTemplates());
+  const [templateSearch, setTemplateSearch] = useState('');
+  const [templateCategoryFilter, setTemplateCategoryFilter] = useState('ALL');
+
+  // Create Template Dialog State
+  const [isCreateTemplateOpen, setIsCreateTemplateOpen] = useState(false);
+  const [newTemplateName, setNewTemplateName] = useState('');
+  const [newTemplateCategory, setNewTemplateCategory] = useState('Accruals & Provisions');
+  const [newTemplateDescription, setNewTemplateDescription] = useState('');
+  const [newTemplateMemo, setNewTemplateMemo] = useState('');
+  const [newTemplateLines, setNewTemplateLines] = useState<{
+    id: string;
+    accountId: string;
+    description: string;
+    isDebit: boolean;
+  }[]>([
+    { id: 'nl-1', accountId: '', description: '', isDebit: true },
+    { id: 'nl-2', accountId: '', description: '', isDebit: false },
+  ]);
+
   const [submitting, setSubmitting] = useState(false);
 
   // Role Governance: Only Finance Managers, Managers, and Directors can approve/post directly
@@ -425,7 +490,39 @@ export function ManualJournalPage() {
     }
   };
 
-  // Apply Sidebar Template
+  // Combine custom templates + system templates
+  const allTemplates = useMemo(() => {
+    return [...customTemplates, ...TEMPLATES];
+  }, [customTemplates]);
+
+  // Filter templates by search input and category chip
+  const filteredTemplates = useMemo(() => {
+    return allTemplates.filter((tmpl) => {
+      // Category filter
+      if (templateCategoryFilter !== 'ALL') {
+        if (templateCategoryFilter === 'CUSTOM' && !tmpl.isCustom) return false;
+        if (templateCategoryFilter !== 'CUSTOM' && tmpl.category !== templateCategoryFilter) return false;
+      }
+
+      // Search term filter
+      if (!templateSearch.trim()) return true;
+      const q = templateSearch.toLowerCase().trim();
+      const matchName = tmpl.name.toLowerCase().includes(q);
+      const matchDesc = tmpl.description.toLowerCase().includes(q);
+      const matchMemo = tmpl.memo.toLowerCase().includes(q);
+      const matchCat = tmpl.category?.toLowerCase().includes(q);
+      const matchLines = tmpl.lines.some(
+        (l) =>
+          l.accountCode.toLowerCase().includes(q) ||
+          l.accountName.toLowerCase().includes(q) ||
+          l.description.toLowerCase().includes(q)
+      );
+
+      return matchName || matchDesc || matchMemo || matchCat || matchLines;
+    });
+  }, [allTemplates, templateSearch, templateCategoryFilter]);
+
+  // Apply Template to Current Journal
   const handleApplyTemplate = (tmpl: JournalTemplate) => {
     if (isAuditLocked) return;
     setMemo(tmpl.memo);
@@ -436,19 +533,165 @@ export function ManualJournalPage() {
         accounts[idx] ||
         accounts[0];
 
+      const isAp = matched?.code === '2010' || tl.accountCode === '2010';
+      const isAr = matched?.code === '1020' || tl.accountCode === '1020';
+
       return {
         id: `line-tmpl-${idx}-${Date.now()}`,
         accountId: matched ? matched.id : '',
         description: tl.description,
         debit: 0,
         credit: 0,
-        supplierId: matched?.code === '2010' && suppliers[0] ? suppliers[0].id : undefined,
-        supplierName: matched?.code === '2010' && suppliers[0] ? suppliers[0].name : undefined,
+        supplierId: isAp ? (tl.supplierId || (suppliers[0] ? suppliers[0].id : undefined)) : undefined,
+        supplierName: isAp ? (tl.supplierName || (suppliers[0] ? suppliers[0].name : undefined)) : undefined,
+        customerId: isAr ? (tl.customerId || (MOCK_CUSTOMERS[0] ? MOCK_CUSTOMERS[0].id : undefined)) : undefined,
+        customerName: isAr ? (tl.customerName || (MOCK_CUSTOMERS[0] ? MOCK_CUSTOMERS[0].name : undefined)) : undefined,
       };
     });
 
     setLines(newLines);
     toast.success(`Applied template: "${tmpl.name}". Enter line amounts to balance.`);
+  };
+
+  // Open Create Template Modal
+  const handleOpenCreateTemplate = (fromCurrentVoucher = false) => {
+    if (fromCurrentVoucher) {
+      setNewTemplateName(memo ? `${memo} Template` : 'Custom Journal Template');
+      setNewTemplateCategory('General Adjustments');
+      setNewTemplateDescription(memo || 'Custom reusable journal entry voucher');
+      setNewTemplateMemo(memo || '');
+
+      const activeLines = lines.filter((l) => l.accountId);
+      if (activeLines.length >= 2) {
+        setNewTemplateLines(
+          activeLines.map((l, idx) => ({
+            id: `nl-${idx}-${Date.now()}`,
+            accountId: l.accountId,
+            description: l.description || '',
+            isDebit: Number(l.debit) > 0 || (Number(l.credit) === 0 && idx === 0),
+          }))
+        );
+      } else {
+        setNewTemplateLines([
+          { id: `nl-1-${Date.now()}`, accountId: lines[0]?.accountId || '', description: lines[0]?.description || '', isDebit: true },
+          { id: `nl-2-${Date.now()}`, accountId: lines[1]?.accountId || '', description: lines[1]?.description || '', isDebit: false },
+        ]);
+      }
+    } else {
+      setNewTemplateName('');
+      setNewTemplateCategory('Accruals & Provisions');
+      setNewTemplateDescription('');
+      setNewTemplateMemo('');
+      setNewTemplateLines([
+        { id: `nl-1-${Date.now()}`, accountId: '', description: '', isDebit: true },
+        { id: `nl-2-${Date.now()}`, accountId: '', description: '', isDebit: false },
+      ]);
+    }
+    setIsCreateTemplateOpen(true);
+  };
+
+  const handleAddTemplateLine = () => {
+    setNewTemplateLines((prev) => [
+      ...prev,
+      {
+        id: `nl-${prev.length + 1}-${Date.now()}`,
+        accountId: '',
+        description: '',
+        isDebit: prev.length % 2 === 0,
+      },
+    ]);
+  };
+
+  const handleRemoveTemplateLine = (id: string) => {
+    if (newTemplateLines.length <= 2) {
+      toast.error('Templates must include at least two journal lines (Dr and Cr).');
+      return;
+    }
+    setNewTemplateLines((prev) => prev.filter((l) => l.id !== id));
+  };
+
+  const handleToggleLineDebit = (id: string) => {
+    setNewTemplateLines((prev) =>
+      prev.map((l) => (l.id === id ? { ...l, isDebit: !l.isDebit } : l))
+    );
+  };
+
+  const handleLineAccountChange = (id: string, accountId: string) => {
+    setNewTemplateLines((prev) =>
+      prev.map((l) => (l.id === id ? { ...l, accountId } : l))
+    );
+  };
+
+  const handleLineDescriptionChange = (id: string, description: string) => {
+    setNewTemplateLines((prev) =>
+      prev.map((l) => (l.id === id ? { ...l, description } : l))
+    );
+  };
+
+  const handleSaveTemplate = () => {
+    const trimmedName = newTemplateName.trim();
+    if (!trimmedName) {
+      toast.error('Template name is required.');
+      return;
+    }
+
+    if (newTemplateLines.length < 2) {
+      toast.error('Template must have at least 2 lines.');
+      return;
+    }
+
+    const missingAccount = newTemplateLines.some((l) => !l.accountId);
+    if (missingAccount) {
+      toast.error('Please select a General Ledger account for all template lines.');
+      return;
+    }
+
+    const hasDebit = newTemplateLines.some((l) => l.isDebit);
+    const hasCredit = newTemplateLines.some((l) => !l.isDebit);
+    if (!hasDebit || !hasCredit) {
+      toast.error('Template must include at least one Debit (Dr) line and one Credit (Cr) line.');
+      return;
+    }
+
+    const templateLines: JournalTemplate['lines'] = newTemplateLines.map((l) => {
+      const acc = accounts.find((a) => a.id === l.accountId);
+      const isAp = acc?.code === '2010';
+      const isAr = acc?.code === '1020';
+      return {
+        accountCode: acc?.code || '0000',
+        accountName: acc?.name || 'General Ledger Account',
+        description: l.description || (l.isDebit ? 'Debit allocation' : 'Credit allocation'),
+        isDebit: l.isDebit,
+        supplierId: isAp && suppliers[0] ? suppliers[0].id : undefined,
+        supplierName: isAp && suppliers[0] ? suppliers[0].name : undefined,
+        customerId: isAr && MOCK_CUSTOMERS[0] ? MOCK_CUSTOMERS[0].id : undefined,
+        customerName: isAr && MOCK_CUSTOMERS[0] ? MOCK_CUSTOMERS[0].name : undefined,
+      };
+    });
+
+    const newTemplate: JournalTemplate = {
+      id: `tmpl-custom-${Date.now()}`,
+      name: trimmedName,
+      category: newTemplateCategory,
+      description: newTemplateDescription.trim() || trimmedName,
+      memo: newTemplateMemo.trim() || trimmedName,
+      lines: templateLines,
+      isCustom: true,
+      createdAt: new Date().toISOString(),
+    };
+
+    const updated = [newTemplate, ...customTemplates];
+    setCustomTemplates(updated);
+    saveStoredTemplates(updated);
+    setIsCreateTemplateOpen(false);
+    toast.success(`Journal template "${trimmedName}" created successfully!`);
+  };
+
+  const handleDeleteTemplate = (id: string, name: string) => {
+    const updated = customTemplates.filter((t) => t.id !== id);
+    setCustomTemplates(updated);
+    saveStoredTemplates(updated);
+    toast.success(`Deleted template "${name}".`);
   };
 
   // Compute Total Debits and Total Credits using decimal.js
@@ -579,6 +822,22 @@ export function ManualJournalPage() {
   const activeCreditLines = lines.filter((l) => l.accountId && l.credit > 0);
   const hasActiveEntries = activeDebitLines.length > 0 || activeCreditLines.length > 0;
 
+  // Reversal impact lines for voiding a posted journal
+  const reversalImpactLines = useMemo(() => {
+    if (!loadedJournal || loadedJournal.status !== 'POSTED') return [];
+    return loadedJournal.lines.map((l) => {
+      // Reversing an entry inverts Debit & Credit
+      const isOriginalDebit = l.debit > 0;
+      return {
+        accountCode: l.accountCode || 'GL',
+        accountName: l.accountName || 'Account',
+        type: isOriginalDebit ? ('CREDIT' as const) : ('DEBIT' as const),
+        amount: isOriginalDebit ? l.debit : l.credit,
+        note: `Reverses ${isOriginalDebit ? 'debit' : 'credit'} from ${loadedJournal.entryNumber}`,
+      };
+    });
+  }, [loadedJournal]);
+
   return (
     <div className="space-y-6">
       {/* Page Header */}
@@ -611,12 +870,34 @@ export function ManualJournalPage() {
         </div>
 
         {!isAuditLocked && (
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => handleOpenCreateTemplate(true)}
+              className="text-xs gap-1.5 border-slate-200 bg-white hover:bg-slate-50 text-slate-700 shadow-2xs"
+              title="Save currently configured lines as a template"
+            >
+              <BookmarkPlus className="h-3.5 w-3.5 text-primary" />
+              <span>Save as Template</span>
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => handleOpenCreateTemplate(false)}
+              className="text-xs gap-1.5 border-slate-200 bg-white hover:bg-slate-50 text-slate-700 shadow-2xs"
+            >
+              <Plus className="h-3.5 w-3.5 text-primary" />
+              <span>New Template</span>
+            </Button>
+            <Button
+              type="button"
               variant="outline"
               size="sm"
               onClick={() => setIsTemplatesOpen(!isTemplatesOpen)}
-              className="text-xs gap-1.5"
+              className="text-xs gap-1.5 shadow-2xs"
             >
               <Bookmark className="h-3.5 w-3.5 text-primary" />
               <span>{isTemplatesOpen ? 'Hide Templates' : 'Templates Library'}</span>
@@ -628,13 +909,13 @@ export function ManualJournalPage() {
       {/* Quick Journal Presets Bar (Merged from The Finance Desk) */}
       {!isAuditLocked && (
         <Card className="p-3 bg-gradient-to-r from-primary-light/60 via-white to-slate-50 border-slate-200 shadow-2xs">
-          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
+          <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <Zap className="h-4 w-4 text-primary shrink-0" />
               <span className="text-xs font-bold text-slate-800">Quick Journal Presets:</span>
             </div>
 
-            <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+            <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto">
               <button
                 type="button"
                 onClick={() => applyPreset('SUPPLIER_PAYMENT')}
@@ -664,6 +945,27 @@ export function ManualJournalPage() {
                 <Sparkles className="h-3.5 w-3.5 text-amber-600" />
                 <span>Record Office Overhead</span>
               </button>
+
+              {/* Quick Template Dropdown Selector */}
+              <div className="flex items-center gap-1.5 pl-2 border-l border-slate-200">
+                <Bookmark className="h-3.5 w-3.5 text-primary shrink-0" />
+                <select
+                  aria-label="Quick Select Template"
+                  value=""
+                  onChange={(e) => {
+                    const tmpl = allTemplates.find((t) => t.id === e.target.value);
+                    if (tmpl) handleApplyTemplate(tmpl);
+                  }}
+                  className="flex h-8 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 shadow-2xs hover:border-primary-border focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
+                >
+                  <option value="">Apply Template ({allTemplates.length})...</option>
+                  {allTemplates.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name} {t.isCustom ? '(Custom)' : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
           </div>
         </Card>
@@ -685,16 +987,25 @@ export function ManualJournalPage() {
             </div>
           </div>
           {loadedJournal?.status === 'POSTED' && isAuthorizedForVoid && (
-            <Button
-              variant="destructive"
-              size="sm"
-              onClick={handleVoidJournal}
-              disabled={submitting}
-              className="gap-1.5 text-xs shrink-0"
-            >
-              <RotateCcw className="h-3.5 w-3.5" />
-              <span>Void / Reverse</span>
-            </Button>
+            <div className="flex items-center gap-2 shrink-0">
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={handleVoidJournal}
+                disabled={submitting}
+                className="gap-1.5 text-xs shadow-xs"
+              >
+                <RotateCcw className="h-3.5 w-3.5" />
+                <span>Void / Reverse</span>
+              </Button>
+              {reversalImpactLines.length > 0 && (
+                <DoubleEntryHoverBadge
+                  title={`GL Reversal Impact (${loadedJournal.entryNumber})`}
+                  description="Voiding this posted transaction automatically posts the following counter-entries to restore account balances:"
+                  lines={reversalImpactLines}
+                />
+              )}
+            </div>
           )}
         </div>
       )}
@@ -1090,15 +1401,25 @@ export function ManualJournalPage() {
               <div className="flex items-center gap-2">
                 {isAuditLocked ? (
                   loadedJournal?.status === 'POSTED' && isAuthorizedForVoid ? (
-                    <Button
-                      variant="destructive"
-                      onClick={handleVoidJournal}
-                      disabled={submitting}
-                      className="font-semibold gap-1.5 shadow-xs"
-                    >
-                      <RotateCcw className="h-4 w-4" />
-                      <span>{submitting ? 'Voiding...' : 'Void / Reverse Journal'}</span>
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="destructive"
+                        onClick={handleVoidJournal}
+                        disabled={submitting}
+                        className="font-semibold gap-1.5 shadow-xs"
+                      >
+                        <RotateCcw className="h-4 w-4" />
+                        <span>{submitting ? 'Voiding...' : 'Void / Reverse Journal'}</span>
+                      </Button>
+                      {reversalImpactLines.length > 0 && (
+                        <DoubleEntryHoverBadge
+                          size="sm"
+                          title={`GL Reversal Impact (${loadedJournal.entryNumber})`}
+                          description="Voiding this posted transaction automatically posts the following counter-entries to restore account balances:"
+                          lines={reversalImpactLines}
+                        />
+                      )}
+                    </div>
                   ) : (
                     <Badge variant="outline" className="px-3 py-1.5 text-xs text-slate-500 border-slate-300">
                       <Lock className="h-3.5 w-3.5 mr-1" />
@@ -1165,38 +1486,198 @@ export function ManualJournalPage() {
 
         {/* Collapsible Sidebar: Templates Library */}
         {isTemplatesOpen && (
-          <div className="w-full lg:w-80 space-y-3 shrink-0">
-            <Card className="p-4 border-slate-200 bg-slate-50/80 shadow-xs space-y-3">
-              <div className="flex items-center justify-between border-b border-slate-200 pb-2">
-                <div className="flex items-center gap-2 text-slate-800 font-bold text-xs uppercase tracking-wider">
+          <div className="w-full lg:w-88 space-y-3 shrink-0">
+            <Card className="p-4 border-slate-200 bg-slate-50/90 shadow-xs space-y-3">
+              {/* Header with Title and "New Template" */}
+              <div className="flex items-center justify-between border-b border-slate-200 pb-2.5">
+                <div className="flex items-center gap-2">
                   <Bookmark className="h-4 w-4 text-primary" />
-                  <span>Templates</span>
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-800">
+                    Templates Library
+                  </span>
+                  <Badge variant="outline" className="text-[10px] bg-white text-slate-600 border-slate-200 font-mono">
+                    {allTemplates.length}
+                  </Badge>
                 </div>
-                <span className="text-[11px] text-slate-400">1-Click Apply</span>
+
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => handleOpenCreateTemplate(false)}
+                  className="h-7 px-2 text-[11px] font-semibold gap-1 text-primary border-primary-border bg-white hover:bg-primary-light/50"
+                >
+                  <Plus className="h-3 w-3" />
+                  New
+                </Button>
               </div>
 
-              <div className="space-y-2">
-                {TEMPLATES.map((tmpl) => (
+              {/* SEARCH BAR */}
+              <div className="relative">
+                <Search className="h-3.5 w-3.5 text-slate-400 absolute left-2.5 top-2.5 pointer-events-none" />
+                <Input
+                  type="text"
+                  placeholder="Search templates (e.g. Payroll, 6010, Rent)..."
+                  value={templateSearch}
+                  onChange={(e) => setTemplateSearch(e.target.value)}
+                  className="pl-8 pr-7 h-8 text-xs bg-white border-slate-200 focus:border-primary shadow-2xs"
+                  data-testid="template-search-input"
+                />
+                {templateSearch && (
                   <button
-                    key={tmpl.id}
                     type="button"
-                    onClick={() => handleApplyTemplate(tmpl)}
-                    className="w-full text-left p-3 rounded-lg border border-slate-200 bg-white hover:border-primary-border hover:bg-primary-light/40 transition-all space-y-1 shadow-2xs group"
+                    onClick={() => setTemplateSearch('')}
+                    className="absolute right-2 top-2 text-slate-400 hover:text-slate-600"
+                    aria-label="Clear template search"
                   >
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold text-xs text-slate-900 group-hover:text-primary">
-                        {tmpl.name}
-                      </span>
-                      <Sparkles className="h-3.5 w-3.5 text-primary opacity-0 group-hover:opacity-100 transition-opacity" />
-                    </div>
-                    <p className="text-[11px] text-slate-500 leading-snug">
-                      {tmpl.description}
-                    </p>
-                    <div className="pt-1.5 text-[10px] text-slate-400 font-mono">
-                      {tmpl.lines.map((l) => `${l.isDebit ? 'Dr' : 'Cr'} ${l.accountName}`).join(' • ')}
-                    </div>
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </div>
+
+              {/* Category filter pills */}
+              <div className="flex items-center gap-1 overflow-x-auto pb-1 text-[11px] no-scrollbar">
+                {[
+                  { key: 'ALL', label: 'All' },
+                  { key: 'CUSTOM', label: 'Custom' },
+                  { key: 'Accruals & Provisions', label: 'Accruals' },
+                  { key: 'Payroll & Statutory', label: 'Payroll' },
+                  { key: 'Fixed Assets & Depreciation', label: 'Assets' },
+                ].map((pill) => (
+                  <button
+                    key={pill.key}
+                    type="button"
+                    onClick={() => setTemplateCategoryFilter(pill.key)}
+                    className={cn(
+                      'px-2 py-0.5 rounded-full font-medium whitespace-nowrap transition-colors text-[10.5px]',
+                      templateCategoryFilter === pill.key
+                        ? 'bg-primary text-white shadow-2xs font-semibold'
+                        : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
+                    )}
+                  >
+                    {pill.label}
                   </button>
                 ))}
+              </div>
+
+              {/* Search results summary when searching */}
+              {templateSearch && (
+                <div className="text-[11px] text-slate-500 flex items-center justify-between px-0.5">
+                  <span>Found {filteredTemplates.length} matching template(s)</span>
+                  <button
+                    type="button"
+                    onClick={() => setTemplateSearch('')}
+                    className="text-primary hover:underline text-[11px]"
+                  >
+                    Reset
+                  </button>
+                </div>
+              )}
+
+              {/* Templates List */}
+              <div data-testid="sidebar-templates-list" className="space-y-2 max-h-[520px] overflow-y-auto pr-0.5">
+                {filteredTemplates.length === 0 ? (
+                  <div className="p-4 text-center rounded-lg border border-dashed border-slate-300 bg-white space-y-2">
+                    <Bookmark className="h-6 w-6 text-slate-300 mx-auto" />
+                    <p className="text-xs font-semibold text-slate-600">No templates found</p>
+                    <p className="text-[11px] text-slate-400">
+                      No matching template for "{templateSearch}".
+                    </p>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        setNewTemplateName(templateSearch);
+                        setTemplateSearch('');
+                        setIsCreateTemplateOpen(true);
+                      }}
+                      className="h-7 text-xs gap-1 border-primary-border text-primary bg-primary-light/40 hover:bg-primary-light"
+                    >
+                      <Plus className="h-3 w-3" />
+                      Create "{templateSearch}"
+                    </Button>
+                  </div>
+                ) : (
+                  filteredTemplates.map((tmpl) => (
+                    <div
+                      key={tmpl.id}
+                      className="p-3 rounded-lg border border-slate-200 bg-white hover:border-primary-border hover:bg-primary-light/20 transition-all space-y-2 shadow-2xs group relative"
+                    >
+                      <div className="flex items-start justify-between gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => handleApplyTemplate(tmpl)}
+                          className="text-left flex-1 group"
+                        >
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="font-bold text-xs text-slate-900 group-hover:text-primary transition-colors">
+                              {tmpl.name}
+                            </span>
+                            {tmpl.isCustom ? (
+                              <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-indigo-50 text-indigo-700 border border-indigo-200">
+                                Custom
+                              </span>
+                            ) : (
+                              <span className="text-[9px] font-medium px-1.5 py-0.2 rounded bg-slate-100 text-slate-600">
+                                System
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-[11px] text-slate-500 leading-snug mt-1">
+                            {tmpl.description}
+                          </p>
+                        </button>
+
+                        <div className="flex items-center gap-1 shrink-0">
+                          {tmpl.isCustom && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteTemplate(tmpl.id, tmpl.name);
+                              }}
+                              className="p-1 text-slate-400 hover:text-rose-600 rounded hover:bg-rose-50 transition-colors"
+                              title="Delete template"
+                              aria-label={`Delete ${tmpl.name}`}
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => handleApplyTemplate(tmpl)}
+                            className="p-1 text-primary hover:text-primary-dark"
+                            title="Apply template"
+                            aria-label={`Apply ${tmpl.name}`}
+                          >
+                            <Sparkles className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Line items badge breakdown */}
+                      <div
+                        onClick={() => handleApplyTemplate(tmpl)}
+                        className="cursor-pointer pt-1.5 border-t border-slate-100 flex flex-wrap gap-1 items-center"
+                      >
+                        {tmpl.lines.map((l, i) => (
+                          <span
+                            key={i}
+                            className={cn(
+                              'text-[9.5px] font-mono px-1.5 py-0.5 rounded',
+                              l.isDebit
+                                ? 'bg-blue-50 text-blue-700 border border-blue-100'
+                                : 'bg-emerald-50 text-emerald-700 border border-emerald-100'
+                            )}
+                          >
+                            {l.isDebit ? 'Dr' : 'Cr'} {l.accountCode} {l.accountName}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             </Card>
           </div>
@@ -1305,6 +1786,200 @@ export function ManualJournalPage() {
           </div>
         </div>
       </div>
+      {/* Create Journal Entry Template Dialog Modal */}
+      <Dialog open={isCreateTemplateOpen} onOpenChange={setIsCreateTemplateOpen}>
+        <DialogHeader>
+          <div className="flex items-center gap-2">
+            <BookmarkPlus className="h-5 w-5 text-primary" />
+            <DialogTitle>Create Journal Entry Template</DialogTitle>
+          </div>
+          <DialogDescription>
+            Configure recurring double-entry accounts and descriptions as a reusable template for 1-click posting in future periods.
+          </DialogDescription>
+        </DialogHeader>
+
+        <DialogContent className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-semibold text-slate-700 block mb-1">
+                Template Name <span className="text-rose-500">*</span>
+              </label>
+              <Input
+                placeholder="e.g. Monthly Warehouse Rent & WHT"
+                value={newTemplateName}
+                onChange={(e) => setNewTemplateName(e.target.value)}
+                className="h-9 text-xs"
+                data-testid="template-name-input"
+              />
+            </div>
+
+            <div>
+              <label className="text-xs font-semibold text-slate-700 block mb-1">
+                Category
+              </label>
+              <select
+                value={newTemplateCategory}
+                onChange={(e) => setNewTemplateCategory(e.target.value)}
+                className="flex h-9 w-full rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-900 shadow-2xs hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+              >
+                <option value="Accruals & Provisions">Accruals & Provisions</option>
+                <option value="Payroll & Statutory">Payroll & Statutory</option>
+                <option value="Fixed Assets & Depreciation">Fixed Assets & Depreciation</option>
+                <option value="Prepayments & Amortization">Prepayments & Amortization</option>
+                <option value="Intercompany & Allocations">Intercompany & Allocations</option>
+                <option value="Taxes & Levies">Taxes & Levies</option>
+                <option value="General Adjustments">General Adjustments</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label className="text-xs font-semibold text-slate-700 block mb-1">
+              Short Description / Purpose
+            </label>
+            <Input
+              placeholder="e.g. Accrues monthly lease payment and withholding tax payable"
+              value={newTemplateDescription}
+              onChange={(e) => setNewTemplateDescription(e.target.value)}
+              className="h-9 text-xs"
+            />
+          </div>
+
+          <div>
+            <label className="text-xs font-semibold text-slate-700 block mb-1">
+              Default Voucher Narration / Memo
+            </label>
+            <Input
+              placeholder="e.g. Monthly warehouse rent expense for Peliyagoda logistics unit"
+              value={newTemplateMemo}
+              onChange={(e) => setNewTemplateMemo(e.target.value)}
+              className="h-9 text-xs"
+            />
+          </div>
+
+          {/* Template Lines Builder */}
+          <div className="space-y-2 pt-2 border-t border-slate-100">
+            <div className="flex items-center justify-between">
+              <div>
+                <span className="text-xs font-bold text-slate-800">Template Lines</span>
+                <span className="text-[11px] text-slate-500 ml-2">
+                  (Assign Dr and Cr accounts)
+                </span>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleAddTemplateLine}
+                className="h-7 text-xs gap-1 border-slate-200 hover:bg-slate-50"
+              >
+                <Plus className="h-3 w-3 text-primary" />
+                Add Line
+              </Button>
+            </div>
+
+            <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+              {newTemplateLines.map((line) => (
+                <div
+                  key={line.id}
+                  className="p-2.5 rounded-lg border border-slate-200 bg-slate-50/70 flex flex-col sm:flex-row items-start sm:items-center gap-2"
+                >
+                  {/* Dr / Cr toggle */}
+                  <div className="flex items-center shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => handleToggleLineDebit(line.id)}
+                      className={cn(
+                        'px-2.5 py-1 text-xs font-bold rounded-md transition-colors w-24 text-center',
+                        line.isDebit
+                          ? 'bg-blue-600 text-white shadow-2xs hover:bg-blue-700'
+                          : 'bg-emerald-600 text-white shadow-2xs hover:bg-emerald-700'
+                      )}
+                    >
+                      {line.isDebit ? 'DEBIT (Dr)' : 'CREDIT (Cr)'}
+                    </button>
+                  </div>
+
+                  {/* Account selector */}
+                  <div className="flex-1 min-w-[200px] w-full sm:w-auto">
+                    <select
+                      data-testid="template-line-account-select"
+                      value={line.accountId}
+                      onChange={(e) => handleLineAccountChange(line.id, e.target.value)}
+                      className="flex h-8 w-full rounded-md border border-slate-200 bg-white px-2 py-1 text-xs text-slate-900 shadow-2xs focus:outline-none focus:ring-1 focus:ring-primary"
+                    >
+                      <option value="">Select Account...</option>
+                      {accounts.map((acc) => (
+                        <option key={acc.id} value={acc.id}>
+                          {acc.code} - {acc.name} ({acc.accountType})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Line Description */}
+                  <div className="flex-1 min-w-[150px] w-full sm:w-auto">
+                    <Input
+                      placeholder="Line narration / memo"
+                      value={line.description}
+                      onChange={(e) => handleLineDescriptionChange(line.id, e.target.value)}
+                      className="h-8 text-xs bg-white"
+                    />
+                  </div>
+
+                  {/* Remove line */}
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveTemplateLine(line.id)}
+                    disabled={newTemplateLines.length <= 2}
+                    className="p-1 text-slate-400 hover:text-rose-600 disabled:opacity-30 disabled:hover:text-slate-400 shrink-0"
+                    title="Remove line"
+                    aria-label="Remove template line"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            {/* Invariant status */}
+            <div className="flex items-center justify-between pt-1 text-[11px] text-slate-500">
+              <span>
+                {newTemplateLines.filter((l) => l.isDebit).length} Debit line(s) •{' '}
+                {newTemplateLines.filter((l) => !l.isDebit).length} Credit line(s)
+              </span>
+              {(!newTemplateLines.some((l) => l.isDebit) || !newTemplateLines.some((l) => !l.isDebit)) && (
+                <span className="text-amber-600 font-medium flex items-center gap-1">
+                  <AlertTriangle className="h-3 w-3" />
+                  Requires at least one Dr and one Cr line
+                </span>
+              )}
+            </div>
+          </div>
+        </DialogContent>
+
+        <DialogFooter className="gap-2 sm:gap-0">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setIsCreateTemplateOpen(false)}
+            className="text-xs"
+          >
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            onClick={handleSaveTemplate}
+            className="text-xs bg-primary text-white gap-1.5 hover:bg-primary-hover"
+            data-testid="save-template-submit-button"
+          >
+            <Check className="h-3.5 w-3.5" />
+            Save Template
+          </Button>
+        </DialogFooter>
+      </Dialog>
     </div>
   );
 }

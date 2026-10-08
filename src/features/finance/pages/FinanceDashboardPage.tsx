@@ -336,9 +336,15 @@ export function FinanceDashboardPage() {
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-500">Recent Ledger Activity</h2>
-          <Link to="/finance/reports/general-ledger" className="text-xs font-semibold text-primary hover:underline">
-            View All Account Statements →
-          </Link>
+          <div className="flex items-center gap-3">
+            <Link to="/finance/reports/monthly-audit" className="text-xs font-semibold text-primary hover:underline">
+              Monthly Audit View (Auto vs Manual) →
+            </Link>
+            <span className="text-slate-300">|</span>
+            <Link to="/finance/reports/general-ledger" className="text-xs font-semibold text-slate-600 hover:text-primary hover:underline">
+              Account Statements →
+            </Link>
+          </div>
         </div>
 
         <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
