@@ -298,6 +298,127 @@ export function ProductDetailPage() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Director / Manager Discount Levels Configuration Dialog */}
+      <Dialog open={isDiscountModalOpen} onOpenChange={setIsDiscountModalOpen}>
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Percent className="h-5 w-5 text-primary" />
+            Configure Product Discount Levels
+          </DialogTitle>
+          <DialogDescription>
+            Configure up to 3 optional discount levels for <strong>{product.name}</strong>.
+            Discount levels are automatically sorted from lowest to highest.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4 py-2">
+          <div className="rounded-lg bg-slate-50 border border-slate-200 p-3 text-xs text-slate-600 space-y-1">
+            <div className="font-semibold text-slate-800">Customer Loyalty Access Rules:</div>
+            <ul className="list-disc list-inside space-y-0.5 text-[11px] text-slate-500">
+              <li><strong>New Customer:</strong> Lowest available discount level only (Level 1)</li>
+              <li><strong>Premium Customer:</strong> Level 1 + Level 2</li>
+              <li><strong>Platinum Customer:</strong> All configured discount levels (Levels 1, 2, and 3)</li>
+              <li><strong>0 Levels:</strong> No direct discount allowed (Management Approval required)</li>
+            </ul>
+          </div>
+
+          <div className="grid grid-cols-3 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Level 1 (%)
+              </label>
+              <Input
+                type="number"
+                min="0"
+                max="100"
+                step="0.5"
+                placeholder="e.g. 5"
+                value={editL1}
+                onChange={(e) => setEditL1(e.target.value)}
+                className="h-9 font-mono"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Level 2 (%)
+              </label>
+              <Input
+                type="number"
+                min="0"
+                max="100"
+                step="0.5"
+                placeholder="e.g. 10"
+                value={editL2}
+                onChange={(e) => setEditL2(e.target.value)}
+                className="h-9 font-mono"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Level 3 (%)
+              </label>
+              <Input
+                type="number"
+                min="0"
+                max="100"
+                step="0.5"
+                placeholder="e.g. 15"
+                value={editL3}
+                onChange={(e) => setEditL3(e.target.value)}
+                className="h-9 font-mono"
+              />
+            </div>
+          </div>
+          <p className="text-[11px] text-slate-400">
+            Tip: Leave inputs blank to configure fewer levels (e.g. 1 or 2 levels). Leave all empty for 0 levels.
+          </p>
+        </div>
+
+        <DialogFooter>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setIsDiscountModalOpen(false)}
+          >
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            disabled={isSavingLevels}
+            onClick={async () => {
+              try {
+                setIsSavingLevels(true);
+                const raw = [editL1, editL2, editL3]
+                  .map((v) => (v.trim() !== '' ? Number(v) : null))
+                  .filter((v): v is number => v !== null && !isNaN(v) && v >= 0 && v <= 100);
+                const sortedLevels = Array.from(new Set(raw)).sort((a, b) => a - b);
+
+                const updated = await productService.updateProduct(product.id, {
+                  discountLevels: sortedLevels,
+                  pricing: {
+                    ...product.pricing,
+                    discountLevels: sortedLevels,
+                  },
+                });
+                setProduct(updated);
+                setIsDiscountModalOpen(false);
+                toast.success('Product discount levels updated successfully.');
+              } catch (err) {
+                toast.error('Failed to update discount levels.');
+              } finally {
+                setIsSavingLevels(false);
+              }
+            }}
+            className="gap-1.5"
+          >
+            <Save className="h-3.5 w-3.5" />
+            Save Discount Levels
+          </Button>
+        </DialogFooter>
+      </Dialog>
     </div>
   );
 }
