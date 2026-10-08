@@ -2,19 +2,6 @@ import { PrimaryColorOption, CompanySettings } from "../types/theme";
 
 export const PRIMARY_COLOR_OPTIONS: PrimaryColorOption[] = [
   {
-    id: "black",
-    name: "Black",
-    hex: "#161511",
-    hover: "#282723",
-    active: "#0D0C0A",
-    light: "#F4F4F3",
-    border: "#D5D4D2",
-    text: "#161511",
-    foreground: "#FFFFFF",
-    foregroundRgb: "255 255 255",
-    ring: "rgba(22, 21, 17, 0.35)",
-  },
-  {
     id: "dark-blue",
     name: "Dark Blue",
     hex: "#263183",
@@ -41,17 +28,17 @@ export const PRIMARY_COLOR_OPTIONS: PrimaryColorOption[] = [
     ring: "rgba(236, 27, 39, 0.35)",
   },
   {
-    id: "orange",
-    name: "Deep Burnt Orange",
-    hex: "#C2410C",
-    hover: "#9A3412",
-    active: "#7C2D12",
-    light: "#FFF7ED",
-    border: "#FED7AA",
-    text: "#C2410C",
+    id: "black",
+    name: "Black",
+    hex: "#161511",
+    hover: "#282723",
+    active: "#0D0C0A",
+    light: "#F4F4F3",
+    border: "#D5D4D2",
+    text: "#161511",
     foreground: "#FFFFFF",
     foregroundRgb: "255 255 255",
-    ring: "rgba(194, 65, 12, 0.35)",
+    ring: "rgba(22, 21, 17, 0.35)",
   },
 ];
 
