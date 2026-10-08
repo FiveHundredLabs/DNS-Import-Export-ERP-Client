@@ -111,7 +111,12 @@ export function ProfitLossPage() {
       : 0;
 
   const handlePrint = () => {
-    reportPdfService.triggerPrint(`DNS_Profit_Loss_${dateFilter.startDate}_to_${dateFilter.endDate}`);
+    if (!report) {
+      reportPdfService.triggerPrint(`DNS_Profit_Loss_${dateFilter.startDate}_to_${dateFilter.endDate}`);
+      return;
+    }
+    const html = reportPdfService.generateProfitLossHtml(report, comparePrior ? priorReport : null);
+    reportPdfService.printReportHtml(html, `DNS_Profit_Loss_${dateFilter.startDate}_to_${dateFilter.endDate}`);
   };
 
   // Helper maps for prior period item lookups
