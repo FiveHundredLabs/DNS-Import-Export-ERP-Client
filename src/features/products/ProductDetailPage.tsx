@@ -5,15 +5,36 @@ import { productService } from '../../services/ProductService';
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
+import { Input } from '../../components/ui/input';
+import { Dialog, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../../components/ui/dialog';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../../components/ui/tabs';
 import { formatCurrency } from '../../utils/formatters';
-import { ArrowLeft, Package, Barcode, ShieldCheck, TrendingUp, AlertTriangle } from 'lucide-react';
+import { useAuth } from '../../hooks/useAuth';
+import {
+  ArrowLeft,
+  Package,
+  Barcode,
+  ShieldCheck,
+  TrendingUp,
+  AlertTriangle,
+  Percent,
+  Edit3,
+  CheckCircle2,
+  Save,
+} from 'lucide-react';
 import { TableLoadingSkeleton } from '../../components/common/LoadingSkeleton';
+import { toast } from 'sonner';
 
 export function ProductDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const { role } = useAuth();
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isDiscountModalOpen, setIsDiscountModalOpen] = useState(false);
+  const [editL1, setEditL1] = useState('');
+  const [editL2, setEditL2] = useState('');
+  const [editL3, setEditL3] = useState('');
+  const [isSavingLevels, setIsSavingLevels] = useState(false);
 
   useEffect(() => {
     async function load() {
