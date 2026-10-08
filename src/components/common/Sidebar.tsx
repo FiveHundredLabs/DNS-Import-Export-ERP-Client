@@ -18,7 +18,6 @@ import {
   Search,
   X,
   Star,
-  ArrowLeftRight,
   BookOpen,
   FileSpreadsheet,
   Receipt,
@@ -106,7 +105,6 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const inventoryItems: SidebarItem[] = [
     { id: 'products', name: 'Product Master', path: '/products', icon: Package, category: 'inventory' },
     { id: 'inventory', name: 'Inventory & GRN', path: '/inventory', icon: Boxes, category: 'inventory', exact: true },
-    { id: 'transfers', name: 'Stock Transfers', path: '/inventory/transfers', icon: ArrowLeftRight, category: 'inventory' },
   ];
 
   // 4. Finance, Banking & Ledger Core

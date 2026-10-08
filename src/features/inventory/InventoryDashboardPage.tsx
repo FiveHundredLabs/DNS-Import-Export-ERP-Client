@@ -157,12 +157,6 @@ const QUICK_LINKS = [
     to: '/inventory/dispatch',
     color: 'from-red-500 to-rose-600',
   },
-  {
-    label: 'Stock Transfers',
-    description: 'Warehouse to showroom movements',
-    to: '/inventory/transfers',
-    color: 'from-cyan-500 to-teal-600',
-  },
 ];
 
 export function InventoryDashboardPage() {
@@ -235,9 +229,6 @@ export function InventoryDashboardPage() {
         <div className="flex gap-2 flex-shrink-0">
           <Link to="/inventory/grn/new">
             <Button variant="default" size="sm">+ New GRN</Button>
-          </Link>
-          <Link to="/inventory/transfers">
-            <Button variant="outline" size="sm">Transfer Stock</Button>
           </Link>
         </div>
       </div>
