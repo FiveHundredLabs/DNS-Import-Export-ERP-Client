@@ -242,7 +242,7 @@ export function InvoiceListPage() {
                 </Select>
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 w-full sm:w-auto">
               <Input
                 type="date"
                 value={startDate}
@@ -250,10 +250,10 @@ export function InvoiceListPage() {
                   setStartDate(e.target.value);
                   setPage(1);
                 }}
-                className="text-xs h-9 w-36"
+                className="text-xs h-9 flex-1 min-w-0 sm:flex-initial sm:w-36"
                 placeholder="From Date"
               />
-              <span className="text-xs text-slate-400">to</span>
+              <span className="text-xs text-slate-400 shrink-0">to</span>
               <Input
                 type="date"
                 value={endDate}
@@ -261,7 +261,7 @@ export function InvoiceListPage() {
                   setEndDate(e.target.value);
                   setPage(1);
                 }}
-                className="text-xs h-9 w-36"
+                className="text-xs h-9 flex-1 min-w-0 sm:flex-initial sm:w-36"
                 placeholder="To Date"
               />
             </div>
@@ -329,16 +329,18 @@ export function InvoiceListPage() {
                       className="rounded-2xl border border-slate-200/90 bg-white p-3.5 shadow-xs hover:border-primary/50 transition-all cursor-pointer active:scale-[0.99]"
                     >
                       {/* Top: Invoice #, Order #, Status */}
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="font-mono text-xs font-bold text-primary tabular-nums">
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <div className="flex items-center gap-1.5 flex-wrap shrink-0 min-w-0">
+                          <span className="font-mono text-xs font-bold text-primary tabular-nums whitespace-nowrap shrink-0">
                             {inv.invoiceNumber}
                           </span>
-                          <span className="text-[10.5px] text-slate-400 font-mono">
+                          <span className="text-[10.5px] text-slate-400 font-mono whitespace-nowrap shrink-0">
                             • SO: {inv.orderNumber}
                           </span>
                         </div>
-                        <InvoiceStatusBadge status={inv.status} />
+                        <div className="shrink-0">
+                          <InvoiceStatusBadge status={inv.status} />
+                        </div>
                       </div>
 
                       {/* Customer info */}

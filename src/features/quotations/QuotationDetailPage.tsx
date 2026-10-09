@@ -319,7 +319,7 @@ export function QuotationDetailPage() {
 
       {/* Main Quotation Document Container */}
       <Card className="shadow-sm border border-slate-200 bg-white">
-        <CardContent className="p-8 space-y-6">
+        <CardContent className="p-4 sm:p-8 space-y-6">
           {/* Document Header */}
           <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 border-b border-slate-200 pb-6">
             <div>
@@ -337,10 +337,10 @@ export function QuotationDetailPage() {
               <span className="text-xs font-medium text-slate-500 block">
                 Official Commercial Document
               </span>
-              <div className="text-xl font-semibold font-mono text-primary tabular-nums">
+              <div className="text-xl font-semibold font-mono text-primary tabular-nums whitespace-nowrap shrink-0">
                 {quotation.quotationNumber}
               </div>
-              <div className="pt-1">
+              <div className="pt-1 shrink-0">
                 <QuotationStatusBadge status={quotation.status} />
               </div>
               <div className="text-xs text-slate-500 pt-2">
@@ -381,7 +381,7 @@ export function QuotationDetailPage() {
           </div>
 
           {/* Line Items Snapshot Table */}
-          <div className="rounded-lg border border-slate-200 overflow-hidden">
+          <div className="rounded-lg border border-slate-200 overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow className="bg-slate-50">

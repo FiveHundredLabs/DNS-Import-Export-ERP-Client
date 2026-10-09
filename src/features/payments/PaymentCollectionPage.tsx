@@ -502,13 +502,13 @@ export function PaymentCollectionPage() {
                         }`}
                       >
                         {/* Top: Invoice # & Status */}
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="font-mono text-xs font-bold text-primary">
+                        <div className="flex items-center justify-between gap-2 flex-wrap">
+                          <span className="font-mono text-xs font-bold text-primary whitespace-nowrap shrink-0">
                             {inv.invoiceNumber}
                           </span>
-                          <div className="flex items-center gap-1.5">
+                          <div className="flex items-center gap-1.5 shrink-0">
                             {isOverdue && (
-                              <span className="text-[10.5px] font-bold text-rose-600 bg-rose-100 px-1.5 py-0.5 rounded">
+                              <span className="text-[10.5px] font-bold text-rose-600 bg-rose-100 px-1.5 py-0.5 rounded whitespace-nowrap">
                                 Overdue
                               </span>
                             )}

@@ -202,11 +202,22 @@ export function CustomerHubView({ customer }: { customer: Customer }) {
       {/* Customer Header Banner */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 rounded-xl border border-slate-200 bg-white shadow-xs">
         <div>
-          <div className="flex items-center gap-2">
-            <span className="font-mono text-xs font-semibold text-slate-500 tabular-nums">{customer.code}</span>
-            <Badge variant="outline">{customer.type}</Badge>
-            {customer.loyaltyTier && <Badge variant="warning">{customer.loyaltyTier} Tier</Badge>}
-            <Badge variant={customer.approvalStage === 'APPROVED' ? 'success' : 'warning'}>
+          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+            <span className="font-mono text-xs font-semibold text-slate-500 tabular-nums whitespace-nowrap shrink-0">
+              {customer.code}
+            </span>
+            <Badge variant="outline" className="whitespace-nowrap shrink-0">
+              {customer.type}
+            </Badge>
+            {customer.loyaltyTier && (
+              <Badge variant="warning" className="whitespace-nowrap shrink-0">
+                {customer.loyaltyTier} Tier
+              </Badge>
+            )}
+            <Badge
+              variant={customer.approvalStage === 'APPROVED' ? 'success' : 'warning'}
+              className="whitespace-nowrap shrink-0"
+            >
               {customer.approvalStage}
             </Badge>
           </div>
@@ -439,11 +450,13 @@ export function CustomerHubView({ customer }: { customer: Customer }) {
                         onClick={() => navigate(`/invoices/${inv.id}`)}
                         className="rounded-2xl border border-slate-200/90 bg-white p-3.5 shadow-xs space-y-2.5 cursor-pointer active:scale-[0.99] transition-all"
                       >
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="font-mono text-xs font-bold text-primary">
+                        <div className="flex items-center justify-between gap-2 flex-wrap">
+                          <span className="font-mono text-xs font-bold text-primary whitespace-nowrap shrink-0">
                             {inv.invoiceNumber}
                           </span>
-                          <InvoiceStatusBadge status={inv.status} />
+                          <div className="shrink-0">
+                            <InvoiceStatusBadge status={inv.status} />
+                          </div>
                         </div>
 
                         <div className="grid grid-cols-2 gap-2 text-xs bg-slate-50 p-2.5 rounded-xl border border-slate-100">
@@ -601,11 +614,13 @@ export function CustomerHubView({ customer }: { customer: Customer }) {
                         onClick={() => navigate(`/orders/${ord.id}`)}
                         className="rounded-2xl border border-slate-200/90 bg-white p-3.5 shadow-xs space-y-2 cursor-pointer active:scale-[0.99] transition-all"
                       >
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="font-mono text-xs font-bold text-primary">
+                        <div className="flex items-center justify-between gap-2 flex-wrap">
+                          <span className="font-mono text-xs font-bold text-primary whitespace-nowrap shrink-0">
                             {ord.orderNumber}
                           </span>
-                          <OrderStatusBadge status={ord.status} isSpecialApproval={ord.isSpecialApproval} />
+                          <div className="shrink-0">
+                            <OrderStatusBadge status={ord.status} isSpecialApproval={ord.isSpecialApproval} />
+                          </div>
                         </div>
                         <div className="flex items-center justify-between text-xs pt-1">
                           <span className="text-slate-500">{formatDate(ord.createdAt)} • {ord.items.length} Items</span>
@@ -705,11 +720,13 @@ export function CustomerHubView({ customer }: { customer: Customer }) {
                         onClick={() => navigate(`/quotations/${qt.id}`)}
                         className="rounded-2xl border border-slate-200/90 bg-white p-3.5 shadow-xs space-y-2 cursor-pointer active:scale-[0.99] transition-all"
                       >
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="font-mono text-xs font-bold text-primary">
+                        <div className="flex items-center justify-between gap-2 flex-wrap">
+                          <span className="font-mono text-xs font-bold text-primary whitespace-nowrap shrink-0">
                             {qt.quotationNumber}
                           </span>
-                          <QuotationStatusBadge status={qt.status} />
+                          <div className="shrink-0">
+                            <QuotationStatusBadge status={qt.status} />
+                          </div>
                         </div>
                         <div className="flex items-center justify-between text-xs pt-1">
                           <span className="text-slate-500">{formatDate(qt.createdAt)} • {qt.items.length} Items</span>
@@ -815,11 +832,13 @@ export function CustomerHubView({ customer }: { customer: Customer }) {
                         onClick={() => navigate(`/payments/${pay.id}`)}
                         className="rounded-2xl border border-slate-200/90 bg-white p-3.5 shadow-xs space-y-2 cursor-pointer active:scale-[0.99] transition-all"
                       >
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="font-mono text-xs font-bold text-primary">
+                        <div className="flex items-center justify-between gap-2 flex-wrap">
+                          <span className="font-mono text-xs font-bold text-primary whitespace-nowrap shrink-0">
                             {pay.receiptNumber}
                           </span>
-                          <PaymentStatusBadge status={pay.status} />
+                          <div className="shrink-0">
+                            <PaymentStatusBadge status={pay.status} />
+                          </div>
                         </div>
                         <div className="flex items-center justify-between text-xs pt-1">
                           <span className="text-slate-500">
