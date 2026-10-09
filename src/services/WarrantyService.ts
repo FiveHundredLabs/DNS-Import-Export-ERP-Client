@@ -15,6 +15,10 @@ import {
   WarrantyNote,
   WarrantyNoteFilters,
   RecordWarrantyNoteDTO,
+  UnitWarrantyStatus,
+  UnitBarcodeWarrantyDetail,
+  DistributorWarrantySummary,
+  SalesRepWarrantySummary,
 } from '../types/warranty';
 import { Invoice, InvoiceItem } from '../types/invoice';
 import { User } from '../types/auth';
@@ -25,6 +29,7 @@ import {
   calculatePendingWarrantyNotes,
   determineWarrantyStartDate,
   canProcessWarrantyClaim,
+  classifyUnitWarrantyStatus,
 } from '../rules/warrantyRules';
 
 export interface CreateClaimDTO {
@@ -631,6 +636,208 @@ export class WarrantyService {
     }
 
     return updated;
+  }
+
+  /**
+   * Retrieves warranty verification summaries for distributors.
+   * If salesRepId is provided, scopes strictly to distributors assigned to that sales representative.
+   * For Sales Managers or Directors without a salesRepId filter, returns all distributors.
+   * Calculates statistics strictly from system records (reconciling physical barcodes, confirmed customer sales, and in-stock units).
+   */
+  async getDistributorWarrantySummaries(
+    salesRepId?: string,
+    userRole?: string
+  ): Promise<DistributorWarrantySummary[]> {
+    // 1. Fetch distributors
+    const customerResult = await this.customerRepo.getAll({
+      page: 1,
+      pageSize: 200,
+      type: 'DEALER',
+      assignedRepId: salesRepId && salesRepId !== 'ALL' ? salesRepId : undefined,
+    });
+
+    let distributors = customerResult.data.filter((c) => c.type === 'DEALER');
+    if (salesRepId && salesRepId !== 'ALL') {
+      distributors = distributors.filter((c) => c.assignedRepId === salesRepId);
+    }
+
+    const summaries: DistributorWarrantySummary[] = [];
+
+    for (const dist of distributors) {
+      // 2. Fetch all unit warranty records for this distributor
+      const records = await this.repo.getRecordsByCustomerId(dist.id);
+      const followUp = await this.repo.getFollowUpByCustomerId(dist.id);
+
+      let totalUnitsSold = 0;
+      let warrantyNotesReceived = 0;
+      let confirmedMissingCount = 0;
+      let unaccountedInStockCount = 0;
+      let lastSubmissionDate: string | undefined = undefined;
+
+      if (records.length > 0) {
+        totalUnitsSold = records.length;
+        for (const record of records) {
+          const classification = classifyUnitWarrantyStatus(record);
+          if (
+            classification.status === 'RECEIVED_VERIFIED' ||
+            classification.status === 'RECEIVED_PENDING'
+          ) {
+            warrantyNotesReceived++;
+            if (record.notesReceivedDate) {
+              const recDate = record.notesReceivedDate.split('T')[0];
+              if (!lastSubmissionDate || recDate > lastSubmissionDate) {
+                lastSubmissionDate = recDate;
+              }
+            }
+          } else if (classification.status === 'MISSING_CONFIRMED') {
+            confirmedMissingCount++;
+          } else {
+            // IN_DISTRIBUTOR_STOCK
+            unaccountedInStockCount++;
+          }
+        }
+      } else {
+        // Fallback to customer master / followUp metrics if individual barcode records not yet populated
+        totalUnitsSold = dist.warrantyNotesExpected || (followUp ? followUp.totalUnitsSold : 0);
+        warrantyNotesReceived = dist.warrantyNotesReceived || (followUp ? followUp.warrantyNotesReceived : 0);
+        const outstanding = calculatePendingWarrantyNotes(totalUnitsSold, warrantyNotesReceived);
+        confirmedMissingCount = outstanding;
+        unaccountedInStockCount = 0;
+      }
+
+      if (!lastSubmissionDate && followUp?.lastFollowUpDate) {
+        lastSubmissionDate = followUp.lastFollowUpDate;
+      }
+
+      const pendingNotesCount = calculatePendingWarrantyNotes(totalUnitsSold, warrantyNotesReceived);
+      const collectionProgress =
+        totalUnitsSold > 0 ? Math.round((warrantyNotesReceived / totalUnitsSold) * 100) : 100;
+
+      summaries.push({
+        distributorId: dist.id,
+        distributorName: dist.name,
+        customerCode: dist.code,
+        phone: dist.phone,
+        address: dist.address,
+        assignedRepId: dist.assignedRepId,
+        assignedRepName: dist.assignedRepName,
+        totalUnitsSold,
+        warrantyNotesReceived,
+        pendingNotesCount,
+        confirmedMissingCount,
+        unaccountedInStockCount,
+        collectionProgress,
+        lastSubmissionDate,
+        hasOutstandingNotes: pendingNotesCount > 0,
+      });
+    }
+
+    return summaries;
+  }
+
+  /**
+   * Retrieves aggregated warranty statistics for a specific sales representative across all assigned distributors.
+   */
+  async getSalesRepWarrantySummary(
+    salesRepId: string,
+    salesRepName?: string
+  ): Promise<SalesRepWarrantySummary> {
+    const distributorSummaries = await this.getDistributorWarrantySummaries(salesRepId, 'SALES_REP');
+
+    let totalUnitsSold = 0;
+    let warrantyNotesReceived = 0;
+    let confirmedMissingCount = 0;
+    let unaccountedInStockCount = 0;
+    let distributorsWithOutstandingNotes = 0;
+
+    for (const d of distributorSummaries) {
+      totalUnitsSold += d.totalUnitsSold;
+      warrantyNotesReceived += d.warrantyNotesReceived;
+      confirmedMissingCount += d.confirmedMissingCount;
+      unaccountedInStockCount += d.unaccountedInStockCount;
+      if (d.hasOutstandingNotes) {
+        distributorsWithOutstandingNotes++;
+      }
+    }
+
+    const pendingNotesCount = calculatePendingWarrantyNotes(totalUnitsSold, warrantyNotesReceived);
+    const collectionProgress =
+      totalUnitsSold > 0 ? Math.round((warrantyNotesReceived / totalUnitsSold) * 100) : 100;
+
+    return {
+      salesRepId,
+      salesRepName: salesRepName || (distributorSummaries[0]?.assignedRepName || 'Sales Representative'),
+      totalUnitsSold,
+      warrantyNotesReceived,
+      pendingNotesCount,
+      confirmedMissingCount,
+      unaccountedInStockCount,
+      collectionProgress,
+      distributorsCount: distributorSummaries.length,
+      distributorsWithOutstandingNotes,
+    };
+  }
+
+  /**
+   * Retrieves individual physical unit barcodes for a distributor with status classification and search/filtering.
+   */
+  async getUnitBarcodesForDistributor(
+    distributorId: string,
+    filters?: {
+      search?: string;
+      status?: UnitWarrantyStatus | 'ALL';
+    }
+  ): Promise<UnitBarcodeWarrantyDetail[]> {
+    const records = await this.repo.getRecordsByCustomerId(distributorId);
+    const distributor = await this.customerRepo.getById(distributorId);
+
+    const units: UnitBarcodeWarrantyDetail[] = records.map((record) => {
+      const classification = classifyUnitWarrantyStatus(record);
+      return {
+        id: record.id,
+        barcode: record.barcode || 'N/A',
+        serialNumber: record.serialNumber,
+        productId: record.productId,
+        productName: record.productName,
+        sku: record.sku,
+        distributorId: record.customerId,
+        distributorName: record.customerName,
+        customerCode: distributor?.code,
+        saleDate: record.saleDate,
+        invoiceNumber: record.invoiceNumber,
+        orderNumber: record.invoiceNumber ? `SO-${record.invoiceNumber.replace('INV-', '')}` : undefined,
+        warrantyStatus: classification.status,
+        statusLabel: classification.label,
+        warrantyNoteId: record.warrantyNoteId,
+        warrantyNoteNumber: record.warrantyNoteNumber,
+        warrantyNoteReceivedDate: record.notesReceivedDate,
+        endCustomerSaleDate: record.dealerSoldDate,
+        endCustomerName: record.endCustomerName,
+        warrantyPeriodMonths: record.warrantyPeriodMonths,
+        warrantyExpiryDate: record.warrantyExpiryDate,
+      };
+    });
+
+    let filtered = units;
+
+    if (filters?.status && filters.status !== 'ALL') {
+      filtered = filtered.filter((u) => u.warrantyStatus === filters.status);
+    }
+
+    if (filters?.search) {
+      const q = filters.search.toLowerCase().trim();
+      filtered = filtered.filter(
+        (u) =>
+          u.barcode.toLowerCase().includes(q) ||
+          (u.serialNumber && u.serialNumber.toLowerCase().includes(q)) ||
+          u.productName.toLowerCase().includes(q) ||
+          u.sku.toLowerCase().includes(q) ||
+          u.invoiceNumber.toLowerCase().includes(q) ||
+          (u.endCustomerName && u.endCustomerName.toLowerCase().includes(q))
+      );
+    }
+
+    return filtered;
   }
 }
 

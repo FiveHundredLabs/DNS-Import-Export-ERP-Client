@@ -22,14 +22,6 @@ describe('Distributor Warranty Note Management & Sales Manager Validation', () =
     isActive: true,
   };
 
-  const mockDirectorUser: User = {
-    id: 'usr-101',
-    name: 'Deshamanya Nihal Jayawardena',
-    email: 'director@dnserp.com',
-    role: 'DIRECTOR',
-    phone: '+94 77 123 4567',
-    isActive: true,
-  };
 
   const mockSalesRepUser: User = {
     id: 'usr-106',

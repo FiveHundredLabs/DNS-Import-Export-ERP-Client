@@ -109,3 +109,32 @@ export function canProcessWarrantyClaim(
   return { allowed: true };
 }
 
+/**
+ * Classifies a physical product unit's warranty note collection status.
+ * Distinguishes between:
+ * 1. Received & Verified by head office
+ * 2. Received (Pending Sales Manager review)
+ * 3. Confirmed sold to end-customer, but warranty note is missing from head office
+ * 4. In distributor inventory / unaccounted (not yet sold to end-customer)
+ */
+export function classifyUnitWarrantyStatus(record: {
+  notesReceived: boolean;
+  warrantyNoteStatus?: string;
+  dealerSoldDate?: string;
+}): {
+  status: 'RECEIVED_VERIFIED' | 'RECEIVED_PENDING' | 'MISSING_CONFIRMED' | 'IN_DISTRIBUTOR_STOCK';
+  label: string;
+} {
+  if (record.warrantyNoteStatus === 'VERIFIED' || record.notesReceived) {
+    return { status: 'RECEIVED_VERIFIED', label: 'Received & Verified' };
+  }
+  if (record.warrantyNoteStatus === 'PENDING_REVIEW') {
+    return { status: 'RECEIVED_PENDING', label: 'Received (Pending Review)' };
+  }
+  if (record.dealerSoldDate) {
+    return { status: 'MISSING_CONFIRMED', label: 'Missing Note (Sold to Customer)' };
+  }
+  return { status: 'IN_DISTRIBUTOR_STOCK', label: 'In Distributor Stock (Unaccounted)' };
+}
+
+

@@ -140,3 +140,66 @@ export interface RecordWarrantyNoteDTO {
   reviewNotes?: string;
   verifyImmediately?: boolean;
 }
+
+export type UnitWarrantyStatus =
+  | 'RECEIVED_VERIFIED'
+  | 'RECEIVED_PENDING'
+  | 'MISSING_CONFIRMED'
+  | 'IN_DISTRIBUTOR_STOCK';
+
+export interface UnitBarcodeWarrantyDetail {
+  id: string;
+  barcode: string;
+  serialNumber?: string;
+  productId: string;
+  productName: string;
+  sku: string;
+  distributorId: string;
+  distributorName: string;
+  customerCode?: string;
+  saleDate: string;
+  invoiceNumber: string;
+  orderNumber?: string;
+  warrantyStatus: UnitWarrantyStatus;
+  statusLabel: string;
+  warrantyNoteId?: string;
+  warrantyNoteNumber?: string;
+  warrantyNoteReceivedDate?: string;
+  endCustomerSaleDate?: string;
+  endCustomerName?: string;
+  endCustomerPhone?: string;
+  warrantyPeriodMonths: number;
+  warrantyExpiryDate?: string;
+}
+
+export interface DistributorWarrantySummary {
+  distributorId: string;
+  distributorName: string;
+  customerCode: string;
+  phone?: string;
+  address?: string;
+  assignedRepId?: string;
+  assignedRepName?: string;
+  totalUnitsSold: number;
+  warrantyNotesReceived: number;
+  pendingNotesCount: number;
+  confirmedMissingCount: number;
+  unaccountedInStockCount: number;
+  collectionProgress: number;
+  lastSubmissionDate?: string;
+  hasOutstandingNotes: boolean;
+}
+
+export interface SalesRepWarrantySummary {
+  salesRepId: string;
+  salesRepName: string;
+  totalUnitsSold: number;
+  warrantyNotesReceived: number;
+  pendingNotesCount: number;
+  confirmedMissingCount: number;
+  unaccountedInStockCount: number;
+  collectionProgress: number;
+  distributorsCount: number;
+  distributorsWithOutstandingNotes: number;
+}
+
