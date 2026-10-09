@@ -48,14 +48,14 @@ export function CustomerTable({
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className="font-mono text-xs font-semibold text-slate-500">
+                    <span className="font-mono text-xs font-semibold text-slate-500 whitespace-nowrap shrink-0">
                       {c.code}
                     </span>
-                    <Badge variant="outline" className="text-[10.5px] py-0">
+                    <Badge variant="outline" className="text-[10.5px] py-0 whitespace-nowrap shrink-0">
                       {c.type}
                     </Badge>
                     {(c.loyaltyLevel || c.loyaltyTier) && (
-                      <Badge variant="warning" className="text-[10px] py-0 uppercase font-semibold">
+                      <Badge variant="warning" className="text-[10px] py-0 uppercase font-semibold whitespace-nowrap shrink-0">
                         {c.loyaltyLevel || c.loyaltyTier}
                       </Badge>
                     )}

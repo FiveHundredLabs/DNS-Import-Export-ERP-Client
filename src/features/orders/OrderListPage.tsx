@@ -156,45 +156,51 @@ export function OrderListPage() {
       </div>
 
       {/* Metrics Row */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card className="p-4 bg-white border border-slate-200">
-          <div className="flex items-center justify-between">
-            <span className="text-[13px] font-medium text-slate-600">Total Filtered</span>
-            <ShoppingCart className="h-4 w-4 text-primary" />
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 sm:gap-4">
+        <Card className="p-3 sm:p-4 bg-white border border-slate-200 overflow-hidden">
+          <div className="flex items-center justify-between gap-1">
+            <span className="text-xs sm:text-[13px] font-medium text-slate-600 truncate">Total Filtered</span>
+            <ShoppingCart className="h-4 w-4 text-primary shrink-0" />
           </div>
-          <div className="mt-2 text-xl font-semibold tabular-nums text-slate-900">{total} Orders</div>
-          <div className="text-xs text-slate-400 mt-0.5">Active order portfolio</div>
+          <div className="mt-1 sm:mt-2 text-base sm:text-xl font-semibold tabular-nums text-slate-900 truncate">
+            {total} Orders
+          </div>
+          <div className="text-[11px] sm:text-xs text-slate-400 mt-0.5 truncate">Active order portfolio</div>
         </Card>
 
-        <Card className="p-4 bg-white border border-slate-200">
-          <div className="flex items-center justify-between">
-            <span className="text-[13px] font-medium text-amber-700">Pending Approval</span>
-            <Clock className="h-4 w-4 text-amber-600" />
+        <Card className="p-3 sm:p-4 bg-white border border-slate-200 overflow-hidden">
+          <div className="flex items-center justify-between gap-1">
+            <span className="text-xs sm:text-[13px] font-medium text-amber-700 truncate">Pending Approval</span>
+            <Clock className="h-4 w-4 text-amber-600 shrink-0" />
           </div>
-          <div className="mt-2 text-xl font-semibold tabular-nums text-amber-600">{pendingApprovalsCount}</div>
-          <div className="text-xs text-slate-400 mt-0.5">
+          <div className="mt-1 sm:mt-2 text-base sm:text-xl font-semibold tabular-nums text-amber-600 truncate">
+            {pendingApprovalsCount}
+          </div>
+          <div className="text-[11px] sm:text-xs text-slate-400 mt-0.5 truncate">
             {specialOrdersCount} require special approval
           </div>
         </Card>
 
-        <Card className="p-4 bg-white border border-slate-200">
-          <div className="flex items-center justify-between">
-            <span className="text-[13px] font-medium text-sky-700">In Fulfillment</span>
-            <Truck className="h-4 w-4 text-primary" />
+        <Card className="p-3 sm:p-4 bg-white border border-slate-200 overflow-hidden">
+          <div className="flex items-center justify-between gap-1">
+            <span className="text-xs sm:text-[13px] font-medium text-sky-700 truncate">In Fulfillment</span>
+            <Truck className="h-4 w-4 text-primary shrink-0" />
           </div>
-          <div className="mt-2 text-xl font-semibold tabular-nums text-primary">{inFulfillmentCount}</div>
-          <div className="text-xs text-slate-400 mt-0.5">Picking, Invoiced, or Dispatched</div>
+          <div className="mt-1 sm:mt-2 text-base sm:text-xl font-semibold tabular-nums text-primary truncate">
+            {inFulfillmentCount}
+          </div>
+          <div className="text-[11px] sm:text-xs text-slate-400 mt-0.5 truncate">Picking, Invoiced, or Dispatched</div>
         </Card>
 
-        <Card className="p-4 bg-white border border-slate-200">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-emerald-700">Active Order Value</span>
-            <DollarSign className="h-4 w-4 text-emerald-600" />
+        <Card className="p-3 sm:p-4 bg-white border border-slate-200 overflow-hidden">
+          <div className="flex items-center justify-between gap-1">
+            <span className="text-xs font-medium text-emerald-700 truncate">Active Order Value</span>
+            <DollarSign className="h-4 w-4 text-emerald-600 shrink-0" />
           </div>
-          <div className="mt-2 text-xl font-bold text-emerald-600 font-mono">
+          <div className="mt-1 sm:mt-2 text-sm sm:text-base md:text-xl font-bold text-emerald-600 tabular-nums truncate">
             {formatCurrency(totalValue)}
           </div>
-          <div className="text-[11px] text-slate-400 mt-0.5">Excludes cancelled</div>
+          <div className="text-[11px] text-slate-400 mt-0.5 truncate">Excludes cancelled</div>
         </Card>
       </div>
 
@@ -237,8 +243,8 @@ export function OrderListPage() {
             </div>
 
             {/* Date Range Filter */}
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <div className="relative">
+            <div className="flex items-center gap-1.5 w-full sm:w-auto">
+              <div className="relative flex-1 min-w-0 sm:flex-initial sm:w-36">
                 <Calendar className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-slate-400 pointer-events-none" />
                 <Input
                   type="date"
@@ -246,13 +252,13 @@ export function OrderListPage() {
                   onChange={(e) =>
                     setFilters({ ...filters, startDate: e.target.value || undefined, page: 1 })
                   }
-                  className="pl-8 text-xs h-9 w-36"
+                  className="pl-7 pr-1 text-xs h-9 w-full sm:w-36"
                   title="Filter orders from date"
                   aria-label="From Date"
                 />
               </div>
-              <span className="text-xs text-slate-400">to</span>
-              <div className="relative">
+              <span className="text-xs text-slate-400 shrink-0">to</span>
+              <div className="relative flex-1 min-w-0 sm:flex-initial sm:w-36">
                 <Calendar className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-slate-400 pointer-events-none" />
                 <Input
                   type="date"
@@ -260,7 +266,7 @@ export function OrderListPage() {
                   onChange={(e) =>
                     setFilters({ ...filters, endDate: e.target.value || undefined, page: 1 })
                   }
-                  className="pl-8 text-xs h-9 w-36"
+                  className="pl-7 pr-1 text-xs h-9 w-full sm:w-36"
                   title="Filter orders to date"
                   aria-label="To Date"
                 />
@@ -367,21 +373,23 @@ export function OrderListPage() {
                       className="rounded-2xl border border-slate-200/90 bg-white p-3.5 shadow-xs hover:border-primary/50 transition-all cursor-pointer active:scale-[0.99]"
                     >
                       {/* Top Row: Order # + Status Badge */}
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-2">
-                          <span className="font-mono text-xs font-bold text-primary">
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <div className="flex items-center gap-2 shrink-0 min-w-0">
+                          <span className="font-mono text-xs font-bold text-primary whitespace-nowrap shrink-0">
                             {order.orderNumber}
                           </span>
                           {order.quotationNumber && (
-                            <span className="text-[10.5px] text-slate-400 font-mono">
+                            <span className="text-[10.5px] text-slate-400 font-mono whitespace-nowrap shrink-0">
                               Quote: {order.quotationNumber}
                             </span>
                           )}
                         </div>
-                        <OrderStatusBadge
-                          status={order.status}
-                          isSpecialApproval={order.isSpecialApproval}
-                        />
+                        <div className="shrink-0">
+                          <OrderStatusBadge
+                            status={order.status}
+                            isSpecialApproval={order.isSpecialApproval}
+                          />
+                        </div>
                       </div>
 
                       {/* Customer Name & Code */}
@@ -389,7 +397,7 @@ export function OrderListPage() {
                         <h4 className="text-xs font-bold text-slate-900 leading-snug">
                           {order.customerNameSnapshot}
                         </h4>
-                        <span className="font-mono text-[11px] text-slate-400">
+                        <span className="font-mono text-[11px] text-slate-400 whitespace-nowrap">
                           {order.customerCodeSnapshot}
                         </span>
                       </div>
