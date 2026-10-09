@@ -21,8 +21,8 @@ import {
 } from '../../components/ui/select';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../../components/ui/table';
 import { TableLoadingSkeleton } from '../../components/common/LoadingSkeleton';
-import { EmptyState } from '../../components/common/EmptyState';
 import { formatCurrency, formatDate } from '../../utils/formatters';
+import { AmountDisplay } from '../../components/common/AmountDisplay';
 import {
   Search,
   Filter,
@@ -134,12 +134,14 @@ export function InvoiceListPage() {
 
       {/* Metrics Row */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 sm:gap-3">
-        <Card className="border-slate-200 col-span-2 sm:col-span-1">
+        <Card className="border-slate-200 col-span-2 sm:col-span-1 min-w-0 overflow-hidden">
           <CardContent className="p-3 sm:p-3.5">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-2">
               <div className="min-w-0 flex-1">
                 <p className="text-xs sm:text-[13px] font-medium text-slate-600 truncate">Total Receivables</p>
-                <p className="text-base sm:text-lg font-bold tabular-nums text-slate-900 mt-0.5 truncate">{formatCurrency(totalReceivables)}</p>
+                <div className="mt-0.5 min-w-0">
+                  <AmountDisplay amount={totalReceivables} className="text-slate-900 font-bold" />
+                </div>
               </div>
               <div className="h-9 w-9 rounded-lg bg-primary-light text-primary flex items-center justify-center shrink-0">
                 <Receipt className="h-5 w-5" />
@@ -148,14 +150,19 @@ export function InvoiceListPage() {
           </CardContent>
         </Card>
 
-        <Card className="border-slate-200 col-span-2 sm:col-span-1">
+        <Card className="border-slate-200 col-span-2 sm:col-span-1 min-w-0 overflow-hidden">
           <CardContent className="p-3 sm:p-3.5">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-2">
               <div className="min-w-0 flex-1">
                 <p className="text-xs sm:text-[13px] font-medium text-slate-600 truncate">Overdue Invoices</p>
-                <p className="text-sm sm:text-base font-bold tabular-nums text-rose-600 mt-0.5 truncate">
-                  {overdueCount} ({formatCurrency(overdueAmount)})
-                </p>
+                <div className="mt-0.5 min-w-0 flex flex-wrap items-baseline gap-1">
+                  <span className="text-sm sm:text-base font-bold tabular-nums text-rose-600 shrink-0">{overdueCount}</span>
+                  <span className="text-xs sm:text-sm text-rose-600 font-semibold">(</span>
+                  <div className="inline-block flex-1 min-w-0">
+                    <AmountDisplay amount={overdueAmount} className="text-rose-600 font-bold" />
+                  </div>
+                  <span className="text-xs sm:text-sm text-rose-600 font-semibold">)</span>
+                </div>
               </div>
               <div className="h-9 w-9 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center shrink-0">
                 <AlertTriangle className="h-5 w-5" />
@@ -164,9 +171,9 @@ export function InvoiceListPage() {
           </CardContent>
         </Card>
 
-        <Card className="border-slate-200">
+        <Card className="border-slate-200 min-w-0 overflow-hidden">
           <CardContent className="p-3 sm:p-3.5">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-2">
               <div className="min-w-0 flex-1">
                 <p className="text-xs sm:text-[13px] font-medium text-slate-600 truncate">Active Invoices</p>
                 <p className="text-base sm:text-lg font-bold tabular-nums text-primary mt-0.5 truncate">
@@ -180,9 +187,9 @@ export function InvoiceListPage() {
           </CardContent>
         </Card>
 
-        <Card className="border-slate-200">
+        <Card className="border-slate-200 min-w-0 overflow-hidden">
           <CardContent className="p-3 sm:p-3.5">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-2">
               <div className="min-w-0 flex-1">
                 <p className="text-xs sm:text-[13px] font-medium text-slate-600 truncate">Fully Settled</p>
                 <p className="text-base sm:text-lg font-bold tabular-nums text-emerald-600 mt-0.5 truncate">{paidCount} Paid</p>

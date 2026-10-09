@@ -22,8 +22,8 @@ import {
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../../components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
 import { TableLoadingSkeleton } from '../../components/common/LoadingSkeleton';
-import { EmptyState } from '../../components/common/EmptyState';
 import { formatCurrency, formatDate, formatDateTime } from '../../utils/formatters';
+import { AmountDisplay } from '../../components/common/AmountDisplay';
 import {
   Search,
   PlusCircle,
@@ -194,62 +194,71 @@ export function PaymentListPage() {
 
       {/* Metrics Row */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <Card className="border-slate-200">
+        <Card className="border-slate-200 min-w-0 overflow-hidden">
           <CardContent className="p-3.5">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-medium text-slate-500">Total Collected</p>
-                <p className="text-xl font-semibold text-slate-900 tabular-nums mt-0.5">{formatCurrency(totalCollected)}</p>
+            <div className="flex items-center justify-between gap-2">
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-medium text-slate-500 truncate">Total Collected</p>
+                <div className="mt-0.5 min-w-0">
+                  <AmountDisplay amount={totalCollected} className="text-slate-900 font-semibold" />
+                </div>
               </div>
-              <div className="h-9 w-9 rounded-lg bg-primary-light text-primary flex items-center justify-center">
+              <div className="h-9 w-9 rounded-lg bg-primary-light text-primary flex items-center justify-center shrink-0">
                 <CreditCard className="h-5 w-5" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-slate-200">
+        <Card className="border-slate-200 min-w-0 overflow-hidden">
           <CardContent className="p-3.5">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-medium text-slate-500">Pending Finance Verification</p>
-                <p className="text-xl font-semibold text-amber-700 tabular-nums mt-0.5">
-                  {pendingCount} ({formatCurrency(pendingAmount)})
-                </p>
+            <div className="flex items-center justify-between gap-2">
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-medium text-slate-500 truncate">Pending Finance Verification</p>
+                <div className="mt-0.5 min-w-0 flex flex-wrap items-baseline gap-1">
+                  <span className="text-lg sm:text-xl font-semibold text-amber-700 tabular-nums shrink-0">
+                    {pendingCount}
+                  </span>
+                  <span className="text-xs sm:text-sm text-amber-700 font-semibold">(</span>
+                  <div className="inline-block flex-1 min-w-0">
+                    <AmountDisplay amount={pendingAmount} className="text-amber-700 font-semibold" />
+                  </div>
+                  <span className="text-xs sm:text-sm text-amber-700 font-semibold">)</span>
+                </div>
               </div>
-              <div className="h-9 w-9 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
+              <div className="h-9 w-9 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
                 <Clock className="h-5 w-5" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-slate-200">
+        <Card className="border-slate-200 min-w-0 overflow-hidden">
           <CardContent className="p-3.5">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-medium text-slate-500">Reconciled & Posted</p>
-                <p className="text-xl font-semibold text-emerald-700 tabular-nums mt-0.5">
-                  {formatCurrency(approvedAmount)}
-                </p>
+            <div className="flex items-center justify-between gap-2">
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-medium text-slate-500 truncate">Reconciled & Posted</p>
+                <div className="mt-0.5 min-w-0">
+                  <AmountDisplay amount={approvedAmount} className="text-emerald-700 font-semibold" />
+                </div>
               </div>
-              <div className="h-9 w-9 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+              <div className="h-9 w-9 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
                 <CheckCircle className="h-5 w-5" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-slate-200">
+        <Card className="border-slate-200 min-w-0 overflow-hidden">
           <CardContent className="p-3.5">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-medium text-slate-500">Cheque Collections</p>
-                <p className="text-xl font-semibold text-primary tabular-nums mt-0.5">
+            <div className="flex items-center justify-between gap-2">
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-medium text-slate-500 truncate">Cheque Collections</p>
+                <p className="text-xl font-semibold text-primary tabular-nums mt-0.5 truncate">
                   {payments.filter((p) => p.paymentMethod === 'CHEQUE').length} Cheques
                 </p>
               </div>
-              <div className="h-9 w-9 rounded-lg bg-primary-light text-primary flex items-center justify-center">
+              <div className="h-9 w-9 rounded-lg bg-primary-light text-primary flex items-center justify-center shrink-0">
                 <ShieldCheck className="h-5 w-5" />
               </div>
             </div>

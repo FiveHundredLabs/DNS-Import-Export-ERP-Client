@@ -7,7 +7,9 @@ export function formatCurrency(amount: number): string {
     currency: 'LKR',
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
-  }).format(amount);
+  })
+    .format(amount)
+    .replace(/\u00A0/g, ' ');
 }
 
 /**

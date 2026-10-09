@@ -16,8 +16,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../../components/ui/select';
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../../components/ui/table';
 import { formatCurrency, formatDate } from '../../utils/formatters';
+import { AmountDisplay } from '../../components/common/AmountDisplay';
 import {
   ShoppingCart,
   Plus,
@@ -157,44 +157,44 @@ export function OrderListPage() {
 
       {/* Metrics Row */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card className="p-4 bg-white border border-slate-200">
-          <div className="flex items-center justify-between">
-            <span className="text-[13px] font-medium text-slate-600">Total Filtered</span>
-            <ShoppingCart className="h-4 w-4 text-primary" />
+        <Card className="p-4 bg-white border border-slate-200 min-w-0 overflow-hidden">
+          <div className="flex items-center justify-between gap-1">
+            <span className="text-[13px] font-medium text-slate-600 truncate">Total Filtered</span>
+            <ShoppingCart className="h-4 w-4 text-primary shrink-0" />
           </div>
-          <div className="mt-2 text-xl font-semibold tabular-nums text-slate-900">{total} Orders</div>
-          <div className="text-xs text-slate-400 mt-0.5">Active order portfolio</div>
+          <div className="mt-2 text-xl font-semibold tabular-nums text-slate-900 truncate">{total} Orders</div>
+          <div className="text-xs text-slate-400 mt-0.5 truncate">Active order portfolio</div>
         </Card>
 
-        <Card className="p-4 bg-white border border-slate-200">
-          <div className="flex items-center justify-between">
-            <span className="text-[13px] font-medium text-amber-700">Pending Approval</span>
-            <Clock className="h-4 w-4 text-amber-600" />
+        <Card className="p-4 bg-white border border-slate-200 min-w-0 overflow-hidden">
+          <div className="flex items-center justify-between gap-1">
+            <span className="text-[13px] font-medium text-amber-700 truncate">Pending Approval</span>
+            <Clock className="h-4 w-4 text-amber-600 shrink-0" />
           </div>
-          <div className="mt-2 text-xl font-semibold tabular-nums text-amber-600">{pendingApprovalsCount}</div>
-          <div className="text-xs text-slate-400 mt-0.5">
+          <div className="mt-2 text-xl font-semibold tabular-nums text-amber-600 truncate">{pendingApprovalsCount}</div>
+          <div className="text-xs text-slate-400 mt-0.5 truncate">
             {specialOrdersCount} require special approval
           </div>
         </Card>
 
-        <Card className="p-4 bg-white border border-slate-200">
-          <div className="flex items-center justify-between">
-            <span className="text-[13px] font-medium text-sky-700">In Fulfillment</span>
-            <Truck className="h-4 w-4 text-primary" />
+        <Card className="p-4 bg-white border border-slate-200 min-w-0 overflow-hidden">
+          <div className="flex items-center justify-between gap-1">
+            <span className="text-[13px] font-medium text-sky-700 truncate">In Fulfillment</span>
+            <Truck className="h-4 w-4 text-primary shrink-0" />
           </div>
-          <div className="mt-2 text-xl font-semibold tabular-nums text-primary">{inFulfillmentCount}</div>
-          <div className="text-xs text-slate-400 mt-0.5">Picking, Invoiced, or Dispatched</div>
+          <div className="mt-2 text-xl font-semibold tabular-nums text-primary truncate">{inFulfillmentCount}</div>
+          <div className="text-xs text-slate-400 mt-0.5 truncate">Picking, Invoiced, or Dispatched</div>
         </Card>
 
-        <Card className="p-4 bg-white border border-slate-200">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-emerald-700">Active Order Value</span>
-            <DollarSign className="h-4 w-4 text-emerald-600" />
+        <Card className="p-4 bg-white border border-slate-200 min-w-0 overflow-hidden">
+          <div className="flex items-center justify-between gap-1">
+            <span className="text-xs font-medium text-emerald-700 truncate">Active Order Value</span>
+            <DollarSign className="h-4 w-4 text-emerald-600 shrink-0" />
           </div>
-          <div className="mt-2 text-xl font-bold text-emerald-600 font-mono">
-            {formatCurrency(totalValue)}
+          <div className="mt-2 min-w-0">
+            <AmountDisplay amount={totalValue} className="text-emerald-600 font-mono" />
           </div>
-          <div className="text-[11px] text-slate-400 mt-0.5">Excludes cancelled</div>
+          <div className="text-[11px] text-slate-400 mt-1 truncate">Excludes cancelled</div>
         </Card>
       </div>
 
