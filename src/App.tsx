@@ -31,6 +31,7 @@ import { ShowroomPOSTerminal } from './features/pos/ShowroomPOSTerminal';
 import { POSTransactionHistoryPage } from './features/pos/POSTransactionHistoryPage';
 import { POSSessionsPage } from './features/pos/POSSessionsPage';
 import { WarrantyHubPage } from './features/warranty/WarrantyHubPage';
+import { SalesRepWarrantyPage } from './features/warranty/SalesRepWarrantyPage';
 import { CommissionHubPage } from './features/commissions/CommissionHubPage';
 import { FinanceLayout } from './features/finance/FinanceLayout';
 import { FinanceDashboardPage } from './features/finance/pages/FinanceDashboardPage';
@@ -337,6 +338,14 @@ export function App() {
           element={
             <ProtectedRoute>
               <WarrantyHubPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="warranty/verification"
+          element={
+            <ProtectedRoute>
+              <SalesRepWarrantyPage />
             </ProtectedRoute>
           }
         />

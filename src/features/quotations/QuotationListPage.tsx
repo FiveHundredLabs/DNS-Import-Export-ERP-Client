@@ -19,6 +19,7 @@ import {
 } from '../../components/ui/select';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../../components/ui/table';
 import { formatCurrency, formatDate } from '../../utils/formatters';
+import { AmountDisplay } from '../../components/common/AmountDisplay';
 import { whatsAppService } from '../../services/WhatsAppService';
 import { printerService } from '../../services/PrinterService';
 import {
@@ -198,13 +199,13 @@ export function QuotationListPage() {
           </CardContent>
         </Card>
 
-        <Card className="shadow-xs col-span-2 sm:col-span-1">
-          <CardContent className="p-3 sm:p-4 flex items-center justify-between">
+        <Card className="shadow-xs col-span-2 sm:col-span-1 min-w-0 overflow-hidden">
+          <CardContent className="p-3 sm:p-4 flex items-center justify-between gap-2 min-w-0">
             <div className="min-w-0 flex-1">
               <p className="text-[11px] sm:text-xs font-medium text-slate-500 truncate">Pipeline Value</p>
-              <h3 className="text-sm sm:text-base lg:text-lg font-bold text-emerald-700 mt-0.5 sm:mt-1 truncate tabular-nums">
-                {formatCurrency(totalPipelineValue)}
-              </h3>
+              <div className="mt-0.5 sm:mt-1 min-w-0">
+                <AmountDisplay amount={totalPipelineValue} className="text-emerald-700 font-bold" />
+              </div>
             </div>
             <div className="rounded-lg bg-emerald-50 p-2 sm:p-2.5 text-emerald-600 shrink-0">
               <DollarSign className="h-4 w-4 sm:h-5 sm:w-5" />

@@ -25,6 +25,7 @@ import { ResolveClaimModal } from './ResolveClaimModal';
 import { RecordFollowUpModal } from './RecordFollowUpModal';
 import { RecordWarrantyNoteModal } from './RecordWarrantyNoteModal';
 import { ReviewWarrantyNoteModal } from './ReviewWarrantyNoteModal';
+import { SalesRepWarrantyPage } from './SalesRepWarrantyPage';
 import { useAuth } from '../../hooks/useAuth';
 import { formatDate } from '../../utils/formatters';
 import {
@@ -42,11 +43,12 @@ import {
   Clock,
   XCircle,
   Sparkles,
+  Barcode,
 } from 'lucide-react';
 
 export function WarrantyHubPage() {
   const { role, currentUser, hasPermission } = useAuth();
-  const [activeTab, setActiveTab] = useState<'notes' | 'records' | 'claims' | 'followups'>('notes');
+  const [activeTab, setActiveTab] = useState<'verification' | 'notes' | 'records' | 'claims' | 'followups'>('records');
 
   // Distributor Warranty Notes state
   const [notes, setNotes] = useState<WarrantyNote[]>([]);
@@ -307,6 +309,13 @@ export function WarrantyHubPage() {
       {/* Main Tabs Hub */}
       <Tabs value={activeTab} onValueChange={(v: any) => setActiveTab(v)}>
         <TabsList className="bg-slate-100/90 p-1 border border-slate-200/80 rounded-xl">
+          <TabsTrigger value="records">
+            Warranty Records
+          </TabsTrigger>
+          <TabsTrigger value="verification" className="gap-1.5">
+            <Barcode className="h-3.5 w-3.5" />
+            Distributor Verification
+          </TabsTrigger>
           <TabsTrigger value="notes" className="gap-1.5">
             <FileCheck2 className="h-3.5 w-3.5" />
             Distributor Warranty Notes ({notes.length})
@@ -316,9 +325,6 @@ export function WarrantyHubPage() {
               </span>
             )}
           </TabsTrigger>
-          <TabsTrigger value="records">
-            Warranty Records
-          </TabsTrigger>
           <TabsTrigger value="claims">
             Warranty Claims ({pendingClaimsCount})
           </TabsTrigger>
@@ -326,6 +332,11 @@ export function WarrantyHubPage() {
             Field Follow-up ({totalPendingCards} Pending)
           </TabsTrigger>
         </TabsList>
+
+        {/* TAB: Distributor Warranty Verification (Sales Rep & Sales Manager) */}
+        <TabsContent value="verification" className="space-y-4 pt-2">
+          <SalesRepWarrantyPage />
+        </TabsContent>
 
         {/* TAB: Distributor Warranty Notes */}
         <TabsContent value="notes" className="space-y-4 pt-2">

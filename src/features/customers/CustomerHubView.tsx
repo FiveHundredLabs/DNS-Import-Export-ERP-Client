@@ -21,8 +21,8 @@ import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/ca
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../../components/ui/tabs';
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../../components/ui/table';
 import { formatCurrency, formatDate } from '../../utils/formatters';
+import { AmountDisplay } from '../../components/common/AmountDisplay';
 import {
   Phone,
   Mail,
@@ -274,53 +274,53 @@ export function CustomerHubView({ customer }: { customer: Customer }) {
 
       {/* Credit & Outstanding Matrix */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {/* Card 1: Total Outstanding - Hero full-width on mobile to guarantee LKR 1,450,000.00 and limit breakdown never clip */}
-        <div className="col-span-2 sm:col-span-1 p-3.5 sm:p-4 rounded-xl border border-slate-200 bg-white shadow-xs">
-          <span className="text-xs font-medium text-slate-500 block">
+        {/* Card 1: Total Outstanding */}
+        <div className="col-span-2 sm:col-span-1 p-3.5 sm:p-4 rounded-xl border border-slate-200 bg-white shadow-xs min-w-0 overflow-hidden">
+          <span className="text-xs font-medium text-slate-500 block truncate">
             Total Outstanding
           </span>
-          <span className="text-lg sm:text-xl font-bold text-slate-900 tabular-nums block mt-1 truncate">
-            {formatCurrency(customer.financials.totalOutstanding)}
-          </span>
+          <div className="mt-1 min-w-0">
+            <AmountDisplay amount={customer.financials.totalOutstanding} className="text-slate-900 font-bold" />
+          </div>
           <div className="text-xs text-slate-500 mt-1 flex items-center justify-between flex-wrap gap-1">
-            <span>Limit: {formatCurrency(customer.commercialTerms.creditLimit)}</span>
-            <span className="text-emerald-700 font-semibold">
+            <span className="truncate">Limit: {formatCurrency(customer.commercialTerms.creditLimit)}</span>
+            <span className="text-emerald-700 font-semibold truncate">
               Avail: {formatCurrency(Math.max(0, customer.commercialTerms.creditLimit - customer.financials.totalOutstanding))}
             </span>
           </div>
         </div>
 
         {/* Card 2: Current Due */}
-        <div className="col-span-2 sm:col-span-1 p-3.5 sm:p-4 rounded-xl border border-emerald-200 bg-emerald-50/50 shadow-xs">
-          <span className="text-xs font-medium text-emerald-800 block">
+        <div className="col-span-2 sm:col-span-1 p-3.5 sm:p-4 rounded-xl border border-emerald-200 bg-emerald-50/50 shadow-xs min-w-0 overflow-hidden">
+          <span className="text-xs font-medium text-emerald-800 block truncate">
             Current Due
           </span>
-          <span className="text-lg sm:text-xl font-bold text-emerald-900 tabular-nums block mt-1 truncate">
-            {formatCurrency(customer.financials.currentDue)}
-          </span>
-          <span className="text-xs text-emerald-700 block mt-1">{customer.commercialTerms.creditDays} Days Credit Policy</span>
+          <div className="mt-1 min-w-0">
+            <AmountDisplay amount={customer.financials.currentDue} className="text-emerald-900 font-bold" />
+          </div>
+          <span className="text-xs text-emerald-700 block mt-1 truncate">{customer.commercialTerms.creditDays} Days Credit Policy</span>
         </div>
 
         {/* Card 3: Near Due (7 Days) */}
-        <div className="col-span-1 p-3.5 sm:p-4 rounded-xl border border-amber-200 bg-amber-50/50 shadow-xs">
-          <span className="text-xs font-medium text-amber-800 block">
+        <div className="col-span-1 p-3.5 sm:p-4 rounded-xl border border-amber-200 bg-amber-50/50 shadow-xs min-w-0 overflow-hidden">
+          <span className="text-xs font-medium text-amber-800 block truncate">
             Near Due (7 Days)
           </span>
-          <span className="text-base sm:text-xl font-bold text-amber-900 tabular-nums block mt-1 truncate">
-            {formatCurrency(customer.financials.nearDue)}
-          </span>
-          <span className="text-xs text-amber-700 block mt-1">Follow-up due</span>
+          <div className="mt-1 min-w-0">
+            <AmountDisplay amount={customer.financials.nearDue} className="text-amber-900 font-bold" />
+          </div>
+          <span className="text-xs text-amber-700 block mt-1 truncate">Follow-up due</span>
         </div>
 
         {/* Card 4: Overdue */}
-        <div className="col-span-1 p-3.5 sm:p-4 rounded-xl border border-rose-200 bg-rose-50/50 shadow-xs">
-          <span className="text-xs font-medium text-rose-800 block">
+        <div className="col-span-1 p-3.5 sm:p-4 rounded-xl border border-rose-200 bg-rose-50/50 shadow-xs min-w-0 overflow-hidden">
+          <span className="text-xs font-medium text-rose-800 block truncate">
             Overdue
           </span>
-          <span className="text-base sm:text-xl font-bold text-rose-900 tabular-nums block mt-1 truncate">
-            {formatCurrency(customer.financials.overdue)}
-          </span>
-          <span className="text-xs text-rose-700 block mt-1">Immediate collection</span>
+          <div className="mt-1 min-w-0">
+            <AmountDisplay amount={customer.financials.overdue} className="text-rose-900 font-bold" />
+          </div>
+          <span className="text-xs text-rose-700 block mt-1 truncate">Immediate collection</span>
         </div>
       </div>
 

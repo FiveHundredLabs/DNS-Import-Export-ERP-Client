@@ -2,6 +2,7 @@ import React from 'react';
 import { Card, CardContent } from '../ui/card';
 import { LucideIcon, Info, TrendingUp, TrendingDown } from 'lucide-react';
 import { cn } from '../../utils/cn';
+import { AmountDisplay } from './AmountDisplay';
 
 interface StatCardProps {
   title: string;
@@ -34,12 +35,17 @@ export function StatCard({
     danger: 'bg-rose-50 text-rose-600 border-rose-100',
   }[variant];
 
+  const isCurrency =
+    typeof value === 'string'
+      ? /^(LKR|Rs\.?|\$|€|£)\s*[\d,]+(\.\d+)?/i.test(value.trim()) || value.includes('LKR')
+      : false;
+
   return (
-    <Card className={cn('bg-white border border-slate-200/80 rounded-2xl shadow-sm hover:shadow-md transition-all duration-200', className)}>
-      <CardContent className="p-5">
-        <div className="flex items-center justify-between">
-          <span className="text-[13px] font-medium text-slate-600">{title}</span>
-          <div className="flex items-center gap-2">
+    <Card className={cn('bg-white border border-slate-200/80 rounded-2xl shadow-sm hover:shadow-md transition-all duration-200 min-w-0 overflow-hidden', className)}>
+      <CardContent className="p-5 min-w-0">
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-[13px] font-medium text-slate-600 truncate">{title}</span>
+          <div className="flex items-center gap-2 shrink-0">
             {Icon && (
               <div className={cn('p-1.5 rounded-lg border', iconBg)}>
                 <Icon className="h-4 w-4" />
@@ -49,16 +55,22 @@ export function StatCard({
           </div>
         </div>
 
-        <div className="mt-2.5">
-          <div className="text-2xl sm:text-[26px] font-semibold tracking-tight tabular-nums text-slate-900 leading-tight">{value}</div>
+        <div className="mt-2.5 min-w-0">
+          {isCurrency ? (
+            <AmountDisplay amount={value} className="text-slate-900 font-semibold" />
+          ) : (
+            <div className="text-2xl sm:text-[26px] font-semibold tracking-tight tabular-nums text-slate-900 leading-tight [overflow-wrap:anywhere] break-words">
+              {value}
+            </div>
+          )}
         </div>
 
-        <div className="mt-2.5 flex items-center justify-between text-xs">
-          <span className="text-slate-500 font-normal">{subtitle || period}</span>
+        <div className="mt-2.5 flex items-center justify-between text-xs gap-1 flex-wrap">
+          <span className="text-slate-500 font-normal truncate">{subtitle || period}</span>
           {trend && (
             <span
               className={cn(
-                'inline-flex items-center gap-1 text-[11.5px] font-medium tabular-nums px-2 py-0.5 rounded-full border',
+                'inline-flex items-center gap-1 text-[11.5px] font-medium tabular-nums px-2 py-0.5 rounded-full border shrink-0',
                 trend.isPositive
                   ? 'text-emerald-700 bg-emerald-50/80 border-emerald-200/60'
                   : 'text-rose-700 bg-rose-50/80 border-rose-200/60'
