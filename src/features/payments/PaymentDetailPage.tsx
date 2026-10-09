@@ -178,17 +178,17 @@ export function PaymentDetailPage() {
 
       {/* Main Payment Card */}
       <Card className="border-slate-200 shadow-sm overflow-hidden bg-white">
-        <CardContent className="p-8 space-y-6">
+        <CardContent className="p-4 sm:p-8 space-y-6">
           {/* Header */}
           <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 border-b border-slate-200 pb-6">
             <div>
-              <div className="font-mono text-xl font-semibold tabular-nums text-primary-text">
+              <div className="font-mono text-xl font-semibold tabular-nums text-primary-text whitespace-nowrap shrink-0">
                 {payment.receiptNumber}
               </div>
               <p className="text-xs text-slate-500 mt-1">
                 Issued on {new Date(payment.collectedAt).toLocaleString()}
               </p>
-              <div className="pt-2">
+              <div className="pt-2 shrink-0">
                 <PaymentStatusBadge status={payment.status} />
               </div>
             </div>

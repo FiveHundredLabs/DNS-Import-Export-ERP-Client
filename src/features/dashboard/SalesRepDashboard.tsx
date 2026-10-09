@@ -646,7 +646,7 @@ export function SalesRepDashboard() {
                           >
                             {pending.name}
                           </Link>
-                          <span className="font-mono text-[10px] bg-slate-100 text-slate-700 px-2 py-0.5 rounded-md font-semibold">
+                          <span className="font-mono text-[10px] bg-slate-100 text-slate-700 px-2 py-0.5 rounded-md font-semibold whitespace-nowrap shrink-0">
                             {pending.code}
                           </span>
                         </div>
@@ -753,7 +753,7 @@ export function SalesRepDashboard() {
                   >
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex items-center gap-1.5">
-                        <span className="font-mono font-bold text-xs text-emerald-800 bg-emerald-50 border border-emerald-200/60 px-2 py-0.5 rounded-md">
+                        <span className="font-mono font-bold text-xs text-emerald-800 bg-emerald-50 border border-emerald-200/60 px-2 py-0.5 rounded-md whitespace-nowrap shrink-0">
                           {order.orderNumber}
                         </span>
                       </div>

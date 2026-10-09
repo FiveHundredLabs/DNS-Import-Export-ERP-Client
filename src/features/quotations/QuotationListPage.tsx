@@ -315,16 +315,18 @@ export function QuotationListPage() {
                     className="rounded-2xl border border-slate-200/90 bg-white p-3.5 shadow-xs hover:border-primary/50 transition-all cursor-pointer active:scale-[0.99]"
                   >
                     {/* Top Row: Quotation # & Status Badge */}
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-1.5">
-                        <span className="font-mono text-xs font-bold text-primary tabular-nums">
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                      <div className="flex items-center gap-1.5 shrink-0 min-w-0">
+                        <span className="font-mono text-xs font-bold text-primary tabular-nums whitespace-nowrap shrink-0">
                           {q.quotationNumber}
                         </span>
-                        <span className="text-[10.5px] text-slate-400 font-mono">
+                        <span className="text-[10.5px] text-slate-400 font-mono whitespace-nowrap shrink-0">
                           • {q.items.length} {q.items.length === 1 ? 'item' : 'items'}
                         </span>
                       </div>
-                      <QuotationStatusBadge status={q.status} />
+                      <div className="shrink-0">
+                        <QuotationStatusBadge status={q.status} />
+                      </div>
                     </div>
 
                     {/* Customer Info */}
@@ -333,7 +335,7 @@ export function QuotationListPage() {
                         {q.customerNameSnapshot}
                       </h4>
                       <div className="flex items-center gap-1.5 text-[11px] text-slate-400 font-mono mt-0.5">
-                        <span>{q.customerCodeSnapshot}</span>
+                        <span className="whitespace-nowrap shrink-0">{q.customerCodeSnapshot}</span>
                         <span>•</span>
                         <span>Valid until {q.validUntil}</span>
                       </div>
