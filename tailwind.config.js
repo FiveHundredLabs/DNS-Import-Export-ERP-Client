@@ -8,6 +8,7 @@ export default {
     extend: {
       fontFamily: {
         sans: [
+          '"Google Sans Flex"',
           'Inter',
           'ui-sans-serif',
           'system-ui',
