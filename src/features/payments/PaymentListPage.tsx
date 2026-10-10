@@ -22,8 +22,8 @@ import {
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../../components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
 import { TableLoadingSkeleton } from '../../components/common/LoadingSkeleton';
-import { EmptyState } from '../../components/common/EmptyState';
 import { formatCurrency, formatDate, formatDateTime } from '../../utils/formatters';
+import { AmountDisplay } from '../../components/common/AmountDisplay';
 import {
   Search,
   PlusCircle,
@@ -195,66 +195,67 @@ export function PaymentListPage() {
       </div>
 
       {/* Metrics Row */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <Card className="border-slate-200">
-          <CardContent className="p-3.5">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-medium text-slate-500">Total Collected</p>
-                <p className="text-xl font-semibold text-slate-900 tabular-nums mt-0.5">{formatCurrency(totalCollected)}</p>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 sm:gap-3">
+        <Card className="border-slate-200 overflow-hidden">
+          <CardContent className="p-3 sm:p-3.5">
+            <div className="flex items-center justify-between gap-1">
+              <p className="text-[11px] sm:text-xs font-medium text-slate-500 truncate">Total Collected</p>
+              <div className="h-7 w-7 sm:h-9 sm:w-9 rounded-lg bg-primary-light text-primary flex items-center justify-center shrink-0">
+                <CreditCard className="h-3.5 w-3.5 sm:h-5 sm:w-5" />
               </div>
-              <div className="h-9 w-9 rounded-lg bg-primary-light text-primary flex items-center justify-center">
-                <CreditCard className="h-5 w-5" />
+            </div>
+            <p className="text-sm sm:text-base md:text-xl font-bold text-slate-900 tabular-nums mt-1 truncate">
+              {formatCurrency(totalCollected)}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="border-slate-200 overflow-hidden">
+          <CardContent className="p-3 sm:p-3.5">
+            <div className="flex items-center justify-between gap-1">
+              <p className="text-[11px] sm:text-xs font-medium text-slate-500 truncate" title="Pending Finance Verification">
+                Pending Verification
+              </p>
+              <div className="h-7 w-7 sm:h-9 sm:w-9 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+                <Clock className="h-3.5 w-3.5 sm:h-5 sm:w-5" />
               </div>
+            </div>
+            <div className="mt-1 flex items-baseline gap-1.5 flex-wrap">
+              <span className="text-sm sm:text-base md:text-xl font-bold text-amber-700 tabular-nums">
+                {pendingCount}
+              </span>
+              <span className="text-[11px] sm:text-xs text-amber-600/90 font-medium tabular-nums truncate">
+                ({formatCurrency(pendingAmount)})
+              </span>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-slate-200">
-          <CardContent className="p-3.5">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-medium text-slate-500">Pending Finance Verification</p>
-                <p className="text-xl font-semibold text-amber-700 tabular-nums mt-0.5">
-                  {pendingCount} ({formatCurrency(pendingAmount)})
-                </p>
-              </div>
-              <div className="h-9 w-9 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
-                <Clock className="h-5 w-5" />
+        <Card className="border-slate-200 overflow-hidden">
+          <CardContent className="p-3 sm:p-3.5">
+            <div className="flex items-center justify-between gap-1">
+              <p className="text-[11px] sm:text-xs font-medium text-slate-500 truncate">Reconciled & Posted</p>
+              <div className="h-7 w-7 sm:h-9 sm:w-9 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                <CheckCircle className="h-3.5 w-3.5 sm:h-5 sm:w-5" />
               </div>
             </div>
+            <p className="text-sm sm:text-base md:text-xl font-bold text-emerald-700 tabular-nums mt-1 truncate">
+              {formatCurrency(approvedAmount)}
+            </p>
           </CardContent>
         </Card>
 
-        <Card className="border-slate-200">
-          <CardContent className="p-3.5">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-medium text-slate-500">Reconciled & Posted</p>
-                <p className="text-xl font-semibold text-emerald-700 tabular-nums mt-0.5">
-                  {formatCurrency(approvedAmount)}
-                </p>
-              </div>
-              <div className="h-9 w-9 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
-                <CheckCircle className="h-5 w-5" />
+        <Card className="border-slate-200 overflow-hidden">
+          <CardContent className="p-3 sm:p-3.5">
+            <div className="flex items-center justify-between gap-1">
+              <p className="text-[11px] sm:text-xs font-medium text-slate-500 truncate">Cheque Collections</p>
+              <div className="h-7 w-7 sm:h-9 sm:w-9 rounded-lg bg-primary-light text-primary flex items-center justify-center shrink-0">
+                <ShieldCheck className="h-3.5 w-3.5 sm:h-5 sm:w-5" />
               </div>
             </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-slate-200">
-          <CardContent className="p-3.5">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-medium text-slate-500">Cheque Collections</p>
-                <p className="text-xl font-semibold text-primary tabular-nums mt-0.5">
-                  {payments.filter((p) => p.paymentMethod === 'CHEQUE').length} Cheques
-                </p>
-              </div>
-              <div className="h-9 w-9 rounded-lg bg-primary-light text-primary flex items-center justify-center">
-                <ShieldCheck className="h-5 w-5" />
-              </div>
-            </div>
+            <p className="text-sm sm:text-base md:text-xl font-bold text-primary tabular-nums mt-1 truncate">
+              {payments.filter((p) => p.paymentMethod === 'CHEQUE').length} Cheques
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -318,7 +319,7 @@ export function PaymentListPage() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 w-full sm:w-auto">
               <Input
                 type="date"
                 value={startDate}
@@ -326,10 +327,10 @@ export function PaymentListPage() {
                   setStartDate(e.target.value);
                   setPage(1);
                 }}
-                className="text-xs h-9 w-36"
+                className="text-xs h-9 flex-1 min-w-0 sm:flex-initial sm:w-36"
                 placeholder="From Date"
               />
-              <span className="text-xs text-slate-400">to</span>
+              <span className="text-xs text-slate-400 shrink-0">to</span>
               <Input
                 type="date"
                 value={endDate}
@@ -337,7 +338,7 @@ export function PaymentListPage() {
                   setEndDate(e.target.value);
                   setPage(1);
                 }}
-                className="text-xs h-9 w-36"
+                className="text-xs h-9 flex-1 min-w-0 sm:flex-initial sm:w-36"
                 placeholder="To Date"
               />
             </div>
@@ -403,16 +404,18 @@ export function PaymentListPage() {
                       className="rounded-2xl border border-slate-200/90 bg-white p-3.5 shadow-xs hover:border-primary/50 transition-all cursor-pointer active:scale-[0.99]"
                     >
                       {/* Top Row: Receipt # + Status */}
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-1.5">
-                          <span className="font-mono text-xs font-bold text-primary tabular-nums">
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <div className="flex items-center gap-1.5 shrink-0 min-w-0">
+                          <span className="font-mono text-xs font-bold text-primary tabular-nums whitespace-nowrap shrink-0">
                             {p.receiptNumber}
                           </span>
-                          <span className="text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded bg-slate-100 text-slate-700">
+                          <span className="text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 whitespace-nowrap shrink-0">
                             {p.paymentMethod}
                           </span>
                         </div>
-                        <PaymentStatusBadge status={p.status} />
+                        <div className="shrink-0">
+                          <PaymentStatusBadge status={p.status} />
+                        </div>
                       </div>
 
                       {/* Customer Info */}

@@ -469,13 +469,15 @@ export function OrderDetailPage() {
       {/* Enterprise Order Document Card */}
       <Card className="border border-slate-200 shadow-sm overflow-hidden bg-white">
         {/* Document Header */}
-        <div className="p-6 border-b border-slate-200 bg-slate-50/50 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="p-4 sm:p-6 border-b border-slate-200 bg-slate-50/50 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <div className="flex items-center gap-3">
-              <span className="text-xl font-semibold font-mono text-slate-900 tabular-nums">{order.orderNumber}</span>
-              <OrderStatusBadge status={order.status} isSpecialApproval={order.isSpecialApproval} />
+            <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+              <span className="text-lg sm:text-xl font-semibold font-mono text-slate-900 tabular-nums whitespace-nowrap shrink-0">{order.orderNumber}</span>
+              <div className="shrink-0">
+                <OrderStatusBadge status={order.status} isSpecialApproval={order.isSpecialApproval} />
+              </div>
             </div>
-            <div className="text-xs text-slate-500 mt-1 flex flex-wrap items-center gap-4">
+            <div className="text-xs text-slate-500 mt-1 flex flex-wrap items-center gap-2 sm:gap-4">
               <span>Date: {formatDate(order.createdAt)}</span>
               <span>Rep: {order.salesRepNameSnapshot}</span>
               {order.customerPoNumber && <span>PO Ref: {order.customerPoNumber}</span>}
@@ -487,9 +489,9 @@ export function OrderDetailPage() {
             </div>
           </div>
 
-          <div className="text-right">
+          <div className="text-left md:text-right pt-2 md:pt-0 border-t md:border-t-0 border-slate-200/80">
             <span className="text-xs font-medium text-slate-500 block">Total Order Value</span>
-            <span className="text-2xl font-semibold font-mono text-primary tabular-nums">
+            <span className="text-xl sm:text-2xl font-semibold font-mono text-primary tabular-nums">
               {formatCurrency(order.totalAmount)}
             </span>
           </div>
@@ -560,11 +562,11 @@ export function OrderDetailPage() {
         </div>
 
         {/* Itemized Table */}
-        <div className="p-6">
+        <div className="p-4 sm:p-6">
           <h4 className="text-sm font-semibold text-slate-800 mb-3">
             Itemized Order Lines
           </h4>
-          <div className="rounded-lg border border-slate-200 overflow-hidden">
+          <div className="rounded-lg border border-slate-200 overflow-x-auto">
             <table className="w-full text-[13px] tabular-nums">
               <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 text-[12.5px]">
                 <tr>

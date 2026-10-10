@@ -16,5 +16,6 @@ export interface IProductRepository {
   submitPriceProposal(proposal: Omit<PriceChangeProposal, 'id' | 'createdAt' | 'updatedAt'>): Promise<PriceChangeProposal>;
   getPriceProposals(productId?: string): Promise<PriceChangeProposal[]>;
   getCategories(): Promise<Category[]>;
+  createCategory(category: Omit<Category, 'id' | 'createdAt' | 'updatedAt'>): Promise<Category>;
   getUOMs(): Promise<UnitOfMeasure[]>;
 }

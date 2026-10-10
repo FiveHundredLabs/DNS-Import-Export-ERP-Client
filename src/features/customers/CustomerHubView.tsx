@@ -21,8 +21,8 @@ import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/ca
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../../components/ui/tabs';
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../../components/ui/table';
 import { formatCurrency, formatDate } from '../../utils/formatters';
+import { AmountDisplay } from '../../components/common/AmountDisplay';
 import {
   Phone,
   Mail,
@@ -202,11 +202,22 @@ export function CustomerHubView({ customer }: { customer: Customer }) {
       {/* Customer Header Banner */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 rounded-xl border border-slate-200 bg-white shadow-xs">
         <div>
-          <div className="flex items-center gap-2">
-            <span className="font-mono text-xs font-semibold text-slate-500 tabular-nums">{customer.code}</span>
-            <Badge variant="outline">{customer.type}</Badge>
-            {customer.loyaltyTier && <Badge variant="warning">{customer.loyaltyTier} Tier</Badge>}
-            <Badge variant={customer.approvalStage === 'APPROVED' ? 'success' : 'warning'}>
+          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+            <span className="font-mono text-xs font-semibold text-slate-500 tabular-nums whitespace-nowrap shrink-0">
+              {customer.code}
+            </span>
+            <Badge variant="outline" className="whitespace-nowrap shrink-0">
+              {customer.type}
+            </Badge>
+            {customer.loyaltyTier && (
+              <Badge variant="warning" className="whitespace-nowrap shrink-0">
+                {customer.loyaltyTier} Tier
+              </Badge>
+            )}
+            <Badge
+              variant={customer.approvalStage === 'APPROVED' ? 'success' : 'warning'}
+              className="whitespace-nowrap shrink-0"
+            >
               {customer.approvalStage}
             </Badge>
           </div>
@@ -263,53 +274,53 @@ export function CustomerHubView({ customer }: { customer: Customer }) {
 
       {/* Credit & Outstanding Matrix */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {/* Card 1: Total Outstanding - Hero full-width on mobile to guarantee LKR 1,450,000.00 and limit breakdown never clip */}
-        <div className="col-span-2 sm:col-span-1 p-3.5 sm:p-4 rounded-xl border border-slate-200 bg-white shadow-xs">
-          <span className="text-xs font-medium text-slate-500 block">
+        {/* Card 1: Total Outstanding */}
+        <div className="col-span-2 sm:col-span-1 p-3.5 sm:p-4 rounded-xl border border-slate-200 bg-white shadow-xs min-w-0 overflow-hidden">
+          <span className="text-xs font-medium text-slate-500 block truncate">
             Total Outstanding
           </span>
-          <span className="text-lg sm:text-xl font-bold text-slate-900 tabular-nums block mt-1 truncate">
-            {formatCurrency(customer.financials.totalOutstanding)}
-          </span>
+          <div className="mt-1 min-w-0">
+            <AmountDisplay amount={customer.financials.totalOutstanding} className="text-slate-900 font-bold" />
+          </div>
           <div className="text-xs text-slate-500 mt-1 flex items-center justify-between flex-wrap gap-1">
-            <span>Limit: {formatCurrency(customer.commercialTerms.creditLimit)}</span>
-            <span className="text-emerald-700 font-semibold">
+            <span className="truncate">Limit: {formatCurrency(customer.commercialTerms.creditLimit)}</span>
+            <span className="text-emerald-700 font-semibold truncate">
               Avail: {formatCurrency(Math.max(0, customer.commercialTerms.creditLimit - customer.financials.totalOutstanding))}
             </span>
           </div>
         </div>
 
         {/* Card 2: Current Due */}
-        <div className="col-span-2 sm:col-span-1 p-3.5 sm:p-4 rounded-xl border border-emerald-200 bg-emerald-50/50 shadow-xs">
-          <span className="text-xs font-medium text-emerald-800 block">
+        <div className="col-span-2 sm:col-span-1 p-3.5 sm:p-4 rounded-xl border border-emerald-200 bg-emerald-50/50 shadow-xs min-w-0 overflow-hidden">
+          <span className="text-xs font-medium text-emerald-800 block truncate">
             Current Due
           </span>
-          <span className="text-lg sm:text-xl font-bold text-emerald-900 tabular-nums block mt-1 truncate">
-            {formatCurrency(customer.financials.currentDue)}
-          </span>
-          <span className="text-xs text-emerald-700 block mt-1">{customer.commercialTerms.creditDays} Days Credit Policy</span>
+          <div className="mt-1 min-w-0">
+            <AmountDisplay amount={customer.financials.currentDue} className="text-emerald-900 font-bold" />
+          </div>
+          <span className="text-xs text-emerald-700 block mt-1 truncate">{customer.commercialTerms.creditDays} Days Credit Policy</span>
         </div>
 
         {/* Card 3: Near Due (7 Days) */}
-        <div className="col-span-1 p-3.5 sm:p-4 rounded-xl border border-amber-200 bg-amber-50/50 shadow-xs">
-          <span className="text-xs font-medium text-amber-800 block">
+        <div className="col-span-1 p-3.5 sm:p-4 rounded-xl border border-amber-200 bg-amber-50/50 shadow-xs min-w-0 overflow-hidden">
+          <span className="text-xs font-medium text-amber-800 block truncate">
             Near Due (7 Days)
           </span>
-          <span className="text-base sm:text-xl font-bold text-amber-900 tabular-nums block mt-1 truncate">
-            {formatCurrency(customer.financials.nearDue)}
-          </span>
-          <span className="text-xs text-amber-700 block mt-1">Follow-up due</span>
+          <div className="mt-1 min-w-0">
+            <AmountDisplay amount={customer.financials.nearDue} className="text-amber-900 font-bold" />
+          </div>
+          <span className="text-xs text-amber-700 block mt-1 truncate">Follow-up due</span>
         </div>
 
         {/* Card 4: Overdue */}
-        <div className="col-span-1 p-3.5 sm:p-4 rounded-xl border border-rose-200 bg-rose-50/50 shadow-xs">
-          <span className="text-xs font-medium text-rose-800 block">
+        <div className="col-span-1 p-3.5 sm:p-4 rounded-xl border border-rose-200 bg-rose-50/50 shadow-xs min-w-0 overflow-hidden">
+          <span className="text-xs font-medium text-rose-800 block truncate">
             Overdue
           </span>
-          <span className="text-base sm:text-xl font-bold text-rose-900 tabular-nums block mt-1 truncate">
-            {formatCurrency(customer.financials.overdue)}
-          </span>
-          <span className="text-xs text-rose-700 block mt-1">Immediate collection</span>
+          <div className="mt-1 min-w-0">
+            <AmountDisplay amount={customer.financials.overdue} className="text-rose-900 font-bold" />
+          </div>
+          <span className="text-xs text-rose-700 block mt-1 truncate">Immediate collection</span>
         </div>
       </div>
 
@@ -439,11 +450,13 @@ export function CustomerHubView({ customer }: { customer: Customer }) {
                         onClick={() => navigate(`/invoices/${inv.id}`)}
                         className="rounded-2xl border border-slate-200/90 bg-white p-3.5 shadow-xs space-y-2.5 cursor-pointer active:scale-[0.99] transition-all"
                       >
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="font-mono text-xs font-bold text-primary">
+                        <div className="flex items-center justify-between gap-2 flex-wrap">
+                          <span className="font-mono text-xs font-bold text-primary whitespace-nowrap shrink-0">
                             {inv.invoiceNumber}
                           </span>
-                          <InvoiceStatusBadge status={inv.status} />
+                          <div className="shrink-0">
+                            <InvoiceStatusBadge status={inv.status} />
+                          </div>
                         </div>
 
                         <div className="grid grid-cols-2 gap-2 text-xs bg-slate-50 p-2.5 rounded-xl border border-slate-100">
@@ -601,11 +614,13 @@ export function CustomerHubView({ customer }: { customer: Customer }) {
                         onClick={() => navigate(`/orders/${ord.id}`)}
                         className="rounded-2xl border border-slate-200/90 bg-white p-3.5 shadow-xs space-y-2 cursor-pointer active:scale-[0.99] transition-all"
                       >
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="font-mono text-xs font-bold text-primary">
+                        <div className="flex items-center justify-between gap-2 flex-wrap">
+                          <span className="font-mono text-xs font-bold text-primary whitespace-nowrap shrink-0">
                             {ord.orderNumber}
                           </span>
-                          <OrderStatusBadge status={ord.status} isSpecialApproval={ord.isSpecialApproval} />
+                          <div className="shrink-0">
+                            <OrderStatusBadge status={ord.status} isSpecialApproval={ord.isSpecialApproval} />
+                          </div>
                         </div>
                         <div className="flex items-center justify-between text-xs pt-1">
                           <span className="text-slate-500">{formatDate(ord.createdAt)} • {ord.items.length} Items</span>
@@ -705,11 +720,13 @@ export function CustomerHubView({ customer }: { customer: Customer }) {
                         onClick={() => navigate(`/quotations/${qt.id}`)}
                         className="rounded-2xl border border-slate-200/90 bg-white p-3.5 shadow-xs space-y-2 cursor-pointer active:scale-[0.99] transition-all"
                       >
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="font-mono text-xs font-bold text-primary">
+                        <div className="flex items-center justify-between gap-2 flex-wrap">
+                          <span className="font-mono text-xs font-bold text-primary whitespace-nowrap shrink-0">
                             {qt.quotationNumber}
                           </span>
-                          <QuotationStatusBadge status={qt.status} />
+                          <div className="shrink-0">
+                            <QuotationStatusBadge status={qt.status} />
+                          </div>
                         </div>
                         <div className="flex items-center justify-between text-xs pt-1">
                           <span className="text-slate-500">{formatDate(qt.createdAt)} • {qt.items.length} Items</span>
@@ -815,11 +832,13 @@ export function CustomerHubView({ customer }: { customer: Customer }) {
                         onClick={() => navigate(`/payments/${pay.id}`)}
                         className="rounded-2xl border border-slate-200/90 bg-white p-3.5 shadow-xs space-y-2 cursor-pointer active:scale-[0.99] transition-all"
                       >
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="font-mono text-xs font-bold text-primary">
+                        <div className="flex items-center justify-between gap-2 flex-wrap">
+                          <span className="font-mono text-xs font-bold text-primary whitespace-nowrap shrink-0">
                             {pay.receiptNumber}
                           </span>
-                          <PaymentStatusBadge status={pay.status} />
+                          <div className="shrink-0">
+                            <PaymentStatusBadge status={pay.status} />
+                          </div>
                         </div>
                         <div className="flex items-center justify-between text-xs pt-1">
                           <span className="text-slate-500">

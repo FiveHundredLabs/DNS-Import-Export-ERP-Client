@@ -19,6 +19,7 @@ import {
 } from '../../components/ui/select';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../../components/ui/table';
 import { formatCurrency, formatDate } from '../../utils/formatters';
+import { AmountDisplay } from '../../components/common/AmountDisplay';
 import { whatsAppService } from '../../services/WhatsAppService';
 import { printerService } from '../../services/PrinterService';
 import {
@@ -200,13 +201,13 @@ export function QuotationListPage() {
           </CardContent>
         </Card>
 
-        <Card className="shadow-xs col-span-2 sm:col-span-1">
-          <CardContent className="p-3 sm:p-4 flex items-center justify-between">
+        <Card className="shadow-xs col-span-2 sm:col-span-1 min-w-0 overflow-hidden">
+          <CardContent className="p-3 sm:p-4 flex items-center justify-between gap-2 min-w-0">
             <div className="min-w-0 flex-1">
               <p className="text-[11px] sm:text-xs font-medium text-slate-500 truncate">Pipeline Value</p>
-              <h3 className="text-sm sm:text-base lg:text-lg font-bold text-emerald-700 mt-0.5 sm:mt-1 truncate tabular-nums">
-                {formatCurrency(totalPipelineValue)}
-              </h3>
+              <div className="mt-0.5 sm:mt-1 min-w-0">
+                <AmountDisplay amount={totalPipelineValue} className="text-emerald-700 font-bold" />
+              </div>
             </div>
             <div className="rounded-lg bg-emerald-50 p-2 sm:p-2.5 text-emerald-600 shrink-0">
               <DollarSign className="h-4 w-4 sm:h-5 sm:w-5" />
@@ -317,16 +318,18 @@ export function QuotationListPage() {
                     className="rounded-2xl border border-slate-200/90 bg-white p-3.5 shadow-xs hover:border-primary/50 transition-all cursor-pointer active:scale-[0.99]"
                   >
                     {/* Top Row: Quotation # & Status Badge */}
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-1.5">
-                        <span className="font-mono text-xs font-bold text-primary tabular-nums">
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                      <div className="flex items-center gap-1.5 shrink-0 min-w-0">
+                        <span className="font-mono text-xs font-bold text-primary tabular-nums whitespace-nowrap shrink-0">
                           {q.quotationNumber}
                         </span>
-                        <span className="text-[10.5px] text-slate-400 font-mono">
+                        <span className="text-[10.5px] text-slate-400 font-mono whitespace-nowrap shrink-0">
                           • {q.items.length} {q.items.length === 1 ? 'item' : 'items'}
                         </span>
                       </div>
-                      <QuotationStatusBadge status={q.status} />
+                      <div className="shrink-0">
+                        <QuotationStatusBadge status={q.status} />
+                      </div>
                     </div>
 
                     {/* Customer Info */}
@@ -335,7 +338,7 @@ export function QuotationListPage() {
                         {q.customerNameSnapshot}
                       </h4>
                       <div className="flex items-center gap-1.5 text-[11px] text-slate-400 font-mono mt-0.5">
-                        <span>{q.customerCodeSnapshot}</span>
+                        <span className="whitespace-nowrap shrink-0">{q.customerCodeSnapshot}</span>
                         <span>•</span>
                         <span>Valid until {q.validUntil}</span>
                       </div>

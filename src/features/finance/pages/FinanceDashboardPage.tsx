@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useFinanceLedger } from '../hooks/useFinanceLedger';
 import { formatCurrency, formatDate } from '../../../utils/formatters';
+import { AmountDisplay } from '../../../components/common/AmountDisplay';
 import {
   DollarSign,
   TrendingUp,
@@ -201,48 +202,48 @@ export function FinanceDashboardPage() {
 
       {/* Primary KPI Grid */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Card className="p-4 border-slate-200">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Bank Float (1010)</span>
-            <DollarSign className="h-4 w-4 text-primary" />
+        <Card className="p-4 border-slate-200 min-w-0 overflow-hidden">
+          <div className="flex items-center justify-between gap-1">
+            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 truncate">Bank Float (1010)</span>
+            <DollarSign className="h-4 w-4 text-primary shrink-0" />
           </div>
-          <div className="mt-2 text-2xl font-semibold text-slate-900 tabular-nums">
-            {formatCurrency(bankAccount?.currentBalance || 0)}
+          <div className="mt-2 min-w-0">
+            <AmountDisplay amount={bankAccount?.currentBalance || 0} className="text-slate-900 font-semibold" />
           </div>
-          <span className="text-xs text-slate-400">Available Operating Liquidity</span>
+          <span className="text-xs text-slate-400 block mt-1 truncate">Available Operating Liquidity</span>
         </Card>
 
-        <Card className="p-4 border-slate-200">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Accounts Receivable (1020)</span>
-            <TrendingUp className="h-4 w-4 text-primary" />
+        <Card className="p-4 border-slate-200 min-w-0 overflow-hidden">
+          <div className="flex items-center justify-between gap-1">
+            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 truncate">Accounts Receivable (1020)</span>
+            <TrendingUp className="h-4 w-4 text-primary shrink-0" />
           </div>
-          <div className="mt-2 text-2xl font-semibold text-slate-900 tabular-nums">
-            {formatCurrency(arAccount?.currentBalance || 0)}
+          <div className="mt-2 min-w-0">
+            <AmountDisplay amount={arAccount?.currentBalance || 0} className="text-slate-900 font-semibold" />
           </div>
-          <span className="text-xs text-primary font-medium">Customer Outstandings</span>
+          <span className="text-xs text-primary font-medium block mt-1 truncate">Customer Outstandings</span>
         </Card>
 
-        <Card className="p-4 border-slate-200">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Accounts Payable (2010)</span>
-            <Receipt className="h-4 w-4 text-amber-600" />
+        <Card className="p-4 border-slate-200 min-w-0 overflow-hidden">
+          <div className="flex items-center justify-between gap-1">
+            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 truncate">Accounts Payable (2010)</span>
+            <Receipt className="h-4 w-4 text-amber-600 shrink-0" />
           </div>
-          <div className="mt-2 text-2xl font-semibold text-slate-900 tabular-nums">
-            {formatCurrency(apAccount?.currentBalance || 0)}
+          <div className="mt-2 min-w-0">
+            <AmountDisplay amount={apAccount?.currentBalance || 0} className="text-slate-900 font-semibold" />
           </div>
-          <span className="text-xs text-amber-600 font-medium">Vendor Liabilities</span>
+          <span className="text-xs text-amber-600 font-medium block mt-1 truncate">Vendor Liabilities</span>
         </Card>
 
-        <Card className="p-4 border-slate-200 bg-emerald-50/40 border-emerald-100">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-emerald-900">Net Operating Profit</span>
-            <PieChart className="h-4 w-4 text-emerald-700" />
+        <Card className="p-4 border-slate-200 bg-emerald-50/40 border-emerald-100 min-w-0 overflow-hidden">
+          <div className="flex items-center justify-between gap-1">
+            <span className="text-xs font-semibold uppercase tracking-wider text-emerald-900 truncate">Net Operating Profit</span>
+            <PieChart className="h-4 w-4 text-emerald-700 shrink-0" />
           </div>
-          <div className="mt-2 text-2xl font-semibold text-emerald-900 tabular-nums">
-            {formatCurrency(netProfit)}
+          <div className="mt-2 min-w-0">
+            <AmountDisplay amount={netProfit} className="text-emerald-900 font-semibold" />
           </div>
-          <span className="text-xs text-emerald-700 font-medium">Period Bottom Line</span>
+          <span className="text-xs text-emerald-700 font-medium block mt-1 truncate">Period Bottom Line</span>
         </Card>
       </div>
 

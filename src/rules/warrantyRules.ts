@@ -85,3 +85,56 @@ export function determineWarrantyStartDate(
   }
   return (dealerSoldDate || saleDate).split('T')[0];
 }
+
+/**
+ * Validates whether a warranty claim can be processed.
+ * Since the company sells to distributors rather than direct end-customers,
+ * any warranty claim for distributor products (DEALER) MUST be validated against
+ * a verified warranty note received from the distributor and reviewed by the Sales Manager.
+ */
+export function canProcessWarrantyClaim(
+  saleType: WarrantySaleType,
+  notesReceived: boolean,
+  noteStatus?: string
+): { allowed: boolean; reason?: string } {
+  if (saleType === 'DEALER') {
+    if (!notesReceived || noteStatus !== 'VERIFIED') {
+      return {
+        allowed: false,
+        reason:
+          'Warranty claim cannot be processed: Distributor sales require a valid warranty note reviewed and verified by the Sales Manager.',
+      };
+    }
+  }
+  return { allowed: true };
+}
+
+/**
+ * Classifies a physical product unit's warranty note collection status.
+ * Distinguishes between:
+ * 1. Received & Verified by head office
+ * 2. Received (Pending Sales Manager review)
+ * 3. Confirmed sold to end-customer, but warranty note is missing from head office
+ * 4. In distributor inventory / unaccounted (not yet sold to end-customer)
+ */
+export function classifyUnitWarrantyStatus(record: {
+  notesReceived: boolean;
+  warrantyNoteStatus?: string;
+  dealerSoldDate?: string;
+}): {
+  status: 'RECEIVED_VERIFIED' | 'RECEIVED_PENDING' | 'MISSING_CONFIRMED' | 'IN_DISTRIBUTOR_STOCK';
+  label: string;
+} {
+  if (record.warrantyNoteStatus === 'VERIFIED' || record.notesReceived) {
+    return { status: 'RECEIVED_VERIFIED', label: 'Received & Verified' };
+  }
+  if (record.warrantyNoteStatus === 'PENDING_REVIEW') {
+    return { status: 'RECEIVED_PENDING', label: 'Received (Pending Review)' };
+  }
+  if (record.dealerSoldDate) {
+    return { status: 'MISSING_CONFIRMED', label: 'Missing Note (Sold to Customer)' };
+  }
+  return { status: 'IN_DISTRIBUTOR_STOCK', label: 'In Distributor Stock (Unaccounted)' };
+}
+
+

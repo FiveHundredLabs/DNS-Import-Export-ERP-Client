@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { StatCard } from '../../components/common/StatCard';
+import { AmountDisplay } from '../../components/common/AmountDisplay';
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
@@ -239,21 +240,23 @@ export function SalesRepDashboard() {
       </div>
 
       {/* 2. Mobile Dashboard Tab Navigation (Sticky Top View Switcher for Field Reps) */}
-      <div className="block md:hidden sticky top-0 z-20 -mx-3.5 px-3.5 sm:-mx-5 sm:px-5 py-2.5 bg-canvas/95 backdrop-blur-md border-b border-slate-200/80 shadow-2xs">
-        <div className="flex items-center p-1 rounded-2xl bg-slate-200/70 border border-slate-200 shadow-inner">
+      <div className="block md:hidden sticky top-0 z-20 -mx-3.5 px-3 sm:-mx-5 sm:px-5 py-2 bg-canvas/95 backdrop-blur-md border-b border-slate-200/80 shadow-2xs">
+        <div className="grid grid-cols-3 gap-1 p-1 rounded-2xl bg-slate-200/75 border border-slate-200/90 shadow-inner">
           <button
             type="button"
             onClick={() => setMobileTab('all')}
             aria-label="All Overview"
             className={cn(
-              'flex-1 flex items-center justify-center gap-1.5 py-2 px-1 text-center text-xs font-bold rounded-xl transition-all select-none',
+              'group w-full min-w-0 flex items-center justify-center gap-1 sm:gap-1.5 py-2 px-1 text-center text-xs font-bold rounded-xl transition-all duration-150 select-none min-h-[38px]',
               mobileTab === 'all'
-                ? 'bg-white text-slate-900 shadow-xs scale-[1.02]'
-                : 'text-slate-600 hover:text-slate-900 active:scale-95'
+                ? 'bg-white text-slate-900 shadow-xs border border-slate-200/80'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-white/40 active:bg-white/60 active:scale-[0.98]'
             )}
           >
-            <LayoutGrid className={cn('h-3.5 w-3.5 shrink-0', mobileTab === 'all' ? 'text-primary' : 'text-slate-400')} />
-            <span className="truncate">All Overview</span>
+            <LayoutGrid className={cn('h-3.5 w-3.5 shrink-0 transition-colors', mobileTab === 'all' ? 'text-primary' : 'text-slate-400 group-hover:text-slate-600')} />
+            <span className="truncate">
+              <span className="hidden min-[380px]:inline">All </span>Overview
+            </span>
           </button>
 
           <button
@@ -261,14 +264,20 @@ export function SalesRepDashboard() {
             onClick={() => setMobileTab('receivables')}
             aria-label={`Receivables (${pendingAccounts.length})`}
             className={cn(
-              'flex-1 flex items-center justify-center gap-1.5 py-2 px-1 text-center text-xs font-bold rounded-xl transition-all select-none',
+              'group w-full min-w-0 flex items-center justify-center gap-1 sm:gap-1.5 py-2 px-1 text-center text-xs font-bold rounded-xl transition-all duration-150 select-none min-h-[38px]',
               mobileTab === 'receivables'
-                ? 'bg-white text-emerald-800 shadow-xs scale-[1.02]'
-                : 'text-slate-600 hover:text-slate-900 active:scale-95'
+                ? 'bg-white text-emerald-900 shadow-xs border border-slate-200/80'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-white/40 active:bg-white/60 active:scale-[0.98]'
             )}
           >
-            <CreditCard className={cn('h-3.5 w-3.5 shrink-0', mobileTab === 'receivables' ? 'text-emerald-600' : 'text-slate-400')} />
-            <span className="truncate">Receivables ({pendingAccounts.length})</span>
+            <CreditCard className={cn('h-3.5 w-3.5 shrink-0 transition-colors', mobileTab === 'receivables' ? 'text-emerald-600' : 'text-slate-400 group-hover:text-slate-600')} />
+            <span className="truncate">Receivables</span>
+            <span className={cn(
+              'shrink-0 text-[10.5px] font-bold transition-opacity',
+              mobileTab === 'receivables' ? 'text-emerald-700' : 'text-slate-500'
+            )}>
+              ({pendingAccounts.length})
+            </span>
           </button>
 
           <button
@@ -276,14 +285,22 @@ export function SalesRepDashboard() {
             onClick={() => setMobileTab('orders')}
             aria-label={`Live Orders (${recentOrders.length})`}
             className={cn(
-              'flex-1 flex items-center justify-center gap-1.5 py-2 px-1 text-center text-xs font-bold rounded-xl transition-all select-none',
+              'group w-full min-w-0 flex items-center justify-center gap-1 sm:gap-1.5 py-2 px-1 text-center text-xs font-bold rounded-xl transition-all duration-150 select-none min-h-[38px]',
               mobileTab === 'orders'
-                ? 'bg-white text-primary shadow-xs scale-[1.02]'
-                : 'text-slate-600 hover:text-slate-900 active:scale-95'
+                ? 'bg-white text-primary shadow-xs border border-slate-200/80'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-white/40 active:bg-white/60 active:scale-[0.98]'
             )}
           >
-            <Clock className={cn('h-3.5 w-3.5 shrink-0', mobileTab === 'orders' ? 'text-primary' : 'text-slate-400')} />
-            <span className="truncate">Live Orders ({recentOrders.length})</span>
+            <Clock className={cn('h-3.5 w-3.5 shrink-0 transition-colors', mobileTab === 'orders' ? 'text-primary' : 'text-slate-400 group-hover:text-slate-600')} />
+            <span className="truncate">
+              <span className="hidden min-[380px]:inline">Live </span>Orders
+            </span>
+            <span className={cn(
+              'shrink-0 text-[10.5px] font-bold transition-opacity',
+              mobileTab === 'orders' ? 'text-primary' : 'text-slate-500'
+            )}>
+              ({recentOrders.length})
+            </span>
           </button>
         </div>
       </div>
@@ -424,10 +441,8 @@ export function SalesRepDashboard() {
                 </span>
               </div>
 
-              <div className="mt-3">
-                <div className="text-2xl sm:text-[24px] font-extrabold tracking-tight tabular-nums text-slate-900 leading-tight">
-                  {formatCurrency(4250000)}
-                </div>
+              <div className="mt-3 min-w-0">
+                <AmountDisplay amount={4250000} className="text-slate-900 font-extrabold" />
               </div>
 
               {/* Progress bar on mobile & desktop */}
@@ -436,14 +451,14 @@ export function SalesRepDashboard() {
                   <div className="h-full bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full w-[85%]" />
                 </div>
                 <div className="flex items-center justify-between text-xs text-slate-500 pt-0.5">
-                  <span className="text-[11px] text-slate-500">Target: LKR 5,000,000</span>
+                  <span className="text-[11px] text-slate-500">Target: LKR 5,000,000.00</span>
                   <span className="font-semibold text-emerald-700 text-[10.5px]">85% Pace</span>
                 </div>
               </div>
             </div>
 
             {/* Card 2: Route Collections (Hero Full-width on mobile to guarantee LKR 2,650,000.00 never clips) */}
-            <div className="col-span-2 lg:col-span-1 rounded-2xl sm:rounded-3xl border border-blue-200/90 bg-gradient-to-br from-blue-500/[0.08] via-sky-50/40 to-white p-4 sm:p-5 shadow-xs hover:shadow-sm transition-all relative overflow-hidden group">
+            <div className="col-span-2 lg:col-span-1 rounded-2xl sm:rounded-3xl border border-blue-200/90 bg-gradient-to-br from-blue-500/[0.08] via-sky-50/40 to-white p-4 sm:p-5 shadow-xs hover:shadow-sm transition-all relative overflow-hidden group min-w-0">
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2.5">
                   <div className="h-9 w-9 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center shrink-0 shadow-2xs">
@@ -461,20 +476,18 @@ export function SalesRepDashboard() {
                 </span>
               </div>
 
-              <div className="mt-3">
-                <div className="text-2xl sm:text-[24px] font-extrabold tracking-tight tabular-nums text-slate-900 leading-tight">
-                  {formatCurrency(2650000)}
-                </div>
+              <div className="mt-3 min-w-0">
+                <AmountDisplay amount={2650000} className="text-slate-900 font-extrabold" />
               </div>
 
               <div className="mt-2.5 flex items-center justify-between text-xs text-slate-500 pt-1 border-t border-blue-100/80">
-                <span className="text-[11px] text-slate-500">Pending Finance: LKR 450k</span>
+                <span className="text-[11px] text-slate-500">Pending Finance: LKR 450,000.00</span>
                 <span className="text-[10.5px] font-semibold text-blue-600">89% verified</span>
               </div>
             </div>
 
-            {/* Card 3: Earned Incentive (Half-width on mobile fits 14 chars cleanly) */}
-            <div className="col-span-1 rounded-2xl sm:rounded-3xl border border-indigo-200/90 bg-gradient-to-br from-indigo-500/[0.08] via-purple-50/40 to-white p-3.5 sm:p-5 shadow-xs hover:shadow-sm transition-all relative overflow-hidden group">
+            {/* Card 3: Earned Incentive (Half-width on mobile) */}
+            <div className="col-span-1 rounded-2xl sm:rounded-3xl border border-indigo-200/90 bg-gradient-to-br from-indigo-500/[0.08] via-purple-50/40 to-white p-3.5 sm:p-5 shadow-xs hover:shadow-sm transition-all relative overflow-hidden group min-w-0">
               <div className="flex items-center justify-between gap-1.5">
                 <div className="flex items-center gap-2">
                   <div className="h-8 w-8 sm:h-9 sm:w-9 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center shrink-0 shadow-2xs">
@@ -486,10 +499,8 @@ export function SalesRepDashboard() {
                 </div>
               </div>
 
-              <div className="mt-2.5">
-                <div className="text-base sm:text-[22px] font-extrabold tracking-tight tabular-nums text-slate-900 leading-tight truncate">
-                  {formatCurrency(127500)}
-                </div>
+              <div className="mt-2.5 min-w-0">
+                <AmountDisplay amount={127500} className="text-slate-900 font-extrabold" />
               </div>
 
               <div className="mt-1.5 sm:mt-2 text-[10.5px] sm:text-xs text-slate-500 truncate">
@@ -646,7 +657,7 @@ export function SalesRepDashboard() {
                           >
                             {pending.name}
                           </Link>
-                          <span className="font-mono text-[10px] bg-slate-100 text-slate-700 px-2 py-0.5 rounded-md font-semibold">
+                          <span className="font-mono text-[10px] bg-slate-100 text-slate-700 px-2 py-0.5 rounded-md font-semibold whitespace-nowrap shrink-0">
                             {pending.code}
                           </span>
                         </div>
@@ -753,7 +764,7 @@ export function SalesRepDashboard() {
                   >
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex items-center gap-1.5">
-                        <span className="font-mono font-bold text-xs text-emerald-800 bg-emerald-50 border border-emerald-200/60 px-2 py-0.5 rounded-md">
+                        <span className="font-mono font-bold text-xs text-emerald-800 bg-emerald-50 border border-emerald-200/60 px-2 py-0.5 rounded-md whitespace-nowrap shrink-0">
                           {order.orderNumber}
                         </span>
                       </div>

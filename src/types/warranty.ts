@@ -2,6 +2,7 @@ import { BaseEntity } from './common';
 
 export type WarrantySaleType = 'SHOWROOM' | 'DEALER';
 export type WarrantyStatus = 'ACTIVE' | 'EXPIRED' | 'CLAIMED';
+export type WarrantyNoteStatus = 'PENDING_REVIEW' | 'VERIFIED' | 'REJECTED';
 export type ClaimStatus =
   | 'SUBMITTED'
   | 'IN_INSPECTION'
@@ -11,6 +12,31 @@ export type ClaimStatus =
   | 'REJECTED';
 export type ClaimResolutionType = 'REPLACE' | 'REPAIR' | 'REJECT';
 
+export interface WarrantyNote extends BaseEntity {
+  noteNumber: string; // Distributor warranty card / note number
+  warrantyRecordId: string;
+  invoiceId: string;
+  invoiceNumber: string;
+  distributorId: string;
+  distributorName: string;
+  productId: string;
+  productName: string;
+  sku: string;
+  barcode?: string; // Unique barcode assigned to this specific individual unit
+  serialNumber: string;
+  distributorSaleDate: string; // Date distributor sold unit to end-customer (YYYY-MM-DD)
+  receivedDate: string; // Date DNS ERP received the warranty note (YYYY-MM-DD)
+  endCustomerName?: string;
+  endCustomerPhone?: string;
+  status: WarrantyNoteStatus; // 'PENDING_REVIEW' | 'VERIFIED' | 'REJECTED'
+  reviewNotes?: string;
+  reviewedByUserId?: string;
+  reviewedByUserName?: string;
+  reviewedAt?: string;
+  enteredByUserId: string;
+  enteredByUserName: string;
+}
+
 export interface WarrantyRecord extends BaseEntity {
   invoiceId: string;
   invoiceNumber: string;
@@ -19,6 +45,7 @@ export interface WarrantyRecord extends BaseEntity {
   productId: string;
   productName: string;
   sku: string;
+  barcode?: string; // Unique barcode assigned to this specific individual unit (not product-level)
   serialNumber?: string;
   saleDate: string; // ISO string or YYYY-MM-DD
   warrantyStartDate: string;
@@ -29,6 +56,10 @@ export interface WarrantyRecord extends BaseEntity {
   dealerSoldDate?: string;
   notesReceived: boolean;
   notesReceivedDate?: string;
+  warrantyNoteId?: string;
+  warrantyNoteNumber?: string;
+  warrantyNoteStatus?: WarrantyNoteStatus;
+  endCustomerName?: string;
 }
 
 export interface WarrantyClaim extends BaseEntity {
@@ -49,6 +80,11 @@ export interface WarrantyClaim extends BaseEntity {
   inspectedById?: string;
   resolvedById?: string;
   resolvedAt?: string;
+  warrantyNoteId?: string;
+  warrantyNoteNumber?: string;
+  distributorId?: string;
+  distributorName?: string;
+  endCustomerName?: string;
 }
 
 export interface ShopWarrantyFollowUp {
@@ -81,3 +117,89 @@ export interface ClaimFilters {
   page?: number;
   pageSize?: number;
 }
+
+export interface WarrantyNoteFilters {
+  status?: WarrantyNoteStatus | 'ALL';
+  distributorId?: string;
+  productId?: string;
+  warrantyRecordId?: string;
+  search?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface RecordWarrantyNoteDTO {
+  warrantyRecordId: string;
+  noteNumber?: string;
+  barcode?: string;
+  distributorSaleDate: string;
+  receivedDate?: string;
+  endCustomerName?: string;
+  endCustomerPhone?: string;
+  serialNumber?: string;
+  reviewNotes?: string;
+  verifyImmediately?: boolean;
+}
+
+export type UnitWarrantyStatus =
+  | 'RECEIVED_VERIFIED'
+  | 'RECEIVED_PENDING'
+  | 'MISSING_CONFIRMED'
+  | 'IN_DISTRIBUTOR_STOCK';
+
+export interface UnitBarcodeWarrantyDetail {
+  id: string;
+  barcode: string;
+  serialNumber?: string;
+  productId: string;
+  productName: string;
+  sku: string;
+  distributorId: string;
+  distributorName: string;
+  customerCode?: string;
+  saleDate: string;
+  invoiceNumber: string;
+  orderNumber?: string;
+  warrantyStatus: UnitWarrantyStatus;
+  statusLabel: string;
+  warrantyNoteId?: string;
+  warrantyNoteNumber?: string;
+  warrantyNoteReceivedDate?: string;
+  endCustomerSaleDate?: string;
+  endCustomerName?: string;
+  endCustomerPhone?: string;
+  warrantyPeriodMonths: number;
+  warrantyExpiryDate?: string;
+}
+
+export interface DistributorWarrantySummary {
+  distributorId: string;
+  distributorName: string;
+  customerCode: string;
+  phone?: string;
+  address?: string;
+  assignedRepId?: string;
+  assignedRepName?: string;
+  totalUnitsSold: number;
+  warrantyNotesReceived: number;
+  pendingNotesCount: number;
+  confirmedMissingCount: number;
+  unaccountedInStockCount: number;
+  collectionProgress: number;
+  lastSubmissionDate?: string;
+  hasOutstandingNotes: boolean;
+}
+
+export interface SalesRepWarrantySummary {
+  salesRepId: string;
+  salesRepName: string;
+  totalUnitsSold: number;
+  warrantyNotesReceived: number;
+  pendingNotesCount: number;
+  confirmedMissingCount: number;
+  unaccountedInStockCount: number;
+  collectionProgress: number;
+  distributorsCount: number;
+  distributorsWithOutstandingNotes: number;
+}
+

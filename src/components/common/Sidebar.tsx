@@ -18,7 +18,6 @@ import {
   Search,
   X,
   Star,
-  ArrowLeftRight,
   BookOpen,
   FileSpreadsheet,
   Receipt,
@@ -37,6 +36,7 @@ import {
   CheckCircle2,
   Percent,
   Layers,
+  Barcode,
 } from 'lucide-react';
 import { useEffect } from 'react';
 import { useAuth } from '../../hooks/useAuth';
@@ -79,12 +79,12 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const [activeCategory, setActiveCategory] = useState<RailCategory>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Automatically activate finance category when navigating within finance module
+  // Automatically activate finance category when navigating within finance module (if authorized)
   useEffect(() => {
-    if (location.pathname.startsWith('/finance')) {
+    if (location.pathname.startsWith('/finance') && canAccessRoute('/finance')) {
       setActiveCategory('finance');
     }
-  }, [location.pathname]);
+  }, [location.pathname, canAccessRoute]);
 
   // 1. Procurement, Orders & Approvals
   const procurementItems: SidebarItem[] = [
@@ -92,6 +92,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     { id: 'orders', name: 'Sales Orders', path: '/orders', icon: ShoppingCart, category: 'sales' },
     { id: 'approvals', name: 'Approvals Engine', path: '/approvals', icon: CheckCircle, category: 'approvals' },
     { id: 'warranty', name: 'Warranty Hub', path: '/warranty', icon: ShieldCheck, category: 'approvals' },
+    { id: 'warranty-verification', name: 'Warranty Verification', path: '/warranty/verification', icon: Barcode, category: 'sales' },
   ];
 
   // 2. Customers, Invoices, Payments & POS
@@ -106,7 +107,6 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const inventoryItems: SidebarItem[] = [
     { id: 'products', name: 'Product Master', path: '/products', icon: Package, category: 'inventory' },
     { id: 'inventory', name: 'Inventory & GRN', path: '/inventory', icon: Boxes, category: 'inventory', exact: true },
-    { id: 'transfers', name: 'Stock Transfers', path: '/inventory/transfers', icon: ArrowLeftRight, category: 'inventory' },
   ];
 
   // 4. Finance, Banking & Ledger Core
@@ -154,6 +154,9 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       if (item.directorOnly && currentUser.role !== 'DIRECTOR') {
         return false;
       }
+      if (item.path.includes('tab=settings') && !canAccessRoute('/settings')) {
+        return false;
+      }
       return canAccessRoute(item.path.split('?')[0]);
     });
   }, [allRawItems, canAccessRoute, currentUser.role]);
@@ -183,37 +186,16 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   }, [authorizedItems, activeCategory, searchQuery]);
 
   // Rail category definition (No separate favorites rail item)
-  const railItems = useMemo(
-    () => [
-      { id: 'all' as RailCategory, label: 'Dashboard & Quick Links', icon: LayoutGrid },
-      { id: 'sales' as RailCategory, label: 'Sales & Orders', icon: Calendar },
-      { id: 'customers' as RailCategory, label: 'Customers & CRM', icon: Users2 },
-      { id: 'inventory' as RailCategory, label: 'Inventory & Products', icon: Boxes },
-      { id: 'finance' as RailCategory, label: 'Finance & Payments', icon: CreditCard },
-      { id: 'approvals' as RailCategory, label: 'Approvals & Warranty', icon: ShieldCheck },
-      { id: 'reports' as RailCategory, label: 'Enterprise Reports', icon: BarChart3 },
-      { id: 'admin' as RailCategory, label: 'Administration', icon: Settings },
-    ],
-    []
-  );
-
-  // Role-filtered visible rail categories: hide categories with 0 authorized modules
-  const visibleRailItems = useMemo(() => {
-    return railItems.filter((item) => {
-      if (item.id === 'all') return true;
-      if (item.id === 'admin') {
-        return authorizedItems.some((ai) => ai.category === 'admin' && ai.id !== 'role-portal');
-      }
-      return authorizedItems.some((ai) => ai.category === item.id);
-    });
-  }, [railItems, authorizedItems]);
-
-  // If active category is no longer visible for this role, reset to 'all'
-  useEffect(() => {
-    if (activeCategory !== 'all' && !visibleRailItems.some((r) => r.id === activeCategory)) {
-      setActiveCategory('all');
-    }
-  }, [activeCategory, visibleRailItems]);
+  const railItems = [
+    { id: 'all' as RailCategory, label: 'Dashboard & Quick Links', icon: LayoutGrid },
+    { id: 'sales' as RailCategory, label: 'Sales & Orders', icon: Calendar },
+    { id: 'customers' as RailCategory, label: 'Customers & CRM', icon: Users2 },
+    { id: 'inventory' as RailCategory, label: 'Inventory & Products', icon: Boxes },
+    { id: 'finance' as RailCategory, label: 'Finance & Payments', icon: CreditCard },
+    { id: 'approvals' as RailCategory, label: 'Approvals & Warranty', icon: ShieldCheck },
+    { id: 'reports' as RailCategory, label: 'Enterprise Reports', icon: BarChart3 },
+    { id: 'admin' as RailCategory, label: 'Administration', icon: Settings },
+  ];
 
   // User initials for the top rail badge
   const userInitials = useMemo(() => {
@@ -348,7 +330,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
           {/* Top Rail Stack: Module Category Navigation Icons */}
           <div className="flex flex-col items-center w-full">
             <div className="flex flex-col items-center gap-1.5 sm:gap-2 w-full px-2">
-              {visibleRailItems.map((item) => {
+              {railItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = activeCategory === item.id;
 

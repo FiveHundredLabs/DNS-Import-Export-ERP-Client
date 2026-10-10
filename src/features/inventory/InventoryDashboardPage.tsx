@@ -10,6 +10,7 @@ import { Skeleton } from '../../components/ui/skeleton';
 import { MOCK_PRODUCTS } from '../../mock/mockProducts';
 import { calculateAvailableForSale } from '../../rules/inventoryRules';
 import { formatCurrency, formatDate } from '../../utils/formatters';
+import { AmountDisplay } from '../../components/common/AmountDisplay';
 
 // ─── Mini Icon Components ────────────────────────────────────────────────────
 function PackageIcon({ className }: { className?: string }) {
@@ -76,14 +77,24 @@ function KpiCard({ title, value, subtitle, accent = 'default', icon, to }: KpiCa
     success: 'text-green-600',
   };
 
+  const isCurrency =
+    typeof value === 'string' &&
+    (/^(LKR|Rs\.?|\$)\s*[\d,]+/i.test(value.trim()) || value.includes('LKR'));
+
   const content = (
-    <Card className={`hover:shadow-md transition-shadow ${to ? 'cursor-pointer' : ''}`}>
-      <CardContent className="p-5">
-        <div className="flex items-start justify-between">
+    <Card className={`hover:shadow-md transition-shadow min-w-0 overflow-hidden ${to ? 'cursor-pointer' : ''}`}>
+      <CardContent className="p-5 min-w-0">
+        <div className="flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-muted-foreground truncate">{title}</p>
-            <p className={`text-3xl font-bold mt-1 ${valueClasses[accent]}`}>{value}</p>
-            {subtitle && <p className="text-xs text-muted-foreground mt-1">{subtitle}</p>}
+            {isCurrency ? (
+              <div className="mt-1 min-w-0">
+                <AmountDisplay amount={value} className={`font-bold ${valueClasses[accent]}`} />
+              </div>
+            ) : (
+              <p className={`text-2xl sm:text-3xl font-bold mt-1 tabular-nums [overflow-wrap:anywhere] break-words ${valueClasses[accent]}`}>{value}</p>
+            )}
+            {subtitle && <p className="text-xs text-muted-foreground mt-1 truncate">{subtitle}</p>}
           </div>
           <div className={`flex-shrink-0 ml-3 p-2.5 rounded-lg border ${accentClasses[accent]}`}>
             {icon}
@@ -157,12 +168,6 @@ const QUICK_LINKS = [
     to: '/inventory/dispatch',
     color: 'from-red-500 to-rose-600',
   },
-  {
-    label: 'Stock Transfers',
-    description: 'Warehouse to showroom movements',
-    to: '/inventory/transfers',
-    color: 'from-cyan-500 to-teal-600',
-  },
 ];
 
 export function InventoryDashboardPage() {
@@ -235,9 +240,6 @@ export function InventoryDashboardPage() {
         <div className="flex gap-2 flex-shrink-0">
           <Link to="/inventory/grn/new">
             <Button variant="default" size="sm">+ New GRN</Button>
-          </Link>
-          <Link to="/inventory/transfers">
-            <Button variant="outline" size="sm">Transfer Stock</Button>
           </Link>
         </div>
       </div>

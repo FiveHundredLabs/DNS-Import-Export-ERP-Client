@@ -12,12 +12,20 @@ import {
 } from '../../components/ui/select';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../../components/ui/tabs';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../../components/ui/table';
-import { WarrantyRecord, WarrantyClaim, ShopWarrantyFollowUp } from '../../types/warranty';
+import {
+  WarrantyRecord,
+  WarrantyClaim,
+  ShopWarrantyFollowUp,
+  WarrantyNote,
+} from '../../types/warranty';
 import { warrantyService } from '../../services/WarrantyService';
 import { WarrantyStatusBadge, ClaimStatusBadge } from './WarrantyStatusBadge';
 import { NewClaimModal } from './NewClaimModal';
 import { ResolveClaimModal } from './ResolveClaimModal';
 import { RecordFollowUpModal } from './RecordFollowUpModal';
+import { RecordWarrantyNoteModal } from './RecordWarrantyNoteModal';
+import { ReviewWarrantyNoteModal } from './ReviewWarrantyNoteModal';
+import { SalesRepWarrantyPage } from './SalesRepWarrantyPage';
 import { useAuth } from '../../hooks/useAuth';
 import { formatDate } from '../../utils/formatters';
 import {
@@ -31,11 +39,22 @@ import {
   AlertCircle,
   CheckCircle2,
   Calendar,
+  FileCheck2,
+  Clock,
+  XCircle,
+  Sparkles,
+  Barcode,
 } from 'lucide-react';
 
 export function WarrantyHubPage() {
   const { role, currentUser, hasPermission } = useAuth();
-  const [activeTab, setActiveTab] = useState<'records' | 'claims' | 'followups'>('records');
+  const [activeTab, setActiveTab] = useState<'verification' | 'notes' | 'records' | 'claims' | 'followups'>('records');
+
+  // Distributor Warranty Notes state
+  const [notes, setNotes] = useState<WarrantyNote[]>([]);
+  const [notesLoading, setNotesLoading] = useState(true);
+  const [noteSearch, setNoteSearch] = useState('');
+  const [noteStatusFilter, setNoteStatusFilter] = useState<string>('ALL');
 
   // Warranty Records state
   const [records, setRecords] = useState<WarrantyRecord[]>([]);
@@ -57,6 +76,29 @@ export function WarrantyHubPage() {
   const [isNewClaimOpen, setIsNewClaimOpen] = useState(false);
   const [resolvingClaim, setResolvingClaim] = useState<WarrantyClaim | null>(null);
   const [activeFollowUp, setActiveFollowUp] = useState<ShopWarrantyFollowUp | null>(null);
+  const [isRecordNoteOpen, setIsRecordNoteOpen] = useState(false);
+  const [reviewingNote, setReviewingNote] = useState<WarrantyNote | null>(null);
+  const [preselectedRecordForNote, setPreselectedRecordForNote] = useState<WarrantyRecord | null>(null);
+
+  const canRecordNotes =
+    hasPermission('warranty:record_notes') ||
+    ['SALES_MANAGER', 'MANAGER', 'DIRECTOR'].includes(role);
+
+  const loadNotes = async () => {
+    try {
+      setNotesLoading(true);
+      const res = await warrantyService.getWarrantyNotes({
+        search: noteSearch || undefined,
+        status: noteStatusFilter !== 'ALL' ? (noteStatusFilter as any) : undefined,
+        pageSize: 100,
+      });
+      setNotes(res.data);
+    } catch (err) {
+      console.error('Failed to load distributor warranty notes', err);
+    } finally {
+      setNotesLoading(false);
+    }
+  };
 
   const loadRecords = async () => {
     try {
@@ -105,6 +147,10 @@ export function WarrantyHubPage() {
   };
 
   useEffect(() => {
+    loadNotes();
+  }, [noteSearch, noteStatusFilter]);
+
+  useEffect(() => {
     loadRecords();
   }, [recordSearch, recordStatusFilter]);
 
@@ -138,6 +184,8 @@ export function WarrantyHubPage() {
   const activeWarrantiesCount = records.filter((r) => r.status === 'ACTIVE').length;
   const pendingClaimsCount = claims.filter((c) => c.status === 'SUBMITTED' || c.status === 'IN_INSPECTION').length;
   const totalPendingCards = followUps.reduce((acc, f) => acc + f.pendingNotesCount, 0);
+  const pendingNotesCount = notes.filter((n) => n.status === 'PENDING_REVIEW').length;
+  const verifiedNotesCount = notes.filter((n) => n.status === 'VERIFIED').length;
 
   return (
     <div className="space-y-6">
@@ -149,22 +197,36 @@ export function WarrantyHubPage() {
             Warranty & Claims Hub
           </h1>
           <p className="text-xs text-slate-500 mt-1">
-            Reconcile dealer warranty notes, track valid periods, and manage replacement lifecycles.
+            Reconcile distributor warranty notes, review customer warranty registration, and manage claim lifecycles.
           </p>
         </div>
-        {role !== 'SALES_REP' && hasPermission('warranty:claims') && (
-          <Button
-            onClick={() => setIsNewClaimOpen(true)}
-            className="bg-primary hover:bg-primary-hover text-primary-foreground text-xs font-medium h-9 gap-1.5 shadow-sm"
-          >
-            <PlusCircle className="h-4 w-4" />
-            Lodge Warranty Claim
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+          {canRecordNotes && (
+            <Button
+              onClick={() => {
+                setPreselectedRecordForNote(null);
+                setIsRecordNoteOpen(true);
+              }}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold h-9 gap-1.5 shadow-sm"
+            >
+              <FileCheck2 className="h-4 w-4" />
+              Record Warranty Note
+            </Button>
+          )}
+          {role !== 'SALES_REP' && hasPermission('warranty:claims') && (
+            <Button
+              onClick={() => setIsNewClaimOpen(true)}
+              className="bg-primary hover:bg-primary-hover text-primary-foreground text-xs font-medium h-9 gap-1.5 shadow-sm"
+            >
+              <PlusCircle className="h-4 w-4" />
+              Lodge Warranty Claim
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* KPI Metric Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="p-4 bg-white border-slate-200 shadow-xs">
           <div className="flex items-center justify-between">
             <div>
@@ -207,6 +269,27 @@ export function WarrantyHubPage() {
           <div className="flex items-center justify-between">
             <div>
               <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block">
+                Distributor Notes
+              </span>
+              <span className="text-2xl font-semibold tabular-nums text-primary mt-1 block">
+                {notes.length}
+              </span>
+            </div>
+            <div className="p-2.5 bg-sky-50 rounded-lg text-sky-600">
+              <FileCheck2 className="h-5 w-5" />
+            </div>
+          </div>
+          <span className="text-xs text-sky-700 mt-2 block font-medium">
+            {pendingNotesCount > 0
+              ? `${pendingNotesCount} pending Sales Manager review`
+              : `${verifiedNotesCount} verified by Sales Manager`}
+          </span>
+        </Card>
+
+        <Card className="p-4 bg-white border-slate-200 shadow-xs">
+          <div className="flex items-center justify-between">
+            <div>
+              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block">
                 Missing Warranty Notes
               </span>
               <span className="text-2xl font-semibold tabular-nums text-rose-700 mt-1 block">
@@ -218,7 +301,7 @@ export function WarrantyHubPage() {
             </div>
           </div>
           <span className="text-xs text-rose-700 mt-2 block font-medium">
-            Across {followUps.length} dealer partner locations
+            Across {followUps.length} distributor locations
           </span>
         </Card>
       </div>
@@ -229,6 +312,19 @@ export function WarrantyHubPage() {
           <TabsTrigger value="records">
             Warranty Records
           </TabsTrigger>
+          <TabsTrigger value="verification" className="gap-1.5">
+            <Barcode className="h-3.5 w-3.5" />
+            Distributor Verification
+          </TabsTrigger>
+          <TabsTrigger value="notes" className="gap-1.5">
+            <FileCheck2 className="h-3.5 w-3.5" />
+            Distributor Warranty Notes ({notes.length})
+            {pendingNotesCount > 0 && (
+              <span className="ml-1 px-1.5 py-0.2 text-[10px] bg-amber-200 text-amber-900 rounded-full font-bold">
+                {pendingNotesCount}
+              </span>
+            )}
+          </TabsTrigger>
           <TabsTrigger value="claims">
             Warranty Claims ({pendingClaimsCount})
           </TabsTrigger>
@@ -236,6 +332,248 @@ export function WarrantyHubPage() {
             Field Follow-up ({totalPendingCards} Pending)
           </TabsTrigger>
         </TabsList>
+
+        {/* TAB: Distributor Warranty Verification (Sales Rep & Sales Manager) */}
+        <TabsContent value="verification" className="space-y-4 pt-2">
+          <SalesRepWarrantyPage />
+        </TabsContent>
+
+        {/* TAB: Distributor Warranty Notes */}
+        <TabsContent value="notes" className="space-y-4 pt-2">
+          <Card>
+            <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-3">
+              <div>
+                <CardTitle className="text-sm font-semibold text-slate-900 flex items-center gap-2">
+                  <FileCheck2 className="h-4 w-4 text-primary" />
+                  Distributor Warranty Notes & Registration Ledger
+                </CardTitle>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Our company sells products to distributors. When a warranty note is received, the Sales Manager reviews and validates it before warranty claims can be processed.
+                </p>
+              </div>
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <div className="relative flex-1 sm:w-64">
+                  <Search className="h-3.5 w-3.5 absolute left-2.5 top-2.5 text-slate-400" />
+                  <Input
+                    type="text"
+                    placeholder="Search note #, distributor, customer..."
+                    value={noteSearch}
+                    onChange={(e) => setNoteSearch(e.target.value)}
+                    className="pl-8 text-xs h-8"
+                  />
+                </div>
+                <Select
+                  value={noteStatusFilter}
+                  onValueChange={(val) => setNoteStatusFilter(val)}
+                >
+                  <SelectTrigger className="rounded-md border border-slate-300 text-xs h-8 px-2 bg-white text-slate-700 min-w-32">
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ALL">All Statuses</SelectItem>
+                    <SelectItem value="PENDING_REVIEW">Pending Review</SelectItem>
+                    <SelectItem value="VERIFIED">Verified</SelectItem>
+                    <SelectItem value="REJECTED">Rejected</SelectItem>
+                  </SelectContent>
+                </Select>
+                {canRecordNotes && (
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      setPreselectedRecordForNote(null);
+                      setIsRecordNoteOpen(true);
+                    }}
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs h-8 gap-1"
+                  >
+                    <PlusCircle className="h-3.5 w-3.5" />
+                    Enter Note
+                  </Button>
+                )}
+              </div>
+            </CardHeader>
+            <CardContent>
+              {notesLoading ? (
+                <div className="py-8 text-center text-xs text-slate-400">Loading distributor warranty notes...</div>
+              ) : notes.length === 0 ? (
+                <div className="py-8 text-center text-xs text-slate-500">
+                  No distributor warranty notes on record. Click &quot;Record Warranty Note&quot; to enter a received note.
+                </div>
+              ) : (
+                <>
+                  {/* Mobile Cards for Warranty Notes */}
+                  <div className="block md:hidden space-y-3">
+                    {notes.map((note) => (
+                      <div key={note.id} className="p-3.5 rounded-2xl border border-slate-200/90 bg-white shadow-xs space-y-2.5">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <span className="font-mono text-xs font-bold text-primary block">{note.noteNumber}</span>
+                            <h4 className="text-xs font-bold text-slate-900 truncate mt-0.5">{note.productName}</h4>
+                            <span className="font-mono text-[11px] text-slate-400 block">
+                              SKU: {note.sku} {note.serialNumber && `| SN: ${note.serialNumber}`}
+                            </span>
+                          </div>
+                          <Badge
+                            variant={
+                              note.status === 'VERIFIED'
+                                ? 'success'
+                                : note.status === 'PENDING_REVIEW'
+                                ? 'warning'
+                                : 'destructive'
+                            }
+                            className="text-[10px]"
+                          >
+                            {note.status === 'VERIFIED'
+                              ? 'Verified'
+                              : note.status === 'PENDING_REVIEW'
+                              ? 'Pending Review'
+                              : 'Rejected'}
+                          </Badge>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2 text-xs bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+                          <div>
+                            <span className="text-[10px] text-slate-400 block">Distributor</span>
+                            <span className="font-medium text-slate-800 truncate block">{note.distributorName}</span>
+                            <span className="font-mono text-[11px] text-slate-500">{note.invoiceNumber}</span>
+                          </div>
+                          <div>
+                            <span className="text-[10px] text-slate-400 block">End-Customer</span>
+                            <span className="font-semibold text-slate-800 truncate block">{note.endCustomerName || 'N/A'}</span>
+                            <span className="text-[10px] text-slate-500">{note.endCustomerPhone || 'No phone'}</span>
+                          </div>
+                          <div>
+                            <span className="text-[10px] text-slate-400 block">Distributor Sold</span>
+                            <span className="font-medium text-slate-700">{formatDate(note.distributorSaleDate)}</span>
+                          </div>
+                          <div>
+                            <span className="text-[10px] text-slate-400 block">Received Date</span>
+                            <span className="font-medium text-slate-700">{formatDate(note.receivedDate)}</span>
+                          </div>
+                        </div>
+
+                        {note.reviewNotes && (
+                          <div className="text-[11px] text-slate-600 bg-slate-50/80 p-2 rounded-lg border border-slate-100 italic">
+                            Review note: {note.reviewNotes}
+                          </div>
+                        )}
+
+                        <div className="pt-1 flex items-center justify-between">
+                          <span className="text-[10px] text-slate-400">
+                            {note.reviewedByUserName ? `Reviewed by: ${note.reviewedByUserName}` : 'Awaiting review'}
+                          </span>
+                          {note.status === 'PENDING_REVIEW' && canRecordNotes && (
+                            <Button
+                              size="sm"
+                              onClick={() => setReviewingNote(note)}
+                              className="text-xs h-7 px-3 bg-primary hover:bg-primary-hover text-white font-semibold"
+                            >
+                              Review & Validate
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Desktop Table for Warranty Notes */}
+                  <div className="hidden md:block rounded-lg border border-slate-200 overflow-hidden">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Note / Card #</TableHead>
+                          <TableHead>Distributor</TableHead>
+                          <TableHead>Product / Serial</TableHead>
+                          <TableHead>Sale Date</TableHead>
+                          <TableHead>Received Date</TableHead>
+                          <TableHead>End Customer</TableHead>
+                          <TableHead className="text-center">Status</TableHead>
+                          <TableHead>Review Audit</TableHead>
+                          <TableHead className="text-right">Action</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {notes.map((note) => (
+                          <TableRow key={note.id}>
+                            <TableCell className="font-mono text-xs font-semibold text-primary">
+                              {note.noteNumber}
+                            </TableCell>
+                            <TableCell>
+                              <div className="text-xs font-medium text-slate-900">{note.distributorName}</div>
+                              <div className="text-[11px] text-slate-400 font-mono">{note.invoiceNumber}</div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="text-xs font-medium text-slate-900">{note.productName}</div>
+                              <div className="text-[11px] text-slate-400 font-mono">
+                                {note.sku} {note.serialNumber && `| SN: ${note.serialNumber}`}
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-xs text-slate-700">
+                              {formatDate(note.distributorSaleDate)}
+                            </TableCell>
+                            <TableCell className="text-xs text-slate-700">
+                              {formatDate(note.receivedDate)}
+                            </TableCell>
+                            <TableCell>
+                              <div className="text-xs font-medium text-slate-900">
+                                {note.endCustomerName || 'Not specified'}
+                              </div>
+                              {note.endCustomerPhone && (
+                                <div className="text-[11px] text-slate-400">{note.endCustomerPhone}</div>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <Badge
+                                variant={
+                                  note.status === 'VERIFIED'
+                                    ? 'success'
+                                    : note.status === 'PENDING_REVIEW'
+                                    ? 'warning'
+                                    : 'destructive'
+                                }
+                                className="text-[10px]"
+                              >
+                                {note.status === 'VERIFIED'
+                                  ? 'Verified'
+                                  : note.status === 'PENDING_REVIEW'
+                                  ? 'Pending Review'
+                                  : 'Rejected'}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-xs text-slate-600 max-w-[160px] truncate" title={note.reviewNotes}>
+                              {note.reviewedByUserName ? (
+                                <div>
+                                  <span className="font-medium text-slate-800">{note.reviewedByUserName}</span>
+                                  {note.reviewedAt && (
+                                    <span className="text-[10px] text-slate-400 block">{formatDate(note.reviewedAt)}</span>
+                                  )}
+                                </div>
+                              ) : (
+                                <span className="text-slate-400 italic">Pending Sales Manager</span>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              {note.status === 'PENDING_REVIEW' && canRecordNotes ? (
+                                <Button
+                                  size="sm"
+                                  onClick={() => setReviewingNote(note)}
+                                  className="text-[11px] h-7 px-2.5 bg-primary hover:bg-primary-hover text-white font-medium"
+                                >
+                                  Review
+                                </Button>
+                              ) : (
+                                <span className="text-[11px] text-slate-400 font-medium">Logged</span>
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         {/* TAB 1: Warranty Records */}
         <TabsContent value="records" className="space-y-4 pt-2">
@@ -318,6 +656,7 @@ export function WarrantyHubPage() {
                           <TableHead>Sale Type</TableHead>
                           <TableHead>Start Date</TableHead>
                           <TableHead>Warranty Expiry</TableHead>
+                          <TableHead>Distributor Note</TableHead>
                           <TableHead className="text-center">Status</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -346,6 +685,42 @@ export function WarrantyHubPage() {
                             </TableCell>
                             <TableCell className="text-xs font-semibold text-slate-800">
                               {formatDate(rec.warrantyExpiryDate)}
+                            </TableCell>
+                            <TableCell>
+                              {rec.saleType === 'DEALER' ? (
+                                rec.warrantyNoteStatus === 'VERIFIED' ? (
+                                  <Badge variant="success" className="text-[10px] gap-1">
+                                    <CheckCircle2 className="h-3 w-3" />
+                                    {rec.warrantyNoteNumber || 'Verified'}
+                                  </Badge>
+                                ) : rec.warrantyNoteStatus === 'PENDING_REVIEW' ? (
+                                  <Badge variant="warning" className="text-[10px] gap-1">
+                                    <Clock className="h-3 w-3" />
+                                    Pending Review
+                                  </Badge>
+                                ) : (
+                                  <div className="flex items-center gap-1.5">
+                                    <Badge variant="destructive" className="text-[10px]">
+                                      Missing Note
+                                    </Badge>
+                                    {canRecordNotes && (
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => {
+                                          setPreselectedRecordForNote(rec);
+                                          setIsRecordNoteOpen(true);
+                                        }}
+                                        className="text-[10px] h-6 px-1.5 text-primary border-primary/30 hover:bg-primary/5"
+                                      >
+                                        + Enter
+                                      </Button>
+                                    )}
+                                  </div>
+                                )
+                              ) : (
+                                <span className="text-[11px] text-slate-400">Direct Showroom</span>
+                              )}
                             </TableCell>
                             <TableCell className="text-center">
                               <WarrantyStatusBadge status={rec.status} />
@@ -674,6 +1049,28 @@ export function WarrantyHubPage() {
           loadFollowUps();
         }}
       />
+
+      <RecordWarrantyNoteModal
+        open={isRecordNoteOpen}
+        onOpenChange={setIsRecordNoteOpen}
+        preselectedRecord={preselectedRecordForNote}
+        onSuccess={() => {
+          loadNotes();
+          loadRecords();
+          loadFollowUps();
+        }}
+      />
+
+      <ReviewWarrantyNoteModal
+        note={reviewingNote}
+        open={!!reviewingNote}
+        onOpenChange={(open) => !open && setReviewingNote(null)}
+        onSuccess={() => {
+          loadNotes();
+          loadRecords();
+        }}
+      />
     </div>
   );
 }
+
