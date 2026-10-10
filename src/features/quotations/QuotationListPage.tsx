@@ -52,7 +52,7 @@ const STATUS_FILTERS: Array<{ label: string; value: QuotationStatus | 'ALL' }> =
 export function QuotationListPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { currentUser } = useAuth();
+  const { currentUser, hasPermission } = useAuth();
   const initialCustomerId = searchParams.get('customerId') || undefined;
 
   const {
@@ -125,13 +125,15 @@ export function QuotationListPage() {
           </p>
         </div>
 
-        <Button
-          onClick={() => navigate('/quotations/new')}
-          className="bg-primary hover:bg-primary-hover text-primary-foreground gap-2 shadow-xs"
-        >
-          <Plus className="h-4 w-4" />
-          New Quotation
-        </Button>
+        {hasPermission('quotations:create') && (
+          <Button
+            onClick={() => navigate('/quotations/new')}
+            className="bg-primary hover:bg-primary-hover text-primary-foreground gap-2 shadow-xs"
+          >
+            <Plus className="h-4 w-4" />
+            New Quotation
+          </Button>
+        )}
       </div>
 
       {/* Role Scoping Banner */}

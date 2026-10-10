@@ -11,7 +11,7 @@
  * - Refer to `src/components/UI_DEVELOPER_GUIDE.md` for full design guidelines.
  *
  * TABLE OF CONTENTS:
- * 1. GOOGLE FONTS (Inter & JetBrains Mono)
+ * 1. GOOGLE FONTS (Google Sans Flex & JetBrains Mono)
  * 2. TAILWIND CORE DIRECTIVES
  * 3. DESIGN TOKENS & DYNAMIC PRIMARY THEME VARIABLES (:root & .dark)
  * 4. GLOBAL HTML & BODY BASE TYPOGRAPHY
@@ -25,9 +25,9 @@
  */
 
 /* ------------------------------------------------------------------------------
- * 1. GOOGLE FONTS (Inter for UI, JetBrains Mono for SKUs/Currencies)
+ * 1. GOOGLE FONTS (Google Sans Flex for UI, JetBrains Mono for SKUs/Currencies)
  * ------------------------------------------------------------------------------ */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Google+Sans+Flex:opsz,wght@6..144,1..1000&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 
 /* ------------------------------------------------------------------------------
  * 2. TAILWIND CORE DIRECTIVES
@@ -110,7 +110,7 @@
  * 4. GLOBAL HTML & BODY BASE TYPOGRAPHY
  * ------------------------------------------------------------------------------ */
 html {
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-family: 'Google Sans Flex', Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
@@ -120,7 +120,7 @@ body {
   margin: 0;
   background-color: #F4F7F9;
   color: #1E293B;
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-family: 'Google Sans Flex', Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   font-size: 0.875rem; /* 14px */
   line-height: 1.5;   /* Enterprise comfortable reading line height */
   letter-spacing: normal;

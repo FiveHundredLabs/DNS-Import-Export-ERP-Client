@@ -45,7 +45,7 @@ import {
 export function PaymentListPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { role, currentUser } = useAuth();
+  const { role, currentUser, hasPermission } = useAuth();
   const [payments, setPayments] = useState<Payment[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [customerIdFilter, setCustomerIdFilter] = useState(searchParams.get('customerId') || '');
@@ -182,13 +182,15 @@ export function PaymentListPage() {
           >
             <RefreshCw className="h-3.5 w-3.5" /> Refresh
           </Button>
-          <Button
-            size="sm"
-            onClick={() => navigate('/payments/new')}
-            className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs gap-1.5 shadow-sm"
-          >
-            <PlusCircle className="h-3.5 w-3.5" /> Record Payment
-          </Button>
+          {hasPermission('payments:create') && (
+            <Button
+              size="sm"
+              onClick={() => navigate('/payments/new')}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs gap-1.5 shadow-sm"
+            >
+              <PlusCircle className="h-3.5 w-3.5" /> Record Payment
+            </Button>
+          )}
         </div>
       </div>
 

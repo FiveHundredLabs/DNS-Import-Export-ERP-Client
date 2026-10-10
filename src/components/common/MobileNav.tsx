@@ -28,7 +28,7 @@ import { cn } from '../../utils/cn';
 import { RoleSwitcher } from './RoleSwitcher';
 
 export function MobileNav() {
-  const { role, currentUser, logout } = useAuth();
+  const { role, currentUser, logout, canAccessRoute } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const [moreOpen, setMoreOpen] = useState(false);
@@ -65,12 +65,12 @@ export function MobileNav() {
   const isMoreRouteActive =
     location.pathname.startsWith('/payments') ||
     location.pathname.startsWith('/quotations') ||
-    location.pathname.startsWith('/products') ||
-    location.pathname.startsWith('/inventory') ||
-    location.pathname.startsWith('/commissions') ||
-    location.pathname.startsWith('/reports') ||
+    (canAccessRoute('/products') && location.pathname.startsWith('/products')) ||
+    (canAccessRoute('/inventory') && location.pathname.startsWith('/inventory')) ||
+    (canAccessRoute('/commissions') && location.pathname.startsWith('/commissions')) ||
+    (canAccessRoute('/reports') && location.pathname.startsWith('/reports')) ||
     location.pathname.startsWith('/invoices') ||
-    location.pathname.startsWith('/approvals');
+    (canAccessRoute('/approvals') && location.pathname.startsWith('/approvals'));
 
   const handleNavClick = (path: string) => {
     setMoreOpen(false);
@@ -415,113 +415,127 @@ export function MobileNav() {
               </div>
             </button>
 
-            <button
-              onClick={() => handleNavClick('/approvals')}
-              className={cn(
-                'flex items-center gap-3 p-3 rounded-2xl border text-left transition-all',
-                location.pathname.startsWith('/approvals')
-                  ? 'border-primary bg-primary-light/50 text-primary-text font-semibold'
-                  : 'border-slate-200/80 bg-white hover:bg-slate-50 text-slate-700'
-              )}
-            >
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-rose-50 text-rose-600">
-                <CheckCircle className="h-4 w-4" />
-              </div>
-              <div className="min-w-0">
-                <div className="text-xs font-semibold truncate">Approvals</div>
-                <div className="text-[10.5px] text-slate-400 truncate">Engine Queue</div>
-              </div>
-            </button>
+            {canAccessRoute('/approvals') && (
+              <button
+                onClick={() => handleNavClick('/approvals')}
+                className={cn(
+                  'flex items-center gap-3 p-3 rounded-2xl border text-left transition-all',
+                  location.pathname.startsWith('/approvals')
+                    ? 'border-primary bg-primary-light/50 text-primary-text font-semibold'
+                    : 'border-slate-200/80 bg-white hover:bg-slate-50 text-slate-700'
+                )}
+              >
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-rose-50 text-rose-600">
+                  <CheckCircle className="h-4 w-4" />
+                </div>
+                <div className="min-w-0">
+                  <div className="text-xs font-semibold truncate">Approvals</div>
+                  <div className="text-[10.5px] text-slate-400 truncate">Engine Queue</div>
+                </div>
+              </button>
+            )}
           </div>
         </div>
 
         {/* Group 2: Catalog & Stock */}
-        <div className="space-y-2 mt-5">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 px-1">
-            Products & Inventory
-          </span>
-          <div className="grid grid-cols-2 gap-2.5">
-            <button
-              onClick={() => handleNavClick('/products')}
-              className={cn(
-                'flex items-center gap-3 p-3 rounded-2xl border text-left transition-all',
-                location.pathname.startsWith('/products')
-                  ? 'border-primary bg-primary-light/50 text-primary-text font-semibold'
-                  : 'border-slate-200/80 bg-white hover:bg-slate-50 text-slate-700'
+        {(canAccessRoute('/products') || canAccessRoute('/inventory')) && (
+          <div className="space-y-2 mt-5">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 px-1">
+              Products & Inventory
+            </span>
+            <div className="grid grid-cols-2 gap-2.5">
+              {canAccessRoute('/products') && (
+                <button
+                  onClick={() => handleNavClick('/products')}
+                  className={cn(
+                    'flex items-center gap-3 p-3 rounded-2xl border text-left transition-all',
+                    location.pathname.startsWith('/products')
+                      ? 'border-primary bg-primary-light/50 text-primary-text font-semibold'
+                      : 'border-slate-200/80 bg-white hover:bg-slate-50 text-slate-700'
+                  )}
+                >
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-cyan-50 text-cyan-600">
+                    <Package className="h-4 w-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-xs font-semibold truncate">Products</div>
+                    <div className="text-[10.5px] text-slate-400 truncate">Prices & Discounts</div>
+                  </div>
+                </button>
               )}
-            >
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-cyan-50 text-cyan-600">
-                <Package className="h-4 w-4" />
-              </div>
-              <div className="min-w-0">
-                <div className="text-xs font-semibold truncate">Products</div>
-                <div className="text-[10.5px] text-slate-400 truncate">Prices & Discounts</div>
-              </div>
-            </button>
 
-            <button
-              onClick={() => handleNavClick('/inventory/stock')}
-              className={cn(
-                'flex items-center gap-3 p-3 rounded-2xl border text-left transition-all',
-                location.pathname.startsWith('/inventory')
-                  ? 'border-primary bg-primary-light/50 text-primary-text font-semibold'
-                  : 'border-slate-200/80 bg-white hover:bg-slate-50 text-slate-700'
+              {canAccessRoute('/inventory') && (
+                <button
+                  onClick={() => handleNavClick('/inventory/stock')}
+                  className={cn(
+                    'flex items-center gap-3 p-3 rounded-2xl border text-left transition-all',
+                    location.pathname.startsWith('/inventory')
+                      ? 'border-primary bg-primary-light/50 text-primary-text font-semibold'
+                      : 'border-slate-200/80 bg-white hover:bg-slate-50 text-slate-700'
+                  )}
+                >
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600">
+                    <Boxes className="h-4 w-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-xs font-semibold truncate">Warehouse Stock</div>
+                    <div className="text-[10.5px] text-slate-400 truncate">Live Quantities</div>
+                  </div>
+                </button>
               )}
-            >
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600">
-                <Boxes className="h-4 w-4" />
-              </div>
-              <div className="min-w-0">
-                <div className="text-xs font-semibold truncate">Warehouse Stock</div>
-                <div className="text-[10.5px] text-slate-400 truncate">Live Quantities</div>
-              </div>
-            </button>
+            </div>
           </div>
-        </div>
+        )}
 
-        {/* Group 3: Analytics & Approvals */}
-        <div className="space-y-2 mt-5">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 px-1">
-            Performance & Analytics
-          </span>
-          <div className="grid grid-cols-2 gap-2.5">
-            <button
-              onClick={() => handleNavClick('/reports')}
-              className={cn(
-                'flex items-center gap-3 p-3 rounded-2xl border text-left transition-all',
-                location.pathname.startsWith('/reports')
-                  ? 'border-primary bg-primary-light/50 text-primary-text font-semibold'
-                  : 'border-slate-200/80 bg-white hover:bg-slate-50 text-slate-700'
+        {/* Group 3: Analytics & Commissions */}
+        {(canAccessRoute('/reports') || canAccessRoute('/commissions')) && (
+          <div className="space-y-2 mt-5">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 px-1">
+              Performance & Analytics
+            </span>
+            <div className="grid grid-cols-2 gap-2.5">
+              {canAccessRoute('/reports') && (
+                <button
+                  onClick={() => handleNavClick('/reports')}
+                  className={cn(
+                    'flex items-center gap-3 p-3 rounded-2xl border text-left transition-all',
+                    location.pathname.startsWith('/reports')
+                      ? 'border-primary bg-primary-light/50 text-primary-text font-semibold'
+                      : 'border-slate-200/80 bg-white hover:bg-slate-50 text-slate-700'
+                  )}
+                >
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-rose-50 text-rose-600">
+                    <BarChart3 className="h-4 w-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-xs font-semibold truncate">Reports</div>
+                    <div className="text-[10.5px] text-slate-400 truncate">Sales & Collections</div>
+                  </div>
+                </button>
               )}
-            >
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-rose-50 text-rose-600">
-                <BarChart3 className="h-4 w-4" />
-              </div>
-              <div className="min-w-0">
-                <div className="text-xs font-semibold truncate">Reports</div>
-                <div className="text-[10.5px] text-slate-400 truncate">Sales & Collections</div>
-              </div>
-            </button>
 
-            <button
-              onClick={() => handleNavClick('/commissions')}
-              className={cn(
-                'flex items-center gap-3 p-3 rounded-2xl border text-left transition-all',
-                location.pathname.startsWith('/commissions')
-                  ? 'border-primary bg-primary-light/50 text-primary-text font-semibold'
-                  : 'border-slate-200/80 bg-white hover:bg-slate-50 text-slate-700'
+              {canAccessRoute('/commissions') && (
+                <button
+                  onClick={() => handleNavClick('/commissions')}
+                  className={cn(
+                    'flex items-center gap-3 p-3 rounded-2xl border text-left transition-all',
+                    location.pathname.startsWith('/commissions')
+                      ? 'border-primary bg-primary-light/50 text-primary-text font-semibold'
+                      : 'border-slate-200/80 bg-white hover:bg-slate-50 text-slate-700'
+                  )}
+                >
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
+                    <Award className="h-4 w-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-xs font-semibold truncate">Targets & Incentive</div>
+                    <div className="text-[10.5px] text-slate-400 truncate">Commission Hub</div>
+                  </div>
+                </button>
               )}
-            >
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
-                <Award className="h-4 w-4" />
-              </div>
-              <div className="min-w-0">
-                <div className="text-xs font-semibold truncate">Targets & Incentive</div>
-                <div className="text-[10.5px] text-slate-400 truncate">Commission Hub</div>
-              </div>
-            </button>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Group 4: Account Actions */}
         <div className="pt-4 border-t border-slate-100 mt-4 space-y-2.5">

@@ -183,16 +183,37 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   }, [authorizedItems, activeCategory, searchQuery]);
 
   // Rail category definition (No separate favorites rail item)
-  const railItems = [
-    { id: 'all' as RailCategory, label: 'Dashboard & Quick Links', icon: LayoutGrid },
-    { id: 'sales' as RailCategory, label: 'Sales & Orders', icon: Calendar },
-    { id: 'customers' as RailCategory, label: 'Customers & CRM', icon: Users2 },
-    { id: 'inventory' as RailCategory, label: 'Inventory & Products', icon: Boxes },
-    { id: 'finance' as RailCategory, label: 'Finance & Payments', icon: CreditCard },
-    { id: 'approvals' as RailCategory, label: 'Approvals & Warranty', icon: ShieldCheck },
-    { id: 'reports' as RailCategory, label: 'Enterprise Reports', icon: BarChart3 },
-    { id: 'admin' as RailCategory, label: 'Administration', icon: Settings },
-  ];
+  const railItems = useMemo(
+    () => [
+      { id: 'all' as RailCategory, label: 'Dashboard & Quick Links', icon: LayoutGrid },
+      { id: 'sales' as RailCategory, label: 'Sales & Orders', icon: Calendar },
+      { id: 'customers' as RailCategory, label: 'Customers & CRM', icon: Users2 },
+      { id: 'inventory' as RailCategory, label: 'Inventory & Products', icon: Boxes },
+      { id: 'finance' as RailCategory, label: 'Finance & Payments', icon: CreditCard },
+      { id: 'approvals' as RailCategory, label: 'Approvals & Warranty', icon: ShieldCheck },
+      { id: 'reports' as RailCategory, label: 'Enterprise Reports', icon: BarChart3 },
+      { id: 'admin' as RailCategory, label: 'Administration', icon: Settings },
+    ],
+    []
+  );
+
+  // Role-filtered visible rail categories: hide categories with 0 authorized modules
+  const visibleRailItems = useMemo(() => {
+    return railItems.filter((item) => {
+      if (item.id === 'all') return true;
+      if (item.id === 'admin') {
+        return authorizedItems.some((ai) => ai.category === 'admin' && ai.id !== 'role-portal');
+      }
+      return authorizedItems.some((ai) => ai.category === item.id);
+    });
+  }, [railItems, authorizedItems]);
+
+  // If active category is no longer visible for this role, reset to 'all'
+  useEffect(() => {
+    if (activeCategory !== 'all' && !visibleRailItems.some((r) => r.id === activeCategory)) {
+      setActiveCategory('all');
+    }
+  }, [activeCategory, visibleRailItems]);
 
   // User initials for the top rail badge
   const userInitials = useMemo(() => {
@@ -327,7 +348,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
           {/* Top Rail Stack: Module Category Navigation Icons */}
           <div className="flex flex-col items-center w-full">
             <div className="flex flex-col items-center gap-1.5 sm:gap-2 w-full px-2">
-              {railItems.map((item) => {
+              {visibleRailItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = activeCategory === item.id;
 

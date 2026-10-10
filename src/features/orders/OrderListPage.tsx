@@ -53,7 +53,7 @@ const STATUS_FILTERS: Array<{ label: string; value: OrderStatus | 'ALL' }> = [
 export function OrderListPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { currentUser } = useAuth();
+  const { currentUser, hasPermission } = useAuth();
   const initialCustomerId = searchParams.get('customerId') || undefined;
 
   const {
@@ -144,14 +144,16 @@ export function OrderListPage() {
             Pipeline Tracking
           </Button>
 
-          <Button
-            size="sm"
-            onClick={() => navigate('/orders/new')}
-            className="bg-primary hover:bg-primary-hover text-primary-foreground gap-1.5 shadow-xs"
-          >
-            <Plus className="h-3.5 w-3.5" />
-            New Sales Order
-          </Button>
+          {hasPermission('orders:create') && (
+            <Button
+              size="sm"
+              onClick={() => navigate('/orders/new')}
+              className="bg-primary hover:bg-primary-hover text-primary-foreground gap-1.5 shadow-xs"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              New Sales Order
+            </Button>
+          )}
         </div>
       </div>
 
