@@ -31,7 +31,7 @@ import {
 } from 'lucide-react';
 
 export function AreaManagerDashboard() {
-  const { currentUser, canAccessRoute } = useAuth();
+  const { currentUser } = useAuth();
   const navigate = useNavigate();
 
   // Determine greeting based on current time
@@ -282,65 +282,45 @@ export function AreaManagerDashboard() {
           Quick Operations
         </span>
         <div className="flex items-center gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-          {canAccessRoute('/customers') && (
-            <Link
-              to="/customers"
-              className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl border border-slate-200/90 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-50 whitespace-nowrap shadow-xs transition-colors shrink-0"
-            >
-              <Users className="h-4 w-4 text-primary" />
-              <span>Customer Directory</span>
-            </Link>
-          )}
+          <Link
+            to="/customers"
+            className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl border border-slate-200/90 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-50 whitespace-nowrap shadow-xs transition-colors shrink-0"
+          >
+            <Users className="h-4 w-4 text-primary" />
+            <span>Customer Directory</span>
+          </Link>
 
-          {canAccessRoute('/orders') && (
-            <Link
-              to="/orders"
-              className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl border border-slate-200/90 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-50 whitespace-nowrap shadow-xs transition-colors shrink-0"
-            >
-              <ShoppingBag className="h-4 w-4 text-emerald-600" />
-              <span>Sales Orders</span>
-            </Link>
-          )}
+          <Link
+            to="/orders"
+            className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl border border-slate-200/90 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-50 whitespace-nowrap shadow-xs transition-colors shrink-0"
+          >
+            <ShoppingBag className="h-4 w-4 text-emerald-600" />
+            <span>Sales Orders</span>
+          </Link>
 
-          {canAccessRoute('/payments') && (
-            <Link
-              to="/payments/collect"
-              className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl border border-slate-200/90 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-50 whitespace-nowrap shadow-xs transition-colors shrink-0"
-            >
-              <DollarSign className="h-4 w-4 text-amber-600" />
-              <span>Collect Payment</span>
-            </Link>
-          )}
+          <Link
+            to="/payments/collect"
+            className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl border border-slate-200/90 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-50 whitespace-nowrap shadow-xs transition-colors shrink-0"
+          >
+            <DollarSign className="h-4 w-4 text-amber-600" />
+            <span>Collect Payment</span>
+          </Link>
 
-          {canAccessRoute('/products') && (
-            <Link
-              to="/products"
-              className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl border border-slate-200/90 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-50 whitespace-nowrap shadow-xs transition-colors shrink-0"
-            >
-              <Package className="h-4 w-4 text-cyan-600" />
-              <span>Product Master</span>
-            </Link>
-          )}
+          <Link
+            to="/inventory/stock"
+            className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl border border-slate-200/90 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-50 whitespace-nowrap shadow-xs transition-colors shrink-0"
+          >
+            <Boxes className="h-4 w-4 text-purple-600" />
+            <span>Showroom Stock</span>
+          </Link>
 
-          {canAccessRoute('/inventory') && (
-            <Link
-              to="/inventory/stock"
-              className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl border border-slate-200/90 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-50 whitespace-nowrap shadow-xs transition-colors shrink-0"
-            >
-              <Boxes className="h-4 w-4 text-purple-600" />
-              <span>Showroom Stock</span>
-            </Link>
-          )}
-
-          {canAccessRoute('/quotations') && (
-            <Link
-              to="/quotations"
-              className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl border border-slate-200/90 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-50 whitespace-nowrap shadow-xs transition-colors shrink-0"
-            >
-              <FileSpreadsheet className="h-4 w-4 text-cyan-600" />
-              <span>Quotations</span>
-            </Link>
-          )}
+          <Link
+            to="/quotations"
+            className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl border border-slate-200/90 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-50 whitespace-nowrap shadow-xs transition-colors shrink-0"
+          >
+            <FileSpreadsheet className="h-4 w-4 text-cyan-600" />
+            <span>Quotations</span>
+          </Link>
         </div>
       </div>
 

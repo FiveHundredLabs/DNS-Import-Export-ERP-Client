@@ -65,12 +65,12 @@ export function MobileNav() {
   const isMoreRouteActive =
     location.pathname.startsWith('/payments') ||
     location.pathname.startsWith('/quotations') ||
-    (canAccessRoute('/products') && location.pathname.startsWith('/products')) ||
-    (canAccessRoute('/inventory') && location.pathname.startsWith('/inventory')) ||
-    (canAccessRoute('/commissions') && location.pathname.startsWith('/commissions')) ||
-    (canAccessRoute('/reports') && location.pathname.startsWith('/reports')) ||
+    location.pathname.startsWith('/products') ||
+    location.pathname.startsWith('/inventory') ||
+    location.pathname.startsWith('/commissions') ||
+    location.pathname.startsWith('/reports') ||
     location.pathname.startsWith('/invoices') ||
-    (canAccessRoute('/approvals') && location.pathname.startsWith('/approvals'));
+    location.pathname.startsWith('/approvals');
 
   const handleNavClick = (path: string) => {
     setMoreOpen(false);
@@ -497,7 +497,7 @@ export function MobileNav() {
           </div>
         )}
 
-        {/* Group 3: Performance, Analytics & Commissions */}
+        {/* Group 3: Analytics & Approvals */}
         {(canAccessRoute('/reports') || canAccessRoute('/commissions')) && (
           <div className="space-y-2 mt-5">
             <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 px-1">

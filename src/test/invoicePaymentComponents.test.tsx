@@ -67,7 +67,7 @@ describe('Phase 7 — Invoice & Payment UI Components', () => {
     expect(screen.getByText('All Customers')).toBeInTheDocument();
 
     await waitFor(() => {
-      expect(screen.getAllByText('INV-2025-0101').length).toBeGreaterThan(0);
+      expect(screen.getByText('INV-2025-0101')).toBeInTheDocument();
     });
   });
 

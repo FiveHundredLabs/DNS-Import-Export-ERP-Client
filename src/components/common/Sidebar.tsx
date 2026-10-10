@@ -197,6 +197,22 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     { id: 'admin' as RailCategory, label: 'Administration', icon: Settings },
   ];
 
+  // Filter rail categories: 'all' is always visible (Dashboard);
+  // other parent categories are only visible if the user's role has permission to access at least 1 child item
+  const authorizedRailItems = useMemo(() => {
+    return railItems.filter((rail) => {
+      if (rail.id === 'all') return true;
+      return authorizedItems.some((item) => item.category === rail.id);
+    });
+  }, [railItems, authorizedItems]);
+
+  // Automatically reset to 'all' if the currently active category is unauthorized for this role
+  useEffect(() => {
+    if (activeCategory !== 'all' && !authorizedRailItems.some((r) => r.id === activeCategory)) {
+      setActiveCategory('all');
+    }
+  }, [activeCategory, authorizedRailItems]);
+
   // User initials for the top rail badge
   const userInitials = useMemo(() => {
     if (!currentUser?.name) return 'AS';
@@ -330,7 +346,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
           {/* Top Rail Stack: Module Category Navigation Icons */}
           <div className="flex flex-col items-center w-full">
             <div className="flex flex-col items-center gap-1.5 sm:gap-2 w-full px-2">
-              {railItems.map((item) => {
+              {authorizedRailItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = activeCategory === item.id;
 
