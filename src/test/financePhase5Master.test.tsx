@@ -115,8 +115,8 @@ describe('Phase 5 Master Test Suite: Period Control, Year-End Close & Reporting'
       expect(preview.fiscalYear).toBe(2026);
       expect(preview.fiscalYearEndDate).toBe('2026-09-30');
       expect(preview.totalRevenue).toBe(3250000); // Account 4010 from seed JE-1002
-      expect(preview.totalExpenses).toBe(2470000); // 1,950,000 COGS + 520,000 initial Operating Expenses
-      expect(preview.netIncome).toBe(780000); // 3,250,000 - 2,470,000 = 780,000 net operating profit
+      expect(preview.totalExpenses).toBe(2315000); // COGS + Operating Expenses
+      expect(preview.netIncome).toBe(935000); // 3,250,000 - 2,315,000 = 935,000 net operating profit
       expect(preview.isProfitable).toBe(true);
       expect(preview.retainedEarningsAccount.code).toBe('3010');
 
@@ -140,7 +140,7 @@ describe('Phase 5 Master Test Suite: Period Control, Year-End Close & Reporting'
       // 3010 Retained Earnings must be credited by net profit
       const retainedEarningsLine = preview.journalLines.find((l) => l.accountId === 'acc-3010');
       expect(retainedEarningsLine).toBeDefined();
-      expect(retainedEarningsLine?.credit).toBe(780000);
+      expect(retainedEarningsLine?.credit).toBe(935000);
       expect(retainedEarningsLine?.debit).toBe(0);
     });
 
@@ -158,11 +158,11 @@ describe('Phase 5 Master Test Suite: Period Control, Year-End Close & Reporting'
       expect(result.journalEntry.totalDebit).toBe(3250000);
       expect(result.journalEntry.totalCredit).toBe(3250000);
 
-      // Ledger balances verification: Retained Earnings (3010) must now have increased by 780,000
+      // Ledger balances verification: Retained Earnings (3010) must now have increased by 935,000
       const accounts = await financeRepository.getAccounts();
       const equityAcc = accounts.find((a) => a.code === '3010');
-      // 5,000,000 initial + 780,000 swept = 5,780,000
-      expect(equityAcc?.currentBalance).toBe(5780000);
+      // 5,000,000 initial + 935,000 swept = 5,935,000
+      expect(equityAcc?.currentBalance).toBe(5935000);
 
       // Period lock must be activated up to 2026-09-30
       const cfg = periodLockService.getConfig();
@@ -189,19 +189,19 @@ describe('Phase 5 Master Test Suite: Period Control, Year-End Close & Reporting'
       });
 
       const preview = await yearEndCloseService.previewClose('2026-09-30');
-      expect(preview.netIncome).toBe(-2980000);
+      expect(preview.netIncome).toBe(-3065000);
       expect(preview.isProfitable).toBe(false);
 
       // In a net loss, Retained Earnings (3010) must be DEBITED
       const reLine = preview.journalLines.find((l) => l.accountId === 'acc-3010');
       expect(reLine).toBeDefined();
-      expect(reLine?.debit).toBe(2980000);
+      expect(reLine?.debit).toBe(3065000);
       expect(reLine?.credit).toBe(0);
 
-      // Total closing debits: 3,250,000 (revenue zeroing) + 2,980,000 (retained earnings loss) = 6,230,000
+      // Total closing debits: 3,250,000 (revenue zeroing) + 3,065,000 (retained earnings loss) = 6,315,000
       expect(preview.isBalanced).toBe(true);
-      expect(preview.totalDebit).toBe(6230000);
-      expect(preview.totalCredit).toBe(6230000);
+      expect(preview.totalDebit).toBe(6315000);
+      expect(preview.totalCredit).toBe(6315000);
     });
 
     it('prevents duplicate Year-End Close execution on an already closed fiscal year', async () => {

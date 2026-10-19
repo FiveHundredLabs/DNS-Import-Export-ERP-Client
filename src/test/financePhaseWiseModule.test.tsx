@@ -345,12 +345,12 @@ describe('DNS ERP Finance Module: Complete UI/UX Specification Test Suite', () =
       expect(postJournalBtn.hasAttribute('disabled')).toBe(true);
 
       // Check templates library is visible
-      expect(screen.getByText('Templates')).toBeDefined();
-      expect(screen.getByText('Monthly Depreciation')).toBeDefined();
+      expect(screen.getByText('Templates Library')).toBeDefined();
+      const depTemplates = screen.getAllByText('Monthly Depreciation');
+      expect(depTemplates.length).toBeGreaterThan(0);
 
       // 5.2 Click "Monthly Depreciation" template: instantly populates lines
-      const depTemplate = screen.getByText('Monthly Depreciation');
-      fireEvent.click(depTemplate);
+      fireEvent.click(depTemplates[depTemplates.length - 1]);
 
       await waitFor(() => {
         expect(screen.getByDisplayValue(/Monthly straight-line depreciation/i)).toBeDefined();

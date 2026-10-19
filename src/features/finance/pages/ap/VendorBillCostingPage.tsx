@@ -67,6 +67,7 @@ export function VendorBillCostingPage() {
   const [lineItems, setLineItems] = useState<VendorBillLineItem[]>([]);
   const [freightCharges, setFreightCharges] = useState<number>(0);
   const [otherLandingCosts, setOtherLandingCosts] = useState<number>(0);
+  const [freightBilledByThirdParty, setFreightBilledByThirdParty] = useState<boolean>(false);
   const [submitting, setSubmitting] = useState(false);
 
   // Landed Cost Engine Modal State
@@ -94,10 +95,12 @@ export function VendorBillCostingPage() {
       setDueDate(existingBill.dueDate);
       setFreightCharges(existingBill.freightCharges);
       setOtherLandingCosts(existingBill.otherLandingCosts);
+      setFreightBilledByThirdParty(Boolean(existingBill.freightBilledByThirdParty));
       setLineItems(existingBill.lineItems);
     } else if (selectedGRN) {
-      setVendorInvoiceNumber('');
+      setVendorInvoiceNumber(selectedGRN.supplierInvoiceNumber || '');
       setInvoiceDate(new Date().toISOString().slice(0, 10));
+      setFreightBilledByThirdParty(false);
       const items: VendorBillLineItem[] = selectedGRN.items.map((item, idx) => {
         // Auto-pull last known historical purchase price from Supplier Master
         const histPrice = apService.getHistoricalPurchasePrice(
@@ -253,6 +256,7 @@ export function VendorBillCostingPage() {
         lineItems,
         freightCharges,
         otherLandingCosts,
+        freightBilledByThirdParty,
         applyAdvanceId: applyAdvanceEnabled ? selectedAdvanceId : undefined,
         advanceAmountToApply: applyAdvanceEnabled ? advanceAmountToApply : undefined,
       });
@@ -723,6 +727,46 @@ export function VendorBillCostingPage() {
                   />
                 </div>
               </div>
+
+              {/* FOB / 3rd-Party Logistics Freight Split Toggle */}
+              {(freightCharges > 0 || otherLandingCosts > 0) && (
+                <div className="rounded-lg border border-slate-200 bg-slate-50/80 p-3 space-y-2.5">
+                  <label className="flex items-start gap-2.5 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={freightBilledByThirdParty}
+                      onChange={(e) => setFreightBilledByThirdParty(e.target.checked)}
+                      disabled={isAuditLocked || submitting}
+                      className="mt-0.5 rounded border-slate-300 text-primary focus:ring-primary"
+                    />
+                    <div className="space-y-0.5">
+                      <span className="text-xs font-bold text-slate-800">
+                        Freight & Clearing Billed Separately by 3rd-Party Logistics (FOB Shipment)
+                      </span>
+                      <p className="text-[11px] text-slate-500">
+                        When enabled, landed cost is capitalized into Inventory (Dr 1100), but freight & clearing are credited to Accruals (Account 2015) instead of inflating the merchandise vendor's payable balance.
+                      </p>
+                    </div>
+                  </label>
+
+                  {freightBilledByThirdParty && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2 border-t border-slate-200 text-xs">
+                      <div className="p-2.5 rounded-md bg-white border border-slate-200">
+                        <span className="text-slate-500 block text-[10px] font-semibold uppercase">Payable to {selectedGRN?.supplierName || 'Merchandise Vendor'}</span>
+                        <span className="text-slate-900 font-bold font-mono text-xs">
+                          {formatCurrency(totals.subtotal + totals.vatTotal)}
+                        </span>
+                      </div>
+                      <div className="p-2.5 rounded-md bg-white border border-slate-200">
+                        <span className="text-slate-500 block text-[10px] font-semibold uppercase">Accrued to Forwarder / Clearing Agent (2015)</span>
+                        <span className="text-primary-text font-bold font-mono text-xs">
+                          {formatCurrency(freightCharges + otherLandingCosts)}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Advance Prepayments Application Banner */}

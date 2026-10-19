@@ -47,6 +47,8 @@ export function GRNCreateEditPage() {
   const { user } = useAuth();
 
   const [supplierName, setSupplierName] = useState('');
+  const [supplierInvoiceNumber, setSupplierInvoiceNumber] = useState('');
+  const [receivedDate, setReceivedDate] = useState(new Date().toISOString().slice(0, 10));
   const [warehouseId, setWarehouseId] = useState('WH-MAIN');
   const [items, setItems] = useState<LineItem[]>([]);
   const [submitting, setSubmitting] = useState(false);
@@ -79,6 +81,9 @@ export function GRNCreateEditPage() {
         unitCostSnapshot: product.pricing.costPrice,
         unitCost: product.pricing.costPrice,
         lineValue: product.pricing.costPrice,
+        barcode: product.barcode || '',
+        serialNumber: '',
+        uom: product.uomCode || 'PCS',
       },
     ]);
     setShowProductPicker(false);
@@ -92,6 +97,15 @@ export function GRNCreateEditPage() {
         const updated = { ...item, [field]: value };
         updated.lineValue = (updated.receivedQuantity - updated.damagedQuantity) * updated.unitCost;
         return updated;
+      })
+    );
+  };
+
+  const updateItemString = (tempId: string, field: 'barcode' | 'serialNumber' | 'uom', value: string) => {
+    setItems(prev =>
+      prev.map(item => {
+        if (item._tempId !== tempId) return item;
+        return { ...item, [field]: value };
       })
     );
   };
@@ -131,6 +145,9 @@ export function GRNCreateEditPage() {
         damagedQuantity: i.damagedQuantity,
         unitCostSnapshot: i.unitCost,
         lineValue: i.lineValue,
+        barcode: i.barcode?.trim() || undefined,
+        serialNumber: i.serialNumber?.trim() || undefined,
+        uom: i.uom || 'PCS',
       }));
 
       const grn = {
@@ -138,6 +155,8 @@ export function GRNCreateEditPage() {
         grnNumber: generateId(),
         supplierId: 'sup-manual',
         supplierName: supplierName.trim(),
+        supplierInvoiceNumber: supplierInvoiceNumber.trim() || undefined,
+        receivedDate,
         warehouseId,
         status: 'DRAFT' as const,
         items: grnItems,
@@ -218,6 +237,28 @@ export function GRNCreateEditPage() {
                   ))}
                 </div>
               )}
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium">
+                Supplier Invoice / Delivery Document #
+              </label>
+              <Input
+                placeholder="e.g. INV-2026-9081 / DO-4481"
+                value={supplierInvoiceNumber}
+                onChange={e => setSupplierInvoiceNumber(e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium">
+                Physical Receipt Date <span className="text-red-500">*</span>
+              </label>
+              <Input
+                type="date"
+                value={receivedDate}
+                onChange={e => setReceivedDate(e.target.value)}
+              />
             </div>
 
             <div className="space-y-1.5">
@@ -324,17 +365,20 @@ export function GRNCreateEditPage() {
                 <thead>
                   <tr className="border-b text-left text-muted-foreground text-xs uppercase tracking-wide">
                     <th className="pb-2 pr-3 font-medium">Product</th>
-                    <th className="pb-2 px-3 font-medium text-right">Expected Qty</th>
-                    <th className="pb-2 px-3 font-medium text-right">Received Qty</th>
-                    <th className="pb-2 px-3 font-medium text-right">Damaged Qty</th>
+                    <th className="pb-2 px-2 font-medium">UOM</th>
+                    <th className="pb-2 px-2 font-medium">Barcode</th>
+                    <th className="pb-2 px-2 font-medium">Serial No</th>
+                    <th className="pb-2 px-2 font-medium text-right">Expected Qty</th>
+                    <th className="pb-2 px-2 font-medium text-right">Received Qty</th>
+                    <th className="pb-2 px-2 font-medium text-right">Damaged Qty</th>
                     {!isStockKeeper && (
-                      <th className="pb-2 px-3 font-medium text-right">Unit Cost (LKR)</th>
+                      <th className="pb-2 px-2 font-medium text-right">Unit Cost (LKR)</th>
                     )}
-                    <th className="pb-2 px-3 font-medium text-right">Good Qty</th>
+                    <th className="pb-2 px-2 font-medium text-right">Good Qty</th>
                     {!isStockKeeper && (
-                      <th className="pb-2 px-3 font-medium text-right">Line Value</th>
+                      <th className="pb-2 px-2 font-medium text-right">Line Value</th>
                     )}
-                    <th className="pb-2 pl-3 font-medium" />
+                    <th className="pb-2 pl-2 font-medium" />
                   </tr>
                 </thead>
                 <tbody className="divide-y">
@@ -342,53 +386,77 @@ export function GRNCreateEditPage() {
                     const goodQty = item.receivedQuantity - item.damagedQuantity;
                     return (
                       <tr key={item._tempId}>
-                        <td className="py-2 pr-3 max-w-[180px]">
+                        <td className="py-2 pr-3 max-w-[160px]">
                           <p className="font-medium truncate">{item.productNameSnapshot}</p>
                           <p className="text-xs text-muted-foreground font-mono">{item.skuSnapshot}</p>
                         </td>
-                        <td className="py-2 px-3">
+                        <td className="py-2 px-2">
+                          <Input
+                            value={item.uom || 'PCS'}
+                            onChange={e => updateItemString(item._tempId, 'uom', e.target.value.toUpperCase())}
+                            className="w-16 h-8 text-xs font-mono"
+                            placeholder="PCS"
+                          />
+                        </td>
+                        <td className="py-2 px-2">
+                          <Input
+                            value={item.barcode || ''}
+                            onChange={e => updateItemString(item._tempId, 'barcode', e.target.value)}
+                            className="w-24 h-8 text-xs font-mono"
+                            placeholder="Barcode..."
+                          />
+                        </td>
+                        <td className="py-2 px-2">
+                          <Input
+                            value={item.serialNumber || ''}
+                            onChange={e => updateItemString(item._tempId, 'serialNumber', e.target.value)}
+                            className="w-24 h-8 text-xs font-mono"
+                            placeholder="SN-..."
+                          />
+                        </td>
+                        <td className="py-2 px-2">
                           <Input
                             type="number" min="0"
                             value={item.expectedQuantity}
                             onChange={e => updateItem(item._tempId, 'expectedQuantity', parseInt(e.target.value) || 0)}
-                            className="text-right w-24 h-8"
+                            className="text-right w-20 h-8"
                           />
                         </td>
-                        <td className="py-2 px-3">
+                        <td className="py-2 px-2">
                           <Input
                             type="number" min="0"
                             value={item.receivedQuantity}
                             onChange={e => updateItem(item._tempId, 'receivedQuantity', parseInt(e.target.value) || 0)}
-                            className="text-right w-24 h-8"
+                            className="text-right w-20 h-8 font-semibold text-slate-900"
                           />
                         </td>
-                        <td className="py-2 px-3">
+                        <td className="py-2 px-2">
                           <Input
                             type="number" min="0"
                             value={item.damagedQuantity}
                             onChange={e => updateItem(item._tempId, 'damagedQuantity', parseInt(e.target.value) || 0)}
-                            className={`text-right w-24 h-8 ${item.damagedQuantity > 0 ? 'border-orange-400 text-orange-600' : ''}`}
+                            className={`text-right w-20 h-8 ${item.damagedQuantity > 0 ? 'border-orange-400 text-orange-600' : ''}`}
                           />
                         </td>
                         {!isStockKeeper && (
-                          <td className="py-2 px-3">
+                          <td className="py-2 px-2">
                             <Input
                               type="number" min="0" step="0.01"
                               value={item.unitCost}
                               onChange={e => updateItem(item._tempId, 'unitCost', parseFloat(e.target.value) || 0)}
-                              className="text-right w-28 h-8"
+                              className="text-right w-24 h-8"
                             />
                           </td>
                         )}
-                        <td className="py-2 px-3 text-right font-medium">
+                        <td className="py-2 px-2 text-right font-medium">
                           <span className={goodQty < 0 ? 'text-red-600' : ''}>{goodQty}</span>
                         </td>
                         {!isStockKeeper && (
-                          <td className="py-2 px-3 text-right font-semibold">
+                          <td className="py-2 px-2 text-right font-semibold">
                             {formatCurrency(item.lineValue)}
                           </td>
                         )}
-                        <td className="py-2 pl-3">
+                        <td className="py-2 pl-2">
                           <Button
                             type="button"
                             variant="ghost"

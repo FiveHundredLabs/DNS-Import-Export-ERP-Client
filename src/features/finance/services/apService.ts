@@ -48,6 +48,9 @@ export interface VendorBill {
   status: 'OPEN' | 'PARTIALLY_PAID' | 'PAID' | 'POSTED' | 'VOIDED';
   journalEntryId?: string;
   appliedAdvanceId?: string;
+  freightBilledByThirdParty?: boolean;
+  vendorPayableAmount?: number;
+  accruedLandedCost?: number;
   createdAt: string;
 }
 
@@ -439,6 +442,7 @@ class AccountsPayableService {
     lineItems: VendorBillLineItem[];
     freightCharges: number;
     otherLandingCosts: number;
+    freightBilledByThirdParty?: boolean;
     applyAdvanceId?: string;
     advanceAmountToApply?: number;
   }): Promise<VendorBill> {
@@ -470,6 +474,13 @@ class AccountsPayableService {
     const vatDebit = totalVAT;
     const totalBillCredit = inventoryDebit.plus(vatDebit);
 
+    const freightBilledByThirdParty = Boolean(params.freightBilledByThirdParty);
+    const landingAccrualAmount = freight.plus(otherCosts);
+    // If freight/landing is billed by third party (FOB terms), vendor AP only owes goods + VAT
+    const vendorPayableCredit = freightBilledByThirdParty
+      ? itemsNetSubtotal.plus(vatDebit)
+      : totalBillCredit;
+
     // Look up GL Accounts
     const accounts = await financeRepository.getAccounts();
     const inventoryAcc =
@@ -484,6 +495,12 @@ class AccountsPayableService {
       accounts.find((a) => a.code === '1025') ||
       accounts.find((a) => a.name.includes('Input VAT')) ||
       accounts.find((a) => a.code === '2020');
+
+    // Landed Cost & Clearing Accruals account (2015)
+    const landedAccrualAcc =
+      accounts.find((a) => a.code === '2015') ||
+      accounts.find((a) => a.name.toLowerCase().includes('landed cost')) ||
+      apAcc;
 
     if (!inventoryAcc || !apAcc) {
       throw new Error(
@@ -511,11 +528,21 @@ class AccountsPayableService {
       {
         accountId: apAcc.id,
         debit: 0,
-        credit: totalBillCredit.toNumber(),
+        credit: vendorPayableCredit.toNumber(),
         description: `Trade Payable to ${grn.supplierName} - Inv #${params.vendorInvoiceNumber}`,
         supplierId: grn.supplierId,
         supplierName: grn.supplierName,
       },
+      ...(freightBilledByThirdParty && landingAccrualAmount.toNumber() > 0
+        ? [
+            {
+              accountId: landedAccrualAcc.id,
+              debit: 0,
+              credit: landingAccrualAmount.toNumber(),
+              description: `Accrued 3rd-Party Freight & Clearing for GRN ${grn.grnNumber}`,
+            },
+          ]
+        : []),
     ];
 
     // Post to General Ledger
@@ -546,7 +573,10 @@ class AccountsPayableService {
       subtotal: itemsNetSubtotal.toNumber(),
       vatTotal: vatDebit.toNumber(),
       totalAmount: totalBillCredit.toNumber(),
-      balanceDue: totalBillCredit.toNumber(),
+      balanceDue: vendorPayableCredit.toNumber(),
+      vendorPayableAmount: vendorPayableCredit.toNumber(),
+      accruedLandedCost: freightBilledByThirdParty ? landingAccrualAmount.toNumber() : 0,
+      freightBilledByThirdParty,
       status: 'POSTED',
       journalEntryId: journalEntry.id,
       appliedAdvanceId: params.applyAdvanceId,
