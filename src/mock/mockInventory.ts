@@ -323,6 +323,18 @@ export const MOCK_GRNS: GRN[] = [
         damagedQuantity: 0,
         unitCostSnapshot: 2200,
         lineValue: 990000,
+        serialNumbers: [
+          'SN-RHD-2025-001',
+          'SN-RHD-2025-002',
+          'SN-RHD-2025-003',
+          'SN-RHD-2025-004',
+          'SN-RHD-2025-005',
+          'SN-RHD-2025-006',
+          'SN-RHD-2025-007',
+          'SN-RHD-2025-008',
+          'SN-RHD-2025-009',
+          'SN-RHD-2025-010',
+        ],
       },
       {
         productId: 'prod-002',
@@ -333,6 +345,10 @@ export const MOCK_GRNS: GRN[] = [
         damagedQuantity: 1,
         unitCostSnapshot: 5800,
         lineValue: 1044000,
+        serialNumbers: [
+          'SN-SCH-2025-88191',
+          'SN-SCH-2025-99312',
+        ],
       },
     ],
     totalValue: 2034000,
@@ -471,4 +487,41 @@ export const MOCK_GRNS: GRN[] = [
     totalValue: 0,
     receivedById: 'usr-201',
   },
+  {
+    id: 'GRN-2025-050',
+    grnNumber: 'GRN-2025-050',
+    supplierId: 'sup-001',
+    supplierName: 'Schneider Electric Lanka (Pvt) Ltd',
+    warehouseId: 'WH-MAIN',
+    status: 'APPROVED',
+    items: Array.from({ length: 50 }, (_, i) => {
+      const idx = i + 1;
+      const ratings = ['6A', '10A', '16A', '20A', '25A', '32A', '40A', '50A', '63A', '80A'];
+      const rating = ratings[i % ratings.length];
+      const poles = (i % 3) + 1;
+      const isSerialized = i % 2 === 0;
+      const qty = 5 + (i % 15);
+      const damaged = i % 8 === 0 ? 1 : 0;
+      const unitCost = 1500 + (i * 120);
+      return {
+        productId: i === 0 ? 'prod-001' : i === 1 ? 'prod-002' : `prod-sch-${String(idx).padStart(3, '0')}`,
+        productNameSnapshot: `Schneider Acti9 iC60N ${rating} ${poles}P MCB Type C`,
+        skuSnapshot: `DNS-SCH-MCB-${poles}P-${rating}`,
+        expectedQuantity: qty,
+        receivedQuantity: qty,
+        damagedQuantity: damaged,
+        unitCostSnapshot: unitCost,
+        lineValue: (qty - damaged) * unitCost,
+        serialNumbers: isSerialized
+          ? Array.from({ length: Math.min(qty, 10) }, (_, s) => `SN-SCH-2025-${String(idx).padStart(3, '0')}${String(s + 1).padStart(2, '0')}`)
+          : undefined,
+      };
+    }),
+    totalValue: 2450000,
+    receivedById: 'usr-201',
+    submittedAt: '2025-09-01T10:00:00Z',
+    approvedById: 'usr-101',
+    approvedAt: '2025-09-02T08:30:00Z',
+  },
 ];
+

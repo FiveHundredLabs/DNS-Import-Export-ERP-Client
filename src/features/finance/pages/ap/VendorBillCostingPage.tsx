@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../../hooks/useAuth';
-import { apService, VendorBillLineItem } from '../../services/apService';
+import { apService, VendorBillLineItem, LandedExpenseItem } from '../../services/apService';
 import { CurrencyInput } from '../../components/CurrencyInput';
 import { DoubleEntryHoverBadge } from '../../components/DoubleEntryHoverBadge';
 import { Button } from '../../../../components/ui/button';
@@ -17,6 +17,10 @@ import {
   DialogFooter,
 } from '../../../../components/ui/dialog';
 import { formatCurrency, formatDate } from '../../../../utils/formatters';
+import { cn } from '../../../../utils/cn';
+import { MOCK_PRODUCTS } from '../../../../mock/mockProducts';
+import { MOCK_WARRANTY_RECORDS } from '../../../../mock/mockWarranty';
+import { GRNItem } from '../../../../types/inventory';
 import Decimal from 'decimal.js';
 import {
   Warehouse,
@@ -30,8 +34,32 @@ import {
   Landmark,
   Scale,
   Sparkles,
+  Barcode,
+  Hash,
+  ChevronDown,
+  ChevronUp,
+  ChevronRight,
+  Search,
+  Copy,
+  Check,
+  Package,
+  Layers,
+  ShieldCheck,
+  Plus,
+  Trash2,
+  Info,
 } from 'lucide-react';
 import { toast } from 'sonner';
+
+const LANDED_EXPENSE_CATEGORIES = [
+  'Shipping / Freight Charges',
+  'Port Charges & Demurrage',
+  'Local Transportation & Haulage',
+  'Handling & Offloading',
+  'Customs Clearance & Duties',
+  'Transit Insurance',
+  'Other Related Expenses',
+];
 
 export function VendorBillCostingPage() {
   const navigate = useNavigate();
@@ -65,14 +93,57 @@ export function VendorBillCostingPage() {
 
   // Financial Line Items Form Array
   const [lineItems, setLineItems] = useState<VendorBillLineItem[]>([]);
-  const [freightCharges, setFreightCharges] = useState<number>(0);
-  const [otherLandingCosts, setOtherLandingCosts] = useState<number>(0);
   const [submitting, setSubmitting] = useState(false);
 
-  // Landed Cost Engine Modal State
+  // Incremental Additional Landed Expenses (Shipping, Port Charges, Transport, Handling, etc.)
+  const [additionalExpenses, setAdditionalExpenses] = useState<LandedExpenseItem[]>([
+    { id: 'exp-1', category: 'Shipping / Freight Charges', description: 'Sea / Air freight charges', amount: 0 },
+    { id: 'exp-2', category: 'Port Charges & Demurrage', description: 'Port terminal handling & wharfage', amount: 0 },
+    { id: 'exp-3', category: 'Local Transportation & Haulage', description: 'Port to warehouse transport', amount: 0 },
+  ]);
+
+  // Apportionment Engine settings
   const [showApportionModal, setShowApportionModal] = useState(false);
   const [apportionBulkFreight, setApportionBulkFreight] = useState<number>(0);
   const [apportionMethod, setApportionMethod] = useState<'BY_VALUE' | 'BY_QUANTITY'>('BY_VALUE');
+
+  // Incremental expense addition and update helpers
+  const handleAddExpense = () => {
+    setAdditionalExpenses((prev) => [
+      ...prev,
+      {
+        id: `exp-${Date.now()}`,
+        category: 'Handling & Offloading',
+        description: '',
+        amount: 0,
+      },
+    ]);
+  };
+
+  const handleUpdateExpense = (id: string, field: keyof LandedExpenseItem, value: any) => {
+    setAdditionalExpenses((prev) =>
+      prev.map((e) => (e.id === id ? { ...e, [field]: value } : e))
+    );
+  };
+
+  const handleRemoveExpense = (id: string) => {
+    setAdditionalExpenses((prev) => {
+      const next = prev.filter((e) => e.id !== id);
+      return next.length > 0
+        ? next
+        : [{ id: `exp-${Date.now()}`, category: 'Shipping / Freight Charges', description: '', amount: 0 }];
+    });
+  };
+
+  // Total Additional Landed Costs (sum of all incremental expenses)
+  const totalAdditionalLandedCosts = useMemo(() => {
+    return additionalExpenses.reduce((sum, exp) => sum + (Number(exp.amount) || 0), 0);
+  }, [additionalExpenses]);
+
+  // Dynamically calculate Landed Cost per Unit and Total Landed Cost for every product line
+  const computedLineItems = useMemo(() => {
+    return apService.apportionLandedCosts(lineItems, totalAdditionalLandedCosts, apportionMethod);
+  }, [lineItems, totalAdditionalLandedCosts, apportionMethod]);
 
   // Advance Prepayments integration
   const unappliedAdvances = useMemo(() => {
@@ -86,15 +157,176 @@ export function VendorBillCostingPage() {
   const [selectedAdvanceId, setSelectedAdvanceId] = useState<string>('');
   const [advanceAmountToApply, setAdvanceAmountToApply] = useState<number>(0);
 
+  // Left GRN Card states for compact list, expand/collapse, search & serial numbers
+  const [isListExpanded, setIsListExpanded] = useState(false);
+  const [expandedProductIds, setExpandedProductIds] = useState<Record<string, boolean>>({});
+  const [productSearch, setProductSearch] = useState('');
+  const [activeSerialItem, setActiveSerialItem] = useState<{
+    item: GRNItem;
+    product?: any;
+    serialNumbers: string[];
+    barcode: string;
+  } | null>(null);
+  const [serialSearchQuery, setSerialSearchQuery] = useState('');
+  const [copiedSerials, setCopiedSerials] = useState(false);
+
+  // Reset left card view state when selected GRN changes
+  useEffect(() => {
+    setIsListExpanded(false);
+    setExpandedProductIds({});
+    setProductSearch('');
+    setActiveSerialItem(null);
+  }, [selectedGRNId]);
+
+  // Product master details lookup helper
+  const getProductMaster = (productId: string, sku: string) => {
+    return MOCK_PRODUCTS.find((p) => p.id === productId || p.sku === sku);
+  };
+
+  // Product-level barcode helper (1 per product type, NOT per individual unit)
+  const getProductBarcode = (item: GRNItem) => {
+    const product = getProductMaster(item.productId, item.skuSnapshot);
+    if (product?.barcode) return product.barcode;
+    const digits = item.skuSnapshot.replace(/[^0-9]/g, '');
+    return `89010${(digits + '12345678').slice(0, 8)}`;
+  };
+
+  // Real serial numbers resolution for a GRN item
+  const getItemSerialNumbers = (item: GRNItem): string[] => {
+    if (item.serialNumbers && item.serialNumbers.length > 0) {
+      return Array.from(new Set(item.serialNumbers));
+    }
+    const matching = MOCK_WARRANTY_RECORDS
+      .filter((w) => (w.productId === item.productId && w.sku === item.skuSnapshot) && Boolean(w.serialNumber))
+      .map((w) => w.serialNumber as string);
+    return Array.from(new Set(matching));
+  };
+
+  const COLLAPSED_PRODUCT_LIMIT = 3;
+
+  const totalReceivedUnits = useMemo(() => {
+    return selectedGRN?.items.reduce((s, it) => s + (it.receivedQuantity || 0), 0) || 0;
+  }, [selectedGRN]);
+
+  const totalDamagedUnits = useMemo(() => {
+    return selectedGRN?.items.reduce((s, it) => s + (it.damagedQuantity || 0), 0) || 0;
+  }, [selectedGRN]);
+
+  const filteredGRNItems = useMemo(() => {
+    if (!selectedGRN?.items) return [];
+    if (!productSearch.trim()) return selectedGRN.items;
+    const q = productSearch.toLowerCase().trim();
+    return selectedGRN.items.filter((item) => {
+      const barcode = getProductBarcode(item);
+      return (
+        item.productNameSnapshot.toLowerCase().includes(q) ||
+        item.skuSnapshot.toLowerCase().includes(q) ||
+        barcode.toLowerCase().includes(q)
+      );
+    });
+  }, [selectedGRN, productSearch]);
+
+  const displayedGRNItems = useMemo(() => {
+    if (productSearch.trim() || isListExpanded) {
+      return filteredGRNItems;
+    }
+    return filteredGRNItems.slice(0, COLLAPSED_PRODUCT_LIMIT);
+  }, [filteredGRNItems, isListExpanded, productSearch]);
+
+  const toggleProductExpand = (itemKey: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setExpandedProductIds((prev) => ({
+      ...prev,
+      [itemKey]: !prev[itemKey],
+    }));
+  };
+
+  const handleExpandAllDetails = () => {
+    if (!selectedGRN) return;
+    const all: Record<string, boolean> = {};
+    selectedGRN.items.forEach((item, idx) => {
+      all[`item-${idx}-${item.productId}`] = true;
+    });
+    setExpandedProductIds(all);
+  };
+
+  const handleCollapseAllDetails = () => {
+    setExpandedProductIds({});
+  };
+
+  const handleOpenSerials = (item: GRNItem, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    const serials = getItemSerialNumbers(item);
+    if (serials.length === 0) {
+      toast.info('No unit serial numbers recorded for this product.');
+      return;
+    }
+    const barcode = getProductBarcode(item);
+    const product = getProductMaster(item.productId, item.skuSnapshot);
+    setActiveSerialItem({
+      item,
+      product,
+      serialNumbers: serials,
+      barcode,
+    });
+    setSerialSearchQuery('');
+    setCopiedSerials(false);
+  };
+
+  const filteredSerials = useMemo(() => {
+    if (!activeSerialItem) return [];
+    if (!serialSearchQuery.trim()) return activeSerialItem.serialNumbers;
+    const q = serialSearchQuery.toLowerCase().trim();
+    return activeSerialItem.serialNumbers.filter((sn) => sn.toLowerCase().includes(q));
+  }, [activeSerialItem, serialSearchQuery]);
+
+  const handleCopySerials = () => {
+    if (!activeSerialItem) return;
+    const text = activeSerialItem.serialNumbers.join('\n');
+    navigator.clipboard.writeText(text);
+    setCopiedSerials(true);
+    toast.success(`Copied ${activeSerialItem.serialNumbers.length} serial numbers to clipboard!`);
+    setTimeout(() => setCopiedSerials(false), 2000);
+  };
+
   // Auto-initialize line items & auto-pull historical purchase price from Supplier Master
   useEffect(() => {
     if (existingBill) {
       setVendorInvoiceNumber(existingBill.vendorInvoiceNumber);
       setInvoiceDate(existingBill.invoiceDate);
       setDueDate(existingBill.dueDate);
-      setFreightCharges(existingBill.freightCharges);
-      setOtherLandingCosts(existingBill.otherLandingCosts);
       setLineItems(existingBill.lineItems);
+
+      if (existingBill.additionalExpenses && existingBill.additionalExpenses.length > 0) {
+        setAdditionalExpenses(existingBill.additionalExpenses);
+      } else {
+        const initExps: LandedExpenseItem[] = [];
+        if (existingBill.freightCharges > 0) {
+          initExps.push({
+            id: 'exp-freight',
+            category: 'Shipping / Freight Charges',
+            description: 'Ocean / Air freight charges',
+            amount: existingBill.freightCharges,
+          });
+        }
+        if (existingBill.otherLandingCosts > 0) {
+          initExps.push({
+            id: 'exp-other',
+            category: 'Port Charges & Demurrage',
+            description: 'Port authority & handling charges',
+            amount: existingBill.otherLandingCosts,
+          });
+        }
+        if (initExps.length === 0) {
+          initExps.push({
+            id: 'exp-1',
+            category: 'Shipping / Freight Charges',
+            description: 'Freight & forwarding charges',
+            amount: 0,
+          });
+        }
+        setAdditionalExpenses(initExps);
+      }
     } else if (selectedGRN) {
       setVendorInvoiceNumber('');
       setInvoiceDate(new Date().toISOString().slice(0, 10));
@@ -124,13 +356,18 @@ export function VendorBillCostingPage() {
           vatAmount: vat,
           lineTotal: net.plus(vat).toNumber(),
           apportionedFreight: 0,
+          allocatedLandedCost: 0,
           landedUnitCost: actualCost,
+          totalLandedCost: net.toNumber(),
         };
       });
       setLineItems(items);
-      setFreightCharges(0);
-      setOtherLandingCosts(0);
       setApportionBulkFreight(0);
+      setAdditionalExpenses([
+        { id: `exp-1`, category: 'Shipping / Freight Charges', description: 'Sea / Air freight charges', amount: 0 },
+        { id: `exp-2`, category: 'Port Charges & Demurrage', description: 'Port terminal handling & wharfage', amount: 0 },
+        { id: `exp-3`, category: 'Local Transportation & Haulage', description: 'Port to warehouse transport', amount: 0 },
+      ]);
     }
   }, [selectedGRN, existingBill]);
 
@@ -183,12 +420,17 @@ export function VendorBillCostingPage() {
     }
   };
 
-  // Calculations for summary totals
-  const { subtotal, vatTotal, grandTotal } = useMemo(() => {
+  // Calculations for summary totals with recommended terminology:
+  // - Supplier Goods Subtotal: payable to supplier for goods
+  // - Additional Landed Costs: shipping, port charges, transportation, handling
+  // - Total Landed Cost: total actual cost of the received inventory (capitalized to inventory)
+  // - 1025 Input VAT Receivable (Asset)
+  // - Total Accounts Payable Commitment
+  const { subtotal, totalLandedCost, vatTotal, grandTotal } = useMemo(() => {
     let sub = new Decimal(0);
     let vat = new Decimal(0);
 
-    for (const item of lineItems) {
+    for (const item of computedLineItems) {
       const net = Decimal.max(
         0,
         new Decimal(item.receivedQuantity).times(new Decimal(item.unitCost)).minus(item.lineDiscount || 0)
@@ -197,32 +439,38 @@ export function VendorBillCostingPage() {
       vat = vat.plus(item.vatAmount || 0);
     }
 
-    const landed = sub.plus(freightCharges || 0).plus(otherLandingCosts || 0);
+    const landed = sub.plus(totalAdditionalLandedCosts || 0);
     const grand = landed.plus(vat);
 
     return {
       subtotal: sub.toNumber(),
+      totalLandedCost: landed.toNumber(),
       vatTotal: vat.toNumber(),
       grandTotal: grand.toNumber(),
     };
-  }, [lineItems, freightCharges, otherLandingCosts]);
+  }, [computedLineItems, totalAdditionalLandedCosts]);
 
   // Landed Cost Apportionment Engine
   const previewApportionment = useMemo(() => {
-    return apService.apportionFreight(lineItems, apportionBulkFreight, apportionMethod);
-  }, [lineItems, apportionBulkFreight, apportionMethod]);
+    return apService.apportionLandedCosts(lineItems, apportionBulkFreight || totalAdditionalLandedCosts, apportionMethod);
+  }, [lineItems, apportionBulkFreight, totalAdditionalLandedCosts, apportionMethod]);
 
   const handleApplyApportionment = () => {
     if (apportionBulkFreight < 0) {
-      toast.error('Bulk freight amount cannot be negative');
+      toast.error('Bulk expenses amount cannot be negative');
       return;
     }
-    const apportionedItems = apService.apportionFreight(lineItems, apportionBulkFreight, apportionMethod);
-    setLineItems(apportionedItems);
-    setFreightCharges(apportionBulkFreight);
+    setAdditionalExpenses((prev) => {
+      if (prev.length === 1) {
+        return [{ ...prev[0], amount: apportionBulkFreight }];
+      }
+      return [
+        { id: `exp-apportioned`, category: 'Shipping / Freight Charges', description: 'Allocated bulk landed expenses', amount: apportionBulkFreight },
+      ];
+    });
     setShowApportionModal(false);
     toast.success(
-      `Freight of ${formatCurrency(apportionBulkFreight)} successfully apportioned across ${lineItems.length} line items by ${
+      `Additional expenses of ${formatCurrency(apportionBulkFreight)} successfully apportioned across ${lineItems.length} line items by ${
         apportionMethod === 'BY_VALUE' ? 'Net Line Value' : 'Received Quantity'
       }. True landed unit costs calculated.`
     );
@@ -245,14 +493,21 @@ export function VendorBillCostingPage() {
 
     try {
       setSubmitting(true);
+      const freightItem = additionalExpenses.find(
+        (e) => e.category.toLowerCase().includes('freight') || e.category.toLowerCase().includes('shipping')
+      );
+      const freightAmount = freightItem ? Number(freightItem.amount) || 0 : 0;
+      const otherCostsAmount = Math.max(0, totalAdditionalLandedCosts - freightAmount);
+
       const bill = await apService.postVendorBill({
         grnId: selectedGRN.id,
         vendorInvoiceNumber: vendorInvoiceNumber.trim(),
         invoiceDate,
         dueDate,
-        lineItems,
-        freightCharges,
-        otherLandingCosts,
+        lineItems: computedLineItems,
+        freightCharges: freightAmount,
+        otherLandingCosts: otherCostsAmount,
+        additionalExpenses,
         applyAdvanceId: applyAdvanceEnabled ? selectedAdvanceId : undefined,
         advanceAmountToApply: applyAdvanceEnabled ? advanceAmountToApply : undefined,
       });
@@ -330,6 +585,7 @@ export function VendorBillCostingPage() {
             </label>
             <Select
               value={selectedGRNId}
+              onValueChange={(val) => setSelectedGRNId(val)}
               onChange={(e) => setSelectedGRNId(e.target.value)}
               className="text-xs h-9 min-w-56"
             >
@@ -347,86 +603,408 @@ export function VendorBillCostingPage() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* Left Pane (Read-Only Warehouse Data) */}
         <div className="lg:col-span-5 space-y-4">
-          <Card className="p-4 border-slate-200 bg-slate-50/70 shadow-xs">
-            <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+          <Card className="p-3.5 border-slate-200 bg-slate-50/80 shadow-xs">
+            <div className="flex items-center justify-between border-b border-slate-200 pb-2.5">
               <div className="flex items-center gap-2 text-slate-800 font-bold text-sm">
-                <Warehouse className="h-4 w-4 text-primary" />
+                <Warehouse className="h-4 w-4 text-primary shrink-0" />
                 <span>Warehouse Goods Receipt (Read-Only)</span>
               </div>
-              <Badge variant="outline" className="text-xs font-semibold bg-white">
+              <Badge
+                variant="outline"
+                className={cn(
+                  "text-xs font-semibold px-2 py-0.5 bg-white",
+                  selectedGRN?.status === 'APPROVED' && "border-emerald-300 text-emerald-800 bg-emerald-50/60",
+                  selectedGRN?.status === 'COSTED' && "border-amber-300 text-amber-800 bg-amber-50/60",
+                  selectedGRN?.status === 'SUBMITTED' && "border-blue-300 text-blue-800 bg-blue-50/60"
+                )}
+              >
                 {selectedGRN?.status || 'SUBMITTED'}
               </Badge>
             </div>
 
             {selectedGRN ? (
-              <div className="mt-4 space-y-3 text-xs">
-                <div>
-                  <span className="text-slate-400 block text-[11px] font-semibold uppercase">
-                    Supplier Name
-                  </span>
-                  <span className="font-bold text-slate-800 text-sm">
-                    {selectedGRN.supplierName}
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-2 gap-2 pt-1 border-t border-slate-200/60">
+              <div className="mt-3 space-y-2.5 text-xs">
+                {/* Supplier & Warehouse Metadata */}
+                <div className="bg-white rounded-lg p-2.5 border border-slate-200/80 shadow-2xs space-y-2">
                   <div>
-                    <span className="text-slate-400 block text-[11px] font-semibold uppercase">
-                      GRN Reference
+                    <span className="text-slate-400 block text-[10px] font-semibold uppercase tracking-wider">
+                      Supplier Name
                     </span>
-                    <span className="font-mono font-semibold text-slate-700">
-                      {selectedGRN.grnNumber}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-slate-400 block text-[11px] font-semibold uppercase">
-                      Received Warehouse
-                    </span>
-                    <span className="font-semibold text-slate-700">
-                      {selectedGRN.warehouseId}
+                    <span className="font-bold text-slate-900 text-xs sm:text-sm">
+                      {selectedGRN.supplierName}
                     </span>
                   </div>
-                </div>
 
-                {selectedGRN.submittedAt && (
-                  <div className="pt-1 border-t border-slate-200/60">
-                    <span className="text-slate-400 block text-[11px] font-semibold uppercase">
-                      Received Date
-                    </span>
-                    <span className="text-slate-700">
-                      {formatDate(selectedGRN.submittedAt)}
-                    </span>
-                  </div>
-                )}
-
-                {/* Warehouse Physical Line Items */}
-                <div className="pt-3 border-t border-slate-200">
-                  <span className="text-slate-600 font-bold block mb-2">
-                    Verified Physical Inbound Quantities:
-                  </span>
-                  <div className="space-y-2">
-                    {selectedGRN.items.map((item, idx) => (
-                      <div
-                        key={idx}
-                        className="rounded-lg border border-slate-200/80 bg-white p-3 space-y-1 shadow-2xs"
-                      >
-                        <div className="flex items-start justify-between">
-                          <span className="font-semibold text-slate-800">{item.productNameSnapshot}</span>
-                          <span className="font-mono text-xs font-bold text-primary tabular-nums">
-                            {item.receivedQuantity} units
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between text-[11px] text-slate-500 font-mono">
-                          <span>SKU: {item.skuSnapshot}</span>
-                          {item.damagedQuantity > 0 && (
-                            <span className="text-rose-600 font-semibold">
-                              Damaged: {item.damagedQuantity}
-                            </span>
-                          )}
-                        </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-2 border-t border-slate-100 text-[11px]">
+                    <div>
+                      <span className="text-slate-400 block text-[10px] font-semibold uppercase">
+                        GRN Reference
+                      </span>
+                      <span className="font-mono font-semibold text-slate-700">
+                        {selectedGRN.grnNumber}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 block text-[10px] font-semibold uppercase">
+                        Received Warehouse
+                      </span>
+                      <span className="font-semibold text-slate-700">
+                        {selectedGRN.warehouseId}
+                      </span>
+                    </div>
+                    {selectedGRN.submittedAt && (
+                      <div className="col-span-2 sm:col-span-1">
+                        <span className="text-slate-400 block text-[10px] font-semibold uppercase">
+                          Received Date
+                        </span>
+                        <span className="text-slate-700">
+                          {formatDate(selectedGRN.submittedAt)}
+                        </span>
                       </div>
-                    ))}
+                    )}
                   </div>
+                </div>
+
+                {/* Summary Metrics Strip */}
+                <div className="grid grid-cols-3 gap-2 text-center">
+                  <div className="rounded-md bg-white border border-slate-200 p-1.5 shadow-2xs">
+                    <span className="text-[10px] font-semibold text-slate-400 uppercase block">Product Lines</span>
+                    <span className="font-mono font-bold text-slate-800 text-xs">{selectedGRN.items.length}</span>
+                  </div>
+                  <div className="rounded-md bg-white border border-slate-200 p-1.5 shadow-2xs">
+                    <span className="text-[10px] font-semibold text-slate-400 uppercase block">Received Units</span>
+                    <span className="font-mono font-bold text-primary text-xs">{totalReceivedUnits}</span>
+                  </div>
+                  <div className={cn(
+                    "rounded-md border p-1.5 shadow-2xs",
+                    totalDamagedUnits > 0
+                      ? "bg-rose-50 border-rose-200 text-rose-800"
+                      : "bg-white border-slate-200 text-slate-800"
+                  )}>
+                    <span className="text-[10px] font-semibold uppercase block opacity-75">Damaged Units</span>
+                    <span className="font-mono font-bold text-xs">{totalDamagedUnits}</span>
+                  </div>
+                </div>
+
+                {/* Physical Product Items Section */}
+                <div className="pt-2 border-t border-slate-200 space-y-2">
+                  <div className="flex items-center justify-between gap-1">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-slate-700 font-bold text-xs">
+                        Verified Physical Inbound Quantities:
+                      </span>
+                      <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-mono text-slate-600 bg-white">
+                        {selectedGRN.items.length}
+                      </Badge>
+                    </div>
+
+                    <div className="flex items-center gap-1">
+                      {selectedGRN.items.length > 1 && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            const isAnyExpanded = Object.values(expandedProductIds).some(Boolean);
+                            if (isAnyExpanded) {
+                              handleCollapseAllDetails();
+                            } else {
+                              handleExpandAllDetails();
+                            }
+                          }}
+                          className="h-6 text-[10px] px-1.5 text-slate-500 hover:text-slate-800"
+                          title="Toggle all product details & barcodes"
+                        >
+                          <Layers className="h-3 w-3 mr-1" />
+                          <span>{Object.values(expandedProductIds).some(Boolean) ? 'Collapse All' : 'Expand All'}</span>
+                        </Button>
+                      )}
+
+                      {selectedGRN.items.length > COLLAPSED_PRODUCT_LIMIT && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setIsListExpanded(!isListExpanded)}
+                          className="h-6 text-[10px] px-2 font-semibold text-primary border-primary/30 hover:bg-primary-light"
+                        >
+                          {isListExpanded ? (
+                            <>
+                              <ChevronUp className="h-3 w-3 mr-1" />
+                              <span>Collapse</span>
+                            </>
+                          ) : (
+                            <>
+                              <ChevronDown className="h-3 w-3 mr-1" />
+                              <span>View All ({selectedGRN.items.length})</span>
+                            </>
+                          )}
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Search filter for large product lists */}
+                  {(selectedGRN.items.length > COLLAPSED_PRODUCT_LIMIT || isListExpanded) && (
+                    <div className="relative">
+                      <Search className="absolute left-2.5 top-2 h-3.5 w-3.5 text-slate-400" />
+                      <Input
+                        placeholder={`Search ${selectedGRN.items.length} products by name, SKU, or barcode...`}
+                        value={productSearch}
+                        onChange={(e) => setProductSearch(e.target.value)}
+                        className="h-7 pl-8 text-xs bg-white border-slate-200"
+                      />
+                      {productSearch && (
+                        <button
+                          type="button"
+                          onClick={() => setProductSearch('')}
+                          className="absolute right-2 top-1.5 text-slate-400 hover:text-slate-600 text-xs px-1"
+                        >
+                          ×
+                        </button>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Product Cards Container */}
+                  <div className="space-y-1.5 max-h-[460px] overflow-y-auto pr-1">
+                    {displayedGRNItems.length > 0 ? (
+                      displayedGRNItems.map((item, idx) => {
+                        const itemKey = `item-${idx}-${item.productId}`;
+                        const isExpanded = Boolean(expandedProductIds[itemKey]);
+                        const product = getProductMaster(item.productId, item.skuSnapshot);
+                        const barcode = getProductBarcode(item);
+                        const serials = getItemSerialNumbers(item);
+                        const costedItem = computedLineItems.find(
+                          (ci) => ci.productId === item.productId || ci.sku === item.skuSnapshot
+                        );
+
+                        return (
+                          <div
+                            key={itemKey}
+                            className={cn(
+                              "rounded-lg border bg-white p-2.5 text-xs transition-all shadow-2xs",
+                              isExpanded
+                                ? "border-primary/40 ring-1 ring-primary/20 bg-slate-50/30"
+                                : "border-slate-200/90 hover:border-slate-300"
+                            )}
+                          >
+                            {/* Primary Compact Row */}
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex items-start gap-1.5 min-w-0">
+                                <button
+                                  type="button"
+                                  onClick={(e) => toggleProductExpand(itemKey, e)}
+                                  className="text-slate-400 hover:text-primary transition-colors p-0.5 rounded -ml-1 mt-0.5 shrink-0"
+                                  title={isExpanded ? "Collapse product details" : "Expand product details & barcode"}
+                                  aria-label={isExpanded ? "Collapse product details" : "Expand product details & barcode"}
+                                >
+                                  <ChevronRight
+                                    className={cn(
+                                      "h-3.5 w-3.5 transition-transform duration-150",
+                                      isExpanded && "rotate-90 text-primary"
+                                    )}
+                                  />
+                                </button>
+                                <div className="min-w-0">
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="font-semibold text-slate-800 truncate" title={item.productNameSnapshot}>
+                                      {item.productNameSnapshot}
+                                    </span>
+                                  </div>
+                                  <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] font-mono mt-0.5">
+                                    <span>SKU: {item.skuSnapshot}</span>
+                                    <span className="text-slate-300">•</span>
+                                    <span className="text-slate-500">
+                                      Supplier: <span className="font-semibold text-slate-700">{formatCurrency(costedItem?.unitCost || item.unitCostSnapshot || 0)}</span>
+                                    </span>
+                                    <span className="text-slate-300">•</span>
+                                    <span className="text-primary font-semibold">
+                                      Landed: <span>{formatCurrency(costedItem?.landedUnitCost || item.unitCostSnapshot || 0)}</span>
+                                      <span className="text-[10px] text-slate-400 font-sans ml-0.5">/unit</span>
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div className="text-right shrink-0">
+                                <div className="font-mono text-xs font-bold text-primary tabular-nums">
+                                  {item.receivedQuantity} units
+                                </div>
+                                {item.damagedQuantity > 0 && (
+                                  <span className="inline-block text-[10px] font-semibold text-rose-600 bg-rose-50 border border-rose-200 rounded px-1.5 py-0.2 mt-0.5">
+                                    Damaged: {item.damagedQuantity}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Serial Number & Barcode Action Line */}
+                            <div className="flex items-center justify-between text-[11px] pt-1.5 mt-1.5 border-t border-slate-100">
+                              <button
+                                type="button"
+                                onClick={(e) => toggleProductExpand(itemKey, e)}
+                                className="flex items-center gap-1 text-[11px] text-slate-500 hover:text-primary font-medium"
+                              >
+                                <Barcode className="h-3 w-3 text-slate-400" />
+                                <span>{isExpanded ? 'Hide Barcode & Details' : 'Show Barcode & Details'}</span>
+                              </button>
+
+                              <div>
+                                {serials.length > 0 ? (
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={(e) => handleOpenSerials(item, e)}
+                                    className="h-6 text-[10px] px-2 gap-1 text-primary hover:bg-primary-light border-primary/30 font-medium"
+                                    title={`View ${serials.length} unit serial numbers`}
+                                  >
+                                    <Hash className="h-3 w-3 text-primary" />
+                                    <span>View Serial Numbers ({serials.length})</span>
+                                  </Button>
+                                ) : (
+                                  <span className="text-[10px] text-slate-400 italic">
+                                    No unit serials
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Expandable Product Details Section */}
+                            {isExpanded && (
+                              <div className="mt-2 pt-2 border-t border-dashed border-slate-200 space-y-2 bg-slate-50/70 -mx-1 -mb-1 p-2 rounded-b-md">
+                                {/* Product-Level Barcode */}
+                                <div className="flex items-center justify-between bg-white border border-slate-200 rounded p-1.5 shadow-2xs">
+                                  <div className="flex items-center gap-1.5 text-slate-700">
+                                    <Barcode className="h-3.5 w-3.5 text-slate-900" />
+                                    <span className="font-semibold text-[11px]">Product Barcode:</span>
+                                  </div>
+                                  <div className="text-right">
+                                    <span className="font-mono font-bold text-xs text-slate-900 bg-slate-50 border border-slate-300 rounded px-2 py-0.5 tracking-wider">
+                                      {barcode}
+                                    </span>
+                                  </div>
+                                </div>
+                                <div className="text-[10px] text-slate-500 text-right pr-0.5">
+                                  Product-level barcode (one barcode per product type, not per unit)
+                                </div>
+
+                                {/* Product Specifications & Inventory Details */}
+                                <div className="grid grid-cols-2 gap-2 text-[11px] bg-white border border-slate-200 rounded p-2 text-slate-600">
+                                  <div>
+                                    <span className="text-slate-400 block text-[10px] uppercase font-semibold">Category</span>
+                                    <span className="font-medium text-slate-800">{product?.categoryName || 'Electrical Switchgear'}</span>
+                                  </div>
+                                  <div>
+                                    <span className="text-slate-400 block text-[10px] uppercase font-semibold">UOM</span>
+                                    <span className="font-medium text-slate-800">{product?.uomCode || 'PCS'}</span>
+                                  </div>
+                                  <div>
+                                    <span className="text-slate-400 block text-[10px] uppercase font-semibold">Expected Inbound</span>
+                                    <span className="font-mono font-medium text-slate-700">{item.expectedQuantity} units</span>
+                                  </div>
+                                  <div>
+                                    <span className="text-slate-400 block text-[10px] uppercase font-semibold">Unit Cost Snapshot</span>
+                                    <span className="font-mono font-medium text-slate-700">{formatCurrency(item.unitCostSnapshot)}</span>
+                                  </div>
+                                </div>
+
+                                {/* True Landed Inventory Costing Comparison Strip */}
+                                <div className="bg-emerald-50/70 border border-emerald-200/80 rounded p-2 text-xs space-y-1.5">
+                                  <div className="flex items-center justify-between pb-1 border-b border-emerald-200/60">
+                                    <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-900 flex items-center gap-1 font-sans">
+                                      <Sparkles className="h-3 w-3 text-emerald-600" />
+                                      <span>True Landed Inventory Costing</span>
+                                    </span>
+                                    <span className="text-[10px] font-mono font-semibold text-emerald-800">
+                                      {item.receivedQuantity} received units
+                                    </span>
+                                  </div>
+                                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px] font-mono">
+                                    <div>
+                                      <span className="text-slate-500 block text-[10px] font-sans">Supplier Unit Cost</span>
+                                      <span className="font-bold text-slate-800">{formatCurrency(costedItem?.unitCost || item.unitCostSnapshot || 0)}</span>
+                                    </div>
+                                    <div>
+                                      <span className="text-slate-500 block text-[10px] font-sans">Allocated Landed</span>
+                                      <span className="font-semibold text-slate-700">+{formatCurrency((costedItem?.allocatedLandedCost || 0) / (item.receivedQuantity || 1))}/unit</span>
+                                    </div>
+                                    <div>
+                                      <span className="text-emerald-800 block text-[10px] font-sans font-semibold">Landed Cost / Unit</span>
+                                      <span className="font-bold text-emerald-700 text-xs">{formatCurrency(costedItem?.landedUnitCost || item.unitCostSnapshot || 0)}</span>
+                                    </div>
+                                    <div>
+                                      <span className="text-slate-500 block text-[10px] font-sans">Total Landed Cost</span>
+                                      <span className="font-bold text-slate-900">{formatCurrency(costedItem?.totalLandedCost || (costedItem ? costedItem.landedUnitCost * item.receivedQuantity : item.lineValue || 0))}</span>
+                                    </div>
+                                  </div>
+                                </div>
+
+                                {/* Serial Numbers Status in Expanded View */}
+                                {serials.length > 0 && (
+                                  <div className="flex items-center justify-between bg-primary-light/40 border border-primary-border/60 rounded p-2">
+                                    <div className="flex items-center gap-1.5 text-primary-text text-[11px] font-medium">
+                                      <ShieldCheck className="h-3.5 w-3.5 text-primary" />
+                                      <span>{serials.length} unit serial numbers verified</span>
+                                    </div>
+                                    <Button
+                                      type="button"
+                                      size="sm"
+                                      onClick={(e) => handleOpenSerials(item, e)}
+                                      className="h-6 text-[10px] px-2 bg-primary hover:bg-primary-hover text-white gap-1"
+                                    >
+                                      <Hash className="h-2.5 w-2.5" />
+                                      <span>Inspect Serials</span>
+                                    </Button>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })
+                    ) : (
+                      <div className="py-6 text-center text-xs text-slate-400 bg-white rounded-lg border border-slate-200">
+                        No products match "{productSearch}"
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Collapsed State Banner & Action Button */}
+                  {!isListExpanded && !productSearch && selectedGRN.items.length > COLLAPSED_PRODUCT_LIMIT && (
+                    <div className="rounded-lg border border-dashed border-primary/30 bg-primary-light/20 p-2 text-center space-y-1.5">
+                      <div className="text-[11px] text-slate-600 font-medium">
+                        Showing {COLLAPSED_PRODUCT_LIMIT} of {selectedGRN.items.length} products in this GRN
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setIsListExpanded(true)}
+                        className="w-full text-xs font-semibold gap-1.5 border-primary/30 text-primary hover:bg-primary-light bg-white shadow-2xs"
+                      >
+                        <Package className="h-3.5 w-3.5" />
+                        <span>Expand / View All Products ({selectedGRN.items.length})</span>
+                      </Button>
+                    </div>
+                  )}
+
+                  {/* Expanded State Collapse Button */}
+                  {isListExpanded && !productSearch && selectedGRN.items.length > COLLAPSED_PRODUCT_LIMIT && (
+                    <div className="pt-1 text-center">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setIsListExpanded(false)}
+                        className="w-full text-xs text-slate-500 hover:text-slate-800 gap-1.5"
+                      >
+                        <ChevronUp className="h-3.5 w-3.5" />
+                        <span>Collapse Products Summary</span>
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </div>
             ) : (
@@ -530,7 +1108,7 @@ export function VendorBillCostingPage() {
               </div>
 
               <div className="space-y-3">
-                {lineItems.map((item, index) => {
+                {computedLineItems.map((item, index) => {
                   const hist = item.historicalPurchasePrice || 0;
                   const priceDiff = item.unitCost - hist;
                   const hasVariance = hist > 0 && Math.abs(priceDiff) > 0.01;
@@ -601,7 +1179,8 @@ export function VendorBillCostingPage() {
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                         <div>
                           <label className="block text-[11px] font-semibold text-slate-600 mb-1">
-                            Base Unit Cost <span className="text-rose-500">*</span>
+                            Supplier Unit Cost <span className="text-rose-500">*</span>
+                            <span className="text-[10px] text-slate-400 font-normal ml-1">(Payable to supplier)</span>
                           </label>
                           <CurrencyInput
                             value={item.unitCost}
@@ -643,85 +1222,219 @@ export function VendorBillCostingPage() {
                         </div>
                       </div>
 
-                      {/* Landed Cost Breakdown Display if freight is apportioned */}
-                      {(item.apportionedFreight || 0) > 0 && (
-                        <div className="pt-2 border-t border-slate-200/70 flex items-center justify-between text-xs bg-slate-100/60 rounded px-2.5 py-1.5 font-mono">
-                          <span className="text-slate-600 text-[11px]">
-                            Apportioned Freight: +{formatCurrency(item.apportionedFreight || 0)} (+{formatCurrency((item.apportionedFreight || 0) / (item.receivedQuantity || 1))}/unit)
-                          </span>
-                          <div className="flex items-center gap-1.5">
-                            <span className="font-semibold text-slate-700 text-[11px]">True Landed Unit Cost:</span>
-                            <span className="font-bold text-primary text-xs">
-                              {formatCurrency(item.landedUnitCost || item.unitCost)}
+                      {/* True Landed Cost Breakdown Display - automatically recalculated */}
+                      <div className="pt-2 border-t border-slate-200/70 rounded-md bg-white border border-slate-200/90 p-2.5 space-y-1.5 font-mono text-xs shadow-2xs">
+                        <div className="flex flex-wrap items-center justify-between gap-3">
+                          <div>
+                            <span className="text-slate-400 text-[10px] font-sans block uppercase font-medium">Supplier Unit Cost</span>
+                            <span className="font-bold text-slate-800 text-xs">{formatCurrency(item.unitCost)}</span>
+                            <span className="text-[10px] text-slate-400 font-sans block">payable to supplier</span>
+                          </div>
+
+                          <div>
+                            <span className="text-slate-400 text-[10px] font-sans block uppercase font-medium">Allocated Landed Costs</span>
+                            <span className="font-semibold text-slate-700 text-xs">
+                              {totalAdditionalLandedCosts > 0 ? (
+                                <>
+                                  +{formatCurrency(item.allocatedLandedCost || 0)}
+                                  <span className="text-[10px] text-slate-500 font-sans ml-1">
+                                    (+{formatCurrency((item.allocatedLandedCost || 0) / (item.receivedQuantity || 1))}/unit)
+                                  </span>
+                                </>
+                              ) : (
+                                <span className="text-slate-400 italic font-sans text-[11px]">No expenses allocated</span>
+                              )}
                             </span>
+                            <span className="text-[10px] text-slate-400 font-sans block">share of additional expenses</span>
+                          </div>
+
+                          <div className="bg-primary/5 border border-primary/20 rounded-md px-3 py-1.5">
+                            <span className="text-primary text-[10px] font-sans font-bold uppercase tracking-wider block">
+                              Landed Cost per Unit
+                            </span>
+                            <div className="flex items-baseline gap-1">
+                              <span className="font-bold text-primary text-sm">
+                                {formatCurrency(item.landedUnitCost || item.unitCost)}
+                              </span>
+                              <span className="text-[10px] text-primary/70 font-sans">/ unit</span>
+                            </div>
+                            <span className="text-[9px] text-slate-400 font-sans block">actual capitalized unit cost</span>
+                          </div>
+
+                          <div className="text-right">
+                            <span className="text-slate-400 text-[10px] font-sans block uppercase font-medium">Total Landed Cost</span>
+                            <span className="font-bold text-slate-900 text-xs">
+                              {formatCurrency(item.totalLandedCost || item.lineTotal)}
+                            </span>
+                            <span className="text-[10px] text-slate-400 font-sans block">supplier + allocated expenses</span>
                           </div>
                         </div>
-                      )}
+                      </div>
                     </div>
                   );
                 })}
               </div>
             </div>
 
-            {/* Landed Cost Engine: Apportion Freight Tool & Additional Landing Costs */}
+            {/* Incremental Additional Landed Costs Section */}
             <div className="rounded-lg border border-slate-200 bg-slate-50/70 p-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-700 block">
-                  Additional Landed Charges (Landed Cost Engine - Capitalized to Inventory)
-                </span>
-                {!isAuditLocked && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setApportionBulkFreight(freightCharges || 0);
-                      setShowApportionModal(true);
-                    }}
-                    className="h-7 text-xs gap-1.5 bg-primary-light text-primary-text border-primary-border hover:bg-primary-light/80 font-semibold"
-                  >
-                    <Calculator className="h-3.5 w-3.5" />
-                    <span>Apportion Freight Tool</span>
-                  </Button>
-                )}
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200 pb-2.5">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Freight Charges (LKR)
-                  </label>
-                  <CurrencyInput
-                    value={freightCharges}
-                    onChange={(val) => {
-                      setFreightCharges(val);
-                      // Auto distribute if freight is directly edited
-                      if (val > 0) {
-                        const apportioned = apService.apportionFreight(lineItems, val, apportionMethod);
-                        setLineItems(apportioned);
-                      }
-                    }}
-                    placeholder="0.00"
-                    disabled={isAuditLocked || submitting}
-                    readOnly={isAuditLocked}
-                  />
-                  <span className="text-[10px] text-slate-400 mt-1 block">
-                    Use Apportion Freight tool above to distribute across line items
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-800 block">
+                    Additional Landed Costs (Additional Landed Charges - Capitalized to Inventory)
+                  </span>
+                  <span className="text-[11px] text-slate-500">
+                    Shipping, port charges, transportation, handling, and other related expenses.
                   </span>
                 </div>
 
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Other Landing Costs (Customs / Handling)
-                  </label>
-                  <CurrencyInput
-                    value={otherLandingCosts}
-                    onChange={(val) => setOtherLandingCosts(val)}
-                    placeholder="0.00"
-                    disabled={isAuditLocked || submitting}
-                    readOnly={isAuditLocked}
-                  />
+                <div className="flex items-center gap-2 self-start sm:self-auto">
+                  <Badge variant="outline" className="bg-white text-primary border-primary/30 font-mono text-xs px-2.5 py-1">
+                    Total Additional: {formatCurrency(totalAdditionalLandedCosts)}
+                  </Badge>
+                  {!isAuditLocked && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setApportionBulkFreight(totalAdditionalLandedCosts);
+                        setShowApportionModal(true);
+                      }}
+                      className="h-7 text-xs gap-1.5 bg-primary-light text-primary-text border-primary-border hover:bg-primary-light/80 font-semibold"
+                    >
+                      <Calculator className="h-3.5 w-3.5" />
+                      <span>Apportion Freight Tool</span>
+                    </Button>
+                  )}
                 </div>
+              </div>
+
+              {/* Allocation Method Selector Bar */}
+              <div className="flex flex-wrap items-center justify-between gap-3 bg-white border border-slate-200 rounded-md p-2.5">
+                <div className="flex items-center gap-2">
+                  <Scale className="h-3.5 w-3.5 text-slate-500" />
+                  <span className="text-xs font-semibold text-slate-700">Allocation Method:</span>
+                  <div className="inline-flex rounded-md shadow-2xs">
+                    <button
+                      type="button"
+                      onClick={() => !isAuditLocked && setApportionMethod('BY_VALUE')}
+                      disabled={isAuditLocked}
+                      className={cn(
+                        "px-2.5 py-1 text-xs font-medium rounded-l-md border transition-colors",
+                        apportionMethod === 'BY_VALUE'
+                          ? "bg-primary text-white border-primary"
+                          : "bg-white text-slate-700 border-slate-300 hover:bg-slate-50"
+                      )}
+                    >
+                      By Net Value (Proportional to Line Value)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => !isAuditLocked && setApportionMethod('BY_QUANTITY')}
+                      disabled={isAuditLocked}
+                      className={cn(
+                        "px-2.5 py-1 text-xs font-medium rounded-r-md border-t border-r border-b -ml-px transition-colors",
+                        apportionMethod === 'BY_QUANTITY'
+                          ? "bg-primary text-white border-primary"
+                          : "bg-white text-slate-700 border-slate-300 hover:bg-slate-50"
+                      )}
+                    >
+                      By Quantity (Proportional to Received Units)
+                    </button>
+                  </div>
+                </div>
+
+                <span className="text-[11px] text-slate-500 font-mono">
+                  Allocated across {computedLineItems.length} product lines
+                </span>
+              </div>
+
+              {/* Incremental Expense Rows */}
+              <div className="space-y-2">
+                <div className="grid grid-cols-12 gap-2 text-[10px] font-bold uppercase text-slate-400 px-1">
+                  <div className="col-span-12 sm:col-span-4">Expense Category</div>
+                  <div className="col-span-12 sm:col-span-4">Description / Reference #</div>
+                  <div className="col-span-10 sm:col-span-3 text-right">Amount (LKR)</div>
+                  <div className="col-span-2 sm:col-span-1 text-center">Action</div>
+                </div>
+
+                {additionalExpenses.map((exp) => (
+                  <div
+                    key={exp.id}
+                    className="grid grid-cols-12 gap-2 items-center bg-white border border-slate-200/90 rounded-md p-2 shadow-2xs hover:border-slate-300 transition-colors"
+                  >
+                    <div className="col-span-12 sm:col-span-4">
+                      <Select
+                        value={exp.category}
+                        onChange={(e) => handleUpdateExpense(exp.id, 'category', e.target.value)}
+                        disabled={isAuditLocked}
+                        className="h-8 text-xs bg-white"
+                      >
+                        {LANDED_EXPENSE_CATEGORIES.map((cat) => (
+                          <option key={cat} value={cat}>
+                            {cat}
+                          </option>
+                        ))}
+                      </Select>
+                    </div>
+
+                    <div className="col-span-12 sm:col-span-4">
+                      <Input
+                        value={exp.description}
+                        onChange={(e) => handleUpdateExpense(exp.id, 'description', e.target.value)}
+                        placeholder="e.g. Carrier, wharfage, haulage details"
+                        disabled={isAuditLocked}
+                        className="h-8 text-xs bg-white"
+                      />
+                    </div>
+
+                    <div className="col-span-10 sm:col-span-3">
+                      <CurrencyInput
+                        value={exp.amount}
+                        onChange={(val) => handleUpdateExpense(exp.id, 'amount', val)}
+                        placeholder="0.00"
+                        disabled={isAuditLocked || submitting}
+                        readOnly={isAuditLocked}
+                        className="h-8 text-xs text-right font-mono"
+                      />
+                    </div>
+
+                    <div className="col-span-2 sm:col-span-1 flex justify-center">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleRemoveExpense(exp.id)}
+                        disabled={isAuditLocked || (additionalExpenses.length === 1 && exp.amount === 0)}
+                        className="h-8 w-8 p-0 text-slate-400 hover:text-rose-600 hover:bg-rose-50"
+                        title="Remove expense line"
+                        aria-label="Remove expense line"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+
+                {!isAuditLocked && (
+                  <div className="pt-1 flex items-center justify-between">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleAddExpense}
+                      className="h-8 text-xs gap-1.5 border-dashed border-slate-300 hover:border-primary text-slate-600 hover:text-primary hover:bg-primary-light/50 font-medium"
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                      <span>Add Additional Landed Expense</span>
+                    </Button>
+
+                    <span className="text-[11px] text-slate-400 italic">
+                      Expenses can be added incrementally; unit costs recalculate automatically.
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -775,15 +1488,21 @@ export function VendorBillCostingPage() {
             {/* Financial Summary Box */}
             <div className="rounded-lg border border-primary-border/60 bg-primary-light/40 p-4 space-y-2 text-xs">
               <div className="flex justify-between text-slate-600">
-                <span>Items Net Subtotal:</span>
+                <span>Supplier Goods Subtotal (Payable to Supplier):</span>
                 <span className="font-mono font-semibold tabular-nums text-slate-800">
                   {formatCurrency(subtotal)}
                 </span>
               </div>
               <div className="flex justify-between text-slate-600">
-                <span>Freight & Landed Additions:</span>
+                <span>Additional Landed Costs (Shipping, Port, Transport, Handling):</span>
                 <span className="font-mono font-semibold tabular-nums text-slate-800">
-                  {formatCurrency((freightCharges || 0) + (otherLandingCosts || 0))}
+                  +{formatCurrency(totalAdditionalLandedCosts)}
+                </span>
+              </div>
+              <div className="flex justify-between text-slate-700 font-semibold border-t border-primary-border/40 pt-1.5">
+                <span>Total Landed Cost (Capitalized to Inventory):</span>
+                <span className="font-mono font-bold tabular-nums text-slate-900">
+                  {formatCurrency(totalLandedCost)}
                 </span>
               </div>
               <div className="flex justify-between text-slate-600">
@@ -864,9 +1583,9 @@ export function VendorBillCostingPage() {
                     lines={[
                       {
                         accountCode: '1100',
-                        accountName: 'Merchandise Inventory (Landed Cost)',
+                        accountName: 'Merchandise Inventory (Total Landed Cost)',
                         type: 'DEBIT',
-                        amount: subtotal + (freightCharges || 0) + (otherLandingCosts || 0),
+                        amount: totalLandedCost,
                       },
                       ...(vatTotal > 0
                         ? [
@@ -942,9 +1661,9 @@ export function VendorBillCostingPage() {
                   <tr>
                     <th className="py-2 px-3 text-left">Item</th>
                     <th className="py-2 px-2 text-right">Units</th>
-                    <th className="py-2 px-2 text-right">Base Cost</th>
-                    <th className="py-2 px-2 text-right">Apportioned Freight</th>
-                    <th className="py-2 px-3 text-right">True Landed Cost</th>
+                    <th className="py-2 px-2 text-right">Supplier Unit Cost</th>
+                    <th className="py-2 px-2 text-right">Allocated Landed Costs</th>
+                    <th className="py-2 px-3 text-right">Landed Cost per Unit</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -988,6 +1707,150 @@ export function VendorBillCostingPage() {
             >
               <CheckCircle2 className="h-4 w-4" />
               <span>Apply Apportionment</span>
+            </Button>
+          </DialogFooter>
+        </div>
+      </Dialog>
+
+      {/* Unit Serial Numbers Modal Dialog */}
+      <Dialog
+        open={Boolean(activeSerialItem)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setActiveSerialItem(null);
+            setSerialSearchQuery('');
+          }
+        }}
+        size="lg"
+      >
+        <div className="space-y-4">
+          <DialogHeader>
+            <div className="flex items-center justify-between pr-6">
+              <div className="flex items-center gap-2.5">
+                <div className="h-9 w-9 rounded-full bg-primary-light flex items-center justify-center text-primary shrink-0">
+                  <Hash className="h-5 w-5" />
+                </div>
+                <div>
+                  <DialogTitle className="text-base font-bold text-slate-900">
+                    Product Serial Numbers
+                  </DialogTitle>
+                  <DialogDescription className="text-xs text-slate-500">
+                    Verified unit-level inbound serial numbers from physical goods receipt
+                  </DialogDescription>
+                </div>
+              </div>
+              <Badge variant="outline" className="text-xs bg-slate-50 font-mono text-primary font-bold px-2 py-0.5">
+                {activeSerialItem?.serialNumbers.length || 0} Serials
+              </Badge>
+            </div>
+          </DialogHeader>
+
+          {activeSerialItem && (
+            <div className="bg-slate-50/80 rounded-lg p-3 border border-slate-200 text-xs space-y-2">
+              <div className="font-bold text-slate-900 text-sm">
+                {activeSerialItem.item.productNameSnapshot}
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[11px] text-slate-600 font-mono">
+                <div>
+                  <span className="text-slate-400 block text-[10px] font-sans uppercase font-semibold">SKU</span>
+                  <span className="font-bold text-slate-800">{activeSerialItem.item.skuSnapshot}</span>
+                </div>
+                <div>
+                  <span className="text-slate-400 block text-[10px] font-sans uppercase font-semibold">Product Barcode</span>
+                  <span className="font-bold text-slate-800">{activeSerialItem.barcode}</span>
+                </div>
+                <div>
+                  <span className="text-slate-400 block text-[10px] font-sans uppercase font-semibold">Received Quantity</span>
+                  <span className="font-bold text-primary">{activeSerialItem.item.receivedQuantity} units</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Search toolbar & Copy All button */}
+          <div className="flex items-center justify-between gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-slate-400" />
+              <Input
+                placeholder="Search serial numbers..."
+                value={serialSearchQuery}
+                onChange={(e) => setSerialSearchQuery(e.target.value)}
+                className="h-8 pl-8 text-xs font-mono bg-white"
+              />
+              {serialSearchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSerialSearchQuery('')}
+                  className="absolute right-2 top-2 text-slate-400 hover:text-slate-600 text-xs px-1"
+                >
+                  ×
+                </button>
+              )}
+            </div>
+
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleCopySerials}
+              className="h-8 text-xs gap-1.5 shrink-0"
+              title="Copy all serial numbers to clipboard"
+            >
+              {copiedSerials ? (
+                <>
+                  <Check className="h-3.5 w-3.5 text-emerald-600" />
+                  <span className="text-emerald-700 font-semibold">Copied!</span>
+                </>
+              ) : (
+                <>
+                  <Copy className="h-3.5 w-3.5 text-slate-600" />
+                  <span>Copy All ({activeSerialItem?.serialNumbers.length || 0})</span>
+                </>
+              )}
+            </Button>
+          </div>
+
+          {/* Serial Numbers Grid / List */}
+          <div className="max-h-64 overflow-y-auto border border-slate-200 rounded-lg p-2.5 bg-slate-50/50">
+            {filteredSerials.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {filteredSerials.map((sn, idx) => (
+                  <div
+                    key={sn}
+                    className="flex items-center justify-between rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-mono shadow-2xs hover:border-primary/50 transition-colors"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] text-slate-400 w-5">#{idx + 1}</span>
+                      <span className="font-semibold text-slate-800 select-all">{sn}</span>
+                    </div>
+                    <Badge variant="outline" className="text-[9px] px-1.5 py-0 text-emerald-700 bg-emerald-50 border-emerald-200 font-sans">
+                      Verified
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="py-8 text-center text-xs text-slate-400">
+                No serial numbers match "{serialSearchQuery}"
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="flex items-center justify-between sm:justify-between border-t border-slate-100 pt-3">
+            <span className="text-xs text-slate-500 font-mono">
+              Showing {filteredSerials.length} of {activeSerialItem?.serialNumbers.length || 0} serial numbers
+            </span>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setActiveSerialItem(null);
+                setSerialSearchQuery('');
+              }}
+              className="text-xs"
+            >
+              Close
             </Button>
           </DialogFooter>
         </div>
