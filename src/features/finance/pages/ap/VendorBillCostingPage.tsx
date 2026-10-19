@@ -170,12 +170,40 @@ export function VendorBillCostingPage() {
   const [serialSearchQuery, setSerialSearchQuery] = useState('');
   const [copiedSerials, setCopiedSerials] = useState(false);
 
-  // Reset left card view state when selected GRN changes
+  // Right-side Costing Breakdown Expand/Collapse state
+  const [expandedCostingItemIds, setExpandedCostingItemIds] = useState<Record<string, boolean>>({
+    'line-0': true, // Keep the first product expanded by default for immediate editing, others compact
+  });
+  const [costingProductSearch, setCostingProductSearch] = useState('');
+
+  const toggleCostingItemExpand = (itemId: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setExpandedCostingItemIds((prev) => ({
+      ...prev,
+      [itemId]: !prev[itemId],
+    }));
+  };
+
+  const handleExpandAllCosting = () => {
+    const all: Record<string, boolean> = {};
+    computedLineItems.forEach((item) => {
+      all[item.id] = true;
+    });
+    setExpandedCostingItemIds(all);
+  };
+
+  const handleCollapseAllCosting = () => {
+    setExpandedCostingItemIds({});
+  };
+
+  // Reset left card & right card view states when selected GRN changes
   useEffect(() => {
     setIsListExpanded(false);
     setExpandedProductIds({});
     setProductSearch('');
     setActiveSerialItem(null);
+    setExpandedCostingItemIds({ 'line-0': true });
+    setCostingProductSearch('');
   }, [selectedGRNId]);
 
   // Product master details lookup helper
@@ -202,7 +230,7 @@ export function VendorBillCostingPage() {
     return Array.from(new Set(matching));
   };
 
-  const COLLAPSED_PRODUCT_LIMIT = 3;
+  const COLLAPSED_PRODUCT_LIMIT = 10;
 
   const totalReceivedUnits = useMemo(() => {
     return selectedGRN?.items.reduce((s, it) => s + (it.receivedQuantity || 0), 0) || 0;
@@ -767,7 +795,14 @@ export function VendorBillCostingPage() {
                   )}
 
                   {/* Product Cards Container */}
-                  <div className="space-y-1.5 max-h-[460px] overflow-y-auto pr-1">
+                  <div
+                    className={cn(
+                      "space-y-1.5 pr-1",
+                      isListExpanded && selectedGRN.items.length > COLLAPSED_PRODUCT_LIMIT
+                        ? "max-h-[650px] overflow-y-auto"
+                        : ""
+                    )}
+                  >
                     {displayedGRNItems.length > 0 ? (
                       displayedGRNItems.map((item, idx) => {
                         const itemKey = `item-${idx}-${item.productId}`;
@@ -1096,183 +1131,325 @@ export function VendorBillCostingPage() {
               </div>
             </div>
 
-            {/* Line Items Dynamic Form Array */}
+            {/* Line Items Dynamic Form Array with Smaller Cards & Expanders */}
             <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                  Costing Breakdown per Item
-                </span>
-                <span className="text-[11px] text-slate-400">
-                  Historical prices auto-pulled from Supplier Master
-                </span>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200 pb-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-800">
+                    Costing Breakdown per Item
+                  </span>
+                  <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-mono text-slate-600 bg-white">
+                    {computedLineItems.length} Products
+                  </Badge>
+                  <span className="text-[11px] text-slate-400 hidden md:inline">
+                    • Auto-pulled from Supplier Master
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  {computedLineItems.length > 3 && (
+                    <div className="relative">
+                      <Search className="absolute left-2 top-1.5 h-3 w-3 text-slate-400" />
+                      <input
+                        type="text"
+                        value={costingProductSearch}
+                        onChange={(e) => setCostingProductSearch(e.target.value)}
+                        placeholder="Filter products..."
+                        className="h-6 w-32 sm:w-40 pl-6 pr-2 text-[11px] rounded border border-slate-200 bg-white placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-primary"
+                      />
+                    </div>
+                  )}
+
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      const isAnyExpanded = Object.values(expandedCostingItemIds).some(Boolean);
+                      if (isAnyExpanded) {
+                        handleCollapseAllCosting();
+                      } else {
+                        handleExpandAllCosting();
+                      }
+                    }}
+                    className="h-6 text-[10px] px-2 text-slate-500 hover:text-slate-800"
+                    title="Toggle all product costing cards"
+                  >
+                    <Layers className="h-3 w-3 mr-1" />
+                    <span>{Object.values(expandedCostingItemIds).some(Boolean) ? 'Collapse All' : 'Expand All'}</span>
+                  </Button>
+                </div>
               </div>
 
-              <div className="space-y-3">
-                {computedLineItems.map((item, index) => {
-                  const hist = item.historicalPurchasePrice || 0;
-                  const priceDiff = item.unitCost - hist;
-                  const hasVariance = hist > 0 && Math.abs(priceDiff) > 0.01;
+              <div className="space-y-2">
+                {computedLineItems
+                  .filter((item) => {
+                    if (!costingProductSearch.trim()) return true;
+                    const q = costingProductSearch.toLowerCase().trim();
+                    return item.productName.toLowerCase().includes(q) || item.sku.toLowerCase().includes(q);
+                  })
+                  .map((item) => {
+                    const originalIndex = lineItems.findIndex((li) => li.id === item.id);
+                    const index = originalIndex >= 0 ? originalIndex : 0;
+                    const hist = item.historicalPurchasePrice || 0;
+                    const priceDiff = item.unitCost - hist;
+                    const hasVariance = hist > 0 && Math.abs(priceDiff) > 0.01;
+                    const isExpanded = Boolean(expandedCostingItemIds[item.id]);
 
-                  return (
-                    <div
-                      key={item.id}
-                      className="rounded-lg border border-slate-200 bg-slate-50/50 p-3.5 space-y-3"
-                    >
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs font-bold text-slate-800">
-                              {item.productName}
-                            </span>
-                            <Badge variant="outline" className="text-[10px] bg-slate-100 font-mono">
-                              {item.sku}
-                            </Badge>
-                          </div>
-                          {/* Historical price auto-pull display */}
-                          <div className="flex items-center gap-2 mt-1">
-                            <span className="text-[11px] text-slate-500 font-medium">
-                              Last Historical Price:
-                            </span>
-                            <span className="text-[11px] font-mono font-semibold text-primary">
-                              {hist > 0 ? formatCurrency(hist) : 'No prior history'}
-                            </span>
-                            <span className="text-[10px] text-slate-400">(Supplier Master)</span>
+                    return (
+                      <div
+                        key={item.id}
+                        className={cn(
+                          "rounded-lg border transition-all duration-200 overflow-hidden shadow-2xs",
+                          isExpanded
+                            ? "border-primary/40 bg-white ring-1 ring-primary/10 shadow-xs"
+                            : "border-slate-200/90 bg-white hover:border-slate-300 hover:shadow-xs"
+                        )}
+                      >
+                        {/* Compact Card Header Bar (Clickable to toggle expander) */}
+                        <div
+                          role="button"
+                          tabIndex={0}
+                          onClick={() => toggleCostingItemExpand(item.id)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              toggleCostingItemExpand(item.id);
+                            }
+                          }}
+                          className={cn(
+                            "w-full text-left p-2 sm:px-3 sm:py-2.5 flex flex-col md:flex-row md:items-center justify-between gap-2 cursor-pointer select-none transition-colors",
+                            isExpanded ? "bg-slate-50/80 border-b border-slate-200/70" : "hover:bg-slate-50/50"
+                          )}
+                        >
+                          {/* Left: Expander icon, Index #, Product Name, SKU, Received Qty, Master variance */}
+                          <div className="flex items-center gap-2 min-w-0">
+                            <div
+                              className={cn(
+                                "h-5 w-5 rounded flex items-center justify-center shrink-0 transition-colors",
+                                isExpanded ? "bg-primary text-white" : "bg-slate-100 text-slate-500 hover:bg-slate-200"
+                              )}
+                              title={isExpanded ? "Collapse product costing details" : "Expand product costing details"}
+                            >
+                              <ChevronDown
+                                className={cn(
+                                  "h-3.5 w-3.5 transition-transform duration-200",
+                                  isExpanded && "rotate-180"
+                                )}
+                              />
+                            </div>
 
-                            {hasVariance && (
-                              <div className="flex items-center gap-1.5 ml-2">
-                                <Badge
-                                  variant="outline"
-                                  className={`text-[10px] py-0 px-1.5 ${
-                                    priceDiff > 0
-                                      ? 'bg-amber-50 text-amber-700 border-amber-300'
-                                      : 'bg-emerald-50 text-emerald-700 border-emerald-300'
-                                  }`}
-                                >
-                                  {priceDiff > 0 ? `+${formatCurrency(priceDiff)}` : formatCurrency(priceDiff)}
+                            <span className="font-mono text-[10px] font-bold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded shrink-0">
+                              #{index + 1}
+                            </span>
+
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className="text-xs font-bold text-slate-900 truncate max-w-[200px] sm:max-w-[320px]" title={item.productName}>
+                                  {item.productName}
+                                </span>
+                                <Badge variant="outline" className="text-[10px] font-mono py-0 px-1 bg-slate-50 text-slate-600">
+                                  {item.sku}
                                 </Badge>
-                                {!isAuditLocked && (
-                                  <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => resetToHistoricalCost(index)}
-                                    className="h-5 text-[10px] px-1 text-primary hover:text-primary-hover hover:underline"
+                                <span className="text-[10px] text-slate-500 bg-slate-100 px-1.5 py-0.2 rounded font-medium whitespace-nowrap">
+                                  Qty: {item.receivedQuantity}
+                                </span>
+                                {hasVariance && (
+                                  <Badge
+                                    variant="outline"
+                                    className={cn(
+                                      "text-[9px] py-0 px-1 whitespace-nowrap",
+                                      priceDiff > 0
+                                        ? "bg-amber-50 text-amber-700 border-amber-300"
+                                        : "bg-emerald-50 text-emerald-700 border-emerald-300"
+                                    )}
                                   >
-                                    Reset to Master
-                                  </Button>
+                                    {priceDiff > 0 ? `+${formatCurrency(priceDiff)}` : formatCurrency(priceDiff)}
+                                  </Badge>
                                 )}
                               </div>
-                            )}
-                          </div>
-                        </div>
-
-                        <div className="text-right">
-                          <span className="text-xs font-mono font-bold text-slate-900 tabular-nums block">
-                            Total: {formatCurrency(item.lineTotal)}
-                          </span>
-                          <span className="text-[10px] text-slate-500">
-                            {item.receivedQuantity} received units
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                        <div>
-                          <label className="block text-[11px] font-semibold text-slate-600 mb-1">
-                            Supplier Unit Cost <span className="text-rose-500">*</span>
-                            <span className="text-[10px] text-slate-400 font-normal ml-1">(Payable to supplier)</span>
-                          </label>
-                          <CurrencyInput
-                            value={item.unitCost}
-                            onChange={(val) => updateLineItem(index, 'unitCost', val)}
-                            placeholder="0.00"
-                            disabled={isAuditLocked || submitting}
-                            readOnly={isAuditLocked}
-                          />
-                        </div>
-
-                        <div>
-                          <label className="block text-[11px] font-semibold text-slate-600 mb-1">
-                            Line Discount (LKR)
-                          </label>
-                          <CurrencyInput
-                            value={item.lineDiscount}
-                            onChange={(val) => updateLineItem(index, 'lineDiscount', val)}
-                            placeholder="0.00"
-                            disabled={isAuditLocked || submitting}
-                            readOnly={isAuditLocked}
-                          />
-                        </div>
-
-                        <div>
-                          <label className="block text-[11px] font-semibold text-slate-600 mb-1">
-                            VAT Code
-                          </label>
-                          <Select
-                            value={item.vatCode}
-                            onChange={(e) =>
-                              updateLineItem(index, 'vatCode', e.target.value)
-                            }
-                            disabled={isAuditLocked || submitting}
-                            className="h-9 text-xs"
-                          >
-                            <option value="STANDARD_18">Standard VAT (18%)</option>
-                            <option value="EXEMPT">Exempt / Zero-Rated</option>
-                          </Select>
-                        </div>
-                      </div>
-
-                      {/* True Landed Cost Breakdown Display - automatically recalculated */}
-                      <div className="pt-2 border-t border-slate-200/70 rounded-md bg-white border border-slate-200/90 p-2.5 space-y-1.5 font-mono text-xs shadow-2xs">
-                        <div className="flex flex-wrap items-center justify-between gap-3">
-                          <div>
-                            <span className="text-slate-400 text-[10px] font-sans block uppercase font-medium">Supplier Unit Cost</span>
-                            <span className="font-bold text-slate-800 text-xs">{formatCurrency(item.unitCost)}</span>
-                            <span className="text-[10px] text-slate-400 font-sans block">payable to supplier</span>
-                          </div>
-
-                          <div>
-                            <span className="text-slate-400 text-[10px] font-sans block uppercase font-medium">Allocated Landed Costs</span>
-                            <span className="font-semibold text-slate-700 text-xs">
-                              {totalAdditionalLandedCosts > 0 ? (
-                                <>
-                                  +{formatCurrency(item.allocatedLandedCost || 0)}
-                                  <span className="text-[10px] text-slate-500 font-sans ml-1">
-                                    (+{formatCurrency((item.allocatedLandedCost || 0) / (item.receivedQuantity || 1))}/unit)
-                                  </span>
-                                </>
-                              ) : (
-                                <span className="text-slate-400 italic font-sans text-[11px]">No expenses allocated</span>
-                              )}
-                            </span>
-                            <span className="text-[10px] text-slate-400 font-sans block">share of additional expenses</span>
-                          </div>
-
-                          <div className="bg-primary/5 border border-primary/20 rounded-md px-3 py-1.5">
-                            <span className="text-primary text-[10px] font-sans font-bold uppercase tracking-wider block">
-                              Landed Cost per Unit
-                            </span>
-                            <div className="flex items-baseline gap-1">
-                              <span className="font-bold text-primary text-sm">
-                                {formatCurrency(item.landedUnitCost || item.unitCost)}
-                              </span>
-                              <span className="text-[10px] text-primary/70 font-sans">/ unit</span>
                             </div>
-                            <span className="text-[9px] text-slate-400 font-sans block">actual capitalized unit cost</span>
                           </div>
 
-                          <div className="text-right">
-                            <span className="text-slate-400 text-[10px] font-sans block uppercase font-medium">Total Landed Cost</span>
-                            <span className="font-bold text-slate-900 text-xs">
-                              {formatCurrency(item.totalLandedCost || item.lineTotal)}
-                            </span>
-                            <span className="text-[10px] text-slate-400 font-sans block">supplier + allocated expenses</span>
+                          {/* Right: Supplier Unit Cost, Landed Cost per Unit, Line Total & Action */}
+                          <div className="flex items-center justify-between md:justify-end gap-2.5 sm:gap-4 shrink-0 text-xs">
+                            {/* Supplier Unit Cost */}
+                            <div className="text-right">
+                              <span className="text-[9px] font-medium uppercase text-slate-400 block tracking-tight">Supplier Unit Cost</span>
+                              <span className="font-mono text-xs font-semibold text-slate-700">
+                                {formatCurrency(item.unitCost)}
+                              </span>
+                            </div>
+
+                            {/* Landed Cost per Unit badge */}
+                            <div className="text-right bg-primary/5 border border-primary/20 rounded px-2 py-0.5">
+                              <span className="text-[8px] font-bold uppercase tracking-wider text-primary block">Landed Cost per Unit</span>
+                              <span className="font-mono text-xs font-bold text-primary">
+                                {formatCurrency(item.landedUnitCost || item.unitCost)}
+                                <span className="text-[9px] font-normal text-primary/70 ml-0.5 font-sans">/u</span>
+                              </span>
+                            </div>
+
+                            {/* Line Total */}
+                            <div className="text-right min-w-[80px]">
+                              <span className="text-[9px] font-medium uppercase text-slate-400 block tracking-tight">Line Total</span>
+                              <span className="font-mono text-xs font-bold text-slate-900 tabular-nums">
+                                {formatCurrency(item.lineTotal)}
+                              </span>
+                            </div>
+
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => toggleCostingItemExpand(item.id, e)}
+                              className="h-6 text-[10px] px-1.5 text-slate-400 hover:text-primary hover:bg-primary-light/50"
+                            >
+                              <span>{isExpanded ? 'Collapse' : 'Edit'}</span>
+                            </Button>
                           </div>
                         </div>
+
+                        {/* Expanded Content: Master comparison, Inputs, Full True Landed Cost Breakdown */}
+                        {isExpanded && (
+                          <div className="p-3.5 space-y-3 bg-white">
+                            {/* Master Price Info */}
+                            <div className="flex items-center justify-between flex-wrap gap-2 text-[11px] bg-slate-50 rounded-md p-2 border border-slate-100">
+                              <div className="flex items-center gap-2">
+                                <span className="text-slate-500 font-medium">Last Historical Price:</span>
+                                <span className="font-mono font-semibold text-primary">
+                                  {hist > 0 ? formatCurrency(hist) : 'No prior history'}
+                                </span>
+                                <span className="text-[10px] text-slate-400">(Supplier Master)</span>
+
+                                {hasVariance && (
+                                  <Badge
+                                    variant="outline"
+                                    className={cn(
+                                      "text-[10px] py-0 px-1.5",
+                                      priceDiff > 0
+                                        ? "bg-amber-50 text-amber-700 border-amber-300"
+                                        : "bg-emerald-50 text-emerald-700 border-emerald-300"
+                                    )}
+                                  >
+                                    {priceDiff > 0 ? `+${formatCurrency(priceDiff)} variance` : `${formatCurrency(priceDiff)} variance`}
+                                  </Badge>
+                                )}
+                              </div>
+
+                              {hasVariance && !isAuditLocked && (
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => resetToHistoricalCost(index)}
+                                  className="h-5 text-[10px] px-1.5 text-primary hover:text-primary-hover hover:underline"
+                                >
+                                  Reset to Master
+                                </Button>
+                              )}
+                            </div>
+
+                            {/* Editable Inputs Grid */}
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                              <div>
+                                <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                                  Supplier Unit Cost <span className="text-rose-500">*</span>
+                                  <span className="text-[10px] text-slate-400 font-normal ml-1">(Payable to supplier)</span>
+                                </label>
+                                <CurrencyInput
+                                  value={item.unitCost}
+                                  onChange={(val) => updateLineItem(index, 'unitCost', val)}
+                                  placeholder="0.00"
+                                  disabled={isAuditLocked || submitting}
+                                  readOnly={isAuditLocked}
+                                />
+                              </div>
+
+                              <div>
+                                <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                                  Line Discount (LKR)
+                                </label>
+                                <CurrencyInput
+                                  value={item.lineDiscount}
+                                  onChange={(val) => updateLineItem(index, 'lineDiscount', val)}
+                                  placeholder="0.00"
+                                  disabled={isAuditLocked || submitting}
+                                  readOnly={isAuditLocked}
+                                />
+                              </div>
+
+                              <div>
+                                <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                                  VAT Code
+                                </label>
+                                <Select
+                                  value={item.vatCode}
+                                  onChange={(e) =>
+                                    updateLineItem(index, 'vatCode', e.target.value)
+                                  }
+                                  disabled={isAuditLocked || submitting}
+                                  className="h-9 text-xs"
+                                >
+                                  <option value="STANDARD_18">Standard VAT (18%)</option>
+                                  <option value="EXEMPT">Exempt / Zero-Rated</option>
+                                </Select>
+                              </div>
+                            </div>
+
+                            {/* True Landed Cost Breakdown Display - automatically recalculated */}
+                            <div className="pt-2 border-t border-slate-200/70 rounded-md bg-slate-50/70 border border-slate-200/90 p-2.5 space-y-1.5 font-mono text-xs shadow-2xs">
+                              <div className="flex flex-wrap items-center justify-between gap-3">
+                                <div>
+                                  <span className="text-slate-400 text-[10px] font-sans block uppercase font-medium">Supplier Unit Cost</span>
+                                  <span className="font-bold text-slate-800 text-xs">{formatCurrency(item.unitCost)}</span>
+                                  <span className="text-[10px] text-slate-400 font-sans block">payable to supplier</span>
+                                </div>
+
+                                <div>
+                                  <span className="text-slate-400 text-[10px] font-sans block uppercase font-medium">Allocated Landed Costs</span>
+                                  <span className="font-semibold text-slate-700 text-xs">
+                                    {totalAdditionalLandedCosts > 0 ? (
+                                      <>
+                                        +{formatCurrency(item.allocatedLandedCost || 0)}
+                                        <span className="text-[10px] text-slate-500 font-sans ml-1">
+                                          (+{formatCurrency((item.allocatedLandedCost || 0) / (item.receivedQuantity || 1))}/unit)
+                                        </span>
+                                      </>
+                                    ) : (
+                                      <span className="text-slate-400 italic font-sans text-[11px]">No expenses allocated</span>
+                                    )}
+                                  </span>
+                                  <span className="text-[10px] text-slate-400 font-sans block">share of additional expenses</span>
+                                </div>
+
+                                <div className="bg-primary/5 border border-primary/20 rounded-md px-3 py-1.5">
+                                  <span className="text-primary text-[10px] font-sans font-bold uppercase tracking-wider block">
+                                    Landed Cost per Unit
+                                  </span>
+                                  <div className="flex items-baseline gap-1">
+                                    <span className="font-bold text-primary text-sm">
+                                      {formatCurrency(item.landedUnitCost || item.unitCost)}
+                                    </span>
+                                    <span className="text-[10px] text-primary/70 font-sans">/ unit</span>
+                                  </div>
+                                  <span className="text-[9px] text-slate-400 font-sans block">actual capitalized unit cost</span>
+                                </div>
+
+                                <div className="text-right">
+                                  <span className="text-slate-400 text-[10px] font-sans block uppercase font-medium">Total Landed Cost</span>
+                                  <span className="font-bold text-slate-900 text-xs">
+                                    {formatCurrency(item.totalLandedCost || item.lineTotal)}
+                                  </span>
+                                  <span className="text-[10px] text-slate-400 font-sans block">supplier + allocated expenses</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
               </div>
             </div>
 

@@ -157,8 +157,8 @@ describe('Vendor Bill Processing: Warehouse Goods Receipt Card (Compact UI & Ser
     fireEvent.click(bulkGrnOption);
 
     await waitFor(() => {
-      // Collapsed state shows limited count of 3 out of 50
-      expect(screen.getByText(/showing 3 of 50 products/i)).toBeDefined();
+      // Collapsed state shows limited count of 10 out of 50
+      expect(screen.getByText(/showing 10 of 50 products/i)).toBeDefined();
       expect(screen.getByRole('button', { name: /expand \/ view all products \(50\)/i })).toBeDefined();
     });
 
@@ -185,7 +185,7 @@ describe('Vendor Bill Processing: Warehouse Goods Receipt Card (Compact UI & Ser
     fireEvent.click(collapseBtn);
 
     await waitFor(() => {
-      expect(screen.getByText(/showing 3 of 50 products/i)).toBeDefined();
+      expect(screen.getByText(/showing 10 of 50 products/i)).toBeDefined();
     });
   });
 });

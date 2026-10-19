@@ -176,5 +176,41 @@ describe('Vendor Bill True Landed Cost Recalculation Engine', () => {
         expect(screen.getAllByText(/Landed Cost per Unit/i).length).toBeGreaterThan(0);
       });
     });
+
+    it('8. Renders 8 example products with compact cards and expanders', async () => {
+      render(
+        <MemoryRouter>
+          <VendorBillCostingPage />
+        </MemoryRouter>
+      );
+
+      // Section header shows 8 Products badge
+      expect(screen.getByText('8 Products')).toBeDefined();
+
+      // Check that all 8 example products exist on the page
+      expect(screen.getAllByText('Schneider Acti9 32A Double Pole MCB').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('Schneider Acti9 63A Triple Pole MCB').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('Schneider Easy9 40A 30mA 2-Pole RCCB').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('Schneider Acti9 100A 4-Pole Main Isolator Switch').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('Schneider Resi9 16A Single Pole Type B MCB').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('Schneider PrismaSeT 8-Way Surface Metal Consumer Unit').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('Schneider TeSys D 25A 3-Pole AC3 Magnetic Contactor').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('Schneider Lisse 13A Single Switched Socket Outlet').length).toBeGreaterThan(0);
+
+      // Verify compact header information: Supplier Unit Cost, Landed Cost per Unit, Line Total
+      expect(screen.getAllByText('Supplier Unit Cost').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('Landed Cost per Unit').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('Line Total').length).toBeGreaterThan(0);
+
+      // Toggle bulk expand / collapse
+      const bulkToggleBtn = screen.getByTitle('Toggle all product costing cards');
+      expect(bulkToggleBtn).toBeDefined();
+
+      // Click to toggle all (Collapse All or Expand All)
+      fireEvent.click(bulkToggleBtn);
+      await waitFor(() => {
+        expect(screen.getByText('8 Products')).toBeDefined();
+      });
+    });
   });
 });
