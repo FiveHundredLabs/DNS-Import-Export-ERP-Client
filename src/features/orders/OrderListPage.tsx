@@ -17,14 +17,13 @@ import {
   SelectValue,
 } from '../../components/ui/select';
 import { formatCurrency, formatDate } from '../../utils/formatters';
-import { AmountDisplay } from '../../components/common/AmountDisplay';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../../components/ui/table';
+
 import {
   ShoppingCart,
   Plus,
   Search,
   ArrowUpDown,
-  Eye,
-  CheckCircle,
   Clock,
   DollarSign,
   AlertTriangle,

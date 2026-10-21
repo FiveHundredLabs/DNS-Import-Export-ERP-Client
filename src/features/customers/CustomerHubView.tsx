@@ -22,6 +22,7 @@ import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../../components/ui/tabs';
 import { formatCurrency, formatDate } from '../../utils/formatters';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../../components/ui/table';
 import { AmountDisplay } from '../../components/common/AmountDisplay';
 import {
   Phone,
