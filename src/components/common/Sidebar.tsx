@@ -12,6 +12,7 @@ import {
   DollarSign,
   Award,
   ShieldCheck,
+  ShieldAlert,
   BarChart3,
   Settings,
   HelpCircle,
@@ -106,6 +107,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const inventoryItems: SidebarItem[] = [
     { id: 'products', name: 'Product Master', path: '/products', icon: Package, category: 'inventory' },
     { id: 'inventory', name: 'Inventory & GRN', path: '/inventory', icon: Boxes, category: 'inventory', exact: true },
+    { id: 'damaged-stock', name: 'Damaged Stock & RMA', path: '/inventory/damaged-stock', icon: ShieldAlert, category: 'inventory' },
   ];
 
   // 4. Finance, Banking & Ledger Core (arranged in logical lifecycle order)

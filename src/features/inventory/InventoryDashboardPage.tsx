@@ -168,6 +168,12 @@ const QUICK_LINKS = [
     to: '/inventory/dispatch',
     color: 'from-red-500 to-rose-600',
   },
+  {
+    label: 'Damaged Stock & RMA',
+    description: 'Quarantine, supplier returns & repairs',
+    to: '/inventory/damaged-stock',
+    color: 'from-rose-500 to-red-600',
+  },
 ];
 
 export function InventoryDashboardPage() {
@@ -284,6 +290,7 @@ export function InventoryDashboardPage() {
             value={kpis.damagedUnits}
             subtitle="Across all locations"
             accent={kpis.damagedUnits > 0 ? 'warning' : 'success'}
+            to="/inventory/damaged-stock"
             icon={<TruckIcon className="w-5 h-5" />}
           />
         </div>

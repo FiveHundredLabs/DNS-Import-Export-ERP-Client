@@ -1006,6 +1006,10 @@ class AccountsPayableService {
     );
   }
 
+  getSupplierDebitNotes(supplierId?: string): SupplierDebitNote[] {
+    return this.getDebitNotes(supplierId);
+  }
+
   /**
    * Post Supplier Debit Note:
    * Dr 2010 Accounts Payable (reduces liability to supplier)

@@ -22,6 +22,7 @@ import { StockBalancePage } from './features/inventory/StockBalancePage';
 import { StockMovementsPage } from './features/inventory/StockMovementsPage';
 import { OrderPickingPage } from './features/inventory/OrderPickingPage';
 import { DispatchPage } from './features/inventory/DispatchPage';
+import { DamagedStockPage } from './features/inventory/DamagedStockPage';
 import { InvoiceListPage } from './features/invoices/InvoiceListPage';
 import { InvoiceDetailPage } from './features/invoices/InvoiceDetailPage';
 import { PaymentListPage } from './features/payments/PaymentListPage';
@@ -260,6 +261,14 @@ export function App() {
           element={
             <ProtectedRoute>
               <DispatchPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="inventory/damaged-stock"
+          element={
+            <ProtectedRoute>
+              <DamagedStockPage />
             </ProtectedRoute>
           }
         />
