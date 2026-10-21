@@ -332,7 +332,7 @@ export function InvoiceListPage() {
                       <div className="flex items-center justify-between gap-2 flex-wrap">
                         <div className="flex items-center gap-1.5 flex-wrap shrink-0 min-w-0">
                           <span className="font-mono text-xs font-bold text-primary tabular-nums whitespace-nowrap shrink-0">
-                            {inv.invoiceNumber}
+                            Inv #{inv.invoiceNumber}
                           </span>
                           <span className="text-[10.5px] text-slate-400 font-mono whitespace-nowrap shrink-0">
                             • SO: {inv.orderNumber}

@@ -143,7 +143,7 @@ export function evaluateOrderApproval(
       );
       if (item.discountPercentage > productMaxDisc || item.discountPercentage > 15) {
         hasDirectorDiscount = true;
-      } else {
+      } else if (item.discountPercentage > customerMaxDisc) {
         hasManagerDiscount = true;
       }
     } else if (item.discountPercentage > repMaxDiscount) {
