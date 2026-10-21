@@ -41,7 +41,7 @@ export class InventoryService {
     return this.repo.getMovements();
   }
 
-  async executeDamageReversal(productId: string, locationId: string, quantity: number, user: any): Promise<void> {
+  async executeDamageReversal(productId: string, locationId: string, quantity: number, userOrActorId: any, maybeActorName?: string): Promise<void> {
     let balance = await this.repo.getBalance(productId, locationId);
     if (!balance || balance.damagedQuantity < quantity) {
       throw new Error('Not enough damaged quantity to reverse');
@@ -49,7 +49,11 @@ export class InventoryService {
     
     balance.damagedQuantity -= quantity;
     balance.availableQuantity += quantity;
+    balance.lastUpdated = new Date().toISOString();
     await this.repo.saveBalance(balance);
+
+    const actorId = typeof userOrActorId === 'object' ? userOrActorId?.id : userOrActorId;
+    const actorName = typeof userOrActorId === 'object' ? userOrActorId?.name : (maybeActorName || 'System');
 
     await this.repo.addMovement({
       id: Math.random().toString(),
@@ -59,9 +63,81 @@ export class InventoryService {
       movementType: 'DAMAGE_REVERSAL',
       referenceDocumentType: 'MANUAL',
       referenceDocumentId: '',
-      performedById: user.id,
-      performedByName: user.name,
+      performedById: actorId,
+      performedByName: actorName,
       timestamp: new Date().toISOString()
+    });
+  }
+
+  async executeDamageScrap(
+    productId: string,
+    locationId: string,
+    quantity: number,
+    userOrActorId: any,
+    reason?: string,
+    maybeActorName?: string
+  ): Promise<void> {
+    let balance = await this.repo.getBalance(productId, locationId);
+    if (!balance || (balance.damagedQuantity || 0) < quantity) {
+      throw new Error('Not enough damaged quantity to write off');
+    }
+
+    balance.damagedQuantity = Math.max(0, (balance.damagedQuantity || 0) - quantity);
+    balance.lastUpdated = new Date().toISOString();
+    await this.repo.saveBalance(balance);
+
+    const actorId = typeof userOrActorId === 'object' ? userOrActorId?.id : userOrActorId;
+    const actorName = typeof userOrActorId === 'object' ? userOrActorId?.name : (maybeActorName || 'System');
+
+    await this.repo.addMovement({
+      id: `mov-${Date.now()}-scrap`,
+      productId,
+      sourceLocation: locationId,
+      quantity,
+      movementType: 'DAMAGE_WRITE_OFF',
+      referenceDocumentType: 'SCRAP_VOUCHER',
+      referenceDocumentId: `SCRAP-${Date.now().toString().slice(-6)}`,
+      performedById: actorId,
+      performedByName: actorName,
+      reason: reason ? `Damaged stock write-off: ${reason}` : 'Damaged stock write-off',
+      timestamp: new Date().toISOString(),
+    });
+  }
+
+  async executeDamageSupplierReturn(
+    productId: string,
+    locationId: string,
+    quantity: number,
+    userOrActorId: any,
+    debitNoteNumber: string,
+    supplierName: string,
+    reason?: string,
+    maybeActorName?: string
+  ): Promise<void> {
+    let balance = await this.repo.getBalance(productId, locationId);
+    if (!balance || (balance.damagedQuantity || 0) < quantity) {
+      throw new Error('Not enough damaged quantity to return to supplier');
+    }
+
+    balance.damagedQuantity = Math.max(0, (balance.damagedQuantity || 0) - quantity);
+    balance.lastUpdated = new Date().toISOString();
+    await this.repo.saveBalance(balance);
+
+    const actorId = typeof userOrActorId === 'object' ? userOrActorId?.id : userOrActorId;
+    const actorName = typeof userOrActorId === 'object' ? userOrActorId?.name : (maybeActorName || 'System');
+
+    await this.repo.addMovement({
+      id: `mov-${Date.now()}-dn`,
+      productId,
+      sourceLocation: locationId,
+      quantity,
+      movementType: 'TRANSFER_OUT',
+      referenceDocumentType: 'SUPPLIER_DEBIT_NOTE',
+      referenceDocumentId: debitNoteNumber,
+      performedById: actorId,
+      performedByName: actorName,
+      reason: `RMA return to supplier ${supplierName} via Debit Note ${debitNoteNumber}: ${reason || ''}`,
+      timestamp: new Date().toISOString(),
     });
   }
 

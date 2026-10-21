@@ -273,6 +273,18 @@ export function CustomerHubView({ customer }: { customer: Customer }) {
           >
             <Send className="h-3.5 w-3.5" /> WhatsApp Statement
           </Button>
+
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              setPreselectedWarrantyRecord(null);
+              setIsWarrantyNoteModalOpen(true);
+            }}
+            className="gap-1.5 text-xs text-indigo-700 border-indigo-300 hover:bg-indigo-50"
+          >
+            <ShieldCheck className="h-3.5 w-3.5 text-indigo-600" /> Warranty Apply / Register Card
+          </Button>
         </div>
       </div>
 
@@ -994,6 +1006,7 @@ export function CustomerHubView({ customer }: { customer: Customer }) {
                         <TableHead>Sale Type</TableHead>
                         <TableHead>Expiry Date</TableHead>
                         <TableHead className="text-center">Status</TableHead>
+                        <TableHead className="text-right">Action</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -1023,6 +1036,20 @@ export function CustomerHubView({ customer }: { customer: Customer }) {
                           </TableCell>
                           <TableCell className="text-center">
                             <WarrantyStatusBadge status={w.status} />
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-7 text-xs text-primary hover:text-primary hover:bg-primary/10 gap-1"
+                              onClick={() => {
+                                setPreselectedWarrantyRecord(w);
+                                setIsWarrantyNoteModalOpen(true);
+                              }}
+                            >
+                              <ShieldCheck className="h-3.5 w-3.5" />
+                              Apply Card
+                            </Button>
                           </TableCell>
                         </TableRow>
                       ))}

@@ -631,6 +631,7 @@ class AccountsPayableService {
     // Record advance application if applied via parameters or auto-detected via linked PO
     let advanceToApplyId = params.applyAdvanceId;
     let advanceAmount = params.advanceAmountToApply;
+    const maxApplicableAdvance = vendorPayableCredit.toNumber();
 
     if (!advanceToApplyId && (grn.purchaseOrderId || grn.purchaseOrderNumber)) {
       const poAdvance = this.advances.find(
@@ -649,7 +650,7 @@ class AccountsPayableService {
       );
       if (poAdvance) {
         advanceToApplyId = poAdvance.id;
-        advanceAmount = Math.min(poAdvance.unappliedBalance, totalBillCredit.toNumber());
+        advanceAmount = Math.min(poAdvance.unappliedBalance, maxApplicableAdvance);
         newBill.appliedAdvanceId = poAdvance.id;
       }
     }
@@ -660,7 +661,7 @@ class AccountsPayableService {
         billId: newBill.id,
         grnId: grn.id,
         grnNumber: grn.grnNumber,
-        amountToApply: Math.min(advanceAmount, totalBillCredit.toNumber()),
+        amountToApply: Math.min(advanceAmount, maxApplicableAdvance),
       });
     }
 
@@ -926,6 +927,14 @@ class AccountsPayableService {
       targetBill = this.bills.find((b) => b.grnId === params.grnId);
     }
 
+    const actualAmount = targetBill
+      ? Math.min(params.amountToApply, targetBill.balanceDue)
+      : params.amountToApply;
+
+    if (actualAmount <= 0) {
+      return { advance, bill: targetBill };
+    }
+
     let jeId: string | undefined;
 
     if (targetBill) {
@@ -943,7 +952,7 @@ class AccountsPayableService {
           lines: [
             {
               accountId: apAcc.id,
-              debit: params.amountToApply,
+              debit: actualAmount,
               credit: 0,
               description: `Clear Accounts Payable against prepayment (${targetBill.supplierName})`,
               supplierId: targetBill.supplierId,
@@ -952,7 +961,7 @@ class AccountsPayableService {
             {
               accountId: advanceAcc.id,
               debit: 0,
-              credit: params.amountToApply,
+              credit: actualAmount,
               description: `Draw down Advance ${advance.advanceNumber}`,
               supplierId: targetBill.supplierId,
               supplierName: targetBill.supplierName,
@@ -965,7 +974,7 @@ class AccountsPayableService {
       // Update bill balance
       const newBillBalance = Math.max(
         0,
-        Number(new Decimal(targetBill.balanceDue).minus(params.amountToApply).toFixed(2))
+        Number(new Decimal(targetBill.balanceDue).minus(actualAmount).toFixed(2))
       );
       targetBill.balanceDue = newBillBalance;
       targetBill.status = newBillBalance === 0 ? 'PAID' : 'PARTIALLY_PAID';
@@ -974,7 +983,7 @@ class AccountsPayableService {
     // Update advance unapplied balance
     const newUnapplied = Math.max(
       0,
-      Number(new Decimal(advance.unappliedBalance).minus(params.amountToApply).toFixed(2))
+      Number(new Decimal(advance.unappliedBalance).minus(actualAmount).toFixed(2))
     );
     advance.unappliedBalance = newUnapplied;
     advance.status = newUnapplied === 0 ? 'APPLIED' : 'PARTIALLY_APPLIED';
@@ -985,7 +994,7 @@ class AccountsPayableService {
       billNumber: targetBill?.billNumber,
       grnId: targetBill?.grnId || params.grnId,
       grnNumber: targetBill?.grnNumber || params.grnNumber,
-      appliedAmount: params.amountToApply,
+      appliedAmount: actualAmount,
       appliedAt: new Date().toISOString(),
       journalEntryId: jeId,
     });

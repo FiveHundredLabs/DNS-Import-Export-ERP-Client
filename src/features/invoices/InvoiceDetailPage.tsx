@@ -26,6 +26,8 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 import { RecordWarrantyNoteModal } from '../warranty/RecordWarrantyNoteModal';
+import { WarrantyRecord } from '../../types/warranty';
+import { warrantyService } from '../../services/WarrantyService';
 
 export function InvoiceDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -33,6 +35,25 @@ export function InvoiceDetailPage() {
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [loading, setLoading] = useState(true);
   const [isWarrantyModalOpen, setIsWarrantyModalOpen] = useState(false);
+  const [matchingWarranty, setMatchingWarranty] = useState<WarrantyRecord | null>(null);
+
+  useEffect(() => {
+    async function checkWarranty() {
+      if (!invoice) return;
+      try {
+        const records = await warrantyService.getAllRecords();
+        const found = records.find(
+          (r) => r.invoiceNumber === invoice.invoiceNumber || r.invoiceId === invoice.id
+        );
+        if (found) {
+          setMatchingWarranty(found);
+        }
+      } catch (e) {
+        console.error('Failed to check warranty record:', e);
+      }
+    }
+    checkWarranty();
+  }, [invoice]);
 
   useEffect(() => {
     async function load() {
@@ -372,6 +393,7 @@ export function InvoiceDetailPage() {
       <RecordWarrantyNoteModal
         open={isWarrantyModalOpen}
         onOpenChange={setIsWarrantyModalOpen}
+        preselectedRecord={matchingWarranty}
         onSuccess={() => {}}
       />
     </div>

@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { inventoryService } from '../../services/InventoryService';
 import { apService } from '../finance/services/apService';
 import { useFinanceLedger } from '../finance/hooks/useFinanceLedger';
-import { MockInventoryRepository } from '../../repositories/mock/MockInventoryRepository';
+import { SupplierDebitNote } from '../finance/api/types';
 import { MOCK_PRODUCTS } from '../../mock/mockProducts';
 import { StockBalance, StockMovement } from '../../types/inventory';
 import { formatCurrency, formatDate } from '../../utils/formatters';
@@ -31,6 +32,7 @@ import {
   ArrowRight,
   ShieldAlert,
   Boxes,
+  Layers,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -39,6 +41,7 @@ export function DamagedStockPage() {
   const { suppliers } = useFinanceLedger();
   const [balances, setBalances] = useState<StockBalance[]>([]);
   const [movements, setMovements] = useState<StockMovement[]>([]);
+  const [debitNotes, setDebitNotes] = useState<SupplierDebitNote[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Filters
@@ -63,15 +66,17 @@ export function DamagedStockPage() {
   const [actionUnitCost, setActionUnitCost] = useState<number>(0);
   const [processing, setProcessing] = useState(false);
 
-  const invRepo = useMemo(() => new MockInventoryRepository(), []);
-
   const loadData = async () => {
     try {
       setLoading(true);
-      const allBalances = await invRepo.getAllBalances();
-      const allMovements = await invRepo.getMovements();
+      const [allBalances, allMovements] = await Promise.all([
+        inventoryService.getAllStockBalances(),
+        inventoryService.getStockMovements(),
+      ]);
+      const allDebitNotes = apService.getDebitNotes();
       setBalances(allBalances);
       setMovements(allMovements);
+      setDebitNotes(allDebitNotes);
     } finally {
       setLoading(false);
     }
@@ -127,8 +132,8 @@ export function DamagedStockPage() {
   }, [damagedItems]);
 
   const pendingDebitNotes = useMemo(() => {
-    return apService.getDebitNotes();
-  }, []);
+    return debitNotes.length > 0 ? debitNotes : apService.getDebitNotes();
+  }, [debitNotes]);
 
   // Open Return to Supplier Modal
   const handleOpenReturnModal = (item: (typeof damagedItems)[0]) => {
@@ -190,28 +195,16 @@ export function DamagedStockPage() {
         ],
       });
 
-      // 2. Decrement damaged stock in inventory repository
-      const bal = await invRepo.getBalance(activeItem.product.id, activeItem.balance.locationId);
-      if (bal) {
-        bal.damagedQuantity = Math.max(0, (bal.damagedQuantity || 0) - actionQuantity);
-        bal.lastUpdated = new Date().toISOString();
-        await invRepo.saveBalance(bal);
-      }
-
-      // 3. Log stock movement
-      await invRepo.addMovement({
-        id: `mov-${Date.now()}-dn`,
-        productId: activeItem.product.id,
-        sourceLocation: activeItem.balance.locationId,
-        quantity: actionQuantity,
-        movementType: 'TRANSFER_OUT',
-        referenceDocumentType: 'SUPPLIER_DEBIT_NOTE',
-        referenceDocumentId: debitNote.debitNoteNumber,
-        performedById: currentUser.id,
-        performedByName: currentUser.name,
-        reason: `RMA return to supplier ${sup?.name || ''} via Debit Note ${debitNote.debitNoteNumber}: ${actionReason}`,
-        timestamp: new Date().toISOString(),
-      });
+      // 2. Decrement damaged stock and add movement via inventoryService
+      await inventoryService.executeDamageSupplierReturn(
+        activeItem.product.id,
+        activeItem.balance.locationId,
+        actionQuantity,
+        currentUser,
+        debitNote.debitNoteNumber,
+        sup.name,
+        actionReason
+      );
 
       toast.success(
         `Supplier Debit Note ${debitNote.debitNoteNumber} issued! ${actionQuantity} damaged unit(s) cleared and Accounts Payable reduced.`
@@ -240,26 +233,13 @@ export function DamagedStockPage() {
 
     try {
       setProcessing(true);
-      const bal = await invRepo.getBalance(activeItem.product.id, activeItem.balance.locationId);
-      if (bal) {
-        bal.damagedQuantity = Math.max(0, (bal.damagedQuantity || 0) - actionQuantity);
-        bal.lastUpdated = new Date().toISOString();
-        await invRepo.saveBalance(bal);
-      }
-
-      await invRepo.addMovement({
-        id: `mov-${Date.now()}-scrap`,
-        productId: activeItem.product.id,
-        sourceLocation: activeItem.balance.locationId,
-        quantity: actionQuantity,
-        movementType: 'DAMAGE_WRITE_OFF',
-        referenceDocumentType: 'SCRAP_VOUCHER',
-        referenceDocumentId: `SCRAP-${Date.now().toString().slice(-6)}`,
-        performedById: currentUser.id,
-        performedByName: currentUser.name,
-        reason: `Damaged stock write-off: ${actionReason}`,
-        timestamp: new Date().toISOString(),
-      });
+      await inventoryService.executeDamageScrap(
+        activeItem.product.id,
+        activeItem.balance.locationId,
+        actionQuantity,
+        currentUser,
+        actionReason
+      );
 
       toast.success(
         `Written off ${actionQuantity} unit(s) of ${activeItem.product.name} to scrap loss.`
@@ -334,6 +314,34 @@ export function DamagedStockPage() {
             Refresh
           </Button>
         </div>
+      </div>
+
+      {/* Inventory Navigation Tabs */}
+      <div className="flex items-center gap-1 border-b border-slate-200 pb-2 text-xs font-medium">
+        <Link
+          to="/inventory"
+          className="px-3 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors"
+        >
+          Overview
+        </Link>
+        <Link
+          to="/inventory/stock"
+          className="px-3 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors"
+        >
+          Stock Balances
+        </Link>
+        <Link
+          to="/inventory/grn"
+          className="px-3 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors"
+        >
+          Goods Receipt (GRN)
+        </Link>
+        <Link
+          to="/inventory/damaged-stock"
+          className="px-3 py-1.5 rounded-lg bg-rose-50 text-rose-700 font-semibold border border-rose-200 shadow-2xs"
+        >
+          Damaged Stock &amp; RMA
+        </Link>
       </div>
 
       {/* Metric Cards */}
