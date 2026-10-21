@@ -71,6 +71,8 @@ export interface SupplierAdvance {
   advanceNumber: string;
   supplierId: string;
   supplierName: string;
+  purchaseOrderId?: string;
+  purchaseOrderNumber?: string;
   paymentDate: string;
   bankAccountId: string;
   bankAccountCode: string;

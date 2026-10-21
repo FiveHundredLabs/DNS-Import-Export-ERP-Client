@@ -402,17 +402,34 @@ export function VendorBillCostingPage() {
     }
   }, [selectedGRN, existingBill]);
 
-  // Update advance selection when unapplied advances change
+  // Update advance selection when unapplied advances change, auto-detecting matching PO
   useEffect(() => {
     if (unappliedAdvances.length > 0) {
-      setSelectedAdvanceId(unappliedAdvances[0].id);
-      setAdvanceAmountToApply(unappliedAdvances[0].unappliedBalance);
+      const matchingPoAdvance =
+        selectedGRN?.purchaseOrderNumber || selectedGRN?.purchaseOrderId
+          ? unappliedAdvances.find(
+              (a) =>
+                (selectedGRN.purchaseOrderId &&
+                  (a.purchaseOrderId === selectedGRN.purchaseOrderId ||
+                    a.purchaseOrderNumber === selectedGRN.purchaseOrderId)) ||
+                (selectedGRN.purchaseOrderNumber &&
+                  (a.purchaseOrderNumber === selectedGRN.purchaseOrderNumber ||
+                    a.purchaseOrderId === selectedGRN.purchaseOrderNumber))
+            )
+          : null;
+
+      const targetAdvance = matchingPoAdvance || unappliedAdvances[0];
+      setSelectedAdvanceId(targetAdvance.id);
+      setAdvanceAmountToApply(targetAdvance.unappliedBalance);
+      if (matchingPoAdvance) {
+        setApplyAdvanceEnabled(true);
+      }
     } else {
       setSelectedAdvanceId('');
       setAdvanceAmountToApply(0);
       setApplyAdvanceEnabled(false);
     }
-  }, [unappliedAdvances]);
+  }, [unappliedAdvances, selectedGRN]);
 
   // Handler for line item updates
   const updateLineItem = (index: number, field: keyof VendorBillLineItem, val: any) => {
@@ -1659,51 +1676,104 @@ export function VendorBillCostingPage() {
             </div>
 
             {/* Advance Prepayments Application Banner */}
-            {unappliedAdvances.length > 0 && !isAuditLocked && (
-              <div className="rounded-lg border border-emerald-200 bg-emerald-50/60 p-4 space-y-3 animate-in fade-in-50">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Landmark className="h-4 w-4 text-emerald-700" />
-                    <span className="text-xs font-bold text-emerald-900">
-                      Supplier Advance Prepayment Available
-                    </span>
-                  </div>
-                  <Badge variant="outline" className="bg-white text-emerald-800 border-emerald-300 text-[11px] font-mono">
-                    Unapplied: {formatCurrency(unappliedAdvances[0].unappliedBalance)}
-                  </Badge>
-                </div>
+            {unappliedAdvances.length > 0 && !isAuditLocked && (() => {
+              const activeAdvance =
+                unappliedAdvances.find((a) => a.id === selectedAdvanceId) || unappliedAdvances[0];
+              const isPoMatched = Boolean(
+                (selectedGRN?.purchaseOrderNumber || selectedGRN?.purchaseOrderId) &&
+                  activeAdvance &&
+                  ((selectedGRN?.purchaseOrderId &&
+                    (activeAdvance.purchaseOrderId === selectedGRN.purchaseOrderId ||
+                      activeAdvance.purchaseOrderNumber === selectedGRN.purchaseOrderId)) ||
+                    (selectedGRN?.purchaseOrderNumber &&
+                      (activeAdvance.purchaseOrderNumber === selectedGRN.purchaseOrderNumber ||
+                        activeAdvance.purchaseOrderId === selectedGRN.purchaseOrderNumber)))
+              );
 
-                <p className="text-xs text-emerald-800">
-                  Prepayment {unappliedAdvances[0].advanceNumber} (Ref: {unappliedAdvances[0].reference}) can be drawn down to offset this vendor bill commitment.
-                </p>
-
-                <div className="flex items-center gap-4 pt-1">
-                  <label className="flex items-center gap-2 text-xs font-medium text-emerald-950 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={applyAdvanceEnabled}
-                      onChange={(e) => setApplyAdvanceEnabled(e.target.checked)}
-                      className="rounded border-emerald-400 text-emerald-600 focus:ring-emerald-500"
-                    />
-                    <span>Apply Advance Prepayment to this Bill</span>
-                  </label>
-
-                  {applyAdvanceEnabled && (
+              return (
+                <div className="rounded-lg border border-emerald-200 bg-emerald-50/60 p-4 space-y-3 animate-in fade-in-50">
+                  <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <span className="text-xs text-emerald-800 font-semibold">Amount to Draw:</span>
-                      <div className="w-36">
-                        <CurrencyInput
-                          value={advanceAmountToApply}
-                          onChange={(val) => setAdvanceAmountToApply(Math.min(val, unappliedAdvances[0].unappliedBalance))}
-                          max={unappliedAdvances[0].unappliedBalance}
-                          className="h-8 text-xs bg-white"
-                        />
-                      </div>
+                      <Landmark className="h-4 w-4 text-emerald-700" />
+                      <span className="text-xs font-bold text-emerald-900">
+                        Supplier Advance Prepayment Available
+                      </span>
+                      {isPoMatched && (
+                        <Badge className="bg-emerald-600 text-white text-[10px] font-semibold hover:bg-emerald-700">
+                          ⚡ PO Match Auto-Detected: {selectedGRN?.purchaseOrderNumber || selectedGRN?.purchaseOrderId}
+                        </Badge>
+                      )}
+                    </div>
+                    <Badge
+                      variant="outline"
+                      className="bg-white text-emerald-800 border-emerald-300 text-[11px] font-mono"
+                    >
+                      Unapplied: {formatCurrency(activeAdvance.unappliedBalance)}
+                    </Badge>
+                  </div>
+
+                  <p className="text-xs text-emerald-800">
+                    Prepayment {activeAdvance.advanceNumber} (Ref: {activeAdvance.reference})
+                    {activeAdvance.purchaseOrderNumber
+                      ? ` linked to PO ${activeAdvance.purchaseOrderNumber}`
+                      : ''}{' '}
+                    can be drawn down to offset this vendor bill commitment.
+                  </p>
+
+                  {unappliedAdvances.length > 1 && (
+                    <div className="flex items-center gap-2 pt-0.5">
+                      <span className="text-xs font-semibold text-emerald-900">Select Advance:</span>
+                      <select
+                        value={selectedAdvanceId}
+                        onChange={(e) => {
+                          const adv = unappliedAdvances.find((a) => a.id === e.target.value);
+                          if (adv) {
+                            setSelectedAdvanceId(adv.id);
+                            setAdvanceAmountToApply(adv.unappliedBalance);
+                          }
+                        }}
+                        className="h-7 text-xs rounded border border-emerald-300 bg-white px-2 py-0.5 text-slate-800 font-mono"
+                      >
+                        {unappliedAdvances.map((adv) => (
+                          <option key={adv.id} value={adv.id}>
+                            {adv.advanceNumber} ({formatCurrency(adv.unappliedBalance)}){' '}
+                            {adv.purchaseOrderNumber ? `- PO: ${adv.purchaseOrderNumber}` : ''}
+                          </option>
+                        ))}
+                      </select>
                     </div>
                   )}
+
+                  <div className="flex items-center gap-4 pt-1">
+                    <label className="flex items-center gap-2 text-xs font-medium text-emerald-950 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={applyAdvanceEnabled}
+                        onChange={(e) => setApplyAdvanceEnabled(e.target.checked)}
+                        className="rounded border-emerald-400 text-emerald-600 focus:ring-emerald-500"
+                      />
+                      <span>Apply Advance Prepayment to this Bill</span>
+                    </label>
+
+                    {applyAdvanceEnabled && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-emerald-800 font-semibold">Amount to Draw:</span>
+                        <div className="w-36">
+                          <CurrencyInput
+                            value={advanceAmountToApply}
+                            onChange={(val) =>
+                              setAdvanceAmountToApply(Math.min(val, activeAdvance.unappliedBalance))
+                            }
+                            max={activeAdvance.unappliedBalance}
+                            className="h-8 text-xs bg-white"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            )}
+              );
+            })()}
 
             {/* Financial Summary Box */}
             <div className="rounded-lg border border-primary-border/60 bg-primary-light/40 p-4 space-y-2 text-xs">

@@ -668,6 +668,47 @@ describe('Phase 2 Master Test Suite: AP, Procurement & Supplier Management', () 
       const advLine = je!.lines.find((l) => l.accountCode === '1050');
       expect(advLine?.credit).toBe(15000);
     });
+
+    it('auto-detects and auto-applies advance linked to PO when GRN with same PO is billed', async () => {
+      const advance = await apService.postSupplierAdvance({
+        supplierId: 'sup-001',
+        supplierName: 'Schneider Electric Lanka (Pvt) Ltd',
+        paymentDate: '2026-03-01',
+        bankAccountId: 'acc-1010',
+        reference: 'ADV-PO-TEST-01',
+        amount: 5000,
+        purchaseOrderId: 'PO-2025-001',
+        purchaseOrderNumber: 'PO-2025-001',
+      });
+      expect(advance.purchaseOrderNumber).toBe('PO-2025-001');
+
+      const bill = await apService.postVendorBill({
+        grnId: 'GRN-2025-001',
+        vendorInvoiceNumber: 'INV-AUTO-PO-TEST',
+        invoiceDate: '2026-03-05',
+        dueDate: '2026-04-05',
+        lineItems: [
+          {
+            id: 'li-po-1',
+            productId: 'prod-001',
+            productName: 'Acti9 MCB',
+            sku: 'DNS-MCB-32A-2P',
+            receivedQuantity: 5,
+            unitCost: 2000,
+            lineDiscount: 0,
+            vatCode: 'NONE',
+            vatAmount: 0,
+            lineTotal: 10000,
+          },
+        ],
+        freightCharges: 0,
+        otherLandingCosts: 0,
+      });
+
+      expect(bill.appliedAdvanceId).toBe(advance.id);
+      expect(bill.balanceDue).toBe(5000);
+      expect(bill.status).toBe('PARTIALLY_PAID');
+    });
   });
 });
 

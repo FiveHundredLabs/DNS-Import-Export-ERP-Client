@@ -51,6 +51,8 @@ export interface GRN {
   grnNumber: string;
   supplierId: string;
   supplierName: string;
+  purchaseOrderId?: string;
+  purchaseOrderNumber?: string;
   supplierInvoiceNumber?: string; // Physical commercial invoice or delivery document #
   receivedDate?: string;
   warehouseId: string;

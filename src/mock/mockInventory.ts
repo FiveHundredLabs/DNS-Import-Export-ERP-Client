@@ -311,6 +311,8 @@ export const MOCK_GRNS: GRN[] = [
     grnNumber: 'GRN-2025-001',
     supplierId: 'sup-001',
     supplierName: 'Schneider Electric Lanka (Pvt) Ltd',
+    purchaseOrderId: 'PO-2025-001',
+    purchaseOrderNumber: 'PO-2025-001',
     warehouseId: 'WH-MAIN',
     status: 'APPROVED',
     items: [

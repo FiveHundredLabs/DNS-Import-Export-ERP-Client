@@ -77,6 +77,8 @@ const INITIAL_ADVANCES: SupplierAdvance[] = [
     advanceNumber: 'ADV-2026-001',
     supplierId: 'sup-1',
     supplierName: 'DNS Global Logistics & Electronics Ltd',
+    purchaseOrderId: 'PO-2026-001',
+    purchaseOrderNumber: 'PO-2026-001',
     paymentDate: '2026-09-05',
     bankAccountId: 'acc-1010',
     bankAccountCode: '1010',
@@ -626,14 +628,39 @@ class AccountsPayableService {
 
     this.bills.unshift(newBill);
 
-    // Record advance application if applied via parameters
-    if (params.applyAdvanceId && params.advanceAmountToApply && params.advanceAmountToApply > 0) {
+    // Record advance application if applied via parameters or auto-detected via linked PO
+    let advanceToApplyId = params.applyAdvanceId;
+    let advanceAmount = params.advanceAmountToApply;
+
+    if (!advanceToApplyId && (grn.purchaseOrderId || grn.purchaseOrderNumber)) {
+      const poAdvance = this.advances.find(
+        (a) =>
+          (a.supplierId === grn.supplierId ||
+            a.supplierName.toLowerCase() === grn.supplierName.toLowerCase() ||
+            ((grn.supplierId === 'sup-001' || grn.supplierId === 'sup-1') &&
+              (a.supplierId === 'sup-001' || a.supplierId === 'sup-1'))) &&
+          a.unappliedBalance > 0 &&
+          ((grn.purchaseOrderId &&
+            (a.purchaseOrderId === grn.purchaseOrderId ||
+              a.purchaseOrderNumber === grn.purchaseOrderId)) ||
+            (grn.purchaseOrderNumber &&
+              (a.purchaseOrderNumber === grn.purchaseOrderNumber ||
+                a.purchaseOrderId === grn.purchaseOrderNumber)))
+      );
+      if (poAdvance) {
+        advanceToApplyId = poAdvance.id;
+        advanceAmount = Math.min(poAdvance.unappliedBalance, totalBillCredit.toNumber());
+        newBill.appliedAdvanceId = poAdvance.id;
+      }
+    }
+
+    if (advanceToApplyId && advanceAmount && advanceAmount > 0) {
       await this.applyAdvanceToGRNOrBill({
-        advanceId: params.applyAdvanceId,
+        advanceId: advanceToApplyId,
         billId: newBill.id,
         grnId: grn.id,
         grnNumber: grn.grnNumber,
-        amountToApply: Math.min(params.advanceAmountToApply, totalBillCredit.toNumber()),
+        amountToApply: Math.min(advanceAmount, totalBillCredit.toNumber()),
       });
     }
 
@@ -791,6 +818,8 @@ class AccountsPayableService {
     bankAccountCode?: string;
     reference: string;
     amount: number;
+    purchaseOrderId?: string;
+    purchaseOrderNumber?: string;
     notes?: string;
   }): Promise<SupplierAdvance> {
     if (params.amount <= 0) {
@@ -841,6 +870,10 @@ class AccountsPayableService {
       advanceNumber: `ADV-2026-${Math.floor(100 + Math.random() * 900)}`,
       supplierId: params.supplierId,
       supplierName: params.supplierName,
+      purchaseOrderId:
+        params.purchaseOrderId || (params.purchaseOrderNumber ? params.purchaseOrderNumber : undefined),
+      purchaseOrderNumber:
+        params.purchaseOrderNumber || (params.purchaseOrderId ? params.purchaseOrderId : undefined),
       paymentDate: params.paymentDate,
       bankAccountId: bankAcc.id,
       bankAccountCode: bankAcc.code,
