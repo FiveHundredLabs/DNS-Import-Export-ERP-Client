@@ -85,6 +85,13 @@ export interface WarrantyClaim extends BaseEntity {
   distributorId?: string;
   distributorName?: string;
   endCustomerName?: string;
+  replacementSerialNumber?: string;
+  sparePartsUsed?: Array<{
+    productId: string;
+    productName: string;
+    quantity: number;
+    unitCost?: number;
+  }>;
 }
 
 export interface ShopWarrantyFollowUp {

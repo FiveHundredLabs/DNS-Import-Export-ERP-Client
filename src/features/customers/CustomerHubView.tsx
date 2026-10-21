@@ -16,6 +16,7 @@ import { PaymentStatusBadge } from '../payments/PaymentStatusBadge';
 import { WarrantyRecord, WarrantyClaim } from '../../types/warranty';
 import { warrantyService } from '../../services/WarrantyService';
 import { WarrantyStatusBadge, ClaimStatusBadge } from '../warranty/WarrantyStatusBadge';
+import { RecordWarrantyNoteModal } from '../warranty/RecordWarrantyNoteModal';
 import { calculatePendingWarrantyNotes } from '../../rules/warrantyRules';
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
@@ -59,6 +60,8 @@ export function CustomerHubView({ customer }: { customer: Customer }) {
   const [warrantiesLoading, setWarrantiesLoading] = useState(true);
   const [customerClaims, setCustomerClaims] = useState<WarrantyClaim[]>([]);
   const [claimsLoading, setClaimsLoading] = useState(true);
+  const [isWarrantyNoteModalOpen, setIsWarrantyNoteModalOpen] = useState(false);
+  const [preselectedWarrantyRecord, setPreselectedWarrantyRecord] = useState<WarrantyRecord | null>(null);
   const [invoiceFilter, setInvoiceFilter] = useState<'ALL' | 'OVERDUE' | 'NEAR_DUE' | 'PENDING' | 'PAID'>('ALL');
   const isCreditOverdue = customer.financials.overdue > 0;
 
@@ -956,10 +959,22 @@ export function CustomerHubView({ customer }: { customer: Customer }) {
 
           {/* Customer Registered Warranties */}
           <Card>
-            <CardHeader className="pb-3">
+            <CardHeader className="pb-3 flex flex-row items-center justify-between">
               <CardTitle className="text-base font-semibold text-slate-900">
                 Registered Warranties ({customerWarranties.length})
               </CardTitle>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  setPreselectedWarrantyRecord(null);
+                  setIsWarrantyNoteModalOpen(true);
+                }}
+                className="h-8 text-xs gap-1.5 text-emerald-700 border-emerald-300 hover:bg-emerald-50"
+              >
+                <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
+                Warranty Apply / Register Card
+              </Button>
             </CardHeader>
             <CardContent>
               {warrantiesLoading ? (
@@ -1111,6 +1126,15 @@ export function CustomerHubView({ customer }: { customer: Customer }) {
           </Card>
         </TabsContent>
       </Tabs>
+
+      <RecordWarrantyNoteModal
+        open={isWarrantyNoteModalOpen}
+        onOpenChange={setIsWarrantyNoteModalOpen}
+        preselectedRecord={preselectedWarrantyRecord}
+        onSuccess={() => {
+          warrantyService.getWarrantiesByCustomerId(customer.id).then(setCustomerWarranties);
+        }}
+      />
     </div>
   );
 }

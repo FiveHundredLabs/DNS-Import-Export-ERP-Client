@@ -23,13 +23,16 @@ import {
   FileText,
   AlertTriangle,
   CheckCircle2,
+  ShieldCheck,
 } from 'lucide-react';
+import { RecordWarrantyNoteModal } from '../warranty/RecordWarrantyNoteModal';
 
 export function InvoiceDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isWarrantyModalOpen, setIsWarrantyModalOpen] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -113,6 +116,15 @@ export function InvoiceDetailPage() {
               <CreditCard className="h-3.5 w-3.5" /> Record Payment
             </Button>
           )}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsWarrantyModalOpen(true)}
+            className="text-xs gap-1.5 text-indigo-700 hover:text-indigo-800 border-indigo-200 hover:bg-indigo-50"
+          >
+            <ShieldCheck className="h-3.5 w-3.5 text-indigo-600" />
+            Warranty Apply / Register Card
+          </Button>
         </div>
       </div>
 
@@ -356,6 +368,12 @@ export function InvoiceDetailPage() {
           </div>
         </CardContent>
       </Card>
+
+      <RecordWarrantyNoteModal
+        open={isWarrantyModalOpen}
+        onOpenChange={setIsWarrantyModalOpen}
+        onSuccess={() => {}}
+      />
     </div>
   );
 }
