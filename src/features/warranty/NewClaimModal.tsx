@@ -89,6 +89,12 @@ export function NewClaimModal({
     ? !isWarrantyValid(selectedRecord.warrantyExpiryDate, complaintDate, selectedRecord.warrantyStartDate)
     : false;
 
+  const isDealerSale = selectedRecord?.saleType === 'DEALER';
+  const hasVerifiedNote = Boolean(
+    selectedRecord?.notesReceived && selectedRecord?.warrantyNoteStatus === 'VERIFIED'
+  );
+  const isNotePending = selectedRecord?.warrantyNoteStatus === 'PENDING_REVIEW';
+
   const handleRecordChange = (recordId: string) => {
     setSelectedRecordId(recordId);
     const rec = records.find((r) => r.id === recordId);
@@ -110,6 +116,12 @@ export function NewClaimModal({
     e.preventDefault();
     if (!selectedRecord) {
       setError('Please select an active warranty record.');
+      return;
+    }
+    if (isDealerSale && !hasVerifiedNote) {
+      setError(
+        'Warranty claim cannot be processed: Distributor sales require a valid warranty note reviewed and verified by the Sales Manager.'
+      );
       return;
     }
     if (!complaintReason.trim()) {
@@ -263,6 +275,45 @@ export function NewClaimModal({
           </div>
         )}
 
+        {/* Distributor Warranty Note Validation Status */}
+        {selectedRecord && isDealerSale && (
+          <div
+            className={`p-3 rounded-lg border text-xs space-y-1.5 ${
+              hasVerifiedNote
+                ? 'bg-emerald-50/70 border-emerald-200 text-emerald-900'
+                : isNotePending
+                ? 'bg-amber-50/70 border-amber-200 text-amber-900'
+                : 'bg-rose-50/70 border-rose-200 text-rose-900'
+            }`}
+          >
+            <div className="flex items-center gap-1.5 font-semibold">
+              {hasVerifiedNote ? (
+                <>
+                  <CheckCircle className="h-4 w-4 text-emerald-600 shrink-0" />
+                  <span>Distributor Warranty Note Verified: {selectedRecord.warrantyNoteNumber || 'Verified'}</span>
+                </>
+              ) : isNotePending ? (
+                <>
+                  <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" />
+                  <span>Distributor Warranty Note Pending Sales Manager Review</span>
+                </>
+              ) : (
+                <>
+                  <AlertTriangle className="h-4 w-4 text-rose-600 shrink-0" />
+                  <span>Missing Distributor Warranty Note</span>
+                </>
+              )}
+            </div>
+            <p className="text-[11px] leading-relaxed">
+              {hasVerifiedNote
+                ? `Validated based on warranty note received from distributor. End customer: ${selectedRecord.endCustomerName || 'Retail Customer'}. Claim processing is authorized.`
+                : isNotePending
+                ? 'A warranty note was entered but is awaiting Sales Manager review and verification before this warranty claim can be lodged.'
+                : 'Because DNS ERP sells products to distributors rather than direct end customers, this warranty claim must be validated based on the warranty note received from the distributor. The Sales Manager must enter and verify the warranty note first.'}
+            </p>
+          </div>
+        )}
+
         {/* Complaint Date & Serial Number */}
         <div className="grid grid-cols-2 gap-3">
           <div>
@@ -317,10 +368,14 @@ export function NewClaimModal({
           <Button
             type="submit"
             size="sm"
-            disabled={loading || isExpired || !selectedRecord}
-            className="bg-primary hover:bg-primary-hover text-primary-foreground"
+            disabled={loading || isExpired || !selectedRecord || (isDealerSale && !hasVerifiedNote)}
+            className="bg-primary hover:bg-primary-hover text-primary-foreground font-semibold"
           >
-            {loading ? 'Submitting...' : 'Lodge Claim'}
+            {loading
+              ? 'Submitting...'
+              : isDealerSale && !hasVerifiedNote
+              ? 'Validation Required'
+              : 'Lodge Claim'}
           </Button>
         </DialogFooter>
       </form>

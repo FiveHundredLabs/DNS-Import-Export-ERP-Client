@@ -22,7 +22,6 @@ import { StockBalancePage } from './features/inventory/StockBalancePage';
 import { StockMovementsPage } from './features/inventory/StockMovementsPage';
 import { OrderPickingPage } from './features/inventory/OrderPickingPage';
 import { DispatchPage } from './features/inventory/DispatchPage';
-import { TransferListPage } from './features/inventory/TransferListPage';
 import { InvoiceListPage } from './features/invoices/InvoiceListPage';
 import { InvoiceDetailPage } from './features/invoices/InvoiceDetailPage';
 import { PaymentListPage } from './features/payments/PaymentListPage';
@@ -32,6 +31,7 @@ import { ShowroomPOSTerminal } from './features/pos/ShowroomPOSTerminal';
 import { POSTransactionHistoryPage } from './features/pos/POSTransactionHistoryPage';
 import { POSSessionsPage } from './features/pos/POSSessionsPage';
 import { WarrantyHubPage } from './features/warranty/WarrantyHubPage';
+import { SalesRepWarrantyPage } from './features/warranty/SalesRepWarrantyPage';
 import { CommissionHubPage } from './features/commissions/CommissionHubPage';
 import { FinanceLayout } from './features/finance/FinanceLayout';
 import { FinanceDashboardPage } from './features/finance/pages/FinanceDashboardPage';
@@ -263,14 +263,6 @@ export function App() {
             </ProtectedRoute>
           }
         />
-        <Route
-          path="inventory/transfers"
-          element={
-            <ProtectedRoute>
-              <TransferListPage />
-            </ProtectedRoute>
-          }
-        />
 
         {/* Phase 7: Invoice & Payments Management */}
         <Route
@@ -346,6 +338,14 @@ export function App() {
           element={
             <ProtectedRoute>
               <WarrantyHubPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="warranty/verification"
+          element={
+            <ProtectedRoute>
+              <SalesRepWarrantyPage />
             </ProtectedRoute>
           }
         />

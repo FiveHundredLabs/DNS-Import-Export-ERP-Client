@@ -18,7 +18,6 @@ import {
   Search,
   X,
   Star,
-  ArrowLeftRight,
   BookOpen,
   FileSpreadsheet,
   Receipt,
@@ -35,7 +34,9 @@ import {
   Lock,
   SlidersHorizontal,
   CheckCircle2,
+  Percent,
   Layers,
+  Barcode,
 } from 'lucide-react';
 import { useEffect } from 'react';
 import { useAuth } from '../../hooks/useAuth';
@@ -78,12 +79,12 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const [activeCategory, setActiveCategory] = useState<RailCategory>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Automatically activate finance category when navigating within finance module
+  // Automatically activate finance category when navigating within finance module (if authorized)
   useEffect(() => {
-    if (location.pathname.startsWith('/finance')) {
+    if (location.pathname.startsWith('/finance') && canAccessRoute('/finance')) {
       setActiveCategory('finance');
     }
-  }, [location.pathname]);
+  }, [location.pathname, canAccessRoute]);
 
   // 1. Procurement, Orders & Approvals
   const procurementItems: SidebarItem[] = [
@@ -91,6 +92,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     { id: 'orders', name: 'Sales Orders', path: '/orders', icon: ShoppingCart, category: 'sales' },
     { id: 'approvals', name: 'Approvals Engine', path: '/approvals', icon: CheckCircle, category: 'approvals' },
     { id: 'warranty', name: 'Warranty Hub', path: '/warranty', icon: ShieldCheck, category: 'approvals' },
+    { id: 'warranty-verification', name: 'Warranty Verification', path: '/warranty/verification', icon: Barcode, category: 'sales' },
   ];
 
   // 2. Customers, Invoices & POS (hiding legacy /payments from navigation bar)
@@ -104,7 +106,6 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const inventoryItems: SidebarItem[] = [
     { id: 'products', name: 'Product Master', path: '/products', icon: Package, category: 'inventory' },
     { id: 'inventory', name: 'Inventory & GRN', path: '/inventory', icon: Boxes, category: 'inventory', exact: true },
-    { id: 'transfers', name: 'Stock Transfers', path: '/inventory/transfers', icon: ArrowLeftRight, category: 'inventory' },
   ];
 
   // 4. Finance, Banking & Ledger Core (arranged in logical lifecycle order)
@@ -145,7 +146,8 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     { id: 'teams', name: 'Team Management', path: '/teams', icon: Users, category: 'admin' },
     { id: 'areas', name: 'Area Management', path: '/areas', icon: Compass, category: 'admin' },
     { id: 'reports', name: 'Enterprise Reports', path: '/reports', icon: BarChart3, category: 'reports' },
-    { id: 'theme', name: 'Theme & Appearance', path: '/?tab=settings', icon: Settings, category: 'admin', directorOnly: true },
+    { id: 'tax-settings', name: 'Global Tax Configuration', path: '/?tab=settings&section=tax', icon: Percent, category: 'admin', directorOnly: true },
+    { id: 'theme', name: 'Theme & Appearance', path: '/?tab=settings&section=appearance', icon: Settings, category: 'admin', directorOnly: true },
     { id: 'role-portal', name: 'Role Switcher Portal', path: '/login', icon: Users, category: 'admin' },
   ];
 
@@ -162,6 +164,9 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const authorizedItems = useMemo(() => {
     return allRawItems.filter((item) => {
       if (item.directorOnly && currentUser.role !== 'DIRECTOR') {
+        return false;
+      }
+      if (item.path.includes('tab=settings') && !canAccessRoute('/settings')) {
         return false;
       }
       return canAccessRoute(item.path.split('?')[0]);
@@ -203,6 +208,22 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     { id: 'reports' as RailCategory, label: 'Enterprise Reports', icon: BarChart3 },
     { id: 'admin' as RailCategory, label: 'Administration', icon: Settings },
   ];
+
+  // Filter rail categories: 'all' is always visible (Dashboard);
+  // other parent categories are only visible if the user's role has permission to access at least 1 child item
+  const authorizedRailItems = useMemo(() => {
+    return railItems.filter((rail) => {
+      if (rail.id === 'all') return true;
+      return authorizedItems.some((item) => item.category === rail.id);
+    });
+  }, [railItems, authorizedItems]);
+
+  // Automatically reset to 'all' if the currently active category is unauthorized for this role
+  useEffect(() => {
+    if (activeCategory !== 'all' && !authorizedRailItems.some((r) => r.id === activeCategory)) {
+      setActiveCategory('all');
+    }
+  }, [activeCategory, authorizedRailItems]);
 
   // User initials for the top rail badge
   const userInitials = useMemo(() => {
@@ -306,10 +327,13 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     );
   };
 
+  // Sales Rep & Area Manager use the bottom nav on mobile — no sidebar overlay needed for them
+  const isMobileNavRole = currentUser.role === 'SALES_REP' || currentUser.role === 'AREA_MANAGER';
+
   return (
     <>
-      {/* Mobile Backdrop */}
-      {isOpen && (
+      {/* Mobile Backdrop — hidden for mobile nav roles (they use the bottom nav instead) */}
+      {isOpen && !isMobileNavRole && (
         <div
           className="fixed inset-0 z-40 bg-slate-900/40 backdrop-blur-xs md:hidden"
           onClick={onClose}
@@ -321,7 +345,10 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       <aside
         className={cn(
           'fixed inset-y-0 left-0 z-50 flex h-full select-none transition-transform duration-200 ease-in-out md:static md:translate-x-0',
-          isOpen ? 'translate-x-0' : '-translate-x-full'
+          // On mobile, mobile nav roles always stay hidden (translate-x-full)
+          isMobileNavRole
+            ? 'md:translate-x-0 -translate-x-full'
+            : isOpen ? 'translate-x-0' : '-translate-x-full'
         )}
       >
         {/* ========================================================================= */}
@@ -331,7 +358,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
           {/* Top Rail Stack: Module Category Navigation Icons */}
           <div className="flex flex-col items-center w-full">
             <div className="flex flex-col items-center gap-1.5 sm:gap-2 w-full px-2">
-              {railItems.map((item) => {
+              {authorizedRailItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = activeCategory === item.id;
 
@@ -407,7 +434,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         {/* ========================================================================= */}
         {/* COLUMN 2: EXPANDED SUB-NAVIGATION FLYOUT PANEL (CONTENT PAGE SHADE) */}
         {/* ========================================================================= */}
-        <div className="flex w-60 sm:w-64 flex-col border-r border-slate-200/90 bg-white rounded-tl-2xl md:rounded-tl-[20px] overflow-hidden">
+        <div className="flex w-60 sm:w-64 flex-col border-r border-slate-200/90 bg-white rounded-tl-xl md:rounded-tl-[16px] overflow-hidden">
           {/* Mobile Close Bar Header */}
           <div className="flex items-center justify-between px-4 py-2.5 border-b border-slate-100 md:hidden">
             <span className="text-xs font-semibold text-slate-500 tracking-wider uppercase">Navigation</span>

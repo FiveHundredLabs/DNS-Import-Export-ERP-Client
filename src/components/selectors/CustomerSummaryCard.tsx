@@ -12,12 +12,12 @@ export function CustomerSummaryCard({ customer }: { customer: Customer }) {
       <CardContent className="p-4 space-y-2">
         <div className="flex items-start justify-between">
           <div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-mono text-slate-400 uppercase tracking-wider">
+            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+              <span className="text-xs font-mono text-slate-400 uppercase tracking-wider whitespace-nowrap shrink-0">
                 {customer.code}
               </span>
-              <Badge variant="outline">{customer.type}</Badge>
-              {customer.loyaltyTier && <Badge variant="warning">{customer.loyaltyTier}</Badge>}
+              <Badge variant="outline" className="whitespace-nowrap shrink-0">{customer.type}</Badge>
+              {customer.loyaltyTier && <Badge variant="warning" className="whitespace-nowrap shrink-0">{customer.loyaltyTier}</Badge>}
             </div>
             <h4 className="text-sm font-semibold text-slate-900 mt-0.5">{customer.name}</h4>
             <p className="text-xs text-slate-500">{customer.address}</p>

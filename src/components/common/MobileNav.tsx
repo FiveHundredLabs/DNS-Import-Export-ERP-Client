@@ -21,13 +21,14 @@ import {
   ChevronRight,
   Clock,
   Layers,
+  Receipt,
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { cn } from '../../utils/cn';
 import { RoleSwitcher } from './RoleSwitcher';
 
 export function MobileNav() {
-  const { role, currentUser, logout } = useAuth();
+  const { role, currentUser, logout, canAccessRoute } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const [moreOpen, setMoreOpen] = useState(false);
@@ -68,6 +69,7 @@ export function MobileNav() {
     location.pathname.startsWith('/inventory') ||
     location.pathname.startsWith('/commissions') ||
     location.pathname.startsWith('/reports') ||
+    location.pathname.startsWith('/invoices') ||
     location.pathname.startsWith('/approvals');
 
   const handleNavClick = (path: string) => {
@@ -86,26 +88,42 @@ export function MobileNav() {
       {/* 1. Fixed Bottom Navigation Bar (5 Items) */}
       <nav
         aria-label="Mobile Navigation"
-        className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200/90 shadow-[0_-2px_10px_rgba(0,0,0,0.03)] md:hidden pb-[env(safe-area-inset-bottom)]"
+        className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-2xl border-t border-slate-200/80 shadow-[0_-8px_30px_rgba(0,0,0,0.06)] md:hidden rounded-t-[20px] pb-[calc(0.4rem+env(safe-area-inset-bottom,0px))]"
       >
-        <div className="grid grid-cols-5 h-16 items-center px-1">
+        <div className="grid grid-cols-5 h-[66px] items-center px-1">
           {/* 1. Dashboard */}
           <NavLink
             to="/"
             end
             className={({ isActive }) =>
               cn(
-                'flex flex-col items-center justify-center min-h-[48px] py-1 px-1 transition-all rounded-md',
-                isActive
-                  ? 'text-primary font-semibold'
-                  : 'text-slate-500 hover:text-slate-800'
+                'group flex flex-col items-center justify-center h-full py-1 transition-all select-none active:scale-95',
+                isActive ? 'text-primary' : 'text-slate-400 hover:text-slate-700'
               )
             }
           >
-            <div className={cn('relative p-1 rounded-md transition-colors', isDashboardActive && 'bg-primary-light')}>
-              <LayoutDashboard className="h-5 w-5" />
-            </div>
-            <span className="text-[11px] font-medium tracking-tight mt-0.5">Dashboard</span>
+            {({ isActive }) => (
+              <>
+                <div
+                  className={cn(
+                    'flex h-8 w-12 items-center justify-center rounded-full transition-all duration-200',
+                    isActive
+                      ? 'bg-primary-light text-primary font-bold shadow-2xs'
+                      : 'text-slate-400 group-hover:bg-slate-100 group-hover:text-slate-600'
+                  )}
+                >
+                  <LayoutDashboard className={cn('h-5 w-5 transition-transform', isActive && 'scale-105 stroke-[2.2]')} />
+                </div>
+                <span
+                  className={cn(
+                    'text-[10.5px] tracking-tight mt-0.5 transition-colors',
+                    isActive ? 'font-bold text-primary' : 'font-medium text-slate-500'
+                  )}
+                >
+                  Dashboard
+                </span>
+              </>
+            )}
           </NavLink>
 
           {/* 2. Customers */}
@@ -113,35 +131,62 @@ export function MobileNav() {
             to="/customers"
             className={({ isActive }) =>
               cn(
-                'flex flex-col items-center justify-center min-h-[48px] py-1 px-1 transition-all rounded-md',
-                isActive || isCustomersActive
-                  ? 'text-primary font-semibold'
-                  : 'text-slate-500 hover:text-slate-800'
+                'group flex flex-col items-center justify-center h-full py-1 transition-all select-none active:scale-95',
+                isActive || isCustomersActive ? 'text-primary' : 'text-slate-400 hover:text-slate-700'
               )
             }
           >
-            <div className={cn('relative p-1 rounded-md transition-colors', isCustomersActive && 'bg-primary-light')}>
-              <Users className="h-5 w-5" />
-            </div>
-            <span className="text-[11px] font-medium tracking-tight mt-0.5">Customers</span>
+            {() => {
+              const active = isCustomersActive;
+              return (
+                <>
+                  <div
+                    className={cn(
+                      'flex h-8 w-12 items-center justify-center rounded-full transition-all duration-200',
+                      active
+                        ? 'bg-primary-light text-primary font-bold shadow-2xs'
+                        : 'text-slate-400 group-hover:bg-slate-100 group-hover:text-slate-600'
+                    )}
+                  >
+                    <Users className={cn('h-5 w-5 transition-transform', active && 'scale-105 stroke-[2.2]')} />
+                  </div>
+                  <span
+                    className={cn(
+                      'text-[10.5px] tracking-tight mt-0.5 transition-colors',
+                      active ? 'font-bold text-primary' : 'font-medium text-slate-500'
+                    )}
+                  >
+                    Customers
+                  </span>
+                </>
+              );
+            }}
           </NavLink>
 
-          {/* 3. Orders */}
+          {/* 3. Center Elevated Floating Action Button (FAB) for Orders */}
           <NavLink
             to="/orders"
-            className={({ isActive }) =>
-              cn(
-                'flex flex-col items-center justify-center min-h-[48px] py-1 px-1 transition-all rounded-md',
-                isActive || isOrdersActive
-                  ? 'text-primary font-semibold'
-                  : 'text-slate-500 hover:text-slate-800'
-              )
-            }
+            aria-label="Orders & Quick Sales"
+            className="group relative flex flex-col items-center justify-center -mt-6 select-none active:scale-90 transition-transform"
           >
-            <div className={cn('relative p-1 rounded-md transition-colors', isOrdersActive && 'bg-primary-light')}>
-              <ShoppingCart className="h-5 w-5" />
+            <div
+              className={cn(
+                'flex h-[52px] w-[52px] items-center justify-center rounded-full shadow-[0_8px_20px_rgba(0,0,0,0.18)] ring-4 ring-white transition-all duration-200 cursor-pointer',
+                isOrdersActive
+                  ? 'bg-gradient-to-tr from-primary to-primary-hover text-white ring-primary/20 shadow-[0_10px_24px_rgba(0,0,0,0.28)] scale-105'
+                  : 'bg-primary text-white hover:brightness-105'
+              )}
+            >
+              <ShoppingCart className="h-6 w-6 stroke-[2.2] text-white" />
             </div>
-            <span className="text-[11px] font-medium tracking-tight mt-0.5">Orders</span>
+            <span
+              className={cn(
+                'text-[10.5px] font-bold tracking-tight mt-1 transition-colors',
+                isOrdersActive ? 'text-primary' : 'text-slate-700 group-hover:text-primary'
+              )}
+            >
+              Orders
+            </span>
           </NavLink>
 
           {/* 4. Warranty */}
@@ -149,17 +194,36 @@ export function MobileNav() {
             to="/warranty"
             className={({ isActive }) =>
               cn(
-                'flex flex-col items-center justify-center min-h-[48px] py-1 px-1 transition-all rounded-md',
-                isActive || isWarrantyActive
-                  ? 'text-primary font-semibold'
-                  : 'text-slate-500 hover:text-slate-800'
+                'group flex flex-col items-center justify-center h-full py-1 transition-all select-none active:scale-95',
+                isActive || isWarrantyActive ? 'text-primary' : 'text-slate-400 hover:text-slate-700'
               )
             }
           >
-            <div className={cn('relative p-1 rounded-md transition-colors', isWarrantyActive && 'bg-primary-light')}>
-              <ShieldCheck className="h-5 w-5" />
-            </div>
-            <span className="text-[11px] font-medium tracking-tight mt-0.5">Warranty</span>
+            {() => {
+              const active = isWarrantyActive;
+              return (
+                <>
+                  <div
+                    className={cn(
+                      'flex h-8 w-12 items-center justify-center rounded-full transition-all duration-200',
+                      active
+                        ? 'bg-primary-light text-primary font-bold shadow-2xs'
+                        : 'text-slate-400 group-hover:bg-slate-100 group-hover:text-slate-600'
+                    )}
+                  >
+                    <ShieldCheck className={cn('h-5 w-5 transition-transform', active && 'scale-105 stroke-[2.2]')} />
+                  </div>
+                  <span
+                    className={cn(
+                      'text-[10.5px] tracking-tight mt-0.5 transition-colors',
+                      active ? 'font-bold text-primary' : 'font-medium text-slate-500'
+                    )}
+                  >
+                    Warranty
+                  </span>
+                </>
+              );
+            }}
           </NavLink>
 
           {/* 5. More ⋯ (Opens Bottom Sheet) */}
@@ -169,16 +233,28 @@ export function MobileNav() {
             aria-expanded={moreOpen}
             aria-label="Open More features menu"
             className={cn(
-              'flex flex-col items-center justify-center min-h-[48px] py-1 px-1 transition-all rounded-md focus:outline-none',
-              moreOpen || isMoreRouteActive
-                ? 'text-primary font-semibold'
-                : 'text-slate-500 hover:text-slate-800'
+              'group flex flex-col items-center justify-center h-full py-1 transition-all select-none active:scale-95 focus:outline-none',
+              moreOpen || isMoreRouteActive ? 'text-primary' : 'text-slate-400 hover:text-slate-700'
             )}
           >
-            <div className={cn('relative p-1 rounded-md transition-colors', (moreOpen || isMoreRouteActive) && 'bg-primary-light')}>
-              <MoreHorizontal className="h-5 w-5" />
+            <div
+              className={cn(
+                'flex h-8 w-12 items-center justify-center rounded-full transition-all duration-200',
+                moreOpen || isMoreRouteActive
+                  ? 'bg-primary-light text-primary font-bold shadow-2xs'
+                  : 'text-slate-400 group-hover:bg-slate-100 group-hover:text-slate-600'
+              )}
+            >
+              <MoreHorizontal className={cn('h-5 w-5 transition-transform', (moreOpen || isMoreRouteActive) && 'scale-105 stroke-[2.2]')} />
             </div>
-            <span className="text-[11px] font-medium tracking-tight mt-0.5">More ⋯</span>
+            <span
+              className={cn(
+                'text-[10.5px] tracking-tight mt-0.5 transition-colors',
+                moreOpen || isMoreRouteActive ? 'font-bold text-primary' : 'font-medium text-slate-500'
+              )}
+            >
+              More ⋯
+            </span>
           </button>
         </div>
       </nav>
@@ -249,167 +325,227 @@ export function MobileNav() {
             Sales & Field Operations
           </span>
           <div className="grid grid-cols-2 gap-2.5">
-            <button
-              onClick={() => handleNavClick('/payments')}
-              className={cn(
-                'flex items-center gap-3 p-3 rounded-2xl border text-left transition-all',
-                location.pathname.startsWith('/payments') && !location.pathname.includes('/collect')
-                  ? 'border-primary bg-primary-light/50 text-primary-text font-semibold'
-                  : 'border-slate-200/80 bg-white hover:bg-slate-50 text-slate-700'
-              )}
-            >
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
-                <CreditCard className="h-4 w-4" />
-              </div>
-              <div className="min-w-0">
-                <div className="text-xs font-semibold truncate">Payments</div>
-                <div className="text-[10.5px] text-slate-400 truncate">PDC & Receipts</div>
-              </div>
-            </button>
+            {canAccessRoute('/payments') && (
+              <button
+                onClick={() => handleNavClick('/payments')}
+                className={cn(
+                  'flex items-center gap-3 p-3 rounded-2xl border text-left transition-all',
+                  location.pathname.startsWith('/payments') && !location.pathname.includes('/collect')
+                    ? 'border-primary bg-primary-light/50 text-primary-text font-semibold'
+                    : 'border-slate-200/80 bg-white hover:bg-slate-50 text-slate-700'
+                )}
+              >
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+                  <CreditCard className="h-4 w-4" />
+                </div>
+                <div className="min-w-0">
+                  <div className="text-xs font-semibold truncate">Payments</div>
+                  <div className="text-[10.5px] text-slate-400 truncate">PDC & Receipts</div>
+                </div>
+              </button>
+            )}
 
-            <button
-              onClick={() => handleNavClick('/payments/collect')}
-              className={cn(
-                'flex items-center gap-3 p-3 rounded-2xl border text-left transition-all',
-                location.pathname.includes('/collect')
-                  ? 'border-emerald-500 bg-emerald-50 text-emerald-800 font-semibold'
-                  : 'border-slate-200/80 bg-white hover:bg-slate-50 text-slate-700'
-              )}
-            >
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
-                <DollarSign className="h-4 w-4" />
-              </div>
-              <div className="min-w-0">
-                <div className="text-xs font-semibold truncate">Collect Payment</div>
-                <div className="text-[10.5px] text-emerald-600 font-medium truncate">Instant FIFO</div>
-              </div>
-            </button>
+            {canAccessRoute('/payments') && (
+              <button
+                onClick={() => handleNavClick('/payments/collect')}
+                className={cn(
+                  'flex items-center gap-3 p-3 rounded-2xl border text-left transition-all',
+                  location.pathname.includes('/collect')
+                    ? 'border-emerald-500 bg-emerald-50 text-emerald-800 font-semibold'
+                    : 'border-slate-200/80 bg-white hover:bg-slate-50 text-slate-700'
+                )}
+              >
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+                  <DollarSign className="h-4 w-4" />
+                </div>
+                <div className="min-w-0">
+                  <div className="text-xs font-semibold truncate">Collect Payment</div>
+                  <div className="text-[10.5px] text-emerald-600 font-medium truncate">Instant FIFO</div>
+                </div>
+              </button>
+            )}
 
-            <button
-              onClick={() => handleNavClick('/quotations')}
-              className={cn(
-                'flex items-center gap-3 p-3 rounded-2xl border text-left transition-all',
-                location.pathname.startsWith('/quotations')
-                  ? 'border-primary bg-primary-light/50 text-primary-text font-semibold'
-                  : 'border-slate-200/80 bg-white hover:bg-slate-50 text-slate-700'
-              )}
-            >
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
-                <FileSpreadsheet className="h-4 w-4" />
-              </div>
-              <div className="min-w-0">
-                <div className="text-xs font-semibold truncate">Quotations</div>
-                <div className="text-[10.5px] text-slate-400 truncate">Quotes & WhatsApp</div>
-              </div>
-            </button>
+            {canAccessRoute('/quotations') && (
+              <button
+                onClick={() => handleNavClick('/quotations')}
+                className={cn(
+                  'flex items-center gap-3 p-3 rounded-2xl border text-left transition-all',
+                  location.pathname.startsWith('/quotations')
+                    ? 'border-primary bg-primary-light/50 text-primary-text font-semibold'
+                    : 'border-slate-200/80 bg-white hover:bg-slate-50 text-slate-700'
+                )}
+              >
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
+                  <FileSpreadsheet className="h-4 w-4" />
+                </div>
+                <div className="min-w-0">
+                  <div className="text-xs font-semibold truncate">Quotations</div>
+                  <div className="text-[10.5px] text-slate-400 truncate">Quotes & WhatsApp</div>
+                </div>
+              </button>
+            )}
 
-            <button
-              onClick={() => handleNavClick('/warranty')}
-              className={cn(
-                'flex items-center gap-3 p-3 rounded-2xl border text-left transition-all',
-                location.pathname.startsWith('/warranty')
-                  ? 'border-primary bg-primary-light/50 text-primary-text font-semibold'
-                  : 'border-slate-200/80 bg-white hover:bg-slate-50 text-slate-700'
-              )}
-            >
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-purple-50 text-purple-600">
-                <Store className="h-4 w-4" />
-              </div>
-              <div className="min-w-0">
-                <div className="text-xs font-semibold truncate">Shop Follow-ups</div>
-                <div className="text-[10.5px] text-slate-400 truncate">Pending Notes</div>
-              </div>
-            </button>
+            {canAccessRoute('/warranty') && (
+              <button
+                onClick={() => handleNavClick('/warranty')}
+                className={cn(
+                  'flex items-center gap-3 p-3 rounded-2xl border text-left transition-all',
+                  location.pathname.startsWith('/warranty')
+                    ? 'border-primary bg-primary-light/50 text-primary-text font-semibold'
+                    : 'border-slate-200/80 bg-white hover:bg-slate-50 text-slate-700'
+                )}
+              >
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-purple-50 text-purple-600">
+                  <Store className="h-4 w-4" />
+                </div>
+                <div className="min-w-0">
+                  <div className="text-xs font-semibold truncate">Shop Follow-ups</div>
+                  <div className="text-[10.5px] text-slate-400 truncate">Pending Notes</div>
+                </div>
+              </button>
+            )}
+
+            {canAccessRoute('/invoices') && (
+              <button
+                onClick={() => handleNavClick('/invoices')}
+                className={cn(
+                  'flex items-center gap-3 p-3 rounded-2xl border text-left transition-all',
+                  location.pathname.startsWith('/invoices')
+                    ? 'border-primary bg-primary-light/50 text-primary-text font-semibold'
+                    : 'border-slate-200/80 bg-white hover:bg-slate-50 text-slate-700'
+                )}
+              >
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-violet-50 text-violet-600">
+                  <Receipt className="h-4 w-4" />
+                </div>
+                <div className="min-w-0">
+                  <div className="text-xs font-semibold truncate">Invoices</div>
+                  <div className="text-[10.5px] text-slate-400 truncate">Tax &amp; Billing</div>
+                </div>
+              </button>
+            )}
+
+            {canAccessRoute('/approvals') && (
+              <button
+                onClick={() => handleNavClick('/approvals')}
+                className={cn(
+                  'flex items-center gap-3 p-3 rounded-2xl border text-left transition-all',
+                  location.pathname.startsWith('/approvals')
+                    ? 'border-primary bg-primary-light/50 text-primary-text font-semibold'
+                    : 'border-slate-200/80 bg-white hover:bg-slate-50 text-slate-700'
+                )}
+              >
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-rose-50 text-rose-600">
+                  <CheckCircle className="h-4 w-4" />
+                </div>
+                <div className="min-w-0">
+                  <div className="text-xs font-semibold truncate">Approvals</div>
+                  <div className="text-[10.5px] text-slate-400 truncate">Engine Queue</div>
+                </div>
+              </button>
+            )}
           </div>
         </div>
 
         {/* Group 2: Catalog & Stock */}
-        <div className="space-y-2 mt-5">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 px-1">
-            Products & Inventory
-          </span>
-          <div className="grid grid-cols-2 gap-2.5">
-            <button
-              onClick={() => handleNavClick('/products')}
-              className={cn(
-                'flex items-center gap-3 p-3 rounded-2xl border text-left transition-all',
-                location.pathname.startsWith('/products')
-                  ? 'border-primary bg-primary-light/50 text-primary-text font-semibold'
-                  : 'border-slate-200/80 bg-white hover:bg-slate-50 text-slate-700'
+        {(canAccessRoute('/products') || canAccessRoute('/inventory')) && (
+          <div className="space-y-2 mt-5">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 px-1">
+              Products & Inventory
+            </span>
+            <div className="grid grid-cols-2 gap-2.5">
+              {canAccessRoute('/products') && (
+                <button
+                  onClick={() => handleNavClick('/products')}
+                  className={cn(
+                    'flex items-center gap-3 p-3 rounded-2xl border text-left transition-all',
+                    location.pathname.startsWith('/products')
+                      ? 'border-primary bg-primary-light/50 text-primary-text font-semibold'
+                      : 'border-slate-200/80 bg-white hover:bg-slate-50 text-slate-700'
+                  )}
+                >
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-cyan-50 text-cyan-600">
+                    <Package className="h-4 w-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-xs font-semibold truncate">Products</div>
+                    <div className="text-[10.5px] text-slate-400 truncate">Prices & Discounts</div>
+                  </div>
+                </button>
               )}
-            >
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-cyan-50 text-cyan-600">
-                <Package className="h-4 w-4" />
-              </div>
-              <div className="min-w-0">
-                <div className="text-xs font-semibold truncate">Products</div>
-                <div className="text-[10.5px] text-slate-400 truncate">Prices & Discounts</div>
-              </div>
-            </button>
 
-            <button
-              onClick={() => handleNavClick('/inventory/stock')}
-              className={cn(
-                'flex items-center gap-3 p-3 rounded-2xl border text-left transition-all',
-                location.pathname.startsWith('/inventory')
-                  ? 'border-primary bg-primary-light/50 text-primary-text font-semibold'
-                  : 'border-slate-200/80 bg-white hover:bg-slate-50 text-slate-700'
+              {canAccessRoute('/inventory') && (
+                <button
+                  onClick={() => handleNavClick('/inventory/stock')}
+                  className={cn(
+                    'flex items-center gap-3 p-3 rounded-2xl border text-left transition-all',
+                    location.pathname.startsWith('/inventory')
+                      ? 'border-primary bg-primary-light/50 text-primary-text font-semibold'
+                      : 'border-slate-200/80 bg-white hover:bg-slate-50 text-slate-700'
+                  )}
+                >
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600">
+                    <Boxes className="h-4 w-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-xs font-semibold truncate">Warehouse Stock</div>
+                    <div className="text-[10.5px] text-slate-400 truncate">Live Quantities</div>
+                  </div>
+                </button>
               )}
-            >
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600">
-                <Boxes className="h-4 w-4" />
-              </div>
-              <div className="min-w-0">
-                <div className="text-xs font-semibold truncate">Warehouse Stock</div>
-                <div className="text-[10.5px] text-slate-400 truncate">Live Quantities</div>
-              </div>
-            </button>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Group 3: Analytics & Approvals */}
-        <div className="space-y-2 mt-5">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 px-1">
-            Performance & Analytics
-          </span>
-          <div className="grid grid-cols-2 gap-2.5">
-            <button
-              onClick={() => handleNavClick('/reports')}
-              className={cn(
-                'flex items-center gap-3 p-3 rounded-2xl border text-left transition-all',
-                location.pathname.startsWith('/reports')
-                  ? 'border-primary bg-primary-light/50 text-primary-text font-semibold'
-                  : 'border-slate-200/80 bg-white hover:bg-slate-50 text-slate-700'
+        {(canAccessRoute('/reports') || canAccessRoute('/commissions')) && (
+          <div className="space-y-2 mt-5">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 px-1">
+              Performance & Analytics
+            </span>
+            <div className="grid grid-cols-2 gap-2.5">
+              {canAccessRoute('/reports') && (
+                <button
+                  onClick={() => handleNavClick('/reports')}
+                  className={cn(
+                    'flex items-center gap-3 p-3 rounded-2xl border text-left transition-all',
+                    location.pathname.startsWith('/reports')
+                      ? 'border-primary bg-primary-light/50 text-primary-text font-semibold'
+                      : 'border-slate-200/80 bg-white hover:bg-slate-50 text-slate-700'
+                  )}
+                >
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-rose-50 text-rose-600">
+                    <BarChart3 className="h-4 w-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-xs font-semibold truncate">Reports</div>
+                    <div className="text-[10.5px] text-slate-400 truncate">Sales & Collections</div>
+                  </div>
+                </button>
               )}
-            >
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-rose-50 text-rose-600">
-                <BarChart3 className="h-4 w-4" />
-              </div>
-              <div className="min-w-0">
-                <div className="text-xs font-semibold truncate">Reports</div>
-                <div className="text-[10.5px] text-slate-400 truncate">Sales & Collections</div>
-              </div>
-            </button>
 
-            <button
-              onClick={() => handleNavClick('/commissions')}
-              className={cn(
-                'flex items-center gap-3 p-3 rounded-2xl border text-left transition-all',
-                location.pathname.startsWith('/commissions')
-                  ? 'border-primary bg-primary-light/50 text-primary-text font-semibold'
-                  : 'border-slate-200/80 bg-white hover:bg-slate-50 text-slate-700'
+              {canAccessRoute('/commissions') && (
+                <button
+                  onClick={() => handleNavClick('/commissions')}
+                  className={cn(
+                    'flex items-center gap-3 p-3 rounded-2xl border text-left transition-all',
+                    location.pathname.startsWith('/commissions')
+                      ? 'border-primary bg-primary-light/50 text-primary-text font-semibold'
+                      : 'border-slate-200/80 bg-white hover:bg-slate-50 text-slate-700'
+                  )}
+                >
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
+                    <Award className="h-4 w-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-xs font-semibold truncate">Targets & Incentive</div>
+                    <div className="text-[10.5px] text-slate-400 truncate">Commission Hub</div>
+                  </div>
+                </button>
               )}
-            >
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
-                <Award className="h-4 w-4" />
-              </div>
-              <div className="min-w-0">
-                <div className="text-xs font-semibold truncate">Targets & Incentive</div>
-                <div className="text-[10.5px] text-slate-400 truncate">Commission Hub</div>
-              </div>
-            </button>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Group 4: Account Actions */}
         <div className="pt-4 border-t border-slate-100 mt-4 space-y-2.5">

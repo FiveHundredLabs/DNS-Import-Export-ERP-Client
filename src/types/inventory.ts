@@ -40,6 +40,7 @@ export interface GRNItem {
   damagedQuantity: number;
   unitCostSnapshot: number;
   lineValue: number;
+  serialNumbers?: string[];
   barcode?: string;
   serialNumber?: string;
   uom?: string; // e.g. 'PCS', 'SET', 'MTR', 'BOX', 'KG'

@@ -32,6 +32,7 @@ export { MobileNav } from './common/MobileNav';
 export { InnerSidebar } from './common/InnerSidebar';
 export { RoleSwitcher } from './common/RoleSwitcher';
 export { StatCard } from './common/StatCard';
+export { AmountDisplay } from './common/AmountDisplay';
 export { EmptyState } from './common/EmptyState';
 export { ErrorState } from './common/ErrorState';
 export { LoadingSkeleton } from './common/LoadingSkeleton';

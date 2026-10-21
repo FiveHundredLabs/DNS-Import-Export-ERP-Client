@@ -11,6 +11,13 @@ import {
 import { periodLockService } from './periodLockService';
 import Decimal from 'decimal.js';
 
+export interface LandedExpenseItem {
+  id: string;
+  category: string;
+  description: string;
+  amount: number;
+}
+
 export interface VendorBillLineItem {
   id: string;
   productId: string;
@@ -18,14 +25,16 @@ export interface VendorBillLineItem {
   sku: string;
   receivedQuantity: number;
   draftUnitCost: number; // Historical reference
-  unitCost: number; // Editable actual cost
+  unitCost: number; // Supplier Unit Cost (payable to supplier)
   lineDiscount: number; // Editable discount in currency
   vatCode: 'STANDARD_18' | 'EXEMPT';
   vatAmount: number;
   lineTotal: number;
   historicalPurchasePrice?: number;
   apportionedFreight?: number;
-  landedUnitCost?: number;
+  allocatedLandedCost?: number; // Total allocated additional landed expenses for this line
+  landedUnitCost?: number; // Landed Cost per Unit (actual cost per unit including allocated expenses)
+  totalLandedCost?: number; // Total Landed Cost (supplier cost + allocated expenses for the line)
 }
 
 export interface VendorBill {
@@ -41,6 +50,9 @@ export interface VendorBill {
   lineItems: VendorBillLineItem[];
   freightCharges: number;
   otherLandingCosts: number;
+  additionalExpenses?: LandedExpenseItem[];
+  totalAdditionalLandedCosts?: number;
+  totalLandedCost?: number;
   subtotal: number;
   vatTotal: number;
   totalAmount: number;
@@ -303,7 +315,7 @@ class AccountsPayableService {
   }
 
   /**
-   * Landed Cost Engine: Apportion bulk freight across line items
+   * Landed Cost Engine: Apportion bulk freight / additional landed expenses across line items
    * - BY_VALUE: Proportional to line net value = receivedQuantity * unitCost - lineDiscount
    * - BY_QUANTITY: Proportional to receivedQuantity
    */
@@ -312,38 +324,60 @@ class AccountsPayableService {
     bulkFreight: number,
     method: 'BY_VALUE' | 'BY_QUANTITY' = 'BY_VALUE'
   ): VendorBillLineItem[] {
-    const freightDecimal = new Decimal(bulkFreight || 0);
-    if (lineItems.length === 0 || freightDecimal.isZero()) {
-      return lineItems.map((item) => ({
-        ...item,
-        apportionedFreight: 0,
-        landedUnitCost: item.unitCost,
-      }));
+    return this.apportionLandedCosts(lineItems, bulkFreight, method);
+  }
+
+  /**
+   * Apportion Additional Landed Costs (Shipping, Port Charges, Transportation, Handling, etc.)
+   * Computes allocated landed expenses per line, true Landed Cost per Unit, and Total Landed Cost.
+   */
+  apportionLandedCosts(
+    lineItems: VendorBillLineItem[],
+    totalAdditionalCosts: number,
+    method: 'BY_VALUE' | 'BY_QUANTITY' = 'BY_VALUE'
+  ): VendorBillLineItem[] {
+    const costDecimal = new Decimal(totalAdditionalCosts || 0);
+    if (lineItems.length === 0 || costDecimal.isZero()) {
+      return lineItems.map((item) => {
+        const qty = item.receivedQuantity || 1;
+        const lineNet = new Decimal(qty).times(item.unitCost).minus(item.lineDiscount || 0);
+        const unitLanded = lineNet.dividedBy(qty).toDecimalPlaces(2).toNumber();
+        return {
+          ...item,
+          apportionedFreight: 0,
+          allocatedLandedCost: 0,
+          landedUnitCost: unitLanded,
+          totalLandedCost: lineNet.toNumber(),
+        };
+      });
     }
 
     if (method === 'BY_QUANTITY') {
       const totalQty = lineItems.reduce((acc, i) => acc + (i.receivedQuantity || 0), 0);
       if (totalQty === 0) return lineItems;
 
-      let remainingFreight = freightDecimal;
+      let remainingCost = costDecimal;
       return lineItems.map((item, idx) => {
-        let lineFreight: Decimal;
+        let lineCost: Decimal;
         if (idx === lineItems.length - 1) {
-          lineFreight = remainingFreight;
+          lineCost = remainingCost;
         } else {
           const ratio = new Decimal(item.receivedQuantity).dividedBy(totalQty);
-          lineFreight = freightDecimal.times(ratio).toDecimalPlaces(2);
-          remainingFreight = remainingFreight.minus(lineFreight);
+          lineCost = costDecimal.times(ratio).toDecimalPlaces(2);
+          remainingCost = remainingCost.minus(lineCost);
         }
 
         const qty = item.receivedQuantity || 1;
         const lineNet = new Decimal(qty).times(item.unitCost).minus(item.lineDiscount || 0);
-        const landedCost = lineNet.plus(lineFreight).dividedBy(qty).toDecimalPlaces(2).toNumber();
+        const totalLineLanded = lineNet.plus(lineCost);
+        const landedCost = totalLineLanded.dividedBy(qty).toDecimalPlaces(2).toNumber();
 
         return {
           ...item,
-          apportionedFreight: lineFreight.toNumber(),
+          apportionedFreight: lineCost.toNumber(),
+          allocatedLandedCost: lineCost.toNumber(),
           landedUnitCost: landedCost,
+          totalLandedCost: totalLineLanded.toDecimalPlaces(2).toNumber(),
         };
       });
     } else {
@@ -357,32 +391,35 @@ class AccountsPayableService {
       }, new Decimal(0));
 
       if (totalNetValue.isZero()) {
-        return this.apportionFreight(lineItems, bulkFreight, 'BY_QUANTITY');
+        return this.apportionLandedCosts(lineItems, totalAdditionalCosts, 'BY_QUANTITY');
       }
 
-      let remainingFreight = freightDecimal;
+      let remainingCost = costDecimal;
       return lineItems.map((item, idx) => {
-        let lineFreight: Decimal;
+        let lineCost: Decimal;
         if (idx === lineItems.length - 1) {
-          lineFreight = remainingFreight;
+          lineCost = remainingCost;
         } else {
           const net = Decimal.max(
             0,
             new Decimal(item.receivedQuantity).times(item.unitCost).minus(item.lineDiscount || 0)
           );
           const ratio = net.dividedBy(totalNetValue);
-          lineFreight = freightDecimal.times(ratio).toDecimalPlaces(2);
-          remainingFreight = remainingFreight.minus(lineFreight);
+          lineCost = costDecimal.times(ratio).toDecimalPlaces(2);
+          remainingCost = remainingCost.minus(lineCost);
         }
 
         const qty = item.receivedQuantity || 1;
         const lineNet = new Decimal(qty).times(item.unitCost).minus(item.lineDiscount || 0);
-        const landedCost = lineNet.plus(lineFreight).dividedBy(qty).toDecimalPlaces(2).toNumber();
+        const totalLineLanded = lineNet.plus(lineCost);
+        const landedCost = totalLineLanded.dividedBy(qty).toDecimalPlaces(2).toNumber();
 
         return {
           ...item,
-          apportionedFreight: lineFreight.toNumber(),
+          apportionedFreight: lineCost.toNumber(),
+          allocatedLandedCost: lineCost.toNumber(),
           landedUnitCost: landedCost,
+          totalLandedCost: totalLineLanded.toDecimalPlaces(2).toNumber(),
         };
       });
     }
@@ -443,6 +480,7 @@ class AccountsPayableService {
     freightCharges: number;
     otherLandingCosts: number;
     freightBilledByThirdParty?: boolean;
+    additionalExpenses?: LandedExpenseItem[];
     applyAdvanceId?: string;
     advanceAmountToApply?: number;
   }): Promise<VendorBill> {
@@ -570,6 +608,9 @@ class AccountsPayableService {
       lineItems: params.lineItems,
       freightCharges: freight.toNumber(),
       otherLandingCosts: otherCosts.toNumber(),
+      additionalExpenses: params.additionalExpenses,
+      totalAdditionalLandedCosts: freight.plus(otherCosts).toNumber(),
+      totalLandedCost: inventoryDebit.toNumber(),
       subtotal: itemsNetSubtotal.toNumber(),
       vatTotal: vatDebit.toNumber(),
       totalAmount: totalBillCredit.toNumber(),

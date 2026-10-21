@@ -116,6 +116,10 @@ export class ProductService {
     return this.repo.getCategories();
   }
 
+  async createCategory(category: Omit<Category, 'id' | 'createdAt' | 'updatedAt'>) {
+    return this.repo.createCategory(category);
+  }
+
   async getUOMs() {
     return this.repo.getUOMs();
   }

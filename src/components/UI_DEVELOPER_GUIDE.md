@@ -11,7 +11,7 @@ All system styles, CSS variables, typography rules, form controls, and component
 > **File location:** [`src/styles.css`](file:///d:/projects/500-labs/DNS-Import-Export-ERP-Client/src/styles.css) (with [`src/index.css`](file:///d:/projects/500-labs/DNS-Import-Export-ERP-Client/src/index.css) as a forwarder)
 
 ### Table of Contents inside `styles.css`:
-1. **Google Fonts Import**: Inter (UI text) & JetBrains Mono (SKUs, serials, currencies, numbers).
+1. **Google Fonts Import**: Google Sans Flex (UI text) & JetBrains Mono (SKUs, serials, currencies, numbers).
 2. **Tailwind Directives**: `@tailwind base`, `@tailwind components`, `@tailwind utilities`.
 3. **Design Tokens & Theme Variables**: Dynamic primary colors (`--primary`, `--primary-hover`, `--primary-active`, `--primary-light`, `--primary-border`, `--primary-text`, `--primary-ring`), plus light/dark tokens.
 4. **Base Typography**: Smooth font rendering, body line height (1.5), enterprise heading hierarchy (`h1` 24px, `h2` 18px, `h3` 16px).

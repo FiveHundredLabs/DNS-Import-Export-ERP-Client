@@ -6,11 +6,15 @@ import {
   Equal,
   Copy,
   Check,
+  X,
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 
 interface CalculatorPopoverProps {
   className?: string;
+  isOpen?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  hideTrigger?: boolean;
 }
 
 function CalculatorIcon({ className = 'h-[17px] w-[17px]' }: { className?: string }) {
@@ -43,8 +47,22 @@ function CalculatorIcon({ className = 'h-[17px] w-[17px]' }: { className?: strin
   );
 }
 
-export function CalculatorPopover({ className }: CalculatorPopoverProps) {
-  const [isOpen, setIsOpen] = useState(false);
+export function CalculatorPopover({
+  className,
+  isOpen: controlledIsOpen,
+  onOpenChange,
+  hideTrigger = false,
+}: CalculatorPopoverProps) {
+  const [internalIsOpen, setInternalIsOpen] = useState(false);
+  const isOpen = controlledIsOpen !== undefined ? controlledIsOpen : internalIsOpen;
+  const setIsOpen = (val: boolean | ((prev: boolean) => boolean)) => {
+    const nextVal = typeof val === 'function' ? val(isOpen) : val;
+    if (controlledIsOpen === undefined) {
+      setInternalIsOpen(nextVal);
+    }
+    onOpenChange?.(nextVal);
+  };
+
   const [displayValue, setDisplayValue] = useState<string>('0');
   const [equation, setEquation] = useState<string>('');
   const [previousValue, setPreviousValue] = useState<number | null>(null);
@@ -203,51 +221,70 @@ export function CalculatorPopover({ className }: CalculatorPopoverProps) {
   return (
     <div className={cn('relative', className)} ref={popoverRef}>
       {/* Header Toolbar Trigger Button */}
-      <button
-        type="button"
-        onClick={() => setIsOpen((prev) => !prev)}
-        className={cn(
-          'flex h-9 w-9 items-center justify-center rounded-lg text-primary-foreground/80 hover:bg-primary-foreground/15 hover:text-primary-foreground transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-primary-foreground shrink-0 cursor-pointer',
-          isOpen && 'bg-primary-foreground/20 text-primary-foreground'
-        )}
-        title="Calculator"
-        aria-label="Calculator"
-        aria-expanded={isOpen}
-      >
-        <CalculatorIcon className="h-[17px] w-[17px] transition-transform duration-150 hover:scale-105" />
-      </button>
+      {!hideTrigger && (
+        <button
+          type="button"
+          onClick={() => setIsOpen((prev) => !prev)}
+          className={cn(
+            'flex h-9 w-9 items-center justify-center rounded-lg text-primary-foreground/80 hover:bg-primary-foreground/15 hover:text-primary-foreground transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-primary-foreground shrink-0 cursor-pointer',
+            isOpen && 'bg-primary-foreground/20 text-primary-foreground'
+          )}
+          title="Calculator"
+          aria-label="Calculator"
+          aria-expanded={isOpen}
+        >
+          <CalculatorIcon className="h-[17px] w-[17px] transition-transform duration-150 hover:scale-105" />
+        </button>
+      )}
 
       {/* Popover Card */}
       {isOpen && (
-        <div className="absolute right-0 mt-2.5 w-72 rounded-2xl border border-slate-200/90 bg-white p-3.5 shadow-2xl shadow-slate-900/15 z-50 animate-in fade-in zoom-in-95 duration-150 select-none">
-          <div className="flex items-center justify-between pb-2.5 border-b border-slate-100">
-            <div className="flex items-center gap-2">
-              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                <CalculatorIcon className="h-4 w-4" />
+        <>
+          {/* Mobile backdrop */}
+          <div
+            className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-40 md:hidden"
+            onClick={() => setIsOpen(false)}
+            aria-hidden="true"
+          />
+          <div className="fixed inset-x-3 sm:inset-x-6 top-20 max-w-xs mx-auto md:mx-0 md:absolute md:inset-x-auto md:top-auto md:right-0 md:mt-2.5 md:w-72 rounded-2xl border border-slate-200/90 bg-white p-3.5 shadow-2xl shadow-slate-900/20 z-50 animate-in fade-in zoom-in-95 duration-150 select-none">
+            <div className="flex items-center justify-between pb-2.5 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                  <CalculatorIcon className="h-4 w-4" />
+                </div>
+                <h3 className="text-xs font-bold text-slate-900 tracking-tight">
+                  ERP Utility Calculator
+                </h3>
               </div>
-              <h3 className="text-xs font-bold text-slate-900 tracking-tight">
-                ERP Utility Calculator
-              </h3>
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={handleCopy}
+                  className="text-[10px] font-mono font-medium text-slate-500 hover:text-slate-800 flex items-center gap-1 bg-slate-100 px-2 py-0.5 rounded hover:bg-slate-200 transition-colors"
+                  title="Copy value to clipboard"
+                >
+                  {copied ? (
+                    <>
+                      <Check className="h-3 w-3 text-emerald-600" />
+                      <span className="text-emerald-600">Copied</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="h-3 w-3" />
+                      <span>Copy</span>
+                    </>
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsOpen(false)}
+                  className="rounded-lg p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors md:hidden cursor-pointer"
+                  aria-label="Close calculator"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
             </div>
-            <button
-              type="button"
-              onClick={handleCopy}
-              className="text-[10px] font-mono font-medium text-slate-500 hover:text-slate-800 flex items-center gap-1 bg-slate-100 px-2 py-0.5 rounded hover:bg-slate-200 transition-colors"
-              title="Copy value to clipboard"
-            >
-              {copied ? (
-                <>
-                  <Check className="h-3 w-3 text-emerald-600" />
-                  <span className="text-emerald-600">Copied</span>
-                </>
-              ) : (
-                <>
-                  <Copy className="h-3 w-3" />
-                  <span>Copy</span>
-                </>
-              )}
-            </button>
-          </div>
 
           {/* Calculator Display Screen */}
           <div className="mt-2.5 mb-3 p-3 rounded-xl bg-slate-900 text-white text-right">
@@ -422,6 +459,7 @@ export function CalculatorPopover({ className }: CalculatorPopoverProps) {
             </button>
           </div>
         </div>
+        </>
       )}
     </div>
   );

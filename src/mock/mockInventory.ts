@@ -323,6 +323,18 @@ export const MOCK_GRNS: GRN[] = [
         damagedQuantity: 0,
         unitCostSnapshot: 2200,
         lineValue: 990000,
+        serialNumbers: [
+          'SN-RHD-2025-001',
+          'SN-RHD-2025-002',
+          'SN-RHD-2025-003',
+          'SN-RHD-2025-004',
+          'SN-RHD-2025-005',
+          'SN-RHD-2025-006',
+          'SN-RHD-2025-007',
+          'SN-RHD-2025-008',
+          'SN-RHD-2025-009',
+          'SN-RHD-2025-010',
+        ],
       },
       {
         productId: 'prod-002',
@@ -333,9 +345,96 @@ export const MOCK_GRNS: GRN[] = [
         damagedQuantity: 1,
         unitCostSnapshot: 5800,
         lineValue: 1044000,
+        serialNumbers: [
+          'SN-SCH-2025-88191',
+          'SN-SCH-2025-99312',
+          'SN-SCH-2025-99313',
+          'SN-SCH-2025-99314',
+          'SN-SCH-2025-99315',
+        ],
+      },
+      {
+        productId: 'prod-006',
+        productNameSnapshot: 'Schneider Easy9 40A 30mA 2-Pole RCCB',
+        skuSnapshot: 'DNS-RCCB-40A-2P',
+        expectedQuantity: 200,
+        receivedQuantity: 200,
+        damagedQuantity: 0,
+        unitCostSnapshot: 4850,
+        lineValue: 970000,
+        serialNumbers: [
+          'SN-EZ9-40A-001',
+          'SN-EZ9-40A-002',
+          'SN-EZ9-40A-003',
+          'SN-EZ9-40A-004',
+        ],
+      },
+      {
+        productId: 'prod-007',
+        productNameSnapshot: 'Schneider Acti9 100A 4-Pole Main Isolator Switch',
+        skuSnapshot: 'DNS-ISO-100A-4P',
+        expectedQuantity: 120,
+        receivedQuantity: 120,
+        damagedQuantity: 0,
+        unitCostSnapshot: 7200,
+        lineValue: 864000,
+        serialNumbers: [
+          'SN-ISO-100-01',
+          'SN-ISO-100-02',
+          'SN-ISO-100-03',
+        ],
+      },
+      {
+        productId: 'prod-008',
+        productNameSnapshot: 'Schneider Resi9 16A Single Pole Type B MCB',
+        skuSnapshot: 'DNS-MCB-16A-1P',
+        expectedQuantity: 600,
+        receivedQuantity: 600,
+        damagedQuantity: 2,
+        unitCostSnapshot: 1450,
+        lineValue: 870000,
+      },
+      {
+        productId: 'prod-009',
+        productNameSnapshot: 'Schneider PrismaSeT 8-Way Surface Metal Consumer Unit',
+        skuSnapshot: 'DNS-DB-8WAY-MTL',
+        expectedQuantity: 80,
+        receivedQuantity: 80,
+        damagedQuantity: 0,
+        unitCostSnapshot: 14200,
+        lineValue: 1136000,
+        serialNumbers: [
+          'SN-DB8-MTL-001',
+          'SN-DB8-MTL-002',
+        ],
+      },
+      {
+        productId: 'prod-010',
+        productNameSnapshot: 'Schneider TeSys D 25A 3-Pole AC3 Magnetic Contactor',
+        skuSnapshot: 'DNS-CON-25A-3P',
+        expectedQuantity: 150,
+        receivedQuantity: 150,
+        damagedQuantity: 0,
+        unitCostSnapshot: 9600,
+        lineValue: 1440000,
+        serialNumbers: [
+          'SN-CON-25A-701',
+          'SN-CON-25A-702',
+          'SN-CON-25A-703',
+        ],
+      },
+      {
+        productId: 'prod-011',
+        productNameSnapshot: 'Schneider Lisse 13A Single Switched Socket Outlet',
+        skuSnapshot: 'DNS-SOC-13A-1G',
+        expectedQuantity: 500,
+        receivedQuantity: 500,
+        damagedQuantity: 0,
+        unitCostSnapshot: 1150,
+        lineValue: 575000,
       },
     ],
-    totalValue: 2034000,
+    totalValue: 7889000,
     receivedById: 'usr-201',
     submittedAt: '2025-05-31T14:00:00Z',
     approvedById: 'usr-101',
@@ -471,4 +570,41 @@ export const MOCK_GRNS: GRN[] = [
     totalValue: 0,
     receivedById: 'usr-201',
   },
+  {
+    id: 'GRN-2025-050',
+    grnNumber: 'GRN-2025-050',
+    supplierId: 'sup-001',
+    supplierName: 'Schneider Electric Lanka (Pvt) Ltd',
+    warehouseId: 'WH-MAIN',
+    status: 'APPROVED',
+    items: Array.from({ length: 50 }, (_, i) => {
+      const idx = i + 1;
+      const ratings = ['6A', '10A', '16A', '20A', '25A', '32A', '40A', '50A', '63A', '80A'];
+      const rating = ratings[i % ratings.length];
+      const poles = (i % 3) + 1;
+      const isSerialized = i % 2 === 0;
+      const qty = 5 + (i % 15);
+      const damaged = i % 8 === 0 ? 1 : 0;
+      const unitCost = 1500 + (i * 120);
+      return {
+        productId: i === 0 ? 'prod-001' : i === 1 ? 'prod-002' : `prod-sch-${String(idx).padStart(3, '0')}`,
+        productNameSnapshot: `Schneider Acti9 iC60N ${rating} ${poles}P MCB Type C`,
+        skuSnapshot: `DNS-SCH-MCB-${poles}P-${rating}`,
+        expectedQuantity: qty,
+        receivedQuantity: qty,
+        damagedQuantity: damaged,
+        unitCostSnapshot: unitCost,
+        lineValue: (qty - damaged) * unitCost,
+        serialNumbers: isSerialized
+          ? Array.from({ length: Math.min(qty, 10) }, (_, s) => `SN-SCH-2025-${String(idx).padStart(3, '0')}${String(s + 1).padStart(2, '0')}`)
+          : undefined,
+      };
+    }),
+    totalValue: 2450000,
+    receivedById: 'usr-201',
+    submittedAt: '2025-09-01T10:00:00Z',
+    approvedById: 'usr-101',
+    approvedAt: '2025-09-02T08:30:00Z',
+  },
 ];
+

@@ -6,11 +6,20 @@ interface DialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   children: React.ReactNode;
-  className?: string;
+  size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl';
   maxWidth?: string;
+  className?: string;
 }
 
-export function Dialog({ open, onOpenChange, children, className, maxWidth = 'max-w-lg' }: DialogProps) {
+const sizeClasses: Record<string, string> = {
+  sm: 'max-w-sm',
+  md: 'max-w-md',
+  lg: 'max-w-lg',
+  xl: 'max-w-xl',
+  '2xl': 'max-w-2xl',
+};
+
+export function Dialog({ open, onOpenChange, children, size = 'lg', maxWidth, className }: DialogProps) {
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && open) {
@@ -32,8 +41,8 @@ export function Dialog({ open, onOpenChange, children, className, maxWidth = 'ma
       />
       <div
         className={cn(
-          'relative z-50 w-full rounded-xl border border-slate-200 bg-white p-6 shadow-xl animate-in zoom-in-95 max-h-[90vh] overflow-y-auto',
-          maxWidth,
+          'relative z-50 w-full rounded-2xl border border-slate-200/90 bg-white p-6 shadow-2xl animate-in zoom-in-95 max-h-[90vh] overflow-y-auto',
+          maxWidth || sizeClasses[size] || 'max-w-lg',
           className
         )}
       >

@@ -48,15 +48,15 @@ export function CustomerTable({
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className="font-mono text-xs font-semibold text-slate-500">
+                    <span className="font-mono text-xs font-semibold text-slate-500 whitespace-nowrap shrink-0">
                       {c.code}
                     </span>
-                    <Badge variant="outline" className="text-[10.5px] py-0">
+                    <Badge variant="outline" className="text-[10.5px] py-0 whitespace-nowrap shrink-0">
                       {c.type}
                     </Badge>
-                    {c.loyaltyTier && (
-                      <Badge variant="warning" className="text-[10px] py-0">
-                        {c.loyaltyTier}
+                    {(c.loyaltyLevel || c.loyaltyTier) && (
+                      <Badge variant="warning" className="text-[10px] py-0 uppercase font-semibold whitespace-nowrap shrink-0">
+                        {c.loyaltyLevel || c.loyaltyTier}
                       </Badge>
                     )}
                     {onDelete && (
@@ -132,10 +132,10 @@ export function CustomerTable({
                   <a
                     href={`tel:${c.phone}`}
                     onClick={(e) => e.stopPropagation()}
-                    className="inline-flex items-center justify-center gap-1.5 min-h-[38px] px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-colors"
+                    className="inline-flex items-center justify-center gap-1.5 min-h-[42px] px-3.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-colors cursor-pointer"
                     title={`Call ${c.contactPerson}`}
                   >
-                    <Phone className="h-3.5 w-3.5 text-slate-600" />
+                    <Phone className="h-4 w-4 text-slate-600" />
                     <span>Call</span>
                   </a>
 
@@ -145,10 +145,10 @@ export function CustomerTable({
                     target="_blank"
                     rel="noopener noreferrer"
                     onClick={(e) => e.stopPropagation()}
-                    className="inline-flex items-center justify-center gap-1.5 min-h-[38px] px-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-semibold transition-colors border border-emerald-200"
+                    className="inline-flex items-center justify-center gap-1.5 min-h-[42px] px-3.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-semibold transition-colors border border-emerald-200 cursor-pointer"
                     title="Send WhatsApp Message"
                   >
-                    <MessageSquare className="h-3.5 w-3.5 text-emerald-600" />
+                    <MessageSquare className="h-4 w-4 text-emerald-600" />
                     <span>WhatsApp</span>
                   </a>
                 </div>
@@ -197,7 +197,11 @@ export function CustomerTable({
                   <TableCell>
                     <div className="font-semibold text-slate-900 flex items-center gap-1.5">
                       {c.name}
-                      {c.loyaltyTier && <Badge variant="warning">{c.loyaltyTier}</Badge>}
+                      {(c.loyaltyLevel || c.loyaltyTier) && (
+                        <Badge variant="warning" className="text-[10px] uppercase font-semibold">
+                          {c.loyaltyLevel || c.loyaltyTier}
+                        </Badge>
+                      )}
                     </div>
                     <div className="text-xs text-slate-500 mt-0.5">
                       <span className="font-mono text-slate-600">{c.code}</span> • {c.contactPerson} ({c.phone})

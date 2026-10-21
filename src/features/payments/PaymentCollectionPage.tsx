@@ -502,13 +502,13 @@ export function PaymentCollectionPage() {
                         }`}
                       >
                         {/* Top: Invoice # & Status */}
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="font-mono text-xs font-bold text-primary">
+                        <div className="flex items-center justify-between gap-2 flex-wrap">
+                          <span className="font-mono text-xs font-bold text-primary whitespace-nowrap shrink-0">
                             {inv.invoiceNumber}
                           </span>
-                          <div className="flex items-center gap-1.5">
+                          <div className="flex items-center gap-1.5 shrink-0">
                             {isOverdue && (
-                              <span className="text-[10.5px] font-bold text-rose-600 bg-rose-100 px-1.5 py-0.5 rounded">
+                              <span className="text-[10.5px] font-bold text-rose-600 bg-rose-100 px-1.5 py-0.5 rounded whitespace-nowrap">
                                 Overdue
                               </span>
                             )}
@@ -700,16 +700,16 @@ export function PaymentCollectionPage() {
         )}
 
         {/* Submit Actions */}
-        <div className="flex items-center justify-end gap-3 pt-2">
-          <Link to="/payments">
-            <Button variant="outline" size="sm" type="button" className="text-xs">
+        <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2.5 sm:gap-3 pt-2 pb-6 md:pb-0">
+          <Link to="/payments" className="w-full sm:w-auto">
+            <Button variant="outline" size="sm" type="button" className="w-full sm:w-auto text-xs h-10 sm:h-9 cursor-pointer">
               Cancel
             </Button>
           </Link>
           <Button
             type="submit"
             disabled={submitting}
-            className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs gap-1.5 shadow-sm px-6 h-9"
+            className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white text-xs gap-1.5 shadow-sm px-6 h-11 sm:h-9 cursor-pointer font-semibold"
           >
             <CheckCircle className="h-4 w-4" />
             {submitting ? 'Recording Collection...' : 'Issue Receipt (Submit for Approval)'}
