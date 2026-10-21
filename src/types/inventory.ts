@@ -40,6 +40,7 @@ export interface GRNItem {
   damagedQuantity: number;
   unitCostSnapshot: number;
   lineValue: number;
+  serialNumbers?: string[];
 }
 
 export interface GRN {
