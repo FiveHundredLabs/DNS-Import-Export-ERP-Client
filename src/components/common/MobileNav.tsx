@@ -480,7 +480,7 @@ export function MobileNav() {
               </div>
               <div className="min-w-0">
                 <div className="text-xs font-semibold truncate">Activity Log</div>
-                <div className="text-[10.5px] text-slate-400 truncate">Order Timeline</div>
+                <div className="text-[10.5px] text-slate-400 truncate">User Activity (Last Month)</div>
               </div>
             </button>
           </div>

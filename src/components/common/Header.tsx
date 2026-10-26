@@ -68,7 +68,7 @@ export function Header({ onToggleSidebar }: HeaderProps) {
   const currentTitle =
     ROUTE_TITLES[location.pathname] ||
     (location.pathname.startsWith('/products') ? 'Product Details' :
-     location.pathname.startsWith('/orders/activity') ? 'Order Activity Log' :
+     location.pathname.startsWith('/orders/activity') ? 'User Activity Log' :
      location.pathname.startsWith('/orders') ? 'Sales Order Details' :
      location.pathname.startsWith('/quotations') ? 'Quotation Details' :
      location.pathname.startsWith('/invoices') ? 'Invoice Details' :
