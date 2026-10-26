@@ -116,16 +116,16 @@ export function InvoiceDetailPage() {
 
       {/* Dedicated Invoice-Wise Payment Collection Highlight Banner */}
       {hasRemainingReceivable ? (
-        <div className="rounded-2xl sm:rounded-3xl border border-emerald-300 bg-gradient-to-br from-emerald-500/[0.08] via-teal-50/40 to-white p-4 sm:p-5 shadow-xs">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="rounded-2xl border border-emerald-300 bg-gradient-to-br from-emerald-500/[0.08] via-teal-50/40 to-white p-3 sm:p-5 shadow-xs">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
             <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10.5px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] sm:text-[10.5px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
                   <Lock className="h-3 w-3 text-emerald-700" />
                   Invoice-Wise Collection
                 </span>
                 {isOverdue && (
-                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10.5px] font-bold bg-rose-100 text-rose-800 border border-rose-200">
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] sm:text-[10.5px] font-bold bg-rose-100 text-rose-800 border border-rose-200">
                     <AlertTriangle className="h-3 w-3 text-rose-600" />
                     Overdue
                   </span>
@@ -134,21 +134,21 @@ export function InvoiceDetailPage() {
               <h3 className="text-sm sm:text-base font-bold text-slate-900 mt-1">
                 Outstanding Balance on {invoice.invoiceNumber}
               </h3>
-              <p className="text-xs text-slate-600">
+              <p className="text-[11.5px] sm:text-xs text-slate-600">
                 Collect payment strictly for this invoice. Funds will NOT be distributed to any other invoices.
               </p>
             </div>
 
-            <div className="flex items-center gap-3 self-stretch sm:self-auto justify-between sm:justify-end">
-              <div className="text-right">
+            <div className="flex items-center gap-3 self-stretch sm:self-auto justify-between sm:justify-end pt-2 sm:pt-0 border-t border-emerald-100 sm:border-0">
+              <div className="text-left sm:text-right">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
                   Remaining to Collect
                 </span>
-                <AmountDisplay amount={uncollectedBalance} className="text-xl sm:text-2xl font-black text-emerald-950" />
+                <AmountDisplay amount={uncollectedBalance} className="text-lg sm:text-2xl font-black text-emerald-950" />
               </div>
               <Button
                 onClick={() => setCollectModalOpen(true)}
-                className="h-11 px-5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs gap-2 shadow-xs active:scale-[0.98]"
+                className="h-10 sm:h-11 px-4 sm:px-5 rounded-xl sm:rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs gap-1.5 shadow-xs active:scale-[0.98]"
               >
                 <CreditCard className="h-4 w-4" />
                 <span>Collect Now</span>
@@ -157,20 +157,20 @@ export function InvoiceDetailPage() {
           </div>
         </div>
       ) : invoice.status === 'COLLECTED' || invoice.status === 'PARTIALLY_COLLECTED' ? (
-        <div className="rounded-2xl sm:rounded-3xl border border-amber-300 bg-gradient-to-br from-amber-500/[0.08] via-orange-50/30 to-white p-4 shadow-xs flex items-start gap-3">
-          <div className="p-2.5 rounded-xl bg-amber-100 text-amber-800 shrink-0 mt-0.5">
-            <Clock className="h-5 w-5" />
+        <div className="rounded-2xl border border-amber-300 bg-gradient-to-br from-amber-500/[0.08] via-orange-50/30 to-white p-3 sm:p-4 shadow-xs flex items-start gap-3">
+          <div className="p-2 sm:p-2.5 rounded-xl bg-amber-100 text-amber-800 shrink-0 mt-0.5">
+            <Clock className="h-4 w-4 sm:h-5 sm:w-5" />
           </div>
           <div className="space-y-0.5 flex-1 text-xs">
             <div className="flex items-center justify-between gap-2 flex-wrap">
-              <span className="font-bold text-amber-950 text-sm">
+              <span className="font-bold text-amber-950 text-xs sm:text-sm">
                 Collection Recorded — Awaiting Finance Verification
               </span>
               <span className="font-mono font-bold text-amber-900 text-xs">
                 {formatCurrency(previouslyCollected)} Recorded
               </span>
             </div>
-            <p className="text-amber-800/90 leading-relaxed">
+            <p className="text-[11.5px] sm:text-xs text-amber-800/90 leading-relaxed">
               The Sales Representative has collected the required funds. The invoice will officially transition to <strong>Paid</strong> or <strong>Partially Paid</strong> once authorized by Finance.
             </p>
           </div>

@@ -100,21 +100,21 @@ export function A4InvoiceViewer({
     <div className={cn('w-full flex flex-col items-center space-y-4', className)}>
       {/* Top Document Controls Toolbar (No-Print) */}
       {showToolbarActions && (
-        <div className="w-full no-print bg-white rounded-2xl border border-slate-200 shadow-xs p-3 sm:p-4 space-y-3">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-            {/* Format Switcher Tabs */}
-            <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-xl border border-slate-200/80 self-start sm:self-auto">
+        <div className="w-full no-print bg-white rounded-2xl border border-slate-200 shadow-xs p-2.5 sm:p-4 space-y-2.5 sm:space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3">
+            {/* Format Switcher Tabs (50/50 responsive on mobile, auto width on desktop) */}
+            <div className="grid grid-cols-2 sm:flex sm:items-center gap-1 sm:gap-1.5 p-1 bg-slate-100 rounded-xl border border-slate-200/80 w-full sm:w-auto">
               <button
                 type="button"
                 onClick={() => setFormat('STANDARD')}
                 className={cn(
-                  'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all',
+                  'flex items-center justify-center gap-1.5 px-2.5 sm:px-3 py-2 sm:py-1.5 rounded-lg text-xs font-bold transition-all text-center',
                   format === 'STANDARD'
                     ? 'bg-white text-slate-900 shadow-xs'
                     : 'text-slate-600 hover:text-slate-900'
                 )}
               >
-                <FileText className="h-3.5 w-3.5 text-primary" />
+                <FileText className="h-3.5 w-3.5 text-primary shrink-0" />
                 <span>Commercial Invoice</span>
               </button>
 
@@ -122,56 +122,56 @@ export function A4InvoiceViewer({
                 type="button"
                 onClick={() => setFormat('IRD_TAX')}
                 className={cn(
-                  'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all',
+                  'flex items-center justify-center gap-1.5 px-2.5 sm:px-3 py-2 sm:py-1.5 rounded-lg text-xs font-bold transition-all text-center',
                   format === 'IRD_TAX'
                     ? 'bg-slate-900 text-white shadow-xs'
                     : 'text-slate-600 hover:text-slate-900'
                 )}
               >
-                <ShieldCheck className={cn('h-3.5 w-3.5', format === 'IRD_TAX' ? 'text-emerald-400' : 'text-emerald-600')} />
-                <span>IRD Tax Invoice (Sri Lanka)</span>
+                <ShieldCheck className={cn('h-3.5 w-3.5 shrink-0', format === 'IRD_TAX' ? 'text-emerald-400' : 'text-emerald-600')} />
+                <span className="truncate sm:overflow-visible">IRD Tax Invoice</span>
               </button>
             </div>
 
-            {/* Document Actions: Print, Download, Share */}
-            <div className="flex flex-wrap items-center gap-2">
+            {/* Document Actions: Print, Download, Share (Responsive 3-col on mobile, flex on desktop) */}
+            <div className="grid grid-cols-3 sm:flex sm:items-center gap-1.5 sm:gap-2 w-full sm:w-auto">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={handlePrint}
-                className="h-9 px-3 text-xs gap-1.5 font-semibold text-slate-700 hover:text-slate-900"
+                className="h-9 px-1.5 sm:px-3 text-xs gap-1 sm:gap-1.5 font-semibold text-slate-700 hover:text-slate-900 justify-center w-full sm:w-auto"
                 title="Print A4 Document"
               >
-                <Printer className="h-3.5 w-3.5" />
-                <span>Print Invoice</span>
+                <Printer className="h-3.5 w-3.5 shrink-0" />
+                <span className="truncate">Print Invoice</span>
               </Button>
 
               <Button
                 variant="outline"
                 size="sm"
                 onClick={handleDownloadPdf}
-                className="h-9 px-3 text-xs gap-1.5 font-semibold text-slate-700 hover:text-slate-900"
+                className="h-9 px-1.5 sm:px-3 text-xs gap-1 sm:gap-1.5 font-semibold text-slate-700 hover:text-slate-900 justify-center w-full sm:w-auto"
                 title="Download A4 PDF"
               >
-                <Download className="h-3.5 w-3.5" />
-                <span>Download PDF</span>
+                <Download className="h-3.5 w-3.5 shrink-0" />
+                <span className="truncate">Download PDF</span>
               </Button>
 
               <Button
                 variant="outline"
                 size="sm"
                 onClick={handleShareWhatsApp}
-                className="h-9 px-3 text-xs gap-1.5 font-semibold text-emerald-700 hover:text-emerald-800"
+                className="h-9 px-1.5 sm:px-3 text-xs gap-1 sm:gap-1.5 font-semibold text-emerald-700 hover:text-emerald-800 justify-center w-full sm:w-auto"
                 title="Share via WhatsApp"
               >
-                <Send className="h-3.5 w-3.5" />
-                <span>Share WhatsApp</span>
+                <Send className="h-3.5 w-3.5 shrink-0" />
+                <span className="truncate">Share WhatsApp</span>
               </Button>
             </div>
           </div>
 
-          {/* Secondary Toolbar: Zoom Controls & A4 Info */}
-          <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-xs">
+          {/* Secondary Toolbar: Zoom Controls & A4 Info - Desktop Only (Hidden on mobile per user requirement) */}
+          <div className="hidden sm:flex items-center justify-between pt-2 border-t border-slate-100 text-xs">
             <div className="flex items-center gap-2 text-slate-500 font-medium">
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-slate-100 text-slate-700 text-[11px] font-mono font-bold">
                 A4 (210 × 297 mm)
@@ -264,7 +264,7 @@ export function A4InvoiceViewer({
       {/* A4 Document Stage Area (Grey Canvas background like PDF viewer) */}
       <div
         ref={containerRef}
-        className="w-full bg-slate-200/70 p-3 sm:p-6 md:p-8 rounded-2xl border border-slate-300/80 overflow-x-auto overflow-y-visible flex justify-center items-start min-h-[600px]"
+        className="w-full bg-slate-200/70 p-1.5 sm:p-6 md:p-8 rounded-xl sm:rounded-2xl border border-slate-300/80 overflow-x-auto overflow-y-visible flex justify-center items-start min-h-[500px] sm:min-h-[600px]"
       >
         {/* Scaled Wrapper: scales 794px A4 sheet down or up smoothly */}
         <div
