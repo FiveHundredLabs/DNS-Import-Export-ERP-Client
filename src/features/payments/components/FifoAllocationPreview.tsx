@@ -22,25 +22,26 @@ export function FifoAllocationPreview({
   invoices,
   selectedInvoiceIds,
   className,
-  defaultExpanded = false,
+  defaultExpanded = true,
 }: FifoAllocationPreviewProps) {
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
 
   const breakdown: FifoAllocationBreakdown = calculateFifoAllocation(
-    paymentAmount,
+    paymentAmount || 0,
     invoices,
     selectedInvoiceIds
   );
 
-  if (!paymentAmount || paymentAmount <= 0) {
+  // If there are no outstanding invoices for this customer at all
+  if (breakdown.items.length === 0) {
     return (
-      <div className={cn('rounded-2xl border border-dashed border-slate-300 p-5 text-center bg-slate-50/50', className)}>
-        <Sparkles className="h-6 w-6 text-slate-400 mx-auto" />
-        <h4 className="text-xs font-bold text-slate-700 mt-1.5 uppercase tracking-wider">
-          Enter an Amount to Preview FIFO Allocation
+      <div className={cn('rounded-2xl border border-slate-200 bg-slate-50/60 p-4 text-center', className)}>
+        <CheckCircle2 className="h-6 w-6 text-emerald-500 mx-auto" />
+        <h4 className="text-xs font-bold text-slate-800 mt-1 uppercase tracking-wider">
+          All Invoices Fully Settled
         </h4>
         <p className="text-[11px] text-slate-500 mt-0.5">
-          Payments automatically prioritize the oldest due invoices first without requiring manual distribution.
+          This customer has no outstanding open invoices requiring payment collection.
         </p>
       </div>
     );
@@ -68,6 +69,11 @@ export function FifoAllocationPreview({
                 {breakdown.partiallySettledCount > 0 && (
                   <span className="text-[10.5px] font-bold text-amber-700 bg-amber-100/80 px-2 py-0.2 rounded-full border border-amber-200">
                     {breakdown.partiallySettledCount} Partial
+                  </span>
+                )}
+                {breakdown.fullySettledCount === 0 && breakdown.partiallySettledCount === 0 && (
+                  <span className="text-[10.5px] font-semibold text-slate-500 bg-slate-100 px-2 py-0.2 rounded-full border border-slate-200">
+                    {breakdown.items.length} Invoices Pending
                   </span>
                 )}
               </div>
@@ -147,7 +153,7 @@ export function FifoAllocationPreview({
                     ? 'border-emerald-200 bg-emerald-50/30'
                     : isPartial
                     ? 'border-amber-200 bg-amber-50/30'
-                    : 'border-slate-200 bg-slate-50/40 opacity-70'
+                    : 'border-slate-200/90 bg-white shadow-2xs'
                 )}
               >
                 <div className="flex items-center justify-between gap-1">
@@ -171,7 +177,9 @@ export function FifoAllocationPreview({
                         <Clock className="h-2.5 w-2.5 text-amber-600" /> Partial
                       </span>
                     ) : (
-                      <span className="text-[10px] text-slate-400">No Alloc</span>
+                      <span className="inline-flex items-center text-[10px] font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200/80">
+                        No Alloc
+                      </span>
                     )}
                   </div>
                 </div>
@@ -184,7 +192,7 @@ export function FifoAllocationPreview({
                   <div className="min-w-0 truncate text-center">
                     <span className="text-slate-400 text-[10px]">Alloc: </span>
                     <span className={cn('font-bold', item.allocatedAmount > 0 ? 'text-emerald-700' : 'text-slate-400')}>
-                      +{item.allocatedAmount.toLocaleString()}
+                      {item.allocatedAmount > 0 ? `+${item.allocatedAmount.toLocaleString()}` : '0'}
                     </span>
                   </div>
                   <div className="min-w-0 truncate text-right">

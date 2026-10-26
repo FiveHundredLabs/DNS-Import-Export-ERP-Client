@@ -43,7 +43,6 @@ import {
   Banknote,
   ChevronDown,
   ChevronUp,
-  MapPin,
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 
@@ -298,16 +297,11 @@ export function CustomerPaymentDetailPage() {
         {/* Customer Header Row */}
         <div>
           <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-1.5 flex-wrap min-w-0">
+            <div className="flex items-center gap-1.5 min-w-0">
               <span className="text-[10px] font-bold uppercase tracking-wider text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded font-mono shrink-0">
                 {customer.code}
               </span>
-              <span className="text-xs text-slate-500 font-medium truncate max-w-[140px] sm:max-w-none">{customer.areaName}</span>
-              {statusMeta?.isNearby && (
-                <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded-full border border-emerald-200 flex items-center gap-0.5 shrink-0">
-                  <MapPin className="h-2.5 w-2.5" /> {statusMeta.distanceLabel}
-                </span>
-              )}
+              <span className="text-xs text-slate-500 font-medium truncate">{customer.areaName}</span>
             </div>
 
             {/* Compact Status Badge */}
