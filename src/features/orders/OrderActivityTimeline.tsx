@@ -5,8 +5,8 @@ import {
   OrderActivityEvent,
   OrderActivityType,
 } from '../../types/order';
-import { useAuth } from '../../hooks/useAuth';
 import { orderActivityService } from '../../services/OrderActivityService';
+import { orderService } from '../../services/OrderService';
 import { formatCurrency, formatDate, formatDateTime } from '../../utils/formatters';
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
@@ -67,8 +67,8 @@ export function OrderActivityTimeline({
   onOrderUpdated,
   compactHeader = false,
 }: OrderActivityTimelineProps) {
-  const navigate = useNavigate();
   const { currentUser } = useAuth();
+  const isSalesRep = currentUser.role === 'SALES_REP';
 
   const [activeFilter, setActiveFilter] = useState<'ALL' | 'APPROVALS' | 'DISPATCH' | 'RETURNS' | 'INVOICES'>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
@@ -239,7 +239,29 @@ export function OrderActivityTimeline({
     }
   };
 
+  // Sales Rep / Operations: Send for approval
+  const handleSendForApproval = async () => {
+    try {
+      setIsSubmitting(true);
+      const updated = await orderService.submitOrder(
+        order.id,
+        currentUser,
+        'Submitted for manager approval from activity tracker.'
+      );
+      toast.success(`Order ${order.orderNumber} sent for approval!`);
+      if (onOrderUpdated) onOrderUpdated(updated);
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to submit order for approval');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const handleDispatchSubmit = async () => {
+    if (isSalesRep) {
+      toast.error('Permission Denied: Sales Representatives cannot dispatch orders.');
+      return;
+    }
     try {
       setIsSubmitting(true);
       const updated = await orderActivityService.recordDeliveryNoteAndDispatch(
@@ -601,58 +623,90 @@ export function OrderActivityTimeline({
                 )}
               </div>
 
-              {/* Workflow Action Simulator Button */}
+              {/* Workflow Actions */}
               <div className="flex items-center gap-1.5 ml-auto">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setActionModal('MODIFY_PRODUCTS')}
-                  className="h-8 text-[11px] gap-1 border-amber-300 text-amber-800 hover:bg-amber-50"
-                  title="Simulate Area Manager product/quantity modification"
-                >
-                  <Sliders className="h-3 w-3 text-amber-600" />
-                  Modify Qty
-                </Button>
-                {isPendingApproval && (
-                  <Button
-                    size="sm"
-                    onClick={() => setActionModal('APPROVE')}
-                    className="h-8 text-[11px] gap-1 bg-emerald-600 hover:bg-emerald-700 text-white"
-                  >
-                    <CheckCircle2 className="h-3 w-3" />
-                    Approve Order
-                  </Button>
-                )}
-                {!isPendingApproval && !order.deliveryNoteNumber && (
-                  <Button
-                    size="sm"
-                    onClick={() => setActionModal('DISPATCH')}
-                    className="h-8 text-[11px] gap-1 bg-cyan-600 hover:bg-cyan-700 text-white"
-                  >
-                    <Truck className="h-3 w-3" />
-                    Dispatch Order
-                  </Button>
-                )}
-                {order.deliveryNoteNumber && (
+                {isSalesRep ? (
+                  /* Sales Rep: Can ONLY send for approval when order is in DRAFT */
+                  order.status === 'DRAFT' ? (
+                    <Button
+                      size="sm"
+                      onClick={handleSendForApproval}
+                      disabled={isSubmitting}
+                      className="h-8 text-[11px] gap-1.5 bg-primary hover:bg-primary-hover text-white font-medium shadow-xs"
+                      title="Submit this draft order for manager approval"
+                    >
+                      <Send className="h-3 w-3" />
+                      {isSubmitting ? 'Sending...' : 'Send for Approval'}
+                    </Button>
+                  ) : null
+                ) : (
+                  /* Operations / Management / Warehouse: Full Workflow Simulator */
                   <>
+                    {order.status === 'DRAFT' && (
+                      <Button
+                        size="sm"
+                        onClick={handleSendForApproval}
+                        disabled={isSubmitting}
+                        className="h-8 text-[11px] gap-1.5 bg-primary hover:bg-primary-hover text-white font-medium shadow-xs"
+                      >
+                        <Send className="h-3 w-3" />
+                        {isSubmitting ? 'Sending...' : 'Send for Approval'}
+                      </Button>
+                    )}
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => setActionModal('RETURN')}
-                      className="h-8 text-[11px] gap-1 border-rose-300 text-rose-700 hover:bg-rose-50"
+                      onClick={() => setActionModal('MODIFY_PRODUCTS')}
+                      className="h-8 text-[11px] gap-1 border-amber-300 text-amber-800 hover:bg-amber-50"
+                      title="Simulate Area Manager product/quantity modification"
                     >
-                      <RotateCcw className="h-3 w-3 text-rose-600" />
-                      Record Return
+                      <Sliders className="h-3 w-3 text-amber-600" />
+                      Modify Qty
                     </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setActionModal('REPLACEMENT')}
-                      className="h-8 text-[11px] gap-1 border-emerald-300 text-emerald-700 hover:bg-emerald-50"
-                    >
-                      <RefreshCw className="h-3 w-3 text-emerald-600" />
-                      Dispatch Replacement
-                    </Button>
+                    {isPendingApproval && (
+                      <Button
+                        size="sm"
+                        onClick={() => setActionModal('APPROVE')}
+                        className="h-8 text-[11px] gap-1 bg-emerald-600 hover:bg-emerald-700 text-white"
+                      >
+                        <CheckCircle2 className="h-3 w-3" />
+                        Approve Order
+                      </Button>
+                    )}
+                    {!isPendingApproval &&
+                      order.status !== 'DRAFT' &&
+                      !order.deliveryNoteNumber && (
+                        <Button
+                          size="sm"
+                          onClick={() => setActionModal('DISPATCH')}
+                          className="h-8 text-[11px] gap-1 bg-cyan-600 hover:bg-cyan-700 text-white"
+                        >
+                          <Truck className="h-3 w-3" />
+                          Dispatch Order
+                        </Button>
+                      )}
+                    {order.deliveryNoteNumber && (
+                      <>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setActionModal('RETURN')}
+                          className="h-8 text-[11px] gap-1 border-rose-300 text-rose-700 hover:bg-rose-50"
+                        >
+                          <RotateCcw className="h-3 w-3 text-rose-600" />
+                          Record Return
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setActionModal('REPLACEMENT')}
+                          className="h-8 text-[11px] gap-1 border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+                        >
+                          <RefreshCw className="h-3 w-3 text-emerald-600" />
+                          Dispatch Replacement
+                        </Button>
+                      </>
+                    )}
                   </>
                 )}
               </div>
@@ -1262,7 +1316,7 @@ export function OrderActivityTimeline({
       )}
 
       {/* C. Dispatch Modal */}
-      {actionModal === 'DISPATCH' && (
+      {actionModal === 'DISPATCH' && !isSalesRep && (
         <Dialog open={true} onOpenChange={() => setActionModal(null)}>
           <DialogContent className="sm:max-w-md">
             <DialogHeader>

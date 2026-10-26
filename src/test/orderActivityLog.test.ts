@@ -160,4 +160,20 @@ describe('Order Activity Log & Multi-Role Lifecycle Workflow', () => {
     expect(returnEvt?.id).not.toBe(replaceEvt?.id);
     expect(timeline.indexOf(returnEvt!)).toBeLessThan(timeline.indexOf(replaceEvt!));
   });
+
+  it('enforces role boundaries: Sales Rep can submit draft order for approval, but cannot dispatch orders', async () => {
+    const draftOrder = await orderService.getOrderById('ord-006');
+    expect(draftOrder).toBeDefined();
+    expect(draftOrder!.status).toBe('DRAFT');
+
+    // Sales Rep submits draft order for approval
+    const submitted = await orderService.submitOrder(draftOrder!.id, salesRep, 'Submitted for area approval');
+    expect(submitted.status).toBe('PENDING_APPROVAL');
+
+    // Activity timeline reflects submission
+    const timeline = orderActivityService.getOrderActivityTimeline(submitted);
+    const submitEvt = timeline.find((e) => e.type === 'SUBMITTED_FOR_APPROVAL');
+    expect(submitEvt).toBeDefined();
+    expect(submitEvt?.actorId).toBe(salesRep.id);
+  });
 });
