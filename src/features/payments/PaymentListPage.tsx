@@ -40,12 +40,19 @@ import {
   RefreshCw,
   Building2,
   ChevronRight,
+  Receipt,
+  Users,
 } from 'lucide-react';
+import { CustomerPaymentsTab } from './CustomerPaymentsTab';
+import { cn } from '../../utils/cn';
 
 export function PaymentListPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { role, currentUser } = useAuth();
+  const [viewMode, setViewMode] = useState<'CUSTOMERS' | 'RECEIPTS'>(
+    role === 'SALES_REP' || searchParams.get('tab') === 'customers' ? 'CUSTOMERS' : 'RECEIPTS'
+  );
   const [payments, setPayments] = useState<Payment[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [customerIdFilter, setCustomerIdFilter] = useState(searchParams.get('customerId') || '');
@@ -167,31 +174,75 @@ export function PaymentListPage() {
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold tracking-tight text-slate-900">Payment Collections & Verification</h1>
+          <h1 className="text-xl font-bold tracking-tight text-slate-900">
+            {viewMode === 'CUSTOMERS' ? 'Customer Payments & Collections' : 'Payment Collections & Verification'}
+          </h1>
           <p className="text-xs text-slate-500">
-            Field receipts, cheque validation, and multi-tier Finance Manager settlement approvals.
+            {viewMode === 'CUSTOMERS'
+              ? 'Real-time customer receivables, overdue balances, and mobile-friendly payment collection.'
+              : 'Field receipts, cheque validation, and multi-tier Finance Manager settlement approvals.'}
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={fetchPayments}
-            className="text-xs gap-1.5"
-            title="Refresh Payments"
-          >
-            <RefreshCw className="h-3.5 w-3.5" /> Refresh
-          </Button>
-          <Button
-            size="sm"
-            onClick={() => navigate('/payments/new')}
-            className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs gap-1.5 shadow-sm"
-          >
-            <PlusCircle className="h-3.5 w-3.5" /> Record Payment
-          </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Tab switcher */}
+          <div className="inline-flex rounded-lg bg-slate-100 p-1 border border-slate-200 shadow-inner">
+            <button
+              type="button"
+              data-testid="tab-customer-accounts"
+              onClick={() => setViewMode('CUSTOMERS')}
+              className={cn(
+                'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all',
+                viewMode === 'CUSTOMERS'
+                  ? 'bg-white text-primary shadow-sm'
+                  : 'text-slate-600 hover:text-slate-900'
+              )}
+            >
+              <Users className="h-3.5 w-3.5" />
+              <span>Customer Accounts</span>
+            </button>
+            <button
+              type="button"
+              data-testid="tab-receipts-ledger"
+              onClick={() => setViewMode('RECEIPTS')}
+              className={cn(
+                'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all',
+                viewMode === 'RECEIPTS'
+                  ? 'bg-white text-primary shadow-sm'
+                  : 'text-slate-600 hover:text-slate-900'
+              )}
+            >
+              <Receipt className="h-3.5 w-3.5" />
+              <span>Receipts Ledger</span>
+            </button>
+          </div>
+
+          {viewMode === 'RECEIPTS' && (
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={fetchPayments}
+                className="text-xs gap-1.5"
+                title="Refresh Payments"
+              >
+                <RefreshCw className="h-3.5 w-3.5" /> Refresh
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => navigate('/payments/new')}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs gap-1.5 shadow-sm"
+              >
+                <PlusCircle className="h-3.5 w-3.5" /> Record Payment
+              </Button>
+            </>
+          )}
         </div>
       </div>
 
+      {viewMode === 'CUSTOMERS' ? (
+        <CustomerPaymentsTab />
+      ) : (
+        <>
       {/* Metrics Row */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 sm:gap-3">
         <Card className="border-slate-200 overflow-hidden">
@@ -653,6 +704,8 @@ export function PaymentListPage() {
           )}
         </CardContent>
       </Card>
+      </>
+      )}
 
       {/* Thermal Receipt Preview Modal */}
       <ThermalReceiptModal

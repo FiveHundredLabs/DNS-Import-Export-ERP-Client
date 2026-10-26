@@ -336,7 +336,7 @@ export function SalesRepDashboard() {
             </Link>
 
             {/* 3. Collect Payment */}
-            <Link to="/payments" className="flex flex-col items-center group active:scale-95 transition-transform">
+            <Link to="/payments/collect" className="flex flex-col items-center group active:scale-95 transition-transform">
               <div className="h-12 w-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center shadow-2xs group-hover:bg-blue-600 group-hover:text-white transition-colors">
                 <CreditCard className="h-6 w-6" />
               </div>
@@ -587,9 +587,9 @@ export function SalesRepDashboard() {
                   Outstanding balances for your assigned territory accounts requiring field collection.
                 </p>
               </div>
-              <Link to="/payments">
+              <Link to="/payments/collect">
                 <Button variant="ghost" size="sm" className="text-xs text-primary gap-1 font-semibold hover:bg-primary-light">
-                  All Payments <ArrowRight className="h-3 w-3" />
+                  All Collections <ArrowRight className="h-3 w-3" />
                 </Button>
               </Link>
             </CardHeader>
@@ -711,7 +711,7 @@ export function SalesRepDashboard() {
 
                         {/* Collect Payment Button */}
                         <Link
-                          to={`/payments/new?customerId=${pending.id}&amount=${pending.amount}`}
+                          to={`/payments/collect/${pending.id}`}
                           className="flex-1 sm:flex-none"
                         >
                           <Button
