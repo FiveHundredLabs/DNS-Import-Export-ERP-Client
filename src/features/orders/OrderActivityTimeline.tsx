@@ -5,6 +5,7 @@ import {
   OrderActivityEvent,
   OrderActivityType,
 } from '../../types/order';
+import { useAuth } from '../../hooks/useAuth';
 import { orderActivityService } from '../../services/OrderActivityService';
 import { orderService } from '../../services/OrderService';
 import { formatCurrency, formatDate, formatDateTime } from '../../utils/formatters';
