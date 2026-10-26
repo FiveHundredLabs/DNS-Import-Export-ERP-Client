@@ -92,8 +92,8 @@ export function HandoverDetailModal({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && !processing && onClose()}>
-      <DialogContent className="max-w-2xl w-[95vw] rounded-3xl p-5 sm:p-7 bg-white space-y-4 max-h-[92vh] overflow-y-auto">
+    <Dialog open={isOpen} onOpenChange={(open) => !open && !processing && onClose()} size="2xl" className="max-w-2xl w-full p-4 sm:p-6 max-h-[90vh] overflow-y-auto">
+      <DialogContent className="space-y-4">
         <DialogHeader className="p-0">
           <div className="flex items-center justify-between gap-2 flex-wrap">
             <div className="flex items-center gap-2.5">

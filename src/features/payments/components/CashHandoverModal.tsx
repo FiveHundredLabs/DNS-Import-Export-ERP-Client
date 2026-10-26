@@ -140,8 +140,8 @@ export function CashHandoverModal({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && !submitting && onClose()}>
-      <DialogContent className="max-w-2xl w-[95vw] rounded-3xl p-5 sm:p-7 bg-white space-y-4 max-h-[92vh] overflow-y-auto">
+    <Dialog open={isOpen} onOpenChange={(open) => !open && !submitting && onClose()} size="2xl" className="max-w-2xl w-full p-4 sm:p-6 max-h-[90vh] overflow-y-auto">
+      <DialogContent className="space-y-4">
         <DialogHeader className="p-0">
           <div className="flex items-center gap-3">
             <div className="h-10 w-10 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-600 text-white flex items-center justify-center shrink-0 shadow-xs">
