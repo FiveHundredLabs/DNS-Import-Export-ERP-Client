@@ -31,7 +31,7 @@ class HandoverService {
       notes: 'Daily field route collection handover for Western Province Central route.',
       items: [
         {
-          paymentId: 'pay-001',
+          paymentId: 'pay-hnd-001',
           receiptNumber: 'REC-2026-1001',
           customerId: 'cust-001',
           customerName: 'Lanka Electrical Superstore',
@@ -40,12 +40,12 @@ class HandoverService {
           paymentMethod: 'CASH',
           collectedAt: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
           invoiceAllocations: [
-            { invoiceId: 'inv-001', invoiceNumber: 'INV-2026-101', allocatedAmount: 15000 },
-            { invoiceId: 'inv-002', invoiceNumber: 'INV-2026-102', allocatedAmount: 10000 },
+            { invoiceId: 'inv-001', invoiceNumber: 'INV-2025-0101', allocatedAmount: 15000 },
+            { invoiceId: 'inv-002', invoiceNumber: 'INV-2025-0102', allocatedAmount: 10000 },
           ],
         },
         {
-          paymentId: 'pay-002',
+          paymentId: 'pay-hnd-002',
           receiptNumber: 'REC-2026-1002',
           customerId: 'cust-002',
           customerName: 'Muthurajawela Engineering',
@@ -54,11 +54,11 @@ class HandoverService {
           paymentMethod: 'CASH',
           collectedAt: new Date(Date.now() - 3.5 * 60 * 60 * 1000).toISOString(),
           invoiceAllocations: [
-            { invoiceId: 'inv-003', invoiceNumber: 'INV-2026-103', allocatedAmount: 15000 },
+            { invoiceId: 'inv-003', invoiceNumber: 'INV-2025-0103', allocatedAmount: 15000 },
           ],
         },
         {
-          paymentId: 'pay-003',
+          paymentId: 'pay-hnd-003',
           receiptNumber: 'REC-2026-1003',
           customerId: 'cust-003',
           customerName: 'Kelani Valley Lighting Mart',
@@ -67,12 +67,12 @@ class HandoverService {
           paymentMethod: 'CASH',
           collectedAt: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
           invoiceAllocations: [
-            { invoiceId: 'inv-004', invoiceNumber: 'INV-2026-104', allocatedAmount: 6000 },
-            { invoiceId: 'inv-005', invoiceNumber: 'INV-2026-105', allocatedAmount: 6000 },
+            { invoiceId: 'inv-004', invoiceNumber: 'INV-2024-0098', allocatedAmount: 6000 },
+            { invoiceId: 'inv-005', invoiceNumber: 'INV-2025-0105', allocatedAmount: 6000 },
           ],
         },
         {
-          paymentId: 'pay-004',
+          paymentId: 'pay-hnd-004',
           receiptNumber: 'REC-2026-1004',
           customerId: 'cust-004',
           customerName: 'Negombo Power & Cables',
@@ -81,12 +81,12 @@ class HandoverService {
           paymentMethod: 'CASH',
           collectedAt: new Date(Date.now() - 2.5 * 60 * 60 * 1000).toISOString(),
           invoiceAllocations: [
-            { invoiceId: 'inv-006', invoiceNumber: 'INV-2026-106', allocatedAmount: 8000 },
-            { invoiceId: 'inv-007', invoiceNumber: 'INV-2026-107', allocatedAmount: 5000 },
+            { invoiceId: 'inv-006', invoiceNumber: 'INV-2025-0106', allocatedAmount: 8000 },
+            { invoiceId: 'inv-007', invoiceNumber: 'INV-2025-0107', allocatedAmount: 5000 },
           ],
         },
         {
-          paymentId: 'pay-005',
+          paymentId: 'pay-hnd-005',
           receiptNumber: 'REC-2026-1005',
           customerId: 'cust-005',
           customerName: 'City Hardware & Electricals',
@@ -95,7 +95,7 @@ class HandoverService {
           paymentMethod: 'CASH',
           collectedAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
           invoiceAllocations: [
-            { invoiceId: 'inv-008', invoiceNumber: 'INV-2026-108', allocatedAmount: 10000 },
+            { invoiceId: 'inv-008', invoiceNumber: 'INV-2025-0108', allocatedAmount: 10000 },
           ],
         },
       ],
@@ -423,16 +423,18 @@ class HandoverService {
     let approvedByFinance = 0;
 
     for (const p of res.data) {
-      const isToday = p.collectedAt?.startsWith(todayStr);
+      const isToday =
+        (p.collectedAt && new Date(p.collectedAt).toDateString() === now.toDateString()) ||
+        p.collectedAt?.startsWith(todayStr);
 
       if (isToday) {
         todayTotalCollected += p.amount;
       }
 
-      if (p.status === 'APPROVED') {
-        approvedByFinance += p.amount;
-      } else if (p.handoverStatus === 'HANDED_OVER') {
+      if (p.handoverStatus === 'HANDED_OVER') {
         handedOver += p.amount;
+      } else if (p.status === 'APPROVED' || p.handoverStatus === 'APPROVED') {
+        approvedByFinance += p.amount;
       } else if (p.status === 'PENDING_APPROVAL') {
         pendingHandover += p.amount;
       }
