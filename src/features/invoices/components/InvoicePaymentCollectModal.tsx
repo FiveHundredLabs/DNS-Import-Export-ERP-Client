@@ -186,7 +186,7 @@ export function InvoicePaymentCollectModal({
             <div className="text-[11px] leading-snug">
               <span className="font-bold block text-blue-950">Targeted Invoice-Wise Collection:</span>
               <span>
-                Payment applied <strong>strictly to this invoice only</strong>. Other customer invoices are not settled.
+                This payment will be applied <strong>strictly to this invoice only</strong>. Other customer invoices or accounts will NOT be touched or settled.
               </span>
             </div>
           </div>

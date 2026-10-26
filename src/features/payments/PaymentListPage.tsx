@@ -259,7 +259,7 @@ export function PaymentListPage() {
               ? 'Customer Payments & Collections'
               : viewMode === 'HANDOVERS'
               ? 'Daily Cash Handover & Finance Approvals'
-              : 'Payment Collections & Collection History'}
+              : 'Payment Collections & Verification'}
           </h1>
           <p className="text-xs text-slate-500">
             {viewMode === 'CUSTOMERS'

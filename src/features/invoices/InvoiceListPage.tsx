@@ -5,6 +5,7 @@ import { Customer } from '../../types/customer';
 import { invoiceService } from '../../services/InvoiceService';
 import { customerService } from '../../services/CustomerService';
 import { InvoiceStatusBadge } from './InvoiceStatusBadge';
+import { InvoicePreviewModal } from './components/InvoicePreviewModal';
 import { printerService } from '../../services/PrinterService';
 import { pdfService } from '../../services/PdfService';
 import { whatsAppService } from '../../services/WhatsAppService';
@@ -63,6 +64,8 @@ export function InvoiceListPage() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
+  const [previewInvoice, setPreviewInvoice] = useState<Invoice | null>(null);
+  const [previewModalOpen, setPreviewModalOpen] = useState(false);
 
   useEffect(() => {
     async function loadCustomers() {
@@ -478,6 +481,21 @@ export function InvoiceListPage() {
                             size="sm"
                             onClick={(e) => {
                               e.stopPropagation();
+                              setPreviewInvoice(inv);
+                              setPreviewModalOpen(true);
+                            }}
+                            className="h-8 px-2.5 text-xs text-primary bg-primary/5 hover:bg-primary/10 border-primary/20 gap-1 rounded-xl cursor-pointer"
+                            title="Preview A4 Document"
+                          >
+                            <Eye className="h-3.5 w-3.5 text-primary" />
+                            <span>A4</span>
+                          </Button>
+
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
                               whatsAppService.shareInvoice(inv);
                             }}
                             className="h-8 px-2.5 text-xs text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border-emerald-200/80 gap-1 rounded-xl cursor-pointer"
@@ -626,6 +644,19 @@ export function InvoiceListPage() {
                               size="sm"
                               onClick={(e) => {
                                 e.stopPropagation();
+                                setPreviewInvoice(inv);
+                                setPreviewModalOpen(true);
+                              }}
+                              className="h-7 w-7 p-0 text-primary hover:text-primary hover:bg-primary/10"
+                              title="Preview A4 Document"
+                            >
+                              <Eye className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
                                 printerService.printInvoice(inv);
                               }}
                               className="h-7 w-7 p-0 text-slate-500 hover:text-slate-900"
@@ -715,6 +746,13 @@ export function InvoiceListPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* A4 Invoice Preview Modal (Commercial & IRD Tax Templates) */}
+      <InvoicePreviewModal
+        isOpen={previewModalOpen}
+        onClose={() => setPreviewModalOpen(false)}
+        invoice={previewInvoice}
+      />
     </div>
   );
 }
