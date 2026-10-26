@@ -24,7 +24,10 @@ import {
   Info,
   CheckCircle2,
   Building,
-  Receipt
+  Receipt,
+  DollarSign,
+  AlertCircle,
+  MapPin,
 } from 'lucide-react';
 
 const AGING_COLORS = ['#10B981', '#3B82F6', '#F59E0B', '#EF4444', '#8B5CF6'];
@@ -113,6 +116,7 @@ export function SalesManagerDashboard() {
           period="Total Gross Revenue"
           trend={{ value: '15.2%', isPositive: true }}
           variant="success"
+          icon={DollarSign}
         />
         <StatCard
           title="Unpaid Invoices"
@@ -120,20 +124,23 @@ export function SalesManagerDashboard() {
           period="Total Receivables"
           trend={{ value: '4.1%', isPositive: false }}
           variant="danger"
+          icon={AlertCircle}
         />
         <StatCard
           title="Active Area Managers"
           value={kpis.activeAreaManagers.toString()}
           period="Field Commanders"
           trend={{ value: '100%', isPositive: true }}
-          variant="default"
+          variant="blue"
+          icon={MapPin}
         />
         <StatCard
           title="Total Sales Reps"
           value={kpis.totalSalesReps.toString()}
           period="Active Fleet"
           trend={{ value: '12%', isPositive: true }}
-          variant="default"
+          variant="indigo"
+          icon={Users}
         />
       </div>
 
