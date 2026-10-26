@@ -166,99 +166,99 @@ export function InvoiceListPage() {
   const paidCount = invoices.filter((i) => i.status === 'PAID').length;
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4 sm:space-y-5 pb-24 md:pb-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Commercial Tax Invoices</h1>
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">Commercial Tax Invoices</h1>
           <p className="text-xs text-slate-500 mt-0.5">
             IRD-compliant invoice management, credit receivables tracking, and settlement history.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 w-full sm:w-auto">
           <Button
             variant="outline"
             size="sm"
             onClick={fetchInvoices}
-            className="gap-1.5"
+            className="h-9 px-3 gap-1.5 text-xs rounded-xl"
             title="Refresh Invoices"
           >
-            <RefreshCw className="h-3.5 w-3.5" /> Refresh
+            <RefreshCw className="h-3.5 w-3.5" />
+            <span>Refresh</span>
           </Button>
           <Button
             size="sm"
             onClick={() => navigate('/payments/new')}
-            className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5 shadow-xs"
+            className="h-9 px-3.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold gap-1.5 shadow-xs rounded-xl flex-1 sm:flex-initial justify-center"
           >
-            <CreditCard className="h-3.5 w-3.5" /> Record Payment
+            <CreditCard className="h-3.5 w-3.5" />
+            <span>Record Payment</span>
           </Button>
         </div>
       </div>
 
-      {/* Metrics Row */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 sm:gap-3">
-        <Card className="border-slate-200 col-span-2 sm:col-span-1 min-w-0 overflow-hidden">
-          <CardContent className="p-3 sm:p-3.5">
+      {/* Metrics Row (Compact 2x2 Grid on Mobile, 4 Columns on Desktop) */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
+        <Card className="border-slate-200 min-w-0 overflow-hidden shadow-2xs">
+          <CardContent className="p-2.5 sm:p-3.5">
             <div className="flex items-center justify-between gap-2">
               <div className="min-w-0 flex-1">
-                <p className="text-xs sm:text-[13px] font-medium text-slate-600 truncate">Total Receivables</p>
+                <p className="text-[11px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider truncate">Total Receivables</p>
                 <div className="mt-0.5 min-w-0">
-                  <AmountDisplay amount={totalReceivables} className="text-slate-900 font-bold" />
+                  <AmountDisplay amount={totalReceivables} className="text-sm sm:text-lg font-bold text-slate-900" />
                 </div>
               </div>
-              <div className="h-9 w-9 rounded-lg bg-primary-light text-primary flex items-center justify-center shrink-0">
-                <Receipt className="h-5 w-5" />
+              <div className="h-8 w-8 sm:h-9 sm:w-9 rounded-lg bg-primary-light text-primary flex items-center justify-center shrink-0">
+                <Receipt className="h-4 w-4 sm:h-5 sm:w-5" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-slate-200 col-span-2 sm:col-span-1 min-w-0 overflow-hidden">
-          <CardContent className="p-3 sm:p-3.5">
+        <Card className="border-slate-200 min-w-0 overflow-hidden shadow-2xs">
+          <CardContent className="p-2.5 sm:p-3.5">
             <div className="flex items-center justify-between gap-2">
               <div className="min-w-0 flex-1">
-                <p className="text-xs sm:text-[13px] font-medium text-slate-600 truncate">Overdue Invoices</p>
-                <div className="mt-0.5 min-w-0 flex flex-wrap items-baseline gap-1">
+                <p className="text-[11px] sm:text-xs font-semibold text-rose-600 uppercase tracking-wider truncate">Overdue Invoices</p>
+                <div className="mt-0.5 min-w-0 flex items-baseline gap-1 truncate">
                   <span className="text-sm sm:text-base font-bold tabular-nums text-rose-600 shrink-0">{overdueCount}</span>
-                  <span className="text-xs sm:text-sm text-rose-600 font-semibold">(</span>
-                  <div className="inline-block flex-1 min-w-0">
-                    <AmountDisplay amount={overdueAmount} className="text-rose-600 font-bold" />
-                  </div>
-                  <span className="text-xs sm:text-sm text-rose-600 font-semibold">)</span>
+                  <span className="text-[11px] sm:text-xs text-rose-600 font-semibold truncate">
+                    ({formatCurrency(overdueAmount)})
+                  </span>
                 </div>
               </div>
-              <div className="h-9 w-9 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center shrink-0">
-                <AlertTriangle className="h-5 w-5" />
+              <div className="h-8 w-8 sm:h-9 sm:w-9 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center shrink-0">
+                <AlertTriangle className="h-4 w-4 sm:h-5 sm:w-5" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-slate-200 min-w-0 overflow-hidden">
-          <CardContent className="p-3 sm:p-3.5">
+        <Card className="border-slate-200 min-w-0 overflow-hidden shadow-2xs">
+          <CardContent className="p-2.5 sm:p-3.5">
             <div className="flex items-center justify-between gap-2">
               <div className="min-w-0 flex-1">
-                <p className="text-xs sm:text-[13px] font-medium text-slate-600 truncate">Active Invoices</p>
-                <p className="text-base sm:text-lg font-bold tabular-nums text-primary mt-0.5 truncate">
+                <p className="text-[11px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider truncate">Active</p>
+                <p className="text-sm sm:text-base font-bold tabular-nums text-primary mt-0.5 truncate">
                   {invoices.filter((i) => i.status === 'ISSUED' || i.status === 'PARTIALLY_PAID').length} open
                 </p>
               </div>
-              <div className="h-9 w-9 rounded-lg bg-primary-light text-primary flex items-center justify-center shrink-0">
-                <Clock className="h-5 w-5" />
+              <div className="h-8 w-8 sm:h-9 sm:w-9 rounded-lg bg-primary-light text-primary flex items-center justify-center shrink-0">
+                <Clock className="h-4 w-4 sm:h-5 sm:w-5" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-slate-200 min-w-0 overflow-hidden">
-          <CardContent className="p-3 sm:p-3.5">
+        <Card className="border-slate-200 min-w-0 overflow-hidden shadow-2xs">
+          <CardContent className="p-2.5 sm:p-3.5">
             <div className="flex items-center justify-between gap-2">
               <div className="min-w-0 flex-1">
-                <p className="text-xs sm:text-[13px] font-medium text-slate-600 truncate">Fully Settled</p>
-                <p className="text-base sm:text-lg font-bold tabular-nums text-emerald-600 mt-0.5 truncate">{paidCount} Paid</p>
+                <p className="text-[11px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider truncate">Settled</p>
+                <p className="text-sm sm:text-base font-bold tabular-nums text-emerald-600 mt-0.5 truncate">{paidCount} Paid</p>
               </div>
-              <div className="h-9 w-9 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
-                <CheckCircle className="h-5 w-5" />
+              <div className="h-8 w-8 sm:h-9 sm:w-9 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5" />
               </div>
             </div>
           </CardContent>
@@ -266,19 +266,19 @@ export function InvoiceListPage() {
       </div>
 
       {/* Filter and Search Bar */}
-      <Card className="border-slate-200">
-        <CardContent className="p-3.5 space-y-3">
-          <div className="flex flex-col md:flex-row gap-3">
+      <Card className="border-slate-200 shadow-2xs">
+        <CardContent className="p-3 sm:p-3.5 space-y-2.5 sm:space-y-3">
+          <div className="flex flex-col md:flex-row gap-2.5 sm:gap-3">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
               <Input
-                placeholder="Search by invoice #, order #, or customer name..."
+                placeholder="Search by invoice #, order #, or customer..."
                 value={search}
                 onChange={(e) => {
                   setSearch(e.target.value);
                   setPage(1);
                 }}
-                className="pl-9 text-xs h-9"
+                className="pl-9 text-xs h-9 rounded-xl"
               />
             </div>
             <div className="w-full md:w-56">
@@ -291,7 +291,7 @@ export function InvoiceListPage() {
                     setPage(1);
                   }}
                 >
-                  <SelectTrigger className="w-full pl-9 pr-3 h-9 text-xs rounded-md border border-slate-300 bg-white">
+                  <SelectTrigger className="w-full pl-9 pr-3 h-9 text-xs rounded-xl border border-slate-300 bg-white">
                     <SelectValue placeholder="All Customers" />
                   </SelectTrigger>
                   <SelectContent>
@@ -305,7 +305,7 @@ export function InvoiceListPage() {
                 </Select>
               </div>
             </div>
-            <div className="flex items-center gap-2 w-full sm:w-auto">
+            <div className="grid grid-cols-2 sm:flex sm:items-center gap-2 w-full sm:w-auto">
               <Input
                 type="date"
                 value={startDate}
@@ -313,10 +313,9 @@ export function InvoiceListPage() {
                   setStartDate(e.target.value);
                   setPage(1);
                 }}
-                className="text-xs h-9 flex-1 min-w-0 sm:flex-initial sm:w-36"
+                className="text-xs h-9 rounded-xl w-full sm:w-36"
                 placeholder="From Date"
               />
-              <span className="text-xs text-slate-400 shrink-0">to</span>
               <Input
                 type="date"
                 value={endDate}
@@ -324,7 +323,7 @@ export function InvoiceListPage() {
                   setEndDate(e.target.value);
                   setPage(1);
                 }}
-                className="text-xs h-9 flex-1 min-w-0 sm:flex-initial sm:w-36"
+                className="text-xs h-9 rounded-xl w-full sm:w-36"
                 placeholder="To Date"
               />
             </div>
@@ -416,22 +415,22 @@ export function InvoiceListPage() {
           ) : (
             <>
               {/* 1. Mobile Cards View (Visible on small screens, hidden on md+) */}
-              <div className="block md:hidden p-3 space-y-3">
+              <div className="block md:hidden p-2.5 sm:p-3 space-y-2.5 sm:space-y-3">
                 {invoices.map((inv) => {
                   const isOverdue = inv.status === 'OVERDUE';
                   return (
                     <div
                       key={inv.id}
                       onClick={() => navigate(`/invoices/${inv.id}`)}
-                      className="rounded-2xl border border-slate-200/90 bg-white p-3.5 shadow-xs hover:border-primary/50 transition-all cursor-pointer active:scale-[0.99]"
+                      className="rounded-2xl border border-slate-200/90 bg-white p-3 sm:p-3.5 shadow-2xs hover:border-primary/50 transition-all cursor-pointer active:scale-[0.99]"
                     >
                       {/* Top: Invoice #, Order #, Status */}
-                      <div className="flex items-center justify-between gap-2 flex-wrap">
-                        <div className="flex items-center gap-1.5 flex-wrap shrink-0 min-w-0">
-                          <span className="font-mono text-xs font-bold text-primary tabular-nums whitespace-nowrap shrink-0">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <span className="font-mono text-xs font-bold text-primary tabular-nums truncate">
                             {inv.invoiceNumber}
                           </span>
-                          <span className="text-[10.5px] text-slate-400 font-mono whitespace-nowrap shrink-0">
+                          <span className="text-[10.5px] text-slate-400 font-mono shrink-0">
                             • SO: {inv.orderNumber}
                           </span>
                         </div>
@@ -441,41 +440,41 @@ export function InvoiceListPage() {
                       </div>
 
                       {/* Customer info */}
-                      <div className="mt-2">
-                        <h4 className="text-xs font-bold text-slate-900 leading-snug truncate">
+                      <div className="mt-1.5 min-w-0">
+                        <h4 className="text-xs sm:text-[13px] font-bold text-slate-900 leading-snug truncate">
                           {inv.customerName}
                         </h4>
-                        <span className="font-mono text-[11px] text-slate-400">
+                        <span className="font-mono text-[10.5px] text-slate-400">
                           {inv.customerCode}
                         </span>
                       </div>
 
                       {/* Financial info box */}
-                      <div className="mt-2.5 rounded-xl bg-slate-50 p-2.5 border border-slate-100 grid grid-cols-2 gap-2">
+                      <div className="mt-2 rounded-xl bg-slate-50/80 p-2.5 border border-slate-100 flex items-center justify-between gap-2">
                         <div>
-                          <span className="text-[10px] uppercase font-semibold text-slate-400 block">Balance Due</span>
-                          <div className={`text-sm font-bold tabular-nums ${isOverdue ? 'text-rose-600' : inv.balanceAmount > 0 ? 'text-slate-900' : 'text-emerald-600'}`}>
+                          <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Balance Due</span>
+                          <div className={`text-sm font-black tabular-nums ${isOverdue ? 'text-rose-600' : inv.balanceAmount > 0 ? 'text-slate-900' : 'text-emerald-600'}`}>
                             {inv.balanceAmount > 0 ? formatCurrency(inv.balanceAmount) : 'Settled'}
                           </div>
-                          <span className="text-[10.5px] text-slate-400 block mt-0.5">
+                          <span className="text-[10px] text-slate-400 block mt-0.5">
                             Total: {formatCurrency(inv.totalAmount)}
                           </span>
                         </div>
 
                         <div className="text-right">
-                          <span className="text-[10px] uppercase font-semibold text-slate-400 block">Due Date</span>
+                          <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Due Date</span>
                           <div className={`text-xs font-bold ${isOverdue ? 'text-rose-600' : 'text-slate-700'}`}>
                             {formatDate(inv.dueDate)}
                           </div>
-                          <span className="text-[10.5px] text-slate-400 block mt-0.5">
+                          <span className="text-[10px] text-slate-400 block mt-0.5">
                             Issued: {formatDate(inv.issueDate)}
                           </span>
                         </div>
                       </div>
 
                       {/* Actions bar */}
-                      <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-1.5">
+                      <div className="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between gap-1.5">
+                        <div className="flex items-center gap-1 min-w-0">
                           <Button
                             variant="outline"
                             size="sm"
@@ -484,7 +483,7 @@ export function InvoiceListPage() {
                               setPreviewInvoice(inv);
                               setPreviewModalOpen(true);
                             }}
-                            className="h-8 px-2.5 text-xs text-primary bg-primary/5 hover:bg-primary/10 border-primary/20 gap-1 rounded-xl cursor-pointer"
+                            className="h-8 px-2 text-xs font-bold text-primary bg-primary/5 hover:bg-primary/10 border-primary/20 gap-1 rounded-xl cursor-pointer shrink-0"
                             title="Preview A4 Document"
                           >
                             <Eye className="h-3.5 w-3.5 text-primary" />
@@ -498,11 +497,11 @@ export function InvoiceListPage() {
                               e.stopPropagation();
                               whatsAppService.shareInvoice(inv);
                             }}
-                            className="h-8 px-2.5 text-xs text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border-emerald-200/80 gap-1 rounded-xl cursor-pointer"
+                            className="h-8 px-2 text-xs text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border-emerald-200/80 gap-1 rounded-xl cursor-pointer shrink-0"
                             title="Share via WhatsApp"
                           >
                             <Send className="h-3.5 w-3.5 text-emerald-600" />
-                            <span>WhatsApp</span>
+                            <span className="hidden xs:inline">WhatsApp</span>
                           </Button>
 
                           <Button
@@ -512,7 +511,7 @@ export function InvoiceListPage() {
                               e.stopPropagation();
                               printerService.printInvoice(inv);
                             }}
-                            className="h-8 px-2 text-xs text-slate-600 hover:bg-slate-100 rounded-xl cursor-pointer"
+                            className="h-8 w-8 p-0 text-slate-500 hover:bg-slate-100 rounded-xl cursor-pointer shrink-0"
                             title="Print Invoice"
                           >
                             <Printer className="h-3.5 w-3.5" />
@@ -525,7 +524,7 @@ export function InvoiceListPage() {
                               e.stopPropagation();
                               pdfService.downloadInvoicePdf(inv);
                             }}
-                            className="h-8 px-2 text-xs text-slate-600 hover:bg-slate-100 rounded-xl cursor-pointer"
+                            className="h-8 w-8 p-0 text-slate-500 hover:bg-slate-100 rounded-xl cursor-pointer shrink-0"
                             title="Download PDF"
                           >
                             <Download className="h-3.5 w-3.5" />
@@ -540,13 +539,13 @@ export function InvoiceListPage() {
                               e.stopPropagation();
                               navigate(`/invoices/${inv.id}?collect=true`);
                             }}
-                            className="h-8 px-3 text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl cursor-pointer gap-1 shadow-xs"
+                            className="h-8 px-3 text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl cursor-pointer gap-1 shadow-xs shrink-0"
                           >
                             <CreditCard className="h-3.5 w-3.5" />
                             <span>Collect</span>
                           </Button>
                         ) : (
-                          <span className="inline-flex items-center text-xs font-semibold text-primary gap-0.5">
+                          <span className="inline-flex items-center text-xs font-semibold text-primary gap-0.5 shrink-0 px-2 py-1">
                             Details <ChevronRight className="h-3.5 w-3.5" />
                           </span>
                         )}
