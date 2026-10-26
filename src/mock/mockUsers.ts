@@ -67,7 +67,17 @@ export const MOCK_USERS: User[] = [
     name: 'Chathura Alwis',
     email: 'cashier@dnserp.com',
     role: 'CASHIER',
+    title: 'Cashier / Remittance Desk',
     phone: '+94 77 890 1234',
+    isActive: true,
+  },
+  {
+    id: 'usr-109',
+    name: 'Nimal Perera',
+    email: 'nimal.finance@dnserp.com',
+    role: 'FINANCE_MANAGER',
+    title: 'Finance Officer',
+    phone: '+94 77 901 2345',
     isActive: true,
   },
 ];

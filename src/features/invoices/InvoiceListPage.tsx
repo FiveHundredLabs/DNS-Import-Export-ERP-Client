@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
-import { Invoice, InvoiceStatus } from '../../types/invoice';
+import { Invoice, InvoiceStatus, InvoicePaymentFilterType } from '../../types/invoice';
 import { Customer } from '../../types/customer';
 import { invoiceService } from '../../services/InvoiceService';
 import { customerService } from '../../services/CustomerService';
@@ -39,6 +39,10 @@ import {
   RefreshCw,
   Building2,
   ChevronRight,
+  DollarSign,
+  ShieldCheck,
+  X,
+  Lock,
 } from 'lucide-react';
 
 export function InvoiceListPage() {
@@ -50,7 +54,10 @@ export function InvoiceListPage() {
   const [customerIdFilter, setCustomerIdFilter] = useState(searchParams.get('customerId') || '');
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<InvoiceStatus | 'ALL'>('ALL');
+  const [statusFilter, setStatusFilter] = useState<InvoicePaymentFilterType | InvoiceStatus | 'ALL'>(
+    (searchParams.get('filter') as any) || 'ALL'
+  );
+  const [allInvoicesForCounts, setAllInvoicesForCounts] = useState<Invoice[]>([]);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [page, setPage] = useState(1);
@@ -72,19 +79,29 @@ export function InvoiceListPage() {
   const fetchInvoices = async () => {
     try {
       setLoading(true);
-      const res = await invoiceService.getInvoices({
-        search: search.trim() || undefined,
-        status: statusFilter,
-        customerId: customerIdFilter || undefined,
-        startDate: startDate || undefined,
-        endDate: endDate || undefined,
-        page,
-        pageSize: 10,
-        salesRepId: role === 'SALES_REP' ? currentUser.id : undefined,
-      });
+      const isRep = role === 'SALES_REP';
+      const [res, allRes] = await Promise.all([
+        invoiceService.getInvoices({
+          search: search.trim() || undefined,
+          paymentFilter: statusFilter !== 'ALL' ? (statusFilter as any) : undefined,
+          status: statusFilter as any,
+          customerId: customerIdFilter || undefined,
+          startDate: startDate || undefined,
+          endDate: endDate || undefined,
+          page,
+          pageSize: 10,
+          salesRepId: isRep ? currentUser.id : undefined,
+        }),
+        invoiceService.getInvoices({
+          pageSize: 200,
+          customerId: customerIdFilter || undefined,
+          salesRepId: isRep ? currentUser.id : undefined,
+        }),
+      ]);
       setInvoices(res.data);
       setTotalPages(res.totalPages);
       setTotalCount(res.total);
+      setAllInvoicesForCounts(allRes.data);
     } catch (err) {
       console.error('Failed to load invoices:', err);
     } finally {
@@ -95,6 +112,49 @@ export function InvoiceListPage() {
   useEffect(() => {
     fetchInvoices();
   }, [search, statusFilter, customerIdFilter, startDate, endDate, page, role, currentUser.id]);
+
+  // Compute live filter counts across customer invoices
+  const counts = useMemo(() => {
+    const now = new Date();
+    const sevenDaysAheadTime = now.getTime() + 7 * 24 * 60 * 60 * 1000;
+
+    let outstanding = 0;
+    let overdue = 0;
+    let nearDue = 0;
+    let pendingCollection = 0;
+    let settled = 0;
+
+    for (const inv of allInvoicesForCounts) {
+      const uncollected = Math.max(0, inv.balanceAmount - (inv.collectedAmount || 0));
+      const [y, m, d] = inv.dueDate.split('-').map(Number);
+      const dueTime = new Date(y, m - 1, d, 23, 59, 59, 999).getTime();
+      const isOvd = dueTime < now.getTime() || inv.status === 'OVERDUE';
+      const isNear = !isOvd && dueTime <= sevenDaysAheadTime && uncollected > 0;
+
+      if (inv.balanceAmount > 0) outstanding++;
+      if (isOvd && uncollected > 0) overdue++;
+      if (isNear) nearDue++;
+      if (
+        inv.status === 'COLLECTED' ||
+        inv.status === 'PARTIALLY_COLLECTED' ||
+        ((inv.collectedAmount || 0) > 0 && inv.status !== 'PAID')
+      ) {
+        pendingCollection++;
+      }
+      if (inv.status === 'PAID' || inv.balanceAmount <= 0) settled++;
+    }
+
+    return {
+      all: allInvoicesForCounts.length,
+      outstanding,
+      overdue,
+      nearDue,
+      pendingCollection,
+      settled,
+    };
+  }, [allInvoicesForCounts]);
+
+  const selectedCustomer = customers.find((c) => c.id === customerIdFilter);
 
   // Aggregate metrics
   const totalReceivables = invoices.reduce((acc, inv) => acc + inv.balanceAmount, 0);
@@ -267,34 +327,68 @@ export function InvoiceListPage() {
             </div>
           </div>
 
-          {/* Status Tabs */}
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs">
-            {(
-              [
-                { label: 'All Invoices', value: 'ALL' },
-                { label: 'Issued', value: 'ISSUED' },
-                { label: 'Collected', value: 'COLLECTED' },
-                { label: 'Partially Collected', value: 'PARTIALLY_COLLECTED' },
-                { label: 'Partially Paid', value: 'PARTIALLY_PAID' },
-                { label: 'Overdue', value: 'OVERDUE' },
-                { label: 'Paid', value: 'PAID' },
-              ] as const
-            ).map((st) => (
+          {/* Customer filter active indicator pill */}
+          {selectedCustomer && (
+            <div className="flex items-center justify-between p-2.5 rounded-xl bg-primary-light/40 border border-primary/20 text-xs text-primary">
+              <div className="flex items-center gap-2">
+                <Building2 className="h-4 w-4 shrink-0 text-primary" />
+                <span>
+                  Filtering invoices for <strong>{selectedCustomer.name}</strong> ({selectedCustomer.code})
+                </span>
+              </div>
               <button
-                key={st.value}
+                type="button"
                 onClick={() => {
-                  setStatusFilter(st.value);
+                  setCustomerIdFilter('');
                   setPage(1);
                 }}
-                className={`px-3 py-1.5 rounded-md font-medium transition-colors text-[11px] whitespace-nowrap ${
-                  statusFilter === st.value
-                    ? 'bg-primary text-primary-foreground shadow-xs'
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                }`}
+                className="inline-flex items-center gap-1 font-semibold text-primary hover:text-primary-dark underline cursor-pointer text-[11px]"
               >
-                {st.label}
+                <X className="h-3.5 w-3.5" /> Clear Filter
               </button>
-            ))}
+            </div>
+          )}
+
+          {/* Standard Status Filter Tabs matching Customer Payments */}
+          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1 text-xs">
+            {(
+              [
+                { label: 'All Invoices', value: 'ALL', count: counts.all, icon: Receipt },
+                { label: 'Outstanding', value: 'OUTSTANDING', count: counts.outstanding, icon: DollarSign },
+                { label: 'Overdue', value: 'OVERDUE', count: counts.overdue, icon: AlertTriangle },
+                { label: 'Near Due', value: 'NEAR_DUE', count: counts.nearDue, icon: Clock },
+                { label: 'Pending Collection', value: 'PENDING_COLLECTION', count: counts.pendingCollection, icon: ShieldCheck },
+                { label: 'Fully Settled', value: 'FULLY_SETTLED', count: counts.settled, icon: CheckCircle },
+              ] as const
+            ).map((st) => {
+              const Icon = st.icon;
+              const isActive = statusFilter === st.value;
+              return (
+                <button
+                  key={st.value}
+                  type="button"
+                  onClick={() => {
+                    setStatusFilter(st.value);
+                    setPage(1);
+                  }}
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-bold transition-all text-xs whitespace-nowrap cursor-pointer active:scale-95 ${
+                    isActive
+                      ? 'bg-slate-900 text-white shadow-xs'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-900'
+                  }`}
+                >
+                  <Icon className="h-3.5 w-3.5" />
+                  <span>{st.label}</span>
+                  <span
+                    className={`ml-0.5 px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+                      isActive ? 'bg-white/20 text-white' : 'bg-slate-200/80 text-slate-700'
+                    }`}
+                  >
+                    {st.count}
+                  </span>
+                </button>
+              );
+            })}
           </div>
         </CardContent>
       </Card>
@@ -426,9 +520,9 @@ export function InvoiceListPage() {
                             size="sm"
                             onClick={(e) => {
                               e.stopPropagation();
-                              navigate(`/payments/new?customerId=${inv.customerId}&invoiceId=${inv.id}`);
+                              navigate(`/invoices/${inv.id}?collect=true`);
                             }}
-                            className="h-8 px-3 text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl cursor-pointer gap-1"
+                            className="h-8 px-3 text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl cursor-pointer gap-1 shadow-xs"
                           >
                             <CreditCard className="h-3.5 w-3.5" />
                             <span>Collect</span>
@@ -569,12 +663,13 @@ export function InvoiceListPage() {
                                 size="sm"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  navigate(`/payments/new?customerId=${inv.customerId}&invoiceId=${inv.id}`);
+                                  navigate(`/invoices/${inv.id}?collect=true`);
                                 }}
-                                className="h-7 w-7 p-0 text-emerald-700 hover:bg-emerald-50"
-                                title="Record Settlement"
+                                className="h-7 px-2 text-xs font-semibold text-emerald-700 hover:bg-emerald-50 gap-1 rounded-lg"
+                                title="Collect Payment on this Invoice"
                               >
                                 <CreditCard className="h-3.5 w-3.5" />
+                                <span>Collect</span>
                               </Button>
                             )}
                           </div>

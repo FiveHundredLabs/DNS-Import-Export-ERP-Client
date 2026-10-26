@@ -70,6 +70,10 @@ export class PaymentService {
     return this.repo.getById(id);
   }
 
+  async updatePayment(id: string, updates: Partial<Payment>): Promise<Payment> {
+    return this.repo.update(id, updates);
+  }
+
   /**
    * Records payment collection from customer.
    * Section 21 & 56: Payment is placed in PENDING_APPROVAL.
