@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Invoice } from '../../../types/invoice';
 import {
   calculateFifoAllocation,
@@ -6,7 +6,7 @@ import {
 } from '../../../rules/customerPaymentRules';
 import { AmountDisplay } from '../../../components/common/AmountDisplay';
 import { formatDate } from '../../../utils/formatters';
-import { Sparkles, CheckCircle2, Clock, AlertCircle, ArrowRight } from 'lucide-react';
+import { Sparkles, CheckCircle2, Clock, ChevronDown, ChevronUp } from 'lucide-react';
 import { cn } from '../../../utils/cn';
 
 interface FifoAllocationPreviewProps {
@@ -14,6 +14,7 @@ interface FifoAllocationPreviewProps {
   invoices: Invoice[];
   selectedInvoiceIds?: string[];
   className?: string;
+  defaultExpanded?: boolean;
 }
 
 export function FifoAllocationPreview({
@@ -21,7 +22,10 @@ export function FifoAllocationPreview({
   invoices,
   selectedInvoiceIds,
   className,
+  defaultExpanded = false,
 }: FifoAllocationPreviewProps) {
+  const [isExpanded, setIsExpanded] = useState(defaultExpanded);
+
   const breakdown: FifoAllocationBreakdown = calculateFifoAllocation(
     paymentAmount,
     invoices,
@@ -43,175 +47,158 @@ export function FifoAllocationPreview({
   }
 
   return (
-    <div className={cn('space-y-3', className)}>
-      {/* Top Banner: FIFO Explanation & Total Metrics */}
-      <div className="rounded-2xl sm:rounded-3xl border border-primary/30 bg-gradient-to-br from-primary/[0.06] via-primary-light/40 to-white p-4 sm:p-5 shadow-xs">
-        <div className="flex items-center justify-between gap-2 flex-wrap">
+    <div className={cn('space-y-2', className)}>
+      {/* Top Summary Card (Compact & Collapsible) */}
+      <div className="rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/[0.04] to-white p-3 sm:p-4 shadow-xs">
+        <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-xl bg-primary text-white flex items-center justify-center shrink-0 shadow-2xs">
-              <Sparkles className="h-4 w-4" />
+            <div className="h-7 w-7 rounded-lg bg-primary text-white flex items-center justify-center shrink-0 shadow-2xs">
+              <Sparkles className="h-3.5 w-3.5" />
             </div>
             <div>
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-900 block">
-                Automatic FIFO Allocation Breakdown
-              </span>
-              <span className="text-[10.5px] text-slate-500 font-medium">
-                Distributed oldest due date first (First-In, First-Out)
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-900" title="Automatic FIFO Allocation Breakdown">
+                  Automatic FIFO Allocation
+                </span>
+                {breakdown.fullySettledCount > 0 && (
+                  <span className="text-[10.5px] font-bold text-emerald-700 bg-emerald-100/80 px-2 py-0.2 rounded-full border border-emerald-200">
+                    {breakdown.fullySettledCount} Settled
+                  </span>
+                )}
+                {breakdown.partiallySettledCount > 0 && (
+                  <span className="text-[10.5px] font-bold text-amber-700 bg-amber-100/80 px-2 py-0.2 rounded-full border border-amber-200">
+                    {breakdown.partiallySettledCount} Partial
+                  </span>
+                )}
+              </div>
+              <span className="text-[10.5px] text-slate-400 font-medium">
+                Oldest invoice settled first
               </span>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            {breakdown.fullySettledCount > 0 && (
-              <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-800 bg-emerald-100/90 px-2.5 py-0.5 rounded-full border border-emerald-200">
-                <CheckCircle2 className="h-3 w-3" />
-                {breakdown.fullySettledCount} Fully Settled
-              </span>
-            )}
-            {breakdown.partiallySettledCount > 0 && (
-              <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-800 bg-amber-100/90 px-2.5 py-0.5 rounded-full border border-amber-200">
-                <Clock className="h-3 w-3" />
-                {breakdown.partiallySettledCount} Partial
-              </span>
-            )}
-          </div>
+          {/* Expand/Collapse Toggle Button */}
+          <button
+            type="button"
+            onClick={() => setIsExpanded((prev) => !prev)}
+            className="flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-semibold text-primary hover:bg-primary-light active:scale-95 transition-all"
+            aria-expanded={isExpanded}
+          >
+            <span>{isExpanded ? 'Hide List' : 'View Invoices'}</span>
+            {isExpanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+          </button>
         </div>
 
-        {/* Totals Summary */}
-        <div className="mt-3 pt-3 border-t border-primary/20 grid grid-cols-2 sm:grid-cols-3 gap-3">
-          <div>
-            <span className="text-[10.5px] font-semibold uppercase tracking-wider text-slate-500 block">
-              Payment Amount
+        {/* Compact Totals Row */}
+        <div className="mt-2.5 pt-2 border-t border-primary/10 grid grid-cols-2 sm:grid-cols-3 gap-2">
+          <div className="min-w-0">
+            <span className="text-[9.5px] sm:text-[10px] font-semibold uppercase tracking-wider text-slate-400 block truncate">
+              Payment
             </span>
-            <div className="mt-0.5">
-              <AmountDisplay amount={breakdown.totalPaymentAmount} size="sm" className="font-extrabold text-slate-900" />
+            <div className="mt-0.5 flex items-baseline gap-1 whitespace-nowrap">
+              <span className="text-[10px] font-bold text-slate-400 uppercase shrink-0">LKR</span>
+              <span className="text-xs sm:text-sm font-extrabold text-slate-900 tabular-nums truncate">
+                {breakdown.totalPaymentAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </span>
             </div>
           </div>
 
-          <div>
-            <span className="text-[10.5px] font-semibold uppercase tracking-wider text-slate-500 block">
-              Total Allocated
+          <div className="min-w-0">
+            <span className="text-[9.5px] sm:text-[10px] font-semibold uppercase tracking-wider text-slate-400 block truncate">
+              Allocated
             </span>
-            <div className="mt-0.5">
-              <AmountDisplay amount={breakdown.totalAllocated} size="sm" className="font-extrabold text-emerald-700" />
+            <div className="mt-0.5 flex items-baseline gap-1 whitespace-nowrap">
+              <span className="text-[10px] font-bold text-emerald-500 uppercase shrink-0">LKR</span>
+              <span className="text-xs sm:text-sm font-extrabold text-emerald-700 tabular-nums truncate">
+                {breakdown.totalAllocated.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </span>
             </div>
           </div>
 
           {breakdown.unallocatedAmount > 0 && (
-            <div>
-              <span className="text-[10.5px] font-bold uppercase tracking-wider text-blue-600 block">
-                Unallocated / Advance
+            <div className="col-span-2 sm:col-span-1 min-w-0">
+              <span className="text-[9.5px] sm:text-[10px] font-bold uppercase tracking-wider text-blue-600 block truncate">
+                Unallocated
               </span>
-              <div className="mt-0.5">
-                <AmountDisplay amount={breakdown.unallocatedAmount} size="sm" className="font-extrabold text-blue-700" />
+              <div className="mt-0.5 flex items-baseline gap-1 whitespace-nowrap">
+                <span className="text-[10px] font-bold text-blue-400 uppercase shrink-0">LKR</span>
+                <span className="text-xs sm:text-sm font-extrabold text-blue-700 tabular-nums truncate">
+                  {breakdown.unallocatedAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
               </div>
             </div>
           )}
         </div>
       </div>
 
-      {/* Itemized Allocation List */}
-      <div className="space-y-2">
-        {breakdown.items.map((item, index) => {
-          const isFull = item.resultingStatus === 'FULLY_COLLECTED';
-          const isPartial = item.resultingStatus === 'PARTIALLY_COLLECTED';
-          const isUntouched = item.resultingStatus === 'UNTOUCHED';
+      {/* Itemized Allocation List (Progressive Disclosure) */}
+      {isExpanded && (
+        <div className="space-y-1.5 animate-in fade-in slide-in-from-top-1">
+          {breakdown.items.map((item, index) => {
+            const isFull = item.resultingStatus === 'FULLY_COLLECTED';
+            const isPartial = item.resultingStatus === 'PARTIALLY_COLLECTED';
 
-          return (
-            <div
-              key={item.invoiceId}
-              className={cn(
-                'rounded-2xl border p-3.5 transition-all duration-150',
-                isFull
-                  ? 'border-emerald-200 bg-gradient-to-r from-emerald-50/70 via-emerald-50/20 to-white'
-                  : isPartial
-                  ? 'border-amber-200 bg-gradient-to-r from-amber-50/70 via-amber-50/20 to-white'
-                  : 'border-slate-200/80 bg-slate-50/40 opacity-70'
-              )}
-            >
-              <div className="flex items-start justify-between gap-2 flex-wrap">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10.5px] font-bold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded font-mono">
-                      #{index + 1}
-                    </span>
-                    <span className="text-xs font-bold text-slate-900 font-mono">
-                      {item.invoiceNumber}
-                    </span>
+            return (
+              <div
+                key={item.invoiceId}
+                className={cn(
+                  'rounded-xl border p-2.5 transition-all text-xs',
+                  isFull
+                    ? 'border-emerald-200 bg-emerald-50/30'
+                    : isPartial
+                    ? 'border-amber-200 bg-amber-50/30'
+                    : 'border-slate-200 bg-slate-50/40 opacity-70'
+                )}
+              >
+                <div className="flex items-center justify-between gap-1">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <span className="text-[10px] font-mono text-slate-400">#{index + 1}</span>
+                    <span className="font-bold text-slate-900 font-mono truncate">{item.invoiceNumber}</span>
                     {item.isOverdue && (
-                      <span className="text-[10.5px] font-bold text-rose-700 bg-rose-100/90 px-2 py-0.2 rounded-full border border-rose-200">
-                        {item.daysOverdue ? `${item.daysOverdue}d Overdue` : 'Overdue'}
+                      <span className="text-[9.5px] font-bold text-rose-700 bg-rose-100 px-1.5 py-0.2 rounded font-sans">
+                        {item.daysOverdue}d overdue
                       </span>
                     )}
                   </div>
-                  <div className="text-[11px] text-slate-500 mt-0.5">
-                    Due: {formatDate(item.dueDate)} • Original: LKR {item.originalAmount.toLocaleString()}
-                  </div>
-                </div>
 
-                {/* Status Result Pill */}
-                <div>
-                  {isFull ? (
-                    <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-800 bg-emerald-100 px-2.5 py-0.5 rounded-full border border-emerald-200">
-                      <CheckCircle2 className="h-3 w-3 text-emerald-600" /> Fully Settled
-                    </span>
-                  ) : isPartial ? (
-                    <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-800 bg-amber-100 px-2.5 py-0.5 rounded-full border border-amber-200">
-                      <Clock className="h-3 w-3 text-amber-600" /> Partially Collected
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-500 bg-slate-100 px-2.5 py-0.5 rounded-full border border-slate-200">
-                      Outstanding (No Allocation)
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              {/* Allocation Numbers Row */}
-              <div className="mt-2.5 pt-2 border-t border-slate-100 grid grid-cols-3 gap-2 text-xs">
-                <div>
-                  <span className="text-[10px] text-slate-400 block uppercase tracking-wider">
-                    Previous Balance
-                  </span>
-                  <div className="font-semibold text-slate-700 mt-0.5">
-                    LKR {item.currentBalance.toLocaleString()}
-                  </div>
-                </div>
-
-                <div>
-                  <span className="text-[10px] text-slate-400 block uppercase tracking-wider">
-                    Allocated Amount
-                  </span>
-                  <div
-                    className={cn(
-                      'font-extrabold mt-0.5',
-                      item.allocatedAmount > 0 ? 'text-emerald-700' : 'text-slate-400'
+                  <div>
+                    {isFull ? (
+                      <span className="inline-flex items-center gap-0.5 text-[10px] font-bold text-emerald-800 bg-emerald-100 px-2 py-0.2 rounded-full">
+                        <CheckCircle2 className="h-2.5 w-2.5 text-emerald-600" /> Settled
+                      </span>
+                    ) : isPartial ? (
+                      <span className="inline-flex items-center gap-0.5 text-[10px] font-bold text-amber-800 bg-amber-100 px-2 py-0.2 rounded-full">
+                        <Clock className="h-2.5 w-2.5 text-amber-600" /> Partial
+                      </span>
+                    ) : (
+                      <span className="text-[10px] text-slate-400">No Alloc</span>
                     )}
-                  >
-                    {item.allocatedAmount > 0
-                      ? `+ LKR ${item.allocatedAmount.toLocaleString()}`
-                      : 'LKR 0.00'}
                   </div>
                 </div>
 
-                <div>
-                  <span className="text-[10px] text-slate-400 block uppercase tracking-wider">
-                    New Balance
-                  </span>
-                  <div
-                    className={cn(
-                      'font-extrabold mt-0.5',
-                      item.remainingBalance === 0 ? 'text-emerald-600' : 'text-slate-900'
-                    )}
-                  >
-                    LKR {item.remainingBalance.toLocaleString()}
+                <div className="mt-1.5 pt-1.5 border-t border-slate-100 grid grid-cols-3 gap-1 text-[10.5px] tabular-nums">
+                  <div className="min-w-0 truncate">
+                    <span className="text-slate-400 text-[10px]">Prev: </span>
+                    <span className="font-medium text-slate-700">{item.currentBalance.toLocaleString()}</span>
+                  </div>
+                  <div className="min-w-0 truncate text-center">
+                    <span className="text-slate-400 text-[10px]">Alloc: </span>
+                    <span className={cn('font-bold', item.allocatedAmount > 0 ? 'text-emerald-700' : 'text-slate-400')}>
+                      +{item.allocatedAmount.toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="min-w-0 truncate text-right">
+                    <span className="text-slate-400 text-[10px]">Rem: </span>
+                    <span className={cn('font-bold', item.remainingBalance === 0 ? 'text-emerald-600' : 'text-slate-900')}>
+                      {item.remainingBalance.toLocaleString()}
+                    </span>
                   </div>
                 </div>
               </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

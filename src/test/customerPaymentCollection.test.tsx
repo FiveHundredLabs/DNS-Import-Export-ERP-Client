@@ -429,15 +429,16 @@ describe('Customer Payments & Collection Management Architecture', () => {
         <FifoAllocationPreview
           paymentAmount={15000}
           invoices={sample5FifoInvoices.slice(0, 3)}
+          defaultExpanded={true}
         />
       );
 
-      expect(screen.getByText(/Automatic FIFO Allocation Breakdown/i)).toBeInTheDocument();
+      expect(screen.getByText(/Automatic FIFO Allocation/i)).toBeInTheDocument();
       expect(screen.getByText('INV-2026-001')).toBeInTheDocument();
       expect(screen.getByText('INV-2026-002')).toBeInTheDocument();
       expect(screen.getByText('INV-2026-003')).toBeInTheDocument();
-      expect(screen.getAllByText(/Fully Settled/i).length).toBeGreaterThan(0);
-      expect(screen.getByText(/Partially Collected/i)).toBeInTheDocument();
+      expect(screen.getAllByText(/Settled/i).length).toBeGreaterThan(0);
+      expect(screen.getAllByText(/Partial/i).length).toBeGreaterThan(0);
     });
 
     it('renders CustomerPaymentFilters with all 6 filter tabs and count badges', () => {

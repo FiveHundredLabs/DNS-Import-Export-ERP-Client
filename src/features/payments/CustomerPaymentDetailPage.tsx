@@ -41,6 +41,9 @@ import {
   Building,
   CreditCard,
   Banknote,
+  ChevronDown,
+  ChevronUp,
+  MapPin,
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 
@@ -54,7 +57,7 @@ export function CustomerPaymentDetailPage() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [paymentHistory, setPaymentHistory] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'COLLECT' | 'HISTORY'>('COLLECT');
+  const [showCustomerDetails, setShowCustomerDetails] = useState(false);
 
   // Form State
   const [amount, setAmount] = useState<number | ''>('');
@@ -302,85 +305,132 @@ export function CustomerPaymentDetailPage() {
         </div>
       </div>
 
-      {/* 2. Customer Banner */}
-      <div className="rounded-2xl sm:rounded-3xl border border-slate-200/90 bg-white p-4 sm:p-6 shadow-xs relative overflow-hidden">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-500 bg-slate-100 px-2.5 py-0.5 rounded-md font-mono">
+      {/* 2. Compact Customer Summary & Combined Financial Bar */}
+      <div className="rounded-2xl border border-slate-200/90 bg-white p-3 sm:p-4 shadow-xs space-y-2.5">
+        {/* Customer Header Row */}
+        <div>
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-1.5 flex-wrap min-w-0">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded font-mono shrink-0">
                 {customer.code}
               </span>
-              <span className="text-xs text-slate-500 font-medium">{customer.areaName}</span>
+              <span className="text-xs text-slate-500 font-medium truncate max-w-[140px] sm:max-w-none">{customer.areaName}</span>
               {statusMeta?.isNearby && (
-                <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                  📍 {statusMeta.distanceLabel}
+                <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded-full border border-emerald-200 flex items-center gap-0.5 shrink-0">
+                  <MapPin className="h-2.5 w-2.5" /> {statusMeta.distanceLabel}
                 </span>
               )}
             </div>
 
-            <h1 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900 mt-1">
-              {customer.name}
-            </h1>
-
-            <p className="text-xs text-slate-500 mt-0.5 flex items-center gap-2 flex-wrap">
-              <span>Contact: <strong>{customer.contactPerson}</strong> ({customer.phone})</span>
-              <span>•</span>
-              <span className="text-slate-400 truncate">{customer.address}</span>
-            </p>
-          </div>
-
-          {/* Status Badge */}
-          <div className="shrink-0 pt-1 sm:pt-0">
+            {/* Compact Status Badge */}
             <span
               className={cn(
-                'inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full border shadow-2xs',
+                'inline-flex items-center gap-1 text-[10.5px] font-bold px-2 py-0.5 rounded-full border shadow-2xs shrink-0',
                 statusMeta?.filterStatus === 'OVERDUE'
-                  ? 'bg-rose-100 text-rose-800 border-rose-200'
+                  ? 'bg-rose-50 text-rose-700 border-rose-200'
                   : statusMeta?.filterStatus === 'PENDING_COLLECTION'
-                  ? 'bg-amber-100 text-amber-800 border-amber-200'
+                  ? 'bg-amber-50 text-amber-700 border-amber-200'
                   : statusMeta?.filterStatus === 'SETTLED'
-                  ? 'bg-emerald-100 text-emerald-800 border-emerald-200'
-                  : 'bg-blue-100 text-blue-800 border-blue-200'
+                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                  : 'bg-blue-50 text-blue-700 border-blue-200'
               )}
             >
               {statusMeta?.filterStatus === 'OVERDUE' ? (
-                <AlertCircle className="h-3.5 w-3.5 text-rose-600" />
+                <AlertCircle className="h-3 w-3 text-rose-600" />
               ) : statusMeta?.filterStatus === 'SETTLED' ? (
-                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+                <CheckCircle2 className="h-3 w-3 text-emerald-600" />
               ) : (
-                <Clock className="h-3.5 w-3.5 text-blue-600" />
+                <Clock className="h-3 w-3 text-blue-600" />
               )}
               <span>{statusMeta?.badgeLabel}</span>
             </span>
           </div>
+
+          <div className="flex items-baseline justify-between gap-2 mt-1">
+            <h1 className="text-sm sm:text-base font-bold text-slate-900 leading-snug">
+              {customer.name}
+            </h1>
+            <button
+              type="button"
+              onClick={() => setShowCustomerDetails((prev) => !prev)}
+              className="text-[10.5px] text-primary hover:underline font-semibold flex items-center gap-0.5 shrink-0 ml-1"
+            >
+              <span>{showCustomerDetails ? 'Less' : 'Details'}</span>
+              {showCustomerDetails ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+            </button>
+          </div>
+
+          <div className="flex items-center justify-between text-[11px] text-slate-500 mt-1 min-w-0 gap-2">
+            <span className="truncate font-medium text-slate-700">{customer.contactPerson}</span>
+            <a
+              href={`tel:${customer.phone.replace(/\s+/g, '')}`}
+              className="inline-flex items-center gap-1 text-primary hover:underline font-bold text-xs whitespace-nowrap shrink-0 ml-auto"
+            >
+              <Phone className="h-3 w-3 text-primary/70 shrink-0" />
+              <span>{customer.phone}</span>
+            </a>
+          </div>
         </div>
-      </div>
 
-      {/* 3. Customer Financial KPI Cards Row */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-4">
-        <StatCard
-          title="Total Outstanding"
-          value={formatCurrency(statusMeta?.totalOutstanding || 0)}
-          subtitle="Remaining trade balance"
-          variant="warning"
-          icon={DollarSign}
-        />
+        {/* Expandable Secondary Customer Details */}
+        {showCustomerDetails && (
+          <div className="pt-2 border-t border-slate-100 text-xs text-slate-600 space-y-1 animate-in fade-in slide-in-from-top-1">
+            <div className="flex items-start gap-1">
+              <span className="text-slate-400 font-medium shrink-0">Address:</span>
+              <span className="text-slate-700">{customer.address}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-slate-400 font-medium">Credit Limit:</span>
+              <span className="font-semibold text-slate-800">
+                {formatCurrency(customer.commercialTerms?.creditLimit || 0)}
+              </span>
+              <span className="text-slate-300">•</span>
+              <span className="text-slate-400 font-medium">Terms:</span>
+              <span className="font-semibold text-slate-800">{customer.commercialTerms?.creditDays || 30} Days</span>
+            </div>
+          </div>
+        )}
 
-        <StatCard
-          title="Overdue Debt"
-          value={formatCurrency(statusMeta?.totalOverdue || 0)}
-          subtitle={`${statusMeta?.overdueCount || 0} Invoices past terms`}
-          variant={statusMeta?.totalOverdue ? 'danger' : 'success'}
-          icon={AlertCircle}
-        />
+        {/* 3. Combined Financial Summary Grid (Responsive 2-col on mobile, 3-col on desktop with Clean Numbers) */}
+        <div className="pt-2 border-t border-slate-100 grid grid-cols-2 sm:grid-cols-3 gap-2 bg-slate-50/80 p-2 sm:p-2.5 rounded-xl">
+          <div className="min-w-0">
+            <div className="flex items-center justify-between gap-1">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 truncate">
+                Outstanding
+              </span>
+              <span className="text-[10px] font-semibold text-slate-400 shrink-0 sm:hidden">
+                ({statusMeta?.openInvoicesCount || 0} Inv)
+              </span>
+            </div>
+            <div className="mt-0.5 flex items-baseline gap-1 whitespace-nowrap">
+              <span className="text-[10px] font-bold text-slate-400 uppercase shrink-0">LKR</span>
+              <span className="text-xs sm:text-sm font-extrabold text-slate-900 tabular-nums truncate">
+                {(statusMeta?.totalOutstanding || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </span>
+            </div>
+          </div>
 
-        <StatCard
-          title="Open Invoices"
-          value={`${statusMeta?.openInvoicesCount || 0} Invoices`}
-          subtitle={`Credit Limit: ${formatCurrency(customer.commercialTerms?.creditLimit || 0)}`}
-          variant="indigo"
-          icon={FileText}
-        />
+          <div className="border-l border-slate-200/80 pl-2 min-w-0">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-rose-600 block truncate">
+              Overdue Debt
+            </span>
+            <div className="mt-0.5 flex items-baseline gap-1 whitespace-nowrap">
+              <span className="text-[10px] font-bold text-rose-400 uppercase shrink-0">LKR</span>
+              <span className="text-xs sm:text-sm font-extrabold text-rose-700 tabular-nums truncate">
+                {(statusMeta?.totalOverdue || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </span>
+            </div>
+          </div>
+
+          <div className="hidden sm:block border-l border-slate-200/80 pl-2 min-w-0">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block truncate">
+              Open Invoices
+            </span>
+            <div className="text-xs sm:text-sm font-extrabold text-slate-800 mt-0.5 tabular-nums">
+              {statusMeta?.openInvoicesCount || 0} Invoices
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* 4. Payment Collection Form & Automatic FIFO Allocation */}
@@ -437,27 +487,35 @@ export function CustomerPaymentDetailPage() {
         </div>
       </div>
 
-      {/* 5. Mobile Sticky Bottom Action Bar (Mobile First UX) */}
-      <div className="fixed md:hidden bottom-0 left-0 right-0 z-30 p-3 bg-white/95 backdrop-blur-md border-t border-slate-200/90 shadow-lg">
-          <div className="flex items-center justify-between gap-2">
-            <div className="min-w-0 flex-1">
-              <span className="text-[10.5px] font-bold uppercase tracking-wider text-slate-500 block">
-                Total Collection
-              </span>
-              <div className="font-black text-slate-900 truncate text-base">
-                {numAmount > 0 ? formatCurrency(numAmount) : 'LKR 0.00'}
-              </div>
+      {/* 5. Mobile Sticky Bottom Action Bar (Docked cleanly at bottom-0 with safe-area padding) */}
+      <div className="fixed md:hidden bottom-0 left-0 right-0 z-40 px-4 py-3 bg-white/95 backdrop-blur-md border-t border-slate-200/90 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))]">
+        <div className="flex items-center justify-between gap-3 max-w-md mx-auto">
+          <div className="min-w-0 flex-1">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block leading-tight">
+              Total Collection
+            </span>
+            <div className="font-extrabold text-slate-900 truncate text-base mt-0.5 tabular-nums flex items-baseline gap-1">
+              {numAmount > 0 ? (
+                <>
+                  <span className="text-xs font-bold text-slate-400 shrink-0">LKR</span>
+                  <span className="truncate">{numAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                </>
+              ) : (
+                'LKR 0.00'
+              )}
             </div>
-
-            <Button
-              disabled={numAmount <= 0 || fifoBreakdown.totalAllocated <= 0}
-              onClick={handleInitiatePayment}
-              className="h-12 px-5 text-xs font-extrabold bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl shadow-md active:scale-95 transition-all gap-1.5 shrink-0"
-            >
-              <CheckCircle2 className="h-4 w-4" /> Collect (FIFO)
-            </Button>
           </div>
+
+          <Button
+            size="sm"
+            disabled={numAmount <= 0 || fifoBreakdown.totalAllocated <= 0}
+            onClick={handleInitiatePayment}
+            className="h-10 px-5 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-xs active:scale-95 transition-all gap-1.5 shrink-0"
+          >
+            <CheckCircle2 className="h-4 w-4" /> Confirm FIFO
+          </Button>
         </div>
+      </div>
 
       {/* 7. Confirmation Modal */}
       {confirmModalOpen && (

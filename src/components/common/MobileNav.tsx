@@ -56,6 +56,11 @@ export function MobileNav() {
 
   if (!isMobileRole) return null;
 
+  // Hide bottom navigation on dedicated fullscreen transactional flows (e.g. collecting a payment)
+  // to avoid colliding with sticky action bars and save valuable vertical mobile screen real estate
+  const isDedicatedFlow = location.pathname.startsWith('/payments/collect');
+  if (isDedicatedFlow) return null;
+
   // Active check for main items
   const isDashboardActive = location.pathname === '/';
   const isCustomersActive = location.pathname.startsWith('/customers');

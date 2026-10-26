@@ -50,21 +50,21 @@ export function PaymentCollectionForm({
   const presets = [10000, 25000, 50000, 100000];
 
   return (
-    <div className={cn('bg-white rounded-2xl sm:rounded-3xl border border-slate-200/90 p-4 sm:p-5 shadow-xs space-y-4', className)}>
-      <div className="flex items-center justify-between">
+    <div className={cn('bg-white rounded-2xl border border-slate-200/90 p-3 sm:p-4 shadow-xs space-y-3', className)}>
+      <div className="flex items-center justify-between pb-1 border-b border-slate-100">
         <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800">
           Payment Details & Method
         </h3>
-        <span className="text-[11px] text-slate-400 font-medium">Field Collection</span>
+        <span className="text-[10.5px] text-slate-400 font-medium">Field Collection</span>
       </div>
 
       {/* Prominent Payment Amount Input */}
       <div>
-        <label className="text-xs font-bold text-slate-700 block mb-1.5">
+        <label className="text-[11px] font-bold text-slate-700 block mb-1">
           Collection Amount (LKR) <span className="text-rose-500">*</span>
         </label>
         <div className="relative">
-          <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400 select-none">
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 select-none">
             LKR
           </span>
           <input
@@ -77,19 +77,19 @@ export function PaymentCollectionForm({
               onAmountChange(isNaN(val as number) ? '' : val);
             }}
             placeholder="0.00"
-            className="w-full h-12 pl-14 pr-4 rounded-2xl bg-slate-50/70 border border-slate-200 text-lg sm:text-xl font-extrabold text-slate-900 placeholder-slate-300 focus:outline-none focus:ring-2 focus:ring-primary focus:bg-white transition-all tabular-nums"
+            className="w-full h-10 pl-11 pr-3 rounded-xl bg-slate-50 border border-slate-200 text-base sm:text-lg font-extrabold text-slate-900 placeholder-slate-300 focus:outline-none focus:ring-2 focus:ring-primary focus:bg-white transition-all tabular-nums"
           />
         </div>
 
         {/* Quick Fill Buttons for Field Rep Speed */}
-        <div className="flex items-center gap-1.5 mt-2 overflow-x-auto pb-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+        <div className="flex items-center gap-1.5 mt-1.5 overflow-x-auto pb-1 scrollbar-none [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden -mx-0.5 px-0.5">
           {totalOutstanding > 0 && (
             <button
               type="button"
               onClick={() => onAmountChange(totalOutstanding)}
-              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-[11px] font-bold bg-primary-light text-primary-text border border-primary-border hover:bg-primary-light/80 active:scale-95 transition-all shrink-0"
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10.5px] font-bold bg-primary-light text-primary-text border border-primary-border hover:bg-primary-light/80 active:scale-95 transition-all shrink-0"
             >
-              <Sparkles className="h-3 w-3" /> Full Balance ({formatCurrency(totalOutstanding)})
+              <Sparkles className="h-3 w-3 text-primary" /> Full Due ({totalOutstanding.toLocaleString()})
             </button>
           )}
 
@@ -97,9 +97,9 @@ export function PaymentCollectionForm({
             <button
               type="button"
               onClick={() => onAmountChange(totalOverdue)}
-              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-[11px] font-bold bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 active:scale-95 transition-all shrink-0"
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10.5px] font-bold bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 active:scale-95 transition-all shrink-0"
             >
-              Overdue ({formatCurrency(totalOverdue)})
+              Overdue ({totalOverdue.toLocaleString()})
             </button>
           )}
 
@@ -108,7 +108,7 @@ export function PaymentCollectionForm({
               key={p}
               type="button"
               onClick={() => onAmountChange(p)}
-              className="px-2 py-1 rounded-xl text-[11px] font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200 active:scale-95 transition-all shrink-0 tabular-nums"
+              className="px-2 py-0.5 rounded-lg text-[10.5px] font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200 active:scale-95 transition-all shrink-0 tabular-nums"
             >
               {p >= 1000 ? `${p / 1000}k` : p}
             </button>
@@ -116,12 +116,12 @@ export function PaymentCollectionForm({
         </div>
       </div>
 
-      {/* Mode of Payment (Segmented touch pills) */}
+      {/* Mode of Payment (Compact 2-column or 4-column touch grid) */}
       <div>
-        <label className="text-xs font-bold text-slate-700 block mb-1.5">
+        <label className="text-[11px] font-bold text-slate-700 block mb-1">
           Payment Method <span className="text-rose-500">*</span>
         </label>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
           {paymentMethods.map((m) => {
             const Icon = m.icon;
             const isSelected = paymentMethod === m.id;
@@ -132,13 +132,13 @@ export function PaymentCollectionForm({
                 type="button"
                 onClick={() => onPaymentMethodChange(m.id)}
                 className={cn(
-                  'h-11 rounded-xl border flex items-center justify-center gap-2 text-xs font-bold transition-all active:scale-95',
+                  'h-9 rounded-xl border flex items-center justify-center gap-1.5 text-xs font-bold transition-all active:scale-95',
                   isSelected
-                    ? 'border-primary bg-primary text-white shadow-xs'
+                    ? 'border-primary bg-primary text-white shadow-2xs'
                     : 'border-slate-200 bg-slate-50/60 text-slate-700 hover:bg-slate-100'
                 )}
               >
-                <Icon className={cn('h-4 w-4', isSelected ? 'text-white' : 'text-slate-500')} />
+                <Icon className={cn('h-3.5 w-3.5', isSelected ? 'text-white' : 'text-slate-500')} />
                 <span>{m.label}</span>
               </button>
             );
@@ -230,15 +230,15 @@ export function PaymentCollectionForm({
 
       {/* Notes / Field Remarks */}
       <div>
-        <label className="text-xs font-semibold text-slate-700 block mb-1">
+        <label className="text-[11px] font-semibold text-slate-700 block mb-1">
           Collection Notes / Collector Remarks
         </label>
         <textarea
-          rows={2}
+          rows={1}
           value={notes}
           onChange={(e) => onNotesChange(e.target.value)}
-          placeholder="e.g. Received cash from shop manager Sunil during routine Pettah territory route visit."
-          className="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50/50 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary focus:bg-white transition-all resize-none"
+          placeholder="e.g. Received cash from shop manager..."
+          className="w-full h-8 px-2.5 py-1.5 rounded-lg border border-slate-200 bg-slate-50 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-primary focus:bg-white focus:h-16 transition-all resize-none"
         />
       </div>
     </div>
