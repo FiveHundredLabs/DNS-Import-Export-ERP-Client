@@ -383,170 +383,62 @@ export function CustomerPaymentDetailPage() {
         />
       </div>
 
-      {/* 4. Tab Switcher: Collect Payment (FIFO) vs Payment History */}
-      <div className="grid grid-cols-2 p-1 rounded-2xl bg-slate-200/80 border border-slate-200/90 shadow-inner">
-        <button
-          type="button"
-          onClick={() => setActiveTab('COLLECT')}
-          className={cn(
-            'flex items-center justify-center gap-2 py-2.5 px-3 text-xs font-bold rounded-xl transition-all',
-            activeTab === 'COLLECT'
-              ? 'bg-white text-slate-900 shadow-xs'
-              : 'text-slate-600 hover:text-slate-900'
-          )}
-        >
-          <CreditCard className={cn('h-4 w-4', activeTab === 'COLLECT' ? 'text-primary' : 'text-slate-400')} />
-          <span>Collect Payment (FIFO)</span>
-        </button>
+      {/* 4. Payment Collection Form & Automatic FIFO Allocation */}
+      <div className="space-y-4 sm:space-y-6">
+        {/* Section A: Payment Amount & Method Form */}
+        <PaymentCollectionForm
+          amount={amount}
+          onAmountChange={setAmount}
+          totalOutstanding={statusMeta?.totalOutstanding || 0}
+          totalOverdue={statusMeta?.totalOverdue || 0}
+          paymentMethod={paymentMethod}
+          onPaymentMethodChange={setPaymentMethod}
+          chequeNumber={chequeNumber}
+          onChequeNumberChange={setChequeNumber}
+          chequeDate={chequeDate}
+          onChequeDateChange={setChequeDate}
+          bankName={bankName}
+          onBankNameChange={setBankName}
+          notes={notes}
+          onNotesChange={setNotes}
+        />
 
-        <button
-          type="button"
-          onClick={() => setActiveTab('HISTORY')}
-          className={cn(
-            'flex items-center justify-center gap-2 py-2.5 px-3 text-xs font-bold rounded-xl transition-all',
-            activeTab === 'HISTORY'
-              ? 'bg-white text-slate-900 shadow-xs'
-              : 'text-slate-600 hover:text-slate-900'
-          )}
-        >
-          <Receipt className={cn('h-4 w-4', activeTab === 'HISTORY' ? 'text-primary' : 'text-slate-400')} />
-          <span>Receipt History ({paymentHistory.length})</span>
-        </button>
+        {/* Section B: Live Automatic FIFO Allocation Breakdown */}
+        <FifoAllocationPreview
+          paymentAmount={numAmount}
+          invoices={invoices}
+          selectedInvoiceIds={selectedInvoiceIds.length > 0 ? selectedInvoiceIds : undefined}
+        />
+
+        {/* Section C: Desktop Submission CTA */}
+        <div className="hidden md:flex items-center justify-between p-4 bg-white rounded-2xl border border-slate-200 shadow-xs">
+          <div>
+            <span className="text-xs text-slate-500 font-semibold uppercase tracking-wider block">
+              Total Collection Scheduled
+            </span>
+            <div className="text-lg font-black text-slate-900">
+              {numAmount > 0 ? formatCurrency(numAmount) : 'LKR 0.00'}
+              {fifoBreakdown.fullySettledCount > 0 && (
+                <span className="text-xs text-emerald-600 font-bold ml-2">
+                  ({fifoBreakdown.fullySettledCount} Settled)
+                </span>
+              )}
+            </div>
+          </div>
+
+          <Button
+            size="lg"
+            disabled={numAmount <= 0 || fifoBreakdown.totalAllocated <= 0}
+            onClick={handleInitiatePayment}
+            className="h-11 px-6 text-sm font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-xs gap-2"
+          >
+            <CheckCircle2 className="h-4 w-4" /> Review & Confirm Collection
+          </Button>
+        </div>
       </div>
 
-      {/* 5. Main Content Section */}
-      {activeTab === 'COLLECT' ? (
-        <div className="space-y-4 sm:space-y-6">
-          {/* Section A: Outstanding Invoices Selection */}
-          <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200/90 p-4 sm:p-5 shadow-xs">
-            <InvoiceListSelector
-              invoices={invoices}
-              selectedInvoiceIds={selectedInvoiceIds}
-              onToggleInvoice={handleToggleInvoice}
-              onSelectAll={handleSelectAllInvoices}
-              onClearAll={handleClearAllInvoices}
-            />
-          </div>
-
-          {/* Section B: Payment Amount & Method Form */}
-          <PaymentCollectionForm
-            amount={amount}
-            onAmountChange={setAmount}
-            totalOutstanding={statusMeta?.totalOutstanding || 0}
-            totalOverdue={statusMeta?.totalOverdue || 0}
-            paymentMethod={paymentMethod}
-            onPaymentMethodChange={setPaymentMethod}
-            chequeNumber={chequeNumber}
-            onChequeNumberChange={setChequeNumber}
-            chequeDate={chequeDate}
-            onChequeDateChange={setChequeDate}
-            bankName={bankName}
-            onBankNameChange={setBankName}
-            notes={notes}
-            onNotesChange={setNotes}
-          />
-
-          {/* Section C: Live Automatic FIFO Allocation Breakdown */}
-          <FifoAllocationPreview
-            paymentAmount={numAmount}
-            invoices={invoices}
-            selectedInvoiceIds={selectedInvoiceIds.length > 0 ? selectedInvoiceIds : undefined}
-          />
-
-          {/* Section D: Desktop Submission CTA */}
-          <div className="hidden md:flex items-center justify-between p-4 bg-white rounded-2xl border border-slate-200 shadow-xs">
-            <div>
-              <span className="text-xs text-slate-500 font-semibold uppercase tracking-wider block">
-                Total Collection Scheduled
-              </span>
-              <div className="text-lg font-black text-slate-900">
-                {numAmount > 0 ? formatCurrency(numAmount) : 'LKR 0.00'}
-                {fifoBreakdown.fullySettledCount > 0 && (
-                  <span className="text-xs text-emerald-600 font-bold ml-2">
-                    ({fifoBreakdown.fullySettledCount} Settled)
-                  </span>
-                )}
-              </div>
-            </div>
-
-            <Button
-              size="lg"
-              disabled={numAmount <= 0 || fifoBreakdown.totalAllocated <= 0}
-              onClick={handleInitiatePayment}
-              className="h-11 px-6 text-sm font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-xs gap-2"
-            >
-              <CheckCircle2 className="h-4 w-4" /> Review & Confirm Collection
-            </Button>
-          </div>
-        </div>
-      ) : (
-        /* Receipt & Payment History Tab */
-        <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200/90 p-4 sm:p-5 shadow-xs space-y-3">
-          <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800">
-              Customer Collection Ledger & Previous Receipts
-            </h3>
-            <span className="text-[11px] text-slate-500 font-medium">
-              {paymentHistory.length} Recorded Transactions
-            </span>
-          </div>
-
-          {paymentHistory.length === 0 ? (
-            <div className="p-8 text-center text-slate-400">
-              <Receipt className="h-8 w-8 mx-auto mb-2 opacity-60" />
-              <p className="text-xs font-medium">No previous collections recorded for this customer.</p>
-            </div>
-          ) : (
-            <div className="space-y-2.5">
-              {paymentHistory.map((pmt) => (
-                <div
-                  key={pmt.id}
-                  className="rounded-2xl border border-slate-200 p-3.5 sm:p-4 hover:border-slate-300 transition-colors bg-slate-50/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
-                >
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-bold text-slate-900 font-mono">
-                        {pmt.receiptNumber}
-                      </span>
-                      <PaymentStatusBadge status={pmt.status} />
-                    </div>
-                    <div className="text-[11px] text-slate-500 mt-1 flex items-center gap-2 flex-wrap">
-                      <span>Collected: {formatDateTime(pmt.collectedAt || pmt.createdAt)}</span>
-                      <span>•</span>
-                      <span>Method: <strong className="text-slate-700">{pmt.paymentMethod}</strong></span>
-                      {pmt.salesRepName && <span>• Rep: {pmt.salesRepName}</span>}
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between sm:justify-end gap-3 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-200/60">
-                    <div className="text-left sm:text-right">
-                      <span className="text-[10px] text-slate-400 uppercase tracking-wider block">Amount</span>
-                      <AmountDisplay amount={pmt.amount} size="sm" className="font-extrabold text-slate-900" />
-                    </div>
-
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => {
-                        setCreatedPayment(pmt);
-                        setThermalModalOpen(true);
-                      }}
-                      className="h-8 px-2.5 text-xs gap-1 rounded-xl"
-                      title="Print Thermal Receipt"
-                    >
-                      <Printer className="h-3.5 w-3.5 text-slate-600" /> Receipt
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* 6. Mobile Sticky Bottom Action Bar (Mobile First UX) */}
-      {activeTab === 'COLLECT' && (
-        <div className="fixed md:hidden bottom-0 left-0 right-0 z-30 p-3 bg-white/95 backdrop-blur-md border-t border-slate-200/90 shadow-lg">
+      {/* 5. Mobile Sticky Bottom Action Bar (Mobile First UX) */}
+      <div className="fixed md:hidden bottom-0 left-0 right-0 z-30 p-3 bg-white/95 backdrop-blur-md border-t border-slate-200/90 shadow-lg">
           <div className="flex items-center justify-between gap-2">
             <div className="min-w-0 flex-1">
               <span className="text-[10.5px] font-bold uppercase tracking-wider text-slate-500 block">
@@ -566,7 +458,6 @@ export function CustomerPaymentDetailPage() {
             </Button>
           </div>
         </div>
-      )}
 
       {/* 7. Confirmation Modal */}
       {confirmModalOpen && (
