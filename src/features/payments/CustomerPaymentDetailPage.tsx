@@ -275,11 +275,11 @@ export function CustomerPaymentDetailPage() {
   return (
     <div className="max-w-5xl mx-auto pb-28 md:pb-12 space-y-4 sm:space-y-6">
       {/* 1. Header & Back Navigation */}
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex items-center justify-end sm:justify-between gap-3">
         <button
           type="button"
           onClick={() => navigate(-1)}
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 bg-white border border-slate-200 px-3 py-1.5 rounded-xl shadow-2xs active:scale-95 transition-all"
+          className="hidden sm:inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 bg-white border border-slate-200 px-3 py-1.5 rounded-xl shadow-2xs active:scale-95 transition-all"
         >
           <ArrowLeft className="h-4 w-4" />
           <span>Back to Customers</span>

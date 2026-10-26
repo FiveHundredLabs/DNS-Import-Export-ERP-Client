@@ -70,6 +70,8 @@ export function Header({ onToggleSidebar }: HeaderProps) {
     (location.pathname.startsWith('/products') ? 'Product Details' :
      location.pathname.startsWith('/orders') ? 'Sales Order Details' :
      location.pathname.startsWith('/quotations') ? 'Quotation Details' :
+     location.pathname.startsWith('/invoices') ? 'Invoice Details' :
+     location.pathname.startsWith('/payments') ? 'Payment Details' :
      location.pathname.startsWith('/finance') ? 'Finance & Ledger Desk' :
      'DNS ERP Workspace');
 

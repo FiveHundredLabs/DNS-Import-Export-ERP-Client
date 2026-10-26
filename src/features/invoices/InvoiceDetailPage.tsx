@@ -93,8 +93,8 @@ export function InvoiceDetailPage() {
 
   return (
     <div className="w-full space-y-5 pb-20">
-      {/* Top Bar with Navigation and Actions */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      {/* Top Bar with Navigation and Actions (Desktop Only — on mobile, the global app header provides Back navigation) */}
+      <div className="hidden sm:flex sm:items-center justify-between gap-3">
         <Link to="/invoices">
           <Button variant="ghost" size="sm" className="gap-1.5 text-xs">
             <ArrowLeft className="h-4 w-4" /> Back to Invoices
