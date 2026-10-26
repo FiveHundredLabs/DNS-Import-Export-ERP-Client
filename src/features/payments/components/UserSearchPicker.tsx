@@ -169,7 +169,8 @@ export function UserSearchPicker({
             filteredUsers.map((user) => {
               const isSelected = user.id === selectedUserId;
               return (
-                <div
+                <button
+                  type="button"
                   key={user.id}
                   onClick={() => {
                     onSelectUser(user);
@@ -177,7 +178,7 @@ export function UserSearchPicker({
                     setQuery('');
                   }}
                   className={cn(
-                    'flex items-center justify-between p-2.5 hover:bg-slate-50/90 cursor-pointer transition-colors text-xs',
+                    'w-full text-left flex items-center justify-between p-2.5 hover:bg-slate-50/90 cursor-pointer transition-colors text-xs',
                     isSelected && 'bg-primary-light/30'
                   )}
                 >
@@ -201,7 +202,7 @@ export function UserSearchPicker({
                   {isSelected && (
                     <Check className="h-4 w-4 text-emerald-600 shrink-0 ml-2" />
                   )}
-                </div>
+                </button>
               );
             })
           )}

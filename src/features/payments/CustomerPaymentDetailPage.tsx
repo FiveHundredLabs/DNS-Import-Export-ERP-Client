@@ -39,6 +39,8 @@ import {
   Share2,
   Calendar,
   Building,
+  CreditCard,
+  Banknote,
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 

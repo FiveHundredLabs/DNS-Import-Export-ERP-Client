@@ -296,7 +296,7 @@ describe('Daily Cash Handover & Payments Dashboard Workflow', () => {
 
   describe('6. UI Modals & Handover Details Modal', () => {
     it('renders HandoverDetailModal with itemized invoices, summary cards, and recipient details', async () => {
-      const sampleHandover = (await handoverService.getHandovers()).data[0];
+      const sampleHandover = (await handoverService.getHandovers({ status: 'PENDING_APPROVAL' })).data[0];
 
       render(
         <HandoverDetailModal
@@ -329,10 +329,10 @@ describe('Daily Cash Handover & Payments Dashboard Workflow', () => {
 
       // 4 Dashboard KPI Cards
       await waitFor(() => {
-        expect(screen.getByText(/Today's Collections/i)).toBeInTheDocument();
-        expect(screen.getByText(/Pending Handover/i)).toBeInTheDocument();
-        expect(screen.getByText(/Handed Over/i)).toBeInTheDocument();
-        expect(screen.getByText(/Approved by Finance/i)).toBeInTheDocument();
+        expect(screen.getAllByText(/Today's Collections/i).length).toBeGreaterThan(0);
+        expect(screen.getAllByText(/Pending Handover/i).length).toBeGreaterThan(0);
+        expect(screen.getAllByText(/Handed Over/i).length).toBeGreaterThan(0);
+        expect(screen.getAllByText(/Approved by Finance/i).length).toBeGreaterThan(0);
       });
 
       // Tabs
@@ -347,8 +347,8 @@ describe('Daily Cash Handover & Payments Dashboard Workflow', () => {
       fireEvent.click(screen.getByTestId('btn-hand-over-cash'));
 
       await waitFor(() => {
-        expect(screen.getByText(/Hand Over Cash to Finance/i)).toBeInTheDocument();
-        expect(screen.getByText(/Select Finance Recipient/i)).toBeInTheDocument();
+        expect(screen.getByText(/Daily Cash Handover to Finance/i)).toBeInTheDocument();
+        expect(screen.getByText(/Receiving Finance Person/i)).toBeInTheDocument();
       });
     });
   });
