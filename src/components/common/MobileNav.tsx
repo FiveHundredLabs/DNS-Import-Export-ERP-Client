@@ -326,6 +326,26 @@ export function MobileNav() {
             Sales & Field Operations
           </span>
           <div className="grid grid-cols-2 gap-2.5">
+            {canAccessRoute('/orders') && (
+              <button
+                onClick={() => handleNavClick('/orders')}
+                className={cn(
+                  'flex items-center gap-3 p-3 rounded-2xl border text-left transition-all',
+                  location.pathname === '/orders'
+                    ? 'border-primary bg-primary-light/50 text-primary-text font-semibold'
+                    : 'border-slate-200/80 bg-white hover:bg-slate-50 text-slate-700'
+                )}
+              >
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary-light text-primary">
+                  <ShoppingCart className="h-4 w-4" />
+                </div>
+                <div className="min-w-0">
+                  <div className="text-xs font-semibold truncate">Sales Orders</div>
+                  <div className="text-[10.5px] text-slate-400 truncate">Registry &amp; Pipeline</div>
+                </div>
+              </button>
+            )}
+
             {canAccessRoute('/payments') && (
               <button
                 onClick={() => handleNavClick('/payments')}

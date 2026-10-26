@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { StatCard } from '../../components/common/StatCard';
 import { AmountDisplay } from '../../components/common/AmountDisplay';
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/card';
@@ -61,6 +61,7 @@ interface OrderTrackingItem {
 }
 
 export function SalesRepDashboard() {
+  const navigate = useNavigate();
   // Mobile app view states
   const [mobileTab, setMobileTab] = useState<'all' | 'collections' | 'receivables' | 'orders'>('all');
   const [receivablesFilter, setReceivablesFilter] = useState<'all' | 'overdue' | 'current'>('all');
@@ -290,7 +291,10 @@ export function SalesRepDashboard() {
 
           <button
             type="button"
-            onClick={() => setMobileTab('orders')}
+            onClick={() => {
+              setMobileTab('orders');
+              navigate('/orders');
+            }}
             aria-label={`Live Orders (${recentOrders.length})`}
             className={cn(
               'group w-full min-w-0 flex items-center justify-center gap-1 py-2 px-0.5 text-center text-xs font-bold rounded-xl transition-all duration-150 select-none min-h-[38px]',
@@ -767,7 +771,8 @@ export function SalesRepDashboard() {
                 {recentOrders.map((order) => (
                   <div
                     key={order.id}
-                    className="p-3.5 sm:p-4 rounded-2xl border border-slate-200/80 bg-white hover:bg-slate-50/50 transition-all shadow-2xs space-y-2.5"
+                    onClick={() => navigate('/orders')}
+                    className="p-3.5 sm:p-4 rounded-2xl border border-slate-200/80 bg-white hover:bg-slate-50/50 transition-all shadow-2xs space-y-2.5 cursor-pointer active:scale-[0.99]"
                   >
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex items-center gap-1.5">
