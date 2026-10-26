@@ -14,6 +14,7 @@ import { OrderListPage } from './features/orders/OrderListPage';
 import { OrderCreateEditPage } from './features/orders/OrderCreateEditPage';
 import { OrderDetailPage } from './features/orders/OrderDetailPage';
 import { OrderTrackingPage } from './features/orders/OrderTrackingPage';
+import { OrderActivityLogPage } from './features/orders/OrderActivityLogPage';
 import { InventoryDashboardPage } from './features/inventory/InventoryDashboardPage';
 import { GRNListPage } from './features/inventory/GRNListPage';
 import { GRNCreateEditPage } from './features/inventory/GRNCreateEditPage';
@@ -178,6 +179,22 @@ export function App() {
           element={
             <ProtectedRoute>
               <OrderTrackingPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="orders/activity-log"
+          element={
+            <ProtectedRoute>
+              <OrderActivityLogPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="orders/:id/activity-log"
+          element={
+            <ProtectedRoute>
+              <OrderActivityLogPage />
             </ProtectedRoute>
           }
         />

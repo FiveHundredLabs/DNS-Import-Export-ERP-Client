@@ -22,6 +22,7 @@ import {
   Clock,
   Layers,
   Receipt,
+  Activity,
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { cn } from '../../utils/cn';
@@ -444,6 +445,24 @@ export function MobileNav() {
                 </div>
               </button>
             )}
+
+            <button
+              onClick={() => handleNavClick('/orders/activity-log')}
+              className={cn(
+                'flex items-center gap-3 p-3 rounded-2xl border text-left transition-all',
+                location.pathname.includes('/activity-log')
+                  ? 'border-primary bg-primary-light/50 text-primary-text font-semibold'
+                  : 'border-slate-200/80 bg-white hover:bg-slate-50 text-slate-700'
+              )}
+            >
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-teal-50 text-teal-600">
+                <Activity className="h-4 w-4" />
+              </div>
+              <div className="min-w-0">
+                <div className="text-xs font-semibold truncate">Activity Log</div>
+                <div className="text-[10.5px] text-slate-400 truncate">Order Timeline</div>
+              </div>
+            </button>
           </div>
         </div>
 

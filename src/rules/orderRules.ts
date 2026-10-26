@@ -245,18 +245,23 @@ export function evaluateOrderApproval(
  */
 export function canApproveOrder(
   userRole: UserRole,
-  targetApproverRole: 'SALES_MANAGER' | 'MANAGER' | 'DIRECTOR',
+  targetApproverRole: 'AREA_MANAGER' | 'SALES_MANAGER' | 'MANAGER' | 'DIRECTOR' | string,
   isSpecialApproval: boolean
 ): boolean {
   if (userRole === 'DIRECTOR') return true;
 
   if (userRole === 'MANAGER') {
-    return targetApproverRole === 'MANAGER' || targetApproverRole === 'SALES_MANAGER';
+    return targetApproverRole === 'MANAGER' || targetApproverRole === 'SALES_MANAGER' || targetApproverRole === 'AREA_MANAGER';
   }
 
   if (userRole === 'SALES_MANAGER') {
-    // Sales Manager can approve standard orders or special orders within Sales Manager authority
-    return !isSpecialApproval || targetApproverRole === 'SALES_MANAGER';
+    // Sales Manager can approve standard orders or special orders within Sales Manager authority, or Area Manager orders
+    return !isSpecialApproval || targetApproverRole === 'SALES_MANAGER' || targetApproverRole === 'AREA_MANAGER';
+  }
+
+  if (userRole === 'AREA_MANAGER') {
+    // Area Manager can approve standard orders within territory when assigned as approver
+    return !isSpecialApproval && (targetApproverRole === 'AREA_MANAGER' || targetApproverRole === 'SALES_MANAGER');
   }
 
   return false;
@@ -266,7 +271,7 @@ export function canApproveOrder(
  * Checks whether an actor can escalate an order to a higher tier.
  */
 export function canEscalateOrder(userRole: UserRole): boolean {
-  return userRole === 'SALES_MANAGER' || userRole === 'MANAGER';
+  return userRole === 'AREA_MANAGER' || userRole === 'SALES_MANAGER' || userRole === 'MANAGER';
 }
 
 /**
@@ -274,7 +279,10 @@ export function canEscalateOrder(userRole: UserRole): boolean {
  */
 export function getAllowedEscalationTargets(
   userRole: UserRole
-): ('MANAGER' | 'DIRECTOR')[] {
+): ('SALES_MANAGER' | 'MANAGER' | 'DIRECTOR')[] {
+  if (userRole === 'AREA_MANAGER') {
+    return ['SALES_MANAGER', 'MANAGER'];
+  }
   if (userRole === 'SALES_MANAGER') {
     return ['MANAGER', 'DIRECTOR'];
   }

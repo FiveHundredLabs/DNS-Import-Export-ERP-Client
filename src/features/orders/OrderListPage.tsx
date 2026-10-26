@@ -136,6 +136,16 @@ export function OrderListPage() {
           <Button
             variant="outline"
             size="sm"
+            onClick={() => navigate('/orders/activity-log')}
+            className="gap-1.5 border-teal-300 text-teal-800 hover:bg-teal-50"
+          >
+            <Clock className="h-3.5 w-3.5 text-teal-600" />
+            Activity Log
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
             onClick={() => navigate('/orders/tracking')}
             className="gap-1.5 border-primary-border text-primary-text hover:bg-primary-light"
           >
@@ -416,9 +426,22 @@ export function OrderListPage() {
                       {/* Bottom Footer: Date & Rep */}
                       <div className="mt-2 flex items-center justify-between text-[11px] text-slate-400">
                         <span>{formatDate(order.createdAt)}</span>
-                        <span className="flex items-center text-primary font-semibold gap-0.5">
-                          View Order <ChevronRight className="h-3.5 w-3.5" />
-                        </span>
+                        <div className="flex items-center gap-2.5">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`/orders/${order.id}/activity-log`);
+                            }}
+                            className="flex items-center text-teal-700 font-semibold gap-1 hover:underline p-1"
+                          >
+                            <Clock className="h-3 w-3" />
+                            Activity Log
+                          </button>
+                          <span className="flex items-center text-primary font-semibold gap-0.5">
+                            View <ChevronRight className="h-3.5 w-3.5" />
+                          </span>
+                        </div>
                       </div>
                     </div>
                   );
