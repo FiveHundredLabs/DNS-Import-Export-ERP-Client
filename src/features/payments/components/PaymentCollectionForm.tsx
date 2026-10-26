@@ -4,6 +4,7 @@ import { Input } from '../../../components/ui/input';
 import { Banknote, CreditCard, Building2, Check, Sparkles } from 'lucide-react';
 import { formatCurrency } from '../../../utils/formatters';
 import { cn } from '../../../utils/cn';
+import { toast } from 'sonner';
 
 interface PaymentCollectionFormProps {
   amount: number | '';
@@ -47,6 +48,41 @@ export function PaymentCollectionForm({
     { id: 'CREDIT_CARD', label: 'Card', icon: CreditCard },
   ];
 
+  const inputRef = React.useRef<HTMLInputElement>(null);
+
+  // Sync ref value if amount was externally clamped or reset
+  React.useEffect(() => {
+    if (inputRef.current && typeof amount === 'number' && totalOutstanding > 0 && amount > totalOutstanding) {
+      inputRef.current.value = String(totalOutstanding);
+      onAmountChange(totalOutstanding);
+    }
+  }, [amount, totalOutstanding, onAmountChange]);
+
+  const handleAmountInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const rawVal = e.target.value;
+    if (rawVal === '') {
+      onAmountChange('');
+      return;
+    }
+    let val = parseFloat(rawVal);
+    if (isNaN(val)) return;
+    if (val < 0) {
+      val = 0;
+      if (inputRef.current) inputRef.current.value = '0';
+    }
+
+    // Cap at totalOutstanding balance: if user tries to type more, set to totalOutstanding and stop
+    if (totalOutstanding > 0 && val > totalOutstanding) {
+      val = totalOutstanding;
+      if (inputRef.current) {
+        inputRef.current.value = String(totalOutstanding);
+      }
+      toast.info(`Collection amount capped at total outstanding balance (LKR ${totalOutstanding.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })})`);
+    }
+
+    onAmountChange(val);
+  };
+
   return (
     <div className={cn('bg-white rounded-2xl border border-slate-200/90 p-3 sm:p-4 shadow-xs space-y-3', className)}>
       <div className="flex items-center justify-between pb-1 border-b border-slate-100">
@@ -58,21 +94,52 @@ export function PaymentCollectionForm({
 
       {/* Prominent Payment Amount Input */}
       <div>
-        <label className="text-[11px] font-bold text-slate-700 block mb-1">
-          Collection Amount (LKR) <span className="text-rose-500">*</span>
-        </label>
+        <div className="flex items-center justify-between mb-1">
+          <label className="text-[11px] font-bold text-slate-700">
+            Collection Amount (LKR) <span className="text-rose-500">*</span>
+          </label>
+          {totalOutstanding > 0 && (
+            <span className="text-[10px] font-semibold text-slate-400">
+              Max: <strong className="text-slate-600 font-mono">LKR {totalOutstanding.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
+            </span>
+          )}
+        </div>
         <div className="relative">
           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 select-none">
             LKR
           </span>
           <input
+            ref={inputRef}
             type="number"
             min="0"
+            max={totalOutstanding > 0 ? totalOutstanding : undefined}
             step="any"
             value={amount === '' ? '' : amount}
-            onChange={(e) => {
-              const val = e.target.value === '' ? '' : parseFloat(e.target.value);
-              onAmountChange(isNaN(val as number) ? '' : val);
+            onKeyDown={(e) => {
+              if (['e', 'E', '+', '-'].includes(e.key)) {
+                e.preventDefault();
+              }
+            }}
+            onChange={handleAmountInputChange}
+            onPaste={(e) => {
+              const pasteText = e.clipboardData.getData('text').replace(/,/g, '').trim();
+              const parsed = parseFloat(pasteText);
+              if (!isNaN(parsed) && totalOutstanding > 0 && parsed > totalOutstanding) {
+                e.preventDefault();
+                onAmountChange(totalOutstanding);
+                if (inputRef.current) {
+                  inputRef.current.value = String(totalOutstanding);
+                }
+                toast.info(`Collection amount capped at total outstanding balance (LKR ${totalOutstanding.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })})`);
+              }
+            }}
+            onBlur={() => {
+              if (typeof amount === 'number' && totalOutstanding > 0 && amount > totalOutstanding) {
+                onAmountChange(totalOutstanding);
+                if (inputRef.current) {
+                  inputRef.current.value = String(totalOutstanding);
+                }
+              }
             }}
             onFocus={(e) => {
               if (amount === 0) {

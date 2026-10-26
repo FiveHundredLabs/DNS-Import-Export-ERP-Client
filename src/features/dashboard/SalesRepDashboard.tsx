@@ -197,26 +197,17 @@ export function SalesRepDashboard() {
             </div>
           </div>
 
-          {/* Right: Quick Action Buttons (Customer Collections, Customer Hub & New Order) */}
-          <div className="flex items-center gap-2 pt-1 md:pt-0 shrink-0 flex-wrap">
-            <Link to="/payments/collect" className="flex-1 md:flex-none">
+          {/* Right: Quick Action Buttons (Customer Collections & New Order) */}
+          <div className="grid grid-cols-2 md:flex md:items-center gap-2 pt-1 md:pt-0 shrink-0 w-full md:w-auto">
+            <Link to="/payments/collect" className="w-full md:w-auto">
               <Button
                 size="sm"
-                className="w-full md:w-auto h-10 md:h-9 gap-1.5 text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl shadow-xs active:scale-[0.98] border-0"
+                className="w-full md:w-auto h-10 md:h-9 gap-1.5 text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-xs active:scale-[0.98] border-0"
               >
                 <Banknote className="h-4 w-4 md:h-3.5 md:w-3.5" /> Customer Collections
               </Button>
             </Link>
-            <Link to="/customers" className="flex-1 md:flex-none">
-              <Button
-                size="sm"
-                variant="outline"
-                className="w-full md:w-auto h-10 md:h-9 gap-1.5 text-xs bg-white/10 md:bg-white text-white md:text-slate-700 border-white/30 md:border-slate-200 hover:bg-white/20 md:hover:bg-slate-50 font-semibold rounded-xl shadow-2xs active:scale-[0.98]"
-              >
-                <Users className="h-4 w-4 md:h-3.5 md:w-3.5 text-white md:text-primary" /> Customer Hub
-              </Button>
-            </Link>
-            <Link to="/orders" className="flex-1 md:flex-none">
+            <Link to="/orders" className="w-full md:w-auto">
               <Button
                 size="sm"
                 className="w-full md:w-auto h-10 md:h-9 gap-1.5 text-xs bg-white md:bg-primary text-primary md:text-primary-foreground hover:bg-white/90 md:hover:bg-primary-hover font-bold md:font-semibold rounded-xl shadow-xs active:scale-[0.98] border-0"

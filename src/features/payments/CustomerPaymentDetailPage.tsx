@@ -140,11 +140,31 @@ export function CustomerPaymentDetailPage() {
     return calculateFifoAllocation(numAmount, invoices, selectedInvoiceIds);
   }, [amount, invoices, selectedInvoiceIds]);
 
+  const handleAmountChange = (newAmount: number | '') => {
+    if (newAmount === '') {
+      setAmount('');
+      return;
+    }
+    const maxAllowed = statusMeta?.totalOutstanding || 0;
+    if (maxAllowed > 0 && newAmount > maxAllowed) {
+      setAmount(maxAllowed);
+      return;
+    }
+    setAmount(newAmount);
+  };
+
   // Validation before opening confirmation
   const handleInitiatePayment = () => {
     const numAmount = typeof amount === 'number' && !isNaN(amount) ? amount : 0;
     if (numAmount <= 0) {
       toast.error('Please enter a valid collection payment amount greater than zero.');
+      return;
+    }
+
+    const maxAllowed = statusMeta?.totalOutstanding || 0;
+    if (maxAllowed > 0 && numAmount > maxAllowed) {
+      toast.error(`Collection amount cannot exceed total outstanding balance of LKR ${maxAllowed.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}.`);
+      setAmount(maxAllowed);
       return;
     }
 
@@ -420,7 +440,7 @@ export function CustomerPaymentDetailPage() {
         {/* Section A: Payment Amount & Method Form */}
         <PaymentCollectionForm
           amount={amount}
-          onAmountChange={setAmount}
+          onAmountChange={handleAmountChange}
           totalOutstanding={statusMeta?.totalOutstanding || 0}
           totalOverdue={statusMeta?.totalOverdue || 0}
           paymentMethod={paymentMethod}
@@ -442,16 +462,23 @@ export function CustomerPaymentDetailPage() {
           selectedInvoiceIds={selectedInvoiceIds.length > 0 ? selectedInvoiceIds : undefined}
         />
 
-        {/* Section C: Desktop Submission CTA */}
-        <div className="hidden md:flex items-center justify-between p-4 bg-white rounded-2xl border border-slate-200 shadow-xs">
+        {/* Section C: Submission CTA (Responsive in-flow card for both mobile and desktop) */}
+        <div className="flex items-center justify-between p-3.5 sm:p-4 bg-white rounded-2xl border border-slate-200 shadow-xs">
           <div>
-            <span className="text-xs text-slate-500 font-semibold uppercase tracking-wider block">
-              Total Collection Scheduled
+            <span className="text-[10px] sm:text-xs text-slate-500 font-bold uppercase tracking-wider block">
+              Total Collection
             </span>
-            <div className="text-lg font-black text-slate-900">
-              {numAmount > 0 ? formatCurrency(numAmount) : 'LKR 0.00'}
+            <div className="text-base sm:text-lg font-black text-slate-900 mt-0.5">
+              {numAmount > 0 ? (
+                <>
+                  <span className="text-xs font-bold text-slate-400 mr-1">LKR</span>
+                  <span>{numAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                </>
+              ) : (
+                'LKR 0.00'
+              )}
               {fifoBreakdown.fullySettledCount > 0 && (
-                <span className="text-xs text-emerald-600 font-bold ml-2">
+                <span className="text-[11px] sm:text-xs text-emerald-600 font-bold ml-1.5">
                   ({fifoBreakdown.fullySettledCount} Settled)
                 </span>
               )}
@@ -462,39 +489,9 @@ export function CustomerPaymentDetailPage() {
             size="lg"
             disabled={numAmount <= 0 || fifoBreakdown.totalAllocated <= 0}
             onClick={handleInitiatePayment}
-            className="h-11 px-6 text-sm font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-xs gap-2"
+            className="h-10 sm:h-11 px-5 sm:px-6 text-xs sm:text-sm font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-xs gap-1.5 shrink-0 active:scale-95 transition-all"
           >
-            <CheckCircle2 className="h-4 w-4" /> Review & Confirm Collection
-          </Button>
-        </div>
-      </div>
-
-      {/* 5. Mobile Sticky Bottom Action Bar (Docked cleanly at bottom-0 with safe-area padding) */}
-      <div className="fixed md:hidden bottom-0 left-0 right-0 z-40 px-4 py-3 bg-white/95 backdrop-blur-md border-t border-slate-200/90 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))]">
-        <div className="flex items-center justify-between gap-3 max-w-md mx-auto">
-          <div className="min-w-0 flex-1">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block leading-tight">
-              Total Collection
-            </span>
-            <div className="font-extrabold text-slate-900 truncate text-base mt-0.5 tabular-nums flex items-baseline gap-1">
-              {numAmount > 0 ? (
-                <>
-                  <span className="text-xs font-bold text-slate-400 shrink-0">LKR</span>
-                  <span className="truncate">{numAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                </>
-              ) : (
-                'LKR 0.00'
-              )}
-            </div>
-          </div>
-
-          <Button
-            size="sm"
-            disabled={numAmount <= 0 || fifoBreakdown.totalAllocated <= 0}
-            onClick={handleInitiatePayment}
-            className="h-10 px-5 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-xs active:scale-95 transition-all gap-1.5 shrink-0"
-          >
-            <CheckCircle2 className="h-4 w-4" /> Confirm FIFO
+            <CheckCircle2 className="h-4 w-4" /> Confirm Collection
           </Button>
         </div>
       </div>
