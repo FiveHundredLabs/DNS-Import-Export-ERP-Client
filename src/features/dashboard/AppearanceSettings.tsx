@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useTheme } from '../../hooks/useTheme';
+import { DEFAULT_PRIMARY_COLOR } from '../../services/ThemeService';
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
@@ -132,7 +133,7 @@ export function AppearanceSettings() {
 
       {/* Configuration Grid: Left Swatches & Right Live Preview */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left Column: 5 Predefined Color Swatches (7 Cols) */}
+        {/* Left Column: Predefined Color Swatches (7 Cols) */}
         <Card className="lg:col-span-7 bg-white border border-slate-200/90 rounded-2xl shadow-sm p-6">
           <div className="flex items-center justify-between mb-4">
             <div>
@@ -141,7 +142,7 @@ export function AppearanceSettings() {
                 Select Enterprise Primary Color
               </h3>
               <p className="text-xs text-slate-500 mt-0.5">
-                Select one of the five approved corporate color options. Only one primary color can
+                Select one of the approved corporate color options. Only one primary color can
                 be active at a time.
               </p>
             </div>
@@ -191,7 +192,7 @@ export function AppearanceSettings() {
                             Active
                           </span>
                         )}
-                        {color.hex === '#6AAED3' && (
+                        {color.hex.toLowerCase() === DEFAULT_PRIMARY_COLOR.hex.toLowerCase() && (
                           <span className="text-xs font-medium text-slate-400">
                             (Default)
                           </span>

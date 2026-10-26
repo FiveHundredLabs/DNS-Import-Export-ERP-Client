@@ -3,6 +3,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/ca
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../../components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table';
 import { Skeleton } from '../../components/ui/skeleton';
 import { orderService } from '../../services/OrderService';
@@ -80,15 +87,21 @@ export function DispatchPage() {
           <div className="flex flex-col sm:flex-row gap-3 mt-4 items-end">
             <div className="flex flex-col gap-1 w-full sm:w-48">
               <label className="text-sm font-medium">Status</label>
-              <select
+              <Select
                 value={statusFilter}
-                onChange={e => setStatusFilter(e.target.value)}
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                onValueChange={(val) => setStatusFilter(val)}
               >
-                {['ALL', 'ISSUED', 'INVOICED', 'DISPATCHED', 'DELIVERED'].map(s => (
-                  <option key={s} value={s}>{s === 'ALL' ? 'All Statuses' : s}</option>
-                ))}
-              </select>
+                <SelectTrigger className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  {['ALL', 'ISSUED', 'INVOICED', 'DISPATCHED', 'DELIVERED'].map((s) => (
+                    <SelectItem key={s} value={s}>
+                      {s === 'ALL' ? 'All Statuses' : s}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="flex flex-col gap-1 flex-1">
               <label className="text-sm font-medium">Search</label>

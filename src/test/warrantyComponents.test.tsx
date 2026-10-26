@@ -27,30 +27,30 @@ vi.mock('../hooks/useAuth', () => ({
 describe('Phase 10 — Warranty & Commission UI Components', () => {
   it('renders warranty status badges correctly', () => {
     const { rerender } = render(<WarrantyStatusBadge status="ACTIVE" />);
-    expect(screen.getByText('ACTIVE')).toBeTruthy();
+    expect(screen.getByText('Active')).toBeTruthy();
 
     rerender(<WarrantyStatusBadge status="EXPIRED" />);
-    expect(screen.getByText('EXPIRED')).toBeTruthy();
+    expect(screen.getByText('Expired')).toBeTruthy();
 
     rerender(<WarrantyStatusBadge status="CLAIMED" />);
-    expect(screen.getByText('CLAIMED')).toBeTruthy();
+    expect(screen.getByText('Claimed')).toBeTruthy();
   });
 
   it('renders claim status badges correctly', () => {
     const { rerender } = render(<ClaimStatusBadge status="SUBMITTED" />);
-    expect(screen.getByText('SUBMITTED')).toBeTruthy();
+    expect(screen.getByText('Submitted')).toBeTruthy();
 
     rerender(<ClaimStatusBadge status="IN_INSPECTION" />);
-    expect(screen.getByText('IN INSPECTION')).toBeTruthy();
+    expect(screen.getByText('In Inspection')).toBeTruthy();
 
     rerender(<ClaimStatusBadge status="REPLACED" />);
-    expect(screen.getByText('REPLACED')).toBeTruthy();
+    expect(screen.getByText('Replaced')).toBeTruthy();
 
     rerender(<ClaimStatusBadge status="REPAIRED" />);
-    expect(screen.getByText('REPAIRED')).toBeTruthy();
+    expect(screen.getByText('Repaired')).toBeTruthy();
 
     rerender(<ClaimStatusBadge status="REJECTED" />);
-    expect(screen.getByText('REJECTED')).toBeTruthy();
+    expect(screen.getByText('Rejected')).toBeTruthy();
   });
 
   it('renders WarrantyHubPage with header, metric cards, and hides claim button for SALES_REP', async () => {
@@ -88,8 +88,6 @@ describe('Phase 10 — Warranty & Commission UI Components', () => {
     expect(screen.getByText('Select Customer')).toBeTruthy();
     expect(screen.getByText(/Defect \/ Complaint Reason/i)).toBeTruthy();
 
-    await waitFor(() => {
-      expect(screen.getByText('All Customers')).toBeTruthy();
-    });
+    expect(screen.getByRole('combobox')).toHaveTextContent(/All Customers/i);
   });
 });

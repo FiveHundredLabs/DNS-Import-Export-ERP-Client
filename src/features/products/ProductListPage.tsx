@@ -4,13 +4,20 @@ import { useProducts } from '../../hooks/useProducts';
 import { ProductTable } from './ProductTable';
 import { ProductCreateModal } from './ProductCreateModal';
 import { ProductPriceProposalModal } from './ProductPriceProposalModal';
+import { CategoryCreateModal } from './CategoryCreateModal';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
-import { Select } from '../../components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../../components/ui/select';
 import { TableLoadingSkeleton } from '../../components/common/LoadingSkeleton';
 import { EmptyState } from '../../components/common/EmptyState';
 import { ErrorState } from '../../components/common/ErrorState';
-import { Plus, Search, Package, RefreshCw } from 'lucide-react';
+import { Plus, Search, Package, RefreshCw, FolderPlus } from 'lucide-react';
 import { Product } from '../../types/product';
 import { useAuth } from '../../hooks/useAuth';
 
@@ -20,6 +27,7 @@ export function ProductListPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
   const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [createCategoryModalOpen, setCreateCategoryModalOpen] = useState(false);
   const [proposalModalOpen, setProposalModalOpen] = useState(false);
   const [selectedProductForProposal, setSelectedProductForProposal] = useState<Product | null>(null);
 
@@ -31,6 +39,7 @@ export function ProductListPage() {
     error,
     refetch,
     createProduct,
+    createCategory,
     proposePriceChange,
     setFilters,
   } = useProducts();
@@ -61,9 +70,19 @@ export function ProductListPage() {
             <RefreshCw className="h-3.5 w-3.5" /> Refresh
           </Button>
           {canCreate && (
-            <Button size="sm" onClick={() => setCreateModalOpen(true)} className="gap-1.5">
-              <Plus className="h-4 w-4" /> Add Product
-            </Button>
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCreateCategoryModalOpen(true)}
+                className="gap-1.5 border-slate-300 text-slate-700 hover:bg-slate-50 hover:text-slate-900"
+              >
+                <FolderPlus className="h-4 w-4 text-indigo-600" /> Add Category
+              </Button>
+              <Button size="sm" onClick={() => setCreateModalOpen(true)} className="gap-1.5">
+                <Plus className="h-4 w-4" /> Add Product
+              </Button>
+            </>
           )}
         </div>
       </div>
@@ -81,16 +100,20 @@ export function ProductListPage() {
         </div>
         <div className="w-full sm:w-64">
           <Select
-            value={selectedCategory}
-            onChange={(e) => handleCategoryChange(e.target.value)}
-            className="text-xs"
+            value={selectedCategory || '__all__'}
+            onValueChange={(val) => handleCategoryChange(val === '__all__' ? '' : val)}
           >
-            <option value="">All Categories</option>
-            {categories.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
+            <SelectTrigger className="text-xs h-9 rounded-md bg-white">
+              <SelectValue placeholder="All Categories" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__all__">All Categories</SelectItem>
+              {categories.map((c) => (
+                <SelectItem key={c.id} value={c.id}>
+                  {c.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
           </Select>
         </div>
       </div>
@@ -128,6 +151,9 @@ export function ProductListPage() {
         onCreate={async (data) => {
           await createProduct(data);
         }}
+        onCreateCategory={async (catData) => {
+          return await createCategory(catData);
+        }}
       />
 
       {/* Price Change Proposal Modal */}
@@ -137,6 +163,15 @@ export function ProductListPage() {
         onOpenChange={setProposalModalOpen}
         onSubmitProposal={async (params) => {
           await proposePriceChange(params);
+        }}
+      />
+
+      {/* Category Creation Modal */}
+      <CategoryCreateModal
+        open={createCategoryModalOpen}
+        onOpenChange={setCreateCategoryModalOpen}
+        onCreate={async (catData) => {
+          await createCategory(catData);
         }}
       />
     </div>

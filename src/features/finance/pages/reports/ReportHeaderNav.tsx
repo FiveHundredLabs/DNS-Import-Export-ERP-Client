@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { ArrowLeft, TrendingUp, Scale, FileSpreadsheet, BookOpen, Receipt, Users, LayoutGrid } from 'lucide-react';
+import { ArrowLeft, TrendingUp, Scale, FileSpreadsheet, BookOpen, Receipt, Users, LayoutGrid, Layers } from 'lucide-react';
 import { cn } from '../../../../utils/cn';
 
 interface ReportTab {
@@ -9,6 +9,7 @@ interface ReportTab {
 }
 
 const REPORT_TABS: ReportTab[] = [
+  { name: 'Monthly Audit', path: '/finance/reports/monthly-audit', icon: Layers },
   { name: 'P&L Statement', path: '/finance/reports/pnl', icon: TrendingUp },
   { name: 'Balance Sheet', path: '/finance/reports/balance-sheet', icon: Scale },
   { name: 'Trial Balance', path: '/finance/reports/trial-balance', icon: FileSpreadsheet },

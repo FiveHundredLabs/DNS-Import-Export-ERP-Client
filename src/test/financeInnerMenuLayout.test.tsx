@@ -35,19 +35,15 @@ describe('Finance Inner Menu Layout & Step-by-Step Flow', () => {
     );
   }
 
-  it('renders the inner menu with 5 core items and starts on 1 - Journal Entry', async () => {
+  it('renders the finance layout as a full-width workspace without redundant inner sidebar', async () => {
     renderFinanceApp('/finance');
 
-    // Inner menu items in order
-    expect(screen.getByText('Journal Entry (Finance Desk)')).toBeDefined();
-    expect(screen.getByText('Chart of Accounts')).toBeDefined();
-    expect(screen.getByText('Cash Verification')).toBeDefined();
-    expect(screen.getByText('Supplier Management')).toBeDefined();
-    expect(screen.getByText('Financial Reports')).toBeDefined();
-
-    // Default screen is 1 - Journal Entry
+    // Child screen (The Finance Desk) renders directly
     expect(screen.getByText('The Finance Desk')).toBeDefined();
     expect(screen.getByText('Quick Journal Presets:')).toBeDefined();
+
+    // Full-width main workspace container is rendered
+    expect(screen.getByRole('main')).toBeDefined();
   });
 
   it('navigates seamlessly to reports and provides easy backward navigation', async () => {

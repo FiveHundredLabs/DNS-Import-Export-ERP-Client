@@ -3,6 +3,13 @@ import { Card, CardContent, CardHeader } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../../components/ui/select';
 import { Textarea } from '../../components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table';
@@ -30,6 +37,7 @@ interface StockRow {
   damagedQuantity: number;
   reservedQuantity: number;
   availableForSale: number;
+  physicalStock: number;
   costPrice: number;
 }
 
@@ -66,6 +74,7 @@ export function StockBalancePage() {
         damagedQuantity: b.damagedQuantity ?? 0,
         reservedQuantity: b.reservedQuantity ?? 0,
         availableForSale,
+        physicalStock: b.availableQuantity ?? (availableForSale + (b.reservedQuantity ?? 0)),
         costPrice: product?.pricing?.costPrice ?? 0,
       } as StockRow;
     });
@@ -149,14 +158,15 @@ export function StockBalancePage() {
   };
 
   const handleExportCSV = () => {
-    const headers = ['SKU', 'Product Name', 'Category', 'Location', 'Available', 'Reserved', 'Damaged', 'Est. Value'];
+    const headers = ['SKU', 'Product Name', 'Category', 'Location', 'Physical Stock', 'Reserved', 'Available Stock', 'Damaged', 'Est. Value'];
     const rows = filteredBalances.map(b => [
       b.sku,
       b.productName,
       b.category,
       b.locationType,
-      b.availableForSale,
+      b.physicalStock,
       b.reservedQuantity,
+      b.availableForSale,
       b.damagedQuantity,
       (b.availableForSale * b.costPrice).toFixed(2),
     ]);
@@ -200,25 +210,37 @@ export function StockBalancePage() {
           <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between flex-wrap">
             <div className="flex gap-2 flex-wrap">
               {/* Location Filter */}
-              <select
+              <Select
                 value={locationFilter}
-                onChange={e => setLocationFilter(e.target.value)}
-                className="h-9 rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                onValueChange={(val) => setLocationFilter(val)}
               >
-                <option value="All">All Locations</option>
-                <option value="WAREHOUSE">Warehouse</option>
-                <option value="SHOWROOM">Showroom</option>
-                <option value="TRANSIT">Transit</option>
-              </select>
+                <SelectTrigger className="h-9 rounded-md border border-input bg-background px-3 text-sm min-w-36">
+                  <SelectValue placeholder="Location" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="All">All Locations</SelectItem>
+                  <SelectItem value="WAREHOUSE">Warehouse</SelectItem>
+                  <SelectItem value="SHOWROOM">Showroom</SelectItem>
+                  <SelectItem value="TRANSIT">Transit</SelectItem>
+                </SelectContent>
+              </Select>
 
               {/* Category Filter */}
-              <select
+              <Select
                 value={categoryFilter}
-                onChange={e => setCategoryFilter(e.target.value)}
-                className="h-9 rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                onValueChange={(val) => setCategoryFilter(val)}
               >
-                {categories.map(c => <option key={c} value={c}>{c}</option>)}
-              </select>
+                <SelectTrigger className="h-9 rounded-md border border-input bg-background px-3 text-sm min-w-36">
+                  <SelectValue placeholder="Category" />
+                </SelectTrigger>
+                <SelectContent>
+                  {categories.map((c) => (
+                    <SelectItem key={c} value={c}>
+                      {c}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
 
               {/* Low Stock Toggle */}
               <label className="flex items-center gap-2 cursor-pointer px-3 h-9 border rounded-md bg-background text-sm">
@@ -262,8 +284,9 @@ export function StockBalancePage() {
                     <TableHead>Product Name</TableHead>
                     <TableHead>Category</TableHead>
                     <TableHead className="text-center">Location</TableHead>
-                    <TableHead className="text-right">Available</TableHead>
+                    <TableHead className="text-right">Physical Stock</TableHead>
                     <TableHead className="text-right">Reserved</TableHead>
+                    <TableHead className="text-right">Available Stock</TableHead>
                     <TableHead className="text-right">Damaged</TableHead>
                     <TableHead className="text-right">Est. Value</TableHead>
                     <TableHead className="text-center">Status</TableHead>
@@ -284,8 +307,9 @@ export function StockBalancePage() {
                         <TableCell className="text-center">
                           <Badge variant="outline" className="text-xs">{b.locationType}</Badge>
                         </TableCell>
-                        <TableCell className="text-right font-bold">{b.availableForSale}</TableCell>
+                        <TableCell className="text-right font-mono font-medium text-slate-700">{b.physicalStock}</TableCell>
                         <TableCell className="text-right text-muted-foreground">{b.reservedQuantity}</TableCell>
+                        <TableCell className="text-right font-bold text-slate-900">{b.availableForSale}</TableCell>
                         <TableCell className={`text-right ${b.damagedQuantity > 0 ? 'text-orange-600 font-medium' : 'text-muted-foreground'}`}>
                           {b.damagedQuantity}
                         </TableCell>

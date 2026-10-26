@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { AppearanceSettings } from './AppearanceSettings';
+import { GlobalTaxSettings } from './GlobalTaxSettings';
 import { StatCard } from '../../components/common/StatCard';
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
@@ -23,6 +24,7 @@ import {
   LayoutDashboard,
   Settings,
   Palette,
+  Percent,
 } from 'lucide-react';
 import { formatCurrency } from '../../utils/formatters';
 import {
@@ -75,10 +77,11 @@ export function DirectorDashboard() {
   const isDirector = role === 'DIRECTOR';
 
   const activeTab = searchParams.get('tab') === 'settings' && isDirector ? 'settings' : 'overview';
+  const activeSection = searchParams.get('section') || 'tax';
 
-  const handleTabChange = (tab: 'overview' | 'settings') => {
+  const handleTabChange = (tab: 'overview' | 'settings', section?: 'tax' | 'appearance') => {
     if (tab === 'settings' && isDirector) {
-      setSearchParams({ tab: 'settings' });
+      setSearchParams({ tab: 'settings', section: section || activeSection });
     } else {
       setSearchParams({});
     }
@@ -89,8 +92,8 @@ export function DirectorDashboard() {
     if (active && payload && payload.length) {
       const topVal = payload[0].value;
       return (
-        <div className="bg-slate-900 text-white px-3 py-1.5 rounded-full text-xs font-bold shadow-lg border border-slate-700 flex items-center gap-1.5 animate-in fade-in zoom-in-95">
-          <span className="h-2 w-2 rounded-full bg-emerald-400" />
+        <div className="bg-white text-slate-900 px-3 py-1.5 rounded-full text-xs font-semibold shadow-md border border-slate-200 flex items-center gap-1.5 animate-in fade-in zoom-in-95">
+          <span className="h-2 w-2 rounded-full bg-emerald-500" />
           <span>{label}: LKR {topVal}k</span>
         </div>
       );
@@ -106,23 +109,39 @@ export function DirectorDashboard() {
           <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl w-fit">
             <button
               onClick={() => handleTabChange('overview')}
-              className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 transition-all"
+              className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 transition-all cursor-pointer"
             >
               <LayoutDashboard className="h-3.5 w-3.5" />
               <span>Overview</span>
             </button>
 
             <button
-              onClick={() => handleTabChange('settings')}
-              className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold bg-white text-primary shadow-xs transition-all"
+              onClick={() => handleTabChange('settings', 'tax')}
+              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs transition-all cursor-pointer ${
+                activeSection === 'tax'
+                  ? 'font-bold bg-white text-primary shadow-xs'
+                  : 'font-semibold text-slate-600 hover:text-slate-900'
+              }`}
             >
-              <Palette className="h-3.5 w-3.5 text-primary" />
+              <Percent className={`h-3.5 w-3.5 ${activeSection === 'tax' ? 'text-primary' : 'text-slate-500'}`} />
+              <span>Settings &gt; Global Tax</span>
+            </button>
+
+            <button
+              onClick={() => handleTabChange('settings', 'appearance')}
+              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs transition-all cursor-pointer ${
+                activeSection === 'appearance'
+                  ? 'font-bold bg-white text-primary shadow-xs'
+                  : 'font-semibold text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <Palette className={`h-3.5 w-3.5 ${activeSection === 'appearance' ? 'text-primary' : 'text-slate-500'}`} />
               <span>Settings &gt; Appearance</span>
             </button>
           </div>
         </div>
 
-        <AppearanceSettings />
+        {activeSection === 'appearance' ? <AppearanceSettings /> : <GlobalTaxSettings />}
       </div>
     );
   }
@@ -135,15 +154,23 @@ export function DirectorDashboard() {
           <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl w-fit">
             <button
               onClick={() => handleTabChange('overview')}
-              className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold bg-white text-slate-900 shadow-xs transition-all"
+              className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold bg-white text-slate-900 shadow-xs transition-all cursor-pointer"
             >
               <LayoutDashboard className="h-3.5 w-3.5 text-primary" />
               <span>Overview</span>
             </button>
 
             <button
-              onClick={() => handleTabChange('settings')}
-              className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 transition-all"
+              onClick={() => handleTabChange('settings', 'tax')}
+              className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 transition-all cursor-pointer"
+            >
+              <Percent className="h-3.5 w-3.5 text-slate-500" />
+              <span>Settings &gt; Global Tax</span>
+            </button>
+
+            <button
+              onClick={() => handleTabChange('settings', 'appearance')}
+              className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 transition-all cursor-pointer"
             >
               <Palette className="h-3.5 w-3.5 text-slate-500" />
               <span>Settings &gt; Appearance</span>
@@ -489,12 +516,13 @@ export function DirectorDashboard() {
                   <Tooltip
                     formatter={(val: any) => [`LKR ${val}k`, 'Average Value']}
                     contentStyle={{
-                      backgroundColor: '#1E293B',
-                      borderColor: '#334155',
+                      backgroundColor: '#ffffff',
+                      borderColor: '#e2e8f0',
                       borderRadius: '0.75rem',
-                      color: '#fff',
+                      color: '#0f172a',
                       fontSize: '12px',
                       fontWeight: 500,
+                      boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
                     }}
                   />
                   <Area

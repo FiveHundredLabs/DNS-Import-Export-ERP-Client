@@ -16,8 +16,11 @@ export interface Account {
   id: string;
   code: string;
   name: string;
-  accountClass: AccountClass;
-  accountSubClass: AccountSubClass;
+  classification: AccountClass; // Tier 1: Classification
+  accountClass: AccountClass; // Backwards-compatible alias
+  accountType: string; // Tier 2: Account Type (e.g. Current Asset, Operating Expense)
+  accountSubClass: AccountSubClass; // Backwards-compatible alias
+  accountSubType: string; // Tier 3: Sub-Type (e.g. Bank & Cash, Accounts Receivable)
   description?: string;
   isSystem: boolean; // 11 non-deletable default system accounts
   isActive: boolean;
@@ -41,8 +44,126 @@ export interface Supplier {
   status: 'ACTIVE' | 'INACTIVE';
   balance: number;
   currency: string;
+  historicalPrices?: Record<string, number>; // productId -> last known historical purchase price
   createdAt: string;
   updatedAt: string;
+}
+
+export interface SupplierAdvanceApplication {
+  id: string;
+  billId?: string;
+  billNumber?: string;
+  grnId?: string;
+  grnNumber?: string;
+  appliedAmount: number;
+  appliedAt: string;
+  journalEntryId?: string;
+}
+
+export interface SupplierAdvance {
+  id: string;
+  advanceNumber: string;
+  supplierId: string;
+  supplierName: string;
+  paymentDate: string;
+  bankAccountId: string;
+  bankAccountCode: string;
+  reference: string;
+  amount: number;
+  unappliedBalance: number;
+  status: 'UNAPPLIED' | 'PARTIALLY_APPLIED' | 'APPLIED' | 'VOIDED';
+  notes?: string;
+  journalEntryId?: string;
+  appliedTo?: SupplierAdvanceApplication[];
+  createdAt: string;
+}
+
+export interface SupplierDebitNoteLineItem {
+  id?: string;
+  productId: string;
+  productName: string;
+  sku: string;
+  damagedQuantity: number;
+  unitCost: number;
+  lineTotal: number;
+  reason?: string;
+}
+
+export interface SupplierDebitNote {
+  id: string;
+  debitNoteNumber: string;
+  supplierId: string;
+  supplierName: string;
+  grnId?: string;
+  grnNumber?: string;
+  date: string;
+  reason: string;
+  lineItems: SupplierDebitNoteLineItem[];
+  totalAmount: number;
+  status: 'ISSUED' | 'SETTLED' | 'VOIDED';
+  journalEntryId?: string;
+  createdAt: string;
+}
+
+export interface PostDatedCheque {
+  id: string;
+  chequeNumber: string;
+  receiptId?: string;
+  receiptNumber?: string;
+  customerId: string;
+  customerName: string;
+  customerCode?: string;
+  drawerBank: string;
+  chequeDate: string; // Realization / maturity date (YYYY-MM-DD)
+  receivedDate: string; // Date received
+  amount: number;
+  status: 'IN_HAND' | 'CLEARED' | 'BOUNCED' | 'RETURNED' | 'VOIDED';
+  holdingAccountCode: string; // '1018'
+  clearedAccountCode?: string; // '1010'
+  clearedAt?: string;
+  clearanceDate?: string;
+  journalEntryId?: string; // Initial GL entry (Dr 1018 / Cr 1020)
+  clearanceJournalId?: string; // Clearance GL entry (Dr 1010 / Cr 1018)
+  bounceReason?: string;
+  notes?: string;
+}
+
+export interface CustomerCreditNoteLineItem {
+  id?: string;
+  productId: string;
+  productName: string;
+  sku: string;
+  returnedQuantity: number;
+  unitPrice: number; // Selling price (reverses 4010 Sales Revenue)
+  unitCost: number; // Cost price (reverses 5010 COGS & restores 1100 Inventory)
+  taxRate?: number; // VAT rate (default 0.18 for 18% VAT or 0)
+  subtotal: number; // returnedQuantity * unitPrice
+  vatAmount: number; // subtotal * taxRate
+  lineTotal: number; // subtotal + vatAmount
+  costTotal: number; // returnedQuantity * unitCost
+  condition?: 'GOOD_RETURN_TO_STOCK' | 'DAMAGED_SCRAP' | 'REFURBISH';
+  reason?: string;
+}
+
+export interface CustomerCreditNote {
+  id: string;
+  creditNoteNumber: string; // e.g. CN-2026-001
+  customerId: string;
+  customerName: string;
+  customerCode?: string;
+  invoiceId?: string;
+  invoiceNumber?: string;
+  date: string;
+  reason: string;
+  lineItems: CustomerCreditNoteLineItem[];
+  subtotal: number; // Net sales revenue reversed (Dr 4010)
+  vatAmount: number; // Output VAT reversed (Dr 2020)
+  totalAmount: number; // Gross AR reversed (Cr 1020)
+  totalCostAmount: number; // COGS reversed & Inventory returned (Dr 1100, Cr 5010)
+  status: 'ISSUED' | 'APPLIED' | 'VOIDED';
+  returnToInventory: boolean;
+  journalEntryId?: string;
+  createdAt: string;
 }
 
 export interface JournalLine {
@@ -53,9 +174,15 @@ export interface JournalLine {
   debit: number;
   credit: number;
   description?: string;
+  customerId?: string; // Sub-ledger tagging for 1020 A/R
+  customerName?: string;
+  supplierId?: string; // Sub-ledger tagging for 2010 A/P
+  supplierName?: string;
 }
 
 export type JournalSource = 'MANUAL' | 'PAYMENT' | 'GRN' | 'SALES' | 'COMMISSION' | 'SYSTEM';
+
+export type JournalEntryStatus = 'DRAFT' | 'PENDING_APPROVAL' | 'POSTED' | 'VOIDED' | 'CLEARED';
 
 export interface JournalEntry {
   id: string;
@@ -64,19 +191,27 @@ export interface JournalEntry {
   description: string;
   reference?: string;
   source: JournalSource;
-  status: 'POSTED' | 'DRAFT';
+  status: JournalEntryStatus;
   lines: JournalLine[];
   totalDebit: number;
   totalCredit: number;
   createdBy: string;
   createdAt: string;
+  approvedBy?: string;
+  approvedAt?: string;
+  voidedAt?: string;
+  voidedBy?: string;
+  voidReason?: string;
 }
 
 export interface CreateAccountDTO {
   code: string;
   name: string;
-  accountClass: AccountClass;
-  accountSubClass: AccountSubClass;
+  classification?: AccountClass;
+  accountClass?: AccountClass;
+  accountType?: string;
+  accountSubClass?: AccountSubClass;
+  accountSubType?: string;
   description?: string;
   parentId?: string;
 }
@@ -97,6 +232,10 @@ export interface CreateJournalLineDTO {
   debit: number;
   credit: number;
   description?: string;
+  customerId?: string;
+  customerName?: string;
+  supplierId?: string;
+  supplierName?: string;
 }
 
 export interface CreateJournalEntryDTO {
@@ -104,6 +243,7 @@ export interface CreateJournalEntryDTO {
   description: string;
   reference?: string;
   source?: JournalSource;
+  status?: JournalEntryStatus;
   lines: CreateJournalLineDTO[];
 }
 
@@ -189,26 +329,48 @@ export interface GeneralLedgerAccountReport {
   totalCredits: number;
 }
 
+export interface VatSalesTransaction {
+  date: string;
+  invoiceNumber: string;
+  customerName: string;
+  customerId?: string;
+  customerTin?: string;
+  customerSvat?: string;
+  taxableAmount: number;
+  vatAmount: number;
+  isSvat?: boolean;
+  svatAmount?: number;
+}
+
+export interface VatPurchaseTransaction {
+  date: string;
+  billNumber: string;
+  supplierName: string;
+  supplierId?: string;
+  supplierTin?: string;
+  supplierSvat?: string;
+  taxableAmount: number;
+  vatAmount: number;
+  isSvat?: boolean;
+  svatAmount?: number;
+}
+
 export interface VatReport {
   dateRange: { start: string; end: string };
   taxableSales: number;
   vatCollected: number; // 18%
   vatPaidOnPurchases: number;
   netVatPayable: number;
-  transactions: {
-    date: string;
-    invoiceNumber: string;
-    customerName: string;
-    taxableAmount: number;
-    vatAmount: number;
-  }[];
+  transactions: VatSalesTransaction[];
+  purchaseTransactions?: VatPurchaseTransaction[];
 }
 
 // Zod Validation Schemas
 export const createAccountSchema = z.object({
   code: z.string().min(2, 'Account code must be at least 2 characters'),
   name: z.string().min(2, 'Account name must be at least 2 characters'),
-  accountClass: z.enum(['ASSET', 'LIABILITY', 'EQUITY', 'INCOME', 'EXPENSE']),
+  accountClass: z.enum(['ASSET', 'LIABILITY', 'EQUITY', 'INCOME', 'EXPENSE']).optional(),
+  classification: z.enum(['ASSET', 'LIABILITY', 'EQUITY', 'INCOME', 'EXPENSE']).optional(),
   accountSubClass: z.enum([
     'CURRENT_ASSET',
     'NON_CURRENT_ASSET',
@@ -218,9 +380,13 @@ export const createAccountSchema = z.object({
     'REVENUE',
     'DIRECT_COST',
     'OPERATING_EXPENSE',
-  ]),
+  ]).optional(),
+  accountType: z.string().optional(),
+  accountSubType: z.string().optional(),
   description: z.string().optional(),
   parentId: z.string().optional(),
+  currency: z.string().optional(),
+  openingBalance: z.number().optional(),
 });
 
 export const createSupplierSchema = z.object({
@@ -239,6 +405,10 @@ export const journalLineSchema = z.object({
   debit: z.number().min(0, 'Debit must be non-negative'),
   credit: z.number().min(0, 'Credit must be non-negative'),
   description: z.string().optional(),
+  customerId: z.string().optional(),
+  customerName: z.string().optional(),
+  supplierId: z.string().optional(),
+  supplierName: z.string().optional(),
 }).refine((line) => (line.debit > 0 && line.credit === 0) || (line.credit > 0 && line.debit === 0), {
   message: 'Each line must have either a debit or a credit amount, but not both or zero',
 });
@@ -248,6 +418,7 @@ export const createJournalEntrySchema = z.object({
   description: z.string().min(3, 'Description must be at least 3 characters'),
   reference: z.string().optional(),
   source: z.enum(['MANUAL', 'PAYMENT', 'GRN', 'SALES', 'COMMISSION', 'SYSTEM']).default('MANUAL'),
+  status: z.enum(['DRAFT', 'PENDING_APPROVAL', 'POSTED', 'VOIDED', 'CLEARED']).optional(),
   lines: z.array(journalLineSchema).min(2, 'A journal entry must contain at least 2 lines'),
 }).refine((data) => {
   const totalDebit = Math.round(data.lines.reduce((sum, l) => sum + (l.debit || 0), 0) * 100);
@@ -256,3 +427,41 @@ export const createJournalEntrySchema = z.object({
 }, {
   message: 'The Double-Entry Invariant violated: Total debits must equal total credits to the cent',
 });
+
+// ==========================================
+// PHASE 4: Bank Reconciliation Workspace Types
+// ==========================================
+
+export interface BankReconciliationLine {
+  id: string;
+  date: string;
+  reference: string;
+  description: string;
+  type: 'DEPOSIT' | 'PAYMENT';
+  amount: number;
+  debit: number;
+  credit: number;
+  isCleared: boolean;
+  matchedLineId?: string;
+  matchConfidence?: 'EXACT' | 'DATE_TOLERANCE' | 'FUZZY' | 'MANUAL';
+}
+
+export interface BankReconciliationRecord {
+  id: string;
+  accountId: string;
+  accountCode: string;
+  accountName: string;
+  statementEndingDate: string;
+  beginningBalance: number; // Dynamically locked to prior period ending balance
+  endingBalance: number;    // Physical/electronic statement target balance
+  clearedDeposits: number;
+  clearedPayments: number;
+  clearedBalance: number;
+  difference: number;       // Strict 0.00
+  clearedCount: number;
+  status: 'RECONCILED' | 'IN_PROGRESS';
+  reconciledBy: string;
+  reconciledAt: string;
+  notes?: string;
+}
+

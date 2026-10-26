@@ -123,6 +123,19 @@ export class MockProductRepository implements IProductRepository {
     return [...this.categories];
   }
 
+  async createCategory(category: Omit<Category, 'id' | 'createdAt' | 'updatedAt'>): Promise<Category> {
+    await new Promise((resolve) => setTimeout(resolve, 80));
+    const now = new Date().toISOString();
+    const newCategory: Category = {
+      ...category,
+      id: `cat-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      createdAt: now,
+      updatedAt: now,
+    };
+    this.categories.push(newCategory);
+    return newCategory;
+  }
+
   async getUOMs(): Promise<UnitOfMeasure[]> {
     return [...this.uoms];
   }

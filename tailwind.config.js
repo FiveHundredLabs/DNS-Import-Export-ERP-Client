@@ -8,6 +8,7 @@ export default {
     extend: {
       fontFamily: {
         sans: [
+          '"Google Sans Flex"',
           'Inter',
           'ui-sans-serif',
           'system-ui',
@@ -113,7 +114,7 @@ export default {
           light: "var(--primary-light)",
           border: "var(--primary-border)",
           text: "var(--primary-text)",
-          foreground: "var(--primary-foreground)",
+          foreground: "rgb(var(--primary-foreground-rgb, 15 23 42) / <alpha-value>)",
           ring: "var(--primary-ring)",
         },
         secondary: {

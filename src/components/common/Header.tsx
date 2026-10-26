@@ -2,14 +2,17 @@ import { useState, useRef, useEffect } from 'react';
 import { useLocation, Link, useNavigate } from 'react-router-dom';
 import {
   Menu,
-  ShieldCheck,
-  Users,
-  LogOut,
   Search,
-  ChevronDown,
-  Layers,
   ArrowLeft,
+  MoreVertical,
+  Calculator,
+  Coins,
 } from 'lucide-react';
+import { FullscreenButton } from '../header/FullscreenButton';
+import { UserProfileMenu } from '../header/UserProfileMenu';
+import { CurrencyConverterPopover } from '../header/CurrencyConverterPopover';
+import { CalculatorPopover } from '../header/CalculatorPopover';
+import { NotificationsPopover } from '../header/NotificationsPopover';
 import { useAuth } from '../../hooks/useAuth';
 
 interface HeaderProps {
@@ -35,36 +38,31 @@ const ROUTE_TITLES: Record<string, string> = {
 };
 
 export function Header({ onToggleSidebar }: HeaderProps) {
-  const { currentUser, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
-
+  const { role } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
-  const [profileOpen, setProfileOpen] = useState(false);
-  const profileRef = useRef<HTMLDivElement>(null);
+  const [overflowOpen, setOverflowOpen] = useState(false);
+  const [mobileCurrencyOpen, setMobileCurrencyOpen] = useState(false);
+  const [mobileCalculatorOpen, setMobileCalculatorOpen] = useState(false);
+  const overflowRef = useRef<HTMLDivElement>(null);
 
-  // Close profile dropdown on click outside
+  // Sales Rep & Area Manager use the bottom nav on mobile — no hamburger/sidebar needed
+  const isMobileNavRole = role === 'SALES_REP' || role === 'AREA_MANAGER';
+
   useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (profileRef.current && !profileRef.current.contains(event.target as Node)) {
-        setProfileOpen(false);
+    function handlePointerDown(e: MouseEvent) {
+      if (overflowRef.current && !overflowRef.current.contains(e.target as Node)) {
+        setOverflowOpen(false);
       }
     }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
-  };
-
-  const formatRole = (role: string) => {
-    return role
-      .split('_')
-      .map((w) => w.charAt(0) + w.slice(1).toLowerCase())
-      .join(' ');
-  };
+    if (overflowOpen) {
+      document.addEventListener('mousedown', handlePointerDown);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown);
+    };
+  }, [overflowOpen]);
 
   // Determine current page title
   const currentTitle =
@@ -76,22 +74,24 @@ export function Header({ onToggleSidebar }: HeaderProps) {
      'DNS ERP Workspace');
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 w-full items-center justify-between border-b border-slate-200/80 bg-white px-4 sm:px-6 backdrop-blur-md transition-all shrink-0">
+    <header className="sticky top-0 z-30 flex h-16 w-full items-center justify-between bg-primary text-primary-foreground px-3 sm:px-6 backdrop-blur-md transition-all shrink-0">
       {/* Left: Mobile Toggle & Enterprise Brand / Page Title */}
-      {/* Left: Mobile Back or Menu Toggle & Enterprise Brand / Page Title */}
-      <div className="flex items-center gap-2.5 sm:gap-4 min-w-0">
+      <div className="flex items-center gap-2 sm:gap-4 min-w-0">
         {location.pathname !== '/' ? (
           <button
             onClick={() => navigate(-1)}
-            className="rounded-xl p-2 text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors focus:outline-none focus:ring-2 focus:ring-primary md:hidden shrink-0"
+            className="rounded-md p-2 text-primary-foreground/90 hover:bg-primary-foreground/15 hover:text-primary-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-primary-foreground md:hidden shrink-0 cursor-pointer"
             aria-label="Go back"
           >
             <ArrowLeft className="h-5 w-5" />
           </button>
+        ) : isMobileNavRole ? (
+          // Sales Rep / Area Manager: no hamburger on mobile — bottom nav handles all navigation
+          null
         ) : (
           <button
             onClick={onToggleSidebar}
-            className="rounded-xl p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-900 transition-colors focus:outline-none focus:ring-2 focus:ring-primary md:hidden shrink-0"
+            className="rounded-md p-2 text-primary-foreground/90 hover:bg-primary-foreground/15 hover:text-primary-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-primary-foreground md:hidden shrink-0 cursor-pointer"
             aria-label="Toggle navigation menu"
           >
             <Menu className="h-5 w-5" />
@@ -100,133 +100,140 @@ export function Header({ onToggleSidebar }: HeaderProps) {
 
         {location.pathname === '/' ? (
           <Link to="/" className="flex items-center gap-2.5 min-w-0 group">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground font-semibold text-sm shadow-md group-hover:bg-primary-hover transition-colors">
-              <Layers className="h-5 w-5" />
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-white p-0.5 shadow-sm ring-1 ring-white/20 transition-transform group-hover:scale-105 overflow-hidden">
+              <img
+                src="/logo.png"
+                alt="DNS IMPORT & EXPORT"
+                className="h-full w-full object-contain"
+              />
             </div>
             <div className="min-w-0">
-              <h1 className="text-sm sm:text-lg md:text-xl font-bold text-slate-900 tracking-tight truncate leading-tight">
-                LabsCore ERP
-              </h1>
-              <span className="text-[10.5px] sm:text-[11.5px] text-primary font-semibold block uppercase tracking-wider -mt-0.5 truncate">
-                DNS Distribution
+              <div className="flex items-center gap-1.5">
+                <h1 className="text-sm sm:text-lg md:text-xl font-bold text-primary-foreground tracking-tight truncate leading-tight">
+                  LabsCore ERP
+                </h1>
+                <span className="sm:hidden text-[9px] bg-white/20 text-white font-bold px-1.5 py-0.2 rounded-full uppercase tracking-wider">
+                  Sales
+                </span>
+              </div>
+              <span className="hidden sm:block text-[10.5px] sm:text-[11.5px] text-primary-foreground/80 font-semibold uppercase tracking-wider -mt-0.5 truncate">
+                DNS IMPORT & EXPORT (PVT) LTD.
               </span>
             </div>
           </Link>
         ) : (
           <div className="flex items-center gap-2 min-w-0">
             <Link to="/" className="hidden md:flex items-center gap-2 shrink-0 group" title="DNS ERP Dashboard">
-              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary text-primary-foreground font-semibold text-xs shadow-md group-hover:bg-primary-hover transition-colors">
-                <Layers className="h-4 w-4" />
+              <div className="flex h-8 w-8 items-center justify-center rounded-md bg-white p-0.5 shadow-sm ring-1 ring-white/20 transition-transform group-hover:scale-105 overflow-hidden">
+                <img
+                  src="/logo.png"
+                  alt="DNS Logo"
+                  className="h-full w-full object-contain"
+                />
               </div>
-              <span className="font-semibold text-slate-900 tracking-tight text-base">
+              <span className="font-semibold text-primary-foreground tracking-tight text-base">
                 DNS ERP
               </span>
             </Link>
-            <span className="text-slate-300 font-light hidden md:inline">/</span>
-            <h1 className="text-sm sm:text-base md:text-lg font-bold text-slate-900 tracking-tight truncate">
+            <span className="text-primary-foreground/50 font-light hidden md:inline">/</span>
+            <h1 className="text-sm sm:text-base md:text-lg font-bold text-primary-foreground tracking-tight truncate">
               {currentTitle}
             </h1>
           </div>
         )}
       </div>
 
-      {/* Center: Search Bar (Reference SaaS pill shape) */}
-      <div className="hidden md:flex flex-1 max-w-md mx-6 justify-center">
+      {/* Center: Global Search Bar */}
+      <div className="hidden md:flex flex-1 max-w-md mx-4 lg:mx-8 justify-center">
         <div className="relative w-full">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-primary-foreground/70" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search orders, products, dealers..."
-            className="w-full pl-9 pr-4 py-2 bg-slate-50/80 hover:bg-slate-50 focus:bg-white border border-slate-200/90 rounded-full text-sm font-normal text-slate-900 placeholder:text-slate-400 placeholder:text-[13px] focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all shadow-[0_1px_2px_rgba(0,0,0,0.02)]"
+            className="w-full pl-9 pr-4 py-2 bg-primary-foreground/15 hover:bg-primary-foreground/20 focus:bg-white border border-primary-foreground/25 focus:border-white rounded-md text-sm font-normal text-primary-foreground focus:text-slate-900 placeholder:text-primary-foreground/70 focus:placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-foreground/40 transition-all shadow-xs"
           />
         </div>
       </div>
 
-      {/* Right: Switch Role Action & Profile Menu */}
-      <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
-        {/* Switch Role Quick Button */}
-        <Link
-          to="/login"
-          className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-slate-200/90 bg-slate-50 hover:bg-primary-light hover:border-primary-border text-slate-700 hover:text-primary-text text-[13px] font-medium transition-all shadow-2xs"
-          title="Switch User Role or Log In as another user"
-        >
-          <Users className="h-3.5 w-3.5 text-primary" />
-          <span>Switch Role</span>
-        </Link>
+      {/* Right: Enterprise Utility Toolbar & Far-Right User Profile Avatar */}
+      <div className="flex items-center gap-1 sm:gap-1.5 md:gap-2 shrink-0">
+        {/* Enterprise Notifications (Always visible) */}
+        <NotificationsPopover />
 
-        <div className="h-6 w-px bg-slate-200 hidden sm:block" />
+        {/* Desktop-only secondary tools */}
+        <div className="hidden md:flex items-center gap-1.5 md:gap-2">
+          {/* Currency Converter */}
+          <CurrencyConverterPopover />
 
-        {/* User Profile Menu (Reference "Audrey Admin v" dropdown) */}
-        <div className="relative" ref={profileRef}>
+          {/* ERP Calculator */}
+          <CalculatorPopover />
+
+          {/* Fullscreen Button */}
+          <FullscreenButton />
+        </div>
+
+        {/* Mobile Overflow Menu */}
+        <div className="relative md:hidden" ref={overflowRef}>
           <button
-            onClick={() => setProfileOpen((prev) => !prev)}
-            className="flex items-center gap-2.5 p-1 rounded-full sm:rounded-xl hover:bg-slate-50 transition-colors focus:outline-none focus:ring-2 focus:ring-primary"
-            aria-expanded={profileOpen}
-            aria-label="User profile menu"
+            type="button"
+            onClick={() => setOverflowOpen((prev) => !prev)}
+            className="flex h-9 w-9 items-center justify-center rounded-lg text-primary-foreground/80 hover:bg-primary-foreground/15 hover:text-primary-foreground transition-colors cursor-pointer"
+            aria-label="More utilities"
+            aria-expanded={overflowOpen}
           >
-            {/* Avatar Circle */}
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground font-bold text-xs shadow-sm ring-2 ring-white">
-              {currentUser.name
-                .split(' ')
-                .map((n) => n[0])
-                .join('')}
-            </div>
-
-            {/* Name & Role Text */}
-            <div className="hidden sm:block text-left">
-              <div className="text-xs font-bold text-slate-800 leading-tight flex items-center gap-1">
-                {currentUser.name}
-              </div>
-              <div className="text-[11px] text-slate-500 font-medium">
-                {formatRole(currentUser.role)}
-              </div>
-            </div>
-
-            <ChevronDown
-              className={`h-3.5 w-3.5 text-slate-400 hidden sm:block transition-transform duration-200 ${
-                profileOpen ? 'rotate-180 text-primary' : ''
-              }`}
-            />
+            <MoreVertical className="h-5 w-5" />
           </button>
 
-          {/* Profile Dropdown Menu */}
-          {profileOpen && (
-            <div className="absolute right-0 mt-2 w-64 rounded-2xl border border-slate-200/90 bg-white p-2 shadow-xl shadow-slate-900/10 z-50 animate-in fade-in zoom-in-95 duration-100">
-              <div className="p-3 border-b border-slate-100">
-                <div className="text-xs font-bold text-slate-900">{currentUser.name}</div>
-                <div className="text-[11px] text-slate-500 font-mono mt-0.5">{currentUser.email}</div>
-                <div className="mt-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-primary-light text-primary-text border border-primary-border">
-                  <ShieldCheck className="h-3 w-3 text-primary" />
-                  {formatRole(currentUser.role)}
-                </div>
+          {overflowOpen && (
+            <div className="absolute right-0 mt-2 w-48 rounded-xl border border-slate-200/90 bg-white p-1.5 shadow-xl shadow-slate-900/15 z-50 animate-in fade-in zoom-in-95 duration-150">
+              <div className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-100 mb-1">
+                Quick Tools
               </div>
-
-              <div className="py-1">
-                <Link
-                  to="/login"
-                  onClick={() => setProfileOpen(false)}
-                  className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:bg-primary-light hover:text-primary-text transition-colors"
-                >
-                  <Users className="h-3.5 w-3.5 text-primary" />
-                  <span>Switch Role / User</span>
-                </Link>
-
-                <button
-                  onClick={() => {
-                    setProfileOpen(false);
-                    handleLogout();
-                  }}
-                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-rose-600 hover:bg-rose-50 transition-colors text-left"
-                >
-                  <LogOut className="h-3.5 w-3.5 text-rose-500" />
-                  <span>Sign Out</span>
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setOverflowOpen(false);
+                  setMobileCalculatorOpen(true);
+                }}
+                className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-100 hover:text-slate-900 transition-colors text-left cursor-pointer"
+              >
+                <Calculator className="h-4 w-4 text-primary" />
+                <span>Field Calculator</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setOverflowOpen(false);
+                  setMobileCurrencyOpen(true);
+                }}
+                className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-100 hover:text-slate-900 transition-colors text-left cursor-pointer"
+              >
+                <Coins className="h-4 w-4 text-emerald-600" />
+                <span>Currency Converter</span>
+              </button>
             </div>
           )}
         </div>
+
+        {/* Subtle Separator */}
+        <div className="h-4.5 w-px bg-white/20 mx-1 sm:mx-1.5" aria-hidden="true" />
+
+        {/* User Profile / Avatar (Far-right) */}
+        <UserProfileMenu />
+
+        {/* Mobile Dialog Modals for Tools */}
+        <CurrencyConverterPopover
+          hideTrigger
+          isOpen={mobileCurrencyOpen}
+          onOpenChange={setMobileCurrencyOpen}
+        />
+        <CalculatorPopover
+          hideTrigger
+          isOpen={mobileCalculatorOpen}
+          onOpenChange={setMobileCalculatorOpen}
+        />
       </div>
     </header>
   );

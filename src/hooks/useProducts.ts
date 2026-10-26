@@ -77,6 +77,12 @@ export function useProducts(initialFilters?: ProductFilters) {
     return proposal;
   };
 
+  const createCategory = async (data: Omit<Category, 'id' | 'createdAt' | 'updatedAt'>) => {
+    const created = await productService.createCategory(data);
+    setCategories((prev) => [...prev, created]);
+    return created;
+  };
+
   return {
     products,
     categories,
@@ -89,6 +95,7 @@ export function useProducts(initialFilters?: ProductFilters) {
     totalPages,
     refetch: fetchProducts,
     createProduct,
+    createCategory,
     updateProduct,
     proposePriceChange,
   };

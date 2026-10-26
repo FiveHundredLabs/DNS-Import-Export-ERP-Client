@@ -5,6 +5,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/ca
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
 import { formatCurrency, formatPercentage } from '../../utils/formatters';
+import { AmountDisplay } from '../../components/common/AmountDisplay';
 import {
   Users,
   Target,
@@ -124,20 +125,20 @@ export function AreaManagerDashboard() {
   return (
     <div className="space-y-4 max-w-5xl mx-auto pb-4">
       {/* 1. Mobile Header & Territory Banner */}
-      <div className="rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white p-4 sm:p-6 shadow-md border border-slate-800">
+      <div className="rounded-2xl bg-white text-slate-900 p-4 sm:p-6 shadow-xs border border-slate-200">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <div className="flex items-center gap-2">
-              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold tracking-wide uppercase bg-primary/20 text-primary-light border border-primary/30">
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold tracking-wide uppercase bg-primary-light text-primary-text border border-primary-border">
                 <MapPin className="h-3 w-3 text-primary" />
                 {currentUser.areaName || 'Western Province Area'}
               </span>
-              <span className="text-[11px] text-slate-400">Area Manager Hub</span>
+              <span className="text-[11px] text-slate-500 font-medium">Area Manager Hub</span>
             </div>
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white mt-1">
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 mt-1">
               {greeting}, {currentUser.name.split(' ')[0]}
             </h1>
-            <p className="text-xs text-slate-300 mt-0.5">
+            <p className="text-xs text-slate-500 mt-0.5">
               4 Active Route Sectors • 6 Field Officers Deployed
             </p>
           </div>
@@ -155,9 +156,9 @@ export function AreaManagerDashboard() {
               <Button
                 size="sm"
                 variant="outline"
-                className="w-full gap-1.5 text-xs bg-slate-800/80 hover:bg-slate-700 text-slate-100 border-slate-700 h-9 px-3.5 rounded-xl"
+                className="w-full gap-1.5 text-xs border-slate-200 text-slate-700 hover:bg-slate-50 h-9 px-3.5 rounded-xl"
               >
-                <CreditCard className="h-4 w-4 text-emerald-400" /> Collect
+                <CreditCard className="h-4 w-4 text-emerald-600" /> Collect
               </Button>
             </Link>
           </div>
@@ -165,17 +166,17 @@ export function AreaManagerDashboard() {
       </div>
 
       {/* 2. Today's Area Sales Hero Performance Card (Mobile First) */}
-      <div className="rounded-2xl border border-slate-200/90 bg-white p-4 sm:p-5 shadow-xs">
-        <div className="flex items-start justify-between">
-          <div>
-            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+      <div className="rounded-2xl border border-slate-200/90 bg-white p-4 sm:p-5 shadow-xs min-w-0 overflow-hidden">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block truncate">
               Today's Area Sales
             </span>
-            <div className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight tabular-nums mt-0.5">
-              {formatCurrency(todaySales)}
+            <div className="mt-0.5 min-w-0">
+              <AmountDisplay amount={todaySales} className="text-slate-900 font-extrabold" />
             </div>
           </div>
-          <div className="text-right">
+          <div className="text-right shrink-0">
             <span className="text-xs text-slate-400">Daily Target</span>
             <div className="text-sm font-bold text-slate-700 tabular-nums">
               {formatCurrency(todayTarget)}
@@ -195,11 +196,11 @@ export function AreaManagerDashboard() {
         </div>
 
         {/* MTD Performance Secondary Bar */}
-        <div className="mt-3.5 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
-          <span className="text-slate-500 flex items-center gap-1.5">
+        <div className="mt-3.5 pt-3 border-t border-slate-100 flex items-center justify-between text-xs gap-2 flex-wrap">
+          <span className="text-slate-500 flex items-center gap-1.5 shrink-0">
             <TrendingUp className="h-3.5 w-3.5 text-primary" /> Month-to-Date:
           </span>
-          <div className="font-semibold text-slate-800 tabular-nums">
+          <div className="font-semibold text-slate-800 tabular-nums min-w-0">
             {formatCurrency(mtdSales)}{' '}
             <span className="text-slate-400 font-normal">/ {formatCurrency(mtdTarget)}</span>{' '}
             <span className="text-emerald-600 font-bold ml-1">({formatPercentage(mtdPercent)})</span>
@@ -212,66 +213,66 @@ export function AreaManagerDashboard() {
         {/* Outstanding Receivables */}
         <div
           onClick={() => navigate('/customers')}
-          className="rounded-2xl border border-slate-200/90 bg-white p-3.5 shadow-xs cursor-pointer hover:border-primary/50 transition-colors"
+          className="rounded-2xl border border-slate-200/90 bg-white p-3.5 shadow-xs cursor-pointer hover:border-primary/50 transition-colors min-w-0 overflow-hidden"
         >
-          <div className="flex items-center justify-between text-slate-400">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+          <div className="flex items-center justify-between text-slate-400 gap-1">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 truncate">
               Outstanding
             </span>
-            <DollarSign className="h-4 w-4 text-amber-500" />
+            <DollarSign className="h-4 w-4 text-amber-500 shrink-0" />
           </div>
-          <div className="text-lg font-bold text-slate-900 tabular-nums mt-1">
-            LKR 8.42M
+          <div className="mt-1 min-w-0">
+            <AmountDisplay amount={8420000} className="text-slate-900 font-bold" />
           </div>
-          <span className="text-[11px] text-slate-400 block mt-0.5">Dealer credit line</span>
+          <span className="text-[11px] text-slate-400 block mt-0.5 truncate">Dealer credit line</span>
         </div>
 
         {/* Pending Collections */}
         <div
           onClick={() => navigate('/payments')}
-          className="rounded-2xl border border-slate-200/90 bg-white p-3.5 shadow-xs cursor-pointer hover:border-primary/50 transition-colors"
+          className="rounded-2xl border border-slate-200/90 bg-white p-3.5 shadow-xs cursor-pointer hover:border-primary/50 transition-colors min-w-0 overflow-hidden"
         >
-          <div className="flex items-center justify-between text-slate-400">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+          <div className="flex items-center justify-between text-slate-400 gap-1">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 truncate">
               Pending Pmt
             </span>
-            <FileCheck2 className="h-4 w-4 text-blue-500" />
+            <FileCheck2 className="h-4 w-4 text-blue-500 shrink-0" />
           </div>
-          <div className="text-lg font-bold text-slate-900 tabular-nums mt-1">
+          <div className="text-lg font-bold text-slate-900 tabular-nums mt-1 truncate">
             5 Receipts
           </div>
-          <span className="text-[11px] text-blue-600 font-medium block mt-0.5">LKR 650k verification</span>
+          <span className="text-[11px] text-blue-600 font-medium block mt-0.5 truncate">LKR 650,000.00 verification</span>
         </div>
 
         {/* Active Sales Reps */}
-        <div className="rounded-2xl border border-slate-200/90 bg-white p-3.5 shadow-xs">
-          <div className="flex items-center justify-between text-slate-400">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+        <div className="rounded-2xl border border-slate-200/90 bg-white p-3.5 shadow-xs min-w-0 overflow-hidden">
+          <div className="flex items-center justify-between text-slate-400 gap-1">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 truncate">
               Field Officers
             </span>
-            <Users className="h-4 w-4 text-emerald-500" />
+            <Users className="h-4 w-4 text-emerald-500 shrink-0" />
           </div>
-          <div className="text-lg font-bold text-slate-900 tabular-nums mt-1">
+          <div className="text-lg font-bold text-slate-900 tabular-nums mt-1 truncate">
             6 Active
           </div>
-          <span className="text-[11px] text-slate-400 block mt-0.5">18 Visits logged</span>
+          <span className="text-[11px] text-slate-400 block mt-0.5 truncate">18 Visits logged</span>
         </div>
 
         {/* Overdue Accounts */}
         <div
           onClick={() => navigate('/customers')}
-          className="rounded-2xl border border-rose-200 bg-rose-50/50 p-3.5 shadow-xs cursor-pointer hover:bg-rose-50 transition-colors"
+          className="rounded-2xl border border-rose-200 bg-rose-50/50 p-3.5 shadow-xs cursor-pointer hover:bg-rose-50 transition-colors min-w-0 overflow-hidden"
         >
-          <div className="flex items-center justify-between text-rose-500">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-rose-700">
+          <div className="flex items-center justify-between text-rose-500 gap-1">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-rose-700 truncate">
               Overdue
             </span>
-            <AlertCircle className="h-4 w-4 text-rose-600" />
+            <AlertCircle className="h-4 w-4 text-rose-600 shrink-0" />
           </div>
-          <div className="text-lg font-bold text-rose-700 tabular-nums mt-1">
+          <div className="text-lg font-bold text-rose-700 tabular-nums mt-1 truncate">
             2 Dealers
           </div>
-          <span className="text-[11px] text-rose-600 font-medium block mt-0.5">LKR 450k overdue</span>
+          <span className="text-[11px] text-rose-600 font-medium block mt-0.5 truncate">LKR 450,000.00 overdue</span>
         </div>
       </div>
 

@@ -7,6 +7,7 @@ import { SalesOrder, OrderStatus } from '../../types/order';
 import { Invoice } from '../../types/invoice';
 import { OrderStatusBadge } from './OrderStatusBadge';
 import { ApprovalTimeline } from '../../components/approval/ApprovalTimeline';
+import { OrderActivityTimeline } from './OrderActivityTimeline';
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import {
@@ -225,6 +226,16 @@ export function OrderDetailPage() {
           >
             <Printer className="h-3.5 w-3.5 text-slate-500" />
             Print / PDF
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigate(`/orders/${order.id}/activity-log`)}
+            className="text-xs gap-1.5 border-teal-300 text-teal-800 hover:bg-teal-50"
+          >
+            <Clock className="h-3.5 w-3.5 text-teal-600" />
+            Full Activity Log
           </Button>
 
           {/* Edit (if DRAFT) */}
@@ -469,13 +480,15 @@ export function OrderDetailPage() {
       {/* Enterprise Order Document Card */}
       <Card className="border border-slate-200 shadow-sm overflow-hidden bg-white">
         {/* Document Header */}
-        <div className="p-6 border-b border-slate-200 bg-slate-50/50 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="p-4 sm:p-6 border-b border-slate-200 bg-slate-50/50 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <div className="flex items-center gap-3">
-              <span className="text-xl font-semibold font-mono text-slate-900 tabular-nums">{order.orderNumber}</span>
-              <OrderStatusBadge status={order.status} isSpecialApproval={order.isSpecialApproval} />
+            <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+              <span className="text-lg sm:text-xl font-semibold font-mono text-slate-900 tabular-nums whitespace-nowrap shrink-0">{order.orderNumber}</span>
+              <div className="shrink-0">
+                <OrderStatusBadge status={order.status} isSpecialApproval={order.isSpecialApproval} />
+              </div>
             </div>
-            <div className="text-xs text-slate-500 mt-1 flex flex-wrap items-center gap-4">
+            <div className="text-xs text-slate-500 mt-1 flex flex-wrap items-center gap-2 sm:gap-4">
               <span>Date: {formatDate(order.createdAt)}</span>
               <span>Rep: {order.salesRepNameSnapshot}</span>
               {order.customerPoNumber && <span>PO Ref: {order.customerPoNumber}</span>}
@@ -487,9 +500,9 @@ export function OrderDetailPage() {
             </div>
           </div>
 
-          <div className="text-right">
+          <div className="text-left md:text-right pt-2 md:pt-0 border-t md:border-t-0 border-slate-200/80">
             <span className="text-xs font-medium text-slate-500 block">Total Order Value</span>
-            <span className="text-2xl font-semibold font-mono text-primary tabular-nums">
+            <span className="text-xl sm:text-2xl font-semibold font-mono text-primary tabular-nums">
               {formatCurrency(order.totalAmount)}
             </span>
           </div>
@@ -560,11 +573,11 @@ export function OrderDetailPage() {
         </div>
 
         {/* Itemized Table */}
-        <div className="p-6">
+        <div className="p-4 sm:p-6">
           <h4 className="text-sm font-semibold text-slate-800 mb-3">
             Itemized Order Lines
           </h4>
-          <div className="rounded-lg border border-slate-200 overflow-hidden">
+          <div className="rounded-lg border border-slate-200 overflow-x-auto">
             <table className="w-full text-[13px] tabular-nums">
               <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 text-[12.5px]">
                 <tr>
@@ -605,7 +618,22 @@ export function OrderDetailPage() {
                       {it.issuedQuantity}
                     </td>
                     <td className="py-3 px-3 text-center font-medium tabular-nums">
-                      {it.discountPercentage}%
+                      <div>{it.discountPercentage}%</div>
+                      {it.discountApprovalStatus === 'PENDING_APPROVAL' && (
+                        <span className="inline-block text-[10px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5 mt-0.5 whitespace-nowrap">
+                          Pending Management Approval
+                        </span>
+                      )}
+                      {it.discountApprovalStatus === 'APPROVED' && (
+                        <span className="inline-block text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded px-1.5 py-0.5 mt-0.5 whitespace-nowrap">
+                          Discount Approved
+                        </span>
+                      )}
+                      {it.discountApprovalStatus === 'REJECTED' && (
+                        <span className="inline-block text-[10px] font-semibold text-rose-700 bg-rose-50 border border-rose-200 rounded px-1.5 py-0.5 mt-0.5 whitespace-nowrap">
+                          Discount Rejected
+                        </span>
+                      )}
                     </td>
                     <td className="py-3 px-3 text-right font-mono text-slate-600 tabular-nums">
                       - {formatCurrency(it.discountAmount)}
@@ -630,7 +658,11 @@ export function OrderDetailPage() {
               <span className="font-mono font-medium tabular-nums">- {formatCurrency(order.discountAmount)}</span>
             </div>
             <div className="flex justify-between w-64 text-slate-600">
-              <span>VAT (18%):</span>
+              <span>
+                {order.taxEnabled !== false && order.taxAmount > 0
+                  ? `VAT (${order.taxRatePercentage ?? 18}%):`
+                  : 'Tax:'}
+              </span>
               <span className="font-mono font-medium tabular-nums">{formatCurrency(order.taxAmount)}</span>
             </div>
             <div className="flex justify-between w-64 border-t-2 border-slate-900 pt-2 font-semibold text-sm text-slate-900">
@@ -640,21 +672,30 @@ export function OrderDetailPage() {
           </div>
         </div>
 
-        {/* Approval Box & Audit Timeline */}
-        <div className="border-t border-slate-200 bg-slate-50/50 p-6">
+        {/* Approval Box & Order Activity Timeline */}
+        <div className="border-t border-slate-200 bg-slate-50/50 p-4 sm:p-6">
           <div className="flex items-center justify-between mb-4">
-            <h4 className="text-sm font-semibold text-slate-700 flex items-center gap-1.5">
-              <Clock className="h-4 w-4 text-primary" />
-              Approval Timeline & State History
-            </h4>
+            <div>
+              <h4 className="text-sm font-bold text-slate-800 flex items-center gap-1.5">
+                <Clock className="h-4 w-4 text-primary" />
+                Order Activity Log &amp; Lifecycle Timeline
+              </h4>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Chronological record of approvals, modifications, reservations, dispatch, and billing.
+              </p>
+            </div>
             {order.targetApproverRole && isPendingOrSpecial && (
-              <span className="text-xs text-slate-500">
-                Pending Approval: <strong className="text-slate-800">{order.currentApproverRole || order.targetApproverRole}</strong>
+              <span className="text-xs text-amber-800 bg-amber-50 border border-amber-200 px-2 py-1 rounded-md font-semibold">
+                Pending Approval: <strong className="text-slate-900">{order.currentApproverRole || order.targetApproverRole}</strong>
               </span>
             )}
           </div>
 
-          <ApprovalTimeline history={order.approvalHistory} />
+          <OrderActivityTimeline
+            order={order}
+            compactHeader={true}
+            onOrderUpdated={(updated) => setOrder(updated)}
+          />
         </div>
       </Card>
 

@@ -2,6 +2,13 @@ import { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../../components/ui/select';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../../components/ui/table';
 import { RepCommissionSummary, CommissionRule, SalesTarget } from '../../types/commission';
 import { commissionService } from '../../services/CommissionService';
@@ -75,17 +82,21 @@ export function CommissionHubPage() {
         <div className="flex items-center gap-2">
           {canConfigure && (
             <>
-              <select
+              <Select
                 value={selectedRepId}
-                onChange={(e) => setSelectedRepId(e.target.value)}
-                className="rounded-md border border-slate-300 text-xs h-9 px-2.5 bg-white text-slate-700 font-medium"
+                onValueChange={(val) => setSelectedRepId(val)}
               >
-                {leaderboard.map((r) => (
-                  <option key={r.salesRepId} value={r.salesRepId}>
-                    {r.salesRepName}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger className="rounded-md border border-slate-300 text-xs h-9 px-2.5 bg-white text-slate-700 font-medium min-w-44">
+                  <SelectValue placeholder="Select Representative" />
+                </SelectTrigger>
+                <SelectContent>
+                  {leaderboard.map((r) => (
+                    <SelectItem key={r.salesRepId} value={r.salesRepId}>
+                      {r.salesRepName}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <Button
                 onClick={() => setIsConfigOpen(true)}
                 className="bg-primary hover:bg-primary-hover text-primary-foreground text-xs font-medium h-9 gap-1.5 shadow-sm"

@@ -15,6 +15,8 @@ import {
   Receipt,
   ArrowRight,
   Info,
+  Eye,
+  Lock,
 } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
 import { Input } from '../../../components/ui/input';
@@ -176,6 +178,8 @@ export function FinanceDeskPage() {
           debit: 250000,
           credit: 0,
           description: 'Reduce Accounts Payable for supplier bill',
+          supplierId: 'sup-1',
+          supplierName: 'DNS Global Logistics & Electronics Ltd',
         },
         {
           id: 'row-preset-2',
@@ -264,6 +268,10 @@ export function FinanceDeskPage() {
           debit: Number(l.debit) || 0,
           credit: Number(l.credit) || 0,
           description: l.description.trim() || undefined,
+          customerId: l.customerId,
+          customerName: l.customerName,
+          supplierId: l.supplierId,
+          supplierName: l.supplierName,
         })),
       });
 
@@ -523,19 +531,29 @@ export function FinanceDeskPage() {
                   <th className="px-4 py-3 text-right">Debit Total</th>
                   <th className="px-4 py-3 text-right">Credit Total</th>
                   <th className="px-4 py-3 text-center">Status</th>
+                  <th className="px-4 py-3 text-right">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-slate-700">
                 {journals.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="p-6 text-center text-slate-400">
+                    <td colSpan={9} className="p-6 text-center text-slate-400">
                       No journals posted yet.
                     </td>
                   </tr>
                 ) : (
                   journals.slice(0, 8).map((je) => (
                     <tr key={je.id} className="hover:bg-slate-50/60 transition-colors">
-                      <td className="px-4 py-3 font-mono font-bold text-primary-text">{je.entryNumber}</td>
+                      <td className="px-4 py-3 font-mono font-bold text-primary">
+                        <a
+                          href={`/finance/journal/new?id=${je.id}`}
+                          className="hover:underline flex items-center gap-1"
+                          title="View Audit-Locked Voucher"
+                        >
+                          <Lock className="h-3 w-3 text-slate-400" />
+                          <span>{je.entryNumber}</span>
+                        </a>
+                      </td>
                       <td className="px-4 py-3 text-slate-600">{formatDate(je.date)}</td>
                       <td className="px-4 py-3">
                         <div className="font-semibold text-slate-900">{je.description}</div>
@@ -563,10 +581,25 @@ export function FinanceDeskPage() {
                         {formatCurrency(je.totalCredit)}
                       </td>
                       <td className="px-4 py-3 text-center">
-                        <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200">
-                          <CheckCircle2 className="h-3 w-3 mr-1" />
-                          <span>Posted</span>
-                        </Badge>
+                        {je.status === 'VOIDED' ? (
+                          <Badge variant="destructive" className="text-[10px]">
+                            Voided
+                          </Badge>
+                        ) : (
+                          <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[10px]">
+                            <CheckCircle2 className="h-3 w-3 mr-1" />
+                            <span>Posted</span>
+                          </Badge>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <a
+                          href={`/finance/journal/new?id=${je.id}`}
+                          className="inline-flex items-center gap-1 text-xs text-primary font-semibold hover:underline"
+                        >
+                          <Eye className="h-3.5 w-3.5" />
+                          <span>View</span>
+                        </a>
                       </td>
                     </tr>
                   ))

@@ -62,6 +62,7 @@ export type Permission =
   | 'finance:reports'
   | 'warranty:view'
   | 'warranty:claims'
+  | 'warranty:record_notes'
   | 'commissions:view'
   | 'commissions:manage'
   | 'reports:all'

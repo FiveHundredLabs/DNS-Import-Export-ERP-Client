@@ -17,9 +17,9 @@ export function AppLayout() {
     <div className="h-screen bg-canvas font-sans text-slate-800 antialiased flex flex-col overflow-hidden">
       <Header onToggleSidebar={() => setSidebarOpen((prev) => !prev)} />
 
-      <div className="flex flex-1 min-h-0 overflow-hidden">
+      <div className="flex flex-1 min-h-0 overflow-hidden bg-primary">
         <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-        <div className="flex-1 flex min-w-0 h-full overflow-hidden">
+        <div className="flex-1 flex min-w-0 h-full overflow-hidden bg-canvas">
           <Outlet />
         </div>
       </div>

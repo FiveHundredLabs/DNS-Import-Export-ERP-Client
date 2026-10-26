@@ -2,6 +2,13 @@ import { useState, useEffect, useMemo } from 'react';
 import { Dialog, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../../components/ui/select';
 import { Alert, AlertDescription } from '../../components/ui/alert';
 import { WarrantyRecord } from '../../types/warranty';
 import { warrantyService } from '../../services/WarrantyService';
@@ -82,6 +89,12 @@ export function NewClaimModal({
     ? !isWarrantyValid(selectedRecord.warrantyExpiryDate, complaintDate, selectedRecord.warrantyStartDate)
     : false;
 
+  const isDealerSale = selectedRecord?.saleType === 'DEALER';
+  const hasVerifiedNote = Boolean(
+    selectedRecord?.notesReceived && selectedRecord?.warrantyNoteStatus === 'VERIFIED'
+  );
+  const isNotePending = selectedRecord?.warrantyNoteStatus === 'PENDING_REVIEW';
+
   const handleRecordChange = (recordId: string) => {
     setSelectedRecordId(recordId);
     const rec = records.find((r) => r.id === recordId);
@@ -103,6 +116,12 @@ export function NewClaimModal({
     e.preventDefault();
     if (!selectedRecord) {
       setError('Please select an active warranty record.');
+      return;
+    }
+    if (isDealerSale && !hasVerifiedNote) {
+      setError(
+        'Warranty claim cannot be processed: Distributor sales require a valid warranty note reviewed and verified by the Sales Manager.'
+      );
       return;
     }
     if (!complaintReason.trim()) {
@@ -159,18 +178,22 @@ export function NewClaimModal({
               <label className="block font-semibold text-slate-700 mb-1">
                 Select Customer
               </label>
-              <select
+              <Select
                 value={selectedCustomerId}
-                onChange={(e) => handleCustomerChange(e.target.value)}
-                className="w-full rounded-md border border-slate-300 p-2 text-xs bg-white text-slate-900 focus:outline-none focus:ring-1 focus:ring-primary"
+                onValueChange={(val) => handleCustomerChange(val)}
               >
-                <option value="ALL">All Customers</option>
-                {MOCK_CUSTOMERS.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name} ({c.type})
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger className="w-full text-xs h-9">
+                  <SelectValue placeholder="All Customers" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">All Customers</SelectItem>
+                  {MOCK_CUSTOMERS.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.name} ({c.type})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <label className="block font-semibold text-slate-700 mb-1">
@@ -207,17 +230,21 @@ export function NewClaimModal({
               No matching warranty records found.
             </div>
           ) : (
-            <select
+            <Select
               value={selectedRecordId}
-              onChange={(e) => handleRecordChange(e.target.value)}
-              className="w-full rounded-md border border-slate-300 p-2 text-xs bg-white text-slate-900 focus:outline-none focus:ring-1 focus:ring-primary"
+              onValueChange={(val) => handleRecordChange(val)}
             >
-              {filteredRecords.map((r) => (
-                <option key={r.id} value={r.id}>
-                  {r.productName} ({r.sku}) - {r.customerName} [Exp: {r.warrantyExpiryDate}]
-                </option>
-              ))}
-            </select>
+              <SelectTrigger className="w-full text-xs h-9">
+                <SelectValue placeholder="Select warranty record" />
+              </SelectTrigger>
+              <SelectContent>
+                {filteredRecords.map((r) => (
+                  <SelectItem key={r.id} value={r.id}>
+                    {r.productName} ({r.sku}) - {r.customerName} [Exp: {r.warrantyExpiryDate}]
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           )}
         </div>
 
@@ -245,6 +272,45 @@ export function NewClaimModal({
             <span className="font-medium text-[11px]">
               Channel: {selectedRecord.saleType}
             </span>
+          </div>
+        )}
+
+        {/* Distributor Warranty Note Validation Status */}
+        {selectedRecord && isDealerSale && (
+          <div
+            className={`p-3 rounded-lg border text-xs space-y-1.5 ${
+              hasVerifiedNote
+                ? 'bg-emerald-50/70 border-emerald-200 text-emerald-900'
+                : isNotePending
+                ? 'bg-amber-50/70 border-amber-200 text-amber-900'
+                : 'bg-rose-50/70 border-rose-200 text-rose-900'
+            }`}
+          >
+            <div className="flex items-center gap-1.5 font-semibold">
+              {hasVerifiedNote ? (
+                <>
+                  <CheckCircle className="h-4 w-4 text-emerald-600 shrink-0" />
+                  <span>Distributor Warranty Note Verified: {selectedRecord.warrantyNoteNumber || 'Verified'}</span>
+                </>
+              ) : isNotePending ? (
+                <>
+                  <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" />
+                  <span>Distributor Warranty Note Pending Sales Manager Review</span>
+                </>
+              ) : (
+                <>
+                  <AlertTriangle className="h-4 w-4 text-rose-600 shrink-0" />
+                  <span>Missing Distributor Warranty Note</span>
+                </>
+              )}
+            </div>
+            <p className="text-[11px] leading-relaxed">
+              {hasVerifiedNote
+                ? `Validated based on warranty note received from distributor. End customer: ${selectedRecord.endCustomerName || 'Retail Customer'}. Claim processing is authorized.`
+                : isNotePending
+                ? 'A warranty note was entered but is awaiting Sales Manager review and verification before this warranty claim can be lodged.'
+                : 'Because DNS ERP sells products to distributors rather than direct end customers, this warranty claim must be validated based on the warranty note received from the distributor. The Sales Manager must enter and verify the warranty note first.'}
+            </p>
           </div>
         )}
 
@@ -302,10 +368,14 @@ export function NewClaimModal({
           <Button
             type="submit"
             size="sm"
-            disabled={loading || isExpired || !selectedRecord}
-            className="bg-primary hover:bg-primary-hover text-primary-foreground"
+            disabled={loading || isExpired || !selectedRecord || (isDealerSale && !hasVerifiedNote)}
+            className="bg-primary hover:bg-primary-hover text-primary-foreground font-semibold"
           >
-            {loading ? 'Submitting...' : 'Lodge Claim'}
+            {loading
+              ? 'Submitting...'
+              : isDealerSale && !hasVerifiedNote
+              ? 'Validation Required'
+              : 'Lodge Claim'}
           </Button>
         </DialogFooter>
       </form>

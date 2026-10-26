@@ -22,6 +22,7 @@ export interface ProductPricing {
   maxDiscountPercentage: number;
   promotionalDiscountPercentage?: number;
   taxRatePercentage: number; // e.g., 18% VAT
+  discountLevels?: number[]; // Up to 3 product-level discount levels ordered lowest to highest (e.g. [5, 10, 15])
 }
 
 export interface Product extends BaseEntity {
@@ -34,6 +35,7 @@ export interface Product extends BaseEntity {
   uomCode: string;
   barcode: string;
   pricing: ProductPricing;
+  discountLevels?: number[]; // Up to 3 product-level discount levels ordered lowest to highest (e.g. [5, 10, 15])
   isPromotional: boolean;
   warrantyPeriodMonths: number;
   status: ProductStatus;

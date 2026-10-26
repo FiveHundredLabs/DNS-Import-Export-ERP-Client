@@ -6,7 +6,13 @@ import { CustomerCreateModal } from './CustomerCreateModal';
 import { CustomerCommercialApprovalModal } from './CustomerCommercialApprovalModal';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
-import { Select } from '../../components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../../components/ui/select';
 import { TableLoadingSkeleton } from '../../components/common/LoadingSkeleton';
 import { EmptyState } from '../../components/common/EmptyState';
 import { ErrorState } from '../../components/common/ErrorState';
@@ -111,9 +117,8 @@ export function CustomerListPage() {
       </div>
 
       {/* Filter toolbar */}
-      <div className="flex flex-col sm:flex-row gap-3 bg-white p-3.5 rounded-2xl border border-slate-200/80 shadow-sm">
+      <div className="flex flex-col sm:flex-row gap-3 bg-white p-3.5 rounded-xl border border-slate-200/80 shadow-sm">
         <div className="relative flex-1">
-
           <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
           <Input
             placeholder="Search by code, customer name, contact person, or phone..."
@@ -124,14 +129,18 @@ export function CustomerListPage() {
         </div>
         <div className="w-full sm:w-48">
           <Select
-            value={selectedType}
-            onChange={(e) => handleTypeChange(e.target.value)}
-            className="text-xs"
+            value={selectedType || '__all__'}
+            onValueChange={(val) => handleTypeChange(val === '__all__' ? '' : val)}
           >
-            <option value="">All Types</option>
-            <option value="DEALER">Dealer</option>
-            <option value="SHOWROOM">Showroom</option>
-            <option value="DIRECT">Direct Contractor</option>
+            <SelectTrigger className="text-xs h-9 rounded-md bg-white">
+              <SelectValue placeholder="All Types" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__all__">All Types</SelectItem>
+              <SelectItem value="DEALER">Dealer</SelectItem>
+              <SelectItem value="SHOWROOM">Showroom</SelectItem>
+              <SelectItem value="DIRECT">Direct Contractor</SelectItem>
+            </SelectContent>
           </Select>
         </div>
       </div>

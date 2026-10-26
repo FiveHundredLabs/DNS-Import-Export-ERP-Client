@@ -59,7 +59,7 @@ describe('Phase 5 — Sales Order UI Components & Type Checking', () => {
 
     // Check that table loads orders
     await waitFor(() => {
-      expect(screen.getByText('SO-DLR-COL-001-1001')).toBeInTheDocument();
+      expect(screen.getAllByText('SO-DLR-COL-001-1001').length).toBeGreaterThan(0);
     });
   });
 

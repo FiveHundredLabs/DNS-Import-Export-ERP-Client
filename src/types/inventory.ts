@@ -29,7 +29,7 @@ export interface StockMovement {
   timestamp: string;
 }
 
-export type GRNStatus = 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'REJECTED';
+export type GRNStatus = 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'COSTED' | 'REJECTED';
 
 export interface GRNItem {
   productId: string;
@@ -40,6 +40,7 @@ export interface GRNItem {
   damagedQuantity: number;
   unitCostSnapshot: number;
   lineValue: number;
+  serialNumbers?: string[];
 }
 
 export interface GRN {

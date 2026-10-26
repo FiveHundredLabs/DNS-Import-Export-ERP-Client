@@ -130,16 +130,16 @@ describe('Phase 7 — Invoice & Payment UI Components', () => {
       </MemoryRouter>
     );
 
-    // Wait for customer open invoices to load
+    // Wait for customer open invoices to load (matching table row or card)
     await waitFor(() => {
-      expect(screen.getByText('INV-2025-0101')).toBeInTheDocument();
-      expect(screen.getByText('INV-2025-0102')).toBeInTheDocument();
-      expect(screen.getByText('INV-2025-0103')).toBeInTheDocument();
-    });
+      expect(screen.getAllByText('INV-2025-0101').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('INV-2025-0102').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('INV-2025-0103').length).toBeGreaterThan(0);
+    }, { timeout: 4000 });
 
-    const row1 = screen.getByText('INV-2025-0101').closest('tr');
-    const row2 = screen.getByText('INV-2025-0102').closest('tr');
-    const row3 = screen.getByText('INV-2025-0103').closest('tr');
+    const row1 = screen.getAllByText('INV-2025-0101').find((el) => el.closest('tr'))?.closest('tr');
+    const row2 = screen.getAllByText('INV-2025-0102').find((el) => el.closest('tr'))?.closest('tr');
+    const row3 = screen.getAllByText('INV-2025-0103').find((el) => el.closest('tr'))?.closest('tr');
 
     const allocInput1 = row1?.querySelector('input[type="number"]') as HTMLInputElement;
     const allocInput2 = row2?.querySelector('input[type="number"]') as HTMLInputElement;
