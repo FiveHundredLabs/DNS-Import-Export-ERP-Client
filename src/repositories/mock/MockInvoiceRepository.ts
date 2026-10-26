@@ -21,8 +21,53 @@ export class MockInvoiceRepository implements IInvoiceRepository {
       );
     }
 
-    if (filters?.status && filters.status !== 'ALL') {
-      filtered = filtered.filter((inv) => inv.status === filters.status);
+    const effectiveFilter = filters?.paymentFilter || filters?.status;
+    if (effectiveFilter && effectiveFilter !== 'ALL') {
+      const now = new Date();
+      const sevenDaysAheadTime = now.getTime() + 7 * 24 * 60 * 60 * 1000;
+
+      filtered = filtered.filter((inv) => {
+        if (
+          [
+            'DRAFT',
+            'ISSUED',
+            'COLLECTED',
+            'PARTIALLY_COLLECTED',
+            'PAID',
+            'PARTIALLY_PAID',
+            'CANCELLED',
+          ].includes(effectiveFilter)
+        ) {
+          return inv.status === effectiveFilter;
+        }
+
+        const uncollected = Math.max(0, inv.balanceAmount - (inv.collectedAmount || 0));
+        const [y, m, d] = inv.dueDate.split('-').map(Number);
+        const dueTime = new Date(y, m - 1, d, 23, 59, 59, 999).getTime();
+        const isOverdue = dueTime < now.getTime() || inv.status === 'OVERDUE';
+        const isNearDue = !isOverdue && dueTime <= sevenDaysAheadTime && uncollected > 0;
+
+        switch (effectiveFilter) {
+          case 'OUTSTANDING':
+            return inv.balanceAmount > 0;
+          case 'OVERDUE':
+            return isOverdue && uncollected > 0;
+          case 'NEARBY':
+          case 'NEAR_DUE':
+            return isNearDue;
+          case 'PENDING_COLLECTION':
+            return (
+              inv.status === 'COLLECTED' ||
+              inv.status === 'PARTIALLY_COLLECTED' ||
+              ((inv.collectedAmount || 0) > 0 && inv.status !== 'PAID')
+            );
+          case 'SETTLED':
+          case 'FULLY_SETTLED':
+            return inv.status === 'PAID' || inv.balanceAmount <= 0;
+          default:
+            return true;
+        }
+      });
     }
 
     if (filters?.customerId) {

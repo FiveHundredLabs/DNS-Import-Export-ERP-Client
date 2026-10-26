@@ -23,7 +23,7 @@ describe('Sales Representative Mobile Dashboard App View', () => {
     expect(screen.getByText(/Field Representative Hub/i)).toBeInTheDocument();
     expect(screen.getByText(/Good Day, Kasun/i)).toBeInTheDocument();
     expect(screen.getByText(/Colombo Central Territory/i)).toBeInTheDocument();
-    expect(screen.getByText('Customer Hub')).toBeInTheDocument();
+    expect(screen.getByText('Customer Collections')).toBeInTheDocument();
     expect(screen.getByText('New Order')).toBeInTheDocument();
   });
 

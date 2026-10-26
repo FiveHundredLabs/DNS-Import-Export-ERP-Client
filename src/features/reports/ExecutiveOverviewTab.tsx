@@ -47,14 +47,14 @@ export function ExecutiveOverviewTab({ kpis, salesReport }: ExecutiveOverviewTab
           value={formatCurrencyLKR(kpis.grossRevenue)}
           subtitle="Tax Invoices + Showroom POS"
           icon={TrendingUp}
-          variant="default"
+          variant="success"
         />
         <StatCard
           title="Total Collections"
           value={formatCurrencyLKR(kpis.totalCollected)}
           subtitle={`${collectionRate}% realized rate`}
           icon={CreditCard}
-          variant="success"
+          variant="blue"
         />
         <StatCard
           title="Receivables"
@@ -75,7 +75,7 @@ export function ExecutiveOverviewTab({ kpis, salesReport }: ExecutiveOverviewTab
           value={formatCurrencyLKR(kpis.totalInventoryValue)}
           subtitle="Cost basis in warehouse/showroom"
           icon={Package}
-          variant="default"
+          variant="indigo"
         />
         <StatCard
           title="Active Orders"

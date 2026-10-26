@@ -35,6 +35,12 @@ export interface Payment extends BaseEntity {
   invoiceAllocations: PaymentAllocation[];
   notes?: string;
   collectedAt: string; // ISO date string
+  handoverId?: string;
+  handoverNumber?: string;
+  handoverStatus?: 'PENDING_HANDOVER' | 'HANDED_OVER' | 'APPROVED' | 'REJECTED';
+  handedOverToUserId?: string;
+  handedOverToUserName?: string;
+  handedOverAt?: string;
   approvedById?: string;
   approvedByName?: string;
   approvedAt?: string;

@@ -70,6 +70,10 @@ export class PaymentService {
     return this.repo.getById(id);
   }
 
+  async updatePayment(id: string, updates: Partial<Payment>): Promise<Payment> {
+    return this.repo.update(id, updates);
+  }
+
   /**
    * Records payment collection from customer.
    * Section 21 & 56: Payment is placed in PENDING_APPROVAL.
@@ -199,8 +203,9 @@ export class PaymentService {
       for (const alloc of effectiveAllocations) {
         const inv = await this.invoiceSvc.getInvoiceById(alloc.invoiceId);
         if (inv) {
+          const allocAmount = alloc.allocatedAmount ?? (alloc as any).amount ?? 0;
           const currentCollected = inv.collectedAmount || 0;
-          const newCollectedAmount = currentCollected + alloc.allocatedAmount;
+          const newCollectedAmount = currentCollected + allocAmount;
           const newStatus = calculateInvoiceStatus(
             inv.totalAmount,
             inv.paidAmount,
@@ -282,15 +287,16 @@ export class PaymentService {
       for (const alloc of payment.invoiceAllocations) {
         const inv = await this.invoiceSvc.getInvoiceById(alloc.invoiceId);
         if (inv) {
-          if (alloc.allocatedAmount > inv.balanceAmount + 0.001) {
+          const allocAmount = alloc.allocatedAmount ?? (alloc as any).amount ?? 0;
+          if (allocAmount > inv.balanceAmount + 0.001) {
             throw new Error(
-              `Cannot approve payment: Allocated amount (LKR ${alloc.allocatedAmount.toLocaleString()}) exceeds invoice ${inv.invoiceNumber} current balance (LKR ${inv.balanceAmount.toLocaleString()}).`
+              `Cannot approve payment: Allocated amount (LKR ${allocAmount.toLocaleString()}) exceeds invoice ${inv.invoiceNumber} current balance (LKR ${inv.balanceAmount.toLocaleString()}).`
             );
           }
-          const newPaidAmount = inv.paidAmount + alloc.allocatedAmount;
+          const newPaidAmount = inv.paidAmount + allocAmount;
           const newBalanceAmount = Math.max(0, inv.totalAmount - newPaidAmount);
           const currentCollected = inv.collectedAmount || 0;
-          const newCollectedAmount = Math.max(0, currentCollected - alloc.allocatedAmount);
+          const newCollectedAmount = Math.max(0, currentCollected - allocAmount);
           const newStatus = calculateInvoiceStatus(
             inv.totalAmount,
             newPaidAmount,

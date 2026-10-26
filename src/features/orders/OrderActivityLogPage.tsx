@@ -109,7 +109,7 @@ export function OrderActivityLogPage() {
         <div>
           <button
             onClick={() => navigate('/orders')}
-            className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-800 transition-colors mb-1 font-medium"
+            className="hidden sm:flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-800 transition-colors mb-1 font-medium"
           >
             <ArrowLeft className="h-3.5 w-3.5" />
             Back to Sales Orders

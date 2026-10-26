@@ -37,6 +37,7 @@ import {
   Percent,
   Layers,
   Barcode,
+  Banknote,
 } from 'lucide-react';
 import { useEffect } from 'react';
 import { useAuth } from '../../hooks/useAuth';
@@ -97,6 +98,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
 
   // 2. Customers, Invoices, Payments & POS
   const customerItems: SidebarItem[] = [
+    { id: 'customer-collections', name: 'Customer Collections', path: '/payments/collect', icon: Banknote, category: 'sales' },
     { id: 'customers', name: 'Customer Master', path: '/customers', icon: Users2, category: 'customers' },
     { id: 'invoices', name: 'Invoices', path: '/invoices', icon: Receipt, category: 'sales' },
     { id: 'payments', name: 'Payments', path: '/payments', icon: CreditCard, category: 'finance' },
