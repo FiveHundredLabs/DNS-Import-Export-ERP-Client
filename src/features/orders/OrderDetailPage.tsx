@@ -7,6 +7,7 @@ import { SalesOrder, OrderStatus } from '../../types/order';
 import { Invoice } from '../../types/invoice';
 import { OrderStatusBadge } from './OrderStatusBadge';
 import { ApprovalTimeline } from '../../components/approval/ApprovalTimeline';
+import { OrderActivityTimeline } from './OrderActivityTimeline';
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import {
@@ -225,6 +226,16 @@ export function OrderDetailPage() {
           >
             <Printer className="h-3.5 w-3.5 text-slate-500" />
             Print / PDF
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigate(`/orders/${order.id}/activity-log`)}
+            className="text-xs gap-1.5 border-teal-300 text-teal-800 hover:bg-teal-50"
+          >
+            <Clock className="h-3.5 w-3.5 text-teal-600" />
+            Full Activity Log
           </Button>
 
           {/* Edit (if DRAFT) */}
@@ -661,21 +672,30 @@ export function OrderDetailPage() {
           </div>
         </div>
 
-        {/* Approval Box & Audit Timeline */}
-        <div className="border-t border-slate-200 bg-slate-50/50 p-6">
+        {/* Approval Box & Order Activity Timeline */}
+        <div className="border-t border-slate-200 bg-slate-50/50 p-4 sm:p-6">
           <div className="flex items-center justify-between mb-4">
-            <h4 className="text-sm font-semibold text-slate-700 flex items-center gap-1.5">
-              <Clock className="h-4 w-4 text-primary" />
-              Approval Timeline & State History
-            </h4>
+            <div>
+              <h4 className="text-sm font-bold text-slate-800 flex items-center gap-1.5">
+                <Clock className="h-4 w-4 text-primary" />
+                Order Activity Log &amp; Lifecycle Timeline
+              </h4>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Chronological record of approvals, modifications, reservations, dispatch, and billing.
+              </p>
+            </div>
             {order.targetApproverRole && isPendingOrSpecial && (
-              <span className="text-xs text-slate-500">
-                Pending Approval: <strong className="text-slate-800">{order.currentApproverRole || order.targetApproverRole}</strong>
+              <span className="text-xs text-amber-800 bg-amber-50 border border-amber-200 px-2 py-1 rounded-md font-semibold">
+                Pending Approval: <strong className="text-slate-900">{order.currentApproverRole || order.targetApproverRole}</strong>
               </span>
             )}
           </div>
 
-          <ApprovalTimeline history={order.approvalHistory} />
+          <OrderActivityTimeline
+            order={order}
+            compactHeader={true}
+            onOrderUpdated={(updated) => setOrder(updated)}
+          />
         </div>
       </Card>
 

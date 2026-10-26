@@ -374,8 +374,12 @@ export class OrderService {
       throw new Error(`Sales Order not found: ${id}`);
     }
 
-    if (existing.status !== 'DRAFT') {
-      throw new Error(`Only DRAFT orders can be edited. Current status is ${existing.status}.`);
+    const isPreApprovalModification =
+      ['AREA_MANAGER', 'SALES_MANAGER', 'MANAGER', 'DIRECTOR'].includes(currentUser.role) &&
+      (existing.status === 'PENDING_APPROVAL' || existing.status === 'SPECIAL_APPROVAL');
+
+    if (existing.status !== 'DRAFT' && !isPreApprovalModification) {
+      throw new Error(`Only DRAFT orders or orders pending approval can be edited. Current status is ${existing.status}.`);
     }
 
     if (currentUser.role === 'SALES_REP' && existing.salesRepId !== currentUser.id) {
@@ -417,9 +421,11 @@ export class OrderService {
       userRole: currentUser.role,
     });
 
-    const isDraft = updates.saveAsDraft !== undefined ? updates.saveAsDraft : true;
+    const isDraft = !isPreApprovalModification && (updates.saveAsDraft !== undefined ? updates.saveAsDraft : true);
     let nextStatus: OrderStatus = 'DRAFT';
-    if (!isDraft) {
+    if (isPreApprovalModification) {
+      nextStatus = existing.status;
+    } else if (!isDraft) {
       nextStatus = evalResult.isSpecialApproval ? 'SPECIAL_APPROVAL' : 'PENDING_APPROVAL';
     }
 
