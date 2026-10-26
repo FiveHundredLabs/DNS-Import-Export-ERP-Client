@@ -104,7 +104,14 @@ export function evaluateCustomerPaymentStatus(
   let overdueCount = 0;
   let totalOverdue = 0;
   let totalOutstanding = 0;
+  let totalNearDue = 0;
+  let nearDueCount = 0;
   let pendingCollectionAmount = 0;
+  let shortestNearDueDays: number | null = null;
+
+  const now = new Date();
+  const nowTime = now.getTime();
+  const sevenDaysAheadTime = nowTime + 7 * 24 * 60 * 60 * 1000;
 
   if (customerInvoices.length > 0) {
     for (const inv of customerInvoices) {
@@ -121,19 +128,48 @@ export function evaluateCustomerPaymentStatus(
 
       if (uncollected > 0) {
         openInvoicesCount++;
-        const pastDue = isPastDueDate(inv.dueDate);
+        const pastDue = isPastDueDate(inv.dueDate, now);
         if (pastDue || inv.status === 'OVERDUE') {
           overdueCount++;
           totalOverdue += uncollected;
+        } else {
+          // Check if invoice due date is approaching (within 7 days based on credit terms)
+          const [y, m, d] = inv.dueDate.split('-').map(Number);
+          const dueTime = new Date(y, m - 1, d, 23, 59, 59, 999).getTime();
+          if (dueTime <= sevenDaysAheadTime) {
+            nearDueCount++;
+            totalNearDue += uncollected;
+            const daysLeft = Math.max(1, Math.ceil((dueTime - nowTime) / (1000 * 60 * 60 * 24)));
+            if (shortestNearDueDays === null || daysLeft < shortestNearDueDays) {
+              shortestNearDueDays = daysLeft;
+            }
+          }
         }
       }
     }
   } else {
-    totalOutstanding = customer.financials?.totalOutstanding || 0;
-    totalOverdue = customer.financials?.overdue || 0;
+    totalOutstanding = customer.financials?.totalOutstanding ?? customer.outstandingBalance ?? 0;
+    totalOverdue = customer.financials?.overdue ?? customer.overdueAmount ?? 0;
+    totalNearDue = customer.financials?.nearDue ?? 0;
     openInvoicesCount = totalOutstanding > 0 ? 1 : 0;
     overdueCount = totalOverdue > 0 ? 1 : 0;
+    nearDueCount = totalNearDue > 0 ? 1 : 0;
   }
+
+  // Also factor in customer financial ledger nearDue if available
+  if (customer.financials?.nearDue && customer.financials.nearDue > 0 && totalNearDue === 0) {
+    totalNearDue = customer.financials.nearDue;
+    nearDueCount = 1;
+  }
+
+  const isNearDue = nearDueCount > 0 || totalNearDue > 0;
+  const isNearby = isNearDue; // "Nearby" = Near Due Date according to credit terms
+
+  const nearDueLabel = shortestNearDueDays !== null
+    ? `Due in ${shortestNearDueDays}d`
+    : isNearDue
+    ? 'Near Due Date'
+    : undefined;
 
   let filterStatus: 'OUTSTANDING' | 'OVERDUE' | 'PENDING_COLLECTION' | 'SETTLED' = 'SETTLED';
   let badgeLabel = 'Fully Settled';
@@ -146,6 +182,10 @@ export function evaluateCustomerPaymentStatus(
   } else if (pendingCollectionAmount > 0) {
     filterStatus = 'PENDING_COLLECTION';
     badgeLabel = 'Collection Awaiting Clearance';
+    badgeVariant = 'warning';
+  } else if (isNearDue) {
+    filterStatus = 'OUTSTANDING';
+    badgeLabel = nearDueLabel || 'Near Due Date';
     badgeVariant = 'warning';
   } else if (totalOutstanding > 0 || openInvoicesCount > 0) {
     filterStatus = 'OUTSTANDING';
@@ -161,10 +201,14 @@ export function evaluateCustomerPaymentStatus(
     openInvoicesCount,
     totalOutstanding,
     totalOverdue,
+    totalNearDue,
+    nearDueCount,
+    nearDueLabel,
+    isNearDue,
+    isNearby,
     pendingCollectionAmount,
     distanceKm: proximity.distanceKm,
     distanceLabel: proximity.label,
-    isNearby: proximity.isNearby,
   };
 }
 
@@ -205,10 +249,12 @@ export function filterCustomersByPaymentStatus(
       case 'OVERDUE':
         return meta.overdueCount > 0 || meta.totalOverdue > 0;
       case 'NEARBY':
-        return meta.isNearby;
+      case 'NEAR_DUE':
+        return meta.isNearDue || meta.isNearby || meta.totalNearDue > 0;
       case 'PENDING_COLLECTION':
         return meta.pendingCollectionAmount > 0 || meta.filterStatus === 'PENDING_COLLECTION';
       case 'SETTLED':
+      case 'FULLY_SETTLED':
         return meta.totalOutstanding <= 0 && meta.openInvoicesCount === 0;
       default:
         return true;

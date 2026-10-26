@@ -59,10 +59,10 @@ export function CustomerPaymentFilters({
     },
     {
       id: 'NEARBY',
-      label: 'Nearby',
+      label: 'Near Due',
       count: counts.nearby,
-      icon: MapPin,
-      activeClass: 'bg-white text-emerald-900 border-emerald-300 shadow-xs',
+      icon: Clock,
+      activeClass: 'bg-white text-amber-900 border-amber-300 shadow-xs',
     },
     {
       id: 'PENDING_COLLECTION',

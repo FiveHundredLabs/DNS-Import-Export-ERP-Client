@@ -77,10 +77,10 @@ export function CustomerPaymentCard({
               {customer.code}
             </span>
 
-            {meta.isNearby && (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10.5px] font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200">
-                <MapPin className="h-3 w-3 text-emerald-600" />
-                {meta.distanceLabel}
+            {meta.isNearDue && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10.5px] font-semibold bg-amber-100 text-amber-800 border border-amber-200">
+                <Clock className="h-3 w-3 text-amber-600" />
+                {meta.nearDueLabel || 'Near Due'}
               </span>
             )}
 
