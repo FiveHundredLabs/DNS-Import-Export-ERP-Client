@@ -49,8 +49,8 @@ import {
 
 export function OrderDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
   const { currentUser } = useAuth();
+  const isSalesRep = currentUser.role === 'SALES_REP';
 
   const [order, setOrder] = useState<SalesOrder | null>(null);
   const [loading, setLoading] = useState(true);
@@ -159,6 +159,10 @@ export function OrderDetailPage() {
 
   const handleFulfillmentAdvance = async (nextStatus: OrderStatus) => {
     if (!order) return;
+    if (isSalesRep) {
+      alert('Permission Denied: Sales Representatives cannot advance warehouse fulfillment or dispatch orders.');
+      return;
+    }
     try {
       setLoading(true);
       await orderService.updateFulfillmentStatus(order.id, nextStatus, currentUser);
@@ -210,7 +214,7 @@ export function OrderDetailPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <button
           onClick={() => navigate('/orders')}
-          className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-800"
+          className="hidden sm:flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-800"
         >
           <ArrowLeft className="h-3.5 w-3.5" />
           Back to Sales Orders
@@ -325,97 +329,103 @@ export function OrderDetailPage() {
             </Button>
           )}
 
-          {/* Operational Pipeline Advance Buttons */}
-          {order.status === 'APPROVED' && (
-            <Button
-              size="sm"
-              onClick={() => handleFulfillmentAdvance('PICKING')}
-              className="bg-primary hover:bg-primary-hover text-primary-foreground text-xs gap-1.5"
-            >
-              <Boxes className="h-3.5 w-3.5" />
-              Start Picking
-            </Button>
-          )}
-
-          {order.status === 'PICKING' && (
-            <Button
-              size="sm"
-              onClick={() => handleFulfillmentAdvance('ISSUED')}
-              className="bg-primary hover:bg-primary-hover text-primary-foreground text-xs gap-1.5"
-            >
-              <PackageCheck className="h-3.5 w-3.5" />
-              Issue Goods
-            </Button>
-          )}
-
-          {order.status === 'PARTIALLY_ISSUED' && (
+          {/* Operational Pipeline Advance Buttons (Restricted: Sales Reps cannot pick, issue, invoice, or dispatch orders) */}
+          {!isSalesRep && (
             <>
-              <Button
-                size="sm"
-                onClick={() => handleFulfillmentAdvance('ISSUED')}
-                className="bg-primary hover:bg-primary-hover text-primary-foreground text-xs gap-1.5"
-              >
-                <PackageCheck className="h-3.5 w-3.5" />
-                Complete Issue
-              </Button>
-              <Button
-                size="sm"
-                onClick={handleGenerateInvoice}
-                className="bg-purple-600 hover:bg-purple-700 text-white text-xs gap-1.5"
-              >
-                <FileText className="h-3.5 w-3.5" />
-                Invoice Partial
-              </Button>
+              {order.status === 'APPROVED' && (
+                <Button
+                  size="sm"
+                  onClick={() => handleFulfillmentAdvance('PICKING')}
+                  className="bg-primary hover:bg-primary-hover text-primary-foreground text-xs gap-1.5"
+                >
+                  <Boxes className="h-3.5 w-3.5" />
+                  Start Picking
+                </Button>
+              )}
+
+              {order.status === 'PICKING' && (
+                <Button
+                  size="sm"
+                  onClick={() => handleFulfillmentAdvance('ISSUED')}
+                  className="bg-primary hover:bg-primary-hover text-primary-foreground text-xs gap-1.5"
+                >
+                  <PackageCheck className="h-3.5 w-3.5" />
+                  Issue Goods
+                </Button>
+              )}
+
+              {order.status === 'PARTIALLY_ISSUED' && (
+                <>
+                  <Button
+                    size="sm"
+                    onClick={() => handleFulfillmentAdvance('ISSUED')}
+                    className="bg-primary hover:bg-primary-hover text-primary-foreground text-xs gap-1.5"
+                  >
+                    <PackageCheck className="h-3.5 w-3.5" />
+                    Complete Issue
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={handleGenerateInvoice}
+                    className="bg-purple-600 hover:bg-purple-700 text-white text-xs gap-1.5"
+                  >
+                    <FileText className="h-3.5 w-3.5" />
+                    Invoice Partial
+                  </Button>
+                </>
+              )}
+
+              {order.status === 'ISSUED' && (
+                <Button
+                  size="sm"
+                  onClick={handleGenerateInvoice}
+                  className="bg-purple-600 hover:bg-purple-700 text-white text-xs gap-1.5 shadow-sm"
+                >
+                  <FileText className="h-3.5 w-3.5" />
+                  Generate Tax Invoice
+                </Button>
+              )}
+
+              {order.status === 'INVOICED' && (
+                <Button
+                  size="sm"
+                  onClick={() => handleFulfillmentAdvance('DISPATCHED')}
+                  className="bg-teal-600 hover:bg-teal-700 text-white text-xs gap-1.5"
+                >
+                  <Truck className="h-3.5 w-3.5" />
+                  Dispatch Order
+                </Button>
+              )}
+
+              {order.status === 'DISPATCHED' && (
+                <Button
+                  size="sm"
+                  onClick={() => handleFulfillmentAdvance('DELIVERED')}
+                  className="bg-emerald-700 hover:bg-emerald-800 text-white text-xs gap-1.5"
+                >
+                  <CheckCircle className="h-3.5 w-3.5" />
+                  Mark Delivered
+                </Button>
+              )}
             </>
           )}
 
-          {order.status === 'ISSUED' && (
+          {/* View Tax Invoice link is visible to everyone (including Sales Rep) once invoiced */}
+          {order.status === 'INVOICED' && (
             <Button
               size="sm"
-              onClick={handleGenerateInvoice}
-              className="bg-purple-600 hover:bg-purple-700 text-white text-xs gap-1.5 shadow-sm"
+              variant="outline"
+              onClick={() => {
+                if (orderInvoice) {
+                  navigate(`/invoices/${orderInvoice.id}`);
+                } else {
+                  navigate(`/invoices?search=${encodeURIComponent(order.orderNumber)}`);
+                }
+              }}
+              className="border-primary-border text-primary-text hover:bg-primary-light text-xs gap-1.5 font-semibold"
             >
               <FileText className="h-3.5 w-3.5" />
-              Generate Tax Invoice
-            </Button>
-          )}
-
-          {order.status === 'INVOICED' && (
-            <>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => {
-                  if (orderInvoice) {
-                    navigate(`/invoices/${orderInvoice.id}`);
-                  } else {
-                    navigate(`/invoices?search=${encodeURIComponent(order.orderNumber)}`);
-                  }
-                }}
-                className="border-primary-border text-primary-text hover:bg-primary-light text-xs gap-1.5 font-semibold"
-              >
-                <FileText className="h-3.5 w-3.5" />
-                View Tax Invoice
-              </Button>
-              <Button
-                size="sm"
-                onClick={() => handleFulfillmentAdvance('DISPATCHED')}
-                className="bg-teal-600 hover:bg-teal-700 text-white text-xs gap-1.5"
-              >
-                <Truck className="h-3.5 w-3.5" />
-                Dispatch Order
-              </Button>
-            </>
-          )}
-
-          {order.status === 'DISPATCHED' && (
-            <Button
-              size="sm"
-              onClick={() => handleFulfillmentAdvance('DELIVERED')}
-              className="bg-emerald-700 hover:bg-emerald-800 text-white text-xs gap-1.5"
-            >
-              <CheckCircle className="h-3.5 w-3.5" />
-              Mark Delivered
+              View Tax Invoice
             </Button>
           )}
         </div>

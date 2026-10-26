@@ -5,6 +5,7 @@ import { AmountDisplay } from '../../components/common/AmountDisplay';
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
+import { CustomerPaymentsTab } from '../payments/CustomerPaymentsTab';
 import {
   Users,
   Target,
@@ -17,6 +18,7 @@ import {
   ArrowRight,
   ShieldAlert,
   CreditCard,
+  Banknote,
   Phone,
   MessageSquare,
   Search,
@@ -60,7 +62,7 @@ interface OrderTrackingItem {
 
 export function SalesRepDashboard() {
   // Mobile app view states
-  const [mobileTab, setMobileTab] = useState<'all' | 'receivables' | 'orders'>('all');
+  const [mobileTab, setMobileTab] = useState<'all' | 'collections' | 'receivables' | 'orders'>('all');
   const [receivablesFilter, setReceivablesFilter] = useState<'all' | 'overdue' | 'current'>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -195,18 +197,17 @@ export function SalesRepDashboard() {
             </div>
           </div>
 
-          {/* Right: Quick Action Buttons (Customer Hub & New Order) */}
-          <div className="flex items-center gap-2 pt-1 md:pt-0 shrink-0">
-            <Link to="/customers" className="flex-1 md:flex-none">
+          {/* Right: Quick Action Buttons (Customer Collections & New Order) */}
+          <div className="grid grid-cols-2 md:flex md:items-center gap-2 pt-1 md:pt-0 shrink-0 w-full md:w-auto">
+            <Link to="/payments/collect" className="w-full md:w-auto">
               <Button
                 size="sm"
-                variant="outline"
-                className="w-full md:w-auto h-10 md:h-9 gap-1.5 text-xs bg-white/10 md:bg-white text-white md:text-slate-700 border-white/30 md:border-slate-200 hover:bg-white/20 md:hover:bg-slate-50 font-semibold rounded-xl shadow-2xs active:scale-[0.98]"
+                className="w-full md:w-auto h-10 md:h-9 gap-1.5 text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-xs active:scale-[0.98] border-0"
               >
-                <Users className="h-4 w-4 md:h-3.5 md:w-3.5 text-white md:text-primary" /> Customer Hub
+                <Banknote className="h-4 w-4 md:h-3.5 md:w-3.5" /> Customer Collections
               </Button>
             </Link>
-            <Link to="/orders" className="flex-1 md:flex-none">
+            <Link to="/orders" className="w-full md:w-auto">
               <Button
                 size="sm"
                 className="w-full md:w-auto h-10 md:h-9 gap-1.5 text-xs bg-white md:bg-primary text-primary md:text-primary-foreground hover:bg-white/90 md:hover:bg-primary-hover font-bold md:font-semibold rounded-xl shadow-xs active:scale-[0.98] border-0"
@@ -241,22 +242,35 @@ export function SalesRepDashboard() {
 
       {/* 2. Mobile Dashboard Tab Navigation (Sticky Top View Switcher for Field Reps) */}
       <div className="block md:hidden sticky top-0 z-20 -mx-3.5 px-3 sm:-mx-5 sm:px-5 py-2 bg-canvas/95 backdrop-blur-md border-b border-slate-200/80 shadow-2xs">
-        <div className="grid grid-cols-3 gap-1 p-1 rounded-2xl bg-slate-200/75 border border-slate-200/90 shadow-inner">
+        <div className="grid grid-cols-4 gap-1 p-1 rounded-2xl bg-slate-200/75 border border-slate-200/90 shadow-inner">
           <button
             type="button"
             onClick={() => setMobileTab('all')}
             aria-label="All Overview"
             className={cn(
-              'group w-full min-w-0 flex items-center justify-center gap-1 sm:gap-1.5 py-2 px-1 text-center text-xs font-bold rounded-xl transition-all duration-150 select-none min-h-[38px]',
+              'group w-full min-w-0 flex items-center justify-center gap-1 py-2 px-0.5 text-center text-xs font-bold rounded-xl transition-all duration-150 select-none min-h-[38px]',
               mobileTab === 'all'
                 ? 'bg-white text-slate-900 shadow-xs border border-slate-200/80'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-white/40 active:bg-white/60 active:scale-[0.98]'
             )}
           >
             <LayoutGrid className={cn('h-3.5 w-3.5 shrink-0 transition-colors', mobileTab === 'all' ? 'text-primary' : 'text-slate-400 group-hover:text-slate-600')} />
-            <span className="truncate">
-              <span className="hidden min-[380px]:inline">All </span>Overview
-            </span>
+            <span className="truncate">Overview</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setMobileTab('collections')}
+            aria-label="Customer Collections"
+            className={cn(
+              'group w-full min-w-0 flex items-center justify-center gap-1 py-2 px-0.5 text-center text-xs font-bold rounded-xl transition-all duration-150 select-none min-h-[38px]',
+              mobileTab === 'collections'
+                ? 'bg-white text-blue-900 shadow-xs border border-slate-200/80'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-white/40 active:bg-white/60 active:scale-[0.98]'
+            )}
+          >
+            <Banknote className={cn('h-3.5 w-3.5 shrink-0 transition-colors', mobileTab === 'collections' ? 'text-blue-600' : 'text-slate-400 group-hover:text-slate-600')} />
+            <span className="truncate">Collect</span>
           </button>
 
           <button
@@ -264,7 +278,7 @@ export function SalesRepDashboard() {
             onClick={() => setMobileTab('receivables')}
             aria-label={`Receivables (${pendingAccounts.length})`}
             className={cn(
-              'group w-full min-w-0 flex items-center justify-center gap-1 sm:gap-1.5 py-2 px-1 text-center text-xs font-bold rounded-xl transition-all duration-150 select-none min-h-[38px]',
+              'group w-full min-w-0 flex items-center justify-center gap-1 py-2 px-0.5 text-center text-xs font-bold rounded-xl transition-all duration-150 select-none min-h-[38px]',
               mobileTab === 'receivables'
                 ? 'bg-white text-emerald-900 shadow-xs border border-slate-200/80'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-white/40 active:bg-white/60 active:scale-[0.98]'
@@ -272,12 +286,6 @@ export function SalesRepDashboard() {
           >
             <CreditCard className={cn('h-3.5 w-3.5 shrink-0 transition-colors', mobileTab === 'receivables' ? 'text-emerald-600' : 'text-slate-400 group-hover:text-slate-600')} />
             <span className="truncate">Receivables</span>
-            <span className={cn(
-              'shrink-0 text-[10.5px] font-bold transition-opacity',
-              mobileTab === 'receivables' ? 'text-emerald-700' : 'text-slate-500'
-            )}>
-              ({pendingAccounts.length})
-            </span>
           </button>
 
           <button
@@ -285,22 +293,14 @@ export function SalesRepDashboard() {
             onClick={() => setMobileTab('orders')}
             aria-label={`Live Orders (${recentOrders.length})`}
             className={cn(
-              'group w-full min-w-0 flex items-center justify-center gap-1 sm:gap-1.5 py-2 px-1 text-center text-xs font-bold rounded-xl transition-all duration-150 select-none min-h-[38px]',
+              'group w-full min-w-0 flex items-center justify-center gap-1 py-2 px-0.5 text-center text-xs font-bold rounded-xl transition-all duration-150 select-none min-h-[38px]',
               mobileTab === 'orders'
                 ? 'bg-white text-primary shadow-xs border border-slate-200/80'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-white/40 active:bg-white/60 active:scale-[0.98]'
             )}
           >
             <Clock className={cn('h-3.5 w-3.5 shrink-0 transition-colors', mobileTab === 'orders' ? 'text-primary' : 'text-slate-400 group-hover:text-slate-600')} />
-            <span className="truncate">
-              <span className="hidden min-[380px]:inline">Live </span>Orders
-            </span>
-            <span className={cn(
-              'shrink-0 text-[10.5px] font-bold transition-opacity',
-              mobileTab === 'orders' ? 'text-primary' : 'text-slate-500'
-            )}>
-              ({recentOrders.length})
-            </span>
+            <span className="truncate">Orders</span>
           </button>
         </div>
       </div>
@@ -336,7 +336,7 @@ export function SalesRepDashboard() {
             </Link>
 
             {/* 3. Collect Payment */}
-            <Link to="/payments" className="flex flex-col items-center group active:scale-95 transition-transform">
+            <Link to="/payments/collect" className="flex flex-col items-center group active:scale-95 transition-transform">
               <div className="h-12 w-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center shadow-2xs group-hover:bg-blue-600 group-hover:text-white transition-colors">
                 <CreditCard className="h-6 w-6" />
               </div>
@@ -572,6 +572,13 @@ export function SalesRepDashboard() {
         </div>
       )}
 
+      {/* 4. Dedicated Customer Collections Tab View (when 'collections' tab is selected) */}
+      {mobileTab === 'collections' && (
+        <div className="bg-white rounded-3xl p-4 sm:p-6 border border-slate-200/80 shadow-xs">
+          <CustomerPaymentsTab />
+        </div>
+      )}
+
       {/* 5. Main Dashboard Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
         {/* Pending Payments & Route Receivables (Formatted as native Mobile App Cards on phone screens) */}
@@ -587,9 +594,9 @@ export function SalesRepDashboard() {
                   Outstanding balances for your assigned territory accounts requiring field collection.
                 </p>
               </div>
-              <Link to="/payments">
+              <Link to="/payments/collect">
                 <Button variant="ghost" size="sm" className="text-xs text-primary gap-1 font-semibold hover:bg-primary-light">
-                  All Payments <ArrowRight className="h-3 w-3" />
+                  All Collections <ArrowRight className="h-3 w-3" />
                 </Button>
               </Link>
             </CardHeader>
@@ -711,7 +718,7 @@ export function SalesRepDashboard() {
 
                         {/* Collect Payment Button */}
                         <Link
-                          to={`/payments/new?customerId=${pending.id}&amount=${pending.amount}`}
+                          to={`/payments/collect/${pending.id}`}
                           className="flex-1 sm:flex-none"
                         >
                           <Button

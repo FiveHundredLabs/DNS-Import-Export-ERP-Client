@@ -28,6 +28,8 @@ import { InvoiceDetailPage } from './features/invoices/InvoiceDetailPage';
 import { PaymentListPage } from './features/payments/PaymentListPage';
 import { PaymentCollectionPage } from './features/payments/PaymentCollectionPage';
 import { PaymentDetailPage } from './features/payments/PaymentDetailPage';
+import { CustomerPaymentDetailPage } from './features/payments/CustomerPaymentDetailPage';
+import { CustomerPaymentsTab } from './features/payments/CustomerPaymentsTab';
 import { ShowroomPOSTerminal } from './features/pos/ShowroomPOSTerminal';
 import { POSTransactionHistoryPage } from './features/pos/POSTransactionHistoryPage';
 import { POSSessionsPage } from './features/pos/POSSessionsPage';
@@ -303,6 +305,38 @@ export function App() {
           element={
             <ProtectedRoute>
               <PaymentListPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="payments/collect"
+          element={
+            <ProtectedRoute>
+              <CustomerPaymentsTab />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="payments/collect/:customerId"
+          element={
+            <ProtectedRoute>
+              <CustomerPaymentDetailPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="payments/customer/:customerId"
+          element={
+            <ProtectedRoute>
+              <CustomerPaymentDetailPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="customers/:customerId/pay"
+          element={
+            <ProtectedRoute>
+              <CustomerPaymentDetailPage />
             </ProtectedRoute>
           }
         />
