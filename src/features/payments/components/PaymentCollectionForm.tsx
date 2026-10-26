@@ -47,8 +47,6 @@ export function PaymentCollectionForm({
     { id: 'CREDIT_CARD', label: 'Card', icon: CreditCard },
   ];
 
-  const presets = [10000, 25000, 50000, 100000];
-
   return (
     <div className={cn('bg-white rounded-2xl border border-slate-200/90 p-3 sm:p-4 shadow-xs space-y-3', className)}>
       <div className="flex items-center justify-between pb-1 border-b border-slate-100">
@@ -69,50 +67,21 @@ export function PaymentCollectionForm({
           </span>
           <input
             type="number"
-            min="1"
+            min="0"
             step="any"
-            value={amount}
+            value={amount === '' ? '' : amount}
             onChange={(e) => {
               const val = e.target.value === '' ? '' : parseFloat(e.target.value);
               onAmountChange(isNaN(val as number) ? '' : val);
             }}
+            onFocus={(e) => {
+              if (amount === 0) {
+                e.target.select();
+              }
+            }}
             placeholder="0.00"
             className="w-full h-10 pl-11 pr-3 rounded-xl bg-slate-50 border border-slate-200 text-base sm:text-lg font-extrabold text-slate-900 placeholder-slate-300 focus:outline-none focus:ring-2 focus:ring-primary focus:bg-white transition-all tabular-nums"
           />
-        </div>
-
-        {/* Quick Fill Buttons for Field Rep Speed */}
-        <div className="flex items-center gap-1.5 mt-1.5 overflow-x-auto pb-1 scrollbar-none [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden -mx-0.5 px-0.5">
-          {totalOutstanding > 0 && (
-            <button
-              type="button"
-              onClick={() => onAmountChange(totalOutstanding)}
-              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10.5px] font-bold bg-primary-light text-primary-text border border-primary-border hover:bg-primary-light/80 active:scale-95 transition-all shrink-0"
-            >
-              <Sparkles className="h-3 w-3 text-primary" /> Full Due ({totalOutstanding.toLocaleString()})
-            </button>
-          )}
-
-          {totalOverdue > 0 && totalOverdue !== totalOutstanding && (
-            <button
-              type="button"
-              onClick={() => onAmountChange(totalOverdue)}
-              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10.5px] font-bold bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 active:scale-95 transition-all shrink-0"
-            >
-              Overdue ({totalOverdue.toLocaleString()})
-            </button>
-          )}
-
-          {presets.map((p) => (
-            <button
-              key={p}
-              type="button"
-              onClick={() => onAmountChange(p)}
-              className="px-2 py-0.5 rounded-lg text-[10.5px] font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200 active:scale-95 transition-all shrink-0 tabular-nums"
-            >
-              {p >= 1000 ? `${p / 1000}k` : p}
-            </button>
-          ))}
         </div>
       </div>
 

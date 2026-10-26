@@ -59,8 +59,8 @@ export function CustomerPaymentDetailPage() {
   const [loading, setLoading] = useState(true);
   const [showCustomerDetails, setShowCustomerDetails] = useState(false);
 
-  // Form State
-  const [amount, setAmount] = useState<number | ''>('');
+  // Form State (Default amount starts at 0 per user requirement)
+  const [amount, setAmount] = useState<number | ''>(0);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('CASH');
   const [chequeNumber, setChequeNumber] = useState('');
   const [chequeDate, setChequeDate] = useState('');
@@ -87,18 +87,6 @@ export function CustomerPaymentDetailPage() {
       setCustomer(cust);
       setInvoices(invs);
       setPaymentHistory(pmts.data);
-
-      // Pre-fill amount with overdue if overdue exists, or first outstanding invoice
-      const activeInvs = invs.filter((i) => {
-        const uncollected = Math.max(0, i.balanceAmount - (i.collectedAmount || 0));
-        return uncollected > 0 && i.status !== 'CANCELLED' && i.status !== 'DRAFT';
-      });
-
-      if (activeInvs.length > 0 && amount === '') {
-        // Default to total outstanding
-        const totalOut = activeInvs.reduce((acc, i) => acc + Math.max(0, i.balanceAmount - (i.collectedAmount || 0)), 0);
-        setAmount(totalOut);
-      }
     } catch (err) {
       console.error('Failed to load customer payment details:', err);
       toast.error('Could not load customer payment data.');
