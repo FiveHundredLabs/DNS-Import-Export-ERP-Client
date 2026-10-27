@@ -78,3 +78,49 @@ export interface StockTransfer {
   dispatchedAt?: string;
   receivedAt?: string;
 }
+
+export type StockBatchStatus = 'ACTIVE' | 'DEPLETED' | 'HOLD' | 'EXPIRED';
+
+export interface StockBatch {
+  id: string;
+  batchNumber: string;
+  productId: string;
+  productName?: string;
+  sku?: string;
+  grnId?: string;
+  grnNumber?: string;
+  warehouseId: string;
+  receivedDate: string; // YYYY-MM-DD
+  initialQuantity: number;
+  availableQuantity: number;
+  quantityOnHand?: number;
+  allocatedQuantity?: number;
+  unitCost: number; // True landed cost per unit
+  sellingPrice: number; // Current batch selling price
+  status: StockBatchStatus;
+}
+
+export type PriceStrategyType = 'PRESERVE_BATCH' | 'STANDARDIZE_UNIFORM';
+
+export interface ProductSellingPriceHistory {
+  id: string;
+  productId: string;
+  productName?: string;
+  sku?: string;
+  productSku?: string;
+  batchId?: string;
+  batchNumber?: string;
+  oldPrice: number;
+  newPrice: number;
+  previousSellingPrice?: number;
+  newSellingPrice?: number;
+  strategy: PriceStrategyType;
+  strategyApplied?: string;
+  changeReason: string;
+  reason?: string;
+  changedBy: string;
+  changedByName?: string;
+  changedAt: string; // ISO date string
+  affectedBatchCount?: number;
+}
+

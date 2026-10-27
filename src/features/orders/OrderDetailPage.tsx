@@ -3,13 +3,17 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { orderService } from '../../services/OrderService';
 import { invoiceService } from '../../services/InvoiceService';
+import { customerService } from '../../services/CustomerService';
 import { SalesOrder, OrderStatus } from '../../types/order';
 import { Invoice } from '../../types/invoice';
+import { Customer } from '../../types/customer';
+import { normalizeCustomerLoyaltyLevel } from '../../rules/discountRules';
 import { OrderStatusBadge } from './OrderStatusBadge';
 import { ApprovalTimeline } from '../../components/approval/ApprovalTimeline';
 import { OrderActivityTimeline } from './OrderActivityTimeline';
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
+import { Badge } from '../../components/ui/badge';
 import {
   Dialog,
   DialogContent,
@@ -49,6 +53,7 @@ import {
 
 export function OrderDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const { currentUser } = useAuth();
   const isSalesRep = currentUser.role === 'SALES_REP';
 
@@ -56,10 +61,11 @@ export function OrderDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [orderInvoice, setOrderInvoice] = useState<Invoice | null>(null);
+  const [customer, setCustomer] = useState<Customer | null>(null);
 
   // Dialog state
   const [actionType, setActionType] = useState<
-    'APPROVE' | 'REJECT' | 'ESCALATE_MANAGER' | 'ESCALATE_DIRECTOR' | 'CANCEL' | null
+    'APPROVE' | 'REJECT' | 'ESCALATE_SALES_MANAGER' | 'ESCALATE_MANAGER' | 'ESCALATE_DIRECTOR' | 'CANCEL' | null
   >(null);
   const [actionComment, setActionComment] = useState('');
   const [isActionSubmitting, setIsActionSubmitting] = useState(false);
@@ -78,6 +84,13 @@ export function OrderDetailPage() {
         setError('Sales Order not found.');
       } else {
         setOrder(data);
+        // Load full customer details for loyalty tier & terms
+        try {
+          const cust = await customerService.getCustomer(data.customerId);
+          if (cust) setCustomer(cust);
+        } catch {
+          // ignore
+        }
         // Check if an invoice exists for this order
         try {
           const invs = await invoiceService.getInvoices({ search: data.orderNumber });
@@ -98,11 +111,11 @@ export function OrderDetailPage() {
     fetchOrder();
   }, [id, currentUser]);
 
-  const handleGenerateInvoice = async () => {
+  const handleGenerateInvoice = async (asDraft: boolean = true) => {
     if (!order) return;
     try {
       setLoading(true);
-      const invoice = await invoiceService.createInvoiceFromOrder(order.id, currentUser);
+      const invoice = await invoiceService.createInvoiceFromOrder(order.id, currentUser, { asDraft });
       navigate(`/invoices/${invoice.id}`);
     } catch (err: unknown) {
       alert(err instanceof Error ? err.message : 'Invoice generation failed.');
@@ -140,6 +153,13 @@ export function OrderDetailPage() {
         );
       } else if (actionType === 'REJECT') {
         await orderService.rejectOrder(order.id, currentUser, actionComment);
+      } else if (actionType === 'ESCALATE_SALES_MANAGER') {
+        await orderService.escalateOrder(
+          order.id,
+          currentUser,
+          'SALES_MANAGER',
+          actionComment || 'Reviewed by Area Manager and forwarded to Sales Manager.'
+        );
       } else if (actionType === 'ESCALATE_MANAGER') {
         await orderService.escalateOrder(order.id, currentUser, 'MANAGER', actionComment);
       } else if (actionType === 'ESCALATE_DIRECTOR') {
@@ -292,6 +312,18 @@ export function OrderDetailPage() {
           )}
 
           {/* Escalation Options */}
+          {allowedEscalations.includes('SALES_MANAGER') && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setActionType('ESCALATE_SALES_MANAGER')}
+              className="text-primary-text border-primary-border hover:bg-primary-light text-xs gap-1.5"
+            >
+              <ArrowUpRight className="h-3.5 w-3.5 text-primary" />
+              Review & Forward to Sales Manager
+            </Button>
+          )}
+
           {allowedEscalations.includes('MANAGER') && (
             <Button
               variant="outline"
@@ -333,15 +365,26 @@ export function OrderDetailPage() {
           {!isSalesRep && (
             <>
               {order.status === 'APPROVED' && (
-                <Button
-                  size="sm"
-                  onClick={() => handleFulfillmentAdvance('PICKING')}
-                  className="bg-primary hover:bg-primary-hover text-primary-foreground text-xs gap-1.5"
-                >
-                  <Boxes className="h-3.5 w-3.5" />
-                  Start Picking
-                </Button>
+                <>
+                  <Button
+                    size="sm"
+                    onClick={() => handleFulfillmentAdvance('PICKING')}
+                    className="bg-primary hover:bg-primary-hover text-primary-foreground text-xs gap-1.5"
+                  >
+                    <Boxes className="h-3.5 w-3.5" />
+                    Start Picking
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={() => handleGenerateInvoice(true)}
+                    className="bg-purple-600 hover:bg-purple-700 text-white text-xs gap-1.5 shadow-sm"
+                  >
+                    <FileText className="h-3.5 w-3.5" />
+                    Convert to Draft Invoice
+                  </Button>
+                </>
               )}
+
 
               {order.status === 'PICKING' && (
                 <Button
@@ -366,11 +409,11 @@ export function OrderDetailPage() {
                   </Button>
                   <Button
                     size="sm"
-                    onClick={handleGenerateInvoice}
+                    onClick={() => handleGenerateInvoice(true)}
                     className="bg-purple-600 hover:bg-purple-700 text-white text-xs gap-1.5"
                   >
                     <FileText className="h-3.5 w-3.5" />
-                    Invoice Partial
+                    Invoice Partial (Draft)
                   </Button>
                 </>
               )}
@@ -378,11 +421,11 @@ export function OrderDetailPage() {
               {order.status === 'ISSUED' && (
                 <Button
                   size="sm"
-                  onClick={handleGenerateInvoice}
+                  onClick={() => handleGenerateInvoice(true)}
                   className="bg-purple-600 hover:bg-purple-700 text-white text-xs gap-1.5 shadow-sm"
                 >
                   <FileText className="h-3.5 w-3.5" />
-                  Generate Tax Invoice
+                  Convert to Draft Invoice
                 </Button>
               )}
 
@@ -525,9 +568,29 @@ export function OrderDetailPage() {
               Customer Snapshot
             </h4>
             <div className="space-y-1 text-xs">
-              <div className="font-semibold text-slate-900">{order.customerNameSnapshot}</div>
+              <div className="font-semibold text-slate-900 flex items-center justify-between">
+                <span>{order.customerNameSnapshot}</span>
+                <Badge
+                  variant={
+                    (customer ? normalizeCustomerLoyaltyLevel(customer) : 'NEW') === 'PLATINUM'
+                      ? 'purple'
+                      : (customer ? normalizeCustomerLoyaltyLevel(customer) : 'NEW') === 'PREMIUM'
+                      ? 'info'
+                      : 'secondary'
+                  }
+                  className="text-[10px] font-bold"
+                >
+                  Loyalty: {customer ? normalizeCustomerLoyaltyLevel(customer) : 'NEW'}
+                </Badge>
+              </div>
               <div className="text-slate-500 font-mono">Code: {order.customerCodeSnapshot}</div>
               <div className="text-slate-600">{order.customerPhoneSnapshot}</div>
+              <div className="text-[11px] text-slate-500 mt-1">
+                Standard Permitted Discount:{' '}
+                <strong className="text-slate-800">
+                  {customer?.commercialTerms?.defaultDiscountPercentage ?? 5}%
+                </strong>
+              </div>
               {order.customerAddressSnapshot && (
                 <div className="text-slate-500 text-xs mt-1">{order.customerAddressSnapshot}</div>
               )}
@@ -596,66 +659,89 @@ export function OrderDetailPage() {
                   <th className="py-2.5 px-3 text-center font-semibold">Ordered</th>
                   <th className="py-2.5 px-3 text-center font-semibold">Approved</th>
                   <th className="py-2.5 px-3 text-center font-semibold">Issued</th>
-                  <th className="py-2.5 px-3 text-center font-semibold">Disc %</th>
-                  <th className="py-2.5 px-3 text-right font-semibold">Disc Amount</th>
+                  <th className="py-2.5 px-3 text-center font-semibold">Requested vs Permitted Disc</th>
+                  <th className="py-2.5 px-3 text-right font-semibold">Margin Impact</th>
                   <th className="py-2.5 px-4 text-right font-semibold">Line Total</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {order.items.map((it) => (
-                  <tr key={it.id} className="hover:bg-slate-50/60">
-                    <td className="py-3 px-4">
-                      <div className="font-semibold text-slate-900">{it.productNameSnapshot}</div>
-                      <div className="text-xs text-slate-400 font-mono">
-                        {it.skuSnapshot} {it.uomSnapshot && `• ${it.uomSnapshot}`}
-                      </div>
-                      {it.requiresSpecialApproval && (
-                        <span className="inline-block mt-1 text-xs text-amber-800 bg-amber-100 px-1.5 py-0.5 rounded font-medium">
-                          {it.specialApprovalReason || 'Excess discount'}
+                {order.items.map((it) => {
+                  const permittedDisc = customer?.commercialTerms?.defaultDiscountPercentage ?? 5;
+                  const isExcess = it.discountPercentage > permittedDisc;
+                  const netUnit = it.unitPriceSnapshot * (1 - it.discountPercentage / 100);
+                  const estCost = it.unitPriceSnapshot * 0.70;
+                  const marginAmt = netUnit - estCost;
+                  const marginPct = netUnit > 0 ? (marginAmt / netUnit) * 100 : 0;
+
+                  return (
+                    <tr key={it.id} className="hover:bg-slate-50/60">
+                      <td className="py-3 px-4">
+                        <div className="font-semibold text-slate-900">{it.productNameSnapshot}</div>
+                        <div className="text-xs text-slate-400 font-mono">
+                          {it.skuSnapshot} {it.uomSnapshot && `• ${it.uomSnapshot}`}
+                        </div>
+                        {it.requiresSpecialApproval && (
+                          <span className="inline-block mt-1 text-xs text-amber-800 bg-amber-100 px-1.5 py-0.5 rounded font-medium">
+                            {it.specialApprovalReason || 'Excess discount'}
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-3 px-3 text-right font-mono text-slate-700 tabular-nums">
+                        {formatCurrency(it.unitPriceSnapshot)}
+                      </td>
+                      <td className="py-3 px-3 text-center font-semibold text-slate-900 tabular-nums">
+                        {it.orderedQuantity}
+                      </td>
+                      <td className="py-3 px-3 text-center text-slate-700 tabular-nums">
+                        {it.approvedQuantity}
+                      </td>
+                      <td className="py-3 px-3 text-center text-slate-700 tabular-nums">
+                        {it.issuedQuantity}
+                      </td>
+                      <td className="py-3 px-3 text-center font-medium tabular-nums">
+                        <div className="font-semibold text-slate-900">{it.discountPercentage}%</div>
+                        <span className="text-[10px] text-slate-400 block font-normal">
+                          Permitted: {permittedDisc}%
                         </span>
-                      )}
-                    </td>
-                    <td className="py-3 px-3 text-right font-mono text-slate-700 tabular-nums">
-                      {formatCurrency(it.unitPriceSnapshot)}
-                    </td>
-                    <td className="py-3 px-3 text-center font-semibold text-slate-900 tabular-nums">
-                      {it.orderedQuantity}
-                    </td>
-                    <td className="py-3 px-3 text-center text-slate-700 tabular-nums">
-                      {it.approvedQuantity}
-                    </td>
-                    <td className="py-3 px-3 text-center text-slate-700 tabular-nums">
-                      {it.issuedQuantity}
-                    </td>
-                    <td className="py-3 px-3 text-center font-medium tabular-nums">
-                      <div>{it.discountPercentage}%</div>
-                      {it.discountApprovalStatus === 'PENDING_APPROVAL' && (
-                        <span className="inline-block text-[10px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5 mt-0.5 whitespace-nowrap">
-                          Pending Management Approval
+                        {isExcess && (
+                          <span className="inline-block text-[9.5px] font-bold text-amber-800 bg-amber-50 border border-amber-300 rounded px-1 py-0.5 mt-0.5 whitespace-nowrap">
+                            +{it.discountPercentage - permittedDisc}% Excess
+                          </span>
+                        )}
+                        {it.discountApprovalStatus === 'PENDING_APPROVAL' && (
+                          <span className="inline-block text-[10px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5 mt-0.5 whitespace-nowrap">
+                            Pending Management Approval
+                          </span>
+                        )}
+                        {it.discountApprovalStatus === 'APPROVED' && (
+                          <span className="inline-block text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded px-1.5 py-0.5 mt-0.5 whitespace-nowrap">
+                            Discount Approved
+                          </span>
+                        )}
+                        {it.discountApprovalStatus === 'REJECTED' && (
+                          <span className="inline-block text-[10px] font-semibold text-rose-700 bg-rose-50 border border-rose-200 rounded px-1.5 py-0.5 mt-0.5 whitespace-nowrap">
+                            Discount Rejected
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-3 px-3 text-right tabular-nums">
+                        <span className={`font-semibold text-xs ${marginPct >= 20 ? 'text-emerald-700' : 'text-amber-700'}`}>
+                          {marginPct.toFixed(1)}%
                         </span>
-                      )}
-                      {it.discountApprovalStatus === 'APPROVED' && (
-                        <span className="inline-block text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded px-1.5 py-0.5 mt-0.5 whitespace-nowrap">
-                          Discount Approved
+                        <span className="block text-[10px] text-slate-400 font-mono">
+                          {formatCurrency(marginAmt * (it.orderedQuantity || 1))}
                         </span>
-                      )}
-                      {it.discountApprovalStatus === 'REJECTED' && (
-                        <span className="inline-block text-[10px] font-semibold text-rose-700 bg-rose-50 border border-rose-200 rounded px-1.5 py-0.5 mt-0.5 whitespace-nowrap">
-                          Discount Rejected
-                        </span>
-                      )}
-                    </td>
-                    <td className="py-3 px-3 text-right font-mono text-slate-600 tabular-nums">
-                      - {formatCurrency(it.discountAmount)}
-                    </td>
-                    <td className="py-3 px-4 text-right font-mono font-semibold text-slate-900 tabular-nums">
-                      {formatCurrency(it.lineTotal)}
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                      <td className="py-3 px-4 text-right font-mono font-semibold text-slate-900 tabular-nums">
+                        {formatCurrency(it.lineTotal)}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
+
 
           {/* Financial Totals */}
           <div className="mt-4 flex flex-col items-end text-xs space-y-1.5">
@@ -718,12 +804,13 @@ export function OrderDetailPage() {
               <DialogTitle className="flex items-center gap-2 text-slate-900">
                 {actionType === 'APPROVE' && <CheckCircle className="h-5 w-5 text-emerald-600" />}
                 {actionType === 'REJECT' && <XCircle className="h-5 w-5 text-rose-600" />}
-                {(actionType === 'ESCALATE_MANAGER' || actionType === 'ESCALATE_DIRECTOR') && (
+                {(actionType === 'ESCALATE_SALES_MANAGER' || actionType === 'ESCALATE_MANAGER' || actionType === 'ESCALATE_DIRECTOR') && (
                   <ArrowUpRight className="h-5 w-5 text-primary" />
                 )}
                 {actionType === 'CANCEL' && <Ban className="h-5 w-5 text-slate-600" />}
                 {actionType === 'APPROVE' && 'Approve Sales Order'}
                 {actionType === 'REJECT' && 'Reject Sales Order'}
+                {actionType === 'ESCALATE_SALES_MANAGER' && 'Forward Order to Sales Manager'}
                 {actionType === 'ESCALATE_MANAGER' && 'Escalate Order to Manager'}
                 {actionType === 'ESCALATE_DIRECTOR' && 'Escalate Order to Director'}
                 {actionType === 'CANCEL' && 'Cancel Sales Order'}
@@ -731,6 +818,7 @@ export function OrderDetailPage() {
               <DialogDescription>
                 {actionType === 'APPROVE' && `Confirm commercial approval for ${order.orderNumber}.`}
                 {actionType === 'REJECT' && `Enter rejection reason for order ${order.orderNumber}.`}
+                {actionType === 'ESCALATE_SALES_MANAGER' && `Forward ${order.orderNumber} to Sales Manager with Area Manager recommendation.`}
                 {actionType === 'ESCALATE_MANAGER' && `Escalate ${order.orderNumber} to Manager for commercial review.`}
                 {actionType === 'ESCALATE_DIRECTOR' && `Escalate ${order.orderNumber} to Director for executive decision.`}
                 {actionType === 'CANCEL' && `Confirm cancellation of order ${order.orderNumber}.`}
@@ -751,6 +839,8 @@ export function OrderDetailPage() {
                     ? 'e.g. Credit limit breach cannot be accommodated.'
                     : actionType === 'CANCEL'
                     ? 'e.g. Customer cancelled purchase order.'
+                    : actionType === 'ESCALATE_SALES_MANAGER'
+                    ? 'e.g. Area performance reviewed; recommending Sales Manager approval.'
                     : 'e.g. Exceeds standard discount parameters; requesting senior management override.'
                 }
                 rows={3}

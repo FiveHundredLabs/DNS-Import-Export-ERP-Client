@@ -29,7 +29,7 @@ export function ApprovalsPage() {
 
   const getDocumentLink = (app: ApprovalRequest): string | null => {
     if (app.documentType === 'PAYMENT_RECEIPT') return `/payments/${app.documentId}`;
-    if (app.documentType === 'SPECIAL_SALES_ORDER') return `/orders/${app.documentId}`;
+    if (app.documentType === 'SPECIAL_SALES_ORDER') return `/approvals/orders/${app.documentId}`;
     if (app.documentType === 'QUOTATION_DISCOUNT') return `/quotations/${app.documentId}`;
     return null;
   };

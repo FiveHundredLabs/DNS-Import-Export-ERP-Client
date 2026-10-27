@@ -4,6 +4,7 @@ import { useAuth } from '../../../../hooks/useAuth';
 import { apService, VendorBillLineItem, LandedExpenseItem } from '../../services/apService';
 import { CurrencyInput } from '../../components/CurrencyInput';
 import { DoubleEntryHoverBadge } from '../../components/DoubleEntryHoverBadge';
+import { FinancePricingModal } from '../../components/FinancePricingModal';
 import { Button } from '../../../../components/ui/button';
 import { Input } from '../../../../components/ui/input';
 import { Select } from '../../../../components/ui/select';
@@ -107,6 +108,9 @@ export function VendorBillCostingPage() {
   const [showApportionModal, setShowApportionModal] = useState(false);
   const [apportionBulkFreight, setApportionBulkFreight] = useState<number>(0);
   const [apportionMethod, setApportionMethod] = useState<'BY_VALUE' | 'BY_QUANTITY'>('BY_VALUE');
+
+  // Selling-Price Strategy Decision Modal state
+  const [showPricingModal, setShowPricingModal] = useState(false);
 
   // Incremental expense addition and update helpers
   const handleAddExpense = () => {
@@ -564,7 +568,8 @@ export function VendorBillCostingPage() {
       toast.success(
         `Vendor Bill ${bill.billNumber} posted successfully! True landed cost recorded and debited to 1025 Input VAT Receivable.`
       );
-      navigate('/finance/dashboard');
+      // Open Selling-Price Strategy Decision modal for post-costing pricing assignment
+      setShowPricingModal(true);
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : 'Failed to post vendor bill');
     } finally {
@@ -2145,6 +2150,21 @@ export function VendorBillCostingPage() {
           </DialogFooter>
         </div>
       </Dialog>
+
+      {/* Selling-Price Strategy Decision Modal (Post-Costing) */}
+      <FinancePricingModal
+        isOpen={showPricingModal}
+        onClose={() => {
+          setShowPricingModal(false);
+          navigate('/finance/dashboard');
+        }}
+        grn={selectedGRN}
+        items={computedLineItems}
+        onComplete={() => {
+          setShowPricingModal(false);
+          navigate('/finance/dashboard');
+        }}
+      />
     </div>
   );
 }

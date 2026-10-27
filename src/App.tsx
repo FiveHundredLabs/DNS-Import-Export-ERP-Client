@@ -26,6 +26,8 @@ import { DispatchPage } from './features/inventory/DispatchPage';
 import { DamagedStockPage } from './features/inventory/DamagedStockPage';
 import { InvoiceListPage } from './features/invoices/InvoiceListPage';
 import { InvoiceDetailPage } from './features/invoices/InvoiceDetailPage';
+import { InvoiceDraftEditPage } from './features/invoices/InvoiceDraftEditPage';
+import { OrderApprovalDetailPage } from './features/approvals/OrderApprovalDetailPage';
 import { PaymentListPage } from './features/payments/PaymentListPage';
 import { PaymentCollectionPage } from './features/payments/PaymentCollectionPage';
 import { PaymentDetailPage } from './features/payments/PaymentDetailPage';
@@ -122,6 +124,14 @@ export function App() {
           element={
             <ProtectedRoute>
               <ApprovalsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="approvals/orders/:id"
+          element={
+            <ProtectedRoute>
+              <OrderApprovalDetailPage />
             </ProtectedRoute>
           }
         />
@@ -306,6 +316,14 @@ export function App() {
           element={
             <ProtectedRoute>
               <InvoiceDetailPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="invoices/:id/edit"
+          element={
+            <ProtectedRoute>
+              <InvoiceDraftEditPage />
             </ProtectedRoute>
           }
         />
