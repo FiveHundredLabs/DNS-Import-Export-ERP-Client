@@ -442,9 +442,7 @@ export function InvoiceListPage() {
                   return (
                     <div
                       key={inv.id}
-                      onClick={() =>
-                        navigate(inv.status === 'DRAFT' ? `/invoices/${inv.id}/edit` : `/invoices/${inv.id}`)
-                      }
+                      onClick={() => navigate(`/invoices/${inv.id}`)}
                       className="rounded-2xl border border-slate-200/90 bg-white p-3 sm:p-3.5 shadow-2xs hover:border-primary/50 transition-all cursor-pointer active:scale-[0.99]"
                     >
                       {/* Top: Invoice #, Order #, Status */}
@@ -560,7 +558,7 @@ export function InvoiceListPage() {
                             size="sm"
                             onClick={(e) => {
                               e.stopPropagation();
-                              navigate(`/invoices/${inv.id}/edit`);
+                              navigate(`/invoices/${inv.id}`);
                             }}
                             className="h-8 px-3 text-xs bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl cursor-pointer gap-1 shadow-xs shrink-0"
                           >
@@ -617,13 +615,11 @@ export function InvoiceListPage() {
                           inv.status === 'DRAFT' && "bg-amber-50/20 hover:bg-amber-50/50"
                         )}
                         tabIndex={0}
-                        onClick={() =>
-                          navigate(inv.status === 'DRAFT' ? `/invoices/${inv.id}/edit` : `/invoices/${inv.id}`)
-                        }
+                        onClick={() => navigate(`/invoices/${inv.id}`)}
                         onKeyDown={(e) => {
                           if (e.key === 'Enter' || e.key === ' ') {
                             e.preventDefault();
-                            navigate(inv.status === 'DRAFT' ? `/invoices/${inv.id}/edit` : `/invoices/${inv.id}`);
+                            navigate(`/invoices/${inv.id}`);
                           }
                         }}
                       >
@@ -631,7 +627,7 @@ export function InvoiceListPage() {
                           <span
                             onClick={(e) => {
                               e.stopPropagation();
-                              navigate(inv.status === 'DRAFT' ? `/invoices/${inv.id}/edit` : `/invoices/${inv.id}`);
+                              navigate(`/invoices/${inv.id}`);
                             }}
                             className="hover:underline cursor-pointer"
                           >
@@ -691,7 +687,7 @@ export function InvoiceListPage() {
                                 size="sm"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  navigate(`/invoices/${inv.id}/edit`);
+                                  navigate(`/invoices/${inv.id}`);
                                 }}
                                 className="h-7 px-2 text-xs bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-lg cursor-pointer gap-1 shadow-2xs shrink-0"
                                 title="Edit Draft Invoice"
