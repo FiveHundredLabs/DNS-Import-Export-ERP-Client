@@ -582,12 +582,83 @@ export function OrderDetailPage() {
           </div>
         </div>
 
-        {/* Itemized Table */}
-        <div className="p-4 sm:p-6">
-          <h4 className="text-sm font-semibold text-slate-800 mb-3">
-            Itemized Order Lines
-          </h4>
-          <div className="rounded-lg border border-slate-200 overflow-x-auto">
+        {/* Itemized Lines */}
+        <div className="p-3.5 sm:p-6">
+          <div className="flex items-center justify-between mb-3">
+            <h4 className="text-sm font-semibold text-slate-800">
+              Itemized Order Lines
+            </h4>
+            <span className="text-xs text-slate-400 font-medium">
+              {order.items.length} {order.items.length === 1 ? 'Line Item' : 'Line Items'}
+            </span>
+          </div>
+
+          {/* 1. Mobile Item Cards (Visible on mobile, hidden on md+) */}
+          <div className="block md:hidden space-y-3">
+            {order.items.map((it) => (
+              <div
+                key={it.id}
+                className="rounded-xl border border-slate-200/90 bg-white p-3 shadow-2xs space-y-2.5"
+              >
+                {/* Header: Name + Line Total */}
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <div className="font-semibold text-xs text-slate-900 leading-snug">
+                      {it.productNameSnapshot}
+                    </div>
+                    <div className="text-[11px] text-slate-400 font-mono mt-0.5">
+                      {it.skuSnapshot} {it.uomSnapshot && `• ${it.uomSnapshot}`}
+                    </div>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <div className="text-xs font-bold text-slate-900 font-mono tabular-nums">
+                      {formatCurrency(it.lineTotal)}
+                    </div>
+                    <div className="text-[10px] text-slate-400">
+                      Line Total
+                    </div>
+                  </div>
+                </div>
+
+                {it.requiresSpecialApproval && (
+                  <div className="text-[10.5px] text-amber-800 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded font-medium">
+                    {it.specialApprovalReason || 'Excess discount'}
+                  </div>
+                )}
+
+                {/* Grid breakdown */}
+                <div className="grid grid-cols-2 gap-2 text-xs pt-2 border-t border-slate-100 bg-slate-50/70 p-2 rounded-lg">
+                  <div>
+                    <span className="text-[10px] text-slate-400 block uppercase font-medium">Unit Price</span>
+                    <span className="font-mono font-semibold text-slate-700 tabular-nums">
+                      {formatCurrency(it.unitPriceSnapshot)}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-slate-400 block uppercase font-medium">Quantity</span>
+                    <span className="font-mono font-bold text-slate-900 tabular-nums">
+                      {it.orderedQuantity} {it.uomSnapshot || 'Units'}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-slate-400 block uppercase font-medium">Fulfillment</span>
+                    <span className="text-[11px] text-slate-700 tabular-nums">
+                      Appr: {it.approvedQuantity} | Iss: {it.issuedQuantity}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-slate-400 block uppercase font-medium">Discount</span>
+                    <span className="text-[11px] font-mono text-slate-700">
+                      {it.discountPercentage}% (-{formatCurrency(it.discountAmount)})
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* 2. Desktop Itemized Table (Hidden on mobile, block on md+) */}
+          <div className="hidden md:block rounded-lg border border-slate-200 overflow-x-auto">
             <table className="w-full text-[13px] tabular-nums">
               <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 text-[12.5px]">
                 <tr>
@@ -658,26 +729,28 @@ export function OrderDetailPage() {
           </div>
 
           {/* Financial Totals */}
-          <div className="mt-4 flex flex-col items-end text-xs space-y-1.5">
-            <div className="flex justify-between w-64 text-slate-600">
-              <span>Subtotal:</span>
-              <span className="font-mono font-medium tabular-nums">{formatCurrency(order.subtotal)}</span>
-            </div>
-            <div className="flex justify-between w-64 text-emerald-600">
-              <span>Applied Discount:</span>
-              <span className="font-mono font-medium tabular-nums">- {formatCurrency(order.discountAmount)}</span>
-            </div>
-            <div className="flex justify-between w-64 text-slate-600">
-              <span>
-                {order.taxEnabled !== false && order.taxAmount > 0
-                  ? `VAT (${order.taxRatePercentage ?? 18}%):`
-                  : 'Tax:'}
-              </span>
-              <span className="font-mono font-medium tabular-nums">{formatCurrency(order.taxAmount)}</span>
-            </div>
-            <div className="flex justify-between w-64 border-t-2 border-slate-900 pt-2 font-semibold text-sm text-slate-900">
-              <span>Grand Total:</span>
-              <span className="font-mono font-semibold text-primary tabular-nums">{formatCurrency(order.totalAmount)}</span>
+          <div className="mt-4 flex flex-col items-end text-xs space-y-1.5 w-full">
+            <div className="w-full sm:w-72 space-y-1.5 ml-auto bg-slate-50/80 p-3.5 rounded-xl border border-slate-200/80">
+              <div className="flex justify-between text-slate-600">
+                <span>Subtotal:</span>
+                <span className="font-mono font-medium tabular-nums">{formatCurrency(order.subtotal)}</span>
+              </div>
+              <div className="flex justify-between text-emerald-600">
+                <span>Applied Discount:</span>
+                <span className="font-mono font-medium tabular-nums">- {formatCurrency(order.discountAmount)}</span>
+              </div>
+              <div className="flex justify-between text-slate-600">
+                <span>
+                  {order.taxEnabled !== false && order.taxAmount > 0
+                    ? `VAT (${order.taxRatePercentage ?? 18}%):`
+                    : 'Tax:'}
+                </span>
+                <span className="font-mono font-medium tabular-nums">{formatCurrency(order.taxAmount)}</span>
+              </div>
+              <div className="flex justify-between border-t border-slate-300 pt-2 font-bold text-sm text-slate-900">
+                <span>Grand Total:</span>
+                <span className="font-mono font-bold text-primary tabular-nums">{formatCurrency(order.totalAmount)}</span>
+              </div>
             </div>
           </div>
         </div>

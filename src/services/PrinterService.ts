@@ -2,6 +2,8 @@ import { Quotation } from '../types/quotation';
 import { Invoice } from '../types/invoice';
 import { Payment } from '../types/payment';
 import { POSTransaction } from '../types/pos';
+import { PurchaseOrder } from '../types/purchasing';
+import { pdfService } from './PdfService';
 
 export interface ThermalReceiptData {
   title: string;
@@ -24,6 +26,7 @@ export interface IPrinterService {
   printQuotation(quotation: Quotation): Promise<boolean>;
   printInvoice(invoice: Invoice, format?: 'STANDARD' | 'IRD_TAX'): Promise<boolean>;
   printPaymentReceipt(payment: Payment, remainingBalance?: number, paperWidth?: '80mm' | '58mm'): Promise<boolean>;
+  printPurchaseOrder(purchaseOrder: PurchaseOrder): Promise<boolean>;
   isPrinterConnected(): Promise<boolean>;
 }
 
@@ -705,6 +708,20 @@ export class ThermalPrinterService implements IPrinterService {
       }
 
       printWindow.document.write(invoiceHtml);
+      printWindow.document.close();
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  async printPurchaseOrder(purchaseOrder: PurchaseOrder): Promise<boolean> {
+    if (typeof window === 'undefined' || !window.open) return false;
+    try {
+      const html = pdfService.generatePurchaseOrderHtml(purchaseOrder);
+      const printWindow = window.open('', '_blank', 'width=850,height=1100');
+      if (!printWindow || !printWindow.document) return false;
+      printWindow.document.write(html);
       printWindow.document.close();
       return true;
     } catch {

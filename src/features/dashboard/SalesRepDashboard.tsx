@@ -1,11 +1,10 @@
 import React, { useState, useMemo } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { StatCard } from '../../components/common/StatCard';
 import { AmountDisplay } from '../../components/common/AmountDisplay';
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
-import { CustomerPaymentsTab } from '../payments/CustomerPaymentsTab';
 import {
   Users,
   Target,
@@ -29,7 +28,6 @@ import {
   X,
   Filter,
   FileSpreadsheet,
-  LayoutGrid,
 } from 'lucide-react';
 import { formatCurrency, formatPercentage } from '../../utils/formatters';
 import { whatsAppService } from '../../services/WhatsAppService';
@@ -61,8 +59,7 @@ interface OrderTrackingItem {
 }
 
 export function SalesRepDashboard() {
-  // Mobile app view states
-  const [mobileTab, setMobileTab] = useState<'all' | 'collections' | 'receivables' | 'orders'>('all');
+  const navigate = useNavigate();
   const [receivablesFilter, setReceivablesFilter] = useState<'all' | 'overdue' | 'current'>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -240,178 +237,111 @@ export function SalesRepDashboard() {
         </div>
       </div>
 
-      {/* 2. Mobile Dashboard Tab Navigation (Sticky Top View Switcher for Field Reps) */}
-      <div className="block md:hidden sticky top-0 z-20 -mx-3.5 px-3 sm:-mx-5 sm:px-5 py-2 bg-canvas/95 backdrop-blur-md border-b border-slate-200/80 shadow-2xs">
-        <div className="grid grid-cols-4 gap-1 p-1 rounded-2xl bg-slate-200/75 border border-slate-200/90 shadow-inner">
+      {/* 2. Quick Actions & Services Grid (Mobile Only) */}
+      <div className="block md:hidden bg-white rounded-3xl p-4 sm:p-5 border border-slate-200/80 shadow-xs">
+        <div className="flex items-center justify-between pb-3 px-1">
+          <span className="text-xs font-bold uppercase tracking-wider text-slate-700">
+            Field Services & Shortcuts
+          </span>
+          <span className="text-[11px] text-slate-400 font-medium">Quick Access</span>
+        </div>
+        <div className="grid grid-cols-4 gap-3 text-center">
+          {/* 1. Quick Order */}
+          <Link to="/orders" className="flex flex-col items-center group active:scale-95 transition-transform">
+            <div className="h-12 w-12 rounded-2xl bg-primary-light text-primary flex items-center justify-center shadow-2xs group-hover:bg-primary group-hover:text-white transition-colors">
+              <PlusCircle className="h-6 w-6" />
+            </div>
+            <span className="text-[11px] font-semibold text-slate-700 mt-1.5 group-hover:text-primary transition-colors">
+              Order Desk
+            </span>
+          </Link>
+
+          {/* 2. Dealer Directory */}
+          <Link to="/customers" className="flex flex-col items-center group active:scale-95 transition-transform">
+            <div className="h-12 w-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center shadow-2xs group-hover:bg-emerald-600 group-hover:text-white transition-colors">
+              <Users className="h-6 w-6" />
+            </div>
+            <span className="text-[11px] font-semibold text-slate-700 mt-1.5 group-hover:text-emerald-700 transition-colors">
+              Dealer Hub
+            </span>
+          </Link>
+
+          {/* 3. Collect Payment */}
+          <Link to="/payments/collect" className="flex flex-col items-center group active:scale-95 transition-transform">
+            <div className="h-12 w-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center shadow-2xs group-hover:bg-blue-600 group-hover:text-white transition-colors">
+              <CreditCard className="h-6 w-6" />
+            </div>
+            <span className="text-[11px] font-semibold text-slate-700 mt-1.5 group-hover:text-blue-700 transition-colors">
+              Collections
+            </span>
+          </Link>
+
+          {/* 4. Warranty Desk */}
+          <Link to="/warranty" className="flex flex-col items-center group active:scale-95 transition-transform">
+            <div className="h-12 w-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center shadow-2xs group-hover:bg-amber-600 group-hover:text-white transition-colors">
+              <ShieldAlert className="h-6 w-6" />
+            </div>
+            <span className="text-[11px] font-semibold text-slate-700 mt-1.5 group-hover:text-amber-700 transition-colors">
+              Warranty
+            </span>
+          </Link>
+
+          {/* 5. Quotations */}
+          <Link to="/quotations" className="flex flex-col items-center group active:scale-95 transition-transform">
+            <div className="h-12 w-12 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center shadow-2xs group-hover:bg-purple-600 group-hover:text-white transition-colors">
+              <FileSpreadsheet className="h-6 w-6" />
+            </div>
+            <span className="text-[11px] font-semibold text-slate-700 mt-1.5 group-hover:text-purple-700 transition-colors">
+              Quotations
+            </span>
+          </Link>
+
+          {/* 6. Invoices */}
+          <Link to="/invoices" className="flex flex-col items-center group active:scale-95 transition-transform">
+            <div className="h-12 w-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center shadow-2xs group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+              <FileCheck2 className="h-6 w-6" />
+            </div>
+            <span className="text-[11px] font-semibold text-slate-700 mt-1.5 group-hover:text-indigo-700 transition-colors">
+              Invoices
+            </span>
+          </Link>
+
+          {/* 7. Live Tracking */}
           <button
             type="button"
-            onClick={() => setMobileTab('all')}
-            aria-label="All Overview"
-            className={cn(
-              'group w-full min-w-0 flex items-center justify-center gap-1 py-2 px-0.5 text-center text-xs font-bold rounded-xl transition-all duration-150 select-none min-h-[38px]',
-              mobileTab === 'all'
-                ? 'bg-white text-slate-900 shadow-xs border border-slate-200/80'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-white/40 active:bg-white/60 active:scale-[0.98]'
-            )}
+            onClick={() => navigate('/orders')}
+            className="flex flex-col items-center group active:scale-95 transition-transform"
           >
-            <LayoutGrid className={cn('h-3.5 w-3.5 shrink-0 transition-colors', mobileTab === 'all' ? 'text-primary' : 'text-slate-400 group-hover:text-slate-600')} />
-            <span className="truncate">Overview</span>
+            <div className="h-12 w-12 rounded-2xl bg-sky-50 text-sky-600 flex items-center justify-center shadow-2xs group-hover:bg-sky-600 group-hover:text-white transition-colors">
+              <Clock className="h-6 w-6" />
+            </div>
+            <span className="text-[11px] font-semibold text-slate-700 mt-1.5 group-hover:text-sky-700 transition-colors">
+              Tracking
+            </span>
           </button>
 
+          {/* 8. Overdue Receivables */}
           <button
             type="button"
-            onClick={() => setMobileTab('collections')}
-            aria-label="Customer Collections"
-            className={cn(
-              'group w-full min-w-0 flex items-center justify-center gap-1 py-2 px-0.5 text-center text-xs font-bold rounded-xl transition-all duration-150 select-none min-h-[38px]',
-              mobileTab === 'collections'
-                ? 'bg-white text-blue-900 shadow-xs border border-slate-200/80'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-white/40 active:bg-white/60 active:scale-[0.98]'
-            )}
+            onClick={() => {
+              setReceivablesFilter('overdue');
+              const el = document.getElementById('pending-receivables-section');
+              if (el) el.scrollIntoView({ behavior: 'smooth' });
+            }}
+            className="flex flex-col items-center group active:scale-95 transition-transform"
           >
-            <Banknote className={cn('h-3.5 w-3.5 shrink-0 transition-colors', mobileTab === 'collections' ? 'text-blue-600' : 'text-slate-400 group-hover:text-slate-600')} />
-            <span className="truncate">Collect</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setMobileTab('receivables')}
-            aria-label={`Receivables (${pendingAccounts.length})`}
-            className={cn(
-              'group w-full min-w-0 flex items-center justify-center gap-1 py-2 px-0.5 text-center text-xs font-bold rounded-xl transition-all duration-150 select-none min-h-[38px]',
-              mobileTab === 'receivables'
-                ? 'bg-white text-emerald-900 shadow-xs border border-slate-200/80'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-white/40 active:bg-white/60 active:scale-[0.98]'
-            )}
-          >
-            <CreditCard className={cn('h-3.5 w-3.5 shrink-0 transition-colors', mobileTab === 'receivables' ? 'text-emerald-600' : 'text-slate-400 group-hover:text-slate-600')} />
-            <span className="truncate">Receivables</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setMobileTab('orders')}
-            aria-label={`Live Orders (${recentOrders.length})`}
-            className={cn(
-              'group w-full min-w-0 flex items-center justify-center gap-1 py-2 px-0.5 text-center text-xs font-bold rounded-xl transition-all duration-150 select-none min-h-[38px]',
-              mobileTab === 'orders'
-                ? 'bg-white text-primary shadow-xs border border-slate-200/80'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-white/40 active:bg-white/60 active:scale-[0.98]'
-            )}
-          >
-            <Clock className={cn('h-3.5 w-3.5 shrink-0 transition-colors', mobileTab === 'orders' ? 'text-primary' : 'text-slate-400 group-hover:text-slate-600')} />
-            <span className="truncate">Orders</span>
+            <div className="h-12 w-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center shadow-2xs group-hover:bg-rose-600 group-hover:text-white transition-colors">
+              <AlertCircle className="h-6 w-6" />
+            </div>
+            <span className="text-[11px] font-semibold text-slate-700 mt-1.5 group-hover:text-rose-700 transition-colors">
+              Overdue
+            </span>
           </button>
         </div>
       </div>
 
-      {/* 3. Quick Actions & Services Grid (Mobile Only - shown on All Overview) */}
-      {mobileTab === 'all' && (
-        <div className="block md:hidden bg-white rounded-3xl p-4 sm:p-5 border border-slate-200/80 shadow-xs">
-          <div className="flex items-center justify-between pb-3 px-1">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-700">
-              Field Services & Shortcuts
-            </span>
-            <span className="text-[11px] text-slate-400 font-medium">Quick Access</span>
-          </div>
-          <div className="grid grid-cols-4 gap-3 text-center">
-            {/* 1. Quick Order */}
-            <Link to="/orders" className="flex flex-col items-center group active:scale-95 transition-transform">
-              <div className="h-12 w-12 rounded-2xl bg-primary-light text-primary flex items-center justify-center shadow-2xs group-hover:bg-primary group-hover:text-white transition-colors">
-                <PlusCircle className="h-6 w-6" />
-              </div>
-              <span className="text-[11px] font-semibold text-slate-700 mt-1.5 group-hover:text-primary transition-colors">
-                Order Desk
-              </span>
-            </Link>
-
-            {/* 2. Dealer Directory */}
-            <Link to="/customers" className="flex flex-col items-center group active:scale-95 transition-transform">
-              <div className="h-12 w-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center shadow-2xs group-hover:bg-emerald-600 group-hover:text-white transition-colors">
-                <Users className="h-6 w-6" />
-              </div>
-              <span className="text-[11px] font-semibold text-slate-700 mt-1.5 group-hover:text-emerald-700 transition-colors">
-                Dealer Hub
-              </span>
-            </Link>
-
-            {/* 3. Collect Payment */}
-            <Link to="/payments/collect" className="flex flex-col items-center group active:scale-95 transition-transform">
-              <div className="h-12 w-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center shadow-2xs group-hover:bg-blue-600 group-hover:text-white transition-colors">
-                <CreditCard className="h-6 w-6" />
-              </div>
-              <span className="text-[11px] font-semibold text-slate-700 mt-1.5 group-hover:text-blue-700 transition-colors">
-                Collections
-              </span>
-            </Link>
-
-            {/* 4. Warranty Desk */}
-            <Link to="/warranty" className="flex flex-col items-center group active:scale-95 transition-transform">
-              <div className="h-12 w-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center shadow-2xs group-hover:bg-amber-600 group-hover:text-white transition-colors">
-                <ShieldAlert className="h-6 w-6" />
-              </div>
-              <span className="text-[11px] font-semibold text-slate-700 mt-1.5 group-hover:text-amber-700 transition-colors">
-                Warranty
-              </span>
-            </Link>
-
-            {/* 5. Quotations */}
-            <Link to="/quotations" className="flex flex-col items-center group active:scale-95 transition-transform">
-              <div className="h-12 w-12 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center shadow-2xs group-hover:bg-purple-600 group-hover:text-white transition-colors">
-                <FileSpreadsheet className="h-6 w-6" />
-              </div>
-              <span className="text-[11px] font-semibold text-slate-700 mt-1.5 group-hover:text-purple-700 transition-colors">
-                Quotations
-              </span>
-            </Link>
-
-            {/* 6. Invoices */}
-            <Link to="/invoices" className="flex flex-col items-center group active:scale-95 transition-transform">
-              <div className="h-12 w-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center shadow-2xs group-hover:bg-indigo-600 group-hover:text-white transition-colors">
-                <FileCheck2 className="h-6 w-6" />
-              </div>
-              <span className="text-[11px] font-semibold text-slate-700 mt-1.5 group-hover:text-indigo-700 transition-colors">
-                Invoices
-              </span>
-            </Link>
-
-            {/* 7. Live Tracking */}
-            <button
-              type="button"
-              onClick={() => setMobileTab('orders')}
-              className="flex flex-col items-center group active:scale-95 transition-transform"
-            >
-              <div className="h-12 w-12 rounded-2xl bg-sky-50 text-sky-600 flex items-center justify-center shadow-2xs group-hover:bg-sky-600 group-hover:text-white transition-colors">
-                <Clock className="h-6 w-6" />
-              </div>
-              <span className="text-[11px] font-semibold text-slate-700 mt-1.5 group-hover:text-sky-700 transition-colors">
-                Tracking
-              </span>
-            </button>
-
-            {/* 8. Overdue Receivables */}
-            <button
-              type="button"
-              onClick={() => {
-                setMobileTab('receivables');
-                setReceivablesFilter('overdue');
-              }}
-              className="flex flex-col items-center group active:scale-95 transition-transform"
-            >
-              <div className="h-12 w-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center shadow-2xs group-hover:bg-rose-600 group-hover:text-white transition-colors">
-                <AlertCircle className="h-6 w-6" />
-              </div>
-              <span className="text-[11px] font-semibold text-slate-700 mt-1.5 group-hover:text-rose-700 transition-colors">
-                Overdue
-              </span>
-            </button>
-          </div>
-        </div>
-      )}
-
       {/* 3. Mobile KPI Cards (Content-Aware Layout: Hero cards prevent currency clipping, distinct coordinated palettes) */}
-      {(mobileTab === 'all' || mobileTab === 'receivables') && (
-        <div className="space-y-1.5 sm:space-y-0">
+      <div className="space-y-1.5 sm:space-y-0">
           <div className="flex sm:hidden items-center justify-between px-1">
             <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
               Performance Snap • Territory KPIs
@@ -533,57 +463,46 @@ export function SalesRepDashboard() {
             </div>
           </div>
         </div>
-      )}
 
       {/* 4. Warranty Note Follow-up Alert (Section 23 - Arranged nicely for mobile app view) */}
-      {(mobileTab === 'all' || mobileTab === 'orders') && (
-        <div className="rounded-2xl sm:rounded-3xl border border-amber-200/90 bg-gradient-to-br from-amber-50/90 via-orange-50/30 to-white p-3.5 sm:p-4 shadow-xs">
-          <div className="flex items-start gap-3">
-            <div className="p-2.5 rounded-xl bg-amber-100 text-amber-800 shrink-0 mt-0.5 shadow-2xs">
-              <ShieldAlert className="h-5 w-5" />
+      <div className="rounded-2xl sm:rounded-3xl border border-amber-200/90 bg-gradient-to-br from-amber-50/90 via-orange-50/30 to-white p-3.5 sm:p-4 shadow-xs">
+        <div className="flex items-start gap-3">
+          <div className="p-2.5 rounded-xl bg-amber-100 text-amber-800 shrink-0 mt-0.5 shadow-2xs">
+            <ShieldAlert className="h-5 w-5" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <h3 className="text-xs font-bold text-amber-950 uppercase tracking-wide">
+                Warranty Note Follow-Up Required
+              </h3>
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-100 text-amber-800 border border-amber-200">
+                22 Pending Notes
+              </span>
             </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center justify-between gap-2 flex-wrap">
-                <h3 className="text-xs font-bold text-amber-950 uppercase tracking-wide">
-                  Warranty Note Follow-Up Required
-                </h3>
-                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-100 text-amber-800 border border-amber-200">
-                  22 Pending Notes
-                </span>
-              </div>
-              <p className="mt-1 text-xs text-amber-900/90 leading-relaxed">
-                <strong>Muthurajawela Engineering:</strong> 85 units sold, only 62 warranty registration slips received back from customer shop. Follow up during next dealer visit.
-              </p>
-              <div className="mt-3 flex items-center gap-2">
-                <Link to="/warranty">
-                  <Button size="sm" variant="outline" className="h-8 text-xs font-semibold border-amber-300 text-amber-900 bg-white hover:bg-amber-100/70 rounded-xl active:scale-95 shadow-2xs">
-                    Open Warranty Desk
-                  </Button>
-                </Link>
-                <a
-                  href="tel:+94312234567"
-                  className="inline-flex items-center gap-1.5 px-3 h-8 rounded-xl text-xs font-semibold text-amber-900 bg-amber-200/70 hover:bg-amber-200 active:scale-95 transition-all shadow-2xs"
-                >
-                  <Phone className="h-3.5 w-3.5" /> Call Dealer
-                </a>
-              </div>
+            <p className="mt-1 text-xs text-amber-900/90 leading-relaxed">
+              <strong>Muthurajawela Engineering:</strong> 85 units sold, only 62 warranty registration slips received back from customer shop. Follow up during next dealer visit.
+            </p>
+            <div className="mt-3 flex items-center gap-2">
+              <Link to="/warranty">
+                <Button size="sm" variant="outline" className="h-8 text-xs font-semibold border-amber-300 text-amber-900 bg-white hover:bg-amber-100/70 rounded-xl active:scale-95 shadow-2xs">
+                  Open Warranty Desk
+                </Button>
+              </Link>
+              <a
+                href="tel:+94312234567"
+                className="inline-flex items-center gap-1.5 px-3 h-8 rounded-xl text-xs font-semibold text-amber-900 bg-amber-200/70 hover:bg-amber-200 active:scale-95 transition-all shadow-2xs"
+              >
+                <Phone className="h-3.5 w-3.5" /> Call Dealer
+              </a>
             </div>
           </div>
         </div>
-      )}
-
-      {/* 4. Dedicated Customer Collections Tab View (when 'collections' tab is selected) */}
-      {mobileTab === 'collections' && (
-        <div className="bg-white rounded-3xl p-4 sm:p-6 border border-slate-200/80 shadow-xs">
-          <CustomerPaymentsTab />
-        </div>
-      )}
+      </div>
 
       {/* 5. Main Dashboard Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
         {/* Pending Payments & Route Receivables (Formatted as native Mobile App Cards on phone screens) */}
-        {(mobileTab === 'all' || mobileTab === 'receivables') && (
-          <Card className="lg:col-span-2 rounded-2xl sm:rounded-3xl border border-slate-200/80 shadow-xs bg-white overflow-hidden">
+        <Card id="pending-receivables-section" className="lg:col-span-2 rounded-2xl sm:rounded-3xl border border-slate-200/80 shadow-xs bg-white overflow-hidden">
             <CardHeader className="flex flex-row items-center justify-between pb-3 p-4 sm:p-6 border-b border-slate-100">
               <div>
                 <CardTitle className="text-sm font-semibold text-slate-900 flex items-center gap-2">
@@ -741,77 +660,75 @@ export function SalesRepDashboard() {
               </div>
             </CardContent>
           </Card>
-        )}
 
         {/* Live Order Tracking (Section 20 - Arranged as Mobile App Delivery Tracking Cards) */}
-        {(mobileTab === 'all' || mobileTab === 'orders') && (
-          <Card className="rounded-2xl sm:rounded-3xl border border-slate-200/80 shadow-xs bg-white overflow-hidden">
-            <CardHeader className="p-4 sm:p-6 pb-3 border-b border-slate-100 flex flex-row items-center justify-between">
-              <div>
-                <CardTitle className="text-sm font-semibold text-slate-900">
-                  Recent Order Status Tracking
-                </CardTitle>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  Live fulfillment status for active territory dispatches.
-                </p>
-              </div>
-              <Link to="/orders">
-                <Button variant="ghost" size="sm" className="text-xs text-emerald-700 font-semibold gap-0.5 p-1 h-7 hover:bg-emerald-50">
-                  All <ChevronRight className="h-3 w-3" />
-                </Button>
-              </Link>
-            </CardHeader>
+        <Card className="rounded-2xl sm:rounded-3xl border border-slate-200/80 shadow-xs bg-white overflow-hidden">
+          <CardHeader className="p-4 sm:p-6 pb-3 border-b border-slate-100 flex flex-row items-center justify-between">
+            <div>
+              <CardTitle className="text-sm font-semibold text-slate-900">
+                Recent Order Status Tracking
+              </CardTitle>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Live fulfillment status for active territory dispatches.
+              </p>
+            </div>
+            <Link to="/orders">
+              <Button variant="ghost" size="sm" className="text-xs text-emerald-700 font-semibold gap-0.5 p-1 h-7 hover:bg-emerald-50">
+                All <ChevronRight className="h-3 w-3" />
+              </Button>
+            </Link>
+          </CardHeader>
 
-            <CardContent className="p-3.5 sm:p-6">
-              <div className="space-y-3 sm:space-y-4">
-                {recentOrders.map((order) => (
-                  <div
-                    key={order.id}
-                    className="p-3.5 sm:p-4 rounded-2xl border border-slate-200/80 bg-white hover:bg-slate-50/50 transition-all shadow-2xs space-y-2.5"
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-1.5">
-                        <span className="font-mono font-bold text-xs text-emerald-800 bg-emerald-50 border border-emerald-200/60 px-2 py-0.5 rounded-md whitespace-nowrap shrink-0">
-                          {order.orderNumber}
-                        </span>
-                      </div>
-                      <Badge variant={order.statusVariant} className="text-[10px] rounded-full px-2">
-                        {order.status}
-                      </Badge>
+          <CardContent className="p-3.5 sm:p-6">
+            <div className="space-y-3 sm:space-y-4">
+              {recentOrders.map((order) => (
+                <div
+                  key={order.id}
+                  onClick={() => navigate('/orders')}
+                  className="p-3.5 sm:p-4 rounded-2xl border border-slate-200/80 bg-white hover:bg-slate-50/50 transition-all shadow-2xs space-y-2.5 cursor-pointer active:scale-[0.99]"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-mono font-bold text-xs text-emerald-800 bg-emerald-50 border border-emerald-200/60 px-2 py-0.5 rounded-md whitespace-nowrap shrink-0">
+                        {order.orderNumber}
+                      </span>
                     </div>
-
-                    <div className="text-xs font-semibold text-slate-800">
-                      {order.customerName}
-                    </div>
-
-                    {/* Native App Stepper Indicator */}
-                    <div className="p-2.5 rounded-xl bg-slate-50/80 border border-slate-100 space-y-1.5 text-[11px]">
-                      {order.steps.map((step, idx) => (
-                        <div
-                          key={idx}
-                          className={`flex items-center gap-2 ${
-                            step.state === 'done'
-                              ? 'text-emerald-700 font-medium'
-                              : step.state === 'current'
-                              ? 'text-amber-700 font-semibold'
-                              : 'text-slate-400'
-                          }`}
-                        >
-                          <span className="shrink-0 text-xs">
-                            {step.state === 'done' && '✓'}
-                            {step.state === 'current' && '●'}
-                            {step.state === 'pending' && '○'}
-                          </span>
-                          <span className="truncate">{step.label}</span>
-                        </div>
-                      ))}
-                    </div>
+                    <Badge variant={order.statusVariant} className="text-[10px] rounded-full px-2">
+                      {order.status}
+                    </Badge>
                   </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
+
+                  <div className="text-xs font-semibold text-slate-800">
+                    {order.customerName}
+                  </div>
+
+                  {/* Native App Stepper Indicator */}
+                  <div className="p-2.5 rounded-xl bg-slate-50/80 border border-slate-100 space-y-1.5 text-[11px]">
+                    {order.steps.map((step, idx) => (
+                      <div
+                        key={idx}
+                        className={`flex items-center gap-2 ${
+                          step.state === 'done'
+                            ? 'text-emerald-700 font-medium'
+                            : step.state === 'current'
+                            ? 'text-amber-700 font-semibold'
+                            : 'text-slate-400'
+                        }`}
+                      >
+                        <span className="shrink-0 text-xs">
+                          {step.state === 'done' && '✓'}
+                          {step.state === 'current' && '●'}
+                          {step.state === 'pending' && '○'}
+                        </span>
+                        <span className="truncate">{step.label}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

@@ -29,7 +29,6 @@ import { handoverService } from '../../services/HandoverService';
 import { CashHandover, DailyHandoverMetrics, HandoverStatus } from '../../types/handover';
 import { CashHandoverModal } from './components/CashHandoverModal';
 import { HandoverDetailModal } from './components/HandoverDetailModal';
-import { CustomerPaymentsTab } from './CustomerPaymentsTab';
 import { cn } from '../../utils/cn';
 import {
   Search,
@@ -59,11 +58,11 @@ export function PaymentListPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { role, currentUser } = useAuth();
-  const [viewMode, setViewMode] = useState<'CUSTOMERS' | 'HANDOVERS' | 'RECEIPTS'>(
-    searchParams.get('tab') === 'handovers'
+  const [viewMode, setViewMode] = useState<'HANDOVERS' | 'RECEIPTS' | 'CUSTOMERS'>(
+    searchParams.get('tab') === 'receipts'
+      ? 'RECEIPTS'
+      : searchParams.get('tab') === 'handovers' || role === 'SALES_REP' || searchParams.get('tab') === 'customers'
       ? 'HANDOVERS'
-      : role === 'SALES_REP' || searchParams.get('tab') === 'customers'
-      ? 'CUSTOMERS'
       : 'RECEIPTS'
   );
   const [payments, setPayments] = useState<Payment[]>([]);
@@ -255,37 +254,19 @@ export function PaymentListPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-xl font-bold tracking-tight text-slate-900">
-            {viewMode === 'CUSTOMERS'
-              ? 'Customer Payments & Collections'
-              : viewMode === 'HANDOVERS'
-              ? 'Daily Cash Handover & Finance Approvals'
-              : 'Payment Collections & Verification'}
+            {viewMode === 'RECEIPTS'
+              ? 'Payment Collections & Verification'
+              : 'Customer Payments & Collections'}
           </h1>
           <p className="text-xs text-slate-500">
-            {viewMode === 'CUSTOMERS'
-              ? 'Real-time customer receivables, overdue balances, and mobile-friendly payment collection.'
-              : viewMode === 'HANDOVERS'
-              ? 'Field collection cash handovers, recipient sign-off, and Finance physical verification workflows.'
-              : 'Field receipt ledger, payment lifecycle tracking, and cheque clearance verification.'}
+            {viewMode === 'RECEIPTS'
+              ? 'Field receipt ledger, payment lifecycle tracking, and cheque clearance verification.'
+              : 'Real-time customer receivables, overdue balances, and mobile-friendly payment collection.'}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {/* Tab switcher */}
           <div className="inline-flex rounded-lg bg-slate-100 p-1 border border-slate-200 shadow-inner">
-            <button
-              type="button"
-              data-testid="tab-customer-accounts"
-              onClick={() => setViewMode('CUSTOMERS')}
-              className={cn(
-                'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all',
-                viewMode === 'CUSTOMERS'
-                  ? 'bg-white text-primary shadow-sm'
-                  : 'text-slate-600 hover:text-slate-900'
-              )}
-            >
-              <Users className="h-3.5 w-3.5" />
-              <span>Customer Accounts</span>
-            </button>
             <button
               type="button"
               data-testid="tab-cash-handovers"
@@ -318,6 +299,16 @@ export function PaymentListPage() {
             >
               <Receipt className="h-3.5 w-3.5" />
               <span>Collection History</span>
+            </button>
+            <button
+              type="button"
+              data-testid="tab-customer-accounts"
+              onClick={() => navigate('/payments/collect')}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all text-slate-600 hover:text-slate-900"
+              title="Open Customer Accounts Collection Desk"
+            >
+              <Users className="h-3.5 w-3.5" />
+              <span>Customer Accounts</span>
             </button>
           </div>
 
@@ -487,12 +478,32 @@ export function PaymentListPage() {
         </div>
       </div>
 
-      {viewMode === 'CUSTOMERS' ? (
-        <CustomerPaymentsTab />
-      ) : viewMode === 'HANDOVERS' ? (
+      {viewMode === 'HANDOVERS' || viewMode === 'CUSTOMERS' ? (
         <div className="space-y-4">
-              {/* Handover Filter Bar */}
-              <Card className="border-slate-200">
+          {/* Handover Cash History Section Header */}
+          <div className="flex items-center justify-between pb-1">
+            <div>
+              <h2 className="text-base sm:text-lg font-bold text-slate-900 flex items-center gap-2">
+                <Banknote className="h-5 w-5 text-amber-600" />
+                <span>Handover Cash History</span>
+              </h2>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Physical cash handovers, recipient sign-off, and Finance physical verification audit trail.
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={fetchHandovers}
+              className="text-xs gap-1.5 h-8 font-semibold"
+              title="Refresh Handovers"
+            >
+              <RefreshCw className="h-3.5 w-3.5" /> Refresh
+            </Button>
+          </div>
+
+          {/* Handover Filter Bar */}
+          <Card className="border-slate-200">
                 <CardContent className="p-3.5 space-y-3">
                   <div className="flex flex-col md:flex-row gap-3">
                     <div className="relative flex-1">

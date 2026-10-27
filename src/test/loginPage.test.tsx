@@ -25,14 +25,15 @@ describe('LoginPage and Example Users For Each Role', () => {
     });
 
     // Check specific role badges
-    expect(screen.getByText('Director')).toBeDefined();
-    expect(screen.getByText('Operations Manager')).toBeDefined();
-    expect(screen.getByText('Sales Manager')).toBeDefined();
-    expect(screen.getByText('Finance Manager')).toBeDefined();
-    expect(screen.getByText('Area Manager')).toBeDefined();
-    expect(screen.getByText('Sales Representative')).toBeDefined();
-    expect(screen.getByText('Stock Keeper')).toBeDefined();
-    expect(screen.getByText('Showroom Cashier')).toBeDefined();
+    expect(screen.getAllByText('Director').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Operations Manager').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Sales Manager').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Finance Manager').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Area Manager').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Sales Representative').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Stock Keeper').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Showroom Cashier').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Purchasing Officer').length).toBeGreaterThan(0);
   });
 
   it('allows clicking an example user card to prefill the email input', () => {
@@ -64,6 +65,24 @@ describe('LoginPage and Example Users For Each Role', () => {
     await waitFor(() => {
       expect(authService.getCurrentUser()?.role).toBe('CASHIER');
       expect(authService.getCurrentUser()?.email).toBe('cashier@dnserp.com');
+    });
+  });
+
+  it('allows 1-click login as Purchasing Officer and updates authService', async () => {
+    render(
+      <MemoryRouter initialEntries={['/login']}>
+        <LoginPage />
+      </MemoryRouter>
+    );
+
+    const poLoginBtn = screen.getByRole('button', { name: /Login as Purchasing Officer/i });
+    expect(poLoginBtn).toBeDefined();
+
+    fireEvent.click(poLoginBtn);
+
+    await waitFor(() => {
+      expect(authService.getCurrentUser()?.role).toBe('PURCHASING_OFFICER');
+      expect(authService.getCurrentUser()?.email).toBe('purchasing@dnserp.com');
     });
   });
 

@@ -1,15 +1,33 @@
 /**
- * Formats a number as Sri Lankan Rupee currency (LKR)
+ * Formats a number as a currency string.
+ * Defaults to Sri Lankan Rupee (LKR) if not specified, with full support
+ * for international trade currencies like USD, CNY, EUR, GBP, SGD, INR, JPY.
  */
-export function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('en-LK', {
-    style: 'currency',
-    currency: 'LKR',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })
-    .format(amount)
-    .replace(/\u00A0/g, ' ');
+export function formatCurrency(amount: number, currencyCode: string = 'LKR'): string {
+  const code = (currencyCode || 'LKR').toUpperCase();
+  try {
+    const localeMap: Record<string, string> = {
+      LKR: 'en-LK',
+      USD: 'en-US',
+      CNY: 'zh-CN',
+      EUR: 'de-DE',
+      GBP: 'en-GB',
+      SGD: 'en-SG',
+      INR: 'en-IN',
+      JPY: 'ja-JP',
+    };
+    const locale = localeMap[code] || 'en-US';
+    return new Intl.NumberFormat(locale, {
+      style: 'currency',
+      currency: code,
+      minimumFractionDigits: code === 'JPY' ? 0 : 2,
+      maximumFractionDigits: code === 'JPY' ? 0 : 2,
+    })
+      .format(amount)
+      .replace(/\u00A0/g, ' ');
+  } catch {
+    return `${code} ${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  }
 }
 
 /**
