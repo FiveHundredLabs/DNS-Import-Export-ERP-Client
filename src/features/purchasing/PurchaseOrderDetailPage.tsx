@@ -380,10 +380,10 @@ export function PurchaseOrderDetailPage() {
                   <th className="py-3 px-4 w-8 text-center">#</th>
                   <th className="py-3 px-4">Product Code & Description</th>
                   <th className="py-3 px-4 text-right w-24">Ordered Qty</th>
-                  <th className="py-3 px-4 text-right w-32">Unit Price</th>
+                  <th className="py-3 px-4 text-right w-32">Unit Price ({po.currency})</th>
                   <th className="py-3 px-4 text-right w-20">Discount</th>
                   <th className="py-3 px-4 text-right w-20">Tax %</th>
-                  <th className="py-3 px-4 text-right w-32">Line Total</th>
+                  <th className="py-3 px-4 text-right w-32">Line Total ({po.currency})</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -401,7 +401,7 @@ export function PurchaseOrderDetailPage() {
                       {item.quantity}
                     </td>
                     <td className="py-3 px-4 text-right font-mono tabular-nums text-slate-700">
-                      {formatCurrency(item.unitPrice)}
+                      {formatCurrency(item.unitPrice, po.currency)}
                     </td>
                     <td className="py-3 px-4 text-right font-mono text-slate-600 tabular-nums">
                       {item.discountPercent > 0 ? `${item.discountPercent}%` : '-'}
@@ -410,7 +410,7 @@ export function PurchaseOrderDetailPage() {
                       {item.taxRate > 0 ? `${item.taxRate}%` : '-'}
                     </td>
                     <td className="py-3 px-4 text-right font-mono font-bold text-slate-900 tabular-nums">
-                      {formatCurrency(item.total)}
+                      {formatCurrency(item.total, po.currency)}
                     </td>
                   </tr>
                 ))}
@@ -426,28 +426,28 @@ export function PurchaseOrderDetailPage() {
           <div className="flex justify-between text-slate-600">
             <span>Subtotal:</span>
             <span className="font-mono font-semibold tabular-nums">
-              {formatCurrency(po.subtotal)}
+              {formatCurrency(po.subtotal, po.currency)}
             </span>
           </div>
           {po.totalDiscount > 0 && (
             <div className="flex justify-between text-emerald-600">
               <span>Discounts Applied:</span>
               <span className="font-mono font-semibold tabular-nums">
-                -{formatCurrency(po.totalDiscount)}
+                -{formatCurrency(po.totalDiscount, po.currency)}
               </span>
             </div>
           )}
           <div className="flex justify-between text-slate-600">
             <span>Applicable Taxes:</span>
             <span className="font-mono font-semibold tabular-nums">
-              {formatCurrency(po.taxTotal)}
+              {formatCurrency(po.taxTotal, po.currency)}
             </span>
           </div>
           {po.shippingCharges > 0 && (
             <div className="flex justify-between text-slate-600">
               <span>Freight / Shipping:</span>
               <span className="font-mono font-semibold tabular-nums">
-                {formatCurrency(po.shippingCharges)}
+                {formatCurrency(po.shippingCharges, po.currency)}
               </span>
             </div>
           )}
@@ -455,14 +455,14 @@ export function PurchaseOrderDetailPage() {
             <div className="flex justify-between text-slate-600">
               <span>Other Charges:</span>
               <span className="font-mono font-semibold tabular-nums">
-                {formatCurrency(po.otherCharges)}
+                {formatCurrency(po.otherCharges, po.currency)}
               </span>
             </div>
           )}
           <div className="border-t-2 border-slate-900 pt-2 flex justify-between items-baseline text-slate-900">
             <span className="font-bold text-sm">Grand Total ({po.currency}):</span>
             <span className="font-mono font-black text-xl tabular-nums">
-              {formatCurrency(po.grandTotal)}
+              {formatCurrency(po.grandTotal, po.currency)}
             </span>
           </div>
         </div>
