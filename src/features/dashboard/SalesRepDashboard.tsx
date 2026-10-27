@@ -535,26 +535,6 @@ export function SalesRepDashboard() {
           </div>
         </div>
 
-      {/* 4. Warranty Note Follow-up Alert (Section 23) */}
-      <div className="rounded-2xl sm:rounded-3xl border border-amber-300 bg-amber-50/70 p-3.5 sm:p-4 shadow-xs">
-        <div className="flex items-start gap-3">
-          <div className="p-2 rounded-xl bg-amber-100 text-amber-800 shrink-0">
-            <ShieldAlert className="h-4 w-4 sm:h-5 sm:w-5" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center justify-between gap-2 flex-wrap">
-              <h3 className="text-xs font-bold text-amber-900 uppercase tracking-wide">
-                Warranty Note Follow-Up Required
-              </h3>
-              <Badge variant="warning" className="text-[10px] rounded-full">22 Pending Notes</Badge>
-            </div>
-            <p className="mt-1 text-xs text-amber-800 leading-snug">
-              Muthurajawela Engineering: 85 units sold, only 62 warranty registration slips received back from customer shop. Follow up during next dealer visit.
-            </p>
-          </div>
-        </div>
-      </div>
-
       {/* 5. Main Dashboard Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
         {/* Pending Payments & Route Receivables (Formatted as native Mobile App Cards on phone screens) */}
