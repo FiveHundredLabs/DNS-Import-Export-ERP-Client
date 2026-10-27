@@ -82,6 +82,7 @@ import { PurchasingGRNListPage } from './features/purchasing/PurchasingGRNListPa
 import { PurchasingGRNDetailPage } from './features/purchasing/PurchasingGRNDetailPage';
 import { PurchasingReportsPage } from './features/purchasing/PurchasingReportsPage';
 import { PurchaseReturnsPlaceholderPage } from './features/purchasing/PurchaseReturnsPlaceholderPage';
+import { ProfilePage } from './features/profile/ProfilePage';
 
 export function App() {
   return (
@@ -460,6 +461,15 @@ export function App() {
           element={
             <ProtectedRoute>
               <CommissionHubPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="profile"
+          element={
+            <ProtectedRoute>
+              <ProfilePage />
             </ProtectedRoute>
           }
         />

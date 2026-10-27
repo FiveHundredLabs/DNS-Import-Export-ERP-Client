@@ -149,7 +149,7 @@ export function UserProfileMenu({ className }: UserProfileMenuProps) {
           {/* Navigation Links */}
           <div className="py-1 space-y-0.5">
             <Link
-              to="/dashboard"
+              to="/profile"
               onClick={() => setIsOpen(false)}
               className="flex items-center justify-between px-3 py-2 text-xs font-medium text-slate-700 rounded-lg hover:bg-slate-100/90 transition-colors group"
             >

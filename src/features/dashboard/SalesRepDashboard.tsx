@@ -215,47 +215,16 @@ export function SalesRepDashboard() {
             </div>
 
             <div className="min-w-0">
-              <div className="flex items-center gap-1.5 flex-wrap">
-                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold tracking-wide uppercase bg-white/20 text-white md:bg-primary-light md:text-primary-text md:border md:border-primary-border backdrop-blur-sm">
-                  Field Representative Hub
-                </span>
-                <span className="inline-flex md:hidden items-center gap-1 px-1.5 py-0.5 rounded-full text-[9.5px] font-medium bg-emerald-400/20 text-emerald-200 border border-emerald-300/30">
-                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-300 animate-pulse" />
-                  Active Route
-                </span>
-              </div>
               <h1 className="text-base sm:text-lg md:text-2xl font-bold tracking-tight text-white md:text-slate-900 mt-0.5 truncate">
                 Good Day, Kasun
               </h1>
               <p className="text-[11px] sm:text-xs text-white/80 md:text-slate-500 mt-0.5 flex items-center gap-1.5 flex-wrap">
                 <MapPin className="h-3 w-3 text-white md:text-rose-500 shrink-0 hidden sm:inline" />
-                <span>Colombo Central Territory</span>
+                <span>Kottawa Central Territory</span>
                 <span>•</span>
                 <span>14 Assigned Dealers</span>
-                <span>•</span>
-                <span className="text-emerald-300 md:text-emerald-600 font-medium">Active Cycle</span>
               </p>
             </div>
-          </div>
-
-          {/* Right: Quick Action Buttons (Customer Collections & New Order) */}
-          <div className="grid grid-cols-2 md:flex md:items-center gap-2 pt-0.5 md:pt-0 shrink-0 w-full md:w-auto">
-            <Link to="/payments/collect" className="w-full md:w-auto">
-              <Button
-                size="sm"
-                className="w-full md:w-auto h-8 sm:h-9 gap-1 text-[11px] sm:text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg shadow-xs active:scale-[0.98] border-0"
-              >
-                <Banknote className="h-3.5 w-3.5" /> Customer Collections
-              </Button>
-            </Link>
-            <Link to="/orders" className="w-full md:w-auto">
-              <Button
-                size="sm"
-                className="w-full md:w-auto h-8 sm:h-9 gap-1 text-[11px] sm:text-xs bg-white md:bg-primary text-primary md:text-primary-foreground hover:bg-white/90 md:hover:bg-primary-hover font-bold md:font-semibold rounded-lg shadow-xs active:scale-[0.98] border-0"
-              >
-                <PlusCircle className="h-3.5 w-3.5" /> New Order
-              </Button>
-            </Link>
           </div>
         </div>
       </div>
