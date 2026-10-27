@@ -236,7 +236,7 @@ export function PurchasingReportsPage() {
             variant="default"
             size="sm"
             onClick={handleExportCSV}
-            className="gap-1.5 text-xs bg-slate-900 hover:bg-slate-800 text-white"
+            className="gap-1.5 text-xs bg-primary hover:bg-primary-hover text-primary-foreground font-semibold shadow-xs"
           >
             <Download className="h-3.5 w-3.5" />
             <span>Export CSV</span>
@@ -321,7 +321,7 @@ export function PurchasingReportsPage() {
               onClick={() => setActiveReport(tab.id as ReportType)}
               className={`flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg transition-colors ${
                 isActive
-                  ? 'bg-slate-900 text-white shadow-2xs'
+                  ? 'bg-primary text-primary-foreground shadow-xs'
                   : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
               }`}
             >

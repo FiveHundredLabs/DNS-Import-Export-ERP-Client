@@ -157,7 +157,7 @@ export function PurchasingSuppliersPage() {
 
         <Button
           onClick={handleOpenCreate}
-          className="gap-1.5 bg-slate-900 hover:bg-slate-800 text-white self-start sm:self-auto"
+          className="gap-1.5 bg-primary hover:bg-primary-hover text-primary-foreground font-semibold shadow-xs self-start sm:self-auto"
         >
           <Plus className="h-4 w-4" />
           <span>New Supplier</span>
@@ -570,7 +570,7 @@ export function PurchasingSuppliersPage() {
                 variant="default"
                 size="sm"
                 onClick={() => setDetailModalOpen(false)}
-                className="text-xs bg-slate-900 text-white"
+                className="text-xs bg-primary hover:bg-primary-hover text-primary-foreground font-semibold shadow-xs"
               >
                 Close
               </Button>

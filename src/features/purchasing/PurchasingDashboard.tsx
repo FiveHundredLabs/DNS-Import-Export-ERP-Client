@@ -82,7 +82,7 @@ export function PurchasingDashboard() {
             <h1 className="text-2xl font-bold tracking-tight text-slate-900">
               Purchasing & Procurement Dashboard
             </h1>
-            <Badge variant="outline" className="bg-slate-100 text-slate-800 border-slate-300 text-xs font-mono">
+            <Badge variant="outline" className="bg-primary-light text-primary border-primary-border text-xs font-mono">
               ROLE: PURCHASING_OFFICER
             </Badge>
           </div>
@@ -94,7 +94,7 @@ export function PurchasingDashboard() {
         <div className="flex items-center gap-2">
           <Button
             onClick={() => navigate('/purchasing/orders/new')}
-            className="gap-1.5 bg-slate-900 hover:bg-slate-800 text-white shadow-xs"
+            className="gap-1.5 bg-primary hover:bg-primary-hover text-primary-foreground font-semibold shadow-xs"
           >
             <FilePlus className="h-4 w-4" />
             <span>Create Purchase Order</span>

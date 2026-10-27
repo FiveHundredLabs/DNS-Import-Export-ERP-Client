@@ -299,7 +299,7 @@ export function PurchaseOrderCreateEditPage() {
             variant="default"
             disabled={submitting}
             onClick={() => handleSaveOrder(true)}
-            className="gap-1.5 text-xs bg-slate-900 hover:bg-slate-800 text-white"
+            className="gap-1.5 text-xs bg-primary hover:bg-primary-hover text-primary-foreground font-semibold shadow-xs"
           >
             <Send className="h-3.5 w-3.5" />
             <span>Submit for Approval</span>

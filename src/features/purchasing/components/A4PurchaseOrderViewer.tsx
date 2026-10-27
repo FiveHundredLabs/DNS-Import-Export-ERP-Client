@@ -195,7 +195,7 @@ export function A4PurchaseOrderViewer({
               variant="default"
               size="sm"
               onClick={handleDownloadPdf}
-              className="gap-1.5 text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-white shadow-xs"
+              className="gap-1.5 text-xs font-semibold bg-primary hover:bg-primary-hover text-primary-foreground shadow-xs"
             >
               <Download className="h-3.5 w-3.5" />
               <span>Export PDF</span>

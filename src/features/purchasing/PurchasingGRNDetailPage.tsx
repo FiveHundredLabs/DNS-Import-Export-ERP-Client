@@ -85,14 +85,14 @@ export function PurchasingGRNDetailPage() {
   return (
     <div className="space-y-6 pb-12">
       {/* Read-Only Restriction Banner */}
-      <div className="p-3.5 bg-slate-900 text-white rounded-xl shadow-xs flex items-center justify-between text-xs">
+      <div className="p-3.5 bg-primary text-primary-foreground rounded-xl shadow-xs flex items-center justify-between text-xs">
         <div className="flex items-center gap-2">
-          <Lock className="h-4 w-4 text-amber-400 shrink-0" />
+          <Lock className="h-4 w-4 text-amber-300 shrink-0" />
           <span>
             <strong>Read-Only Inspection Mode:</strong> As a Purchasing Officer, you have viewing authorization for inward deliveries. Modifications, stock adjustments, and approval actions are restricted to Stock Keeper and Finance roles.
           </span>
         </div>
-        <Badge variant="outline" className="bg-slate-800 text-slate-200 border-slate-700 text-[10px] shrink-0 font-mono">
+        <Badge variant="outline" className="bg-primary-hover text-white border-primary-light/40 text-[10px] shrink-0 font-mono">
           SECURE VIEW
         </Badge>
       </div>
