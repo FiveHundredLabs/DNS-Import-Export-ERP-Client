@@ -55,12 +55,7 @@ export function PurchaseOrderCreateEditPage() {
   );
   const [paymentTerms, setPaymentTerms] = useState<string>('Net 30');
   const [currency, setCurrency] = useState<string>('LKR');
-  const [shippingCharges, setShippingCharges] = useState<number>(0);
-  const [otherCharges, setOtherCharges] = useState<number>(0);
   const [notes, setNotes] = useState<string>('');
-  const [deliveryInstructions, setDeliveryInstructions] = useState<string>(
-    'Deliver to Central Warehouse, Wellampitiya during standard receiving hours.'
-  );
 
   const [lines, setLines] = useState<LineFormState[]>([
     {
@@ -86,11 +81,8 @@ export function PurchaseOrderCreateEditPage() {
         setOrderDate(existing.orderDate);
         setExpectedDeliveryDate(existing.expectedDeliveryDate);
         setPaymentTerms(existing.paymentTerms);
-        setShippingCharges(existing.shippingCharges || 0);
-        setOtherCharges(existing.otherCharges || 0);
         setNotes(existing.notes || '');
         setCurrency(existing.currency || 'LKR');
-        setDeliveryInstructions(existing.deliveryInstructions || '');
         setLines(
           existing.items.map((item) => ({
             id: item.id,
@@ -138,10 +130,10 @@ export function PurchaseOrderCreateEditPage() {
 
     return purchaseOrderService.calculateTotals(
       rawItems,
-      shippingCharges,
-      otherCharges
+      0,
+      0
     );
-  }, [lines, shippingCharges, otherCharges]);
+  }, [lines]);
 
   // Line helpers
   const handleProductChange = (lineId: string, productId: string) => {
@@ -236,10 +228,9 @@ export function PurchaseOrderCreateEditPage() {
           taxRate: Number(l.taxRate) || 0,
           notes: l.notes,
         })),
-        shippingCharges: Number(shippingCharges) || 0,
-        otherCharges: Number(otherCharges) || 0,
+        shippingCharges: 0,
+        otherCharges: 0,
         notes,
-        deliveryInstructions,
         submitForApproval,
       };
 
@@ -567,17 +558,6 @@ export function PurchaseOrderCreateEditPage() {
                   className="text-xs"
                 />
               </div>
-
-              <div className="space-y-1">
-                <label className="text-xs font-medium text-slate-700">Delivery Instructions</label>
-                <Textarea
-                  placeholder="Receiving dock instructions, gate passes, specific timing..."
-                  value={deliveryInstructions}
-                  onChange={(e) => setDeliveryInstructions(e.target.value)}
-                  rows={2}
-                  className="text-xs"
-                />
-              </div>
             </CardContent>
           </Card>
         </div>
@@ -611,28 +591,6 @@ export function PurchaseOrderCreateEditPage() {
                 <span className="font-mono font-semibold tabular-nums">
                   {formatCurrency(calculation.taxTotal, currency)}
                 </span>
-              </div>
-
-              <div className="flex items-center justify-between text-slate-600 gap-2">
-                <span>Shipping / Freight ({currency}):</span>
-                <Input
-                  type="number"
-                  min="0"
-                  value={shippingCharges}
-                  onChange={(e) => setShippingCharges(Math.max(0, parseFloat(e.target.value) || 0))}
-                  className="w-28 h-7 text-xs text-right font-mono bg-white"
-                />
-              </div>
-
-              <div className="flex items-center justify-between text-slate-600 gap-2">
-                <span>Other Handling Charges ({currency}):</span>
-                <Input
-                  type="number"
-                  min="0"
-                  value={otherCharges}
-                  onChange={(e) => setOtherCharges(Math.max(0, parseFloat(e.target.value) || 0))}
-                  className="w-28 h-7 text-xs text-right font-mono bg-white"
-                />
               </div>
 
               <div className="border-t-2 border-slate-900 pt-3 flex justify-between items-baseline text-slate-900">
