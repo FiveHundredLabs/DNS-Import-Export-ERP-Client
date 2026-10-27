@@ -44,6 +44,7 @@ export interface Product extends BaseEntity {
   approvalStatus: ApprovalStatus;
   stockOnHand: number;
   damagedStock: number;
+  requiresSerialNumber?: boolean;
 }
 
 export interface PriceChangeProposal extends BaseEntity {

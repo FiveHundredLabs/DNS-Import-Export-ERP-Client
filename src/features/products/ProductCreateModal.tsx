@@ -38,6 +38,7 @@ export function ProductCreateModal({
   const [showDiscountInfo, setShowDiscountInfo] = useState(false);
   const [warrantyMonths, setWarrantyMonths] = useState<number>(12);
   const [isPromotional, setIsPromotional] = useState(false);
+  const [requiresSerialNumber, setRequiresSerialNumber] = useState(false);
   const [discLevel1, setDiscLevel1] = useState<string>('');
   const [discLevel2, setDiscLevel2] = useState<string>('');
   const [discLevel3, setDiscLevel3] = useState<string>('');
@@ -80,6 +81,7 @@ export function ProductCreateModal({
       approvalStatus: 'APPROVED' as const,
       stockOnHand: 0,
       damagedStock: 0,
+      requiresSerialNumber,
     };
 
     const validation = validateProductData(productPayload);
@@ -205,6 +207,19 @@ export function ProductCreateModal({
               placeholder="e.g. 12"
             />
           </div>
+        </div>
+
+        <div className="flex items-center gap-2.5 p-3 rounded-lg border border-indigo-100 bg-indigo-50/50">
+          <input
+            type="checkbox"
+            id="requiresSerialNumber"
+            checked={requiresSerialNumber}
+            onChange={(e) => setRequiresSerialNumber(e.target.checked)}
+            className="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary cursor-pointer"
+          />
+          <label htmlFor="requiresSerialNumber" className="text-xs font-semibold text-slate-800 cursor-pointer select-none">
+            Track Serial Numbers (Requires mandatory unit-wise manufacturer serial numbers in GRN receiving)
+          </label>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 border-t border-slate-100 pt-3">

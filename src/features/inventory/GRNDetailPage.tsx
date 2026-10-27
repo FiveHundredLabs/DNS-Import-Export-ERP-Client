@@ -368,7 +368,7 @@ export function GRNDetailPage() {
               )}
             </div>
             <p className="text-xs text-slate-500 mt-0.5">
-              Inward delivery inspection • Physical barcode serialization record
+              <span>GRN Details</span> • Inward delivery inspection • Physical barcode serialization record
             </p>
           </div>
         </div>
