@@ -42,14 +42,14 @@ export function StockMovementsPage() {
 
   const getMovementColor = (type: string) => {
     switch (type) {
-      case 'GRN_INWARD': return 'bg-green-500';
-      case 'SALES_ISSUE': return 'bg-primary-light';
-      case 'TRANSFER_OUT': return 'bg-orange-500';
-      case 'TRANSFER_IN': return 'bg-cyan-500';
-      case 'DAMAGE_WRITE_OFF': return 'bg-red-500';
-      case 'DAMAGE_REVERSAL': return 'bg-purple-500';
-      case 'ADJUSTMENT': return 'bg-slate-500';
-      default: return 'bg-gray-500';
+      case 'GRN_INWARD': return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+      case 'SALES_ISSUE': return 'bg-blue-50 text-blue-700 border-blue-200';
+      case 'TRANSFER_OUT': return 'bg-orange-50 text-orange-700 border-orange-200';
+      case 'TRANSFER_IN': return 'bg-cyan-50 text-cyan-700 border-cyan-200';
+      case 'DAMAGE_WRITE_OFF': return 'bg-rose-50 text-rose-700 border-rose-200';
+      case 'DAMAGE_REVERSAL': return 'bg-purple-50 text-purple-700 border-purple-200';
+      case 'ADJUSTMENT': return 'bg-slate-100 text-slate-700 border-slate-300';
+      default: return 'bg-slate-100 text-slate-700 border-slate-200';
     }
   };
 
@@ -128,8 +128,11 @@ export function StockMovementsPage() {
                   return (
                     <TableRow key={m.id}>
                       <TableCell className="whitespace-nowrap">{formatDate(m.timestamp)}</TableCell>
-                    <TableCell>
-                        <Badge className={`${getMovementColor(m.movementType ?? m.type)} text-white border-0`}>
+                      <TableCell>
+                        <Badge
+                          variant="outline"
+                          className={`${getMovementColor(m.movementType ?? m.type)} text-[10px] font-mono font-semibold uppercase tracking-wider rounded-md px-2.5 py-0.5`}
+                        >
                           {(m.movementType ?? m.type)?.replace(/_/g, ' ')}
                         </Badge>
                       </TableCell>

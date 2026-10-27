@@ -8,6 +8,7 @@ import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table';
 import { Skeleton } from '../../components/ui/skeleton';
+import { StatCard } from '../../components/common/StatCard';
 import { MOCK_PRODUCTS } from '../../mock/mockProducts';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 import { unitBarcodeService } from '../../services/UnitBarcodeService';

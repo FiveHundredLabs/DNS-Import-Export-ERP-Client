@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
@@ -171,6 +172,7 @@ export function GRNDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { grnService } = useGRN();
+  const { user } = useAuth();
 
   const [grn, setGrn] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -247,15 +249,17 @@ export function GRNDetailPage() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'DRAFT':
-        return 'bg-slate-500';
+        return 1;
       case 'SUBMITTED':
-        return 'bg-amber-500';
+        return 2;
       case 'APPROVED':
-        return 'bg-emerald-600';
-      case 'REJECTED':
-        return 'bg-red-500';
+        return 3;
+      case 'COSTED':
+        return 4;
+      case 'PRICED':
+        return 5;
       default:
-        return 'bg-gray-500';
+        return 1;
     }
   };
 
@@ -271,11 +275,12 @@ export function GRNDetailPage() {
 
   if (error || !grn) {
     return (
-      <div className="p-6 text-center text-red-500">
-        <h2 className="text-xl font-bold">Error Loading GRN</h2>
-        <p>{error}</p>
-        <Button onClick={() => navigate('/inventory/grn')} className="mt-4">
-          Back to List
+      <div className="p-10 text-center space-y-4">
+        <AlertTriangle className="h-10 w-10 text-rose-500 mx-auto" />
+        <h2 className="text-xl font-bold text-slate-900">Error Loading GRN</h2>
+        <p className="text-sm text-slate-500">{error || 'Unable to locate GRN record.'}</p>
+        <Button onClick={() => navigate('/inventory/grn')} className="mt-2">
+          Back to GRN List
         </Button>
       </div>
     );
@@ -300,16 +305,54 @@ export function GRNDetailPage() {
 
   return (
     <div className="p-6 space-y-6">
+      {/* ── Finance & Warehouse Read-Only Inspection Mode Banner ── */}
+      <div className="p-4 bg-slate-900 text-white rounded-2xl shadow-xs flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs">
+        <div className="flex items-center gap-2.5">
+          <ShieldCheck className="h-4 w-4 text-emerald-400 shrink-0" />
+          <span>
+            <strong>Warehouse Inward Verification &amp; Read-Only Audit View:</strong> Stock Keepers inspect physical counts, verify packaging, and apply unit barcode stickers. Unit costing, supplier ledger entries, and vendor bills are securely managed in Finance.
+          </span>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <Badge variant="outline" className="bg-slate-800 text-emerald-300 border-emerald-500/30 text-[10px] font-mono">
+            PHYSICAL AUDIT SECURE
+          </Badge>
+          <Badge variant="outline" className="bg-slate-800 text-slate-300 border-slate-700 text-[10px] font-mono">
+            READ-ONLY VIEW
+          </Badge>
+        </div>
+      </div>
+
+      {/* ── Top Header & Actions ── */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center gap-3">
-          <h1 className="text-2xl font-bold">GRN Number: {grn.grnNumber || grn.id}</h1>
-          <Badge className={`${getStatusColor(grn.status)} text-white border-0`}>{grn.status}</Badge>
-          {grn.sourceType && (
-            <Badge variant="outline" className="text-xs bg-slate-50 text-slate-700">
-              Source: {grn.sourceType === 'PO' ? `PO (${grn.poNumber || 'Ref'})` : 'Manual Intake'}
-            </Badge>
-          )}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => navigate('/inventory/grn')}
+            className="text-slate-600 hover:text-slate-900 -ml-2"
+          >
+            <ArrowLeft className="h-4 w-4 mr-1" />
+            <span>GRN List</span>
+          </Button>
+          <div>
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <h1 className="text-2xl font-bold tracking-tight text-slate-900 font-mono">
+                GRN Number: {grn.grnNumber || grn.id}
+              </h1>
+              {getStatusBadge(grn.status)}
+              {grn.sourceType && (
+                <Badge variant="outline" className="text-xs bg-slate-50 text-slate-700">
+                  Source: {grn.sourceType === 'PO' ? `PO (${grn.poNumber || 'Ref'})` : 'Manual Intake'}
+                </Badge>
+              )}
+            </div>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Inward delivery inspection • Physical barcode serialization record
+            </p>
+          </div>
         </div>
+
         <div className="flex flex-wrap items-center gap-2">
           {/* Unit Barcodes Button */}
           <Button
@@ -322,7 +365,7 @@ export function GRNDetailPage() {
             className="gap-1.5 text-xs font-semibold text-primary border-primary/30 hover:bg-primary/5"
           >
             <Printer className="h-3.5 w-3.5" />
-            Unit Barcodes &amp; Stickers ({totalUnits})
+            Unit Barcodes &amp; Stickers ({totalGood})
           </Button>
 
           <Button variant="outline" onClick={() => navigate('/inventory/grn')}>
@@ -415,25 +458,25 @@ export function GRNDetailPage() {
             View All Barcode Stickers
           </Button>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0">
           <Table>
             <TableHeader>
-              <TableRow>
-                <TableHead>Product Name</TableHead>
-                <TableHead>SKU</TableHead>
-                <TableHead className="text-right">Expected Qty</TableHead>
-                <TableHead className="text-right">Received Qty</TableHead>
-                <TableHead className="text-right">Damaged Qty</TableHead>
-                <TableHead className="text-right">Good Qty</TableHead>
-                <TableHead className="text-center">Unit Barcodes</TableHead>
-                {!isStockKeeper && <TableHead className="text-right">Unit Cost</TableHead>}
-                {!isStockKeeper && <TableHead className="text-right">Line Value</TableHead>}
+              <TableRow className="bg-slate-50/70 hover:bg-slate-50/70">
+                <TableHead className="text-xs font-semibold">Product Name</TableHead>
+                <TableHead className="text-xs font-semibold">SKU</TableHead>
+                <TableHead className="text-right text-xs font-semibold">Expected Qty</TableHead>
+                <TableHead className="text-right text-xs font-semibold">Received Qty</TableHead>
+                <TableHead className="text-right text-xs font-semibold">Damaged Qty</TableHead>
+                <TableHead className="text-right text-xs font-semibold">Good Qty</TableHead>
+                <TableHead className="text-center text-xs font-semibold">Unit Barcodes</TableHead>
+                {!isStockKeeper && <TableHead className="text-right text-xs font-semibold">Unit Cost</TableHead>}
+                {!isStockKeeper && <TableHead className="text-right text-xs font-semibold">Line Value</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
               {preparedItems?.map((item: any, idx: number) => {
                 const product = MOCK_PRODUCTS.find((p) => p.id === item.productId);
-                const goodQty = item.receivedQuantity - (item.damagedQuantity || 0);
+                const goodQty = (item.receivedQuantity || 0) - (item.damagedQuantity || 0);
                 const unitCost = item.unitCostSnapshot ?? item.unitCost ?? 0;
                 const lineValue = goodQty * unitCost;
                 const barcodesCount = item.unitRecords?.length || item.unitBarcodes?.length || goodQty;
@@ -507,20 +550,31 @@ export function GRNDetailPage() {
               })}
             </TableBody>
           </Table>
-          <div className="flex justify-end mt-4 text-base font-bold text-slate-900">
-            {isStockKeeper
-              ? `Total Accepted Units: ${totalUnits}`
-              : `Total Value: ${formatCurrency(totalValue)}`}
+
+          {/* Table Footer Summary Strip */}
+          <div className="flex flex-col sm:flex-row items-center justify-between p-4 bg-slate-50 border-t border-slate-200 text-xs">
+            <span className="text-slate-500">
+              {isStockKeeper
+                ? 'Stock Keeper physical audit view. Commercial unit valuation (LKR) is securely managed in Finance.'
+                : 'Commercial stock receipt valuation.'}
+            </span>
+            <div className="text-sm font-bold text-slate-900 mt-2 sm:mt-0">
+              {isStockKeeper
+                ? `Total Accepted Units: ${totalGood}`
+                : `Total Value: ${formatCurrency(totalValue)}`}
+            </div>
           </div>
         </CardContent>
       </Card>
 
       {/* ── Manager Approval Section ── */}
       {grn.status === 'SUBMITTED' && user?.role === 'MANAGER' && (
-        <Card className="border-primary-border bg-primary-light">
-          <CardHeader>
+        <Card className="border-primary-border bg-primary-light/40 shadow-xs">
+          <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-blue-900">Manager Approval &amp; Inward Release</CardTitle>
+              <CardTitle className="text-primary-text font-bold">
+                Manager Approval &amp; Inward Release
+              </CardTitle>
               <Badge className="bg-emerald-600 text-white gap-1 text-xs">
                 <CheckCircle2 className="h-3.5 w-3.5" />
                 Physical Labeling Verified
@@ -528,10 +582,10 @@ export function GRNDetailPage() {
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="p-3 bg-white/80 border border-blue-200 rounded-lg text-xs text-blue-950 flex items-center gap-2">
+            <div className="p-3 bg-white/90 border border-blue-200 rounded-xl text-xs text-blue-950 flex items-center gap-2">
               <ShieldCheck className="h-4 w-4 text-emerald-600 shrink-0" />
               <span>
-                Stock Keeper has verified physical intake and affixed system-generated barcode stickers to all {totalUnits} received units in the warehouse.
+                Stock Keeper has verified physical intake and affixed system-generated barcode stickers to all {totalGood} accepted units in the warehouse.
               </span>
             </div>
 
@@ -541,11 +595,11 @@ export function GRNDetailPage() {
               onChange={(e) => setComment(e.target.value)}
               className="bg-white"
             />
-            <div className="flex gap-4">
-              <Button onClick={handleApprove} variant="default" className="bg-green-600 hover:bg-green-700">
+            <div className="flex gap-3">
+              <Button onClick={handleApprove} variant="default" className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold">
                 Approve &amp; Update Inventory
               </Button>
-              <Button onClick={handleReject} variant="destructive">
+              <Button onClick={handleReject} variant="destructive" className="font-semibold">
                 Reject GRN
               </Button>
             </div>

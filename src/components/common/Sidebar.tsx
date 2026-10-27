@@ -12,6 +12,7 @@ import {
   DollarSign,
   Award,
   ShieldCheck,
+  ShieldAlert,
   BarChart3,
   Settings,
   HelpCircle,
@@ -75,6 +76,8 @@ interface SidebarItem {
   category: RailCategory;
   exact?: boolean;
   directorOnly?: boolean;
+  excludedRoles?: string[];
+  badge?: string;
 }
 
 export function Sidebar({ isOpen, onClose }: SidebarProps) {
@@ -114,12 +117,11 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     { id: 'warranty-verification', name: 'Warranty Verification', path: '/warranty/verification', icon: Barcode, category: 'sales' },
   ];
 
-  // 2. Customers, Invoices, Payments & POS
+  // 2. Customers, Invoices & POS (hiding legacy /payments from navigation bar)
   const customerItems: SidebarItem[] = [
     { id: 'customer-collections', name: 'Customer Collections', path: '/payments/collect', icon: Banknote, category: 'sales' },
     { id: 'customers', name: 'Customer Master', path: '/customers', icon: Users2, category: 'customers' },
     { id: 'invoices', name: 'Invoices', path: '/invoices', icon: Receipt, category: 'sales' },
-    { id: 'payments', name: 'Payments', path: '/payments', icon: CreditCard, category: 'finance' },
     { id: 'pos', name: 'Showroom POS', path: '/pos', icon: Store, category: 'sales' },
   ];
 
@@ -129,25 +131,39 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     { id: 'grn', name: 'GRN', path: '/inventory/grn', icon: Receipt, category: 'inventory' },
     { id: 'delivery-notes', name: 'Delivery Notes', path: '/inventory/delivery-notes', icon: Truck, category: 'inventory' },
     { id: 'products', name: 'Product Master', path: '/products', icon: Package, category: 'inventory', excludedRoles: ['STOCK_KEEPER'] },
+    { id: 'damaged-stock', name: 'Damaged Stock & RMA', path: '/inventory/damaged-stock', icon: ShieldAlert, category: 'inventory' },
   ];
 
-  // 4. Finance, Banking & Ledger Core
+  // 4. Finance, Banking & Ledger Core (arranged in logical lifecycle order)
   const financeItems: SidebarItem[] = [
-    { id: 'journal', name: 'Journal Entry Voucher', path: '/finance/journal/new', icon: Zap, category: 'finance' },
+    // 1. Foundation & Master Data
     { id: 'accounts', name: 'Chart of Accounts', path: '/finance/accounts', icon: BookOpen, category: 'finance' },
-    { id: 'ap-bills', name: 'Vendor Bill Costing (AP)', path: '/finance/ap/bills/new', icon: Receipt, category: 'finance' },
-    { id: 'ap-advances', name: 'Advance Prepayments (AP)', path: '/finance/ap/advances', icon: Coins, category: 'finance' },
-    { id: 'ap-debit-notes', name: 'Supplier Debit Notes', path: '/finance/ap/debit-notes', icon: Undo2, category: 'finance' },
-    { id: 'ap-payments', name: 'Batch Supplier Payments', path: '/finance/ap/payments/new', icon: CreditCard, category: 'finance' },
-    { id: 'ar-approvals', name: 'Receipt Approval Queue (AR)', path: '/finance/ar/approvals', icon: CheckCircle2, category: 'finance' },
-    { id: 'ar-allocate', name: 'AR Collection Allocation', path: '/finance/ar/allocate', icon: SlidersHorizontal, category: 'finance' },
-    { id: 'ar-pdc', name: 'PDC Vault (Cheques in Hand)', path: '/finance/ar/pdc-vault', icon: Clock, category: 'finance' },
-    { id: 'ar-credit-notes', name: 'Customer Credit Notes', path: '/finance/ar/credit-notes', icon: RotateCcw, category: 'finance' },
-    { id: 'reconciliation', name: 'Bank Reconciliation', path: '/finance/reconciliation', icon: Landmark, category: 'finance' },
     { id: 'suppliers', name: 'Suppliers', path: '/finance/suppliers', icon: Store, category: 'finance' },
+
+    // 2. Procurement & Accounts Payable (AP)
+    { id: 'ap-bills', name: 'Vendor Bill Costing (AP)', path: '/finance/ap/bills/new', icon: Receipt, category: 'finance' },
+    { id: 'ap-advances', name: 'Supplier Advance Prepayments', path: '/finance/ap/advances', icon: Coins, category: 'finance' },
+    { id: 'ap-payments', name: 'Batch Supplier Payments', path: '/finance/ap/payments/new', icon: CreditCard, category: 'finance' },
+    { id: 'ap-debit-notes', name: 'Supplier Debit Notes', path: '/finance/ap/debit-notes', icon: Undo2, category: 'finance' },
+
+    // 3. Sales & Accounts Receivable (AR)
+    { id: 'ar-approvals', name: 'Receipt Approval Queue (AR)', path: '/finance/ar/approvals', icon: CheckCircle2, category: 'finance' },
+    { id: 'ar-pdc', name: 'PDC Vault (Cheques in Hand)', path: '/finance/ar/pdc-vault', icon: Clock, category: 'finance' },
+    { id: 'ar-allocate', name: 'AR Collection Allocation', path: '/finance/ar/allocate', icon: SlidersHorizontal, category: 'finance' },
+    { id: 'ar-credit-notes', name: 'Customer Credit Notes', path: '/finance/ar/credit-notes', icon: RotateCcw, category: 'finance' },
+
+    // 4. Core Universal Journal & Adjustments
+    { id: 'journal', name: 'Journal Entry Voucher', path: '/finance/journal/new', icon: Zap, category: 'finance' },
+
+    // 5. Banking & Reconciliation
+    { id: 'reconciliation', name: 'Bank Reconciliation', path: '/finance/reconciliation', icon: Landmark, category: 'finance' },
+
+    // 6. Period Control & Year-End Close
     { id: 'closing', name: 'Period Closing Lock', path: '/finance/settings/closing', icon: Lock, category: 'finance' },
-    { id: 'monthly-audit', name: 'Monthly Audit & Double Entry', path: '/finance/reports/monthly-audit', icon: Layers, category: 'finance' },
+
+    // 7. Statutory Reports & Compliance
     { id: 'reports-hub', name: 'Financial Reports Hub', path: '/finance/reports', icon: BarChart3, category: 'finance' },
+    { id: 'monthly-audit', name: 'Monthly Audit & Double Entry', path: '/finance/reports/monthly-audit', icon: Layers, category: 'finance' },
     { id: 'commissions', name: 'Sales Commission', path: '/commissions', icon: Award, category: 'finance' },
   ];
 

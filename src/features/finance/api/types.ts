@@ -44,6 +44,12 @@ export interface Supplier {
   status: 'ACTIVE' | 'INACTIVE';
   balance: number;
   currency: string;
+  category?: string; // e.g. 'Raw Materials', 'Finished Goods', 'Logistics & Clearing', 'Equipment', 'General Services'
+  vatNumber?: string; // Statutory VAT registration number
+  bankName?: string;
+  bankBranch?: string;
+  bankAccountNumber?: string;
+  bankSwiftCode?: string;
   historicalPrices?: Record<string, number>; // productId -> last known historical purchase price
   createdAt: string;
   updatedAt: string;
@@ -65,6 +71,8 @@ export interface SupplierAdvance {
   advanceNumber: string;
   supplierId: string;
   supplierName: string;
+  purchaseOrderId?: string;
+  purchaseOrderNumber?: string;
   paymentDate: string;
   bankAccountId: string;
   bankAccountCode: string;
@@ -224,6 +232,12 @@ export interface CreateSupplierDTO {
   phone: string;
   address?: string;
   taxNumber?: string;
+  vatNumber?: string;
+  category?: string;
+  bankName?: string;
+  bankBranch?: string;
+  bankAccountNumber?: string;
+  bankSwiftCode?: string;
   paymentTerms: string;
 }
 

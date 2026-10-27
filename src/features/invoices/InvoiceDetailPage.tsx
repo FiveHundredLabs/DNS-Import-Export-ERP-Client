@@ -33,13 +33,41 @@ import {
   Sparkles,
   ShieldCheck,
 } from 'lucide-react';
+import { RecordWarrantyNoteModal } from '../warranty/RecordWarrantyNoteModal';
+import { WarrantyRecord } from '../../types/warranty';
+import { warrantyService } from '../../services/WarrantyService';
+import { useAuth } from '../../hooks/useAuth';
+import { toast } from 'sonner';
+import { Edit3 } from 'lucide-react';
 
 export function InvoiceDetailPage() {
   const { id } = useParams<{ id: string }>();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const { currentUser, role } = useAuth();
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [loading, setLoading] = useState(true);
+  const [finalizing, setFinalizing] = useState(false);
+  const [isWarrantyModalOpen, setIsWarrantyModalOpen] = useState(false);
+  const [matchingWarranty, setMatchingWarranty] = useState<WarrantyRecord | null>(null);
+
+  useEffect(() => {
+    async function checkWarranty() {
+      if (!invoice) return;
+      try {
+        const records = await warrantyService.getAllRecords();
+        const found = records.find(
+          (r) => r.invoiceNumber === invoice.invoiceNumber || r.invoiceId === invoice.id
+        );
+        if (found) {
+          setMatchingWarranty(found);
+        }
+      } catch (e) {
+        console.error('Failed to check warranty record:', e);
+      }
+    }
+    checkWarranty();
+  }, [invoice]);
 
   // Single-Invoice Collection state
   const [collectModalOpen, setCollectModalOpen] = useState(searchParams.get('collect') === 'true');
@@ -80,15 +108,35 @@ export function InvoiceDetailPage() {
     );
   }
 
+  const isDraft = invoice.status === 'DRAFT';
+  const isSalesManager = ['SALES_MANAGER', 'MANAGER', 'DIRECTOR'].includes(currentUser?.role || role);
   const isOverdue = invoice.status === 'OVERDUE';
   const previouslyCollected = invoice.collectedAmount || 0;
   const uncollectedBalance = Math.max(0, invoice.balanceAmount - previouslyCollected);
-  const hasRemainingReceivable = uncollectedBalance > 0;
+  const hasRemainingReceivable = !isDraft && uncollectedBalance > 0;
 
   const handlePaymentSuccess = (payment: Payment, updatedInvoice: Invoice) => {
     setInvoice(updatedInvoice);
     setRecordedPayment(payment);
     setThermalModalOpen(true);
+  };
+
+  const handleFinalizeAndIssue = async () => {
+    if (!invoice || !currentUser) {
+      toast.error('Authentication required to finalize invoice');
+      return;
+    }
+    try {
+      setFinalizing(true);
+      const updated = await invoiceService.finalizeAndIssueInvoice(invoice.id, currentUser);
+      setInvoice(updated);
+      toast.success('Invoice finalized and issued successfully.');
+    } catch (err: any) {
+      console.error('Failed to finalize invoice:', err);
+      toast.error(err.message || 'Failed to finalize invoice');
+    } finally {
+      setFinalizing(false);
+    }
   };
 
   return (
@@ -102,6 +150,24 @@ export function InvoiceDetailPage() {
         </Link>
 
         <div className="flex flex-wrap items-center gap-2">
+          {isDraft && isSalesManager && (
+            <>
+              <Link to={`/invoices/${invoice.id}/edit`}>
+                <Button variant="outline" size="sm" className="text-xs gap-1.5 border-slate-300">
+                  <Edit3 className="h-3.5 w-3.5 text-slate-600" /> Edit Draft
+                </Button>
+              </Link>
+              <Button
+                size="sm"
+                onClick={handleFinalizeAndIssue}
+                disabled={finalizing}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs gap-1.5 shadow-sm font-semibold"
+              >
+                <CheckCircle2 className="h-3.5 w-3.5" />
+                {finalizing ? 'Finalizing...' : 'Finalize & Issue'}
+              </Button>
+            </>
+          )}
           {hasRemainingReceivable && (
             <Button
               size="sm"
@@ -111,8 +177,66 @@ export function InvoiceDetailPage() {
               <CreditCard className="h-3.5 w-3.5" /> Collect Payment
             </Button>
           )}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsWarrantyModalOpen(true)}
+            className="text-xs gap-1.5 text-indigo-700 hover:text-indigo-800 border-indigo-200 hover:bg-indigo-50"
+          >
+            <ShieldCheck className="h-3.5 w-3.5 text-indigo-600" />
+            Warranty Apply / Register Card
+          </Button>
         </div>
       </div>
+
+      {/* Draft Invoice Banner */}
+      {isDraft && (
+        <div className="rounded-2xl border border-amber-300 bg-gradient-to-br from-amber-500/[0.10] via-amber-50/40 to-white p-4 sm:p-5 shadow-xs">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-300">
+                  <Clock className="h-3.5 w-3.5 text-amber-700" /> DRAFT INVOICE
+                </span>
+                <span className="font-mono text-xs font-semibold text-slate-600">
+                  Origin: {invoice.orderNumber}
+                </span>
+              </div>
+              <h3 className="text-base font-bold text-slate-900 mt-1">
+                Awaiting Sales Manager Finalization and Issue
+              </h3>
+              <p className="text-xs text-slate-600 max-w-2xl">
+                This invoice was converted as a draft. Sales Managers have full authority to modify line item quantities, substitute products, or finalize and issue the invoice.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2">
+              {isSalesManager ? (
+                <>
+                  <Link to={`/invoices/${invoice.id}/edit`}>
+                    <Button variant="outline" size="sm" className="text-xs gap-1.5 bg-white border-amber-300 hover:bg-amber-50 text-amber-900 font-semibold">
+                      <Edit3 className="h-3.5 w-3.5" /> Edit Draft
+                    </Button>
+                  </Link>
+                  <Button
+                    size="sm"
+                    onClick={handleFinalizeAndIssue}
+                    disabled={finalizing}
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs gap-1.5 shadow-xs"
+                  >
+                    <CheckCircle2 className="h-4 w-4" />
+                    <span>{finalizing ? 'Issuing...' : 'Finalize & Issue'}</span>
+                  </Button>
+                </>
+              ) : (
+                <span className="text-xs text-amber-800 italic bg-amber-50 px-3 py-1.5 rounded-lg border border-amber-200">
+                  Editing restricted to Sales Management
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Dedicated Invoice-Wise Payment Collection Highlight Banner */}
       {hasRemainingReceivable ? (
@@ -216,6 +340,13 @@ export function InvoiceDetailPage() {
           </div>
         </div>
       )}
+
+      <RecordWarrantyNoteModal
+        open={isWarrantyModalOpen}
+        onOpenChange={setIsWarrantyModalOpen}
+        preselectedRecord={matchingWarranty}
+        onSuccess={() => {}}
+      />
     </div>
   );
 }

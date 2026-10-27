@@ -23,6 +23,8 @@ export interface InvoiceItem {
   lineTotal: number;
   quantity: number;
   uomSnapshot?: string;
+  batchId?: string;
+  batchNumber?: string;
   discountApprovalStatus?: 'NOT_REQUIRED' | 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED';
   discountAllowedPercentage?: number;
   discountApprovedById?: string;

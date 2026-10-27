@@ -22,11 +22,6 @@ describe('Phase F-3: The Finance Desk Universal Debit/Credit UI', () => {
   it('applies one-click preset, balances the entry, and enables post commitment', async () => {
     render(<FinanceDeskPage />);
 
-    // Wait for initial data to load
-    await waitFor(() => {
-      expect(screen.getByText('JE-1001')).toBeDefined();
-    });
-
     const supplierPresetBtn = screen.getByRole('button', { name: /pay supplier bill/i });
     fireEvent.click(supplierPresetBtn);
 

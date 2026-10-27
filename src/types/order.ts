@@ -35,6 +35,8 @@ export interface SalesOrderItem {
   orderedQuantity: number;
   approvedQuantity: number;
   issuedQuantity: number;
+  batchId?: string;
+  batchNumber?: string;
   requiresSpecialApproval?: boolean;
   specialApprovalReason?: string;
   discountApprovalStatus?: 'NOT_REQUIRED' | 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED';
@@ -295,6 +297,9 @@ export interface CreateOrderItemInput {
   productId: string;
   orderedQuantity: number;
   requestedDiscountPercentage?: number;
+  batchId?: string;
+  batchNumber?: string;
+  unitPrice?: number;
 }
 
 export interface CreateOrderInput {

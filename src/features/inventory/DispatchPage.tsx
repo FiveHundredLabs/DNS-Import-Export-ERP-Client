@@ -16,6 +16,8 @@ import { orderService } from '../../services/OrderService';
 import { useAuth } from '../../hooks/useAuth';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 import { toast } from 'sonner';
+import { DeliveryNoteModal } from './DeliveryNoteModal';
+import { Printer, Truck } from 'lucide-react';
 
 export function DispatchPage() {
   const [orders, setOrders] = useState<any[]>([]);
@@ -23,6 +25,8 @@ export function DispatchPage() {
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
+  const [selectedOrderForDeliveryNote, setSelectedOrderForDeliveryNote] = useState<any | null>(null);
+  const [deliveryNoteModalOpen, setDeliveryNoteModalOpen] = useState(false);
 
   const { user } = useAuth();
 
@@ -69,11 +73,11 @@ export function DispatchPage() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'ISSUED': return 'bg-purple-500';
-      case 'INVOICED': return 'bg-cyan-500';
-      case 'DISPATCHED': return 'bg-primary-light';
-      case 'DELIVERED': return 'bg-green-500';
-      default: return 'bg-gray-500';
+      case 'ISSUED': return 'bg-purple-50 text-purple-700 border-purple-200';
+      case 'INVOICED': return 'bg-cyan-50 text-cyan-700 border-cyan-200';
+      case 'DISPATCHED': return 'bg-blue-50 text-blue-700 border-blue-200';
+      case 'DELIVERED': return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+      default: return 'bg-slate-100 text-slate-700 border-slate-300';
     }
   };
 
@@ -142,29 +146,56 @@ export function DispatchPage() {
                     <TableCell>{formatDate(o.createdAt)}</TableCell>
                     <TableCell className="text-right">{formatCurrency(o.totalAmount || 0)}</TableCell>
                     <TableCell className="text-center">
-                      <Badge className={`${getStatusColor(o.status)} text-white border-0`}>{o.status}</Badge>
+                      <Badge
+                        variant="outline"
+                        className={`${getStatusColor(o.status)} text-[10px] font-mono font-semibold uppercase tracking-wider rounded-md px-2.5 py-0.5`}
+                      >
+                        {o.status}
+                      </Badge>
                     </TableCell>
                     <TableCell className="text-center">
-                      {(o.status === 'ISSUED' || o.status === 'INVOICED') && (
-                        <Button
-                          size="sm"
-                          onClick={() => handleAction(o.id, 'DISPATCHED')}
-                          disabled={processingId === o.id}
-                        >
-                          Confirm Dispatch
-                        </Button>
-                      )}
-                      {o.status === 'DISPATCHED' && (
+                      <div className="flex items-center justify-center gap-1.5 flex-wrap">
                         <Button
                           size="sm"
                           variant="outline"
-                          className="bg-green-50 text-green-700 hover:bg-green-100 hover:text-green-800 border-green-200"
-                          onClick={() => handleAction(o.id, 'DELIVERED')}
-                          disabled={processingId === o.id}
+                          onClick={() => {
+                            setSelectedOrderForDeliveryNote(o);
+                            setDeliveryNoteModalOpen(true);
+                          }}
+                          className="h-8 text-xs gap-1 border-slate-200 text-slate-700 bg-white hover:bg-slate-50"
+                          title="Print 3-Ply Delivery Note (Customer, Accounts, Stores copies)"
                         >
-                          Confirm Delivery
+                          <Printer className="h-3.5 w-3.5 text-primary" />
+                          <span>3-Ply Note</span>
                         </Button>
-                      )}
+
+                        {(o.status === 'ISSUED' || o.status === 'INVOICED') && (
+                          <Button
+                            size="sm"
+                            onClick={() => {
+                              setSelectedOrderForDeliveryNote(o);
+                              setDeliveryNoteModalOpen(true);
+                            }}
+                            disabled={processingId === o.id}
+                            className="h-8 text-xs bg-primary hover:bg-primary-hover text-white gap-1"
+                          >
+                            <Truck className="h-3.5 w-3.5" />
+                            <span>Dispatch</span>
+                          </Button>
+                        )}
+
+                        {o.status === 'DISPATCHED' && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-8 text-xs bg-green-50 text-green-700 hover:bg-green-100 hover:text-green-800 border-green-200"
+                            onClick={() => handleAction(o.id, 'DELIVERED')}
+                            disabled={processingId === o.id}
+                          >
+                            Confirm Delivery
+                          </Button>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -173,6 +204,22 @@ export function DispatchPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* 3-Ply Delivery Note & Driver Logistics Modal */}
+      {selectedOrderForDeliveryNote && (
+        <DeliveryNoteModal
+          open={deliveryNoteModalOpen}
+          onOpenChange={setDeliveryNoteModalOpen}
+          order={selectedOrderForDeliveryNote}
+          onConfirmDispatch={
+            selectedOrderForDeliveryNote.status === 'ISSUED' || selectedOrderForDeliveryNote.status === 'INVOICED'
+              ? async () => {
+                  await handleAction(selectedOrderForDeliveryNote.id, 'DISPATCHED');
+                }
+              : undefined
+          }
+        />
+      )}
     </div>
   );
 }

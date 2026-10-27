@@ -3,6 +3,7 @@ import { WarrantyService } from '../services/WarrantyService';
 import { MockWarrantyRepository } from '../repositories/mock/MockWarrantyRepository';
 import { MockCustomerRepository } from '../repositories/mock/MockCustomerRepository';
 import { MockProductRepository } from '../repositories/mock/MockProductRepository';
+import { MockInventoryRepository } from '../repositories/mock/MockInventoryRepository';
 import {
   calculateWarrantyExpiry,
   isWarrantyValid,
@@ -16,6 +17,7 @@ describe('Phase 10 — Warranty Domain & Dealer Reconciliation', () => {
   let warrantyRepo: MockWarrantyRepository;
   let customerRepo: MockCustomerRepository;
   let productRepo: MockProductRepository;
+  let invRepo: MockInventoryRepository;
   let warrantySvc: WarrantyService;
 
   const mockSalesRepUser: User = {
@@ -78,7 +80,8 @@ describe('Phase 10 — Warranty Domain & Dealer Reconciliation', () => {
     warrantyRepo = new MockWarrantyRepository();
     customerRepo = new MockCustomerRepository();
     productRepo = new MockProductRepository();
-    warrantySvc = new WarrantyService(warrantyRepo, customerRepo, productRepo);
+    invRepo = new MockInventoryRepository();
+    warrantySvc = new WarrantyService(warrantyRepo, customerRepo, productRepo, invRepo);
   });
 
   describe('1. Pure Business Rules (warrantyRules.ts)', () => {
@@ -280,6 +283,10 @@ describe('Phase 10 — Warranty Domain & Dealer Reconciliation', () => {
       expect(approved.status).toBe('APPROVED');
       expect(approved.resolutionNotes).toContain('Claim authorized for warehouse exchange.');
 
+      const balBefore = await invRepo.getBalance(claim.productId, 'WH-MAIN');
+      const initialAvailable = balBefore ? balBefore.availableQuantity : 0;
+      const initialDamaged = balBefore ? balBefore.damagedQuantity : 0;
+
       // Resolution: REPLACE
       const resolved = await warrantySvc.resolveClaim(
         claim.id,
@@ -292,6 +299,10 @@ describe('Phase 10 — Warranty Domain & Dealer Reconciliation', () => {
       expect(resolved.resolvedById).toBe('usr-102');
       expect(resolved.resolvedAt).toBeDefined();
       expect(resolved.resolutionNotes).toContain('Authorized replacement unit');
+
+      const balAfter = await invRepo.getBalance(claim.productId, 'WH-MAIN');
+      expect(balAfter!.availableQuantity).toBe(initialAvailable - 1);
+      expect(balAfter!.damagedQuantity).toBe(initialDamaged + 1);
     });
 
     it('supports REPAIR and REJECT resolution outcomes', async () => {
@@ -304,14 +315,27 @@ describe('Phase 10 — Warranty Domain & Dealer Reconciliation', () => {
         mockSalesRepUser
       );
 
+      const spareBefore = await invRepo.getBalance('prod-002', 'WH-MAIN');
+      const spareAvailBefore = spareBefore ? spareBefore.availableQuantity : 0;
+
       const repaired = await warrantySvc.resolveClaim(
         claim1.id,
         'REPAIR',
         'Tightened contact terminal and recalibrated.',
-        mockManagerUser
+        mockManagerUser,
+        {
+          spareParts: [
+            { productId: 'prod-002', productName: 'Schneider Acti9 63A Triple Pole MCB', quantity: 2 },
+          ],
+        }
       );
       expect(repaired.status).toBe('REPAIRED');
       expect(repaired.resolutionType).toBe('REPAIR');
+      expect(repaired.sparePartsUsed).toBeDefined();
+      expect(repaired.sparePartsUsed![0].quantity).toBe(2);
+
+      const spareAfter = await invRepo.getBalance('prod-002', 'WH-MAIN');
+      expect(spareAfter!.availableQuantity).toBe(spareAvailBefore - 2);
 
       const claim2 = await warrantySvc.createClaim(
         {

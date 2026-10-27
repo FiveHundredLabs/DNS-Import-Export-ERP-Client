@@ -3,8 +3,44 @@ import { ApprovalRequest, ApprovalActionType } from '../../types/approval';
 import { UserRole } from '../../types/auth';
 import { MOCK_APPROVALS } from '../../mock/mockApprovals';
 
+const APPROVALS_STORAGE_KEY = 'dns_erp_approval_requests';
+
 export class MockApprovalRepository implements IApprovalRepository {
-  private approvals: ApprovalRequest[] = [...MOCK_APPROVALS];
+  private approvals: ApprovalRequest[] = [];
+
+  constructor() {
+    this.init();
+  }
+
+  private init() {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const stored = localStorage.getItem(APPROVALS_STORAGE_KEY);
+        this.approvals = stored ? JSON.parse(stored) : JSON.parse(JSON.stringify(MOCK_APPROVALS));
+      } else {
+        this.approvals = JSON.parse(JSON.stringify(MOCK_APPROVALS));
+      }
+    } catch (e) {
+      this.approvals = JSON.parse(JSON.stringify(MOCK_APPROVALS));
+    }
+  }
+
+  private saveToStorage(): void {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        localStorage.setItem(APPROVALS_STORAGE_KEY, JSON.stringify(this.approvals));
+      }
+    } catch (e) {}
+  }
+
+  resetToDefaults(): void {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        localStorage.removeItem(APPROVALS_STORAGE_KEY);
+      }
+    } catch (e) {}
+    this.init();
+  }
 
   async getAll(userRole?: UserRole): Promise<ApprovalRequest[]> {
     await new Promise((resolve) => setTimeout(resolve, 120));
@@ -34,6 +70,7 @@ export class MockApprovalRepository implements IApprovalRepository {
       updatedAt: now,
     };
     this.approvals.unshift(newRequest);
+    this.saveToStorage();
     return newRequest;
   }
 
@@ -107,6 +144,7 @@ export class MockApprovalRepository implements IApprovalRepository {
     };
 
     this.approvals[idx] = updated;
+    this.saveToStorage();
     return updated;
   }
 }

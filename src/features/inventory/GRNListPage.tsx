@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
@@ -6,6 +6,7 @@ import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table';
 import { Skeleton } from '../../components/ui/skeleton';
+import { StatCard } from '../../components/common/StatCard';
 import { useGRN } from '../../hooks/useGRN';
 import { useAuth } from '../../hooks/useAuth';
 import { formatCurrency, formatDate } from '../../utils/formatters';
@@ -20,37 +21,139 @@ export function GRNListPage() {
 
   const isStockKeeper = role === 'STOCK_KEEPER';
 
-  const filteredGRNs =
-    grns?.filter((g) => {
-      if (filter !== 'All' && g.status !== filter.toUpperCase()) return false;
-      if (search) {
-        const s = search.toLowerCase();
-        if (!g.id.toLowerCase().includes(s) && !g.supplierName?.toLowerCase().includes(s))
-          return false;
-      }
-      return true;
-    }) || [];
+  // ─── Summary KPI Metrics & Visual Data ──────────────────────────────────────
+  const stats = useMemo(() => {
+    const list = grns || [];
+    const totalGRNs = list.length;
+    const approvedGRNs = list.filter((g) => g.status === 'APPROVED' || g.status === 'COSTED').length;
+    const submittedGRNs = list.filter((g) => g.status === 'SUBMITTED').length;
+    const draftGRNs = list.filter((g) => g.status === 'DRAFT').length;
+    const rejectedGRNs = list.filter((g) => g.status === 'REJECTED').length;
 
-  const getStatusColor = (status: string) => {
+    let totalReceivedUnits = 0;
+    let totalDamagedUnits = 0;
+    let totalCostValue = 0;
+    let confirmedLabeledGRNs = 0;
+
+    list.forEach((g: any) => {
+      let grnReceived = 0;
+      let grnDamaged = 0;
+      g.items?.forEach((item: any) => {
+        const rec = item.receivedQuantity ?? 0;
+        const dmg = item.damagedQuantity ?? 0;
+        grnReceived += rec;
+        grnDamaged += dmg;
+        totalReceivedUnits += rec;
+        totalDamagedUnits += dmg;
+        const cost = item.unitCostSnapshot ?? item.unitCost ?? 0;
+        totalCostValue += cost * (rec - dmg);
+      });
+
+      if (g.barcodesConfirmed) {
+        confirmedLabeledGRNs += 1;
+      }
+    });
+
+    const goodUnits = Math.max(0, totalReceivedUnits - totalDamagedUnits);
+    const labelingRate = totalGRNs > 0 ? Math.round((confirmedLabeledGRNs / totalGRNs) * 100) : 100;
+
+    // Bar chart data for status distribution
+    const chartData = [
+      { name: 'Approved', count: approvedGRNs, color: '#10B981', label: 'Active Stock' },
+      { name: 'Submitted', count: submittedGRNs, color: '#F59E0B', label: 'Pending Review' },
+      { name: 'Draft', count: draftGRNs, color: '#64748B', label: 'In Progress' },
+      { name: 'Rejected', count: rejectedGRNs, color: '#F43F5E', label: 'Discrepancy' },
+    ];
+
+    return {
+      totalGRNs,
+      approvedGRNs,
+      submittedGRNs,
+      draftGRNs,
+      rejectedGRNs,
+      totalReceivedUnits,
+      totalDamagedUnits,
+      goodUnits,
+      totalCostValue,
+      labelingRate,
+      chartData,
+    };
+  }, [grns]);
+
+  // ─── Filtered GRN List ──────────────────────────────────────────────────────
+  const filteredGRNs = useMemo(() => {
+    return (
+      grns?.filter((g) => {
+        if (filter !== 'All' && g.status !== filter.toUpperCase()) return false;
+        if (search.trim()) {
+          const s = search.toLowerCase().trim();
+          if (
+            !g.id.toLowerCase().includes(s) &&
+            !g.grnNumber?.toLowerCase().includes(s) &&
+            !g.supplierName?.toLowerCase().includes(s)
+          ) {
+            return false;
+          }
+        }
+        return true;
+      }) || []
+    );
+  }, [grns, filter, search]);
+
+  const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'DRAFT':
-        return 'bg-slate-500 hover:bg-slate-600';
-      case 'SUBMITTED':
-        return 'bg-amber-500 hover:bg-amber-600';
       case 'APPROVED':
-        return 'bg-green-600 hover:bg-green-700';
       case 'COSTED':
-        return 'bg-sky-600 hover:bg-sky-700';
+        return (
+          <Badge
+            variant="outline"
+            className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[10px] font-mono font-semibold uppercase tracking-wider rounded-md px-2.5 py-0.5"
+          >
+            APPROVED
+          </Badge>
+        );
+      case 'SUBMITTED':
+        return (
+          <Badge
+            variant="outline"
+            className="bg-amber-50 text-amber-700 border-amber-200 text-[10px] font-mono font-semibold uppercase tracking-wider rounded-md px-2.5 py-0.5"
+          >
+            SUBMITTED
+          </Badge>
+        );
+      case 'DRAFT':
+        return (
+          <Badge
+            variant="outline"
+            className="bg-slate-100 text-slate-700 border-slate-300 text-[10px] font-mono font-semibold uppercase tracking-wider rounded-md px-2.5 py-0.5"
+          >
+            DRAFT
+          </Badge>
+        );
       case 'REJECTED':
-        return 'bg-red-500 hover:bg-red-600';
+        return (
+          <Badge
+            variant="outline"
+            className="bg-rose-50 text-rose-700 border-rose-200 text-[10px] font-mono font-semibold uppercase tracking-wider rounded-md px-2.5 py-0.5"
+          >
+            REJECTED
+          </Badge>
+        );
       default:
-        return 'bg-gray-500 hover:bg-gray-600';
+        return (
+          <Badge
+            variant="outline"
+            className="bg-slate-100 text-slate-700 border-slate-200 text-[10px] font-mono font-semibold uppercase tracking-wider rounded-md px-2.5 py-0.5"
+          >
+            {status}
+          </Badge>
+        );
     }
   };
 
   return (
     <div className="p-6 space-y-6">
-            {/* ── Page Header ── */}
+      {/* ── Page Header & Quick Actions ── */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
@@ -63,6 +166,9 @@ export function GRNListPage() {
                 Stock Keeper Intake
               </span>
             )}
+            <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 text-xs font-mono">
+              GRN List
+            </Badge>
           </div>
           <p className="text-xs sm:text-sm text-slate-500 mt-1">
             Inbound warehouse intake receipts, physical quantity counting, and unit serialization logs.
@@ -96,30 +202,243 @@ export function GRNListPage() {
         </div>
       )}
 
-      {/* ── GRN Table Card ── */}
-      <Card className="border border-slate-200">
-        <CardHeader className="pb-4">
-          <CardTitle className="text-base">GRN Records</CardTitle>
-          <div className="flex flex-col sm:flex-row justify-between gap-4 mt-4">
-            <div className="flex gap-2 flex-wrap">
-              {['All', 'Draft', 'Submitted', 'Approved', 'Rejected'].map((f) => (
-                <Button
-                  key={f}
-                  variant={filter === f ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setFilter(f)}
-                  className="text-xs h-8"
-                >
-                  {f}
-                </Button>
+      {/* ── Global KPI Cards Strip ── */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard
+          title="Total Inward Receipts"
+          value={stats.totalGRNs}
+          subtitle={`Across ${stats.totalReceivedUnits.toLocaleString()} received units`}
+          icon={Boxes}
+          variant="indigo"
+          badge="Intake Registry"
+        />
+
+        <StatCard
+          title="Verified & Approved"
+          value={stats.approvedGRNs}
+          subtitle="Released into Active Inventory"
+          icon={CheckCircle2}
+          variant="emerald"
+          trend={{ value: `${stats.goodUnits.toLocaleString()} units`, isPositive: true }}
+          progress={stats.totalGRNs > 0 ? (stats.approvedGRNs / stats.totalGRNs) * 100 : 0}
+        />
+
+        <StatCard
+          title="Pending Finance Review"
+          value={stats.submittedGRNs}
+          subtitle="Awaiting Dock Approval"
+          icon={Clock}
+          variant="amber"
+          badge={stats.submittedGRNs > 0 ? `${stats.submittedGRNs} In Queue` : 'Up to date'}
+        />
+
+        <StatCard
+          title="Damaged / Quarantine"
+          value={`${stats.totalDamagedUnits} Units`}
+          subtitle={stats.totalDamagedUnits > 0 ? 'Isolated for return/debit note' : 'Zero transit damage'}
+          icon={AlertTriangle}
+          variant={stats.totalDamagedUnits > 0 ? 'rose' : 'blue'}
+          badge={stats.totalDamagedUnits > 0 ? 'Quarantine Active' : 'Zero Defect'}
+        />
+      </div>
+
+      {/* ── Global Charts & Status Breakdown Cards ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left: Bar Chart for Intake Status Distribution */}
+        <Card className="lg:col-span-2 border-slate-200 shadow-xs">
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-base font-bold text-slate-900 flex items-center gap-2">
+                  <BarChart3 className="h-4 w-4 text-primary" />
+                  <span>GRN Intake Status Distribution</span>
+                </CardTitle>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Breakdown of inbound warehouse receipts by operational stage
+                </p>
+              </div>
+              <Badge variant="outline" className="font-mono text-[11px] bg-slate-50">
+                {stats.totalGRNs} Total GRNs
+              </Badge>
+            </div>
+          </CardHeader>
+          <CardContent className="pt-2">
+            <div className="h-56 w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={stats.chartData} margin={{ top: 15, right: 15, left: -20, bottom: 5 }}>
+                  <XAxis
+                    dataKey="name"
+                    stroke="#64748B"
+                    fontSize={12}
+                    tickLine={false}
+                    axisLine={{ stroke: '#E2E8F0' }}
+                  />
+                  <YAxis
+                    stroke="#64748B"
+                    fontSize={11}
+                    tickLine={false}
+                    axisLine={false}
+                    allowDecimals={false}
+                  />
+                  <Tooltip
+                    cursor={{ fill: 'rgba(241, 245, 249, 0.6)' }}
+                    content={({ active, payload }) => {
+                      if (active && payload && payload.length) {
+                        const data = payload[0].payload;
+                        return (
+                          <div className="bg-slate-900 text-white p-2.5 rounded-lg text-xs shadow-md space-y-1">
+                            <p className="font-semibold">{data.name} Receipts</p>
+                            <p className="text-slate-300">
+                              Count: <span className="text-white font-bold">{data.count}</span>
+                            </p>
+                            <p className="text-slate-400 text-[10px]">{data.label}</p>
+                          </div>
+                        );
+                      }
+                      return null;
+                    }}
+                  />
+                  <Bar dataKey="count" radius={[6, 6, 0, 0]} maxBarSize={48}>
+                    {stats.chartData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+
+            {/* Quick Chart Legend */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-3 border-t border-slate-100 text-center">
+              {stats.chartData.map((item) => (
+                <div key={item.name} className="p-2 rounded-lg bg-slate-50/70 border border-slate-100">
+                  <div className="flex items-center justify-center gap-1.5 text-xs text-slate-600 font-medium">
+                    <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: item.color }} />
+                    <span>{item.name}</span>
+                  </div>
+                  <p className="text-lg font-bold text-slate-900 mt-0.5 tabular-nums">{item.count}</p>
+                </div>
               ))}
             </div>
-            <div className="w-full sm:w-72">
+          </CardContent>
+        </Card>
+
+        {/* Right: Operational Status Pipeline Cards */}
+        <Card className="border-slate-200 shadow-xs flex flex-col justify-between">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base font-bold text-slate-900 flex items-center gap-2">
+              <Activity className="h-4 w-4 text-emerald-600" />
+              <span>Inward Pipeline &amp; Compliance</span>
+            </CardTitle>
+            <p className="text-xs text-slate-500">
+              Warehouse fulfillment health and dock intake status
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-3 pt-2">
+            {/* Status Card 1: Active In Inventory */}
+            <div className="p-3 rounded-xl border border-emerald-100 bg-emerald-50/40 space-y-1">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-emerald-900 flex items-center gap-1.5">
+                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+                  Active Stock Released
+                </span>
+                <span className="text-xs font-mono font-bold text-emerald-800">
+                  {stats.approvedGRNs} GRNs
+                </span>
+              </div>
+              <p className="text-[11px] text-emerald-700">
+                {stats.goodUnits.toLocaleString()} units stocked &amp; available for sales dispatch.
+              </p>
+            </div>
+
+            {/* Status Card 2: Awaiting Finance / Manager Approval */}
+            <div className="p-3 rounded-xl border border-amber-100 bg-amber-50/40 space-y-1">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-amber-900 flex items-center gap-1.5">
+                  <Clock className="h-3.5 w-3.5 text-amber-600" />
+                  Dock Intake Review
+                </span>
+                <span className="text-xs font-mono font-bold text-amber-800">
+                  {stats.submittedGRNs} GRNs
+                </span>
+              </div>
+              <p className="text-[11px] text-amber-700">
+                Physical counts entered; awaiting manager sign-off &amp; finance costing.
+              </p>
+            </div>
+
+            {/* Status Card 3: Physical Labeling Rate */}
+            <div className="p-3 rounded-xl border border-blue-100 bg-blue-50/40 space-y-1.5">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-blue-900 flex items-center gap-1.5">
+                  <Package className="h-3.5 w-3.5 text-blue-600" />
+                  Barcode Tagging Rate
+                </span>
+                <span className="text-xs font-mono font-bold text-blue-800">
+                  {stats.labelingRate}%
+                </span>
+              </div>
+              <div className="w-full bg-blue-100 rounded-full h-1.5 overflow-hidden">
+                <div
+                  className="bg-blue-600 h-full rounded-full transition-all"
+                  style={{ width: `${stats.labelingRate}%` }}
+                />
+              </div>
+              <p className="text-[10px] text-blue-700">
+                Inward receipts with barcode stickers verified on unit packages.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* ── GRN Table Card ── */}
+      <Card className="border border-slate-200 shadow-xs">
+        <CardHeader className="pb-4">
+          <CardTitle className="text-base font-bold text-slate-900">GRN Records</CardTitle>
+          <div className="flex flex-col sm:flex-row justify-between gap-4 mt-4">
+            {/* Filter Tabs with Dynamic Counts */}
+            <div className="flex gap-1.5 flex-wrap">
+              {[
+                { label: 'All', count: stats.totalGRNs },
+                { label: 'Draft', count: stats.draftGRNs },
+                { label: 'Submitted', count: stats.submittedGRNs },
+                { label: 'Approved', count: stats.approvedGRNs },
+                { label: 'Rejected', count: stats.rejectedGRNs },
+              ].map(({ label, count }) => {
+                const isActive = filter === label;
+                return (
+                  <Button
+                    key={label}
+                    variant={isActive ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setFilter(label)}
+                    className={`text-xs h-8 gap-1.5 transition-all ${
+                      isActive ? 'font-semibold shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    <span>{label}</span>
+                    <span
+                      className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
+                        isActive
+                          ? 'bg-white/25 text-white'
+                          : 'bg-slate-100 text-slate-600'
+                      }`}
+                    >
+                      {count}
+                    </span>
+                  </Button>
+                );
+              })}
+            </div>
+
+            {/* Search Input */}
+            <div className="relative w-full sm:w-72">
+              <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-slate-400" />
               <Input
                 placeholder="Search GRN number or supplier..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="h-8 text-xs"
+                className="pl-8 h-8 text-xs"
               />
             </div>
           </div>
@@ -128,11 +447,12 @@ export function GRNListPage() {
           {loading ? (
             <div className="space-y-2">
               {[1, 2, 3].map((i) => (
-                <Skeleton key={i} className="h-12 w-full" />
+                <Skeleton key={i} className="h-12 w-full rounded-lg" />
               ))}
             </div>
           ) : filteredGRNs.length === 0 ? (
-            <div className="text-center py-10 text-muted-foreground text-sm">
+            <div className="text-center py-12 text-slate-400 text-sm">
+              <Boxes className="h-8 w-8 mx-auto text-slate-300 mb-2" />
               No GRN records found
             </div>
           ) : (
@@ -216,9 +536,7 @@ export function GRNListPage() {
                         </TableCell>
                       )}
                       <TableCell className="text-center">
-                        <Badge className={`${getStatusColor(g.status)} text-white border-0 text-xs`}>
-                          {g.status}
-                        </Badge>
+                        {getStatusBadge(g.status)}
                       </TableCell>
                     </TableRow>
                   );

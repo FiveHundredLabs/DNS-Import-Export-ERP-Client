@@ -4,7 +4,11 @@ import { PaginatedResult } from '../../types/common';
 import { MOCK_INVOICES } from '../../mock/mockInvoices';
 
 export class MockInvoiceRepository implements IInvoiceRepository {
-  private invoices: Invoice[] = [...MOCK_INVOICES];
+  private invoices: Invoice[] = JSON.parse(JSON.stringify(MOCK_INVOICES));
+
+  resetToDefaults(): void {
+    this.invoices = JSON.parse(JSON.stringify(MOCK_INVOICES));
+  }
 
   async getAll(filters?: InvoiceFilters): Promise<PaginatedResult<Invoice>> {
     await new Promise((resolve) => setTimeout(resolve, 50));

@@ -123,6 +123,26 @@ export function ApprovalActionDialog({
               {currentUser.role === 'MANAGER' && (
                 <option value="DIRECTOR">Director (Executive Escalation)</option>
               )}
+              {currentUser.role === 'FINANCE_MANAGER' && (
+                <>
+                  <option value="MANAGER">Operational Manager</option>
+                  <option value="DIRECTOR">Director (Executive Escalation)</option>
+                </>
+              )}
+              {currentUser.role === 'DIRECTOR' && (
+                <>
+                  <option value="SALES_MANAGER">Sales Manager</option>
+                  <option value="FINANCE_MANAGER">Finance Manager</option>
+                  <option value="MANAGER">Operational Manager</option>
+                </>
+              )}
+              {!['SALES_MANAGER', 'MANAGER', 'FINANCE_MANAGER', 'DIRECTOR'].includes(currentUser.role) && (
+                <>
+                  <option value="SALES_MANAGER">Sales Manager</option>
+                  <option value="MANAGER">Operational Manager</option>
+                  <option value="DIRECTOR">Director</option>
+                </>
+              )}
             </Select>
           </div>
         )}

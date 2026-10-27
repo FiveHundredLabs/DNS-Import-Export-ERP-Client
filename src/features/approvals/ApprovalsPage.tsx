@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useApprovals } from '../../hooks/useApprovals';
 import { useAuth } from '../../hooks/useAuth';
@@ -9,17 +9,35 @@ import { ApprovalBadge } from '../../components/approval/ApprovalBadge';
 import { ApprovalActionDialog } from '../../components/approval/ApprovalActionDialog';
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
+import { Input } from '../../components/ui/input';
 import { TableLoadingSkeleton } from '../../components/common/LoadingSkeleton';
 import { EmptyState } from '../../components/common/EmptyState';
 import { ErrorState } from '../../components/common/ErrorState';
-import { CheckCircle, Clock, AlertTriangle, ShieldCheck, RefreshCw, ExternalLink } from 'lucide-react';
+import {
+  CheckCircle,
+  Clock,
+  AlertTriangle,
+  ShieldCheck,
+  RefreshCw,
+  ExternalLink,
+  Search,
+  ShoppingCart,
+  FileText,
+  Warehouse,
+  Landmark,
+  Layers,
+} from 'lucide-react';
 import { formatDateTime } from '../../utils/formatters';
+import { cn } from '../../utils/cn';
 
 export function ApprovalsPage() {
   const { currentUser, role } = useAuth();
   const { approvals, loading, error, refetch, executeAction } = useApprovals(role);
   const [selectedRequest, setSelectedRequest] = useState<ApprovalRequest | null>(null);
   const [actionDialogOpen, setActionDialogOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState<'ALL' | 'ORDERS' | 'QUOTATIONS' | 'GRN' | 'FINANCE_CUSTOMERS'>('ALL');
+  const [statusFilter, setStatusFilter] = useState<'ALL' | 'PENDING' | 'APPROVED' | 'ESCALATED' | 'REJECTED'>('ALL');
 
   const canAction = (app: ApprovalRequest) => {
     if (app.status !== 'PENDING') return false;
@@ -28,12 +46,41 @@ export function ApprovalsPage() {
   };
 
   const getDocumentLink = (app: ApprovalRequest): string | null => {
-    if (app.documentType === 'PAYMENT_RECEIPT') return `/payments/${app.documentId}`;
-    if (app.documentType === 'SPECIAL_SALES_ORDER') return `/orders/${app.documentId}`;
+    if (app.documentType === 'PAYMENT_RECEIPT') return `/finance/ar/receipt-approvals`;
+    if (app.documentType === 'SPECIAL_SALES_ORDER') return `/approvals/orders/${app.documentId}`;
     if (app.documentType === 'QUOTATION_DISCOUNT') return `/quotations/${app.documentId}`;
+    if (app.documentType === 'GRN_RECEIPT') return `/finance/ap/bills/new?grnId=${app.documentId}`;
+    if (app.documentType === 'CUSTOMER_CREATION') return `/customers/${app.documentId}`;
+    if (app.documentType === 'PRODUCT_PRICE_CHANGE') return `/inventory`;
     if (app.documentType === 'PURCHASE_ORDER') return `/purchasing/orders/${app.documentId}`;
     return null;
   };
+
+  const filteredApprovals = useMemo(() => {
+    return approvals.filter((app) => {
+      if (statusFilter !== 'ALL' && app.status !== statusFilter) return false;
+      if (categoryFilter === 'ORDERS' && app.documentType !== 'SPECIAL_SALES_ORDER') return false;
+      if (categoryFilter === 'QUOTATIONS' && app.documentType !== 'QUOTATION_DISCOUNT') return false;
+      if (categoryFilter === 'GRN' && app.documentType !== 'GRN_RECEIPT') return false;
+      if (
+        categoryFilter === 'FINANCE_CUSTOMERS' &&
+        app.documentType !== 'CUSTOMER_CREATION' &&
+        app.documentType !== 'PAYMENT_RECEIPT' &&
+        app.documentType !== 'EXPENSE_CLAIM'
+      )
+        return false;
+
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        const matchesRef = app.documentReferenceNumber.toLowerCase().includes(q);
+        const matchesTitle = app.title.toLowerCase().includes(q);
+        const matchesDesc = app.description.toLowerCase().includes(q);
+        const matchesInit = app.initiatorName.toLowerCase().includes(q);
+        if (!matchesRef && !matchesTitle && !matchesDesc && !matchesInit) return false;
+      }
+      return true;
+    });
+  }, [approvals, categoryFilter, statusFilter, searchQuery]);
 
   return (
     <div className="space-y-5">
@@ -41,7 +88,7 @@ export function ApprovalsPage() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Enterprise Approvals Engine</h1>
           <p className="text-xs text-slate-500 mt-0.5">
-            Multi-tier hierarchical decision workflows with traceable audit history.
+            Unified multi-tier hierarchical decision workflows for orders, discount tiers, price floors, quotations, and inbound GRNs.
           </p>
         </div>
         <Button variant="outline" size="sm" onClick={() => refetch()} className="gap-1.5">
@@ -49,19 +96,98 @@ export function ApprovalsPage() {
         </Button>
       </div>
 
+      {/* Filter and Search Bar */}
+      <Card className="border-slate-200 shadow-2xs">
+        <CardContent className="p-3.5 space-y-3">
+          <div className="flex flex-col sm:flex-row gap-3 items-center justify-between">
+            <div className="relative flex-1 w-full">
+              <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+              <Input
+                placeholder="Search by reference #, title, reason, or initiator..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9 text-xs h-9 rounded-xl"
+              />
+            </div>
+
+            {/* Status Filter Tabs */}
+            <div className="inline-flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs shrink-0">
+              {(
+                [
+                  { label: 'All Statuses', value: 'ALL' },
+                  { label: 'Pending', value: 'PENDING' },
+                  { label: 'Approved', value: 'APPROVED' },
+                  { label: 'Escalated / Rejected', value: 'ESCALATED' },
+                ] as const
+              ).map((st) => (
+                <button
+                  key={st.value}
+                  type="button"
+                  onClick={() => setStatusFilter(st.value)}
+                  className={cn(
+                    'px-3 py-1 rounded-lg font-semibold transition-all cursor-pointer text-xs',
+                    statusFilter === st.value
+                      ? 'bg-white text-slate-900 shadow-2xs border border-slate-200/60'
+                      : 'text-slate-600 hover:text-slate-900'
+                  )}
+                >
+                  {st.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Unified Domain Categories Bar */}
+          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pt-1 text-xs">
+            {(
+              [
+                { label: 'All Queue Items', value: 'ALL', icon: Layers },
+                { label: 'Sales Orders & Exceptions', value: 'ORDERS', icon: ShoppingCart },
+                { label: 'Quotations', value: 'QUOTATIONS', icon: FileText },
+                { label: 'Inbound GRNs', value: 'GRN', icon: Warehouse },
+                { label: 'Customers & Finance', value: 'FINANCE_CUSTOMERS', icon: Landmark },
+              ] as const
+            ).map((cat) => {
+              const Icon = cat.icon;
+              const isActive = categoryFilter === cat.value;
+              return (
+                <button
+                  key={cat.value}
+                  type="button"
+                  onClick={() => setCategoryFilter(cat.value)}
+                  className={cn(
+                    'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-bold transition-all text-xs whitespace-nowrap cursor-pointer active:scale-95',
+                    isActive
+                      ? 'bg-slate-900 text-white shadow-xs'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-900'
+                  )}
+                >
+                  <Icon className="h-3.5 w-3.5" />
+                  <span>{cat.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </CardContent>
+      </Card>
+
       {loading ? (
         <TableLoadingSkeleton />
       ) : error ? (
         <ErrorState message={error} onRetry={refetch} />
-      ) : approvals.length === 0 ? (
+      ) : filteredApprovals.length === 0 ? (
         <EmptyState
           icon={CheckCircle}
-          title="All caught up!"
-          description="There are currently no pending approval requests assigned to your role."
+          title={searchQuery || categoryFilter !== 'ALL' || statusFilter !== 'ALL' ? 'No matching approvals' : 'All caught up!'}
+          description={
+            searchQuery || categoryFilter !== 'ALL' || statusFilter !== 'ALL'
+              ? 'No approval requests match the current search or category filters.'
+              : 'There are currently no pending approval requests assigned to your role.'
+          }
         />
       ) : (
         <div className="space-y-4">
-          {approvals.map((app) => {
+          {filteredApprovals.map((app) => {
             const hasActionAuthority = canAction(app);
 
             return (

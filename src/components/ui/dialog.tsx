@@ -7,6 +7,7 @@ interface DialogProps {
   onOpenChange: (open: boolean) => void;
   children: React.ReactNode;
   size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl' | '5xl' | 'full';
+  maxWidth?: string;
   className?: string;
 }
 
@@ -22,7 +23,7 @@ const sizeClasses: Record<string, string> = {
   full: 'max-w-6xl',
 };
 
-export function Dialog({ open, onOpenChange, children, size = 'lg', className }: DialogProps) {
+export function Dialog({ open, onOpenChange, children, size = 'lg', maxWidth, className }: DialogProps) {
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && open) {
@@ -45,7 +46,7 @@ export function Dialog({ open, onOpenChange, children, size = 'lg', className }:
       <div
         className={cn(
           'relative z-50 w-full rounded-2xl border border-slate-200/90 bg-white p-6 shadow-2xl animate-in zoom-in-95 max-h-[90vh] overflow-y-auto',
-          sizeClasses[size] || 'max-w-lg',
+          maxWidth || sizeClasses[size] || 'max-w-lg',
           className
         )}
       >

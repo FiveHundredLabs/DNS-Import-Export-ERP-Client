@@ -29,7 +29,7 @@ export interface StockMovement {
   timestamp: string;
 }
 
-export type GRNStatus = 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'COSTED' | 'REJECTED';
+export type GRNStatus = 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'COSTED' | 'PRICED' | 'REJECTED';
 
 export interface UnitBarcodeRecord {
   unitIndex: number;
@@ -49,6 +49,9 @@ export interface GRNItem {
   unitCostSnapshot: number;
   lineValue: number;
   serialNumbers?: string[];
+  barcode?: string;
+  serialNumber?: string;
+  uom?: string; // e.g. 'PCS', 'SET', 'MTR', 'BOX', 'KG'
   unitBarcodes?: string[];
   unitRecords?: UnitBarcodeRecord[];
   barcodesConfirmed?: boolean;
@@ -63,6 +66,10 @@ export interface GRN {
   poNumber?: string;
   supplierId: string;
   supplierName: string;
+  purchaseOrderId?: string;
+  purchaseOrderNumber?: string;
+  supplierInvoiceNumber?: string; // Physical commercial invoice or delivery document #
+  receivedDate?: string;
   warehouseId: string;
   status: GRNStatus;
   items: GRNItem[];
@@ -110,6 +117,51 @@ export interface StockTransfer {
   approvedById?: string;
   dispatchedAt?: string;
   receivedAt?: string;
+}
+
+export type StockBatchStatus = 'ACTIVE' | 'DEPLETED' | 'HOLD' | 'EXPIRED';
+
+export interface StockBatch {
+  id: string;
+  batchNumber: string;
+  productId: string;
+  productName?: string;
+  sku?: string;
+  grnId?: string;
+  grnNumber?: string;
+  warehouseId: string;
+  receivedDate: string; // YYYY-MM-DD
+  initialQuantity: number;
+  availableQuantity: number;
+  quantityOnHand?: number;
+  allocatedQuantity?: number;
+  unitCost: number; // True landed cost per unit
+  sellingPrice: number; // Current batch selling price
+  status: StockBatchStatus;
+}
+
+export type PriceStrategyType = 'PRESERVE_BATCH' | 'STANDARDIZE_UNIFORM';
+
+export interface ProductSellingPriceHistory {
+  id: string;
+  productId: string;
+  productName?: string;
+  sku?: string;
+  productSku?: string;
+  batchId?: string;
+  batchNumber?: string;
+  oldPrice: number;
+  newPrice: number;
+  previousSellingPrice?: number;
+  newSellingPrice?: number;
+  strategy: PriceStrategyType;
+  strategyApplied?: string;
+  changeReason: string;
+  reason?: string;
+  changedBy: string;
+  changedByName?: string;
+  changedAt: string; // ISO date string
+  affectedBatchCount?: number;
 }
 
 export type SerialNumberStatus = 'IN_STOCK' | 'ALLOCATED' | 'DISPATCHED' | 'DAMAGED' | 'RETURNED';
