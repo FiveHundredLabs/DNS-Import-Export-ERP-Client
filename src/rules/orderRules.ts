@@ -260,8 +260,8 @@ export function canApproveOrder(
   }
 
   if (userRole === 'AREA_MANAGER') {
-    // Area Manager can approve standard orders within territory when assigned as approver
-    return !isSpecialApproval && (targetApproverRole === 'AREA_MANAGER' || targetApproverRole === 'SALES_MANAGER');
+    // Area Manager can only approve standard orders when assigned as approver
+    return !isSpecialApproval && targetApproverRole === 'AREA_MANAGER';
   }
 
   return false;

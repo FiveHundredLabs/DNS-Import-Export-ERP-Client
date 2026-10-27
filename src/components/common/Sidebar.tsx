@@ -53,6 +53,7 @@ interface SidebarProps {
 
 type RailCategory =
   | 'all'
+  | 'purchasing'
   | 'sales'
   | 'customers'
   | 'inventory'
@@ -69,6 +70,7 @@ interface SidebarItem {
   category: RailCategory;
   exact?: boolean;
   directorOnly?: boolean;
+  badge?: string;
 }
 
 export function Sidebar({ isOpen, onClose }: SidebarProps) {
@@ -80,12 +82,24 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const [activeCategory, setActiveCategory] = useState<RailCategory>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Automatically activate finance category when navigating within finance module (if authorized)
+  // Automatically activate purchasing or finance category when navigating within their modules
   useEffect(() => {
-    if (location.pathname.startsWith('/finance') && canAccessRoute('/finance')) {
+    if (location.pathname.startsWith('/purchasing') && canAccessRoute('/purchasing')) {
+      setActiveCategory('purchasing');
+    } else if (location.pathname.startsWith('/finance') && canAccessRoute('/finance')) {
       setActiveCategory('finance');
     }
   }, [location.pathname, canAccessRoute]);
+
+  // 0. Purchasing & Procurement Module
+  const purchasingItems: SidebarItem[] = [
+    { id: 'purchasing-dashboard', name: 'Purchasing Dashboard', path: '/purchasing', icon: LayoutGrid, category: 'purchasing', exact: true },
+    { id: 'purchasing-suppliers', name: 'Supplier Management', path: '/purchasing/suppliers', icon: Store, category: 'purchasing' },
+    { id: 'purchasing-orders', name: 'Purchase Orders', path: '/purchasing/orders', icon: ShoppingCart, category: 'purchasing' },
+    { id: 'purchasing-grn', name: 'Goods Received (View Only)', path: '/purchasing/grn', icon: Boxes, category: 'purchasing' },
+    { id: 'purchasing-reports', name: 'Purchase Reports', path: '/purchasing/reports', icon: BarChart3, category: 'purchasing' },
+    { id: 'purchasing-returns', name: 'Purchase Returns', path: '/purchasing/returns', icon: RotateCcw, category: 'purchasing', badge: 'Under Dev' },
+  ];
 
   // 1. Procurement, Orders & Approvals
   const procurementItems: SidebarItem[] = [
@@ -143,6 +157,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
 
   // Combined item list in canonical Quick Links order
   const allRawItems: SidebarItem[] = [
+    ...purchasingItems,
     ...procurementItems,
     ...customerItems,
     ...inventoryItems,
@@ -190,6 +205,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   // Rail category definition (No separate favorites rail item)
   const railItems = [
     { id: 'all' as RailCategory, label: 'Dashboard & Quick Links', icon: LayoutGrid },
+    { id: 'purchasing' as RailCategory, label: 'Purchasing & Procurement', icon: ShoppingCart },
     { id: 'sales' as RailCategory, label: 'Sales & Orders', icon: Calendar },
     { id: 'customers' as RailCategory, label: 'Customers & CRM', icon: Users2 },
     { id: 'inventory' as RailCategory, label: 'Inventory & Products', icon: Boxes },
@@ -228,6 +244,8 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   // Determine panel title
   const panelTitle = useMemo(() => {
     switch (activeCategory) {
+      case 'purchasing':
+        return 'Purchasing & Procurement';
       case 'sales':
         return 'Sales & Orders';
       case 'customers':
@@ -288,6 +306,11 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         >
           <Icon className={cn('h-3.5 w-3.5 shrink-0 transition-colors text-slate-500 group-hover:text-slate-700', active && 'text-slate-900')} />
           <span className="truncate">{item.name}</span>
+          {item.badge && (
+            <span className="ml-auto mr-1.5 text-[9px] font-mono px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200 shrink-0">
+              {item.badge}
+            </span>
+          )}
         </NavLink>
 
         {/* Right: Interactive Star Toggle Button (Clean Gray, Small) */}

@@ -41,6 +41,14 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'reports:all',
     'reports:area_only',
     'audit:view',
+    'view:purchasing_dashboard',
+    'purchasing:suppliers_view',
+    'purchasing:suppliers_manage',
+    'purchasing:po_view',
+    'purchasing:po_create',
+    'purchasing:po_edit',
+    'purchasing:grn_view',
+    'purchasing:reports',
   ],
   MANAGER: [
     'view:manager_dashboard',
@@ -75,6 +83,14 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'reports:all',
     'reports:area_only',
     'audit:view',
+    'view:purchasing_dashboard',
+    'purchasing:suppliers_view',
+    'purchasing:suppliers_manage',
+    'purchasing:po_view',
+    'purchasing:po_create',
+    'purchasing:po_edit',
+    'purchasing:grn_view',
+    'purchasing:reports',
   ],
   SALES_MANAGER: [
     'view:sales_manager_dashboard',
@@ -157,6 +173,17 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'payments:view',
     'payments:create',
   ],
+  PURCHASING_OFFICER: [
+    'view:purchasing_dashboard',
+    'products:view',
+    'purchasing:suppliers_view',
+    'purchasing:suppliers_manage',
+    'purchasing:po_view',
+    'purchasing:po_create',
+    'purchasing:po_edit',
+    'purchasing:grn_view',
+    'purchasing:reports',
+  ],
 };
 
 export function hasPermission(role: UserRole, permission: Permission): boolean {
@@ -237,6 +264,31 @@ export function canAccessRoute(role: UserRole, path: string): boolean {
   }
   if (path.startsWith('/settings')) {
     return role === 'DIRECTOR' || role === 'MANAGER';
+  }
+  if (path.startsWith('/purchasing')) {
+    if (role === 'DIRECTOR' || role === 'MANAGER') return true;
+    if (role === 'PURCHASING_OFFICER') {
+      if (path === '/purchasing' || path.startsWith('/purchasing/dashboard')) {
+        return hasPermission(role, 'view:purchasing_dashboard');
+      }
+      if (path.startsWith('/purchasing/suppliers')) {
+        return hasPermission(role, 'purchasing:suppliers_view');
+      }
+      if (path.startsWith('/purchasing/orders')) {
+        return hasPermission(role, 'purchasing:po_view');
+      }
+      if (path.startsWith('/purchasing/grn')) {
+        return hasPermission(role, 'purchasing:grn_view');
+      }
+      if (path.startsWith('/purchasing/reports')) {
+        return hasPermission(role, 'purchasing:reports');
+      }
+      if (path.startsWith('/purchasing/returns')) {
+        return true;
+      }
+      return true;
+    }
+    return false;
   }
 
   // Strict default deny for unrecognized routes

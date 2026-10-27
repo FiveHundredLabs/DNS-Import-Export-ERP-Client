@@ -4,6 +4,7 @@ import { SalesRepDashboard } from './SalesRepDashboard';
 import { AreaManagerDashboard } from './AreaManagerDashboard';
 import { SalesManagerDashboard } from './SalesManagerDashboard';
 import { FinanceManagerDashboard } from './FinanceManagerDashboard';
+import { PurchasingDashboard } from '../purchasing/PurchasingDashboard';
 import { StatCard } from '../../components/common/StatCard';
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/card';
 import {
@@ -42,6 +43,10 @@ export function DashboardPage() {
 
   if (role === 'AREA_MANAGER') {
     return <AreaManagerDashboard />;
+  }
+
+  if (role === 'PURCHASING_OFFICER') {
+    return <PurchasingDashboard />;
   }
 
   // Generalized role-specific dashboard for Sales Manager, Finance, Stock Keeper, Cashier

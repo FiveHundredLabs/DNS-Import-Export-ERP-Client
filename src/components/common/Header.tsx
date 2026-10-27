@@ -35,6 +35,14 @@ const ROUTE_TITLES: Record<string, string> = {
   '/warranty': 'Warranty Claim Hub',
   '/commissions': 'Sales Commissions',
   '/reports': 'Enterprise Analytics',
+  '/purchasing': 'Purchasing Dashboard',
+  '/purchasing/dashboard': 'Purchasing Dashboard',
+  '/purchasing/suppliers': 'Supplier Management',
+  '/purchasing/orders': 'Purchase Orders',
+  '/purchasing/orders/new': 'Create Purchase Order',
+  '/purchasing/grn': 'Goods Received Notes (Read-Only)',
+  '/purchasing/reports': 'Procurement & Purchasing Reports',
+  '/purchasing/returns': 'Purchase Returns (Under Development)',
 };
 
 export function Header({ onToggleSidebar }: HeaderProps) {
@@ -67,7 +75,10 @@ export function Header({ onToggleSidebar }: HeaderProps) {
   // Determine current page title
   const currentTitle =
     ROUTE_TITLES[location.pathname] ||
-    (location.pathname.startsWith('/products') ? 'Product Details' :
+    (location.pathname.startsWith('/purchasing/orders') ? 'Purchase Order Details' :
+     location.pathname.startsWith('/purchasing/grn') ? 'GRN Inspection Details' :
+     location.pathname.startsWith('/purchasing') ? 'Purchasing Hub' :
+     location.pathname.startsWith('/products') ? 'Product Details' :
      location.pathname.startsWith('/orders/activity') ? 'User Activity Log' :
      location.pathname.startsWith('/orders') ? 'Sales Order Details' :
      location.pathname.startsWith('/quotations') ? 'Quotation Details' :
