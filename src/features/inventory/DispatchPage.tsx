@@ -69,11 +69,11 @@ export function DispatchPage() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'ISSUED': return 'bg-purple-500';
-      case 'INVOICED': return 'bg-cyan-500';
-      case 'DISPATCHED': return 'bg-primary-light';
-      case 'DELIVERED': return 'bg-green-500';
-      default: return 'bg-gray-500';
+      case 'ISSUED': return 'bg-purple-50 text-purple-700 border-purple-200';
+      case 'INVOICED': return 'bg-cyan-50 text-cyan-700 border-cyan-200';
+      case 'DISPATCHED': return 'bg-blue-50 text-blue-700 border-blue-200';
+      case 'DELIVERED': return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+      default: return 'bg-slate-100 text-slate-700 border-slate-300';
     }
   };
 
@@ -142,7 +142,12 @@ export function DispatchPage() {
                     <TableCell>{formatDate(o.createdAt)}</TableCell>
                     <TableCell className="text-right">{formatCurrency(o.totalAmount || 0)}</TableCell>
                     <TableCell className="text-center">
-                      <Badge className={`${getStatusColor(o.status)} text-white border-0`}>{o.status}</Badge>
+                      <Badge
+                        variant="outline"
+                        className={`${getStatusColor(o.status)} text-[10px] font-mono font-semibold uppercase tracking-wider rounded-md px-2.5 py-0.5`}
+                      >
+                        {o.status}
+                      </Badge>
                     </TableCell>
                     <TableCell className="text-center">
                       {(o.status === 'ISSUED' || o.status === 'INVOICED') && (

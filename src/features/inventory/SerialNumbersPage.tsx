@@ -9,6 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '../../components/ui/dialog';
 import { Skeleton } from '../../components/ui/skeleton';
 import { useAuth } from '../../hooks/useAuth';
+import { StatCard } from '../../components/common/StatCard';
 import { serialNumberService } from '../../services/SerialNumberService';
 import { SerialNumberRecord, SerialNumberStatus } from '../../types/inventory';
 import { MOCK_PRODUCTS } from '../../mock/mockProducts';
@@ -332,62 +333,52 @@ export function SerialNumbersPage() {
         </span>
       </div>
 
-      {/* ── KPI Stat Strip ── */}
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-        <Card className="p-3.5 border border-slate-200">
-          <div className="flex items-center justify-between text-xs text-slate-500 font-medium">
-            <span>Total Registered</span>
-            <Hash className="h-3.5 w-3.5 text-slate-400" />
-          </div>
-          <p className="text-xl sm:text-2xl font-bold text-slate-900 mt-1 tabular-nums">
-            {summary.total}
-          </p>
-          <span className="text-[10px] text-slate-400">Tracked Units</span>
-        </Card>
+      {/* ── KPI Stat Strip (Global Cards) ── */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+        <StatCard
+          title="Total Registered"
+          value={summary.total}
+          subtitle="Tracked Units"
+          icon={Hash}
+          variant="indigo"
+          badge="Registry"
+        />
 
-        <Card className="p-3.5 border border-emerald-100 bg-emerald-50/30">
-          <div className="flex items-center justify-between text-xs text-emerald-700 font-medium">
-            <span>In Warehouse</span>
-            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
-          </div>
-          <p className="text-xl sm:text-2xl font-bold text-emerald-700 mt-1 tabular-nums">
-            {summary.inStock}
-          </p>
-          <span className="text-[10px] text-emerald-600">Available to Pick</span>
-        </Card>
+        <StatCard
+          title="In Warehouse"
+          value={summary.inStock}
+          subtitle="Available to Pick"
+          icon={CheckCircle2}
+          variant="emerald"
+          trend={{ value: 'Available', isPositive: true }}
+          progress={summary.total > 0 ? (summary.inStock / summary.total) * 100 : 0}
+        />
 
-        <Card className="p-3.5 border border-sky-100 bg-sky-50/30">
-          <div className="flex items-center justify-between text-xs text-sky-700 font-medium">
-            <span>Allocated</span>
-            <Boxes className="h-3.5 w-3.5 text-sky-600" />
-          </div>
-          <p className="text-xl sm:text-2xl font-bold text-sky-700 mt-1 tabular-nums">
-            {summary.allocated}
-          </p>
-          <span className="text-[10px] text-sky-600">Reserved for Orders</span>
-        </Card>
+        <StatCard
+          title="Allocated"
+          value={summary.allocated}
+          subtitle="Reserved for Orders"
+          icon={Boxes}
+          variant="blue"
+          badge="Reserved"
+        />
 
-        <Card className="p-3.5 border border-purple-100 bg-purple-50/30">
-          <div className="flex items-center justify-between text-xs text-purple-700 font-medium">
-            <span>Dispatched</span>
-            <Truck className="h-3.5 w-3.5 text-purple-600" />
-          </div>
-          <p className="text-xl sm:text-2xl font-bold text-purple-700 mt-1 tabular-nums">
-            {summary.dispatched}
-          </p>
-          <span className="text-[10px] text-purple-600">Delivered to Clients</span>
-        </Card>
+        <StatCard
+          title="Dispatched"
+          value={summary.dispatched}
+          subtitle="Delivered to Clients"
+          icon={Truck}
+          variant="purple"
+          badge="Fulfilled"
+        />
 
-        <Card className="p-3.5 border border-rose-100 bg-rose-50/30">
-          <div className="flex items-center justify-between text-xs text-rose-700 font-medium">
-            <span>Damaged</span>
-            <AlertTriangle className="h-3.5 w-3.5 text-rose-600" />
-          </div>
-          <p className="text-xl sm:text-2xl font-bold text-rose-700 mt-1 tabular-nums">
-            {summary.damaged}
-          </p>
-          <span className="text-[10px] text-rose-600">Quarantine Bay</span>
-        </Card>
+        <StatCard
+          title="Damaged"
+          value={summary.damaged}
+          subtitle="Quarantine Bay"
+          icon={AlertTriangle}
+          variant={summary.damaged > 0 ? 'rose' : 'blue'}
+        />
       </div>
 
       {/* ── Filters & Search Toolbar ── */}
