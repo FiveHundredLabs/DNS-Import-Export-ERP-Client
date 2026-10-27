@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
@@ -18,12 +18,14 @@ import { Skeleton } from '../../components/ui/skeleton';
 import { StatCard } from '../../components/common/StatCard';
 import { useInventory } from '../../hooks/useInventory';
 import { useAuth } from '../../hooks/useAuth';
+import { orderService } from '../../services/OrderService';
+import { SalesOrder } from '../../types/order';
 import { MOCK_PRODUCTS } from '../../mock/mockProducts';
 import { calculateAvailableForSale } from '../../rules/inventoryRules';
 import { formatCurrency } from '../../utils/formatters';
 import { exportToCSV } from '../../utils/exportUtils';
 import { toast } from 'sonner';
-import { DollarSign, AlertTriangle, Package, Boxes, TrendingDown } from 'lucide-react';
+import { DollarSign, AlertTriangle, Package, Boxes, TrendingDown, Truck, Layers, CheckCircle2 } from 'lucide-react';
 
 type AdjustDirection = 'ADD' | 'REMOVE';
 
@@ -39,6 +41,8 @@ interface StockRow {
   showroomQuantity: number;
   damagedQuantity: number;
   reservedQuantity: number;
+  dispatchedQuantity: number;
+  deliveredQuantity: number;
   availableForSale: number;
   physicalStock: number;
   costPrice: number;
@@ -48,6 +52,11 @@ export function StockBalancePage() {
   const navigate = useNavigate();
   const { stockBalances, loading, inventoryService } = useInventory();
   const { user } = useAuth();
+  const [orders, setOrders] = useState<SalesOrder[]>([]);
+
+  useEffect(() => {
+    orderService.getOrders().then(setOrders).catch(console.error);
+  }, []);
 
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('All');
@@ -61,10 +70,34 @@ export function StockBalancePage() {
   const [adjReason, setAdjReason] = useState('');
   const [adjProcessing, setAdjProcessing] = useState(false);
 
+  // Map product sales orders
+  const productOrderStats = useMemo(() => {
+    const map: Record<string, { reserved: number; dispatched: number; delivered: number }> = {};
+    orders.forEach((ord) => {
+      ord.items?.forEach((it) => {
+        if (!map[it.productId]) {
+          map[it.productId] = { reserved: 0, dispatched: 0, delivered: 0 };
+        }
+        const qty = it.approvedQuantity || it.orderedQuantity || 0;
+        if (['APPROVED', 'PICKING', 'PARTIALLY_ISSUED', 'ISSUED', 'INVOICED'].includes(ord.status)) {
+          map[it.productId].reserved += qty;
+        } else if (ord.status === 'DISPATCHED') {
+          map[it.productId].dispatched += qty;
+        } else if (ord.status === 'DELIVERED') {
+          map[it.productId].delivered += qty;
+        }
+      });
+    });
+    return map;
+  }, [orders]);
+
   const enrichedBalances: StockRow[] = useMemo(() => {
     return (stockBalances ?? []).map((b: any) => {
       const product = MOCK_PRODUCTS.find(p => p.id === b.productId);
       const availableForSale = calculateAvailableForSale(b) ?? 0;
+      const stats = productOrderStats[b.productId] || { reserved: 0, dispatched: 0, delivered: 0 };
+      const reservedQty = Math.max(b.reservedQuantity ?? 0, stats.reserved);
+
       return {
         id: b.id,
         productId: b.productId,
@@ -76,13 +109,15 @@ export function StockBalancePage() {
         warehouseQuantity: b.locationType === 'WAREHOUSE' ? (b.availableQuantity ?? 0) : 0,
         showroomQuantity: b.locationType === 'SHOWROOM' ? (b.availableQuantity ?? 0) : 0,
         damagedQuantity: b.damagedQuantity ?? 0,
-        reservedQuantity: b.reservedQuantity ?? 0,
+        reservedQuantity: reservedQty,
+        dispatchedQuantity: stats.dispatched,
+        deliveredQuantity: stats.delivered,
         availableForSale,
-        physicalStock: b.availableQuantity ?? (availableForSale + (b.reservedQuantity ?? 0)),
+        physicalStock: b.availableQuantity ?? (availableForSale + reservedQty),
         costPrice: product?.pricing?.costPrice ?? 0,
       } as StockRow;
     });
-  }, [stockBalances]);
+  }, [stockBalances, productOrderStats]);
 
   const categories = useMemo(() => {
     const cats = new Set(enrichedBalances.map(b => b.category));
@@ -162,15 +197,16 @@ export function StockBalancePage() {
   };
 
   const handleExportCSV = () => {
-    const headers = ['SKU', 'Product Name', 'Category', 'Location', 'Physical Stock', 'Reserved', 'Available Stock', 'Damaged', 'Est. Value'];
+    const headers = ['SKU', 'Product Name', 'Category', 'Location', 'Available Stock', 'Reserved (Allocated)', 'Dispatched', 'Delivered', 'Rejected (Damage)', 'Est. Value'];
     const rows = filteredBalances.map(b => [
       b.sku,
       b.productName,
       b.category,
       b.locationType,
-      b.physicalStock,
-      b.reservedQuantity,
       b.availableForSale,
+      b.reservedQuantity,
+      b.dispatchedQuantity,
+      b.deliveredQuantity,
       b.damagedQuantity,
       (b.availableForSale * b.costPrice).toFixed(2),
     ]);
@@ -346,10 +382,11 @@ export function StockBalancePage() {
                     <TableHead>Product Name</TableHead>
                     <TableHead>Category</TableHead>
                     <TableHead className="text-center">Location</TableHead>
-                    <TableHead className="text-right">Physical Stock</TableHead>
-                    <TableHead className="text-right">Reserved</TableHead>
-                    <TableHead className="text-right">Available Stock</TableHead>
-                    <TableHead className="text-right">Damaged</TableHead>
+                    <TableHead className="text-right font-bold text-emerald-700">Available</TableHead>
+                    <TableHead className="text-right font-semibold text-blue-700">Reserved (Order)</TableHead>
+                    <TableHead className="text-right font-semibold text-indigo-700">Dispatched</TableHead>
+                    <TableHead className="text-right font-semibold text-teal-700">Delivered</TableHead>
+                    <TableHead className="text-right font-semibold text-rose-600">Rejected (Damage)</TableHead>
                     <TableHead className="text-right">Est. Value</TableHead>
                     <TableHead className="text-center">Status</TableHead>
                     <TableHead className="text-center">Action</TableHead>
@@ -369,13 +406,44 @@ export function StockBalancePage() {
                         <TableCell className="text-center">
                           <Badge variant="outline" className="text-xs">{b.locationType}</Badge>
                         </TableCell>
-                        <TableCell className="text-right font-mono font-medium text-slate-700">{b.physicalStock}</TableCell>
-                        <TableCell className="text-right text-muted-foreground">{b.reservedQuantity}</TableCell>
-                        <TableCell className="text-right font-bold text-slate-900">{b.availableForSale}</TableCell>
-                        <TableCell className={`text-right ${b.damagedQuantity > 0 ? 'text-orange-600 font-medium' : 'text-muted-foreground'}`}>
-                          {b.damagedQuantity}
+                        <TableCell className="text-right font-bold text-emerald-700 font-mono">{b.availableForSale}</TableCell>
+                        <TableCell className="text-right font-mono">
+                          {b.reservedQuantity > 0 ? (
+                            <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 text-[10.5px] py-0 px-1.5 font-mono">
+                              {b.reservedQuantity}
+                            </Badge>
+                          ) : (
+                            <span className="text-muted-foreground text-xs">0</span>
+                          )}
                         </TableCell>
-                        <TableCell className="text-right text-sm">{formatCurrency(estValue)}</TableCell>
+                        <TableCell className="text-right font-mono">
+                          {b.dispatchedQuantity > 0 ? (
+                            <Badge variant="outline" className="bg-indigo-50 text-indigo-700 border-indigo-200 text-[10.5px] py-0 px-1.5 font-mono">
+                              {b.dispatchedQuantity}
+                            </Badge>
+                          ) : (
+                            <span className="text-muted-foreground text-xs">0</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right font-mono">
+                          {b.deliveredQuantity > 0 ? (
+                            <Badge variant="outline" className="bg-teal-50 text-teal-700 border-teal-200 text-[10.5px] py-0 px-1.5 font-mono">
+                              {b.deliveredQuantity}
+                            </Badge>
+                          ) : (
+                            <span className="text-muted-foreground text-xs">0</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right font-mono">
+                          {b.damagedQuantity > 0 ? (
+                            <Badge className="bg-rose-100 text-rose-800 border-rose-200 text-[10px] py-0 px-1 font-mono">
+                              {b.damagedQuantity}
+                            </Badge>
+                          ) : (
+                            <span className="text-muted-foreground text-xs">0</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right text-sm font-mono">{formatCurrency(estValue)}</TableCell>
                         <TableCell className="text-center">
                           <Badge
                             variant="outline"

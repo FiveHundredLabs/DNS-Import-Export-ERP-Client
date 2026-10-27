@@ -13,6 +13,8 @@ import { MOCK_PRODUCTS } from '../../mock/mockProducts';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 import { unitBarcodeService } from '../../services/UnitBarcodeService';
 import { serialNumberService } from '../../services/SerialNumberService';
+import { orderService } from '../../services/OrderService';
+import { SalesOrder } from '../../types/order';
 import { UnitBarcodeModal } from '../../components/inventory/UnitBarcodeModal';
 import { PaginationControls } from '../../components/common/PaginationControls';
 import { SerialNumberRecord, UnitBarcodeRecord } from '../../types/inventory';
@@ -40,6 +42,7 @@ import {
   Filter,
   DollarSign,
   Warehouse,
+  Truck,
 } from 'lucide-react';
 
 interface FlatGRNStockItem {
@@ -58,6 +61,11 @@ interface FlatGRNStockItem {
   receivedQuantity: number;
   damagedQuantity: number;
   goodQuantity: number;
+  availableQuantity: number;
+  reservedQuantity: number;
+  dispatchedQuantity: number;
+  deliveredQuantity: number;
+  primaryStatus: 'AVAILABLE' | 'RESERVED' | 'DISPATCHED' | 'DELIVERED' | 'REJECTED';
   unitCost: number;
   lineValue: number;
   serialNumbers: string[];
@@ -70,11 +78,18 @@ export function InventoryDashboardPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { grns, loading: grnsLoading } = useGRN();
+  const [orders, setOrders] = useState<SalesOrder[]>([]);
+
+  useEffect(() => {
+    orderService.getOrders().then(setOrders).catch(console.error);
+  }, []);
 
   const [activeTab, setActiveTab] = useState<'LEDGER' | 'GRN_LIST' | 'QUARANTINE' | 'SERIALS'>('LEDGER');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedGrnFilter, setSelectedGrnFilter] = useState<string>('ALL');
-  const [quickFilter, setQuickFilter] = useState<'ALL' | 'DAMAGED' | 'SERIALIZED' | 'PENDING_STICKERS'>('ALL');
+  const [quickFilter, setQuickFilter] = useState<
+    'ALL' | 'AVAILABLE' | 'RESERVED' | 'DISPATCHED' | 'DELIVERED' | 'DAMAGED' | 'SERIALIZED' | 'PENDING_STICKERS'
+  >('ALL');
   const [scannerTestInput, setScannerTestInput] = useState('');
 
   // Pagination for main items ledger
@@ -98,7 +113,28 @@ export function InventoryDashboardPage() {
     serialNumberService.getAll().then((data) => setSerials(data));
   }, []);
 
-  // Compute flattened stock items directly generated and received from all GRNs
+  // Compute product-level sales order commitments (Reserved, Dispatched, Delivered)
+  const productOrderStats = useMemo(() => {
+    const map: Record<string, { reserved: number; dispatched: number; delivered: number }> = {};
+    orders.forEach((ord) => {
+      ord.items?.forEach((it) => {
+        if (!map[it.productId]) {
+          map[it.productId] = { reserved: 0, dispatched: 0, delivered: 0 };
+        }
+        const qty = it.approvedQuantity || it.orderedQuantity || 0;
+        if (['APPROVED', 'PICKING', 'PARTIALLY_ISSUED', 'ISSUED', 'INVOICED'].includes(ord.status)) {
+          map[it.productId].reserved += qty;
+        } else if (ord.status === 'DISPATCHED') {
+          map[it.productId].dispatched += qty;
+        } else if (ord.status === 'DELIVERED') {
+          map[it.productId].delivered += qty;
+        }
+      });
+    });
+    return map;
+  }, [orders]);
+
+  // Compute flattened stock items directly generated and received from all GRNs with lifecycle status breakdown
   const flatStockItems: FlatGRNStockItem[] = useMemo(() => {
     if (!grns || grns.length === 0) return [];
 
@@ -113,9 +149,29 @@ export function InventoryDashboardPage() {
 
       itemsWithBarcodes.forEach((item: any, idx: number) => {
         const product = MOCK_PRODUCTS.find((p) => p.id === item.productId);
-        const goodQty = Math.max(0, (item.receivedQuantity || 0) - (item.damagedQuantity || 0));
+        const damagedQty = item.damagedQuantity || 0;
+        const goodQty = Math.max(0, (item.receivedQuantity || 0) - damagedQty);
+        const stats = productOrderStats[item.productId] || { reserved: 0, dispatched: 0, delivered: 0 };
+
+        // Available for Sale = Net Good intake minus reserved for active orders
+        const availableQty = Math.max(0, goodQty - stats.reserved);
+
+        // Determine primary status for status-wise representation
+        let primaryStatus: 'AVAILABLE' | 'RESERVED' | 'DISPATCHED' | 'DELIVERED' | 'REJECTED' = 'AVAILABLE';
+        if (damagedQty > 0 && availableQty === 0) {
+          primaryStatus = 'REJECTED';
+        } else if (stats.reserved > 0 && availableQty === 0) {
+          primaryStatus = 'RESERVED';
+        } else if (availableQty > 0) {
+          primaryStatus = 'AVAILABLE';
+        } else if (stats.dispatched > 0) {
+          primaryStatus = 'DISPATCHED';
+        } else if (stats.delivered > 0) {
+          primaryStatus = 'DELIVERED';
+        }
+
         const unitCost = item.unitCostSnapshot ?? item.unitCost ?? product?.pricing?.costPrice ?? 0;
-        const lineValue = goodQty * unitCost;
+        const lineValue = availableQty * unitCost;
         const barcodesCount = item.unitRecords?.length || item.unitBarcodes?.length || goodQty;
 
         list.push({
@@ -132,8 +188,13 @@ export function InventoryDashboardPage() {
           categoryName: product?.categoryName || 'Electrical Components',
           expectedQuantity: item.expectedQuantity || item.receivedQuantity || 0,
           receivedQuantity: item.receivedQuantity || 0,
-          damagedQuantity: item.damagedQuantity || 0,
+          damagedQuantity: damagedQty,
           goodQuantity: goodQty,
+          availableQuantity: availableQty,
+          reservedQuantity: stats.reserved,
+          dispatchedQuantity: stats.dispatched,
+          deliveredQuantity: stats.delivered,
+          primaryStatus,
           unitCost,
           lineValue,
           serialNumbers: item.serialNumbers || [],
@@ -145,12 +206,14 @@ export function InventoryDashboardPage() {
     });
 
     return list;
-  }, [grns]);
+  }, [grns, productOrderStats]);
 
-  // Operational KPIs
+  // Operational KPIs reflecting the 5 key operational statuses
   const kpis = useMemo(() => {
-    let totalReceivedUnits = 0;
-    let totalAcceptedUnits = 0;
+    let totalAvailableUnits = 0;
+    let totalReservedUnits = 0;
+    let totalDispatchedUnits = 0;
+    let totalDeliveredUnits = 0;
     let totalDamagedUnits = 0;
     let totalStockValue = 0;
     let totalBarcodes = 0;
@@ -158,8 +221,10 @@ export function InventoryDashboardPage() {
     let serializedUnitsCount = 0;
 
     flatStockItems.forEach((item) => {
-      totalReceivedUnits += item.receivedQuantity;
-      totalAcceptedUnits += item.goodQuantity;
+      totalAvailableUnits += item.availableQuantity;
+      totalReservedUnits += item.reservedQuantity;
+      totalDispatchedUnits += item.dispatchedQuantity;
+      totalDeliveredUnits += item.deliveredQuantity;
       totalDamagedUnits += item.damagedQuantity;
       totalStockValue += item.lineValue;
       totalBarcodes += item.barcodesCount;
@@ -177,8 +242,10 @@ export function InventoryDashboardPage() {
     const approvedGRNs = (grns || []).filter((g) => g.status === 'APPROVED').length;
 
     return {
-      totalReceivedUnits,
-      totalAcceptedUnits,
+      totalAvailableUnits,
+      totalReservedUnits,
+      totalDispatchedUnits,
+      totalDeliveredUnits,
       totalDamagedUnits,
       totalStockValue,
       totalBarcodes,
@@ -189,7 +256,7 @@ export function InventoryDashboardPage() {
     };
   }, [flatStockItems, grns]);
 
-  // Filtered stock items based on search, GRN, and quick filters
+  // Filtered stock items based on search, GRN, and status-wise quick filters
   const filteredStockItems = useMemo(() => {
     return flatStockItems.filter((item) => {
       // 1. GRN dropdown filter
@@ -197,7 +264,19 @@ export function InventoryDashboardPage() {
         return false;
       }
 
-      // 2. Quick status filters
+      // 2. Status-wise quick filters
+      if (quickFilter === 'AVAILABLE' && item.availableQuantity <= 0) {
+        return false;
+      }
+      if (quickFilter === 'RESERVED' && item.reservedQuantity <= 0) {
+        return false;
+      }
+      if (quickFilter === 'DISPATCHED' && item.dispatchedQuantity <= 0) {
+        return false;
+      }
+      if (quickFilter === 'DELIVERED' && item.deliveredQuantity <= 0) {
+        return false;
+      }
       if (quickFilter === 'DAMAGED' && item.damagedQuantity <= 0) {
         return false;
       }
@@ -356,66 +435,66 @@ export function InventoryDashboardPage() {
 
       {/* ── Top Operational KPI Metrics ── */}
       <div className="grid grid-cols-2 lg:grid-cols-6 gap-3">
-        {/* KPI 1: Good Accepted Units */}
+        {/* KPI 1: Available Units */}
         <Card className="border-slate-200 shadow-2xs bg-gradient-to-br from-white to-emerald-50/30">
           <CardContent className="p-3.5">
             <div className="flex items-center justify-between text-slate-500 mb-1">
-              <span className="text-[10.5px] font-bold uppercase tracking-wider">Accepted Stock</span>
+              <span className="text-[10.5px] font-bold uppercase tracking-wider text-emerald-800">Available Stock</span>
               <Package className="h-4 w-4 text-emerald-600" />
             </div>
-            <div className="text-xl sm:text-2xl font-black font-mono text-slate-900 tabular-nums">
-              {kpis.totalAcceptedUnits.toLocaleString()}
+            <div className="text-xl sm:text-2xl font-black font-mono text-emerald-900 tabular-nums">
+              {kpis.totalAvailableUnits.toLocaleString()}
             </div>
             <p className="text-[10px] text-slate-500 mt-0.5 truncate">
-              Saleable units in warehouse
+              Ready for dispatch &amp; sale
             </p>
           </CardContent>
         </Card>
 
-        {/* KPI 2: Total Intake Stock Value */}
+        {/* KPI 2: Reserved (Order Allocated) */}
         <Card className="border-slate-200 shadow-2xs bg-gradient-to-br from-white to-blue-50/30">
           <CardContent className="p-3.5">
             <div className="flex items-center justify-between text-slate-500 mb-1">
-              <span className="text-[10.5px] font-bold uppercase tracking-wider">Intake Valuation</span>
-              <DollarSign className="h-4 w-4 text-blue-600" />
+              <span className="text-[10.5px] font-bold uppercase tracking-wider text-blue-800">Reserved (Orders)</span>
+              <Layers className="h-4 w-4 text-blue-600" />
             </div>
-            <div className="text-lg sm:text-xl font-black font-mono text-blue-900 truncate tabular-nums">
-              {formatCurrency(kpis.totalStockValue)}
+            <div className="text-xl sm:text-2xl font-black font-mono text-blue-900 tabular-nums">
+              {kpis.totalReservedUnits.toLocaleString()}
             </div>
             <p className="text-[10px] text-slate-500 mt-0.5 truncate">
-              Based on GRN landed unit costs
+              Allocated to approved orders
             </p>
           </CardContent>
         </Card>
 
-        {/* KPI 3: Unit Barcodes */}
+        {/* KPI 3: Dispatched Units */}
         <Card className="border-slate-200 shadow-2xs bg-gradient-to-br from-white to-indigo-50/30">
           <CardContent className="p-3.5">
             <div className="flex items-center justify-between text-slate-500 mb-1">
-              <span className="text-[10.5px] font-bold uppercase tracking-wider">Unit Barcodes</span>
-              <Barcode className="h-4 w-4 text-indigo-600" />
+              <span className="text-[10.5px] font-bold uppercase tracking-wider text-indigo-800">Dispatched</span>
+              <Truck className="h-4 w-4 text-indigo-600" />
             </div>
             <div className="text-xl sm:text-2xl font-black font-mono text-indigo-900 tabular-nums">
-              {kpis.totalBarcodes.toLocaleString()}
+              {kpis.totalDispatchedUnits.toLocaleString()}
             </div>
-            <p className="text-[10px] text-emerald-700 font-semibold mt-0.5 truncate">
-              ✓ {kpis.confirmedBarcodes.toLocaleString()} Affixed in Bay
+            <p className="text-[10px] text-slate-500 mt-0.5 truncate">
+              Out for delivery / transit
             </p>
           </CardContent>
         </Card>
 
-        {/* KPI 4: Serial Numbers */}
-        <Card className="border-slate-200 shadow-2xs bg-gradient-to-br from-white to-violet-50/30">
+        {/* KPI 4: Delivered Units */}
+        <Card className="border-slate-200 shadow-2xs bg-gradient-to-br from-white to-teal-50/30">
           <CardContent className="p-3.5">
             <div className="flex items-center justify-between text-slate-500 mb-1">
-              <span className="text-[10.5px] font-bold uppercase tracking-wider">Serialized Units</span>
-              <Hash className="h-4 w-4 text-violet-600" />
+              <span className="text-[10.5px] font-bold uppercase tracking-wider text-teal-800">Delivered</span>
+              <CheckCircle2 className="h-4 w-4 text-teal-600" />
             </div>
-            <div className="text-xl sm:text-2xl font-black font-mono text-violet-900 tabular-nums">
-              {kpis.serializedUnitsCount} Units
+            <div className="text-xl sm:text-2xl font-black font-mono text-teal-900 tabular-nums">
+              {kpis.totalDeliveredUnits.toLocaleString()}
             </div>
             <p className="text-[10px] text-slate-500 mt-0.5 truncate">
-              Tracked with OEM serials
+              Fulfilled to customers
             </p>
           </CardContent>
         </Card>
@@ -429,7 +508,7 @@ export function InventoryDashboardPage() {
         >
           <CardContent className="p-3.5">
             <div className="flex items-center justify-between text-slate-500 mb-1">
-              <span className="text-[10.5px] font-bold uppercase tracking-wider">Damaged Stock</span>
+              <span className="text-[10.5px] font-bold uppercase tracking-wider text-rose-800">Rejected / Damaged</span>
               <AlertTriangle className={cn('h-4 w-4', kpis.totalDamagedUnits > 0 ? 'text-rose-600' : 'text-slate-400')} />
             </div>
             <div
@@ -446,18 +525,18 @@ export function InventoryDashboardPage() {
           </CardContent>
         </Card>
 
-        {/* KPI 6: GRN Intake Sessions */}
+        {/* KPI 6: Available Stock Valuation */}
         <Card className="border-slate-200 shadow-2xs bg-gradient-to-br from-white to-amber-50/30">
           <CardContent className="p-3.5">
             <div className="flex items-center justify-between text-slate-500 mb-1">
-              <span className="text-[10.5px] font-bold uppercase tracking-wider">GRN Shipments</span>
-              <Clock className="h-4 w-4 text-amber-600" />
+              <span className="text-[10.5px] font-bold uppercase tracking-wider text-amber-800">Available Valuation</span>
+              <DollarSign className="h-4 w-4 text-amber-600" />
             </div>
-            <div className="text-xl sm:text-2xl font-black font-mono text-slate-900 tabular-nums">
-              {grns?.length || 0} Total
+            <div className="text-lg sm:text-xl font-black font-mono text-amber-950 truncate tabular-nums">
+              {formatCurrency(kpis.totalStockValue)}
             </div>
             <p className="text-[10px] text-slate-500 mt-0.5 truncate">
-              {kpis.approvedGRNs} approved · {kpis.pendingGRNs} pending
+              Free stock landed cost value
             </p>
           </CardContent>
         </Card>
@@ -562,7 +641,7 @@ export function InventoryDashboardPage() {
           </div>
 
           {/* Quick filter pills */}
-          <div className="flex items-center gap-1 flex-wrap">
+          <div className="flex items-center gap-1.5 flex-wrap">
             <Button
               type="button"
               size="sm"
@@ -571,9 +650,81 @@ export function InventoryDashboardPage() {
                 setQuickFilter('ALL');
                 setCurrentPage(1);
               }}
-              className="h-7 text-[11px] px-2.5 shadow-2xs"
+              className="h-7 text-[11px] px-2.5 shadow-2xs font-semibold"
             >
-              All Items
+              All Items ({flatStockItems.length})
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant={quickFilter === 'AVAILABLE' ? 'default' : 'outline'}
+              onClick={() => {
+                setQuickFilter('AVAILABLE');
+                setCurrentPage(1);
+              }}
+              className={cn(
+                'h-7 text-[11px] px-2.5 shadow-2xs gap-1 font-semibold',
+                quickFilter === 'AVAILABLE'
+                  ? 'bg-emerald-600 text-white hover:bg-emerald-700'
+                  : 'text-emerald-700 border-emerald-200 hover:bg-emerald-50'
+              )}
+            >
+              <Package className="h-3 w-3" />
+              Available ({flatStockItems.filter((i) => i.availableQuantity > 0).length})
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant={quickFilter === 'RESERVED' ? 'default' : 'outline'}
+              onClick={() => {
+                setQuickFilter('RESERVED');
+                setCurrentPage(1);
+              }}
+              className={cn(
+                'h-7 text-[11px] px-2.5 shadow-2xs gap-1 font-semibold',
+                quickFilter === 'RESERVED'
+                  ? 'bg-blue-600 text-white hover:bg-blue-700'
+                  : 'text-blue-700 border-blue-200 hover:bg-blue-50'
+              )}
+            >
+              <Layers className="h-3 w-3" />
+              Reserved ({flatStockItems.filter((i) => i.reservedQuantity > 0).length})
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant={quickFilter === 'DISPATCHED' ? 'default' : 'outline'}
+              onClick={() => {
+                setQuickFilter('DISPATCHED');
+                setCurrentPage(1);
+              }}
+              className={cn(
+                'h-7 text-[11px] px-2.5 shadow-2xs gap-1 font-semibold',
+                quickFilter === 'DISPATCHED'
+                  ? 'bg-indigo-600 text-white hover:bg-indigo-700'
+                  : 'text-indigo-700 border-indigo-200 hover:bg-indigo-50'
+              )}
+            >
+              <Truck className="h-3 w-3" />
+              Dispatched ({flatStockItems.filter((i) => i.dispatchedQuantity > 0).length})
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant={quickFilter === 'DELIVERED' ? 'default' : 'outline'}
+              onClick={() => {
+                setQuickFilter('DELIVERED');
+                setCurrentPage(1);
+              }}
+              className={cn(
+                'h-7 text-[11px] px-2.5 shadow-2xs gap-1 font-semibold',
+                quickFilter === 'DELIVERED'
+                  ? 'bg-teal-600 text-white hover:bg-teal-700'
+                  : 'text-teal-700 border-teal-200 hover:bg-teal-50'
+              )}
+            >
+              <CheckCircle2 className="h-3 w-3" />
+              Delivered ({flatStockItems.filter((i) => i.deliveredQuantity > 0).length})
             </Button>
             <Button
               type="button"
@@ -584,14 +735,14 @@ export function InventoryDashboardPage() {
                 setCurrentPage(1);
               }}
               className={cn(
-                'h-7 text-[11px] px-2.5 shadow-2xs gap-1',
+                'h-7 text-[11px] px-2.5 shadow-2xs gap-1 font-semibold',
                 quickFilter === 'DAMAGED'
                   ? 'bg-rose-600 text-white hover:bg-rose-700'
                   : 'text-rose-700 border-rose-200 hover:bg-rose-50'
               )}
             >
               <AlertTriangle className="h-3 w-3" />
-              Damaged Only ({kpis.totalDamagedUnits})
+              Rejected / Damaged ({kpis.totalDamagedUnits})
             </Button>
             <Button
               type="button"
@@ -601,10 +752,10 @@ export function InventoryDashboardPage() {
                 setQuickFilter('SERIALIZED');
                 setCurrentPage(1);
               }}
-              className="h-7 text-[11px] px-2.5 shadow-2xs gap-1 text-indigo-700 border-indigo-200"
+              className="h-7 text-[11px] px-2.5 shadow-2xs gap-1 text-slate-700 border-slate-200"
             >
               <Hash className="h-3 w-3" />
-              Serialized Only
+              Serialized
             </Button>
             <Button
               type="button"
@@ -679,15 +830,18 @@ export function InventoryDashboardPage() {
                     <TableHeader className="bg-slate-100/70 border-b border-slate-200">
                       <TableRow>
                         <TableHead className="w-10"></TableHead>
-                        <TableHead className="min-w-[200px]">Product &amp; SKU</TableHead>
-                        <TableHead className="min-w-[150px]">Source GRN</TableHead>
-                        <TableHead className="text-right">Received</TableHead>
-                        <TableHead className="text-right font-bold text-slate-900">Good Units</TableHead>
-                        <TableHead className="text-right text-rose-600">Damaged</TableHead>
+                        <TableHead className="min-w-[180px]">Product &amp; SKU</TableHead>
+                        <TableHead className="min-w-[120px]">Source GRN</TableHead>
+                        <TableHead className="text-center min-w-[100px]">Status</TableHead>
+                        <TableHead className="text-right font-bold text-emerald-700">Available</TableHead>
+                        <TableHead className="text-right font-semibold text-blue-700">Reserved (Order)</TableHead>
+                        <TableHead className="text-right font-semibold text-indigo-700">Dispatched</TableHead>
+                        <TableHead className="text-right font-semibold text-teal-700">Delivered</TableHead>
+                        <TableHead className="text-right font-semibold text-rose-600">Rejected (Damage)</TableHead>
                         <TableHead className="text-right">Unit Cost</TableHead>
                         <TableHead className="text-right font-bold">Line Value</TableHead>
-                        <TableHead className="text-center min-w-[130px]">Unit Barcodes</TableHead>
-                        <TableHead className="text-center min-w-[110px]">Serials</TableHead>
+                        <TableHead className="text-center min-w-[110px]">Unit Barcodes</TableHead>
+                        <TableHead className="text-center min-w-[100px]">Serials</TableHead>
                         <TableHead className="text-right w-16">Action</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -740,17 +894,74 @@ export function InventoryDashboardPage() {
                                 </p>
                               </TableCell>
 
-                              {/* Received */}
-                              <TableCell className="py-2.5 px-3 text-right font-mono font-semibold text-slate-600">
-                                {item.receivedQuantity}
+                              {/* Status Badge */}
+                              <TableCell className="py-2.5 px-2 text-center">
+                                {item.primaryStatus === 'AVAILABLE' && (
+                                  <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[10px] py-0 px-2 font-semibold">
+                                    Available
+                                  </Badge>
+                                )}
+                                {item.primaryStatus === 'RESERVED' && (
+                                  <Badge className="bg-blue-50 text-blue-700 border-blue-200 text-[10px] py-0 px-2 font-semibold">
+                                    Reserved
+                                  </Badge>
+                                )}
+                                {item.primaryStatus === 'DISPATCHED' && (
+                                  <Badge className="bg-indigo-50 text-indigo-700 border-indigo-200 text-[10px] py-0 px-2 font-semibold">
+                                    Dispatched
+                                  </Badge>
+                                )}
+                                {item.primaryStatus === 'DELIVERED' && (
+                                  <Badge className="bg-teal-50 text-teal-700 border-teal-200 text-[10px] py-0 px-2 font-semibold">
+                                    Delivered
+                                  </Badge>
+                                )}
+                                {item.primaryStatus === 'REJECTED' && (
+                                  <Badge className="bg-rose-50 text-rose-700 border-rose-200 text-[10px] py-0 px-2 font-semibold">
+                                    Quarantined
+                                  </Badge>
+                                )}
                               </TableCell>
 
-                              {/* Good */}
-                              <TableCell className="py-2.5 px-3 text-right font-mono font-bold text-slate-900">
-                                {item.goodQuantity}
+                              {/* 1. Available */}
+                              <TableCell className="py-2.5 px-3 text-right font-mono font-bold text-emerald-700">
+                                {item.availableQuantity}
                               </TableCell>
 
-                              {/* Damaged */}
+                              {/* 2. Reserved (Allocated to Order) */}
+                              <TableCell className="py-2.5 px-3 text-right font-mono">
+                                {item.reservedQuantity > 0 ? (
+                                  <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 text-[10.5px] py-0 px-1.5 font-mono">
+                                    {item.reservedQuantity}
+                                  </Badge>
+                                ) : (
+                                  <span className="text-slate-400 text-xs">0</span>
+                                )}
+                              </TableCell>
+
+                              {/* 3. Dispatched */}
+                              <TableCell className="py-2.5 px-3 text-right font-mono">
+                                {item.dispatchedQuantity > 0 ? (
+                                  <Badge variant="outline" className="bg-indigo-50 text-indigo-700 border-indigo-200 text-[10.5px] py-0 px-1.5 font-mono">
+                                    {item.dispatchedQuantity}
+                                  </Badge>
+                                ) : (
+                                  <span className="text-slate-400 text-xs">0</span>
+                                )}
+                              </TableCell>
+
+                              {/* 4. Delivered */}
+                              <TableCell className="py-2.5 px-3 text-right font-mono">
+                                {item.deliveredQuantity > 0 ? (
+                                  <Badge variant="outline" className="bg-teal-50 text-teal-700 border-teal-200 text-[10.5px] py-0 px-1.5 font-mono">
+                                    {item.deliveredQuantity}
+                                  </Badge>
+                                ) : (
+                                  <span className="text-slate-400 text-xs">0</span>
+                                )}
+                              </TableCell>
+
+                              {/* 5. Rejected / Damaged */}
                               <TableCell className="py-2.5 px-3 text-right font-mono">
                                 {item.damagedQuantity > 0 ? (
                                   <Badge className="bg-rose-100 text-rose-800 border-rose-200 text-[10px] py-0 px-1 font-mono">
@@ -810,7 +1021,7 @@ export function InventoryDashboardPage() {
                             {/* ── Expanded Detail Drawer for This Inward Item ── */}
                             {isExpanded && (
                               <TableRow className="bg-slate-50/60 hover:bg-slate-50/60 border-t-0">
-                                <TableCell colSpan={11} className="p-3 sm:p-5">
+                                <TableCell colSpan={14} className="p-3 sm:p-5">
                                   <ItemDetailsDrawer
                                     item={item}
                                     onOpenStudio={() => handleOpenStudioForItem(item)}
