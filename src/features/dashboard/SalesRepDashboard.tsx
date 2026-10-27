@@ -62,8 +62,6 @@ interface OrderTrackingItem {
 
 export function SalesRepDashboard() {
   const navigate = useNavigate();
-  // Mobile app view states
-  const [mobileTab, setMobileTab] = useState<'all' | 'collections' | 'receivables' | 'orders'>('all');
   const [receivablesFilter, setReceivablesFilter] = useState<'all' | 'overdue' | 'current'>('all');
   const [searchQuery, setSearchQuery] = useState('');
 

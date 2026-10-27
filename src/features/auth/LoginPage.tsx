@@ -13,6 +13,7 @@ import {
   Landmark,
   MapPin,
   ShoppingBag,
+  ShoppingCart,
   Boxes,
   Store,
   Eye,
@@ -146,6 +147,19 @@ const ROLE_METAS: Record<UserRole, RoleMeta> = {
     avatarBg: 'bg-rose-600 text-white',
     icon: Store,
   },
+  PURCHASING_OFFICER: {
+    role: 'PURCHASING_OFFICER',
+    title: 'Purchasing Officer',
+    department: 'Procurement & Supply Chain',
+    description: 'Purchase Order generation, supplier management, approval requests & read-only GRN inspection.',
+    keyPermissions: ['Purchase Order Drafting', 'Supplier Catalog & Pricing', 'Internal Approval Requests', 'GRN Receiving (Read-Only)'],
+    defaultPath: '/purchasing',
+    badgeBg: 'bg-teal-100',
+    badgeText: 'text-teal-800 border-teal-200',
+    accentBorder: 'hover:border-teal-400 group-hover:border-teal-400',
+    avatarBg: 'bg-teal-600 text-white',
+    icon: ShoppingCart,
+  },
 };
 
 type FilterCategory = 'ALL' | 'MANAGEMENT' | 'FINANCE_OPS' | 'SALES_RETAIL';
@@ -218,7 +232,7 @@ export function LoginPage() {
       if (activeCategory === 'MANAGEMENT') {
         if (!['DIRECTOR', 'MANAGER', 'SALES_MANAGER'].includes(user.role)) return false;
       } else if (activeCategory === 'FINANCE_OPS') {
-        if (!['FINANCE_MANAGER', 'STOCK_KEEPER'].includes(user.role)) return false;
+        if (!['FINANCE_MANAGER', 'STOCK_KEEPER', 'PURCHASING_OFFICER'].includes(user.role)) return false;
       } else if (activeCategory === 'SALES_RETAIL') {
         if (!['AREA_MANAGER', 'SALES_REP', 'CASHIER'].includes(user.role)) return false;
       }
@@ -460,10 +474,25 @@ export function LoginPage() {
             {/* Filter Tabs */}
             <div className="flex flex-wrap gap-2">
               {[
-                { id: 'ALL', label: 'All Roles (8)' },
-                { id: 'MANAGEMENT', label: 'Executive & Management (3)' },
-                { id: 'FINANCE_OPS', label: 'Finance & Logistics (2)' },
-                { id: 'SALES_RETAIL', label: 'Sales & POS Retail (3)' },
+                { id: 'ALL', label: `All Roles (${MOCK_USERS.length})` },
+                {
+                  id: 'MANAGEMENT',
+                  label: `Executive & Management (${
+                    MOCK_USERS.filter((u) => ['DIRECTOR', 'MANAGER', 'SALES_MANAGER'].includes(u.role)).length
+                  })`,
+                },
+                {
+                  id: 'FINANCE_OPS',
+                  label: `Finance, Purchasing & Ops (${
+                    MOCK_USERS.filter((u) => ['FINANCE_MANAGER', 'STOCK_KEEPER', 'PURCHASING_OFFICER'].includes(u.role)).length
+                  })`,
+                },
+                {
+                  id: 'SALES_RETAIL',
+                  label: `Sales & POS Retail (${
+                    MOCK_USERS.filter((u) => ['AREA_MANAGER', 'SALES_REP', 'CASHIER'].includes(u.role)).length
+                  })`,
+                },
               ].map((tab) => (
                 <button
                   key={tab.id}
