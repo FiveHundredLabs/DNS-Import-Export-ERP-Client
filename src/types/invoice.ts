@@ -60,8 +60,19 @@ export interface Invoice extends BaseEntity {
   paymentTerms?: string;
 }
 
+export type InvoicePaymentFilterType =
+  | 'ALL'
+  | 'OUTSTANDING'
+  | 'OVERDUE'
+  | 'NEARBY'
+  | 'NEAR_DUE'
+  | 'PENDING_COLLECTION'
+  | 'SETTLED'
+  | 'FULLY_SETTLED';
+
 export interface InvoiceFilters {
-  status?: InvoiceStatus | 'ALL';
+  status?: InvoiceStatus | InvoicePaymentFilterType | 'ALL';
+  paymentFilter?: InvoicePaymentFilterType;
   customerId?: string;
   salesRepId?: string;
   search?: string;

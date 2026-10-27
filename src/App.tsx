@@ -14,6 +14,7 @@ import { OrderListPage } from './features/orders/OrderListPage';
 import { OrderCreateEditPage } from './features/orders/OrderCreateEditPage';
 import { OrderDetailPage } from './features/orders/OrderDetailPage';
 import { OrderTrackingPage } from './features/orders/OrderTrackingPage';
+import { OrderActivityLogPage } from './features/orders/OrderActivityLogPage';
 import { InventoryDashboardPage } from './features/inventory/InventoryDashboardPage';
 import { GRNListPage } from './features/inventory/GRNListPage';
 import { GRNCreateEditPage } from './features/inventory/GRNCreateEditPage';
@@ -28,6 +29,8 @@ import { InvoiceDetailPage } from './features/invoices/InvoiceDetailPage';
 import { PaymentListPage } from './features/payments/PaymentListPage';
 import { PaymentCollectionPage } from './features/payments/PaymentCollectionPage';
 import { PaymentDetailPage } from './features/payments/PaymentDetailPage';
+import { CustomerPaymentDetailPage } from './features/payments/CustomerPaymentDetailPage';
+import { CustomerPaymentsTab } from './features/payments/CustomerPaymentsTab';
 import { ShowroomPOSTerminal } from './features/pos/ShowroomPOSTerminal';
 import { POSTransactionHistoryPage } from './features/pos/POSTransactionHistoryPage';
 import { POSSessionsPage } from './features/pos/POSSessionsPage';
@@ -183,6 +186,22 @@ export function App() {
           }
         />
         <Route
+          path="orders/activity-log"
+          element={
+            <ProtectedRoute>
+              <OrderActivityLogPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="orders/:id/activity-log"
+          element={
+            <ProtectedRoute>
+              <OrderActivityLogPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="orders/:id"
           element={
             <ProtectedRoute>
@@ -295,6 +314,38 @@ export function App() {
           element={
             <ProtectedRoute>
               <PaymentListPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="payments/collect"
+          element={
+            <ProtectedRoute>
+              <CustomerPaymentsTab />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="payments/collect/:customerId"
+          element={
+            <ProtectedRoute>
+              <CustomerPaymentDetailPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="payments/customer/:customerId"
+          element={
+            <ProtectedRoute>
+              <CustomerPaymentDetailPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="customers/:customerId/pay"
+          element={
+            <ProtectedRoute>
+              <CustomerPaymentDetailPage />
             </ProtectedRoute>
           }
         />

@@ -18,6 +18,7 @@ export interface User {
   areaName?: string;
   assignedCustomersCount?: number;
   avatarUrl?: string;
+  title?: string;
   isActive: boolean;
 }
 

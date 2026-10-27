@@ -28,7 +28,7 @@ describe('LoginPage and Example Users For Each Role', () => {
     expect(screen.getByText('Director')).toBeDefined();
     expect(screen.getByText('Operations Manager')).toBeDefined();
     expect(screen.getByText('Sales Manager')).toBeDefined();
-    expect(screen.getByText('Finance Manager')).toBeDefined();
+    expect(screen.getAllByText('Finance Manager').length).toBeGreaterThan(0);
     expect(screen.getByText('Area Manager')).toBeDefined();
     expect(screen.getByText('Sales Representative')).toBeDefined();
     expect(screen.getByText('Stock Keeper')).toBeDefined();
