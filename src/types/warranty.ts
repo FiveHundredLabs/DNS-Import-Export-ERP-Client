@@ -47,8 +47,8 @@ export interface WarrantyRecord extends BaseEntity {
   sku: string;
   barcode?: string; // Unique barcode assigned to this specific individual unit (not product-level)
   serialNumber?: string;
-  saleDate: string; // ISO string or YYYY-MM-DD
-  warrantyStartDate: string;
+  saleDate: string; // ISO string or YYYY-MM-DD (Distributor invoice date)
+  warrantyStartDate: string; // End-customer selling date
   warrantyPeriodMonths: number;
   warrantyExpiryDate: string;
   saleType: WarrantySaleType;
@@ -60,6 +60,14 @@ export interface WarrantyRecord extends BaseEntity {
   warrantyNoteNumber?: string;
   warrantyNoteStatus?: WarrantyNoteStatus;
   endCustomerName?: string;
+  endCustomerPhone?: string;
+  grnNumber?: string;
+  grnDate?: string;
+  productCost?: number;
+  distributorSupplierName?: string;
+  salesRepId?: string;
+  salesRepName?: string;
+  receiptPhotoUrl?: string;
 }
 
 export interface WarrantyClaim extends BaseEntity {
@@ -208,5 +216,89 @@ export interface SalesRepWarrantySummary {
   collectionProgress: number;
   distributorsCount: number;
   distributorsWithOutstandingNotes: number;
+}
+
+export interface ProductBarcodeDossier {
+  barcode: string;
+  serialNumber?: string;
+  productId: string;
+  productName: string;
+  sku: string;
+  categoryName?: string;
+  productCost: number;
+  sellingPrice?: number;
+  defaultWarrantyPeriodMonths: number;
+  supplierId?: string;
+  supplierName?: string;
+  grnId?: string;
+  grnNumber?: string;
+  grnDate?: string;
+  distributorInvoiceId?: string;
+  distributorInvoiceNumber?: string;
+  distributorInvoiceDate?: string;
+  salesRepId?: string;
+  salesRepName?: string;
+  distributorId?: string;
+  distributorName?: string;
+  distributorCode?: string;
+  isRegistered: boolean;
+  warrantyRecordId?: string;
+  endCustomerSellingDate?: string;
+  warrantyStartDate?: string;
+  warrantyPeriodMonths?: number;
+  warrantyExpiryDate?: string;
+  warrantyStatus: 'ACTIVE' | 'EXPIRING_SOON' | 'EXPIRED' | 'NOT_REGISTERED';
+  remainingPeriodText?: string;
+  receiptPhotoUrl?: string;
+  endCustomerName?: string;
+  endCustomerPhone?: string;
+  canRegister: boolean;
+  canClaim: boolean;
+  isExpired: boolean;
+  claimBlockReason?: string;
+}
+
+export interface RegisterEndCustomerWarrantyDTO {
+  barcode: string;
+  sellingDate: string;
+  customerId: string;
+  customerName?: string;
+  warrantyPeriodMonths: number;
+  endCustomerName?: string;
+  endCustomerPhone?: string;
+  receiptPhotoUrl?: string;
+  notes?: string;
+}
+
+export interface CustomerWarrantyTallyItem {
+  id: string;
+  productId: string;
+  productName: string;
+  sku: string;
+  barcode: string;
+  serialNumber?: string;
+  quantity: number;
+  unit: string;
+  invoiceNumber: string;
+  invoiceDate: string;
+  sellingDate?: string;
+  isRegistered: boolean;
+  hasNoteReceipt: boolean;
+  receiptPhotoUrl?: string;
+  warrantyStatus: 'ACTIVE' | 'EXPIRING_SOON' | 'EXPIRED' | 'NOT_REGISTERED';
+  warrantyExpiryDate?: string;
+  remainingPeriodText?: string;
+}
+
+export interface CustomerWarrantyTally {
+  customerId: string;
+  customerName: string;
+  customerCode: string;
+  assignedRepId?: string;
+  assignedRepName?: string;
+  totalSupplied: number;
+  registeredCount: number;
+  pendingCount: number;
+  items: CustomerWarrantyTallyItem[];
 }
 

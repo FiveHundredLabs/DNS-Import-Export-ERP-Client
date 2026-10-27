@@ -137,4 +137,80 @@ export function classifyUnitWarrantyStatus(record: {
   return { status: 'IN_DISTRIBUTOR_STOCK', label: 'In Distributor Stock (Unaccounted)' };
 }
 
+export interface RemainingWarrantyInfo {
+  remainingMonths: number;
+  remainingDays: number;
+  isExpired: boolean;
+  isExpiringSoon: boolean;
+  displayText: string;
+  status: 'ACTIVE' | 'EXPIRING_SOON' | 'EXPIRED' | 'NOT_REGISTERED';
+}
+
+/**
+ * Calculates remaining warranty duration and visual status.
+ * Compares warrantyExpiryDate against reference date (defaults to today).
+ */
+export function calculateRemainingWarranty(
+  expiryDate?: string,
+  todayStr: string = new Date().toISOString().split('T')[0]
+): RemainingWarrantyInfo {
+  if (!expiryDate) {
+    return {
+      remainingMonths: 0,
+      remainingDays: 0,
+      isExpired: false,
+      isExpiringSoon: false,
+      displayText: 'Not Registered',
+      status: 'NOT_REGISTERED',
+    };
+  }
+
+  const exp = expiryDate.split('T')[0];
+  const today = todayStr.split('T')[0];
+
+  const expDate = new Date(exp + 'T00:00:00Z');
+  const currDate = new Date(today + 'T00:00:00Z');
+
+  const diffMs = expDate.getTime() - currDate.getTime();
+  const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+
+  if (diffDays < 0) {
+    return {
+      remainingMonths: 0,
+      remainingDays: diffDays,
+      isExpired: true,
+      isExpiringSoon: false,
+      displayText: 'Warranty Expired',
+      status: 'EXPIRED',
+    };
+  }
+
+  const expYear = expDate.getUTCFullYear();
+  const expMonth = expDate.getUTCMonth();
+  const currYear = currDate.getUTCFullYear();
+  const currMonth = currDate.getUTCMonth();
+
+  let diffMonths = (expYear - currYear) * 12 + (expMonth - currMonth);
+  if (expDate.getUTCDate() < currDate.getUTCDate()) {
+    diffMonths -= 1;
+  }
+  diffMonths = Math.max(0, diffMonths);
+
+  const isExpiringSoon = diffDays <= 30;
+  const status = isExpiringSoon ? 'EXPIRING_SOON' : 'ACTIVE';
+  const displayText =
+    diffMonths > 0
+      ? `${diffMonths} Month${diffMonths > 1 ? 's' : ''}`
+      : `${diffDays} Day${diffDays !== 1 ? 's' : ''}`;
+
+  return {
+    remainingMonths: diffMonths,
+    remainingDays: diffDays,
+    isExpired: false,
+    isExpiringSoon,
+    displayText,
+    status,
+  };
+}
+
 
