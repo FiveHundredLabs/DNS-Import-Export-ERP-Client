@@ -193,7 +193,7 @@ export function FinancePricingModal({
   const decisionList = Object.values(decisions);
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()} maxWidth="max-w-4xl">
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader className="border-b border-slate-100 pb-3">
           <div className="flex items-center gap-2">
