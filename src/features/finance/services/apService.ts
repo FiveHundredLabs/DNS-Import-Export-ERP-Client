@@ -506,14 +506,18 @@ class AccountsPayableService {
   }
 
   /**
-   * Get all GRNs available for costing (status SUBMITTED or APPROVED and not yet COSTED).
+   * Get all GRNs available for costing or review.
+   * Lifecycle:
+   * 1. Stock keeper submits GRN (no costing done yet) -> SUBMITTED
+   * 2. Finance costs GRN & posts bill -> COSTED
+   * 3. Selling price strategy assigned -> APPROVED
    */
   getAvailableGRNs(): GRN[] {
     const list = JSON.parse(JSON.stringify(MOCK_GRNS)) as GRN[];
     return list.map((g) => {
       const overrideStatus = this.grnStatuses[g.id];
       if (overrideStatus) {
-        return { ...g, status: overrideStatus };
+        return { ...g, status: overrideStatus === 'PRICED' ? 'APPROVED' : overrideStatus };
       }
       return g;
     });
@@ -525,7 +529,7 @@ class AccountsPayableService {
   }
 
   setGRNStatus(grnId: string, status: 'COSTED' | 'SUBMITTED' | 'APPROVED' | 'PRICED') {
-    this.grnStatuses[grnId] = status;
+    this.grnStatuses[grnId] = status === 'PRICED' ? 'APPROVED' : status;
     this.save();
   }
 
@@ -1240,9 +1244,9 @@ class AccountsPayableService {
       }
     }
 
-    // Restore GRN status back to APPROVED so it can be re-costed or inspected
+    // Restore GRN status back to SUBMITTED so it can be re-costed or inspected
     if (bill.grnId) {
-      this.grnStatuses[bill.grnId] = 'APPROVED';
+      this.grnStatuses[bill.grnId] = 'SUBMITTED';
     }
 
     bill.status = 'VOIDED';

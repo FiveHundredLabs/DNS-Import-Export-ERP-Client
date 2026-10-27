@@ -6,6 +6,8 @@ import { PaginatedResult } from '../types/common';
 import { orderService, OrderService } from './OrderService';
 import { customerService, CustomerService } from './CustomerService';
 import { taxService, TaxService } from './TaxService';
+import { productService } from './ProductService';
+import { batchInventoryService } from './BatchInventoryService';
 
 export class InvoiceService {
   private repo: IInvoiceRepository;
@@ -49,7 +51,7 @@ export class InvoiceService {
   async createInvoiceFromOrder(
     orderId: string,
     currentUser: User,
-    options?: { asDraft?: boolean }
+    options?: { asDraft?: boolean; allowUnapproved?: boolean }
   ): Promise<Invoice> {
     const order = await this.orderSvc.getOrder(orderId);
     if (!order) {
@@ -74,7 +76,9 @@ export class InvoiceService {
       return existingDraft;
     }
 
-    const eligibleStatuses = ['APPROVED', 'PICKING', 'PARTIALLY_ISSUED', 'ISSUED'];
+    const eligibleStatuses = options?.allowUnapproved
+      ? ['DRAFT', 'SUBMITTED', 'PENDING_APPROVAL', 'SPECIAL_APPROVAL', 'APPROVED', 'PICKING', 'PARTIALLY_ISSUED', 'ISSUED']
+      : ['APPROVED', 'PICKING', 'PARTIALLY_ISSUED', 'ISSUED'];
     if (!eligibleStatuses.includes(order.status)) {
       throw new Error(
         `Cannot generate invoice for order in status '${order.status}'. Order must be approved or issued first.`
@@ -245,6 +249,26 @@ export class InvoiceService {
       throw new Error('Permission Denied: Only SALES_MANAGER can edit draft invoice line items.');
     }
 
+    // Available stock restriction: line quantity cannot exceed available stock
+    for (const it of items) {
+      let available = 0;
+      if (it.batchId) {
+        const batch = batchInventoryService.getBatchById(it.batchId);
+        if (batch) available = batch.availableQuantity;
+      }
+      if (!available) {
+        const prod = await productService.getProduct(it.productId);
+        if (prod) {
+          available = Math.max(0, (prod.stockOnHand ?? 0) - (prod.damagedStock ?? 0));
+        }
+      }
+      if (available > 0 && it.quantity > available) {
+        throw new Error(
+          `Quantity for "${it.productNameSnapshot || it.productId}" (${it.quantity}) cannot exceed available stock (${available} units).`
+        );
+      }
+    }
+
     const taxConfig = this.taxSvc.getTaxConfig();
     const effectiveTaxRate = taxConfig.taxEnabled ? (inv.taxRatePercentage || taxConfig.taxRate) : 0;
 
@@ -292,6 +316,26 @@ export class InvoiceService {
     if (!inv) throw new Error(`Invoice not found: ${invoiceId}`);
     if (inv.status !== 'DRAFT') {
       throw new Error(`Invoice is already in status '${inv.status}'`);
+    }
+
+    // Available stock restriction before finalizing and issuing
+    for (const it of inv.items) {
+      let available = 0;
+      if (it.batchId) {
+        const batch = batchInventoryService.getBatchById(it.batchId);
+        if (batch) available = batch.availableQuantity;
+      }
+      if (!available) {
+        const prod = await productService.getProduct(it.productId);
+        if (prod) {
+          available = Math.max(0, (prod.stockOnHand ?? 0) - (prod.damagedStock ?? 0));
+        }
+      }
+      if (available > 0 && it.quantity > available) {
+        throw new Error(
+          `Cannot finalize invoice: Quantity for "${it.productNameSnapshot || it.productId}" (${it.quantity}) cannot exceed available stock (${available} units).`
+        );
+      }
     }
 
     const updated = await this.repo.update(invoiceId, {
