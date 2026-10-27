@@ -6,3 +6,5 @@ export * from './StockBalancePage';
 export * from './StockMovementsPage';
 export * from './OrderPickingPage';
 export * from './DispatchPage';
+export * from './SerialNumbersPage';
+export * from './BarcodesPage';
