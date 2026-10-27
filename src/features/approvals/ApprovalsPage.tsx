@@ -31,6 +31,7 @@ export function ApprovalsPage() {
     if (app.documentType === 'PAYMENT_RECEIPT') return `/payments/${app.documentId}`;
     if (app.documentType === 'SPECIAL_SALES_ORDER') return `/orders/${app.documentId}`;
     if (app.documentType === 'QUOTATION_DISCOUNT') return `/quotations/${app.documentId}`;
+    if (app.documentType === 'PURCHASE_ORDER') return `/purchasing/orders/${app.documentId}`;
     return null;
   };
 

@@ -35,7 +35,7 @@ export { StatCard } from './common/StatCard';
 export { AmountDisplay } from './common/AmountDisplay';
 export { EmptyState } from './common/EmptyState';
 export { ErrorState } from './common/ErrorState';
-export { LoadingSkeleton } from './common/LoadingSkeleton';
+export { TableLoadingSkeleton, TableLoadingSkeleton as LoadingSkeleton, CardGridSkeleton } from './common/LoadingSkeleton';
 export { ModulePlaceholder } from './common/ModulePlaceholder';
 export { ProtectedRoute } from './common/ProtectedRoute';
 export { FullscreenButton } from './header/FullscreenButton';

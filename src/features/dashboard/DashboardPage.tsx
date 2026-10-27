@@ -4,9 +4,22 @@ import { SalesRepDashboard } from './SalesRepDashboard';
 import { AreaManagerDashboard } from './AreaManagerDashboard';
 import { SalesManagerDashboard } from './SalesManagerDashboard';
 import { FinanceManagerDashboard } from './FinanceManagerDashboard';
+import { PurchasingDashboard } from '../purchasing/PurchasingDashboard';
 import { StatCard } from '../../components/common/StatCard';
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/card';
-import { CheckCircle2 } from 'lucide-react';
+import {
+  CheckCircle2,
+  DollarSign,
+  AlertCircle,
+  CreditCard,
+  FileCheck2,
+  Package,
+  Clock,
+  ShoppingCart,
+  Receipt,
+  Target,
+  Users,
+} from 'lucide-react';
 import { formatCurrency } from '../../utils/formatters';
 
 export function DashboardPage() {
@@ -32,6 +45,10 @@ export function DashboardPage() {
     return <AreaManagerDashboard />;
   }
 
+  if (role === 'PURCHASING_OFFICER') {
+    return <PurchasingDashboard />;
+  }
+
   // Generalized role-specific dashboard for Sales Manager, Finance, Stock Keeper, Cashier
   return (
     <div className="space-y-6">
@@ -49,34 +66,34 @@ export function DashboardPage() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {role === 'FINANCE_MANAGER' && (
           <>
-            <StatCard title="Collections Today" value={formatCurrency(3450000)} period="Verified" trend={{ value: '12.8%', isPositive: true }} variant="success" />
-            <StatCard title="Total Receivables" value={formatCurrency(12450000)} period="Dealer credit" variant="warning" />
-            <StatCard title="Petty Cash Balance" value={formatCurrency(145000)} period="Imprest balance" variant="default" />
-            <StatCard title="Payments to Verify" value="5 Receipts" period="Pending queue" variant="warning" />
+            <StatCard title="Collections Today" value={formatCurrency(3450000)} period="Verified" trend={{ value: '12.8%', isPositive: true }} variant="success" icon={DollarSign} />
+            <StatCard title="Total Receivables" value={formatCurrency(12450000)} period="Dealer credit" variant="warning" icon={AlertCircle} />
+            <StatCard title="Petty Cash Balance" value={formatCurrency(145000)} period="Imprest balance" variant="blue" icon={CreditCard} />
+            <StatCard title="Payments to Verify" value="5 Receipts" period="Pending queue" variant="warning" icon={FileCheck2} />
           </>
         )}
         {role === 'STOCK_KEEPER' && (
           <>
-            <StatCard title="Stock Items" value="5 SKU Lines" period="Active catalogue" variant="default" />
-            <StatCard title="Pending GRNs" value="2 Shipments" period="Intake queue" trend={{ value: '1 urgent', isPositive: false }} variant="warning" />
-            <StatCard title="Orders to Pick" value="4 Orders" period="Warehouse dispatch" variant="default" />
-            <StatCard title="Damaged Stock Items" value="11 Units" period="Quarantine bay" variant="danger" />
+            <StatCard title="Stock Items" value="5 SKU Lines" period="Active catalogue" variant="indigo" icon={Package} />
+            <StatCard title="Pending GRNs" value="2 Shipments" period="Intake queue" trend={{ value: '1 urgent', isPositive: false }} variant="warning" icon={Clock} />
+            <StatCard title="Orders to Pick" value="4 Orders" period="Warehouse dispatch" variant="blue" icon={ShoppingCart} />
+            <StatCard title="Damaged Stock Items" value="11 Units" period="Quarantine bay" variant="danger" icon={AlertCircle} />
           </>
         )}
         {role === 'CASHIER' && (
           <>
-            <StatCard title="Showroom Register" value="ACTIVE" period="Session opened" variant="success" />
-            <StatCard title="Shift Cash In Hand" value={formatCurrency(84500)} period="Opening 10,000" variant="default" />
-            <StatCard title="Transactions Today" value="18 Invoices" period="Average 4.7k" trend={{ value: '24%', isPositive: true }} variant="default" />
-            <StatCard title="Cash Variance" value="LKR 0.00" period="Reconciled" variant="success" />
+            <StatCard title="Showroom Register" value="ACTIVE" period="Session opened" variant="success" icon={CheckCircle2} />
+            <StatCard title="Shift Cash In Hand" value={formatCurrency(84500)} period="Opening 10,000" variant="blue" icon={DollarSign} />
+            <StatCard title="Transactions Today" value="18 Invoices" period="Average 4.7k" trend={{ value: '24%', isPositive: true }} variant="indigo" icon={Receipt} />
+            <StatCard title="Cash Variance" value="LKR 0.00" period="Reconciled" variant="success" icon={CheckCircle2} />
           </>
         )}
         {role === 'AREA_MANAGER' && (
           <>
-            <StatCard title="Area Target" value="94.2%" period="Western Province" trend={{ value: '4.2%', isPositive: true }} variant="success" />
-            <StatCard title="Active Sales Reps" value="6 Officers" period="Field deployments" variant="default" />
-            <StatCard title="Customer Registrations" value="3 Pending" period="Commercial review" variant="warning" />
-            <StatCard title="Route Collections" value={formatCurrency(8400000)} period="PDC + Cash" variant="default" />
+            <StatCard title="Area Target" value="94.2%" period="Western Province" trend={{ value: '4.2%', isPositive: true }} variant="success" icon={Target} />
+            <StatCard title="Active Sales Reps" value="6 Officers" period="Field deployments" variant="indigo" icon={Users} />
+            <StatCard title="Customer Registrations" value="3 Pending" period="Commercial review" variant="warning" icon={Users} />
+            <StatCard title="Route Collections" value={formatCurrency(8400000)} period="PDC + Cash" variant="blue" icon={CreditCard} />
           </>
         )}
       </div>

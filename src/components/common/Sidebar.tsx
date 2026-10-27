@@ -41,6 +41,7 @@ import {
   ArrowLeftRight,
   CheckSquare,
   Truck,
+  Banknote,
 } from 'lucide-react';
 import { useEffect } from 'react';
 import { useAuth } from '../../hooks/useAuth';
@@ -56,6 +57,7 @@ interface SidebarProps {
 
 type RailCategory =
   | 'all'
+  | 'purchasing'
   | 'sales'
   | 'customers'
   | 'inventory'
@@ -72,7 +74,6 @@ interface SidebarItem {
   category: RailCategory;
   exact?: boolean;
   directorOnly?: boolean;
-  excludedRoles?: string[];
 }
 
 export function Sidebar({ isOpen, onClose }: SidebarProps) {
@@ -84,20 +85,12 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const [activeCategory, setActiveCategory] = useState<RailCategory>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Automatically activate finance category when navigating within finance module (if authorized)
+  // Automatically activate purchasing or finance category when navigating within their modules
   useEffect(() => {
-    if (location.pathname.startsWith('/finance') && canAccessRoute('/finance')) {
+    if (location.pathname.startsWith('/purchasing') && canAccessRoute('/purchasing')) {
+      setActiveCategory('purchasing');
+    } else if (location.pathname.startsWith('/finance') && canAccessRoute('/finance')) {
       setActiveCategory('finance');
-    }
-  }, [location.pathname, canAccessRoute]);
-
-  // Automatically activate inventory category when navigating within inventory module or products (if authorized)
-  useEffect(() => {
-    if (
-      (location.pathname.startsWith('/inventory') || location.pathname.startsWith('/products')) &&
-      canAccessRoute('/inventory')
-    ) {
-      setActiveCategory('inventory');
     }
   }, [location.pathname, canAccessRoute]);
 
@@ -112,6 +105,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
 
   // 2. Customers, Invoices, Payments & POS
   const customerItems: SidebarItem[] = [
+    { id: 'customer-collections', name: 'Customer Collections', path: '/payments/collect', icon: Banknote, category: 'sales' },
     { id: 'customers', name: 'Customer Master', path: '/customers', icon: Users2, category: 'customers' },
     { id: 'invoices', name: 'Invoices', path: '/invoices', icon: Receipt, category: 'sales' },
     { id: 'payments', name: 'Payments', path: '/payments', icon: CreditCard, category: 'finance' },
@@ -159,6 +153,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
 
   // Combined item list in canonical Quick Links order
   const allRawItems: SidebarItem[] = [
+    ...purchasingItems,
     ...procurementItems,
     ...customerItems,
     ...inventoryItems,
@@ -209,6 +204,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   // Rail category definition (No separate favorites rail item)
   const railItems = [
     { id: 'all' as RailCategory, label: 'Dashboard & Quick Links', icon: LayoutGrid },
+    { id: 'purchasing' as RailCategory, label: 'Purchasing & Procurement', icon: ShoppingCart },
     { id: 'sales' as RailCategory, label: 'Sales & Orders', icon: Calendar },
     { id: 'customers' as RailCategory, label: 'Customers & CRM', icon: Users2 },
     { id: 'inventory' as RailCategory, label: 'Inventory & Products', icon: Boxes },
@@ -247,6 +243,8 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   // Determine panel title
   const panelTitle = useMemo(() => {
     switch (activeCategory) {
+      case 'purchasing':
+        return 'Purchasing & Procurement';
       case 'sales':
         return 'Sales & Orders';
       case 'customers':
@@ -307,6 +305,11 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         >
           <Icon className={cn('h-3.5 w-3.5 shrink-0 transition-colors text-slate-500 group-hover:text-slate-700', active && 'text-slate-900')} />
           <span className="truncate">{item.name}</span>
+          {item.badge && (
+            <span className="ml-auto mr-1.5 text-[9px] font-mono px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200 shrink-0">
+              {item.badge}
+            </span>
+          )}
         </NavLink>
 
         {/* Right: Interactive Star Toggle Button (Clean Gray, Small) */}

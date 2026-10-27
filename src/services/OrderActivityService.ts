@@ -12,6 +12,30 @@ import {
 import { User } from '../types/auth';
 import { orderService } from './OrderService';
 import { invoiceService } from './InvoiceService';
+import { paymentService } from './PaymentService';
+import { quotationService } from './QuotationService';
+
+export interface UserActivityItem {
+  id: string;
+  timestamp: string;
+  category: 'ORDER' | 'PAYMENT' | 'QUOTATION' | 'APPROVAL';
+  action: string;
+  title: string;
+  description: string;
+  referenceNumber: string;
+  customerName: string;
+  customerCode?: string;
+  amount?: number;
+  statusBadge: {
+    label: string;
+    variant: 'default' | 'success' | 'warning' | 'destructive' | 'info' | 'purple' | 'cyan';
+  };
+  link: string;
+  actorId: string;
+  actorName: string;
+  actorRole: string;
+  comment?: string;
+}
 
 export class OrderActivityService {
   /**
@@ -621,6 +645,185 @@ export class OrderActivityService {
       status: 'INVOICED',
       activityLog: updatedLog,
     });
+  }
+
+  /**
+   * Returns a comprehensive unified activity log for a specific user (or their assigned scope)
+   * aggregating orders, payment collections, quotations, and approval workflow milestones.
+   */
+  async getUserActivityLog(userId: string, role?: string): Promise<UserActivityItem[]> {
+    const items: UserActivityItem[] = [];
+
+    // 1. Orders and their approval / milestone history
+    try {
+      const orderRes = await orderService.listOrders({ pageSize: 500 });
+      const userOrders = (orderRes.data || []).filter(
+        (o) =>
+          o.salesRepId === userId ||
+          o.approvalHistory?.some((h) => h.actorId === userId) ||
+          role === 'DIRECTOR' ||
+          role === 'MANAGER'
+      );
+
+      for (const o of userOrders) {
+        // Order creation
+        items.push({
+          id: `act-ord-${o.id}-create`,
+          timestamp: o.createdAt,
+          category: 'ORDER',
+          action: 'ORDER_CREATED',
+          title: 'Sales Order Created',
+          description: `Order ${o.orderNumber} initiated for ${o.customerNameSnapshot}.`,
+          referenceNumber: o.orderNumber,
+          customerName: o.customerNameSnapshot,
+          customerCode: o.customerCodeSnapshot,
+          amount: o.totalAmount,
+          statusBadge: { label: o.status, variant: 'info' },
+          link: `/orders/${o.id}`,
+          actorId: o.salesRepId,
+          actorName: o.salesRepNameSnapshot,
+          actorRole: 'SALES_REP',
+          comment: o.notes,
+        });
+
+        // Approval history milestones
+        if (o.approvalHistory && o.approvalHistory.length > 0) {
+          for (const h of o.approvalHistory) {
+            const isUserAction = h.actorId === userId || o.salesRepId === userId;
+            if (isUserAction) {
+              const hTime = h.timestamp || o.createdAt;
+              let title = 'Approval Step Actioned';
+              let badgeVariant: UserActivityItem['statusBadge']['variant'] = 'warning';
+              if (h.action === 'SUBMIT') {
+                title = 'Order Submitted for Approval';
+                badgeVariant = 'warning';
+              } else if (h.action === 'APPROVE') {
+                title = 'Order Approved by Supervisor';
+                badgeVariant = 'success';
+              } else if (h.action === 'REJECT') {
+                title = 'Order Rejected';
+                badgeVariant = 'destructive';
+              } else if (h.action === 'ESCALATE') {
+                title = 'Approval Escalated';
+                badgeVariant = 'purple';
+              }
+
+              items.push({
+                id: `act-ord-${o.id}-hist-${h.id}`,
+                timestamp: hTime,
+                category: 'APPROVAL',
+                action: h.action,
+                title,
+                description: `${o.orderNumber} • ${h.comment || (h.action === 'SUBMIT' ? 'Sent for review' : 'Commercial review processed')}`,
+                referenceNumber: o.orderNumber,
+                customerName: o.customerNameSnapshot,
+                customerCode: o.customerCodeSnapshot,
+                amount: o.totalAmount,
+                statusBadge: { label: h.toStatus || h.action, variant: badgeVariant },
+                link: `/orders/${o.id}`,
+                actorId: h.actorId,
+                actorName: h.actorName,
+                actorRole: h.actorRole,
+                comment: h.comment,
+              });
+            }
+          }
+        }
+
+        // Delivery completed
+        if (o.status === 'DELIVERED') {
+          items.push({
+            id: `act-ord-${o.id}-delivered`,
+            timestamp: o.updatedAt || o.createdAt,
+            category: 'ORDER',
+            action: 'DELIVERED',
+            title: 'Order Delivered to Customer',
+            description: `${o.orderNumber} successfully delivered under ${o.deliveryNoteNumber || 'delivery note'}.`,
+            referenceNumber: o.orderNumber,
+            customerName: o.customerNameSnapshot,
+            customerCode: o.customerCodeSnapshot,
+            amount: o.totalAmount,
+            statusBadge: { label: 'Delivered', variant: 'success' },
+            link: `/orders/${o.id}`,
+            actorId: o.salesRepId,
+            actorName: o.salesRepNameSnapshot,
+            actorRole: 'SALES_REP',
+          });
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to load orders for user activity log', e);
+    }
+
+    // 2. Payments & Collections
+    try {
+      const payRes = await paymentService.getPayments({ pageSize: 500 });
+      const userPayments = (payRes.data || []).filter(
+        (p) => p.salesRepId === userId || p.approvedById === userId || role === 'DIRECTOR'
+      );
+
+      for (const p of userPayments) {
+        items.push({
+          id: `act-pay-${p.id}`,
+          timestamp: p.collectedAt || p.createdAt,
+          category: 'PAYMENT',
+          action: 'PAYMENT_COLLECTED',
+          title: `Payment Collected (${p.paymentMethod === 'CHEQUE' ? 'Cheque / PDC' : 'Cash'})`,
+          description: `Collected receipt ${p.receiptNumber} from ${p.customerName}.`,
+          referenceNumber: p.receiptNumber,
+          customerName: p.customerName,
+          customerCode: p.customerCode,
+          amount: p.amount,
+          statusBadge: {
+            label: p.status,
+            variant: p.status === 'APPROVED' ? 'success' : 'warning',
+          },
+          link: `/payments`,
+          actorId: p.salesRepId,
+          actorName: p.salesRepName,
+          actorRole: 'SALES_REP',
+          comment: p.notes,
+        });
+      }
+    } catch (e) {
+      console.warn('Failed to load payments for user activity log', e);
+    }
+
+    // 3. Quotations
+    try {
+      const quoteRes = await quotationService.listQuotations({ pageSize: 500 });
+      const userQuotes = (quoteRes.data || []).filter(
+        (q) => q.salesRepId === userId || role === 'DIRECTOR'
+      );
+
+      for (const q of userQuotes) {
+        items.push({
+          id: `act-quote-${q.id}`,
+          timestamp: q.createdAt,
+          category: 'QUOTATION',
+          action: 'QUOTATION_CREATED',
+          title: 'Quotation Generated & Dispatched',
+          description: `Quote ${q.quotationNumber} issued for ${q.customerNameSnapshot}.`,
+          referenceNumber: q.quotationNumber,
+          customerName: q.customerNameSnapshot,
+          customerCode: q.customerCodeSnapshot,
+          amount: q.totalAmount,
+          statusBadge: {
+            label: q.status,
+            variant: q.status === 'APPROVED' ? 'success' : q.status === 'CONVERTED' ? 'cyan' : 'warning',
+          },
+          link: `/quotations/${q.id}`,
+          actorId: q.salesRepId,
+          actorName: q.salesRepNameSnapshot,
+          actorRole: 'SALES_REP',
+        });
+      }
+    } catch (e) {
+      console.warn('Failed to load quotations for user activity log', e);
+    }
+
+    // Sort chronologically descending (newest first)
+    return items.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
   }
 }
 

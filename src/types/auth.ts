@@ -6,7 +6,8 @@ export type UserRole =
   | 'AREA_MANAGER'
   | 'SALES_REP'
   | 'STOCK_KEEPER'
-  | 'CASHIER';
+  | 'CASHIER'
+  | 'PURCHASING_OFFICER';
 
 export interface User {
   id: string;
@@ -18,6 +19,7 @@ export interface User {
   areaName?: string;
   assignedCustomersCount?: number;
   avatarUrl?: string;
+  title?: string;
   isActive: boolean;
 }
 
@@ -67,4 +69,12 @@ export type Permission =
   | 'commissions:manage'
   | 'reports:all'
   | 'reports:area_only'
-  | 'audit:view';
+  | 'audit:view'
+  | 'view:purchasing_dashboard'
+  | 'purchasing:suppliers_view'
+  | 'purchasing:suppliers_manage'
+  | 'purchasing:po_view'
+  | 'purchasing:po_create'
+  | 'purchasing:po_edit'
+  | 'purchasing:grn_view'
+  | 'purchasing:reports';

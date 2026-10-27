@@ -25,6 +25,8 @@ import {
   Settings,
   Palette,
   Percent,
+  Target,
+  AlertCircle,
 } from 'lucide-react';
 import { formatCurrency } from '../../utils/formatters';
 import {
@@ -187,20 +189,23 @@ export function DirectorDashboard() {
           period="This month"
           trend={{ value: '20.7%', isPositive: true }}
           variant="success"
+          icon={DollarSign}
         />
         <StatCard
           title="New Orders"
           value="209"
           period="This month"
           trend={{ value: '12%', isPositive: true }}
-          variant="default"
+          variant="blue"
+          icon={ShoppingBag}
         />
         <StatCard
           title="Conversion Rate"
           value="9.5%"
           period="This month"
           trend={{ value: '2.12%', isPositive: true }}
-          variant="default"
+          variant="indigo"
+          icon={Target}
         />
         <StatCard
           title="Cancelled Orders"
@@ -208,6 +213,7 @@ export function DirectorDashboard() {
           period="This month"
           trend={{ value: '3.8%', isPositive: false }}
           variant="danger"
+          icon={AlertCircle}
         />
       </div>
 
