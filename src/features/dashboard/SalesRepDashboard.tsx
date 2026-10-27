@@ -198,30 +198,30 @@ export function SalesRepDashboard() {
   return (
     <div className="space-y-4 sm:space-y-6 pb-24 md:pb-6 max-w-7xl mx-auto">
       {/* 1. Header Banner:
-          - MOBILE (< md): Curved brand header in primary gradient, fluid waves, mobile search
+          - MOBILE (< md): Curved brand header with deeper 32px+ radius, fluid ambient glow, avatar & territory
           - DESKTOP (md:): Clean enterprise white card, standard layout, desktop actions
       */}
-      <div className="relative -mx-3.5 -mt-3.5 md:mx-0 md:mt-0 p-3 sm:p-4 md:p-6 rounded-b-2xl md:rounded-2xl bg-gradient-to-br from-primary via-primary-hover to-primary-active md:from-white md:via-white md:to-white text-primary-foreground md:text-slate-900 shadow-sm md:shadow-xs shadow-primary/15 md:border md:border-slate-200/90 overflow-hidden md:overflow-visible transition-all">
-        {/* Fluid Decorative Ambient Waves (Mobile only) */}
-        <div className="block md:hidden absolute -top-12 -right-12 w-36 h-36 rounded-full bg-white/10 blur-xl pointer-events-none" />
-        <div className="block md:hidden absolute -bottom-10 -left-10 w-32 h-32 rounded-full bg-white/5 blur-lg pointer-events-none" />
+      <div className="relative -mx-3.5 -mt-3.5 md:mx-0 md:mt-0 px-4 pt-3 pb-6 sm:px-6 sm:pt-4 sm:pb-7 md:p-6 rounded-b-[2rem] sm:rounded-b-[2.5rem] md:rounded-2xl bg-gradient-to-br from-primary via-primary-hover to-primary-active md:from-white md:via-white md:to-white text-primary-foreground md:text-slate-900 shadow-md md:shadow-xs shadow-primary/20 md:border md:border-slate-200/90 overflow-hidden md:overflow-visible transition-all">
+        {/* Fluid Decorative Ambient Glows (Mobile only) */}
+        <div className="block md:hidden absolute -top-10 -right-8 w-44 h-44 rounded-full bg-white/10 blur-2xl pointer-events-none" />
+        <div className="block md:hidden absolute -bottom-10 -left-8 w-40 h-40 rounded-full bg-white/10 blur-xl pointer-events-none" />
 
         <div className="relative z-10 space-y-2.5 md:space-y-0 md:flex md:items-center md:justify-between md:gap-4">
           {/* Left: Avatar (mobile) + Greeting & Territory */}
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-3">
             {/* User Avatar Squircle (Mobile only) */}
-            <div className="flex md:hidden h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/20 backdrop-blur-md text-white font-extrabold text-xs ring-1.5 ring-white/30">
+            <div className="flex md:hidden h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white/20 backdrop-blur-md text-white font-black text-xs ring-2 ring-white/30 shadow-xs">
               KW
             </div>
 
             <div className="min-w-0">
-              <h1 className="text-base sm:text-lg md:text-2xl font-bold tracking-tight text-white md:text-slate-900 mt-0.5 truncate">
+              <h1 className="text-lg sm:text-xl md:text-2xl font-extrabold tracking-tight text-white md:text-slate-900 leading-tight">
                 Good Day, Kasun
               </h1>
-              <p className="text-[11px] sm:text-xs text-white/80 md:text-slate-500 mt-0.5 flex items-center gap-1.5 flex-wrap">
-                <MapPin className="h-3 w-3 text-white md:text-rose-500 shrink-0 hidden sm:inline" />
+              <p className="text-[11.5px] sm:text-xs text-white/90 md:text-slate-500 mt-1 flex items-center gap-1.5 flex-wrap font-medium">
+                <MapPin className="h-3.5 w-3.5 text-rose-300 md:text-rose-500 shrink-0" />
                 <span>Kottawa Central Territory</span>
-                <span>•</span>
+                <span className="opacity-60">•</span>
                 <span>14 Assigned Dealers</span>
               </p>
             </div>
