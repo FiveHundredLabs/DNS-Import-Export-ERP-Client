@@ -38,7 +38,6 @@ import {
   Percent,
   Layers,
   Barcode,
-  Hash,
   ArrowLeftRight,
   CheckSquare,
   Truck,
@@ -128,8 +127,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const inventoryItems: SidebarItem[] = [
     { id: 'inventory', name: 'Inventory Hub', path: '/inventory', icon: Boxes, category: 'inventory', exact: true },
     { id: 'grn', name: 'GRN', path: '/inventory/grn', icon: Receipt, category: 'inventory' },
-    { id: 'serials', name: 'Serial Numbers', path: '/inventory/serial-numbers', icon: Hash, category: 'inventory' },
-    { id: 'barcodes', name: 'Bar Codes', path: '/inventory/barcodes', icon: Barcode, category: 'inventory' },
+    { id: 'delivery-notes', name: 'Delivery Notes', path: '/inventory/delivery-notes', icon: Truck, category: 'inventory' },
     { id: 'products', name: 'Product Master', path: '/products', icon: Package, category: 'inventory', excludedRoles: ['STOCK_KEEPER'] },
     { id: 'damaged-stock', name: 'Damaged Stock & RMA', path: '/inventory/damaged-stock', icon: ShieldAlert, category: 'inventory' },
   ];

@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../../components/ui/dialog';
 import { BarcodeVisual } from '../../components/common/BarcodeVisual';
 import { UnitBarcodeModal } from '../../components/inventory/UnitBarcodeModal';
+import { PaginationControls } from '../../components/common/PaginationControls';
 import { useGRN } from '../../hooks/useGRN';
 import { useAuth } from '../../hooks/useAuth';
 import { MOCK_PRODUCTS } from '../../mock/mockProducts';
@@ -106,6 +107,9 @@ export function GRNCreateEditPage() {
   const [selectedProductFilter, setSelectedProductFilter] = useState<string>('ALL');
   const [scannerTestInput, setScannerTestInput] = useState<string>('');
   const [verifiedBarcode, setVerifiedBarcode] = useState<string | null>(null);
+  const [barcodePage, setBarcodePage] = useState<number>(1);
+  const [barcodePageSize, setBarcodePageSize] = useState<number>(12);
+  const [isPrintingStep3, setIsPrintingStep3] = useState<boolean>(false);
 
   // Fallback modal for viewing/reprinting
   const [isBarcodeModalOpen, setIsBarcodeModalOpen] = useState<boolean>(false);
@@ -322,8 +326,10 @@ export function GRNCreateEditPage() {
   // Step 3 Sticker Print Trigger
   const handlePrintAllStickers = () => {
     toast.info(`Sending ${barcodeSummary.totalUnits} barcode stickers to printer...`);
+    setIsPrintingStep3(true);
     setTimeout(() => {
       window.print();
+      setIsPrintingStep3(false);
     }, 250);
   };
 
@@ -333,26 +339,19 @@ export function GRNCreateEditPage() {
     if (!val) return;
     setScannerTestInput(val);
 
-    let match: { product: string; barcode: string; unitIndex: number } | null = null;
-    items.forEach((item) => {
-      item.unitRecords?.forEach((rec) => {
-        if (
-          rec.unitBarcode.toLowerCase() === val.toLowerCase() ||
-          (rec.serialNumber && rec.serialNumber.toLowerCase() === val.toLowerCase())
-        ) {
-          match = {
-            product: item.productNameSnapshot,
-            barcode: rec.unitBarcode,
-            unitIndex: rec.unitIndex,
-          };
-        }
-      });
-    });
+    const foundIdx = allStickers.findIndex(
+      (s) =>
+        s.record.unitBarcode.toLowerCase() === val.toLowerCase() ||
+        (s.record.serialNumber && s.record.serialNumber.toLowerCase() === val.toLowerCase())
+    );
 
-    if (match) {
-      setVerifiedBarcode((match as any).barcode);
+    if (foundIdx !== -1) {
+      const found = allStickers[foundIdx];
+      const targetPage = Math.floor(foundIdx / barcodePageSize) + 1;
+      setBarcodePage(targetPage);
+      setVerifiedBarcode(found.record.unitBarcode);
       toast.success(
-        `✓ Scanner Match: Unit ${(match as any).unitIndex} of ${(match as any).product} (${(match as any).barcode})`
+        `✓ Scanner Match (Page ${targetPage}): Unit ${found.unitIndex} of ${found.productName} (${found.record.unitBarcode})`
       );
       setScannerTestInput('');
     } else {
@@ -409,6 +408,105 @@ export function GRNCreateEditPage() {
 
     return list;
   }, [items, selectedProductFilter]);
+
+  // Paginated barcode stickers for Step 3
+  const totalBarcodeStickers = allStickers.length;
+  const totalBarcodePages = Math.max(1, Math.ceil(totalBarcodeStickers / barcodePageSize));
+  const safeBarcodePage = Math.min(Math.max(1, barcodePage), totalBarcodePages);
+  const barcodeStartIndex = (safeBarcodePage - 1) * barcodePageSize;
+  const barcodeEndIndex = Math.min(barcodeStartIndex + barcodePageSize, totalBarcodeStickers);
+  const pagedBarcodeStickers = useMemo(() => {
+    return allStickers.slice(barcodeStartIndex, barcodeEndIndex);
+  }, [allStickers, barcodeStartIndex, barcodeEndIndex]);
+
+  const renderStickerCard = (sticker: (typeof allStickers)[0], idx: number) => {
+    const isVerified = verifiedBarcode === sticker.record.unitBarcode;
+    const isAffixed = sticker.record.status === 'LABELED';
+
+    return (
+      <div
+        key={`${sticker.record.unitBarcode}-${idx}`}
+        className={cn(
+          'p-3.5 rounded-xl border bg-white flex flex-col justify-between transition-all select-none overflow-hidden',
+          isVerified
+            ? 'border-emerald-500 ring-2 ring-emerald-400/40 shadow-xs'
+            : isAffixed
+            ? 'border-slate-200'
+            : 'border-amber-200/90 shadow-2xs'
+        )}
+      >
+        {/* Sticker Top Header */}
+        <div className="flex items-start justify-between gap-1 border-b border-slate-100 pb-1.5">
+          <div className="min-w-0 pr-1">
+            <span className="text-[9.5px] font-bold text-slate-400 tracking-wider uppercase block">
+              DNS WAREHOUSE • INTAKE
+            </span>
+            <h4 className="font-bold text-xs text-slate-900 truncate" title={sticker.productName}>
+              {sticker.productName}
+            </h4>
+            <span className="font-mono text-[10px] text-slate-500 block truncate">
+              SKU: {sticker.sku}
+            </span>
+          </div>
+          <Badge
+            variant="outline"
+            className="text-[9.5px] px-1.5 py-0 font-mono shrink-0 bg-slate-50 text-slate-700 border-slate-200"
+          >
+            Unit {sticker.unitIndex}/{sticker.totalUnitsForProduct}
+          </Badge>
+        </div>
+
+        {/* SVG Barcode Visual */}
+        <div className="py-2 px-1 flex flex-col items-center justify-center bg-slate-50/50 rounded my-1.5 overflow-hidden">
+          <BarcodeVisual
+            value={sticker.record.unitBarcode}
+            width={180}
+            height={40}
+            showText={false}
+          />
+          <span className="font-mono font-bold text-[11px] text-slate-800 tracking-wider mt-1 truncate max-w-full text-center">
+            {sticker.record.unitBarcode}
+          </span>
+        </div>
+
+        {/* Sticker Footer Metadata */}
+        <div className="pt-1.5 border-t border-slate-100 text-[10px] text-slate-500 flex items-center justify-between">
+          {sticker.record.serialNumber ? (
+            <div className="flex items-center gap-1 font-mono font-semibold text-indigo-700 truncate">
+              <Hash className="h-3 w-3 text-indigo-500 shrink-0" />
+              <span className="truncate">SN: {sticker.record.serialNumber}</span>
+            </div>
+          ) : (
+            <span className="text-slate-400 italic">Non-Serialized Item</span>
+          )}
+
+          <span className="font-mono text-[9.5px] text-slate-400 shrink-0">
+            {poNumber || deliveryNoteRef || 'GRN'} · {warehouseId}
+          </span>
+        </div>
+
+        {/* Sticker Physical Affix Status */}
+        <div className="mt-2 pt-1 border-t border-dashed border-slate-100 flex items-center justify-between text-[10px]">
+          {isAffixed ? (
+            <span className="inline-flex items-center gap-1 text-emerald-700 font-semibold">
+              <CheckCircle2 className="h-3 w-3 text-emerald-600" />
+              Sticker Affixed
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1 text-amber-700 font-medium">
+              <Clock className="h-3 w-3 text-amber-600" />
+              Pending Affixing
+            </span>
+          )}
+          {isVerified && (
+            <Badge className="bg-emerald-600 text-white text-[9px] px-1 py-0">
+              Verified
+            </Badge>
+          )}
+        </div>
+      </div>
+    );
+  };
 
   const validate = (): string | null => {
     if (sourceType === 'PO' && !selectedPoId && !poNumber) {
@@ -1206,9 +1304,19 @@ export function GRNCreateEditPage() {
                           <td className="py-2.5 px-3 text-center">
                             {barcodesCount > 0 ? (
                               <div className="flex flex-col items-center gap-1">
-                                <span className="font-mono text-[11px] font-semibold text-slate-800">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedProductFilter(item.productId);
+                                    setBarcodePage(1);
+                                    setCurrentStep(3);
+                                  }}
+                                  className="font-mono text-[11px] font-semibold text-primary hover:underline flex items-center gap-1 cursor-pointer"
+                                  title="View paginated unit barcodes in Step 3"
+                                >
+                                  <Barcode className="h-3 w-3" />
                                   {barcodesCount} Barcodes
-                                </span>
+                                </button>
                                 {isAffixed ? (
                                   <Badge className="bg-emerald-100 text-emerald-800 border-0 text-[10px] py-0 px-1.5 flex items-center gap-1">
                                     <CheckCircle2 className="h-3 w-3" />
@@ -1389,7 +1497,13 @@ export function GRNCreateEditPage() {
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200/90 text-xs">
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="font-semibold text-slate-700 shrink-0">Filter Product:</span>
-                <Select value={selectedProductFilter} onValueChange={setSelectedProductFilter}>
+                <Select
+                  value={selectedProductFilter}
+                  onValueChange={(val) => {
+                    setSelectedProductFilter(val);
+                    setBarcodePage(1);
+                  }}
+                >
                   <SelectTrigger className="h-8 text-xs bg-white w-48 sm:w-60">
                     <SelectValue placeholder="All Received Products" />
                   </SelectTrigger>
@@ -1428,111 +1542,81 @@ export function GRNCreateEditPage() {
             </div>
 
             {/* Printable Barcode Stickers Sheet */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-                  Unit Barcode Stickers Preview ({allStickers.length} stickers)
-                </span>
+            <div className="space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-slate-100 pb-2">
+                <div>
+                  <span className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
+                    Unit Barcode Stickers Preview
+                  </span>
+                  <span className="text-[11px] text-slate-500">
+                    Showing {allStickers.length === 0 ? 0 : barcodeStartIndex + 1}–{barcodeEndIndex} of {allStickers.length} stickers
+                    {selectedProductFilter !== 'ALL' && ' (Filtered by Product)'}
+                  </span>
+                </div>
                 <span className="text-[11px] text-slate-400">
                   Standard Thermal / Adhesive Label (50mm × 30mm)
                 </span>
               </div>
+
+              {/* Top Pagination Controls */}
+              {allStickers.length > 0 && (
+                <div className="bg-slate-50/70 border border-slate-200/80 rounded-lg px-3 py-1">
+                  <PaginationControls
+                    currentPage={safeBarcodePage}
+                    totalItems={totalBarcodeStickers}
+                    pageSize={barcodePageSize}
+                    onPageChange={setBarcodePage}
+                    onPageSizeChange={(newSize) => {
+                      setBarcodePageSize(newSize);
+                      setBarcodePage(1);
+                    }}
+                    pageSizeOptions={[12, 24, 48, 96]}
+                    label="stickers"
+                  />
+                </div>
+              )}
 
               {allStickers.length === 0 ? (
                 <div className="text-center py-10 border-2 border-dashed border-slate-200 rounded-xl text-slate-400 text-xs">
                   No unit barcode stickers found for the selected filter.
                 </div>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 print:grid-cols-2">
-                  {allStickers.map((sticker, idx) => {
-                    const isVerified = verifiedBarcode === sticker.record.unitBarcode;
-                    const isAffixed = sticker.record.status === 'LABELED';
+                <>
+                  {/* Screen View: Paginated Grid */}
+                  <div
+                    className={cn(
+                      'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3',
+                      isPrintingStep3 ? 'hidden' : 'print:grid'
+                    )}
+                  >
+                    {pagedBarcodeStickers.map((sticker, idx) => renderStickerCard(sticker, idx))}
+                  </div>
 
-                    return (
-                      <div
-                        key={idx}
-                        className={cn(
-                          'p-3.5 rounded-xl border bg-white flex flex-col justify-between transition-all select-none overflow-hidden',
-                          isVerified
-                            ? 'border-emerald-500 ring-2 ring-emerald-400/40 shadow-xs'
-                            : isAffixed
-                            ? 'border-slate-200'
-                            : 'border-amber-200/90 shadow-2xs'
-                        )}
-                      >
-                        {/* Sticker Top Header */}
-                        <div className="flex items-start justify-between gap-1 border-b border-slate-100 pb-1.5">
-                          <div className="min-w-0 pr-1">
-                            <span className="text-[9.5px] font-bold text-slate-400 tracking-wider uppercase block">
-                              DNS WAREHOUSE • INTAKE
-                            </span>
-                            <h4 className="font-bold text-xs text-slate-900 truncate" title={sticker.productName}>
-                              {sticker.productName}
-                            </h4>
-                            <span className="font-mono text-[10px] text-slate-500 block truncate">
-                              SKU: {sticker.sku}
-                            </span>
-                          </div>
-                          <Badge
-                            variant="outline"
-                            className="text-[9.5px] px-1.5 py-0 font-mono shrink-0 bg-slate-50 text-slate-700 border-slate-200"
-                          >
-                            Unit {sticker.unitIndex}/{sticker.totalUnitsForProduct}
-                          </Badge>
-                        </div>
+                  {/* Print View: Full unpaginated grid for print media */}
+                  {isPrintingStep3 && (
+                    <div className="hidden print:grid print:grid-cols-2 gap-3">
+                      {allStickers.map((sticker, idx) => renderStickerCard(sticker, idx))}
+                    </div>
+                  )}
 
-                        {/* SVG Barcode Visual */}
-                        <div className="py-2 px-1 flex flex-col items-center justify-center bg-slate-50/50 rounded my-1.5 overflow-hidden">
-                          <BarcodeVisual
-                            value={sticker.record.unitBarcode}
-                            width={180}
-                            height={40}
-                            showText={false}
-                          />
-                          <span className="font-mono font-bold text-[11px] text-slate-800 tracking-wider mt-1 truncate max-w-full text-center">
-                            {sticker.record.unitBarcode}
-                          </span>
-                        </div>
-
-                        {/* Sticker Footer Metadata */}
-                        <div className="pt-1.5 border-t border-slate-100 text-[10px] text-slate-500 flex items-center justify-between">
-                          {sticker.record.serialNumber ? (
-                            <div className="flex items-center gap-1 font-mono font-semibold text-indigo-700 truncate">
-                              <Hash className="h-3 w-3 text-indigo-500 shrink-0" />
-                              <span className="truncate">SN: {sticker.record.serialNumber}</span>
-                            </div>
-                          ) : (
-                            <span className="text-slate-400 italic">Non-Serialized Item</span>
-                          )}
-
-                          <span className="font-mono text-[9.5px] text-slate-400 shrink-0">
-                            {poNumber || deliveryNoteRef || 'GRN'} · {warehouseId}
-                          </span>
-                        </div>
-
-                        {/* Sticker Physical Affix Status */}
-                        <div className="mt-2 pt-1 border-t border-dashed border-slate-100 flex items-center justify-between text-[10px]">
-                          {isAffixed ? (
-                            <span className="inline-flex items-center gap-1 text-emerald-700 font-semibold">
-                              <CheckCircle2 className="h-3 w-3 text-emerald-600" />
-                              Sticker Affixed
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1 text-amber-700 font-medium">
-                              <Clock className="h-3 w-3 text-amber-600" />
-                              Pending Affixing
-                            </span>
-                          )}
-                          {isVerified && (
-                            <Badge className="bg-emerald-600 text-white text-[9px] px-1 py-0">
-                              Verified
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
+                  {/* Bottom Pagination Controls if multiple pages */}
+                  {totalBarcodePages > 1 && (
+                    <div className="bg-slate-50/70 border border-slate-200/80 rounded-lg px-3 py-1 mt-3">
+                      <PaginationControls
+                        currentPage={safeBarcodePage}
+                        totalItems={totalBarcodeStickers}
+                        pageSize={barcodePageSize}
+                        onPageChange={setBarcodePage}
+                        onPageSizeChange={(newSize) => {
+                          setBarcodePageSize(newSize);
+                          setBarcodePage(1);
+                        }}
+                        pageSizeOptions={[12, 24, 48, 96]}
+                        label="stickers"
+                      />
+                    </div>
+                  )}
+                </>
               )}
             </div>
 
@@ -1853,6 +1937,7 @@ export function GRNCreateEditPage() {
           grnNumber={poNumber || deliveryNoteRef || 'GRN-INBOUND'}
           supplierName={supplierName}
           warehouseId={warehouseId}
+          initialProductId={selectedProductFilter}
           onConfirmLabeled={(updated) => setItems(updated)}
         />
       )}

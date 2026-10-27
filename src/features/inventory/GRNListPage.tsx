@@ -11,25 +11,6 @@ import { useGRN } from '../../hooks/useGRN';
 import { useAuth } from '../../hooks/useAuth';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 import {
-  PlusCircle,
-  ShieldCheck,
-  Hash,
-  Boxes,
-  CheckCircle2,
-  Clock,
-  AlertTriangle,
-  Package,
-  BarChart3,
-  TrendingUp,
-  Search,
-  Filter,
-  DollarSign,
-  Activity,
-  Layers,
-  ArrowRight,
-  Sparkles,
-} from 'lucide-react';
-import {
   ResponsiveContainer,
   BarChart,
   Bar,
@@ -38,6 +19,18 @@ import {
   Tooltip,
   Cell,
 } from 'recharts';
+import {
+  PlusCircle,
+  ShieldCheck,
+  Boxes,
+  CheckCircle2,
+  AlertTriangle,
+  Package,
+  Clock,
+  BarChart3,
+  Activity,
+  Search,
+} from 'lucide-react';
 
 export function GRNListPage() {
   const { grns, loading } = useGRN();
@@ -203,15 +196,6 @@ export function GRNListPage() {
         </div>
 
         <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => navigate('/inventory/serial-numbers')}
-            className="gap-1.5 text-xs font-medium"
-          >
-            <Hash className="h-3.5 w-3.5 text-primary" />
-            Unit Serials
-          </Button>
           <Button
             size="sm"
             onClick={() => navigate('/inventory/grn/new')}

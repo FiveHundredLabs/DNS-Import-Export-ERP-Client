@@ -23,9 +23,9 @@ import { StockBalancePage } from './features/inventory/StockBalancePage';
 import { StockMovementsPage } from './features/inventory/StockMovementsPage';
 import { OrderPickingPage } from './features/inventory/OrderPickingPage';
 import { DispatchPage } from './features/inventory/DispatchPage';
-import { DamagedStockPage } from './features/inventory/DamagedStockPage';
-import { SerialNumbersPage } from './features/inventory/SerialNumbersPage';
-import { BarcodesPage } from './features/inventory/BarcodesPage';
+import { DeliveryNoteListPage } from './features/inventory/delivery-notes/DeliveryNoteListPage';
+import { DeliveryNoteCreatePage } from './features/inventory/delivery-notes/DeliveryNoteCreatePage';
+import { DeliveryNoteDetailPage } from './features/inventory/delivery-notes/DeliveryNoteDetailPage';
 import { InvoiceListPage } from './features/invoices/InvoiceListPage';
 import { InvoiceDetailPage } from './features/invoices/InvoiceDetailPage';
 import { InvoiceDraftEditPage } from './features/invoices/InvoiceDraftEditPage';
@@ -306,42 +306,26 @@ export function App() {
           }
         />
         <Route
-          path="inventory/damaged-stock"
+          path="inventory/delivery-notes"
           element={
             <ProtectedRoute>
-              <DamagedStockPage />
+              <DeliveryNoteListPage />
             </ProtectedRoute>
           }
         />
         <Route
-          path="inventory/serial-numbers"
+          path="inventory/delivery-notes/new"
           element={
             <ProtectedRoute>
-              <SerialNumbersPage />
+              <DeliveryNoteCreatePage />
             </ProtectedRoute>
           }
         />
         <Route
-          path="inventory/serials"
+          path="inventory/delivery-notes/:id"
           element={
             <ProtectedRoute>
-              <SerialNumbersPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="inventory/barcodes"
-          element={
-            <ProtectedRoute>
-              <BarcodesPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="inventory/bar-codes"
-          element={
-            <ProtectedRoute>
-              <BarcodesPage />
+              <DeliveryNoteDetailPage />
             </ProtectedRoute>
           }
         />
