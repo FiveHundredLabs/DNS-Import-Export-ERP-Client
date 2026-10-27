@@ -6,6 +6,7 @@ import { invoiceService } from '../../services/InvoiceService';
 import { customerService } from '../../services/CustomerService';
 import { InvoiceStatusBadge } from './InvoiceStatusBadge';
 import { InvoicePreviewModal } from './components/InvoicePreviewModal';
+import { CreateInvoiceModal } from './components/CreateInvoiceModal';
 import { printerService } from '../../services/PrinterService';
 import { pdfService } from '../../services/PdfService';
 import { whatsAppService } from '../../services/WhatsAppService';
@@ -33,6 +34,7 @@ import {
   Download,
   Send,
   PlusCircle,
+  Plus,
   Receipt,
   AlertTriangle,
   CheckCircle,
@@ -72,6 +74,7 @@ export function InvoiceListPage() {
   const [totalCount, setTotalCount] = useState(0);
   const [previewInvoice, setPreviewInvoice] = useState<Invoice | null>(null);
   const [previewModalOpen, setPreviewModalOpen] = useState(false);
+  const [createModalOpen, setCreateModalOpen] = useState(false);
 
   useEffect(() => {
     async function loadCustomers() {
@@ -194,6 +197,14 @@ export function InvoiceListPage() {
           >
             <RefreshCw className="h-3.5 w-3.5" />
             <span>Refresh</span>
+          </Button>
+          <Button
+            size="sm"
+            onClick={() => setCreateModalOpen(true)}
+            className="h-9 px-3.5 bg-primary hover:bg-primary-hover text-white text-xs font-bold gap-1.5 shadow-xs rounded-xl flex-1 sm:flex-initial justify-center cursor-pointer"
+          >
+            <Plus className="h-4 w-4" />
+            <span>Create Invoice</span>
           </Button>
           <Button
             size="sm"
@@ -431,7 +442,9 @@ export function InvoiceListPage() {
                   return (
                     <div
                       key={inv.id}
-                      onClick={() => navigate(`/invoices/${inv.id}`)}
+                      onClick={() =>
+                        navigate(inv.status === 'DRAFT' ? `/invoices/${inv.id}/edit` : `/invoices/${inv.id}`)
+                      }
                       className="rounded-2xl border border-slate-200/90 bg-white p-3 sm:p-3.5 shadow-2xs hover:border-primary/50 transition-all cursor-pointer active:scale-[0.99]"
                     >
                       {/* Top: Invoice #, Order #, Status */}
@@ -604,16 +617,24 @@ export function InvoiceListPage() {
                           inv.status === 'DRAFT' && "bg-amber-50/20 hover:bg-amber-50/50"
                         )}
                         tabIndex={0}
-                        onClick={() => navigate(`/invoices/${inv.id}`)}
+                        onClick={() =>
+                          navigate(inv.status === 'DRAFT' ? `/invoices/${inv.id}/edit` : `/invoices/${inv.id}`)
+                        }
                         onKeyDown={(e) => {
                           if (e.key === 'Enter' || e.key === ' ') {
                             e.preventDefault();
-                            navigate(`/invoices/${inv.id}`);
+                            navigate(inv.status === 'DRAFT' ? `/invoices/${inv.id}/edit` : `/invoices/${inv.id}`);
                           }
                         }}
                       >
                         <TableCell className="font-mono text-xs font-semibold tabular-nums text-primary">
-                          <span className="hover:underline">
+                          <span
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(inv.status === 'DRAFT' ? `/invoices/${inv.id}/edit` : `/invoices/${inv.id}`);
+                            }}
+                            className="hover:underline cursor-pointer"
+                          >
                             {inv.invoiceNumber}
                           </span>
                         </TableCell>
@@ -792,6 +813,15 @@ export function InvoiceListPage() {
         isOpen={previewModalOpen}
         onClose={() => setPreviewModalOpen(false)}
         invoice={previewInvoice}
+      />
+
+      {/* Create Commercial Sales Invoice Modal */}
+      <CreateInvoiceModal
+        isOpen={createModalOpen}
+        onClose={() => {
+          setCreateModalOpen(false);
+          fetchInvoices();
+        }}
       />
     </div>
   );

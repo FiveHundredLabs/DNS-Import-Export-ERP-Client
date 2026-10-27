@@ -12,6 +12,7 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '.
 import { TableLoadingSkeleton } from '../../components/common/LoadingSkeleton';
 import { formatCurrency } from '../../utils/formatters';
 import { toast } from 'sonner';
+import { cn } from '../../utils/cn';
 import {
   ArrowLeft,
   Trash2,
@@ -85,9 +86,29 @@ export function InvoiceDraftEditPage() {
   const taxTotal = (taxableBase * taxRate) / 100;
   const totalAmount = taxableBase + taxTotal;
 
+  // Helper to determine available stock for a product or specific batch
+  const getAvailableQuantityForItem = (item: { productId: string; batchId?: string }) => {
+    if (item.batchId && item.batchId !== 'DEFAULT') {
+      const batch = batchInventoryService.getBatchById(item.batchId);
+      if (batch) return batch.availableQuantity;
+    }
+    const prod = allProducts.find((p) => p.id === item.productId);
+    if (prod) {
+      return Math.max(0, (prod.stockOnHand ?? 0) - (prod.damagedStock ?? 0));
+    }
+    return 0;
+  };
+
   // Handlers for Line Items
   const handleQuantityChange = (index: number, newQty: number) => {
     if (newQty < 1) return;
+    const itm = items[index];
+    const available = getAvailableQuantityForItem(itm);
+    if (available > 0 && newQty > available) {
+      toast.warning(
+        `Quantity cannot exceed available stock (${available} ${itm.uomSnapshot || 'units'}).`
+      );
+    }
     setItems((prev) => {
       const copy = [...prev];
       const item = { ...copy[index], quantity: newQty };
@@ -97,6 +118,25 @@ export function InvoiceDraftEditPage() {
       const tax = (net * (item.taxPercentage || 0)) / 100;
       item.discountAmount = discount;
       item.taxAmount = tax;
+      item.lineTotal = net + tax;
+      copy[index] = item;
+      return copy;
+    });
+  };
+
+  const handleDiscountChange = (index: number, newDiscountPct: number) => {
+    const clamped = Math.max(0, Math.min(100, isNaN(newDiscountPct) ? 0 : newDiscountPct));
+    setItems((prev) => {
+      const copy = [...prev];
+      const item = { ...copy[index], discountPercentage: clamped };
+      const gross = item.quantity * item.unitPriceSnapshot;
+      const discount = (gross * clamped) / 100;
+      const net = Math.max(0, gross - discount);
+      const itemTaxRate = invoice?.taxRatePercentage || (invoice?.taxEnabled ? 15 : 0);
+      const tax = (net * itemTaxRate) / 100;
+      item.discountAmount = discount;
+      item.taxAmount = tax;
+      item.taxPercentage = itemTaxRate;
       item.lineTotal = net + tax;
       copy[index] = item;
       return copy;
@@ -148,6 +188,18 @@ export function InvoiceDraftEditPage() {
     const prod = allProducts.find((p) => p.id === selectedProductId);
     if (!prod) return;
 
+    const availableToAdd =
+      selectedBatchId && selectedBatchId !== 'DEFAULT'
+        ? (batchInventoryService.getBatchById(selectedBatchId)?.availableQuantity ?? 0)
+        : Math.max(0, (prod.stockOnHand ?? 0) - (prod.damagedStock ?? 0));
+
+    if (availableToAdd > 0 && addQuantity > availableToAdd) {
+      toast.error(
+        `Quantity (${addQuantity}) cannot exceed available stock (${availableToAdd} ${prod.uomCode || 'units'}).`
+      );
+      return;
+    }
+
     const gross = addQuantity * addUnitPrice;
     const discount = (gross * addDiscountPct) / 100;
     const net = Math.max(0, gross - discount);
@@ -192,6 +244,17 @@ export function InvoiceDraftEditPage() {
       return;
     }
 
+    // Available stock validation
+    for (const it of items) {
+      const avail = getAvailableQuantityForItem(it);
+      if (avail > 0 && it.quantity > avail) {
+        toast.error(
+          `Cannot save draft: Quantity for "${it.productNameSnapshot}" (${it.quantity}) cannot exceed available stock (${avail}).`
+        );
+        return;
+      }
+    }
+
     try {
       setSaving(true);
       await invoiceService.updateDraftInvoiceItems(id, items, currentUser);
@@ -209,6 +272,17 @@ export function InvoiceDraftEditPage() {
     if (!currentUser) {
       toast.error('Authentication required to finalize invoice');
       return;
+    }
+
+    // Available stock validation
+    for (const it of items) {
+      const avail = getAvailableQuantityForItem(it);
+      if (avail > 0 && it.quantity > avail) {
+        toast.error(
+          `Cannot finalize: Quantity for "${it.productNameSnapshot}" (${it.quantity}) cannot exceed available stock (${avail}).`
+        );
+        return;
+      }
     }
 
     try {
@@ -358,30 +432,66 @@ export function InvoiceDraftEditPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {items.map((item, index) => (
-                <TableRow key={item.id || index} className="hover:bg-slate-50/60">
-                  <TableCell className="py-3">
-                    <div className="font-bold text-slate-900 text-xs">{item.productNameSnapshot}</div>
-                    <div className="font-mono text-[11px] text-slate-400">{item.skuSnapshot}</div>
-                  </TableCell>
-                  <TableCell className="text-center py-2">
-                    <input
-                      type="number"
-                      min="1"
-                      value={item.quantity}
-                      disabled={!isSalesManager}
-                      onChange={(e) => handleQuantityChange(index, parseInt(e.target.value) || 1)}
-                      className="w-20 text-center font-mono font-bold text-xs py-1 px-2 border border-slate-300 rounded-md focus:ring-1 focus:ring-primary focus:outline-none disabled:bg-slate-100 disabled:text-slate-400"
-                    />
-                  </TableCell>
+              {items.map((item, index) => {
+                const available = getAvailableQuantityForItem(item);
+                const isExceeding = available > 0 && item.quantity > available;
+
+                return (
+                  <TableRow key={item.id || index} className="hover:bg-slate-50/60">
+                    <TableCell className="py-3">
+                      <div className="font-bold text-slate-900 text-xs">{item.productNameSnapshot}</div>
+                      <div className="font-mono text-[11px] text-slate-400">
+                        {item.skuSnapshot}
+                        {item.batchNumber && (
+                          <span className="ml-2 text-indigo-600 font-semibold">• Batch: {item.batchNumber}</span>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-center py-2 align-top">
+                      <input
+                        type="number"
+                        min="1"
+                        max={available > 0 ? available : undefined}
+                        value={item.quantity}
+                        disabled={!isSalesManager}
+                        onChange={(e) => handleQuantityChange(index, parseInt(e.target.value) || 1)}
+                        className={cn(
+                          'w-20 text-center font-mono font-bold text-xs py-1 px-2 border rounded-md focus:ring-1 focus:outline-none disabled:bg-slate-100 disabled:text-slate-400',
+                          isExceeding
+                            ? 'border-rose-500 bg-rose-50 text-rose-800 focus:ring-rose-500'
+                            : 'border-slate-300 focus:ring-primary'
+                        )}
+                      />
+                      <span
+                        className={cn(
+                          'text-[9.5px] block mt-0.5 font-mono whitespace-nowrap',
+                          isExceeding ? 'text-rose-600 font-bold' : 'text-slate-400'
+                        )}
+                      >
+                        {isExceeding ? `Exceeds (${available})` : `Max: ${available}`}
+                      </span>
+                    </TableCell>
                   <TableCell className="text-right font-mono text-xs text-slate-700 py-3">
                     {formatCurrency(item.unitPriceSnapshot)}
                   </TableCell>
-                  <TableCell className="text-center font-mono text-xs text-slate-600 py-3">
-                    {item.discountPercentage > 0 ? (
-                      <span className="text-amber-700 font-semibold">{item.discountPercentage}%</span>
-                    ) : (
-                      '—'
+                  <TableCell className="text-center py-2">
+                    <div className="inline-flex items-center gap-1 justify-center">
+                      <input
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="0.5"
+                        value={item.discountPercentage ?? 0}
+                        disabled={!isSalesManager}
+                        onChange={(e) => handleDiscountChange(index, parseFloat(e.target.value))}
+                        className="w-16 text-center font-mono font-bold text-xs py-1 px-1.5 border border-slate-300 rounded-md focus:ring-1 focus:ring-primary focus:outline-none disabled:bg-slate-100 disabled:text-slate-400"
+                      />
+                      <span className="text-xs text-slate-500 font-bold">%</span>
+                    </div>
+                    {item.discountAmount > 0 && (
+                      <div className="text-[10px] text-amber-700 font-mono mt-0.5">
+                        -{formatCurrency(item.discountAmount)}
+                      </div>
                     )}
                   </TableCell>
                   <TableCell className="text-right font-mono font-bold text-xs text-slate-900 py-3">
@@ -400,7 +510,8 @@ export function InvoiceDraftEditPage() {
                     </Button>
                   </TableCell>
                 </TableRow>
-              ))}
+              );
+            })}
             </TableBody>
           </Table>
         </CardContent>
@@ -416,7 +527,7 @@ export function InvoiceDraftEditPage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="p-4">
-            <div className="grid grid-cols-1 sm:grid-cols-5 gap-3 items-end">
+            <div className="grid grid-cols-1 sm:grid-cols-6 gap-3 items-end">
               <div className="sm:col-span-2 space-y-1">
                 <label className="text-[11px] font-bold text-slate-700 block">Select Product</label>
                 <select
@@ -454,7 +565,21 @@ export function InvoiceDraftEditPage() {
               )}
 
               <div className="space-y-1">
-                <label className="text-[11px] font-bold text-slate-700 block">Quantity</label>
+                <div className="flex items-center justify-between">
+                  <label className="text-[11px] font-bold text-slate-700 block">Quantity</label>
+                  {selectedProductId && (
+                    <span className="text-[10px] text-slate-500 font-mono">
+                      Avail:{' '}
+                      {selectedBatchId && selectedBatchId !== 'DEFAULT'
+                        ? (batchInventoryService.getBatchById(selectedBatchId)?.availableQuantity ?? 0)
+                        : Math.max(
+                            0,
+                            ((allProducts.find((p) => p.id === selectedProductId)?.stockOnHand ?? 0) -
+                              (allProducts.find((p) => p.id === selectedProductId)?.damagedStock ?? 0))
+                          )}
+                    </span>
+                  )}
+                </div>
                 <input
                   type="number"
                   min="1"
@@ -471,6 +596,20 @@ export function InvoiceDraftEditPage() {
                   value={addUnitPrice}
                   onChange={(e) => setAddUnitPrice(parseFloat(e.target.value) || 0)}
                   className="w-full text-xs py-2 px-3 border border-slate-300 rounded-md bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500 font-mono"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[11px] font-bold text-slate-700 block">Discount (%)</label>
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.5"
+                  value={addDiscountPct}
+                  onChange={(e) => setAddDiscountPct(Math.max(0, Math.min(100, parseFloat(e.target.value) || 0)))}
+                  className="w-full text-xs py-2 px-3 border border-slate-300 rounded-md bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500 font-mono"
+                  placeholder="0%"
                 />
               </div>
 

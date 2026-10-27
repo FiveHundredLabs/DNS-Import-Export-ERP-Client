@@ -6,6 +6,8 @@ import { useTax } from '../../hooks/useTax';
 import { customerService } from '../../services/CustomerService';
 import { productService } from '../../services/ProductService';
 import { quotationService } from '../../services/QuotationService';
+import { invoiceService } from '../../services/InvoiceService';
+import { toast } from 'sonner';
 import { Customer } from '../../types/customer';
 import { Product } from '../../types/product';
 import { CustomerSelector } from '../../components/selectors/CustomerSelector';
@@ -200,9 +202,25 @@ export function OrderCreateEditPage() {
   };
 
   const handleAddProduct = (product: Product) => {
+    const available = Math.max(0, (product.stockOnHand ?? 0) - (product.damagedStock ?? 0));
+    if (available <= 0) {
+      toast.error(`"${product.name}" has 0 available stock and cannot be added.`);
+      return;
+    }
+
     const existingIdx = items.findIndex((i) => i.product.id === product.id);
     if (existingIdx >= 0) {
       const next = [...items];
+      const cur = next[existingIdx];
+      const selectedBatch = cur.selectedBatchId ? batchInventoryService.getBatchById(cur.selectedBatchId) : null;
+      const maxAllowed = selectedBatch
+        ? selectedBatch.availableQuantity
+        : Math.max(0, (product.stockOnHand ?? 0) - (product.damagedStock ?? 0));
+
+      if (maxAllowed > 0 && cur.quantity + 1 > maxAllowed) {
+        toast.warning(`Cannot exceed available quantity (${maxAllowed}) for "${product.name}".`);
+        return;
+      }
       next[existingIdx].quantity += 1;
       setItems(next);
     } else {
@@ -254,6 +272,19 @@ export function OrderCreateEditPage() {
     val: number
   ) => {
     const next = [...items];
+    const item = next[index];
+    if (field === 'quantity') {
+      const selectedBatch = item.selectedBatchId ? batchInventoryService.getBatchById(item.selectedBatchId) : null;
+      const maxAllowed = selectedBatch
+        ? selectedBatch.availableQuantity
+        : Math.max(0, (item.product.stockOnHand ?? 0) - (item.product.damagedStock ?? 0));
+
+      if (maxAllowed > 0 && val > maxAllowed) {
+        toast.warning(
+          `Requested quantity (${val}) exceeds available stock (${maxAllowed} ${item.product.uomCode || 'units'}).`
+        );
+      }
+    }
     next[index] = {
       ...next[index],
       [field]: val,
@@ -322,6 +353,22 @@ export function OrderCreateEditPage() {
         return;
       }
 
+      // Restrict: quantity cannot exceed available stock
+      for (const i of items) {
+        const selectedBatch = i.selectedBatchId ? batchInventoryService.getBatchById(i.selectedBatchId) : null;
+        const availableStock = selectedBatch
+          ? selectedBatch.availableQuantity
+          : Math.max(0, (i.product.stockOnHand ?? 0) - (i.product.damagedStock ?? 0));
+
+        if (availableStock > 0 && i.quantity > availableStock) {
+          setFormError(
+            `Ordered quantity for "${i.product.name}" (${i.quantity}) cannot exceed available stock (${availableStock} ${i.product.uomCode || 'units'}).`
+          );
+          setIsSubmitting(false);
+          return;
+        }
+      }
+
       if (!deliveryAddress.trim()) {
         setFormError('Delivery address is required.');
         return;
@@ -365,6 +412,23 @@ export function OrderCreateEditPage() {
           quotationId: quotationId || undefined,
           quotationNumber,
         });
+
+        if (searchParams.get('createInvoice') === 'true') {
+          try {
+            const draftInvoice = await invoiceService.createInvoiceFromOrder(
+              created.id,
+              currentUser!,
+              { asDraft: true, allowUnapproved: true }
+            );
+            toast.success(`Sales Order ${created.orderNumber} created & converted to Draft Invoice!`);
+            navigate(`/invoices/${draftInvoice.id}/edit`);
+            return;
+          } catch (invErr: any) {
+            console.error('Failed to create draft invoice:', invErr);
+            toast.error(invErr?.message || 'Failed to auto-create draft invoice');
+          }
+        }
+
         navigate(`/orders/${created.id}`);
       }
     } catch (err: unknown) {
@@ -397,6 +461,12 @@ export function OrderCreateEditPage() {
           {quotationNumber && (
             <p className="text-xs text-primary font-medium mt-0.5">
               Converting from Approved Quotation: <span className="font-mono font-semibold">{quotationNumber}</span>
+            </p>
+          )}
+          {searchParams.get('createInvoice') === 'true' && (
+            <p className="text-xs text-emerald-700 font-semibold mt-1 flex items-center gap-1.5 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200">
+              <CheckCircle className="h-3.5 w-3.5 text-emerald-600" />
+              Invoice Creation Mode: Saving will immediately convert this order into an editable draft invoice.
             </p>
           )}
         </div>
@@ -774,6 +844,12 @@ export function OrderCreateEditPage() {
                         : it.discountPercentage > maxAllowed;
 
                     const productBatches = batchInventoryService.getActiveBatches(it.product.id);
+                    const selectedBatch = it.selectedBatchId ? batchInventoryService.getBatchById(it.selectedBatchId) : null;
+                    const availableStock = selectedBatch
+                      ? selectedBatch.availableQuantity
+                      : Math.max(0, (it.product.stockOnHand ?? 0) - (it.product.damagedStock ?? 0));
+                    const isExceedingStock = availableStock > 0 && it.quantity > availableStock;
+
                     const isBelowFloor =
                       (it.product.pricing.minimumSellingPrice || 0) > 0 &&
                       price * (1 - it.discountPercentage / 100) < (it.product.pricing.minimumSellingPrice || 0);
@@ -822,16 +898,28 @@ export function OrderCreateEditPage() {
                             </span>
                           )}
                         </td>
-                        <td className="py-3 px-3 text-center">
+                        <td className="py-3 px-3 text-center align-top">
                           <Input
                             type="number"
                             min={1}
+                            max={availableStock > 0 ? availableStock : undefined}
                             value={it.quantity}
                             onChange={(e) =>
                               handleUpdateItem(idx, 'quantity', Math.max(1, parseInt(e.target.value) || 1))
                             }
-                            className="w-16 h-7 text-xs text-center mx-auto tabular-nums"
+                            className={cn(
+                              'w-20 h-7 text-xs text-center mx-auto tabular-nums font-mono',
+                              isExceedingStock && 'border-rose-500 bg-rose-50 text-rose-800 font-bold focus:ring-rose-500'
+                            )}
                           />
+                          <span
+                            className={cn(
+                              'text-[10px] block mt-0.5 font-mono whitespace-nowrap',
+                              isExceedingStock ? 'text-rose-600 font-bold' : 'text-slate-400'
+                            )}
+                          >
+                            {isExceedingStock ? `Exceeds (${availableStock})` : `Max: ${availableStock}`}
+                          </span>
                         </td>
                         <td className="py-3 px-3 text-center align-top">
                           <div className="flex items-center justify-center gap-1">

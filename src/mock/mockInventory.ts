@@ -314,7 +314,7 @@ export const MOCK_GRNS: GRN[] = [
     purchaseOrderId: 'PO-2025-001',
     purchaseOrderNumber: 'PO-2025-001',
     warehouseId: 'WH-MAIN',
-    status: 'APPROVED',
+    status: 'SUBMITTED',
     items: [
       {
         productId: 'prod-001',
@@ -473,7 +473,7 @@ export const MOCK_GRNS: GRN[] = [
     supplierId: 'sup-003',
     supplierName: 'Signify Lanka (Philips)',
     warehouseId: 'WH-MAIN',
-    status: 'APPROVED',
+    status: 'SUBMITTED',
     items: [
       {
         productId: 'prod-004',
@@ -518,7 +518,7 @@ export const MOCK_GRNS: GRN[] = [
     supplierId: 'sup-004',
     supplierName: 'Growatt Energy Solutions',
     warehouseId: 'WH-MAIN',
-    status: 'APPROVED',
+    status: 'SUBMITTED',
     items: [
       {
         productId: 'prod-005',
@@ -649,7 +649,7 @@ export const MOCK_GRNS: GRN[] = [
     supplierId: 'sup-001',
     supplierName: 'Schneider Electric Lanka (Pvt) Ltd',
     warehouseId: 'WH-MAIN',
-    status: 'APPROVED',
+    status: 'SUBMITTED',
     items: Array.from({ length: 50 }, (_, i) => {
       const idx = i + 1;
       const ratings = ['6A', '10A', '16A', '20A', '25A', '32A', '40A', '50A', '63A', '80A'];

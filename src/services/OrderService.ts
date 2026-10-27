@@ -17,6 +17,7 @@ import { customerService, CustomerService } from './CustomerService';
 import { approvalService, ApprovalService } from './ApprovalService';
 import { quotationService, QuotationService } from './QuotationService';
 import { taxService, TaxService } from './TaxService';
+import { batchInventoryService } from './BatchInventoryService';
 import {
   evaluateOrderApproval,
   isValidOrderTransition,
@@ -194,6 +195,23 @@ export class OrderService {
       const product = await this.productSvc.getProduct(inputItem.productId);
       if (!product) {
         throw new Error(`Product not found: ${inputItem.productId}`);
+      }
+
+      // Available stock restriction: ordered quantity cannot exceed available stock
+      let availableStock = 0;
+      if (inputItem.batchId) {
+        const batch = batchInventoryService.getBatchById(inputItem.batchId);
+        if (batch) {
+          availableStock = batch.availableQuantity;
+        }
+      }
+      if (!availableStock) {
+        availableStock = Math.max(0, (product.stockOnHand ?? 0) - (product.damagedStock ?? 0));
+      }
+      if (availableStock > 0 && inputItem.orderedQuantity > availableStock) {
+        throw new Error(
+          `Ordered quantity for "${product.name}" (${inputItem.orderedQuantity}) exceeds available stock (${availableStock} ${product.uomCode || 'units'}).`
+        );
       }
 
       const discountPercentage = inputItem.requestedDiscountPercentage ?? 0;
