@@ -88,14 +88,15 @@ export function VendorBillCostingPage() {
   });
 
   const [queueSearch, setQueueSearch] = useState('');
-  const [queueFilter, setQueueFilter] = useState<'ALL' | 'APPROVED' | 'COSTED' | 'SUBMITTED' | 'PRICED'>('ALL');
+  const [queueFilter, setQueueFilter] = useState<'PENDING' | 'SUBMITTED' | 'COSTED' | 'APPROVED' | 'ALL'>('PENDING');
 
   // Selected GRN state (respecting url parameter if present)
   const [selectedGRNId, setSelectedGRNId] = useState<string>(() => {
     if (urlGrnId && availableGRNs.some((g) => g.id === urlGrnId || g.grnNumber === urlGrnId)) {
       return urlGrnId;
     }
-    return availableGRNs[0]?.id || '';
+    const firstPending = availableGRNs.find((g) => g.status === 'SUBMITTED' || g.status === 'COSTED');
+    return firstPending?.id || availableGRNs[0]?.id || '';
   });
 
   // Sync selectedGRNId when urlGrnId changes
@@ -108,15 +109,18 @@ export function VendorBillCostingPage() {
 
   const filteredGRNs = useMemo(() => {
     return availableGRNs.filter((g) => {
-      if (queueFilter !== 'ALL') {
-        if (queueFilter === 'COSTED') {
-          if (g.status !== 'COSTED' && g.status !== 'PRICED') return false;
-        } else if (queueFilter === 'APPROVED') {
-          if (g.status !== 'APPROVED' && g.status !== 'SUBMITTED') return false;
-        } else if (g.status !== queueFilter) {
-          return false;
-        }
+      if (queueFilter === 'PENDING') {
+        // Pending actions: submitted by stock keeper (needs costing) or costed by finance (needs pricing)
+        if (g.status !== 'SUBMITTED' && g.status !== 'COSTED') return false;
+      } else if (queueFilter === 'SUBMITTED') {
+        if (g.status !== 'SUBMITTED') return false;
+      } else if (queueFilter === 'COSTED') {
+        if (g.status !== 'COSTED') return false;
+      } else if (queueFilter === 'APPROVED') {
+        if (g.status !== 'APPROVED' && g.status !== 'PRICED') return false;
       }
+      // 'ALL' shows all statuses
+
       if (queueSearch.trim()) {
         const q = queueSearch.toLowerCase();
         const matchesRef = g.grnNumber.toLowerCase().includes(q);
@@ -151,6 +155,7 @@ export function VendorBillCostingPage() {
   const isAuditLocked = Boolean(
     selectedGRN?.status === 'COSTED' ||
     selectedGRN?.status === 'PRICED' ||
+    selectedGRN?.status === 'APPROVED' ||
     existingBill?.status === 'POSTED'
   );
   const isAuthorizedForVoid = !currentUser || ['FINANCE_MANAGER', 'MANAGER', 'DIRECTOR'].includes(currentUser.role);
@@ -717,7 +722,7 @@ export function VendorBillCostingPage() {
       await apService.voidVendorBill(existingBill?.id || selectedGRN.id);
       setGrnRefreshKey((k) => k + 1);
       toast.success(
-        `Vendor Bill ${existingBill?.billNumber || ''} voided and reversed successfully! GRN returned to APPROVED status.`
+        `Vendor Bill ${existingBill?.billNumber || ''} voided and reversed successfully! GRN returned to SUBMITTED status.`
       );
       navigate('/finance/dashboard');
     } catch (err: unknown) {
@@ -780,88 +785,164 @@ export function VendorBillCostingPage() {
         </div>
 
         {/* Live Metrics Row */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <Card className="p-3.5 border-slate-200 shadow-2xs bg-white">
-            <div className="flex items-center justify-between">
-              <div>
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Total Inbound GRNs</span>
-                <div className="text-lg font-bold text-slate-900 mt-0.5">{availableGRNs.length} Receipts</div>
-              </div>
-              <div className="h-8 w-8 rounded-lg bg-primary-light text-primary flex items-center justify-center">
-                <Warehouse className="h-4 w-4" />
-              </div>
-            </div>
-          </Card>
-          <Card className="p-3.5 border-amber-200 shadow-2xs bg-amber-50/40">
-            <div className="flex items-center justify-between">
-              <div>
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-amber-800">Awaiting Landed Costing</span>
-                <div className="text-lg font-bold text-amber-900 mt-0.5">
-                  {availableGRNs.filter((g) => g.status !== 'COSTED' && g.status !== 'PRICED').length} Pending Bills
-                </div>
-              </div>
-              <div className="h-8 w-8 rounded-lg bg-amber-100 text-amber-800 flex items-center justify-center">
-                <Calculator className="h-4 w-4" />
-              </div>
-            </div>
-          </Card>
-          <Card className="p-3.5 border-emerald-200 shadow-2xs bg-emerald-50/40">
-            <div className="flex items-center justify-between">
-              <div>
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-emerald-800">Costed & Posted to GL</span>
-                <div className="text-lg font-bold text-emerald-900 mt-0.5">
-                  {availableGRNs.filter((g) => g.status === 'COSTED' || g.status === 'PRICED').length} Posted
-                </div>
-              </div>
-              <div className="h-8 w-8 rounded-lg bg-emerald-100 text-emerald-800 flex items-center justify-center">
-                <CheckCircle2 className="h-4 w-4" />
-              </div>
-            </div>
-          </Card>
-        </div>
+        {(() => {
+          const pendingCount = availableGRNs.filter((g) => g.status === 'SUBMITTED' || g.status === 'COSTED').length;
+          const submittedCount = availableGRNs.filter((g) => g.status === 'SUBMITTED').length;
+          const costedCount = availableGRNs.filter((g) => g.status === 'COSTED').length;
+          const approvedCount = availableGRNs.filter((g) => g.status === 'APPROVED' || g.status === 'PRICED').length;
 
-        {/* Filter and Search Bar */}
-        <Card className="border-slate-200 shadow-2xs">
-          <div className="p-3.5 space-y-3">
-            <div className="flex flex-col sm:flex-row gap-3 items-center justify-between">
-              <div className="relative flex-1 w-full">
-                <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-                <Input
-                  placeholder="Search GRN #, supplier name, or warehouse..."
-                  value={queueSearch}
-                  onChange={(e) => setQueueSearch(e.target.value)}
-                  className="pl-9 text-xs h-9 rounded-xl"
-                />
+          return (
+            <div className="space-y-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                <Card
+                  onClick={() => setQueueFilter('PENDING')}
+                  className={cn(
+                    'p-3.5 border shadow-2xs transition-all cursor-pointer',
+                    queueFilter === 'PENDING'
+                      ? 'border-amber-400 bg-amber-50/70 ring-1 ring-amber-400'
+                      : 'border-slate-200 bg-white hover:border-slate-300'
+                  )}
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                        Pending Actions
+                      </span>
+                      <div className="text-lg font-bold text-slate-900 mt-0.5">{pendingCount} Actionable</div>
+                      <span className="text-[10px] text-slate-400">Needs costing or pricing</span>
+                    </div>
+                    <div className="h-8 w-8 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center">
+                      <Warehouse className="h-4 w-4" />
+                    </div>
+                  </div>
+                </Card>
+
+                <Card
+                  onClick={() => setQueueFilter('SUBMITTED')}
+                  className={cn(
+                    'p-3.5 border shadow-2xs transition-all cursor-pointer',
+                    queueFilter === 'SUBMITTED'
+                      ? 'border-amber-400 bg-amber-50/70 ring-1 ring-amber-400'
+                      : 'border-amber-200/70 bg-amber-50/30 hover:border-amber-300'
+                  )}
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className="text-[11px] font-semibold uppercase tracking-wider text-amber-800">
+                        Submitted
+                      </span>
+                      <div className="text-lg font-bold text-amber-900 mt-0.5">{submittedCount} Pending Costing</div>
+                      <span className="text-[10px] text-amber-600/80">Stock keeper submitted</span>
+                    </div>
+                    <div className="h-8 w-8 rounded-lg bg-amber-100 text-amber-800 flex items-center justify-center">
+                      <Calculator className="h-4 w-4" />
+                    </div>
+                  </div>
+                </Card>
+
+                <Card
+                  onClick={() => setQueueFilter('COSTED')}
+                  className={cn(
+                    'p-3.5 border shadow-2xs transition-all cursor-pointer',
+                    queueFilter === 'COSTED'
+                      ? 'border-sky-400 bg-sky-50/70 ring-1 ring-sky-400'
+                      : 'border-sky-200/70 bg-sky-50/30 hover:border-sky-300'
+                  )}
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className="text-[11px] font-semibold uppercase tracking-wider text-sky-800">
+                        Costed
+                      </span>
+                      <div className="text-lg font-bold text-sky-900 mt-0.5">{costedCount} Pending Pricing</div>
+                      <span className="text-[10px] text-sky-600/80">Finance costed</span>
+                    </div>
+                    <div className="h-8 w-8 rounded-lg bg-sky-100 text-sky-800 flex items-center justify-center">
+                      <SlidersHorizontal className="h-4 w-4" />
+                    </div>
+                  </div>
+                </Card>
+
+                <Card
+                  onClick={() => setQueueFilter('APPROVED')}
+                  className={cn(
+                    'p-3.5 border shadow-2xs transition-all cursor-pointer',
+                    queueFilter === 'APPROVED'
+                      ? 'border-emerald-400 bg-emerald-50/70 ring-1 ring-emerald-400'
+                      : 'border-emerald-200/70 bg-emerald-50/30 hover:border-emerald-300'
+                  )}
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className="text-[11px] font-semibold uppercase tracking-wider text-emerald-800">
+                        Approved
+                      </span>
+                      <div className="text-lg font-bold text-emerald-900 mt-0.5">{approvedCount} Completed</div>
+                      <span className="text-[10px] text-emerald-600/80">Costed & priced</span>
+                    </div>
+                    <div className="h-8 w-8 rounded-lg bg-emerald-100 text-emerald-800 flex items-center justify-center">
+                      <CheckCircle2 className="h-4 w-4" />
+                    </div>
+                  </div>
+                </Card>
               </div>
 
-              {/* Status Filter Tabs */}
-              <div className="inline-flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs shrink-0">
-                {(
-                  [
-                    { label: 'All', value: 'ALL' },
-                    { label: 'Ready for Costing', value: 'APPROVED' },
-                    { label: 'Costed & Locked', value: 'COSTED' },
-                    { label: 'Awaiting Sign-off', value: 'SUBMITTED' },
-                  ] as const
-                ).map((tab) => (
-                  <button
-                    key={tab.value}
-                    type="button"
-                    onClick={() => setQueueFilter(tab.value)}
-                    className={cn(
-                      'px-3 py-1 rounded-lg font-semibold transition-all cursor-pointer text-xs',
-                      queueFilter === tab.value
-                        ? 'bg-white text-slate-900 shadow-2xs border border-slate-200/60'
-                        : 'text-slate-600 hover:text-slate-900'
-                    )}
-                  >
-                    {tab.label}
-                  </button>
-                ))}
-              </div>
+              {/* Filter and Search Bar */}
+              <Card className="border-slate-200 shadow-2xs">
+                <div className="p-3.5 space-y-3">
+                  <div className="flex flex-col sm:flex-row gap-3 items-center justify-between">
+                    <div className="relative flex-1 w-full">
+                      <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+                      <Input
+                        placeholder="Search GRN #, supplier name, or warehouse..."
+                        value={queueSearch}
+                        onChange={(e) => setQueueSearch(e.target.value)}
+                        className="pl-9 text-xs h-9 rounded-xl"
+                      />
+                    </div>
+
+                    {/* Status Filter Tabs */}
+                    <div className="inline-flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs shrink-0 flex-wrap gap-1">
+                      {(
+                        [
+                          { label: 'Pending Actions', value: 'PENDING', count: pendingCount },
+                          { label: 'Submitted', value: 'SUBMITTED', count: submittedCount },
+                          { label: 'Costed', value: 'COSTED', count: costedCount },
+                          { label: 'Approved', value: 'APPROVED', count: approvedCount },
+                          { label: 'All', value: 'ALL', count: availableGRNs.length },
+                        ] as const
+                      ).map((tab) => (
+                        <button
+                          key={tab.value}
+                          type="button"
+                          onClick={() => setQueueFilter(tab.value)}
+                          className={cn(
+                            'px-3 py-1 rounded-lg font-semibold transition-all cursor-pointer text-xs flex items-center gap-1.5',
+                            queueFilter === tab.value
+                              ? 'bg-white text-slate-900 shadow-2xs border border-slate-200/60'
+                              : 'text-slate-600 hover:text-slate-900'
+                          )}
+                        >
+                          <span>{tab.label}</span>
+                          <span
+                            className={cn(
+                              'px-1.5 py-0.2 rounded-full text-[10px] font-mono',
+                              queueFilter === tab.value
+                                ? 'bg-slate-100 text-slate-800'
+                                : 'bg-slate-200/70 text-slate-600'
+                            )}
+                          >
+                            {tab.count}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </Card>
             </div>
-          </div>
-        </Card>
+          );
+        })()}
 
         {/* Inbound GRNs Table */}
         <Card className="border-slate-200 overflow-hidden shadow-2xs">
@@ -889,8 +970,9 @@ export function VendorBillCostingPage() {
                 ) : (
                   filteredGRNs.map((grn) => {
                     const totalQty = grn.items.reduce((sum, it) => sum + (it.receivedQuantity || 0), 0);
-                    const isCosted = grn.status === 'COSTED' || grn.status === 'PRICED';
-                    const isApproved = grn.status === 'APPROVED';
+                    const isApproved = grn.status === 'APPROVED' || grn.status === 'PRICED';
+                    const isCosted = grn.status === 'COSTED';
+                    const isSubmitted = grn.status === 'SUBMITTED' || (!isApproved && !isCosted);
 
                     return (
                       <tr
@@ -929,30 +1011,34 @@ export function VendorBillCostingPage() {
                           <Badge
                             variant="outline"
                             className={cn(
-                              'text-xs font-semibold px-2 py-0.5',
-                              grn.status === 'PRICED' && 'border-indigo-300 text-indigo-800 bg-indigo-50/60',
-                              grn.status === 'COSTED' && 'border-emerald-300 text-emerald-800 bg-emerald-50/60',
+                              'text-xs font-semibold px-2.5 py-0.5',
                               isApproved && 'border-emerald-300 text-emerald-800 bg-emerald-50/60',
-                              grn.status === 'SUBMITTED' && 'border-amber-300 text-amber-800 bg-amber-50/60'
+                              isCosted && 'border-sky-300 text-sky-800 bg-sky-50/60',
+                              isSubmitted && 'border-amber-300 text-amber-800 bg-amber-50/60'
                             )}
                           >
-                            {grn.status}
+                            {isApproved ? 'APPROVED' : isCosted ? 'COSTED' : 'SUBMITTED'}
                           </Badge>
+                          <span className="block text-[10px] text-slate-400 mt-0.5">
+                            {isApproved ? 'Costed & Priced' : isCosted ? 'Awaiting Pricing' : 'Awaiting Costing'}
+                          </span>
                         </td>
                         <td className="py-3 px-4 text-right">
                           <Button
                             size="sm"
-                            variant={isCosted ? 'outline' : 'default'}
+                            variant={isApproved ? 'outline' : 'default'}
                             onClick={(e) => {
                               e.stopPropagation();
                               handleSelectGrn(grn.id);
                             }}
                             className={cn(
                               'text-xs h-7 px-2.5 gap-1 font-semibold rounded-lg',
-                              !isCosted && 'bg-primary hover:bg-primary-hover text-white shadow-2xs'
+                              isSubmitted && 'bg-primary hover:bg-primary-hover text-white shadow-2xs',
+                              isCosted && 'bg-sky-600 hover:bg-sky-700 text-white shadow-2xs',
+                              isApproved && 'border-slate-300 text-slate-700 hover:bg-slate-50'
                             )}
                           >
-                            <span>{isCosted ? 'View Costing' : 'Cost & Price'}</span>
+                            <span>{isSubmitted ? 'Cost & Price' : isCosted ? 'Set Pricing' : 'View Costing'}</span>
                             <ArrowRight className="h-3 w-3" />
                           </Button>
                         </td>
@@ -1028,7 +1114,7 @@ export function VendorBillCostingPage() {
               className="gap-1.5 bg-primary hover:bg-primary-hover text-white text-xs font-semibold shadow-xs h-9"
             >
               <SlidersHorizontal className="h-3.5 w-3.5" />
-              <span>Set Selling Prices</span>
+              <span>{selectedGRN?.status === 'APPROVED' || selectedGRN?.status === 'PRICED' ? 'View Selling Prices' : 'Set Selling Prices'}</span>
             </Button>
           )}
 
@@ -1045,7 +1131,7 @@ export function VendorBillCostingPage() {
             >
               {availableGRNs.map((g) => (
                 <option key={g.id} value={g.id}>
-                  {g.grnNumber} - {g.supplierName} ({g.status})
+                  {g.grnNumber} - {g.supplierName} ({g.status === 'PRICED' ? 'APPROVED' : g.status})
                 </option>
               ))}
             </Select>
@@ -1201,17 +1287,20 @@ export function VendorBillCostingPage() {
             <Badge
               variant="outline"
               className={cn(
-                'text-[10px] font-semibold px-2 py-0.5',
-                selectedGRN?.status === 'PRICED' && 'border-indigo-300 text-indigo-800 bg-indigo-50/60',
-                (selectedGRN?.status === 'COSTED' || isAuditLocked) && selectedGRN?.status !== 'PRICED' && 'border-emerald-300 text-emerald-800 bg-emerald-50/60',
-                !isAuditLocked && selectedGRN?.status !== 'COSTED' && selectedGRN?.status !== 'PRICED' && 'border-amber-300 text-amber-800 bg-amber-50/60'
+                'text-[10px] font-semibold px-2.5 py-0.5',
+                (selectedGRN?.status === 'APPROVED' || selectedGRN?.status === 'PRICED') &&
+                  'border-emerald-300 text-emerald-800 bg-emerald-50/60',
+                selectedGRN?.status === 'COSTED' &&
+                  'border-sky-300 text-sky-800 bg-sky-50/60',
+                (!selectedGRN?.status || selectedGRN?.status === 'SUBMITTED') &&
+                  'border-amber-300 text-amber-800 bg-amber-50/60'
               )}
             >
-              {selectedGRN?.status === 'PRICED'
-                ? 'PRICED & RELEASED'
-                : isAuditLocked || selectedGRN?.status === 'COSTED'
-                ? 'APPROVED & COSTED'
-                : 'PENDING COSTING & APPROVAL (SUBMITTED)'}
+              {selectedGRN?.status === 'APPROVED' || selectedGRN?.status === 'PRICED'
+                ? 'APPROVED (Costed & Priced)'
+                : selectedGRN?.status === 'COSTED'
+                ? 'COSTED (Awaiting Pricing)'
+                : 'SUBMITTED (Awaiting Landed Costing)'}
             </Badge>
           </div>
         </div>
@@ -1241,14 +1330,16 @@ export function VendorBillCostingPage() {
               <Badge
                 variant="outline"
                 className={cn(
-                  "text-xs font-semibold px-2 py-0.5 bg-white",
-                  selectedGRN?.status === 'PRICED' && "border-indigo-300 text-indigo-800 bg-indigo-50/60",
-                  (selectedGRN?.status === 'COSTED' || isAuditLocked) && selectedGRN?.status !== 'PRICED' && "border-emerald-300 text-emerald-800 bg-emerald-50/60",
-                  selectedGRN?.status === 'APPROVED' && "border-emerald-300 text-emerald-800 bg-emerald-50/60",
-                  selectedGRN?.status === 'SUBMITTED' && "border-amber-300 text-amber-800 bg-amber-50/60"
+                  "text-xs font-semibold px-2.5 py-0.5 bg-white",
+                  (selectedGRN?.status === 'APPROVED' || selectedGRN?.status === 'PRICED') &&
+                    "border-emerald-300 text-emerald-800 bg-emerald-50/60",
+                  selectedGRN?.status === 'COSTED' &&
+                    "border-sky-300 text-sky-800 bg-sky-50/60",
+                  (!selectedGRN?.status || selectedGRN?.status === 'SUBMITTED') &&
+                    "border-amber-300 text-amber-800 bg-amber-50/60"
                 )}
               >
-                {selectedGRN?.status || 'SUBMITTED'}
+                {selectedGRN?.status === 'PRICED' ? 'APPROVED' : (selectedGRN?.status || 'SUBMITTED')}
               </Badge>
             </div>
 
@@ -2660,7 +2751,7 @@ export function VendorBillCostingPage() {
           }}
           onComplete={() => {
             if (selectedGRN) {
-              apService.setGRNStatus(selectedGRN.id, 'PRICED');
+              apService.setGRNStatus(selectedGRN.id, 'APPROVED');
             }
             setShowInlinePricing(false);
             if (activeWorkflowTab === 'step4') {
@@ -2668,7 +2759,7 @@ export function VendorBillCostingPage() {
             }
             setGrnRefreshKey((k) => k + 1);
             setPricingAssigned(true);
-            toast.success('Selling price strategy assigned & inventory released!');
+            toast.success('Selling price strategy assigned & inventory released! Status updated to APPROVED.');
           }}
         />
       )}
