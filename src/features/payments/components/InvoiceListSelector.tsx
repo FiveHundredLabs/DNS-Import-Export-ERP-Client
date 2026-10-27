@@ -5,7 +5,6 @@ import { formatDate } from '../../../utils/formatters';
 import { isPastDueDate } from '../../../rules/invoiceRules';
 import { getDaysOverdue } from '../../../rules/customerPaymentRules';
 import { InvoiceStatusBadge } from '../../invoices/InvoiceStatusBadge';
-import { Checkbox } from '../../../components/ui/checkbox';
 import { Calendar, AlertCircle, FileText, CheckCircle2 } from 'lucide-react';
 import { cn } from '../../../utils/cn';
 

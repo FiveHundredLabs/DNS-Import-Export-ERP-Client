@@ -19,6 +19,7 @@ export const ROLES: { label: string; shortLabel: string; role: UserRole }[] = [
   { label: 'Sales Representative (Field Rep)', shortLabel: 'Sales Rep', role: 'SALES_REP' },
   { label: 'Stock Keeper (Warehouse/GRN)', shortLabel: 'Stock Keeper', role: 'STOCK_KEEPER' },
   { label: 'Cashier (Showroom POS)', shortLabel: 'Cashier', role: 'CASHIER' },
+  { label: 'Purchasing Officer (Procurement)', shortLabel: 'Purchasing Officer', role: 'PURCHASING_OFFICER' },
 ];
 
 interface RoleSwitcherProps {

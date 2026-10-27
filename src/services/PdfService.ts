@@ -1,7 +1,9 @@
 import { Quotation } from '../types/quotation';
 import { Invoice } from '../types/invoice';
 import { Payment } from '../types/payment';
-import { numberToWordsLKR } from '../utils/formatters';
+import { PurchaseOrder } from '../types/purchasing';
+import { paginatePurchaseOrder } from '../features/purchasing/utils/purchaseOrderPaginator';
+import { numberToWordsLKR, formatDate, formatCurrency } from '../utils/formatters';
 
 export interface IPdfService {
   downloadQuotationPdf(quotation: Quotation): Promise<void>;
@@ -11,6 +13,8 @@ export interface IPdfService {
   generateIrdTaxInvoiceHtml(invoice: Invoice): string;
   downloadReceiptPdf(payment: Payment): Promise<void>;
   generateReceiptHtml(payment: Payment): string;
+  downloadPurchaseOrderPdf(purchaseOrder: PurchaseOrder): Promise<void>;
+  generatePurchaseOrderHtml(purchaseOrder: PurchaseOrder): string;
 }
 
 export class PdfService implements IPdfService {
@@ -601,6 +605,256 @@ export class PdfService implements IPdfService {
   async downloadReceiptPdf(payment: Payment): Promise<void> {
     const htmlContent = this.generateReceiptHtml(payment);
     this.triggerDownloadOrPrint(htmlContent, `Receipt_${payment.receiptNumber}.html`);
+  }
+
+  async downloadPurchaseOrderPdf(purchaseOrder: PurchaseOrder): Promise<void> {
+    const htmlContent = this.generatePurchaseOrderHtml(purchaseOrder);
+    this.triggerDownloadOrPrint(htmlContent, `PurchaseOrder_${purchaseOrder.poNumber}.html`);
+  }
+
+  generatePurchaseOrderHtml(purchaseOrder: PurchaseOrder): string {
+    const pages = paginatePurchaseOrder(purchaseOrder);
+    const isApproved =
+      Boolean(purchaseOrder.approvedByName) ||
+      purchaseOrder.status === 'APPROVED' ||
+      purchaseOrder.status === 'SENT_TO_SUPPLIER';
+
+    const renderedPagesHtml = pages
+      .map((p) => {
+        const itemRowsHtml = p.items
+          .map(
+            (pi) => `
+            <tr>
+              <td style="padding: 7px 8px; border-bottom: 1px solid #e2e8f0; text-align: center; font-family: monospace; font-size: 11px;">${pi.itemNumber}</td>
+              <td style="padding: 7px 8px; border-bottom: 1px solid #e2e8f0;">
+                <strong style="color: #0f172a; font-size: 11px;">${pi.item.productName}</strong><br/>
+                <span style="font-size: 10px; color: #64748b; font-family: monospace;">${pi.item.productCode}</span>
+                ${pi.item.notes ? `<div style="font-size: 10px; color: #64748b; font-style: italic;">${pi.item.notes}</div>` : ''}
+              </td>
+              <td style="padding: 7px 8px; border-bottom: 1px solid #e2e8f0; text-align: right; font-family: monospace; font-size: 11px;">${pi.item.quantity}</td>
+              <td style="padding: 7px 8px; border-bottom: 1px solid #e2e8f0; text-align: right; font-family: monospace; font-size: 11px; white-space: nowrap;">${formatCurrency(pi.item.unitPrice)}</td>
+              <td style="padding: 7px 8px; border-bottom: 1px solid #e2e8f0; text-align: right; font-family: monospace; font-size: 11px;">${pi.item.discountPercent > 0 ? `${pi.item.discountPercent}%` : '-'}</td>
+              <td style="padding: 7px 8px; border-bottom: 1px solid #e2e8f0; text-align: right; font-family: monospace; font-size: 11px;">${pi.item.taxRate > 0 ? `${pi.item.taxRate}%` : '-'}</td>
+              <td style="padding: 7px 8px; border-bottom: 1px solid #e2e8f0; text-align: right; font-family: monospace; font-weight: 700; color: #0f172a; font-size: 11px; white-space: nowrap;">${formatCurrency(pi.item.total)}</td>
+            </tr>
+          `
+          )
+          .join('');
+
+        const headerHtml = p.isFirstPage
+          ? `
+            <div style="display: flex; justify-content: space-between; border-bottom: 2px solid #0f172a; padding-bottom: 12px; margin-bottom: 14px;">
+              <div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <div style="background: #0f172a; color: #fff; width: 32px; height: 32px; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; font-weight: 900; font-size: 13px;">DNS</div>
+                  <div>
+                    <div style="font-size: 17px; font-weight: 800; color: #0f172a; line-height: 1;">DNS DISTRIBUTION (PVT) LTD</div>
+                    <div style="font-size: 10px; color: #64748b; margin-top: 3px;">Authorized Wholesale Electrical, Automation & Industrial Solutions</div>
+                  </div>
+                </div>
+                <div style="font-size: 10px; color: #64748b; margin-top: 6px; line-height: 1.4;">
+                  142 First Cross Street, Colombo 11, Sri Lanka<br/>
+                  Tel: +94 11 234 5678 | Email: procurement@dnsdistribution.lk<br/>
+                  <strong>VAT Registration No: 109847291-7000</strong>
+                </div>
+              </div>
+              <div style="text-align: right;">
+                <div style="display: flex; align-items: center; justify-content: flex-end; gap: 6px;">
+                  <span style="background: #0f172a; color: #fff; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; font-family: monospace;">PURCHASE ORDER</span>
+                  <span style="font-size: 10px; font-weight: 600; color: #475569; background: #f1f5f9; padding: 2px 6px; border-radius: 4px; border: 1px solid #cbd5e1;">Page ${p.pageNumber} of ${p.totalPages}</span>
+                </div>
+                <div style="font-family: monospace; font-size: 18px; font-weight: 800; color: #0f172a; margin-top: 4px;">${purchaseOrder.poNumber}</div>
+                <div style="font-size: 10.5px; color: #475569; margin-top: 4px; line-height: 1.4;">
+                  PO Date: <strong>${formatDate(purchaseOrder.orderDate)}</strong><br/>
+                  Delivery Due: <strong>${formatDate(purchaseOrder.expectedDeliveryDate)}</strong><br/>
+                  Terms: <strong>${purchaseOrder.paymentTerms}</strong>
+                </div>
+              </div>
+            </div>
+
+            <table style="width: 100%; border-collapse: collapse; margin-bottom: 14px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px;">
+              <tr>
+                <td style="width: 50%; padding: 10px 12px; vertical-align: top; font-size: 11px;">
+                  <span style="font-size: 9px; font-weight: 700; text-transform: uppercase; color: #94a3b8; letter-spacing: 0.5px;">Vendor / Supplier</span>
+                  <div style="font-weight: 700; font-size: 13px; color: #0f172a; margin-top: 2px;">${purchaseOrder.supplierName}</div>
+                  <div style="font-family: monospace; font-size: 10px; color: #64748b;">Code: ${purchaseOrder.supplierCode}</div>
+                  ${purchaseOrder.supplierContactPerson ? `<div style="color: #475569;">Attn: ${purchaseOrder.supplierContactPerson}</div>` : ''}
+                  ${purchaseOrder.supplierAddress ? `<div style="color: #475569;">${purchaseOrder.supplierAddress}</div>` : ''}
+                  ${purchaseOrder.supplierPhone ? `<div style="color: #475569;">Phone: ${purchaseOrder.supplierPhone}</div>` : ''}
+                  ${purchaseOrder.supplierVatNumber ? `<div style="color: #475569; font-weight: 600;">VAT: ${purchaseOrder.supplierVatNumber}</div>` : ''}
+                </td>
+                <td style="width: 50%; padding: 10px 12px; vertical-align: top; font-size: 11px;">
+                  <span style="font-size: 9px; font-weight: 700; text-transform: uppercase; color: #94a3b8; letter-spacing: 0.5px;">Delivery Destination</span>
+                  <div style="font-weight: 700; font-size: 13px; color: #0f172a; margin-top: 2px;">Central Warehouse (DNS Central Hub)</div>
+                  <div style="color: #475569;">18 Bloemendhal Road, Kotahena, Colombo 13</div>
+                  <div style="color: #475569;">Receiving Hours: Mon-Fri 08:30 - 16:30</div>
+                  <div style="color: #475569;">Storekeeper Desk: +94 11 245 8899</div>
+                  <div style="margin-top: 4px; font-weight: 600;">Currency: ${purchaseOrder.currency || 'LKR'}</div>
+                </td>
+              </tr>
+            </table>
+          `
+          : `
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #0f172a; padding-bottom: 8px; margin-bottom: 12px;">
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <div style="background: #0f172a; color: #fff; width: 22px; height: 22px; border-radius: 4px; display: inline-flex; align-items: center; justify-content: center; font-weight: 900; font-size: 10px;">DNS</div>
+                <span style="font-weight: 700; font-size: 12px; color: #0f172a;">DNS DISTRIBUTION (PVT) LTD</span>
+                <span style="font-size: 10px; color: #64748b; margin-left: 6px;">VAT: 109847291-7000</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="font-family: monospace; font-weight: 700; font-size: 11px; color: #0f172a;">PURCHASE ORDER: ${purchaseOrder.poNumber}</span>
+                <span style="font-size: 10px; font-weight: 700; color: #475569; background: #f1f5f9; padding: 2px 6px; border-radius: 4px; border: 1px solid #cbd5e1;">Page ${p.pageNumber} of ${p.totalPages}</span>
+              </div>
+            </div>
+          `;
+
+        const tableHtml = p.items.length > 0
+          ? `
+            <table style="width: 100%; border-collapse: collapse; margin-bottom: 14px; border: 1px solid #cbd5e1; border-radius: 6px; overflow: hidden; table-layout: fixed;">
+              <thead>
+                <tr style="background: #f1f5f9; border-bottom: 2px solid #cbd5e1;">
+                  <th style="width: 32px; padding: 8px; font-size: 10.5px; font-weight: 700; text-align: center; color: #334155;">#</th>
+                  <th style="padding: 8px; font-size: 10.5px; font-weight: 700; text-align: left; color: #334155;">Product / SKU & Description</th>
+                  <th style="width: 50px; padding: 8px; font-size: 10.5px; font-weight: 700; text-align: right; color: #334155;">Qty</th>
+                  <th style="width: 105px; padding: 8px; font-size: 10.5px; font-weight: 700; text-align: right; color: #334155; white-space: nowrap;">Unit Price (${purchaseOrder.currency})</th>
+                  <th style="width: 55px; padding: 8px; font-size: 10.5px; font-weight: 700; text-align: right; color: #334155;">Disc %</th>
+                  <th style="width: 55px; padding: 8px; font-size: 10.5px; font-weight: 700; text-align: right; color: #334155;">Tax %</th>
+                  <th style="width: 115px; padding: 8px; font-size: 10.5px; font-weight: 700; text-align: right; color: #334155; white-space: nowrap;">Line Total (${purchaseOrder.currency})</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${itemRowsHtml}
+              </tbody>
+            </table>
+          `
+          : '';
+
+        const summaryHtml = p.showSummaryAndTerms
+          ? `
+            <table style="width: 100%; border-collapse: collapse; margin-top: 10px; margin-bottom: 14px;">
+              <tr>
+                <td style="width: 55%; vertical-align: top; padding-right: 14px; font-size: 10px; color: #475569;">
+                  ${purchaseOrder.notes ? `<div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 8px; border-radius: 6px; margin-bottom: 8px;"><strong>Order Notes:</strong> ${purchaseOrder.notes}</div>` : ''}
+                  ${purchaseOrder.deliveryInstructions ? `<div style="background: #fffbeb; border: 1px solid #fde68a; padding: 8px; border-radius: 6px; margin-bottom: 8px; color: #92400e;"><strong>Delivery Instructions:</strong> ${purchaseOrder.deliveryInstructions}</div>` : ''}
+                  <div style="background: #f0fdf4; border: 1px solid #bbf7d0; padding: 8px; border-radius: 6px; color: #166534; line-height: 1.4;">
+                    <strong>General Terms & Policy:</strong><br/>
+                    1. Reference PO number on all commercial correspondence.<br/>
+                    2. Inward goods subject to verification against specifications.<br/>
+                    3. Disbursement matched to authorized Goods Received Notes (GRN).
+                  </div>
+                </td>
+                <td style="width: 45%; vertical-align: top;">
+                  <table style="width: 100%; border-collapse: collapse; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 11px;">
+                    <tr><td style="padding: 5px 10px; color: #64748b;">Subtotal:</td><td style="padding: 5px 10px; text-align: right; font-family: monospace; font-weight: 600;">${formatCurrency(purchaseOrder.subtotal)}</td></tr>
+                    ${purchaseOrder.totalDiscount > 0 ? `<tr><td style="padding: 5px 10px; color: #16a34a;">Discounts Applied:</td><td style="padding: 5px 10px; text-align: right; font-family: monospace; color: #16a34a; font-weight: 600;">-${formatCurrency(purchaseOrder.totalDiscount)}</td></tr>` : ''}
+                    <tr><td style="padding: 5px 10px; color: #64748b;">Applicable Taxes:</td><td style="padding: 5px 10px; text-align: right; font-family: monospace; font-weight: 600;">${formatCurrency(purchaseOrder.taxTotal)}</td></tr>
+                    ${purchaseOrder.shippingCharges > 0 ? `<tr><td style="padding: 5px 10px; color: #64748b;">Shipping Charges:</td><td style="padding: 5px 10px; text-align: right; font-family: monospace; font-weight: 600;">${formatCurrency(purchaseOrder.shippingCharges)}</td></tr>` : ''}
+                    ${purchaseOrder.otherCharges > 0 ? `<tr><td style="padding: 5px 10px; color: #64748b;">Handling Charges:</td><td style="padding: 5px 10px; text-align: right; font-family: monospace; font-weight: 600;">${formatCurrency(purchaseOrder.otherCharges)}</td></tr>` : ''}
+                    <tr style="border-top: 2px solid #0f172a; font-weight: 800; font-size: 13px;">
+                      <td style="padding: 8px 10px;">Grand Total:</td>
+                      <td style="padding: 8px 10px; text-align: right; font-family: monospace;">${formatCurrency(purchaseOrder.grandTotal)}</td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+          `
+          : '';
+
+        const signaturesHtml = p.showSignatures
+          ? `
+            <table style="width: 100%; border-collapse: collapse; margin-top: 14px; border-top: 1px solid #e2e8f0; padding-top: 10px; font-size: 10px; color: #475569;">
+              <tr>
+                <td style="width: 33%; vertical-align: top; padding-right: 10px;">
+                  <strong>Prepared By:</strong><br/>
+                  <span style="font-weight: 700; color: #0f172a; font-size: 11px;">${purchaseOrder.createdByName || 'Purchasing Officer'}</span><br/>
+                  <span style="color: #94a3b8; font-size: 9.5px;">Date: ${formatDate(purchaseOrder.createdAt)}</span>
+                  <div style="height: 35px; border-bottom: 1px dashed #cbd5e1; margin-top: 4px;"></div>
+                  <div style="text-align: center; font-size: 9px; color: #94a3b8; margin-top: 3px;">Procurement Department</div>
+                </td>
+                <td style="width: 33%; vertical-align: top; padding-right: 10px;">
+                  <strong>Manager / Director Authorization:</strong><br/>
+                  <span style="font-weight: 700; color: #0f172a; font-size: 11px;">${isApproved ? purchaseOrder.approvedByName || 'Authorized Executive Signatory' : 'Pending Authorization'}</span><br/>
+                  <span style="color: #94a3b8; font-size: 9.5px;">Date: ${purchaseOrder.approvedAt ? formatDate(purchaseOrder.approvedAt) : 'Pending'}</span>
+                  <div style="height: 35px; border-bottom: 1px dashed #cbd5e1; margin-top: 4px; display: flex; align-items: center; justify-content: center;">
+                    ${isApproved ? '<span style="color: #16a34a; font-weight: 800; font-size: 9px; letter-spacing: 0.5px; text-transform: uppercase;">✓ Digitally Signed & Approved</span>' : ''}
+                  </div>
+                  <div style="text-align: center; font-size: 9px; color: #94a3b8; margin-top: 3px;">Authorized Executive Signatory</div>
+                </td>
+                <td style="width: 33%; vertical-align: top;">
+                  <strong>Supplier Acceptance:</strong><br/>
+                  <span style="font-weight: 700; color: #0f172a; font-size: 11px;">${purchaseOrder.supplierName}</span><br/>
+                  <span style="color: #94a3b8; font-size: 9.5px;">Acknowledged Date: ____________</span>
+                  <div style="height: 35px; border-bottom: 1px dashed #cbd5e1; margin-top: 4px;"></div>
+                  <div style="text-align: center; font-size: 9px; color: #94a3b8; margin-top: 3px;">Authorized Vendor Stamp & Signature</div>
+                </td>
+              </tr>
+            </table>
+          `
+          : '';
+
+        const footerHtml = `
+          <div style="margin-top: auto; padding-top: 10px; border-top: 1px solid #f1f5f9; display: flex; justify-content: space-between; font-size: 9px; color: #94a3b8;">
+            <span>DNS Distribution (Pvt) Ltd • Official Purchase Order • Non-Transferable</span>
+            <span style="font-weight: 700; font-family: monospace;">Page ${p.pageNumber} of ${p.totalPages}</span>
+          </div>
+        `;
+
+        return `
+          <div class="po-page" style="page-break-after: ${p.isLastPage ? 'auto' : 'always'}; break-after: ${p.isLastPage ? 'auto' : 'page'}; min-height: 270mm; display: flex; flex-direction: column; justify-content: space-between; margin-bottom: 24px;">
+            <div>
+              ${headerHtml}
+              ${tableHtml}
+              ${summaryHtml}
+              ${signaturesHtml}
+            </div>
+            ${footerHtml}
+          </div>
+        `;
+      })
+      .join('');
+
+    return `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <title>PO_${purchaseOrder.poNumber}</title>
+          <style>
+            @page {
+              size: A4 portrait;
+              margin: 12mm 15mm 15mm 15mm;
+            }
+            body {
+              font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+              color: #1e293b;
+              margin: 0;
+              padding: 0;
+              background-color: #ffffff;
+              font-size: 12px;
+              line-height: 1.4;
+            }
+            .po-page {
+              page-break-inside: avoid;
+              break-inside: avoid;
+            }
+            @media print {
+              .po-page {
+                page-break-after: always;
+                break-after: page;
+              }
+              .po-page:last-child {
+                page-break-after: auto;
+                break-after: auto;
+              }
+            }
+          </style>
+        </head>
+        <body>
+          ${renderedPagesHtml}
+        </body>
+      </html>
+    `;
   }
 
   private triggerDownloadOrPrint(htmlContent: string, filename: string): void {

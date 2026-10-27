@@ -8,7 +8,8 @@ export type ApprovalDocumentType =
   | 'SPECIAL_SALES_ORDER'
   | 'GRN_RECEIPT'
   | 'PAYMENT_RECEIPT'
-  | 'EXPENSE_CLAIM';
+  | 'EXPENSE_CLAIM'
+  | 'PURCHASE_ORDER';
 
 export type ApprovalRequestStatus =
   | 'PENDING'
