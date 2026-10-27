@@ -122,7 +122,7 @@ export function PurchaseOrderListPage() {
 
         <Button
           onClick={() => navigate('/purchasing/orders/new')}
-          className="gap-1.5 bg-primary hover:bg-primary-hover text-primary-foreground font-semibold shadow-xs self-start sm:self-auto"
+          className="gap-1.5 bg-primary hover:bg-primary-hover text-primary-foreground font-semibold shadow-xs self-start sm:self-auto text-xs h-9 px-4 rounded-lg"
         >
           <Plus className="h-4 w-4" />
           <span>New Purchase Order</span>
@@ -130,49 +130,55 @@ export function PurchaseOrderListPage() {
       </div>
 
       {/* Metric Tabs Bar */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         {[
           {
             id: 'ALL',
             label: 'All Orders',
             count: metrics.all,
             icon: ShoppingCart,
-            activeColor: 'bg-primary-light border-primary ring-1 ring-primary text-primary',
+            iconBg: 'bg-primary-light text-primary',
+            activeClass: 'border-primary ring-2 ring-primary/20 bg-primary-light/30',
           },
           {
             id: 'DRAFT',
             label: 'Drafts',
             count: metrics.draft,
             icon: FileText,
-            activeColor: 'bg-slate-100 border-slate-400 ring-1 ring-slate-400 text-slate-800',
+            iconBg: 'bg-slate-100 text-slate-600',
+            activeClass: 'border-slate-500 ring-2 ring-slate-300 bg-slate-50',
           },
           {
             id: 'PENDING_APPROVAL',
             label: 'Pending Approval',
             count: metrics.pending,
             icon: Clock,
-            activeColor: 'bg-amber-50 border-amber-400 ring-1 ring-amber-400 text-amber-800',
+            iconBg: 'bg-amber-100/70 text-amber-700',
+            activeClass: 'border-amber-500 ring-2 ring-amber-200 bg-amber-50/60',
           },
           {
             id: 'APPROVED',
             label: 'Approved',
             count: metrics.approved,
             icon: CheckCircle2,
-            activeColor: 'bg-emerald-50 border-emerald-400 ring-1 ring-emerald-400 text-emerald-800',
+            iconBg: 'bg-emerald-100/70 text-emerald-700',
+            activeClass: 'border-emerald-500 ring-2 ring-emerald-200 bg-emerald-50/60',
           },
           {
             id: 'SENT_TO_SUPPLIER',
             label: 'Sent to Vendor',
             count: metrics.sent,
             icon: Send,
-            activeColor: 'bg-sky-50 border-sky-400 ring-1 ring-sky-400 text-sky-800',
+            iconBg: 'bg-sky-100/70 text-sky-700',
+            activeClass: 'border-sky-500 ring-2 ring-sky-200 bg-sky-50/60',
           },
           {
             id: 'REJECTED',
             label: 'Rejected',
             count: metrics.rejected,
             icon: Filter,
-            activeColor: 'bg-rose-50 border-rose-400 ring-1 ring-rose-400 text-rose-800',
+            iconBg: 'bg-rose-100/70 text-rose-700',
+            activeClass: 'border-rose-500 ring-2 ring-rose-200 bg-rose-50/60',
           },
         ].map((tab) => {
           const isActive = statusFilter === tab.id;
@@ -185,21 +191,21 @@ export function PurchaseOrderListPage() {
                 setStatusFilter(tab.id as any);
                 setPage(1);
               }}
-              className={`p-3 rounded-xl border text-left transition-all ${
+              className={`p-3.5 rounded-xl border text-left transition-all ${
                 isActive
-                  ? `${tab.activeColor} shadow-xs font-semibold`
+                  ? `${tab.activeClass} shadow-xs font-semibold`
                   : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50 hover:border-slate-300 shadow-2xs'
               }`}
             >
               <div className="flex items-center justify-between">
-                <span className={`text-xs font-semibold ${isActive ? '' : 'text-slate-500'}`}>
+                <span className="text-xs font-semibold text-slate-600">
                   {tab.label}
                 </span>
-                <div className={`p-1 rounded-md ${isActive ? 'bg-white/80' : 'bg-slate-50'}`}>
-                  <Icon className={`h-3.5 w-3.5 ${isActive ? '' : 'text-slate-400'}`} />
+                <div className={`h-7 w-7 rounded-lg ${tab.iconBg} flex items-center justify-center shrink-0`}>
+                  <Icon className="h-3.5 w-3.5" />
                 </div>
               </div>
-              <div className={`text-xl font-bold mt-1.5 font-mono tabular-nums ${isActive ? '' : 'text-slate-900'}`}>
+              <div className="text-xl font-bold mt-2 font-mono tabular-nums text-slate-900">
                 {tab.count}
               </div>
             </button>

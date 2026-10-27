@@ -37,6 +37,10 @@ import {
   Percent,
   Layers,
   Barcode,
+  Hash,
+  ArrowLeftRight,
+  CheckSquare,
+  Truck,
   Banknote,
 } from 'lucide-react';
 import { useEffect } from 'react';
@@ -70,6 +74,7 @@ interface SidebarItem {
   category: RailCategory;
   exact?: boolean;
   directorOnly?: boolean;
+  excludedRoles?: string[];
   badge?: string;
 }
 
@@ -121,8 +126,11 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
 
   // 3. Products & Inventory
   const inventoryItems: SidebarItem[] = [
-    { id: 'products', name: 'Product Master', path: '/products', icon: Package, category: 'inventory' },
-    { id: 'inventory', name: 'Inventory & GRN', path: '/inventory', icon: Boxes, category: 'inventory', exact: true },
+    { id: 'inventory', name: 'Inventory Hub', path: '/inventory', icon: Boxes, category: 'inventory', exact: true },
+    { id: 'grn', name: 'GRN', path: '/inventory/grn', icon: Receipt, category: 'inventory' },
+    { id: 'serials', name: 'Serial Numbers', path: '/inventory/serial-numbers', icon: Hash, category: 'inventory' },
+    { id: 'barcodes', name: 'Bar Codes', path: '/inventory/barcodes', icon: Barcode, category: 'inventory' },
+    { id: 'products', name: 'Product Master', path: '/products', icon: Package, category: 'inventory', excludedRoles: ['STOCK_KEEPER'] },
   ];
 
   // 4. Finance, Banking & Ledger Core
@@ -169,6 +177,9 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const authorizedItems = useMemo(() => {
     return allRawItems.filter((item) => {
       if (item.directorOnly && currentUser.role !== 'DIRECTOR') {
+        return false;
+      }
+      if (item.excludedRoles && item.excludedRoles.includes(currentUser.role)) {
         return false;
       }
       if (item.path.includes('tab=settings') && !canAccessRoute('/settings')) {

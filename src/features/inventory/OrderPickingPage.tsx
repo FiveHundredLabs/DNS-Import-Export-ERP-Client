@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
+import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table';
@@ -128,9 +129,22 @@ export function OrderPickingPage() {
                   >
                     <div className="font-bold">{o.id}</div>
                     <div className="text-sm">{o.customerName || 'Unknown Customer'}</div>
-                    <div className="text-xs text-muted-foreground mt-1 flex justify-between">
-                      <span>{o.status}</span>
-                      <span>{new Date(o.createdAt).toLocaleDateString()}</span>
+                    <div className="text-xs text-muted-foreground mt-2 flex justify-between items-center">
+                      <Badge
+                        variant="outline"
+                        className={`text-[10px] font-mono font-semibold uppercase tracking-wider rounded-md px-2 py-0.5 ${
+                          o.status === 'APPROVED'
+                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                            : o.status === 'PICKING'
+                            ? 'bg-amber-50 text-amber-700 border-amber-200'
+                            : 'bg-slate-100 text-slate-700 border-slate-200'
+                        }`}
+                      >
+                        {o.status}
+                      </Badge>
+                      <span className="font-mono text-[11px] text-slate-400">
+                        {new Date(o.createdAt).toLocaleDateString()}
+                      </span>
                     </div>
                   </div>
                 ))

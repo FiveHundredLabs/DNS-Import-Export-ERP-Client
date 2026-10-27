@@ -23,6 +23,8 @@ import { StockBalancePage } from './features/inventory/StockBalancePage';
 import { StockMovementsPage } from './features/inventory/StockMovementsPage';
 import { OrderPickingPage } from './features/inventory/OrderPickingPage';
 import { DispatchPage } from './features/inventory/DispatchPage';
+import { SerialNumbersPage } from './features/inventory/SerialNumbersPage';
+import { BarcodesPage } from './features/inventory/BarcodesPage';
 import { InvoiceListPage } from './features/invoices/InvoiceListPage';
 import { InvoiceDetailPage } from './features/invoices/InvoiceDetailPage';
 import { PaymentListPage } from './features/payments/PaymentListPage';
@@ -289,6 +291,38 @@ export function App() {
           element={
             <ProtectedRoute>
               <DispatchPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="inventory/serial-numbers"
+          element={
+            <ProtectedRoute>
+              <SerialNumbersPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="inventory/serials"
+          element={
+            <ProtectedRoute>
+              <SerialNumbersPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="inventory/barcodes"
+          element={
+            <ProtectedRoute>
+              <BarcodesPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="inventory/bar-codes"
+          element={
+            <ProtectedRoute>
+              <BarcodesPage />
             </ProtectedRoute>
           }
         />

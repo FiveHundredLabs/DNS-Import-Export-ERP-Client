@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { StatCard } from '../../components/common/StatCard';
 import { AmountDisplay } from '../../components/common/AmountDisplay';
@@ -28,10 +28,17 @@ import {
   X,
   Filter,
   FileSpreadsheet,
+  Send,
 } from 'lucide-react';
 import { formatCurrency, formatPercentage } from '../../utils/formatters';
 import { whatsAppService } from '../../services/WhatsAppService';
 import { cn } from '../../utils/cn';
+import { useAuth } from '../../hooks/useAuth';
+import { handoverService } from '../../services/HandoverService';
+import { CashHandoverModal } from '../payments/components/CashHandoverModal';
+import { User } from '../../types/auth';
+import { MOCK_USERS } from '../../mock/mockUsers';
+import { toast } from 'sonner';
 
 interface PendingAccount {
   id: string;
@@ -60,8 +67,45 @@ interface OrderTrackingItem {
 
 export function SalesRepDashboard() {
   const navigate = useNavigate();
+  const { currentUser, role } = useAuth();
+  const effectiveRepId = role === 'SALES_REP' && currentUser?.id ? currentUser.id : (currentUser?.id || 'usr-106');
+
   const [receivablesFilter, setReceivablesFilter] = useState<'all' | 'overdue' | 'current'>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [cashToHandOver, setCashToHandOver] = useState<number>(0);
+  const [pendingHandoverCount, setPendingHandoverCount] = useState<number>(0);
+  const [loadingHandover, setLoadingHandover] = useState<boolean>(true);
+  const [cashHandoverModalOpen, setCashHandoverModalOpen] = useState<boolean>(false);
+
+  const loadHandoverMetrics = useCallback(async () => {
+    try {
+      setLoadingHandover(true);
+      const eligible = await handoverService.getEligibleCollectionsForHandover(effectiveRepId);
+      const cashOnly = eligible.filter((p) => !p.paymentMethod || p.paymentMethod === 'CASH');
+      const total = cashOnly.reduce((sum, p) => sum + p.amount, 0);
+      setCashToHandOver(total);
+      setPendingHandoverCount(cashOnly.length);
+    } catch (err) {
+      console.error('Failed to load cash handover metrics:', err);
+    } finally {
+      setLoadingHandover(false);
+    }
+  }, [effectiveRepId]);
+
+  useEffect(() => {
+    loadHandoverMetrics();
+    const handleFocus = () => {
+      loadHandoverMetrics();
+    };
+    window.addEventListener('focus', handleFocus);
+    window.addEventListener('cash-handover-updated', handleFocus);
+    window.addEventListener('payment-recorded', handleFocus);
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+      window.removeEventListener('cash-handover-updated', handleFocus);
+      window.removeEventListener('payment-recorded', handleFocus);
+    };
+  }, [loadHandoverMetrics]);
 
   // Existing Pending Accounts Data (enhanced with phone for mobile app 1-tap call/whatsapp)
   const pendingAccounts: PendingAccount[] = [
@@ -349,8 +393,8 @@ export function SalesRepDashboard() {
             <span className="text-[11px] text-emerald-600 font-semibold">85% Target Pace</span>
           </div>
 
-          {/* Content-Aware Grid: Full-width Hero cards on mobile for long currency amounts, 4-col on desktop */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
+          {/* Content-Aware Grid: Full-width Hero cards on mobile for long currency amounts, 5-col on desktop */}
+          <div className="grid grid-cols-2 lg:grid-cols-5 gap-2.5 sm:gap-4">
             {/* Card 1: Monthly Sales Target (Hero Full-width on mobile to guarantee LKR 4,250,000.00 never clips) */}
             <div className="col-span-2 lg:col-span-1 rounded-2xl sm:rounded-3xl border border-emerald-200/90 bg-gradient-to-br from-emerald-500/[0.08] via-emerald-50/40 to-white p-4 sm:p-5 shadow-xs hover:shadow-sm transition-all relative overflow-hidden group">
               <div className="flex items-center justify-between gap-2">
@@ -416,7 +460,66 @@ export function SalesRepDashboard() {
               </div>
             </div>
 
-            {/* Card 3: Earned Incentive (Half-width on mobile) */}
+            {/* Card 3: Cash to Hand Over (Hero Full-width on mobile to guarantee currency amounts never clip, 1-col on desktop) */}
+            <div className="col-span-2 lg:col-span-1 rounded-2xl sm:rounded-3xl border border-amber-200/90 bg-gradient-to-br from-amber-500/[0.08] via-amber-50/40 to-white p-4 sm:p-5 shadow-xs hover:shadow-sm transition-all relative overflow-hidden group min-w-0">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2.5">
+                  <div className="h-9 w-9 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0 shadow-2xs">
+                    <Banknote className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <span className="text-xs font-bold uppercase tracking-wider text-amber-950">
+                      Cash to Hand Over
+                    </span>
+                    <div className="text-[10px] text-slate-400 font-medium sm:hidden">In Rep Possession</div>
+                  </div>
+                </div>
+                {cashToHandOver > 0 ? (
+                  <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-800 bg-amber-100/90 px-2.5 py-0.5 rounded-full border border-amber-200/80">
+                    <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
+                    To Hand Over
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-800 bg-emerald-100/90 px-2 py-0.5 rounded-full border border-emerald-200/80">
+                    <CheckCircle2 className="h-3 w-3 text-emerald-600" />
+                    Settled
+                  </span>
+                )}
+              </div>
+
+              <div className="mt-3 min-w-0">
+                <AmountDisplay amount={cashToHandOver} className="text-slate-900 font-extrabold" />
+              </div>
+
+              <div className="mt-2.5 flex items-center justify-between text-xs text-slate-500 pt-1 border-t border-amber-100/80">
+                <span className="text-[11px] text-slate-500 truncate">
+                  {pendingHandoverCount > 0
+                    ? `Field Cash: ${pendingHandoverCount} ${pendingHandoverCount === 1 ? 'collection' : 'collections'}`
+                    : 'All collected cash handed over'}
+                </span>
+                {cashToHandOver > 0 ? (
+                  <button
+                    type="button"
+                    onClick={() => setCashHandoverModalOpen(true)}
+                    className="inline-flex items-center gap-1 text-[10.5px] font-bold text-amber-800 bg-amber-200/80 hover:bg-amber-200 px-2.5 py-0.5 rounded-lg transition-all shadow-2xs cursor-pointer active:scale-95 shrink-0"
+                    title="Hand over collected cash to Finance Department"
+                  >
+                    <Send className="h-2.5 w-2.5" />
+                    <span>Hand Over</span>
+                  </button>
+                ) : (
+                  <Link
+                    to="/payments"
+                    className="text-[10.5px] font-semibold text-amber-700 hover:text-amber-800 flex items-center gap-0.5 shrink-0"
+                  >
+                    <span>Ledger</span>
+                    <ChevronRight className="h-3 w-3" />
+                  </Link>
+                )}
+              </div>
+            </div>
+
+            {/* Card 4: Earned Incentive (Half-width on mobile) */}
             <div className="col-span-1 rounded-2xl sm:rounded-3xl border border-indigo-200/90 bg-gradient-to-br from-indigo-500/[0.08] via-purple-50/40 to-white p-3.5 sm:p-5 shadow-xs hover:shadow-sm transition-all relative overflow-hidden group min-w-0">
               <div className="flex items-center justify-between gap-1.5">
                 <div className="flex items-center gap-2">
@@ -438,7 +541,7 @@ export function SalesRepDashboard() {
               </div>
             </div>
 
-            {/* Card 4: Overdue Accounts (Half-width on mobile fits 2 Dealers cleanly) */}
+            {/* Card 5: Overdue Accounts (Half-width on mobile fits 2 Dealers cleanly) */}
             <div className="col-span-1 rounded-2xl sm:rounded-3xl border border-rose-200/90 bg-gradient-to-br from-rose-500/[0.08] via-red-50/40 to-white p-3.5 sm:p-5 shadow-xs hover:shadow-sm transition-all relative overflow-hidden group">
               <div className="flex items-center justify-between gap-1.5">
                 <div className="flex items-center gap-2">
@@ -730,6 +833,17 @@ export function SalesRepDashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Cash Handover Submission Modal */}
+      <CashHandoverModal
+        isOpen={cashHandoverModalOpen}
+        onClose={() => setCashHandoverModalOpen(false)}
+        currentUser={currentUser || MOCK_USERS.find((u) => u.role === 'SALES_REP')!}
+        onHandoverSuccess={(_handover) => {
+          loadHandoverMetrics();
+          toast.success(`Handover ${_handover.handoverNumber} submitted to Finance!`);
+        }}
+      />
     </div>
   );
 }
