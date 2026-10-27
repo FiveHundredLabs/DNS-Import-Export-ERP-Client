@@ -217,7 +217,7 @@ export function StatCard({
     <div
       onClick={onClick}
       className={cn(
-        'rounded-2xl sm:rounded-3xl border p-3.5 sm:p-5 shadow-xs hover:shadow-sm transition-all relative overflow-hidden group min-w-0',
+        'rounded-xl sm:rounded-3xl border p-2.5 sm:p-5 shadow-xs hover:shadow-sm transition-all relative overflow-hidden group min-w-0',
         theme.container,
         onClick && 'cursor-pointer active:scale-[0.99]',
         className
@@ -225,14 +225,14 @@ export function StatCard({
     >
       {/* Top Header: Squircle Icon Badge + Uppercase Bold Title + Trend / Status Pill */}
       <div className="flex items-center justify-between gap-1.5 sm:gap-2">
-        <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
+        <div className="flex items-center gap-1.5 sm:gap-2.5 min-w-0">
           <div
             className={cn(
-              'h-8 w-8 sm:h-9 sm:w-9 rounded-xl flex items-center justify-center shrink-0 shadow-2xs',
+              'h-7 w-7 sm:h-9 sm:w-9 rounded-lg sm:rounded-xl flex items-center justify-center shrink-0 shadow-2xs',
               theme.iconBg
             )}
           >
-            <EffectiveIcon className="h-4 w-4" />
+            <EffectiveIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
           </div>
           <span
             className={cn(
@@ -247,7 +247,7 @@ export function StatCard({
         {trend ? (
           <span
             className={cn(
-              'inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full border shrink-0',
+              'hidden sm:inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full border shrink-0',
               trend.isPositive ? theme.trendPositive : theme.trendNegative
             )}
           >
@@ -257,7 +257,7 @@ export function StatCard({
         ) : badge ? (
           <span
             className={cn(
-              'inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full border shrink-0',
+              'hidden sm:inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full border shrink-0',
               theme.badge
             )}
           >
@@ -267,7 +267,7 @@ export function StatCard({
       </div>
 
       {/* Main KPI Value */}
-      <div className="mt-2.5 sm:mt-3 min-w-0">
+      <div className="mt-1.5 sm:mt-3 min-w-0">
         {isCurrency ? (
           <AmountDisplay amount={value} className="text-slate-900 font-extrabold" />
         ) : (
@@ -282,9 +282,9 @@ export function StatCard({
         )}
       </div>
 
-      {/* Progress Bar (if provided) */}
+      {/* Progress Bar (if provided, desktop only) */}
       {typeof progress === 'number' ? (
-        <div className="mt-2.5 space-y-1">
+        <div className="hidden sm:block mt-2.5 space-y-1">
           <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
             <div
               className={cn('h-full rounded-full transition-all duration-500', theme.progressBar)}
@@ -299,7 +299,7 @@ export function StatCard({
       ) : subtitle || period ? (
         <div
           className={cn(
-            'mt-1.5 sm:mt-2 text-[10.5px] sm:text-xs text-slate-500 truncate flex items-center justify-between pt-1 border-t',
+            'hidden sm:flex mt-1.5 sm:mt-2 text-[10.5px] sm:text-xs text-slate-500 truncate items-center justify-between pt-1 border-t',
             theme.borderDivider
           )}
         >

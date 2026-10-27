@@ -363,234 +363,194 @@ export function SalesRepDashboard() {
         </div>
       </div>
 
-      {/* 3. Mobile KPI Cards (Content-Aware Layout: Hero cards prevent currency clipping, distinct coordinated palettes) */}
+      {/* 3. Mobile KPI Cards (Clean, Simple, High-Scannability Layout) */}
       <div className="space-y-1.5 sm:space-y-0">
           <div className="flex sm:hidden items-center justify-between px-1">
             <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
-              Performance Snap • Territory KPIs
+              Performance Snapshot
             </span>
             <span className="text-[11px] text-emerald-600 font-semibold">85% Target Pace</span>
           </div>
 
-          {/* Content-Aware Grid: Full-width Hero cards on mobile for long currency amounts, 5-col on desktop */}
-          <div className="grid grid-cols-2 lg:grid-cols-5 gap-2.5 sm:gap-4">
-            {/* Card 1: Monthly Sales Target (Hero Full-width on mobile to guarantee LKR 4,250,000.00 never clips) */}
-            <div className="col-span-2 lg:col-span-1 rounded-2xl sm:rounded-3xl border border-emerald-200/90 bg-gradient-to-br from-emerald-500/[0.08] via-emerald-50/40 to-white p-4 sm:p-5 shadow-xs hover:shadow-sm transition-all relative overflow-hidden group">
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2.5">
-                  <div className="h-9 w-9 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0 shadow-2xs">
-                    <DollarSign className="h-4 w-4" />
+          {/* Clean KPI Grid: Full-width Hero card on mobile, 5-col on desktop */}
+          <div className="grid grid-cols-2 lg:grid-cols-5 gap-2 sm:gap-4">
+            {/* Card 1: Monthly Sales Target */}
+            <div className="col-span-2 lg:col-span-1 rounded-2xl sm:rounded-3xl border border-emerald-200/90 bg-gradient-to-br from-emerald-500/[0.08] via-emerald-50/40 to-white p-2.5 sm:p-5 shadow-xs hover:shadow-sm transition-all relative overflow-hidden group">
+              <div className="flex items-center justify-between gap-1.5 sm:gap-2">
+                <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+                  <div className="h-7 w-7 sm:h-9 sm:w-9 rounded-lg sm:rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0 shadow-2xs">
+                    <DollarSign className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                   </div>
-                  <div>
-                    <span className="text-xs font-bold uppercase tracking-wider text-emerald-950">
-                      Monthly Sales
-                    </span>
-                    <div className="text-[10px] text-slate-400 font-medium sm:hidden">Territory Target</div>
-                  </div>
+                  <span className="text-xs sm:text-sm font-bold text-slate-800 truncate">
+                    Monthly Sales
+                  </span>
                 </div>
-                <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-800 bg-emerald-100/90 px-2.5 py-0.5 rounded-full border border-emerald-200/80">
+                <span className="hidden sm:inline-flex items-center gap-1 text-[11px] font-bold text-emerald-800 bg-emerald-100/90 px-2 py-0.5 rounded-full border border-emerald-200/80 shrink-0">
                   <TrendingUp className="h-3 w-3" />
                   85.0%
                 </span>
               </div>
 
-              <div className="mt-3 min-w-0">
+              <div className="mt-1.5 sm:mt-3 min-w-0">
                 <AmountDisplay amount={4250000} className="text-slate-900 font-extrabold" />
               </div>
 
-              {/* Progress bar on mobile & desktop */}
-              <div className="mt-2.5 space-y-1">
+              {/* Progress bar on desktop only */}
+              <div className="hidden sm:block mt-2 space-y-1">
                 <div className="h-1.5 w-full bg-emerald-100/90 rounded-full overflow-hidden">
                   <div className="h-full bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full w-[85%]" />
                 </div>
                 <div className="flex items-center justify-between text-xs text-slate-500 pt-0.5">
-                  <span className="text-[11px] text-slate-500">Target: LKR 5,000,000.00</span>
+                  <span className="text-[10.5px] text-slate-500">Target: LKR 5,000,000.00</span>
                   <span className="font-semibold text-emerald-700 text-[10.5px]">85% Pace</span>
                 </div>
               </div>
             </div>
 
-            {/* Card 2: Route Collections (Row 1, Col 1 of the 4 cards) */}
-            <div className="col-span-1 rounded-2xl sm:rounded-3xl border border-blue-200/90 bg-gradient-to-br from-blue-500/[0.08] via-sky-50/40 to-white p-3.5 sm:p-5 shadow-xs hover:shadow-sm transition-all relative overflow-hidden group min-w-0 flex flex-col justify-between">
+            {/* Card 2: Route Collections */}
+            <div className="col-span-1 rounded-2xl sm:rounded-3xl border border-blue-200/90 bg-gradient-to-br from-blue-500/[0.08] via-sky-50/40 to-white p-2.5 sm:p-5 shadow-xs hover:shadow-sm transition-all relative overflow-hidden group min-w-0 flex flex-col justify-between">
               <div>
-                <div className="flex items-center justify-between gap-1.5">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <div className="h-8 w-8 sm:h-9 sm:w-9 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center shrink-0 shadow-2xs">
-                      <FileCheck2 className="h-4 w-4" />
-                    </div>
-                    <div className="min-w-0">
-                      <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-blue-950 block truncate">
-                        Route Collections
-                      </span>
-                      <div className="text-[10px] text-slate-400 font-medium sm:hidden truncate">Collected to Date</div>
-                    </div>
+                <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+                  <div className="h-7 w-7 sm:h-9 sm:w-9 rounded-lg sm:rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center shrink-0 shadow-2xs">
+                    <FileCheck2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                   </div>
-                  <span className="hidden sm:inline-flex items-center gap-1 text-[10.5px] font-medium text-blue-800 bg-blue-100/80 px-2 py-0.5 rounded-full border border-blue-200/70 shrink-0">
-                    Field Active
+                  <span className="text-xs sm:text-sm font-bold text-slate-800 leading-tight truncate">
+                    Route Collections
                   </span>
                 </div>
 
-                <div className="mt-2.5 sm:mt-3 min-w-0">
+                <div className="mt-1.5 sm:mt-3 min-w-0">
                   <AmountDisplay amount={2650000} className="text-slate-900 font-extrabold" />
                 </div>
               </div>
 
-              <div className="mt-2 sm:mt-2.5 flex items-center justify-between text-xs text-slate-500 pt-1 border-t border-blue-100/80">
-                <span className="text-[10.5px] sm:text-[11px] text-slate-500 truncate">Pending: LKR 450,000</span>
-                <span className="text-[10px] sm:text-[10.5px] font-semibold text-blue-600 shrink-0">89% verified</span>
+              <div className="hidden sm:block mt-2 text-[11px] sm:text-xs text-blue-700 font-semibold">
+                89% verified
               </div>
             </div>
 
-            {/* Card 3: Cash to Hand Over (Row 1, Col 2 of the 4 cards) */}
-            <div className="col-span-1 rounded-2xl sm:rounded-3xl border border-amber-200/90 bg-gradient-to-br from-amber-500/[0.08] via-amber-50/40 to-white p-3.5 sm:p-5 shadow-xs hover:shadow-sm transition-all relative overflow-hidden group min-w-0 flex flex-col justify-between">
+            {/* Card 3: Cash to Hand Over */}
+            <div className="col-span-1 rounded-2xl sm:rounded-3xl border border-amber-200/90 bg-gradient-to-br from-amber-500/[0.08] via-amber-50/40 to-white p-2.5 sm:p-5 shadow-xs hover:shadow-sm transition-all relative overflow-hidden group min-w-0 flex flex-col justify-between">
               <div>
-                <div className="flex items-center justify-between gap-1.5">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <div className="h-8 w-8 sm:h-9 sm:w-9 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0 shadow-2xs">
-                      <Banknote className="h-4 w-4" />
+                <div className="flex items-center justify-between gap-1.5 sm:gap-2">
+                  <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+                    <div className="h-7 w-7 sm:h-9 sm:w-9 rounded-lg sm:rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0 shadow-2xs">
+                      <Banknote className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                     </div>
-                    <div className="min-w-0">
-                      <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-amber-950 block truncate">
-                        Cash to Hand Over
-                      </span>
-                      <div className="text-[10px] text-slate-400 font-medium sm:hidden truncate">In Rep Possession</div>
-                    </div>
+                    <span className="text-xs sm:text-sm font-bold text-slate-800 leading-tight truncate">
+                      Cash to Hand Over
+                    </span>
                   </div>
                   {cashToHandOver > 0 ? (
-                    <span className="inline-flex items-center gap-1 text-[10px] sm:text-[11px] font-bold text-amber-800 bg-amber-100/90 px-2 sm:px-2.5 py-0.5 rounded-full border border-amber-200/80 shrink-0">
+                    <span className="hidden sm:inline-flex items-center gap-1 text-[10px] font-bold text-amber-800 bg-amber-100/90 px-2 py-0.5 rounded-full border border-amber-200/80 shrink-0">
                       <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
                       <span>To Hand Over</span>
                     </span>
                   ) : (
-                    <span className="inline-flex items-center gap-1 text-[10px] sm:text-[11px] font-semibold text-emerald-800 bg-emerald-100/90 px-2 py-0.5 rounded-full border border-emerald-200/80 shrink-0">
+                    <span className="hidden sm:inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-800 bg-emerald-100/90 px-2 py-0.5 rounded-full border border-emerald-200/80 shrink-0">
                       <CheckCircle2 className="h-3 w-3 text-emerald-600" />
                       <span>Settled</span>
                     </span>
                   )}
                 </div>
 
-                <div className="mt-2.5 sm:mt-3 min-w-0">
+                <div className="mt-1.5 sm:mt-3 min-w-0">
                   <AmountDisplay amount={cashToHandOver} className="text-slate-900 font-extrabold" />
                 </div>
               </div>
 
-              <div className="mt-2 sm:mt-2.5 flex items-center justify-between text-xs text-slate-500 pt-1 border-t border-amber-100/80">
-                <span className="text-[10.5px] sm:text-[11px] text-slate-500 truncate">
-                  {pendingHandoverCount > 0
-                    ? `Field Cash: ${pendingHandoverCount} ${pendingHandoverCount === 1 ? 'collection' : 'collections'}`
-                    : 'All collected cash handed over'}
-                </span>
-                {cashToHandOver > 0 ? (
+              {/* Supporting info on desktop only */}
+              <div className="hidden sm:block mt-2 space-y-1.5">
+                <div className="text-[10.5px] sm:text-xs text-slate-500 flex items-center justify-between">
+                  <span>
+                    {pendingHandoverCount > 0
+                      ? `Field Cash: ${pendingHandoverCount} ${pendingHandoverCount === 1 ? 'collection' : 'collections'}`
+                      : 'All handed over'}
+                  </span>
+                  {cashToHandOver > 0 && (
+                    <span className="text-[10px] font-bold text-amber-700">
+                      <span>To Hand Over</span>
+                    </span>
+                  )}
+                </div>
+                {cashToHandOver > 0 && (
                   <button
                     type="button"
                     onClick={() => setCashHandoverModalOpen(true)}
-                    className="inline-flex items-center gap-1 text-[10px] sm:text-[10.5px] font-bold text-amber-800 bg-amber-200/80 hover:bg-amber-200 px-2 sm:px-2.5 py-0.5 rounded-lg transition-all shadow-2xs cursor-pointer active:scale-95 shrink-0"
+                    className="w-full inline-flex items-center justify-center gap-1 text-[10.5px] font-bold text-amber-900 bg-amber-200/80 hover:bg-amber-300 py-1 px-2 rounded-lg transition-all active:scale-95 shadow-2xs"
                     title="Hand over collected cash to Finance Department"
                   >
-                    <Send className="h-2.5 w-2.5" />
+                    <Send className="h-3 w-3" />
                     <span>Hand Over</span>
                   </button>
-                ) : (
-                  <Link
-                    to="/payments"
-                    className="text-[10px] sm:text-[10.5px] font-semibold text-amber-700 hover:text-amber-800 flex items-center gap-0.5 shrink-0"
-                  >
-                    <span>Ledger</span>
-                    <ChevronRight className="h-3 w-3" />
-                  </Link>
                 )}
               </div>
             </div>
 
-            {/* Card 4: Earned Incentive (Row 2, Col 1 of the 4 cards) */}
-            <div className="col-span-1 rounded-2xl sm:rounded-3xl border border-indigo-200/90 bg-gradient-to-br from-indigo-500/[0.08] via-purple-50/40 to-white p-3.5 sm:p-5 shadow-xs hover:shadow-sm transition-all relative overflow-hidden group min-w-0 flex flex-col justify-between">
+            {/* Card 4: Earned Incentive */}
+            <div className="col-span-1 rounded-2xl sm:rounded-3xl border border-indigo-200/90 bg-gradient-to-br from-indigo-500/[0.08] via-purple-50/40 to-white p-2.5 sm:p-5 shadow-xs hover:shadow-sm transition-all relative overflow-hidden group min-w-0 flex flex-col justify-between">
               <div>
-                <div className="flex items-center justify-between gap-1.5">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <div className="h-8 w-8 sm:h-9 sm:w-9 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center shrink-0 shadow-2xs">
-                      <Target className="h-4 w-4" />
-                    </div>
-                    <div className="min-w-0">
-                      <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-indigo-950 block truncate">
-                        Earned Incentive
-                      </span>
-                      <div className="text-[10px] text-slate-400 font-medium sm:hidden truncate">Performance Bonus</div>
-                    </div>
+                <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+                  <div className="h-7 w-7 sm:h-9 sm:w-9 rounded-lg sm:rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center shrink-0 shadow-2xs">
+                    <Target className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                   </div>
+                  <span className="text-xs sm:text-sm font-bold text-slate-800 leading-tight truncate">
+                    Earned Incentive
+                  </span>
                 </div>
 
-                <div className="mt-2.5 sm:mt-3 min-w-0">
+                <div className="mt-1.5 sm:mt-3 min-w-0">
                   <AmountDisplay amount={127500} className="text-slate-900 font-extrabold" />
                 </div>
               </div>
 
-              <div className="mt-2 sm:mt-2.5 text-[10.5px] sm:text-xs text-slate-500 truncate pt-1 border-t border-indigo-100/80">
+              <div className="hidden sm:block mt-2 text-[11px] sm:text-xs text-indigo-700 font-semibold">
                 Tier 2 Commission (3.0%)
               </div>
             </div>
 
-            {/* Card 5: Overdue Accounts (Row 2, Col 2 of the 4 cards) */}
-            <div className="col-span-1 rounded-2xl sm:rounded-3xl border border-rose-200/90 bg-gradient-to-br from-rose-500/[0.08] via-red-50/40 to-white p-3.5 sm:p-5 shadow-xs hover:shadow-sm transition-all relative overflow-hidden group min-w-0 flex flex-col justify-between">
+            {/* Card 5: Overdue Accounts */}
+            <div className="col-span-1 rounded-2xl sm:rounded-3xl border border-rose-200/90 bg-gradient-to-br from-rose-500/[0.08] via-red-50/40 to-white p-2.5 sm:p-5 shadow-xs hover:shadow-sm transition-all relative overflow-hidden group min-w-0 flex flex-col justify-between">
               <div>
-                <div className="flex items-center justify-between gap-1.5">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <div className="h-8 w-8 sm:h-9 sm:w-9 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center shrink-0 shadow-2xs">
-                      <AlertCircle className="h-4 w-4" />
-                    </div>
-                    <div className="min-w-0">
-                      <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-rose-950 block truncate">
-                        Overdue Accounts
-                      </span>
-                      <div className="text-[10px] text-slate-400 font-medium sm:hidden truncate">Requiring Follow-up</div>
-                    </div>
+                <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+                  <div className="h-7 w-7 sm:h-9 sm:w-9 rounded-lg sm:rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center shrink-0 shadow-2xs">
+                    <AlertCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                   </div>
+                  <span className="text-xs sm:text-sm font-bold text-slate-800 leading-tight truncate">
+                    Overdue Accounts
+                  </span>
                 </div>
 
-                <div className="mt-2.5 sm:mt-3">
+                <div className="mt-1.5 sm:mt-3">
                   <div className="text-base sm:text-[22px] font-extrabold tracking-tight tabular-nums text-rose-600 leading-tight">
                     2 Dealers
                   </div>
                 </div>
               </div>
 
-              <div className="mt-2 sm:mt-2.5 text-[10.5px] sm:text-xs text-slate-500 truncate pt-1 border-t border-rose-100/80">
+              <div className="hidden sm:block mt-2 text-[11px] sm:text-xs text-rose-700 font-semibold">
                 Total: LKR 450,000
               </div>
             </div>
           </div>
         </div>
 
-      {/* 4. Warranty Note Follow-up Alert (Section 23 - Arranged nicely for mobile app view) */}
-      <div className="rounded-2xl sm:rounded-3xl border border-amber-200/90 bg-gradient-to-br from-amber-50/90 via-orange-50/30 to-white p-3.5 sm:p-4 shadow-xs">
+      {/* 4. Warranty Note Follow-up Alert (Section 23) */}
+      <div className="rounded-2xl sm:rounded-3xl border border-amber-300 bg-amber-50/70 p-3.5 sm:p-4 shadow-xs">
         <div className="flex items-start gap-3">
-          <div className="p-2.5 rounded-xl bg-amber-100 text-amber-800 shrink-0 mt-0.5 shadow-2xs">
-            <ShieldAlert className="h-5 w-5" />
+          <div className="p-2 rounded-xl bg-amber-100 text-amber-800 shrink-0">
+            <ShieldAlert className="h-4 w-4 sm:h-5 sm:w-5" />
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between gap-2 flex-wrap">
-              <h3 className="text-xs font-bold text-amber-950 uppercase tracking-wide">
+              <h3 className="text-xs font-bold text-amber-900 uppercase tracking-wide">
                 Warranty Note Follow-Up Required
               </h3>
-              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-100 text-amber-800 border border-amber-200">
-                22 Pending Notes
-              </span>
+              <Badge variant="warning" className="text-[10px] rounded-full">22 Pending Notes</Badge>
             </div>
-            <p className="mt-1 text-xs text-amber-900/90 leading-relaxed">
-              <strong>Muthurajawela Engineering:</strong> 85 units sold, only 62 warranty registration slips received back from customer shop. Follow up during next dealer visit.
+            <p className="mt-1 text-xs text-amber-800 leading-snug">
+              Muthurajawela Engineering: 85 units sold, only 62 warranty registration slips received back from customer shop. Follow up during next dealer visit.
             </p>
-            <div className="mt-3 flex items-center gap-2">
-              <Link to="/warranty">
-                <Button size="sm" variant="outline" className="h-8 text-xs font-semibold border-amber-300 text-amber-900 bg-white hover:bg-amber-100/70 rounded-xl active:scale-95 shadow-2xs">
-                  Open Warranty Desk
-                </Button>
-              </Link>
-              <a
-                href="tel:+94312234567"
-                className="inline-flex items-center gap-1.5 px-3 h-8 rounded-xl text-xs font-semibold text-amber-900 bg-amber-200/70 hover:bg-amber-200 active:scale-95 transition-all shadow-2xs"
-              >
-                <Phone className="h-3.5 w-3.5" /> Call Dealer
-              </a>
-            </div>
           </div>
         </div>
       </div>
@@ -605,9 +565,6 @@ export function SalesRepDashboard() {
                   <CreditCard className="h-4 w-4 text-emerald-600" />
                   Pending Payments & Route Receivables
                 </CardTitle>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  Outstanding balances for your assigned territory accounts requiring field collection.
-                </p>
               </div>
               <Link to="/payments/collect">
                 <Button variant="ghost" size="sm" className="text-xs text-primary gap-1 font-semibold hover:bg-primary-light">
