@@ -201,33 +201,33 @@ export function SalesRepDashboard() {
           - MOBILE (< md): Curved brand header in primary gradient, fluid waves, mobile search
           - DESKTOP (md:): Clean enterprise white card, standard layout, desktop actions
       */}
-      <div className="relative -mx-3.5 -mt-3.5 md:mx-0 md:mt-0 p-5 md:p-6 pb-7 md:pb-6 rounded-b-[2.5rem] md:rounded-2xl bg-gradient-to-br from-primary via-primary-hover to-primary-active md:from-white md:via-white md:to-white text-primary-foreground md:text-slate-900 shadow-md md:shadow-xs shadow-primary/20 md:border md:border-slate-200/90 overflow-hidden md:overflow-visible transition-all">
+      <div className="relative -mx-3.5 -mt-3.5 md:mx-0 md:mt-0 p-3 sm:p-4 md:p-6 rounded-b-2xl md:rounded-2xl bg-gradient-to-br from-primary via-primary-hover to-primary-active md:from-white md:via-white md:to-white text-primary-foreground md:text-slate-900 shadow-sm md:shadow-xs shadow-primary/15 md:border md:border-slate-200/90 overflow-hidden md:overflow-visible transition-all">
         {/* Fluid Decorative Ambient Waves (Mobile only) */}
-        <div className="block md:hidden absolute -top-12 -right-12 w-48 h-48 rounded-full bg-white/10 blur-2xl pointer-events-none" />
-        <div className="block md:hidden absolute -bottom-10 -left-10 w-40 h-40 rounded-full bg-white/5 blur-xl pointer-events-none" />
+        <div className="block md:hidden absolute -top-12 -right-12 w-36 h-36 rounded-full bg-white/10 blur-xl pointer-events-none" />
+        <div className="block md:hidden absolute -bottom-10 -left-10 w-32 h-32 rounded-full bg-white/5 blur-lg pointer-events-none" />
 
-        <div className="relative z-10 space-y-4 md:space-y-0 md:flex md:items-center md:justify-between md:gap-4">
+        <div className="relative z-10 space-y-2.5 md:space-y-0 md:flex md:items-center md:justify-between md:gap-4">
           {/* Left: Avatar (mobile) + Greeting & Territory */}
-          <div className="flex items-start md:items-center gap-3">
+          <div className="flex items-center gap-2.5">
             {/* User Avatar Squircle (Mobile only) */}
-            <div className="flex md:hidden h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white/20 backdrop-blur-md text-white font-extrabold text-sm ring-2 ring-white/30">
+            <div className="flex md:hidden h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/20 backdrop-blur-md text-white font-extrabold text-xs ring-1.5 ring-white/30">
               KW
             </div>
 
-            <div>
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold tracking-wide uppercase bg-white/20 text-white md:bg-primary-light md:text-primary-text md:border md:border-primary-border backdrop-blur-sm">
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold tracking-wide uppercase bg-white/20 text-white md:bg-primary-light md:text-primary-text md:border md:border-primary-border backdrop-blur-sm">
                   Field Representative Hub
                 </span>
-                <span className="inline-flex md:hidden items-center gap-1 px-2 py-0.5 rounded-full text-[10.5px] font-medium bg-emerald-400/20 text-emerald-200 border border-emerald-300/30">
+                <span className="inline-flex md:hidden items-center gap-1 px-1.5 py-0.5 rounded-full text-[9.5px] font-medium bg-emerald-400/20 text-emerald-200 border border-emerald-300/30">
                   <span className="h-1.5 w-1.5 rounded-full bg-emerald-300 animate-pulse" />
                   Active Route
                 </span>
               </div>
-              <h1 className="text-xl md:text-2xl font-bold tracking-tight text-white md:text-slate-900 mt-1">
+              <h1 className="text-base sm:text-lg md:text-2xl font-bold tracking-tight text-white md:text-slate-900 mt-0.5 truncate">
                 Good Day, Kasun
               </h1>
-              <p className="text-xs text-white/80 md:text-slate-500 mt-0.5 flex items-center gap-1.5 flex-wrap">
+              <p className="text-[11px] sm:text-xs text-white/80 md:text-slate-500 mt-0.5 flex items-center gap-1.5 flex-wrap">
                 <MapPin className="h-3 w-3 text-white md:text-rose-500 shrink-0 hidden sm:inline" />
                 <span>Colombo Central Territory</span>
                 <span>•</span>
@@ -239,45 +239,24 @@ export function SalesRepDashboard() {
           </div>
 
           {/* Right: Quick Action Buttons (Customer Collections & New Order) */}
-          <div className="grid grid-cols-2 md:flex md:items-center gap-2 pt-1 md:pt-0 shrink-0 w-full md:w-auto">
+          <div className="grid grid-cols-2 md:flex md:items-center gap-2 pt-0.5 md:pt-0 shrink-0 w-full md:w-auto">
             <Link to="/payments/collect" className="w-full md:w-auto">
               <Button
                 size="sm"
-                className="w-full md:w-auto h-10 md:h-9 gap-1.5 text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-xs active:scale-[0.98] border-0"
+                className="w-full md:w-auto h-8 sm:h-9 gap-1 text-[11px] sm:text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg shadow-xs active:scale-[0.98] border-0"
               >
-                <Banknote className="h-4 w-4 md:h-3.5 md:w-3.5" /> Customer Collections
+                <Banknote className="h-3.5 w-3.5" /> Customer Collections
               </Button>
             </Link>
             <Link to="/orders" className="w-full md:w-auto">
               <Button
                 size="sm"
-                className="w-full md:w-auto h-10 md:h-9 gap-1.5 text-xs bg-white md:bg-primary text-primary md:text-primary-foreground hover:bg-white/90 md:hover:bg-primary-hover font-bold md:font-semibold rounded-xl shadow-xs active:scale-[0.98] border-0"
+                className="w-full md:w-auto h-8 sm:h-9 gap-1 text-[11px] sm:text-xs bg-white md:bg-primary text-primary md:text-primary-foreground hover:bg-white/90 md:hover:bg-primary-hover font-bold md:font-semibold rounded-lg shadow-xs active:scale-[0.98] border-0"
               >
-                <PlusCircle className="h-4 w-4 md:h-3.5 md:w-3.5" /> New Order
+                <PlusCircle className="h-3.5 w-3.5" /> New Order
               </Button>
             </Link>
           </div>
-        </div>
-
-        {/* Mobile Search Bar tucked inside banner (Mobile only) */}
-        <div className="block md:hidden relative pt-3 border-t border-white/15">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search dealer, phone, or code..."
-            className="w-full h-11 pl-10 pr-9 rounded-2xl bg-white text-slate-900 placeholder-slate-400 text-xs font-medium shadow-md shadow-black/10 focus:outline-none focus:ring-2 focus:ring-primary transition-all"
-          />
-          {searchQuery && (
-            <button
-              onClick={() => setSearchQuery('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600"
-              aria-label="Clear search"
-            >
-              <X className="h-3.5 w-3.5" />
-            </button>
-          )}
         </div>
       </div>
 
@@ -431,68 +410,72 @@ export function SalesRepDashboard() {
               </div>
             </div>
 
-            {/* Card 2: Route Collections (Hero Full-width on mobile to guarantee LKR 2,650,000.00 never clips) */}
-            <div className="col-span-2 lg:col-span-1 rounded-2xl sm:rounded-3xl border border-blue-200/90 bg-gradient-to-br from-blue-500/[0.08] via-sky-50/40 to-white p-4 sm:p-5 shadow-xs hover:shadow-sm transition-all relative overflow-hidden group min-w-0">
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2.5">
-                  <div className="h-9 w-9 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center shrink-0 shadow-2xs">
-                    <FileCheck2 className="h-4 w-4" />
+            {/* Card 2: Route Collections (Row 1, Col 1 of the 4 cards) */}
+            <div className="col-span-1 rounded-2xl sm:rounded-3xl border border-blue-200/90 bg-gradient-to-br from-blue-500/[0.08] via-sky-50/40 to-white p-3.5 sm:p-5 shadow-xs hover:shadow-sm transition-all relative overflow-hidden group min-w-0 flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between gap-1.5">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <div className="h-8 w-8 sm:h-9 sm:w-9 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center shrink-0 shadow-2xs">
+                      <FileCheck2 className="h-4 w-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-blue-950 block truncate">
+                        Route Collections
+                      </span>
+                      <div className="text-[10px] text-slate-400 font-medium sm:hidden truncate">Collected to Date</div>
+                    </div>
                   </div>
-                  <div>
-                    <span className="text-xs font-bold uppercase tracking-wider text-blue-950">
-                      Route Collections
-                    </span>
-                    <div className="text-[10px] text-slate-400 font-medium sm:hidden">Collected to Date</div>
-                  </div>
+                  <span className="hidden sm:inline-flex items-center gap-1 text-[10.5px] font-medium text-blue-800 bg-blue-100/80 px-2 py-0.5 rounded-full border border-blue-200/70 shrink-0">
+                    Field Active
+                  </span>
                 </div>
-                <span className="inline-flex items-center gap-1 text-[11px] font-medium text-blue-800 bg-blue-100/80 px-2 py-0.5 rounded-full border border-blue-200/70">
-                  Field Active
-                </span>
+
+                <div className="mt-2.5 sm:mt-3 min-w-0">
+                  <AmountDisplay amount={2650000} className="text-slate-900 font-extrabold" />
+                </div>
               </div>
 
-              <div className="mt-3 min-w-0">
-                <AmountDisplay amount={2650000} className="text-slate-900 font-extrabold" />
-              </div>
-
-              <div className="mt-2.5 flex items-center justify-between text-xs text-slate-500 pt-1 border-t border-blue-100/80">
-                <span className="text-[11px] text-slate-500">Pending Finance: LKR 450,000.00</span>
-                <span className="text-[10.5px] font-semibold text-blue-600">89% verified</span>
+              <div className="mt-2 sm:mt-2.5 flex items-center justify-between text-xs text-slate-500 pt-1 border-t border-blue-100/80">
+                <span className="text-[10.5px] sm:text-[11px] text-slate-500 truncate">Pending: LKR 450,000</span>
+                <span className="text-[10px] sm:text-[10.5px] font-semibold text-blue-600 shrink-0">89% verified</span>
               </div>
             </div>
 
-            {/* Card 3: Cash to Hand Over (Hero Full-width on mobile to guarantee currency amounts never clip, 1-col on desktop) */}
-            <div className="col-span-2 lg:col-span-1 rounded-2xl sm:rounded-3xl border border-amber-200/90 bg-gradient-to-br from-amber-500/[0.08] via-amber-50/40 to-white p-4 sm:p-5 shadow-xs hover:shadow-sm transition-all relative overflow-hidden group min-w-0">
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2.5">
-                  <div className="h-9 w-9 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0 shadow-2xs">
-                    <Banknote className="h-4 w-4" />
+            {/* Card 3: Cash to Hand Over (Row 1, Col 2 of the 4 cards) */}
+            <div className="col-span-1 rounded-2xl sm:rounded-3xl border border-amber-200/90 bg-gradient-to-br from-amber-500/[0.08] via-amber-50/40 to-white p-3.5 sm:p-5 shadow-xs hover:shadow-sm transition-all relative overflow-hidden group min-w-0 flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between gap-1.5">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <div className="h-8 w-8 sm:h-9 sm:w-9 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0 shadow-2xs">
+                      <Banknote className="h-4 w-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-amber-950 block truncate">
+                        Cash to Hand Over
+                      </span>
+                      <div className="text-[10px] text-slate-400 font-medium sm:hidden truncate">In Rep Possession</div>
+                    </div>
                   </div>
-                  <div>
-                    <span className="text-xs font-bold uppercase tracking-wider text-amber-950">
-                      Cash to Hand Over
+                  {cashToHandOver > 0 ? (
+                    <span className="inline-flex items-center gap-1 text-[10px] sm:text-[11px] font-bold text-amber-800 bg-amber-100/90 px-2 sm:px-2.5 py-0.5 rounded-full border border-amber-200/80 shrink-0">
+                      <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
+                      <span>To Hand Over</span>
                     </span>
-                    <div className="text-[10px] text-slate-400 font-medium sm:hidden">In Rep Possession</div>
-                  </div>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 text-[10px] sm:text-[11px] font-semibold text-emerald-800 bg-emerald-100/90 px-2 py-0.5 rounded-full border border-emerald-200/80 shrink-0">
+                      <CheckCircle2 className="h-3 w-3 text-emerald-600" />
+                      <span>Settled</span>
+                    </span>
+                  )}
                 </div>
-                {cashToHandOver > 0 ? (
-                  <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-800 bg-amber-100/90 px-2.5 py-0.5 rounded-full border border-amber-200/80">
-                    <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
-                    To Hand Over
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-800 bg-emerald-100/90 px-2 py-0.5 rounded-full border border-emerald-200/80">
-                    <CheckCircle2 className="h-3 w-3 text-emerald-600" />
-                    Settled
-                  </span>
-                )}
+
+                <div className="mt-2.5 sm:mt-3 min-w-0">
+                  <AmountDisplay amount={cashToHandOver} className="text-slate-900 font-extrabold" />
+                </div>
               </div>
 
-              <div className="mt-3 min-w-0">
-                <AmountDisplay amount={cashToHandOver} className="text-slate-900 font-extrabold" />
-              </div>
-
-              <div className="mt-2.5 flex items-center justify-between text-xs text-slate-500 pt-1 border-t border-amber-100/80">
-                <span className="text-[11px] text-slate-500 truncate">
+              <div className="mt-2 sm:mt-2.5 flex items-center justify-between text-xs text-slate-500 pt-1 border-t border-amber-100/80">
+                <span className="text-[10.5px] sm:text-[11px] text-slate-500 truncate">
                   {pendingHandoverCount > 0
                     ? `Field Cash: ${pendingHandoverCount} ${pendingHandoverCount === 1 ? 'collection' : 'collections'}`
                     : 'All collected cash handed over'}
@@ -501,7 +484,7 @@ export function SalesRepDashboard() {
                   <button
                     type="button"
                     onClick={() => setCashHandoverModalOpen(true)}
-                    className="inline-flex items-center gap-1 text-[10.5px] font-bold text-amber-800 bg-amber-200/80 hover:bg-amber-200 px-2.5 py-0.5 rounded-lg transition-all shadow-2xs cursor-pointer active:scale-95 shrink-0"
+                    className="inline-flex items-center gap-1 text-[10px] sm:text-[10.5px] font-bold text-amber-800 bg-amber-200/80 hover:bg-amber-200 px-2 sm:px-2.5 py-0.5 rounded-lg transition-all shadow-2xs cursor-pointer active:scale-95 shrink-0"
                     title="Hand over collected cash to Finance Department"
                   >
                     <Send className="h-2.5 w-2.5" />
@@ -510,7 +493,7 @@ export function SalesRepDashboard() {
                 ) : (
                   <Link
                     to="/payments"
-                    className="text-[10.5px] font-semibold text-amber-700 hover:text-amber-800 flex items-center gap-0.5 shrink-0"
+                    className="text-[10px] sm:text-[10.5px] font-semibold text-amber-700 hover:text-amber-800 flex items-center gap-0.5 shrink-0"
                   >
                     <span>Ledger</span>
                     <ChevronRight className="h-3 w-3" />
@@ -519,48 +502,58 @@ export function SalesRepDashboard() {
               </div>
             </div>
 
-            {/* Card 4: Earned Incentive (Half-width on mobile) */}
-            <div className="col-span-1 rounded-2xl sm:rounded-3xl border border-indigo-200/90 bg-gradient-to-br from-indigo-500/[0.08] via-purple-50/40 to-white p-3.5 sm:p-5 shadow-xs hover:shadow-sm transition-all relative overflow-hidden group min-w-0">
-              <div className="flex items-center justify-between gap-1.5">
-                <div className="flex items-center gap-2">
-                  <div className="h-8 w-8 sm:h-9 sm:w-9 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center shrink-0 shadow-2xs">
-                    <Target className="h-4 w-4" />
+            {/* Card 4: Earned Incentive (Row 2, Col 1 of the 4 cards) */}
+            <div className="col-span-1 rounded-2xl sm:rounded-3xl border border-indigo-200/90 bg-gradient-to-br from-indigo-500/[0.08] via-purple-50/40 to-white p-3.5 sm:p-5 shadow-xs hover:shadow-sm transition-all relative overflow-hidden group min-w-0 flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between gap-1.5">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <div className="h-8 w-8 sm:h-9 sm:w-9 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center shrink-0 shadow-2xs">
+                      <Target className="h-4 w-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-indigo-950 block truncate">
+                        Earned Incentive
+                      </span>
+                      <div className="text-[10px] text-slate-400 font-medium sm:hidden truncate">Performance Bonus</div>
+                    </div>
                   </div>
-                  <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-indigo-950 truncate">
-                    Earned Incentive
-                  </span>
+                </div>
+
+                <div className="mt-2.5 sm:mt-3 min-w-0">
+                  <AmountDisplay amount={127500} className="text-slate-900 font-extrabold" />
                 </div>
               </div>
 
-              <div className="mt-2.5 min-w-0">
-                <AmountDisplay amount={127500} className="text-slate-900 font-extrabold" />
-              </div>
-
-              <div className="mt-1.5 sm:mt-2 text-[10.5px] sm:text-xs text-slate-500 truncate">
+              <div className="mt-2 sm:mt-2.5 text-[10.5px] sm:text-xs text-slate-500 truncate pt-1 border-t border-indigo-100/80">
                 Tier 2 Commission (3.0%)
               </div>
             </div>
 
-            {/* Card 5: Overdue Accounts (Half-width on mobile fits 2 Dealers cleanly) */}
-            <div className="col-span-1 rounded-2xl sm:rounded-3xl border border-rose-200/90 bg-gradient-to-br from-rose-500/[0.08] via-red-50/40 to-white p-3.5 sm:p-5 shadow-xs hover:shadow-sm transition-all relative overflow-hidden group">
-              <div className="flex items-center justify-between gap-1.5">
-                <div className="flex items-center gap-2">
-                  <div className="h-8 w-8 sm:h-9 sm:w-9 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center shrink-0 shadow-2xs">
-                    <AlertCircle className="h-4 w-4" />
+            {/* Card 5: Overdue Accounts (Row 2, Col 2 of the 4 cards) */}
+            <div className="col-span-1 rounded-2xl sm:rounded-3xl border border-rose-200/90 bg-gradient-to-br from-rose-500/[0.08] via-red-50/40 to-white p-3.5 sm:p-5 shadow-xs hover:shadow-sm transition-all relative overflow-hidden group min-w-0 flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between gap-1.5">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <div className="h-8 w-8 sm:h-9 sm:w-9 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center shrink-0 shadow-2xs">
+                      <AlertCircle className="h-4 w-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-rose-950 block truncate">
+                        Overdue Accounts
+                      </span>
+                      <div className="text-[10px] text-slate-400 font-medium sm:hidden truncate">Requiring Follow-up</div>
+                    </div>
                   </div>
-                  <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-rose-950 truncate">
-                    Overdue Accounts
-                  </span>
+                </div>
+
+                <div className="mt-2.5 sm:mt-3">
+                  <div className="text-base sm:text-[22px] font-extrabold tracking-tight tabular-nums text-rose-600 leading-tight">
+                    2 Dealers
+                  </div>
                 </div>
               </div>
 
-              <div className="mt-2.5">
-                <div className="text-base sm:text-[22px] font-extrabold tracking-tight tabular-nums text-rose-600 leading-tight">
-                  2 Dealers
-                </div>
-              </div>
-
-              <div className="mt-1.5 sm:mt-2 text-[10.5px] sm:text-xs text-slate-500 truncate">
+              <div className="mt-2 sm:mt-2.5 text-[10.5px] sm:text-xs text-slate-500 truncate pt-1 border-t border-rose-100/80">
                 Total: LKR 450,000
               </div>
             </div>
@@ -625,7 +618,7 @@ export function SalesRepDashboard() {
 
             <CardContent className="p-3.5 sm:p-6 space-y-3">
               {/* Mobile Filter Chips Bar (Quick touch toggles for field reps) */}
-              <div className="flex items-center justify-between gap-2 pb-1">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-1">
                 <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
                   <button
                     type="button"
@@ -661,9 +654,24 @@ export function SalesRepDashboard() {
                     Within Terms (2)
                   </button>
                 </div>
-                <span className="text-[11px] text-slate-400 font-mono hidden sm:inline">
-                  3 Dealers Listed
-                </span>
+                <div className="relative w-full sm:w-48">
+                  <Search className="absolute left-2.5 top-2 h-3.5 w-3.5 text-slate-400" />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search dealer..."
+                    className="w-full h-7 pl-8 pr-7 rounded-lg bg-slate-50 border border-slate-200 text-slate-900 placeholder-slate-400 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
+                  />
+                  {searchQuery && (
+                    <button
+                      onClick={() => setSearchQuery('')}
+                      className="absolute right-2 top-1.5 text-slate-400 hover:text-slate-600"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  )}
+                </div>
               </div>
 
               {/* Account Rows / Mobile App Cards */}
