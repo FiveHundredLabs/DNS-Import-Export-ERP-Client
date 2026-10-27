@@ -484,8 +484,12 @@ export class OrderService {
       status: nextStatus,
       isSpecialApproval: evalResult.isSpecialApproval,
       specialApprovalReasons: evalResult.specialApprovalReasons,
-      targetApproverRole: evalResult.targetApproverRole,
-      currentApproverRole: evalResult.targetApproverRole,
+      targetApproverRole: isPreApprovalModification && !evalResult.isSpecialApproval
+        ? (existing.targetApproverRole || evalResult.targetApproverRole)
+        : evalResult.targetApproverRole,
+      currentApproverRole: isPreApprovalModification && !evalResult.isSpecialApproval
+        ? (existing.currentApproverRole || evalResult.targetApproverRole)
+        : evalResult.targetApproverRole,
       approvalRequestId,
       approvalHistory: [...existing.approvalHistory, historyEntry],
     });
