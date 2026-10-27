@@ -145,13 +145,39 @@ const INITIAL_BILLS: VendorBill[] = [
         vatAmount: 198000,
         lineTotal: 1298000,
       },
+      {
+        id: 'bli-1-2',
+        productId: 'prod-002',
+        productName: 'Schneider Acti9 63A Triple Pole MCB',
+        sku: 'DNS-MCB-63A-3P',
+        receivedQuantity: 100,
+        draftUnitCost: 5800,
+        unitCost: 5800,
+        lineDiscount: 0,
+        vatCode: 'STANDARD_18',
+        vatAmount: 104400,
+        lineTotal: 684400,
+      },
+      {
+        id: 'bli-1-3',
+        productId: 'prod-006',
+        productName: 'Schneider Easy9 40A 30mA 2-Pole RCCB',
+        sku: 'DNS-RCCB-40A-2P',
+        receivedQuantity: 150,
+        draftUnitCost: 4850,
+        unitCost: 4850,
+        lineDiscount: 0,
+        vatCode: 'STANDARD_18',
+        vatAmount: 130950,
+        lineTotal: 858450,
+      },
     ],
     freightCharges: 15000,
     otherLandingCosts: 5000,
-    subtotal: 1100000,
-    vatTotal: 198000,
-    totalAmount: 1318000,
-    balanceDue: 1318000,
+    subtotal: 2407500,
+    vatTotal: 433350,
+    totalAmount: 2860850,
+    balanceDue: 2860850,
     status: 'OPEN',
     createdAt: '2026-09-10T10:00:00Z',
   },
@@ -179,13 +205,39 @@ const INITIAL_BILLS: VendorBill[] = [
         vatAmount: 102600,
         lineTotal: 672600,
       },
+      {
+        id: 'bli-2-2',
+        productId: 'prod-007',
+        productName: 'Schneider Acti9 100A 4-Pole Main Isolator Switch',
+        sku: 'DNS-ISO-100A-4P',
+        receivedQuantity: 50,
+        draftUnitCost: 7200,
+        unitCost: 7200,
+        lineDiscount: 0,
+        vatCode: 'STANDARD_18',
+        vatAmount: 64800,
+        lineTotal: 424800,
+      },
+      {
+        id: 'bli-2-3',
+        productId: 'prod-008',
+        productName: 'Schneider Resi9 16A Single Pole Type B MCB',
+        sku: 'DNS-MCB-16A-1P',
+        receivedQuantity: 200,
+        draftUnitCost: 1450,
+        unitCost: 1450,
+        lineDiscount: 0,
+        vatCode: 'STANDARD_18',
+        vatAmount: 52200,
+        lineTotal: 342200,
+      },
     ],
     freightCharges: 8000,
     otherLandingCosts: 2000,
-    subtotal: 570000,
-    vatTotal: 102600,
-    totalAmount: 682600,
-    balanceDue: 682600,
+    subtotal: 1220000,
+    vatTotal: 219600,
+    totalAmount: 1449600,
+    balanceDue: 1449600,
     status: 'OPEN',
     createdAt: '2026-09-20T14:30:00Z',
   },
@@ -213,13 +265,39 @@ const INITIAL_BILLS: VendorBill[] = [
         vatAmount: 278550,
         lineTotal: 1826050,
       },
+      {
+        id: 'bli-3-2',
+        productId: 'prod-004',
+        productName: 'Philips SmartBright 600x600 48W Recessed Panel',
+        sku: 'DNS-LED-PNL-48W',
+        receivedQuantity: 100,
+        draftUnitCost: 4200,
+        unitCost: 4200,
+        lineDiscount: 0,
+        vatCode: 'STANDARD_18',
+        vatAmount: 75600,
+        lineTotal: 495600,
+      },
+      {
+        id: 'bli-3-3',
+        productId: 'prod-010',
+        productName: 'Schneider TeSys D 25A 3-Pole AC3 Magnetic Contactor',
+        sku: 'DNS-CON-25A-3P',
+        receivedQuantity: 40,
+        draftUnitCost: 9600,
+        unitCost: 9600,
+        lineDiscount: 0,
+        vatCode: 'STANDARD_18',
+        vatAmount: 69120,
+        lineTotal: 453120,
+      },
     ],
     freightCharges: 12000,
     otherLandingCosts: 3000,
-    subtotal: 1547500,
-    vatTotal: 278550,
-    totalAmount: 1841050,
-    balanceDue: 1841050,
+    subtotal: 2367500,
+    vatTotal: 423270,
+    totalAmount: 2805770,
+    balanceDue: 2805770,
     status: 'OPEN',
     createdAt: '2026-09-15T09:00:00Z',
   },
@@ -227,7 +305,7 @@ const INITIAL_BILLS: VendorBill[] = [
 
 class AccountsPayableService {
   private bills: VendorBill[] = [];
-  private grnStatuses: Record<string, 'COSTED' | 'SUBMITTED' | 'APPROVED'> = {};
+  private grnStatuses: Record<string, 'COSTED' | 'SUBMITTED' | 'APPROVED' | 'PRICED'> = {};
   private advances: SupplierAdvance[] = [];
   private debitNotes: SupplierDebitNote[] = [];
 
@@ -444,6 +522,11 @@ class AccountsPayableService {
   getGRNById(grnId: string): GRN | null {
     const all = this.getAvailableGRNs();
     return all.find((g) => g.id === grnId || g.grnNumber === grnId) || null;
+  }
+
+  setGRNStatus(grnId: string, status: 'COSTED' | 'SUBMITTED' | 'APPROVED' | 'PRICED') {
+    this.grnStatuses[grnId] = status;
+    this.save();
   }
 
   /**
@@ -1146,7 +1229,15 @@ class AccountsPayableService {
 
     // Revert GL entry if posted
     if (bill.journalEntryId) {
-      await financeRepository.voidJournalEntry(bill.journalEntryId, reason);
+      try {
+        if (typeof (financeRepository as any).reverseJournalEntry === 'function') {
+          await (financeRepository as any).reverseJournalEntry(bill.journalEntryId, reason);
+        } else {
+          await financeRepository.voidJournalEntry(bill.journalEntryId, reason);
+        }
+      } catch (err: any) {
+        console.warn(`Could not reverse journal entry ${bill.journalEntryId}:`, err);
+      }
     }
 
     // Restore GRN status back to APPROVED so it can be re-costed or inspected

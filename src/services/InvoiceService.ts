@@ -62,8 +62,16 @@ export class InvoiceService {
 
     // Check if an invoice already exists for this order in the repository (idempotency safeguard)
     const existingInvoices = await this.repo.getByOrderId(order.id);
-    if (existingInvoices.length > 0) {
+    const existingFinalized = existingInvoices.find(
+      (inv) => inv.status !== 'DRAFT' && inv.status !== 'CANCELLED'
+    );
+    if (existingFinalized) {
       throw new Error(`Order ${order.orderNumber} is already invoiced.`);
+    }
+
+    const existingDraft = existingInvoices.find((inv) => inv.status === 'DRAFT');
+    if (existingDraft && options?.asDraft) {
+      return existingDraft;
     }
 
     const eligibleStatuses = ['APPROVED', 'PICKING', 'PARTIALLY_ISSUED', 'ISSUED'];
@@ -143,38 +151,55 @@ export class InvoiceService {
     const invoiceNumber = `INV-${year}-${seq}`;
     const initialStatus = options?.asDraft ? 'DRAFT' : 'ISSUED';
 
-    // Create the invoice domain entity
-    const newInvoice = await this.repo.create({
-      invoiceNumber,
-      orderId: order.id,
-      orderNumber: order.orderNumber,
-      customerId: order.customerId,
-      customerName: order.customerNameSnapshot,
-      customerCode: order.customerCodeSnapshot,
-      customerAddress: order.customerAddressSnapshot,
-      customerPhone: order.customerPhoneSnapshot,
-      salesRepId: order.salesRepId,
-      salesRepName: order.salesRepNameSnapshot,
-      issueDate: issueDateStr,
-      dueDate: dueDateStr,
-      items: invoiceItems,
-      subtotal: calculatedSubtotal,
-      discountTotal: calculatedDiscountTotal,
-      taxTotal: calculatedTaxTotal,
-      totalAmount: calculatedGrandTotal,
-      taxEnabled: taxConfig.taxEnabled,
-      taxRatePercentage: effectiveTaxRate,
-      paidAmount: 0,
-      balanceAmount: calculatedGrandTotal,
-      status: initialStatus,
-      paymentTerms: order.paymentTerms || `${creditDays} Days Credit`,
-      notes: order.notes,
-    });
+    // Create or update the invoice domain entity
+    let newInvoice: Invoice;
+    if (existingDraft) {
+      newInvoice = await this.repo.update(existingDraft.id, {
+        items: invoiceItems,
+        subtotal: calculatedSubtotal,
+        discountTotal: calculatedDiscountTotal,
+        taxTotal: calculatedTaxTotal,
+        totalAmount: calculatedGrandTotal,
+        taxEnabled: taxConfig.taxEnabled,
+        taxRatePercentage: effectiveTaxRate,
+        balanceAmount: calculatedGrandTotal,
+        status: initialStatus,
+        paymentTerms: order.paymentTerms || `${creditDays} Days Credit`,
+        notes: order.notes,
+      });
+    } else {
+      newInvoice = await this.repo.create({
+        invoiceNumber,
+        orderId: order.id,
+        orderNumber: order.orderNumber,
+        customerId: order.customerId,
+        customerName: order.customerNameSnapshot,
+        customerCode: order.customerCodeSnapshot,
+        customerAddress: order.customerAddressSnapshot,
+        customerPhone: order.customerPhoneSnapshot,
+        salesRepId: order.salesRepId,
+        salesRepName: order.salesRepNameSnapshot,
+        issueDate: issueDateStr,
+        dueDate: dueDateStr,
+        items: invoiceItems,
+        subtotal: calculatedSubtotal,
+        discountTotal: calculatedDiscountTotal,
+        taxTotal: calculatedTaxTotal,
+        totalAmount: calculatedGrandTotal,
+        taxEnabled: taxConfig.taxEnabled,
+        taxRatePercentage: effectiveTaxRate,
+        paidAmount: 0,
+        balanceAmount: calculatedGrandTotal,
+        status: initialStatus,
+        paymentTerms: order.paymentTerms || `${creditDays} Days Credit`,
+        notes: order.notes,
+      });
+    }
 
     // Advance order status to INVOICED if issued
     if (initialStatus === 'ISSUED') {
       await this.orderSvc.updateFulfillmentStatus(order.id, 'INVOICED', currentUser, {
-        comment: `Tax Invoice ${invoiceNumber} generated for LKR ${calculatedGrandTotal.toLocaleString()}.`,
+        comment: `Tax Invoice ${newInvoice.invoiceNumber} generated for LKR ${calculatedGrandTotal.toLocaleString()}.`,
       });
 
       // Update Customer Master financials (single source of truth)

@@ -79,6 +79,18 @@ export class OrderService {
                 },
               ],
             });
+
+            // Auto-generate draft invoice upon order approval from central engine
+            try {
+              const { invoiceService } = await import('./InvoiceService');
+              await invoiceService.createInvoiceFromOrder(
+                order.id,
+                { id: request.initiatorId, name: `${actorRole} Approval`, role: actorRole } as any,
+                { asDraft: true }
+              );
+            } catch (invErr) {
+              console.warn('Auto-generation of draft invoice on approval skipped:', invErr);
+            }
           } else if (action === 'REJECT' && (order.status === 'PENDING_APPROVAL' || order.status === 'SPECIAL_APPROVAL')) {
             await this.repo.update(order.id, {
               status: 'REJECTED',
@@ -625,7 +637,7 @@ export class OrderService {
       return it;
     });
 
-    return this.repo.update(id, {
+    const updated = await this.repo.update(id, {
       items: updatedItems,
       status: 'APPROVED',
       approvedById: currentUser.id,
@@ -633,6 +645,16 @@ export class OrderService {
       approvedAt: new Date().toISOString(),
       approvalHistory: [...order.approvalHistory, historyEntry],
     });
+
+    // Auto-generate draft invoice upon direct order approval
+    try {
+      const { invoiceService } = await import('./InvoiceService');
+      await invoiceService.createInvoiceFromOrder(updated.id, currentUser, { asDraft: true });
+    } catch (invErr) {
+      console.warn('Auto-generation of draft invoice on approveOrder skipped:', invErr);
+    }
+
+    return updated;
   }
 
   async rejectOrder(id: string, currentUser: User, reason: string): Promise<SalesOrder> {

@@ -46,8 +46,10 @@ export interface IFinanceRepository {
   }): Promise<JournalEntry[]>;
   getJournalEntryById(id: string): Promise<JournalEntry | null>;
   createJournalEntry(dto: CreateJournalEntryDTO): Promise<JournalEntry>;
+  postJournalEntry?(dto: CreateJournalEntryDTO): Promise<JournalEntry>;
   approveJournalEntry(id: string, approverName?: string): Promise<JournalEntry>;
   voidJournalEntry(id: string, reason?: string): Promise<JournalEntry>;
+  reverseJournalEntry?(id: string, reason?: string): Promise<JournalEntry>;
 
   // Reports
   getProfitLossReport(dateRange?: DateRangeFilter): Promise<ProfitLossReport>;

@@ -154,7 +154,7 @@ export function InvoiceDetailPage() {
             <>
               <Link to={`/invoices/${invoice.id}/edit`}>
                 <Button variant="outline" size="sm" className="text-xs gap-1.5 border-slate-300">
-                  <Edit3 className="h-3.5 w-3.5 text-slate-600" /> Edit Draft Items
+                  <Edit3 className="h-3.5 w-3.5 text-slate-600" /> Edit Draft
                 </Button>
               </Link>
               <Button
@@ -215,7 +215,7 @@ export function InvoiceDetailPage() {
                 <>
                   <Link to={`/invoices/${invoice.id}/edit`}>
                     <Button variant="outline" size="sm" className="text-xs gap-1.5 bg-white border-amber-300 hover:bg-amber-50 text-amber-900 font-semibold">
-                      <Edit3 className="h-3.5 w-3.5" /> Edit Items
+                      <Edit3 className="h-3.5 w-3.5" /> Edit Draft
                     </Button>
                   </Link>
                   <Button

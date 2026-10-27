@@ -166,9 +166,125 @@ describe('Vendor Bill Costing Workflow: Selling Price Modal & Redirection Preven
     expect(setPricesButtons.length).toBeGreaterThan(0);
     fireEvent.click(setPricesButtons[0]);
 
-    // Modal opens cleanly
+    // Modal/inline section opens cleanly without dialog popup
     await waitFor(() => {
       expect(screen.getByText(/GRN Post-Costing Price Assignment/i)).toBeDefined();
+    });
+    // Verify NOT inside role="dialog"
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('5. Confirms removal of Costing Summary ribbon and verifies Step 4 tab dismissal returns to all sections', async () => {
+    // Post bill for first GRN
+    const available = apService.getAvailableGRNs();
+    const grn = available[0];
+    await apService.postVendorBill({
+      grnId: grn.id,
+      vendorInvoiceNumber: 'INV-PRECOSTED-100',
+      invoiceDate: '2026-10-01',
+      dueDate: '2026-11-01',
+      lineItems: [
+        {
+          id: 'li-test-1',
+          productId: grn.items[0].productId,
+          productName: grn.items[0].productNameSnapshot,
+          sku: grn.items[0].skuSnapshot,
+          receivedQuantity: grn.items[0].receivedQuantity,
+          draftUnitCost: grn.items[0].unitCostSnapshot,
+          unitCost: grn.items[0].unitCostSnapshot,
+          lineDiscount: 0,
+          vatCode: 'STANDARD_18',
+          vatAmount: 0,
+          lineTotal: 1000,
+        },
+      ],
+      freightCharges: 0,
+      otherLandingCosts: 0,
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/finance/ap/bills/new']}>
+        <Routes>
+          <Route path="/finance/ap/bills/new" element={<VendorBillCostingPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    // Verify Costing Summary ribbon is completely removed
+    expect(screen.queryByText(/Supplier Base:/i)).toBeNull();
+    expect(screen.queryByText(/AP Commitment \(Cr 2010\):/i)).toBeNull();
+    expect(screen.queryByText(/True Landed \(Dr 1100\):/i)).toBeNull();
+
+    // Click "Step 4: Selling Prices" tab in navigation bar
+    const step4Tab = await screen.findByRole('button', { name: /Step 4: Selling Prices/i });
+    expect(step4Tab).toBeInTheDocument();
+    fireEvent.click(step4Tab);
+
+    // Verify Step 4 section is active
+    expect(screen.getByText(/GRN Post-Costing Price Assignment/i)).toBeInTheDocument();
+
+    // Click "Skip / Keep Defaults"
+    const skipBtn = screen.getByRole('button', { name: /skip \/ keep defaults/i });
+    fireEvent.click(skipBtn);
+
+    // Verify Step 4 section closes and resets
+    await waitFor(() => {
+      expect(screen.queryByText(/GRN Post-Costing Price Assignment/i)).toBeNull();
+    });
+    // Active view returns to all sections
+    expect(screen.getByText(/Step 1: Inbound & Invoice Items/i)).toBeInTheDocument();
+  });
+
+  it('6. Synchronizes approvals engine and updates status to PRICED after applying strategy', async () => {
+    // Seed pending approval for GRN-2025-005 in localStorage
+    localStorage.setItem(
+      'dns_erp_approval_requests',
+      JSON.stringify([
+        {
+          id: 'app-test-grn-05',
+          documentId: 'GRN-2025-005',
+          documentReferenceNumber: 'GRN-2025-005',
+          documentType: 'GRN_RECEIPT',
+          title: 'Inbound GRN Approval',
+          status: 'PENDING',
+        },
+      ])
+    );
+
+    render(
+      <MemoryRouter initialEntries={['/finance/ap/bills/new?grnId=GRN-2025-005']}>
+        <Routes>
+          <Route path="/finance/ap/bills/new" element={<VendorBillCostingPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    // Fill invoice number
+    const invInput = screen.getByPlaceholderText(/e\.g\. INV-SCH-90214/i);
+    fireEvent.change(invInput, { target: { value: 'INV-TEST-SYNC-05' } });
+
+    // Post bill
+    const postBillBtn = screen.getByRole('button', { name: /post vendor bill/i });
+    await waitFor(() => {
+      expect(postBillBtn.hasAttribute('disabled')).toBe(false);
+    });
+    fireEvent.click(postBillBtn);
+
+    // Verify localStorage approval was marked APPROVED
+    await waitFor(() => {
+      const stored = JSON.parse(localStorage.getItem('dns_erp_approval_requests') || '[]');
+      const req = stored.find((r: any) => r.documentId === 'GRN-2025-005');
+      expect(req?.status).toBe('APPROVED');
+    });
+
+    // Apply strategy in inline pricing
+    const applyBtn = await screen.findByRole('button', { name: /confirm & apply selling price strategy/i });
+    fireEvent.click(applyBtn);
+
+    // Verify GRN status updated to PRICED
+    await waitFor(() => {
+      const grn = apService.getGRNById('GRN-2025-005');
+      expect(grn?.status).toBe('PRICED');
     });
   });
 });

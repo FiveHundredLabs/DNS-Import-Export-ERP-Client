@@ -79,6 +79,8 @@ export function GRNDetailPage() {
       case 'DRAFT': return 'bg-slate-500';
       case 'SUBMITTED': return 'bg-primary-light';
       case 'APPROVED': return 'bg-green-500';
+      case 'COSTED': return 'bg-emerald-600';
+      case 'PRICED': return 'bg-indigo-600';
       case 'REJECTED': return 'bg-red-500';
       default: return 'bg-gray-500';
     }
@@ -118,7 +120,7 @@ export function GRNDetailPage() {
           <Badge className={`${getStatusColor(grn.status)} text-white border-0`}>{grn.status}</Badge>
         </div>
         <div className="flex items-center gap-2">
-          {grn.status === 'APPROVED' && !isStockKeeper && (
+          {(grn.status === 'APPROVED' || grn.status === 'SUBMITTED') && !isStockKeeper && (
             <Button
               onClick={() => navigate(`/finance/ap/bills/new?grnId=${grn.id}`)}
               className="bg-primary hover:bg-primary-hover text-white text-xs"
