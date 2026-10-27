@@ -106,8 +106,8 @@ export function CreateInvoiceModal({ isOpen, onClose }: CreateInvoiceModalProps)
         `Draft Invoice ${invoice.invoiceNumber} created from Order ${selectedOrder?.orderNumber || ''}`
       );
       onClose();
-      // Directly go to draft edit view
-      navigate(`/invoices/${invoice.id}/edit`);
+      // Directly navigate to canonical invoice view
+      navigate(`/invoices/${invoice.id}`);
     } catch (err: any) {
       console.error('Failed to create draft invoice:', err);
       toast.error(err.message || 'Failed to create invoice from order');

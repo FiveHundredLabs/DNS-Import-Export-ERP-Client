@@ -276,7 +276,7 @@ describe('5. Sales Invoice Draft & Finalize Workflow', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText(/DRAFT INVOICE/i)).toBeInTheDocument();
+      expect(screen.getAllByText(/DRAFT INVOICE/i)[0]).toBeInTheDocument();
     });
 
     expect(screen.getByText(/Awaiting Sales Manager Finalization and Issue/i)).toBeInTheDocument();
