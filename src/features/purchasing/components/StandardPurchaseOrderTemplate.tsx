@@ -159,23 +159,19 @@ function POFirstPageHeader({
           </div>
         </div>
 
-        <div className="text-right space-y-1 shrink-0">
-          <div className="flex items-center justify-end gap-2">
-            <span className="inline-block px-3 py-1 rounded bg-slate-900 text-white font-mono text-xs uppercase tracking-wider font-bold">
+        <div className="text-right shrink-0">
+          <div>
+            <h2 className="text-2xl font-black tracking-wider text-slate-900 uppercase">
               PURCHASE ORDER
-            </span>
-            <span className="text-[11px] font-semibold text-slate-600 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
-              Page {page.pageNumber} of {page.totalPages}
-            </span>
-          </div>
-
-          <div className="font-mono text-xl font-bold tabular-nums text-slate-900 pt-0.5">
-            {purchaseOrder.poNumber}
+            </h2>
+            <div className="font-mono text-sm font-bold text-slate-600 tracking-wide mt-0.5">
+              {purchaseOrder.poNumber}
+            </div>
           </div>
 
           {/* NOTE: Status badge explicitly omitted from printable document */}
 
-          <div className="text-[11px] text-slate-500 pt-0.5 space-y-0.5">
+          <div className="text-[11px] text-slate-500 pt-2 space-y-0.5">
             <p>
               PO Date: <span className="font-semibold text-slate-800">{formatDate(purchaseOrder.orderDate)}</span>
             </p>
@@ -334,12 +330,7 @@ function POFinancialSummaryAndTerms({
             <p className="text-slate-600 leading-relaxed">{purchaseOrder.notes}</p>
           </div>
         )}
-        {purchaseOrder.deliveryInstructions && (
-          <div className="p-2.5 bg-amber-50/60 rounded-lg border border-amber-200/80 text-[11px]">
-            <span className="font-bold text-amber-800 block mb-0.5">Delivery & Handling Instructions:</span>
-            <p className="text-amber-900 leading-relaxed">{purchaseOrder.deliveryInstructions}</p>
-          </div>
-        )}
+
         <div className="p-2.5 bg-blue-50/40 rounded-lg border border-blue-100 text-[10px] text-slate-600 space-y-1">
           <span className="font-bold text-slate-800 block">General Terms & Delivery Policy:</span>
           <p>1. Please reference this PO number on all packing slips, commercial invoices, and correspondence.</p>
