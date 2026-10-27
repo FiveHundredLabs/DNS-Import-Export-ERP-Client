@@ -18,6 +18,7 @@ import { SalesOrder } from '../../types/order';
 import { UnitBarcodeModal } from '../../components/inventory/UnitBarcodeModal';
 import { PaginationControls } from '../../components/common/PaginationControls';
 import { SerialNumberRecord, UnitBarcodeRecord } from '../../types/inventory';
+import { InventoryStatusBadge } from './InventoryStatusBadge';
 import { toast } from 'sonner';
 import { cn } from '../../utils/cn';
 import {
@@ -399,6 +400,13 @@ export function InventoryDashboardPage() {
     );
   }
 
+  const totalTrackedUnits =
+    (kpis.totalAvailableUnits +
+      kpis.totalReservedUnits +
+      kpis.totalDispatchedUnits +
+      kpis.totalDeliveredUnits +
+      kpis.totalDamagedUnits) || 1;
+
   return (
     <div className="p-4 sm:p-6 space-y-6 max-w-7xl mx-auto">
       {/* ── Page Header ── */}
@@ -447,8 +455,14 @@ export function InventoryDashboardPage() {
                 <p className="text-[10.5px] text-emerald-600 font-semibold truncate mt-0.5">
                   Ready for sale
                 </p>
+                <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden mt-2">
+                  <div
+                    className="h-full bg-emerald-500 rounded-full transition-all duration-500"
+                    style={{ width: `${Math.round((kpis.totalAvailableUnits / totalTrackedUnits) * 100)}%` }}
+                  />
+                </div>
               </div>
-              <div className="h-8 w-8 sm:h-9 sm:w-9 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+              <div className="h-8 w-8 sm:h-9 sm:w-9 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 self-start">
                 <Package className="h-4 w-4 sm:h-5 sm:w-5" />
               </div>
             </div>
@@ -467,8 +481,14 @@ export function InventoryDashboardPage() {
                 <p className="text-[10.5px] text-blue-600 font-semibold truncate mt-0.5">
                   Allocated to SOs
                 </p>
+                <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden mt-2">
+                  <div
+                    className="h-full bg-blue-500 rounded-full transition-all duration-500"
+                    style={{ width: `${Math.round((kpis.totalReservedUnits / totalTrackedUnits) * 100)}%` }}
+                  />
+                </div>
               </div>
-              <div className="h-8 w-8 sm:h-9 sm:w-9 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+              <div className="h-8 w-8 sm:h-9 sm:w-9 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 self-start">
                 <Layers className="h-4 w-4 sm:h-5 sm:w-5" />
               </div>
             </div>
@@ -487,8 +507,14 @@ export function InventoryDashboardPage() {
                 <p className="text-[10.5px] text-indigo-600 font-semibold truncate mt-0.5">
                   In delivery transit
                 </p>
+                <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden mt-2">
+                  <div
+                    className="h-full bg-indigo-500 rounded-full transition-all duration-500"
+                    style={{ width: `${Math.round((kpis.totalDispatchedUnits / totalTrackedUnits) * 100)}%` }}
+                  />
+                </div>
               </div>
-              <div className="h-8 w-8 sm:h-9 sm:w-9 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+              <div className="h-8 w-8 sm:h-9 sm:w-9 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0 self-start">
                 <Truck className="h-4 w-4 sm:h-5 sm:w-5" />
               </div>
             </div>
@@ -507,8 +533,14 @@ export function InventoryDashboardPage() {
                 <p className="text-[10.5px] text-teal-600 font-semibold truncate mt-0.5">
                   Fulfilled to clients
                 </p>
+                <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden mt-2">
+                  <div
+                    className="h-full bg-teal-500 rounded-full transition-all duration-500"
+                    style={{ width: `${Math.round((kpis.totalDeliveredUnits / totalTrackedUnits) * 100)}%` }}
+                  />
+                </div>
               </div>
-              <div className="h-8 w-8 sm:h-9 sm:w-9 rounded-lg bg-teal-50 text-teal-600 flex items-center justify-center shrink-0">
+              <div className="h-8 w-8 sm:h-9 sm:w-9 rounded-lg bg-teal-50 text-teal-600 flex items-center justify-center shrink-0 self-start">
                 <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5" />
               </div>
             </div>
@@ -527,8 +559,14 @@ export function InventoryDashboardPage() {
                 <p className="text-[10.5px] text-rose-600 font-semibold truncate mt-0.5">
                   Bay Q-01 defects
                 </p>
+                <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden mt-2">
+                  <div
+                    className="h-full bg-rose-500 rounded-full transition-all duration-500"
+                    style={{ width: `${Math.round((kpis.totalDamagedUnits / totalTrackedUnits) * 100)}%` }}
+                  />
+                </div>
               </div>
-              <div className="h-8 w-8 sm:h-9 sm:w-9 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center shrink-0">
+              <div className="h-8 w-8 sm:h-9 sm:w-9 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center shrink-0 self-start">
                 <AlertTriangle className="h-4 w-4 sm:h-5 sm:w-5" />
               </div>
             </div>
@@ -547,8 +585,11 @@ export function InventoryDashboardPage() {
                 <p className="text-[10.5px] text-slate-500 font-medium truncate mt-0.5">
                   Landed cost basis
                 </p>
+                <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden mt-2">
+                  <div className="h-full bg-slate-900 rounded-full" style={{ width: '100%' }} />
+                </div>
               </div>
-              <div className="h-8 w-8 sm:h-9 sm:w-9 rounded-lg bg-primary-light text-primary flex items-center justify-center shrink-0">
+              <div className="h-8 w-8 sm:h-9 sm:w-9 rounded-lg bg-primary-light text-primary flex items-center justify-center shrink-0 self-start">
                 <DollarSign className="h-4 w-4 sm:h-5 sm:w-5" />
               </div>
             </div>
@@ -820,31 +861,7 @@ export function InventoryDashboardPage() {
 
                               {/* Status Badge */}
                               <TableCell className="py-2.5 px-2 text-center">
-                                {item.primaryStatus === 'AVAILABLE' && (
-                                  <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[10px] py-0 px-2 font-semibold">
-                                    Available
-                                  </Badge>
-                                )}
-                                {item.primaryStatus === 'RESERVED' && (
-                                  <Badge className="bg-blue-50 text-blue-700 border-blue-200 text-[10px] py-0 px-2 font-semibold">
-                                    Reserved
-                                  </Badge>
-                                )}
-                                {item.primaryStatus === 'DISPATCHED' && (
-                                  <Badge className="bg-indigo-50 text-indigo-700 border-indigo-200 text-[10px] py-0 px-2 font-semibold">
-                                    Dispatched
-                                  </Badge>
-                                )}
-                                {item.primaryStatus === 'DELIVERED' && (
-                                  <Badge className="bg-teal-50 text-teal-700 border-teal-200 text-[10px] py-0 px-2 font-semibold">
-                                    Delivered
-                                  </Badge>
-                                )}
-                                {item.primaryStatus === 'REJECTED' && (
-                                  <Badge className="bg-rose-50 text-rose-700 border-rose-200 text-[10px] py-0 px-2 font-semibold">
-                                    Quarantined
-                                  </Badge>
-                                )}
+                                <InventoryStatusBadge status={item.primaryStatus} />
                               </TableCell>
 
                               {/* 1. Available */}
@@ -1014,17 +1031,7 @@ export function InventoryDashboardPage() {
                       </span>
                       <p className="text-xs text-slate-500 truncate max-w-[180px]">{grn.supplierName}</p>
                     </div>
-                    <Badge
-                      className={cn(
-                        'text-[10px] font-mono px-2 py-0.5 border-0',
-                        grn.status === 'APPROVED' && 'bg-emerald-600 text-white',
-                        grn.status === 'SUBMITTED' && 'bg-amber-500 text-white',
-                        grn.status === 'DRAFT' && 'bg-slate-500 text-white',
-                        grn.status === 'REJECTED' && 'bg-rose-600 text-white'
-                      )}
-                    >
-                      {grn.status}
-                    </Badge>
+                    <InventoryStatusBadge status={grn.status} />
                   </CardHeader>
 
                   <CardContent className="p-4 space-y-3 flex-1 text-xs">

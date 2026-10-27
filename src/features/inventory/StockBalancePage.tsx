@@ -23,6 +23,7 @@ import { SalesOrder } from '../../types/order';
 import { MOCK_PRODUCTS } from '../../mock/mockProducts';
 import { calculateAvailableForSale } from '../../rules/inventoryRules';
 import { formatCurrency } from '../../utils/formatters';
+import { InventoryStatusBadge } from './InventoryStatusBadge';
 import { exportToCSV } from '../../utils/exportUtils';
 import { toast } from 'sonner';
 import { DollarSign, AlertTriangle, Package, Boxes, TrendingDown, Truck, Layers, CheckCircle2 } from 'lucide-react';
@@ -448,12 +449,7 @@ export function StockBalancePage() {
                         </TableCell>
                         <TableCell className="text-right text-sm font-mono">{formatCurrency(estValue)}</TableCell>
                         <TableCell className="text-center">
-                          <Badge
-                            variant="outline"
-                            className={`${cls} text-[10px] font-mono font-semibold uppercase tracking-wider rounded-md px-2.5 py-0.5`}
-                          >
-                            {label}
-                          </Badge>
+                          <InventoryStatusBadge status={label} />
                         </TableCell>
                         <TableCell className="text-center">
                           <Button

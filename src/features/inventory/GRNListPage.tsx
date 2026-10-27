@@ -10,6 +10,7 @@ import { StatCard } from '../../components/common/StatCard';
 import { useGRN } from '../../hooks/useGRN';
 import { useAuth } from '../../hooks/useAuth';
 import { formatCurrency, formatDate } from '../../utils/formatters';
+import { InventoryStatusBadge } from './InventoryStatusBadge';
 import {
   ResponsiveContainer,
   BarChart,
@@ -121,54 +122,7 @@ export function GRNListPage() {
   }, [grns, filter, search]);
 
   const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'APPROVED':
-      case 'COSTED':
-        return (
-          <Badge
-            variant="outline"
-            className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[10px] font-mono font-semibold uppercase tracking-wider rounded-md px-2.5 py-0.5"
-          >
-            APPROVED
-          </Badge>
-        );
-      case 'SUBMITTED':
-        return (
-          <Badge
-            variant="outline"
-            className="bg-amber-50 text-amber-700 border-amber-200 text-[10px] font-mono font-semibold uppercase tracking-wider rounded-md px-2.5 py-0.5"
-          >
-            SUBMITTED
-          </Badge>
-        );
-      case 'DRAFT':
-        return (
-          <Badge
-            variant="outline"
-            className="bg-slate-100 text-slate-700 border-slate-300 text-[10px] font-mono font-semibold uppercase tracking-wider rounded-md px-2.5 py-0.5"
-          >
-            DRAFT
-          </Badge>
-        );
-      case 'REJECTED':
-        return (
-          <Badge
-            variant="outline"
-            className="bg-rose-50 text-rose-700 border-rose-200 text-[10px] font-mono font-semibold uppercase tracking-wider rounded-md px-2.5 py-0.5"
-          >
-            REJECTED
-          </Badge>
-        );
-      default:
-        return (
-          <Badge
-            variant="outline"
-            className="bg-slate-100 text-slate-700 border-slate-200 text-[10px] font-mono font-semibold uppercase tracking-wider rounded-md px-2.5 py-0.5"
-          >
-            {status}
-          </Badge>
-        );
-    }
+    return <InventoryStatusBadge status={status} />;
   };
 
   return (
