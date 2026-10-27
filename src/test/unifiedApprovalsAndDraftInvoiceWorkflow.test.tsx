@@ -69,6 +69,42 @@ describe('Unified Approvals and Costing Workflow Tests', () => {
       fireEvent.click(screen.getByRole('button', { name: /Back to GRN Selection/i }));
       expect(await screen.findByText('Inbound Goods Receipts (GRN) Costing Queue')).toBeInTheDocument();
     });
+
+    it('defaults to Pending Actions filter (showing SUBMITTED and COSTED only), hiding APPROVED until filter selected', async () => {
+      render(
+        <MemoryRouter initialEntries={['/finance/ap/bills/new?view=list']}>
+          <Routes>
+            <Route path="/finance/ap/bills/new" element={<VendorBillCostingPage />} />
+          </Routes>
+        </MemoryRouter>
+      );
+
+      // Verify KPI metric cards and tabs
+      expect((await screen.findAllByText(/Pending Actions/i)).length).toBeGreaterThan(0);
+      expect(screen.getAllByText(/Submitted/i).length).toBeGreaterThan(0);
+      expect(screen.getAllByText(/Costed/i).length).toBeGreaterThan(0);
+      expect(screen.getAllByText(/Approved/i).length).toBeGreaterThan(0);
+
+      // Pending action tabs
+      const pendingTab = screen.getByRole('button', { name: /Pending Actions/i });
+      expect(pendingTab).toBeInTheDocument();
+
+      // By default in Pending Actions, APPROVED GRN-2025-002 should NOT be in the table
+      expect(screen.queryByText('GRN-2025-002')).not.toBeInTheDocument();
+
+      // But uncosted SUBMITTED GRNs should be shown
+      expect(screen.getByText('GRN-2025-001')).toBeInTheDocument();
+
+      // Now click "Approved" filter tab
+      const approvedTab = screen.getByRole('button', { name: /^Approved/i });
+      fireEvent.click(approvedTab);
+
+      // APPROVED GRN-2025-002 should now be visible
+      expect(await screen.findByText('GRN-2025-002')).toBeInTheDocument();
+
+      // And SUBMITTED GRN-2025-001 should now be filtered out
+      expect(screen.queryByText('GRN-2025-001')).not.toBeInTheDocument();
+    });
   });
 
   describe('InvoiceListPage Draft Filter & Edit Draft Button', () => {

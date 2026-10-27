@@ -92,28 +92,31 @@ export function StockBalancePage() {
   }, [orders]);
 
   const enrichedBalances: StockRow[] = useMemo(() => {
-    return (stockBalances ?? []).map((b: any) => {
+    return (stockBalances ?? []).map((b: any, idx: number) => {
       const product = MOCK_PRODUCTS.find(p => p.id === b.productId);
-      const availableForSale = calculateAvailableForSale(b) ?? 0;
+      const availRaw = typeof b.availableQuantity === 'number' ? b.availableQuantity : 0;
+      const resRaw = typeof b.reservedQuantity === 'number' ? b.reservedQuantity : 0;
       const stats = productOrderStats[b.productId] || { reserved: 0, dispatched: 0, delivered: 0 };
-      const reservedQty = Math.max(b.reservedQuantity ?? 0, stats.reserved);
+      const reservedQty = Math.max(resRaw, stats.reserved);
+      const calculatedAvail = Math.max(0, availRaw - reservedQty);
+      const availableForSale = isNaN(calculatedAvail) ? 0 : calculatedAvail;
 
       return {
-        id: b.id,
+        id: b.id || `${b.productId}-${b.locationId || idx}-${idx}`,
         productId: b.productId,
         locationId: b.locationId,
         locationType: b.locationType,
         productName: product?.name ?? b.productId,
         sku: product?.sku ?? 'N/A',
         category: product?.categoryName ?? 'N/A',
-        warehouseQuantity: b.locationType === 'WAREHOUSE' ? (b.availableQuantity ?? 0) : 0,
-        showroomQuantity: b.locationType === 'SHOWROOM' ? (b.availableQuantity ?? 0) : 0,
+        warehouseQuantity: b.locationType === 'WAREHOUSE' ? availRaw : 0,
+        showroomQuantity: b.locationType === 'SHOWROOM' ? availRaw : 0,
         damagedQuantity: b.damagedQuantity ?? 0,
         reservedQuantity: reservedQty,
         dispatchedQuantity: stats.dispatched,
         deliveredQuantity: stats.delivered,
         availableForSale,
-        physicalStock: b.availableQuantity ?? (availableForSale + reservedQty),
+        physicalStock: availRaw,
         costPrice: product?.pricing?.costPrice ?? 0,
       } as StockRow;
     });
