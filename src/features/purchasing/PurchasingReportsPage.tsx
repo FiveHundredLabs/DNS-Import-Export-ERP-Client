@@ -432,16 +432,16 @@ export function PurchasingReportsPage() {
                           <PurchaseOrderStatusBadge status={po.status} />
                         </td>
                         <td className="py-3 px-4 text-right font-mono tabular-nums text-slate-600">
-                          {formatCurrency(po.subtotal)}
+                          {formatCurrency(po.subtotal, po.currency)}
                         </td>
                         <td className="py-3 px-4 text-right font-mono tabular-nums text-emerald-600">
-                          {po.totalDiscount > 0 ? `-${formatCurrency(po.totalDiscount)}` : '-'}
+                          {po.totalDiscount > 0 ? `-${formatCurrency(po.totalDiscount, po.currency)}` : '-'}
                         </td>
                         <td className="py-3 px-4 text-right font-mono tabular-nums text-slate-600">
-                          {formatCurrency(po.taxTotal)}
+                          {formatCurrency(po.taxTotal, po.currency)}
                         </td>
                         <td className="py-3 px-4 text-right font-mono font-bold text-slate-900 tabular-nums">
-                          {formatCurrency(po.grandTotal)}
+                          {formatCurrency(po.grandTotal, po.currency)}
                         </td>
                       </tr>
                     ))

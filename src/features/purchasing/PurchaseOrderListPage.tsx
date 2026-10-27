@@ -111,7 +111,7 @@ export function PurchaseOrderListPage() {
             <h1 className="text-2xl font-bold tracking-tight text-slate-900">
               Purchase Orders
             </h1>
-            <Badge variant="outline" className="bg-slate-100 text-slate-800 border-slate-300 text-xs">
+            <Badge variant="outline" className="bg-primary-light text-primary border-primary-border text-xs font-medium">
               Procurement Lifecycle
             </Badge>
           </div>
@@ -122,7 +122,7 @@ export function PurchaseOrderListPage() {
 
         <Button
           onClick={() => navigate('/purchasing/orders/new')}
-          className="gap-1.5 bg-slate-900 hover:bg-slate-800 text-white self-start sm:self-auto"
+          className="gap-1.5 bg-primary hover:bg-primary-hover text-primary-foreground font-semibold shadow-xs self-start sm:self-auto"
         >
           <Plus className="h-4 w-4" />
           <span>New Purchase Order</span>
@@ -132,12 +132,48 @@ export function PurchaseOrderListPage() {
       {/* Metric Tabs Bar */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
         {[
-          { id: 'ALL', label: 'All Orders', count: metrics.all, icon: ShoppingCart },
-          { id: 'DRAFT', label: 'Drafts', count: metrics.draft, icon: FileText },
-          { id: 'PENDING_APPROVAL', label: 'Pending Approval', count: metrics.pending, icon: Clock },
-          { id: 'APPROVED', label: 'Approved', count: metrics.approved, icon: CheckCircle2 },
-          { id: 'SENT_TO_SUPPLIER', label: 'Sent to Vendor', count: metrics.sent, icon: Send },
-          { id: 'REJECTED', label: 'Rejected', count: metrics.rejected, icon: Filter },
+          {
+            id: 'ALL',
+            label: 'All Orders',
+            count: metrics.all,
+            icon: ShoppingCart,
+            activeColor: 'bg-primary-light border-primary ring-1 ring-primary text-primary',
+          },
+          {
+            id: 'DRAFT',
+            label: 'Drafts',
+            count: metrics.draft,
+            icon: FileText,
+            activeColor: 'bg-slate-100 border-slate-400 ring-1 ring-slate-400 text-slate-800',
+          },
+          {
+            id: 'PENDING_APPROVAL',
+            label: 'Pending Approval',
+            count: metrics.pending,
+            icon: Clock,
+            activeColor: 'bg-amber-50 border-amber-400 ring-1 ring-amber-400 text-amber-800',
+          },
+          {
+            id: 'APPROVED',
+            label: 'Approved',
+            count: metrics.approved,
+            icon: CheckCircle2,
+            activeColor: 'bg-emerald-50 border-emerald-400 ring-1 ring-emerald-400 text-emerald-800',
+          },
+          {
+            id: 'SENT_TO_SUPPLIER',
+            label: 'Sent to Vendor',
+            count: metrics.sent,
+            icon: Send,
+            activeColor: 'bg-sky-50 border-sky-400 ring-1 ring-sky-400 text-sky-800',
+          },
+          {
+            id: 'REJECTED',
+            label: 'Rejected',
+            count: metrics.rejected,
+            icon: Filter,
+            activeColor: 'bg-rose-50 border-rose-400 ring-1 ring-rose-400 text-rose-800',
+          },
         ].map((tab) => {
           const isActive = statusFilter === tab.id;
           const Icon = tab.icon;
@@ -151,17 +187,21 @@ export function PurchaseOrderListPage() {
               }}
               className={`p-3 rounded-xl border text-left transition-all ${
                 isActive
-                  ? 'bg-slate-900 text-white border-slate-900 shadow-sm'
-                  : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                  ? `${tab.activeColor} shadow-xs font-semibold`
+                  : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50 hover:border-slate-300 shadow-2xs'
               }`}
             >
               <div className="flex items-center justify-between">
-                <span className={`text-xs font-semibold ${isActive ? 'text-slate-200' : 'text-slate-500'}`}>
+                <span className={`text-xs font-semibold ${isActive ? '' : 'text-slate-500'}`}>
                   {tab.label}
                 </span>
-                <Icon className={`h-3.5 w-3.5 ${isActive ? 'text-white' : 'text-slate-400'}`} />
+                <div className={`p-1 rounded-md ${isActive ? 'bg-white/80' : 'bg-slate-50'}`}>
+                  <Icon className={`h-3.5 w-3.5 ${isActive ? '' : 'text-slate-400'}`} />
+                </div>
               </div>
-              <div className="text-xl font-bold mt-1 font-mono tabular-nums">{tab.count}</div>
+              <div className={`text-xl font-bold mt-1.5 font-mono tabular-nums ${isActive ? '' : 'text-slate-900'}`}>
+                {tab.count}
+              </div>
             </button>
           );
         })}
@@ -250,7 +290,7 @@ export function PurchaseOrderListPage() {
                         {po.items.length}
                       </td>
                       <td className="py-3 px-4 text-right font-mono font-bold text-slate-900 tabular-nums">
-                        {formatCurrency(po.grandTotal)}
+                        {formatCurrency(po.grandTotal, po.currency)}
                       </td>
                       <td className="py-3 px-4 text-center">
                         <PurchaseOrderStatusBadge status={po.status} />

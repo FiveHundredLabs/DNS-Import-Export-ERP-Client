@@ -84,6 +84,7 @@ export function POPageSheet({ purchaseOrder, page }: POPageSheetProps) {
                   <POItemRow
                     key={paginated.item.id || `${paginated.item.productCode}-${paginated.itemNumber}`}
                     paginated={paginated}
+                    currency={purchaseOrder.currency}
                   />
                 ))}
               </TableBody>
@@ -277,7 +278,13 @@ function POContinuationHeader({
 /**
  * Single product item table row with right-aligned currency and continuous global numbering
  */
-function POItemRow({ paginated }: { paginated: PaginatedPOItem }) {
+function POItemRow({
+  paginated,
+  currency,
+}: {
+  paginated: PaginatedPOItem;
+  currency: string;
+}) {
   const { item, itemNumber } = paginated;
 
   return (
@@ -294,7 +301,7 @@ function POItemRow({ paginated }: { paginated: PaginatedPOItem }) {
         {item.quantity}
       </TableCell>
       <TableCell className="text-right font-mono tabular-nums whitespace-nowrap align-top py-2">
-        {formatCurrency(item.unitPrice)}
+        {formatCurrency(item.unitPrice, currency)}
       </TableCell>
       <TableCell className="text-right font-mono text-slate-600 tabular-nums align-top py-2">
         {item.discountPercent > 0 ? `${item.discountPercent}%` : '-'}
@@ -303,7 +310,7 @@ function POItemRow({ paginated }: { paginated: PaginatedPOItem }) {
         {item.taxRate > 0 ? `${item.taxRate}%` : '-'}
       </TableCell>
       <TableCell className="text-right font-mono font-bold tabular-nums text-slate-900 whitespace-nowrap align-top py-2">
-        {formatCurrency(item.total)}
+        {formatCurrency(item.total, currency)}
       </TableCell>
     </TableRow>
   );
@@ -346,28 +353,28 @@ function POFinancialSummaryAndTerms({
         <div className="flex justify-between text-slate-600">
           <span>Subtotal:</span>
           <span className="font-mono font-semibold tabular-nums">
-            {formatCurrency(purchaseOrder.subtotal)}
+            {formatCurrency(purchaseOrder.subtotal, purchaseOrder.currency)}
           </span>
         </div>
         {purchaseOrder.totalDiscount > 0 && (
           <div className="flex justify-between text-emerald-600">
             <span>Discounts Applied:</span>
             <span className="font-mono font-semibold tabular-nums">
-              -{formatCurrency(purchaseOrder.totalDiscount)}
+              -{formatCurrency(purchaseOrder.totalDiscount, purchaseOrder.currency)}
             </span>
           </div>
         )}
         <div className="flex justify-between text-slate-600">
           <span>Applicable Taxes (VAT/SSCL):</span>
           <span className="font-mono font-semibold tabular-nums">
-            {formatCurrency(purchaseOrder.taxTotal)}
+            {formatCurrency(purchaseOrder.taxTotal, purchaseOrder.currency)}
           </span>
         </div>
         {purchaseOrder.shippingCharges > 0 && (
           <div className="flex justify-between text-slate-600">
             <span>Freight / Shipping Charges:</span>
             <span className="font-mono font-semibold tabular-nums">
-              {formatCurrency(purchaseOrder.shippingCharges)}
+              {formatCurrency(purchaseOrder.shippingCharges, purchaseOrder.currency)}
             </span>
           </div>
         )}
@@ -375,14 +382,14 @@ function POFinancialSummaryAndTerms({
           <div className="flex justify-between text-slate-600">
             <span>Handling & Other Charges:</span>
             <span className="font-mono font-semibold tabular-nums">
-              {formatCurrency(purchaseOrder.otherCharges)}
+              {formatCurrency(purchaseOrder.otherCharges, purchaseOrder.currency)}
             </span>
           </div>
         )}
         <div className="border-t-2 border-slate-900 pt-2 flex justify-between items-baseline text-slate-900">
           <span className="font-bold text-xs sm:text-sm">Grand Total ({purchaseOrder.currency}):</span>
           <span className="font-mono font-black text-base sm:text-lg tabular-nums">
-            {formatCurrency(purchaseOrder.grandTotal)}
+            {formatCurrency(purchaseOrder.grandTotal, purchaseOrder.currency)}
           </span>
         </div>
       </div>

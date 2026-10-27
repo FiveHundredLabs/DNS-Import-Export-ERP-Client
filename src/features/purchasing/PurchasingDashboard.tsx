@@ -320,7 +320,7 @@ export function PurchasingDashboard() {
                           {formatDate(po.orderDate)}
                         </td>
                         <td className="py-3 px-4 text-right font-mono font-semibold text-slate-900 tabular-nums">
-                          {formatCurrency(po.grandTotal)}
+                          {formatCurrency(po.grandTotal, po.currency)}
                         </td>
                         <td className="py-3 px-4 text-center">
                           <PurchaseOrderStatusBadge status={po.status} />
