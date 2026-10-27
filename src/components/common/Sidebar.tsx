@@ -37,6 +37,10 @@ import {
   Percent,
   Layers,
   Barcode,
+  Hash,
+  ArrowLeftRight,
+  CheckSquare,
+  Truck,
 } from 'lucide-react';
 import { useEffect } from 'react';
 import { useAuth } from '../../hooks/useAuth';
@@ -86,6 +90,16 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     }
   }, [location.pathname, canAccessRoute]);
 
+  // Automatically activate inventory category when navigating within inventory module or products (if authorized)
+  useEffect(() => {
+    if (
+      (location.pathname.startsWith('/inventory') || location.pathname.startsWith('/products')) &&
+      canAccessRoute('/inventory')
+    ) {
+      setActiveCategory('inventory');
+    }
+  }, [location.pathname, canAccessRoute]);
+
   // 1. Procurement, Orders & Approvals
   const procurementItems: SidebarItem[] = [
     { id: 'quotations', name: 'Quotations', path: '/quotations', icon: FileSpreadsheet, category: 'sales' },
@@ -105,8 +119,15 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
 
   // 3. Products & Inventory
   const inventoryItems: SidebarItem[] = [
+    { id: 'inventory', name: 'Inventory Hub', path: '/inventory', icon: Boxes, category: 'inventory', exact: true },
+    { id: 'grn', name: 'GRN', path: '/inventory/grn', icon: Receipt, category: 'inventory' },
+    { id: 'serials', name: 'Serial Numbers', path: '/inventory/serial-numbers', icon: Hash, category: 'inventory' },
+    { id: 'barcodes', name: 'Bar Codes', path: '/inventory/barcodes', icon: Barcode, category: 'inventory' },
+    { id: 'stock', name: 'Stock Balances', path: '/inventory/stock', icon: Layers, category: 'inventory' },
+    { id: 'movements', name: 'Stock Movements', path: '/inventory/movements', icon: ArrowLeftRight, category: 'inventory' },
+    { id: 'picking', name: 'Order Picking', path: '/inventory/picking', icon: CheckSquare, category: 'inventory' },
+    { id: 'dispatch', name: 'Dispatch', path: '/inventory/dispatch', icon: Truck, category: 'inventory' },
     { id: 'products', name: 'Product Master', path: '/products', icon: Package, category: 'inventory' },
-    { id: 'inventory', name: 'Inventory & GRN', path: '/inventory', icon: Boxes, category: 'inventory', exact: true },
   ];
 
   // 4. Finance, Banking & Ledger Core

@@ -71,3 +71,28 @@ export interface StockTransfer {
   dispatchedAt?: string;
   receivedAt?: string;
 }
+
+export type SerialNumberStatus = 'IN_STOCK' | 'ALLOCATED' | 'DISPATCHED' | 'DAMAGED' | 'RETURNED';
+
+export interface SerialNumberRecord {
+  id: string;
+  serialNumber: string;
+  productId: string;
+  productName: string;
+  sku: string;
+  barcode: string;
+  locationId: string;
+  locationName: string;
+  binLocation?: string;
+  status: SerialNumberStatus;
+  grnId?: string;
+  grnNumber?: string;
+  orderId?: string;
+  orderNumber?: string;
+  customerId?: string;
+  customerName?: string;
+  receivedDate: string;
+  receivedBy: string;
+  dispatchedDate?: string;
+  notes?: string;
+}
