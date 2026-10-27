@@ -1,5 +1,4 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
@@ -25,6 +24,8 @@ import {
   ChevronDown,
   ChevronUp,
   Copy,
+  ArrowLeft,
+  AlertTriangle,
 } from 'lucide-react';
 
 function ItemInlineBarcodes({
@@ -182,8 +183,6 @@ export function GRNDetailPage() {
   const [selectedProductForModal, setSelectedProductForModal] = useState<string>('ALL');
   const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
 
-  const { user } = useAuth();
-
   useEffect(() => {
     const fetchGRN = async () => {
       if (!id) return;
@@ -212,6 +211,26 @@ export function GRNDetailPage() {
       grn.grnNumber || grn.id || 'GRN-2025-001'
     );
   }, [grn]);
+
+  const totalGood = useMemo(() => {
+    return preparedItems.reduce(
+      (sum, item) => sum + Math.max(0, (item.receivedQuantity || 0) - (item.damagedQuantity || 0)),
+      0
+    );
+  }, [preparedItems]);
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'APPROVED':
+        return <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200">Approved</Badge>;
+      case 'SUBMITTED':
+        return <Badge className="bg-amber-100 text-amber-800 border-amber-200">Submitted</Badge>;
+      case 'REJECTED':
+        return <Badge className="bg-rose-100 text-rose-800 border-rose-200">Rejected</Badge>;
+      default:
+        return <Badge variant="outline">{status}</Badge>;
+    }
+  };
 
   const handleApprove = async () => {
     if (!id || !user) return;

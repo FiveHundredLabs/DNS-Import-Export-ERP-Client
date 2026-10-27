@@ -54,7 +54,6 @@ import {
 export function OrderDetailPage() {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
   const { currentUser } = useAuth();
   const isSalesRep = currentUser.role === 'SALES_REP';
 

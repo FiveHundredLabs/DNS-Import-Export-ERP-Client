@@ -67,8 +67,6 @@ type RailCategory =
   | 'admin';
 
 interface SidebarItem {
-  excludedRoles?: string[];
-  badge?: string;
   id: string;
   name: string;
   path: string;

@@ -10,7 +10,27 @@ import { StatCard } from '../../components/common/StatCard';
 import { useGRN } from '../../hooks/useGRN';
 import { useAuth } from '../../hooks/useAuth';
 import { formatCurrency, formatDate } from '../../utils/formatters';
-import { PlusCircle, ShieldCheck } from 'lucide-react';
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  Cell,
+} from 'recharts';
+import {
+  PlusCircle,
+  ShieldCheck,
+  Boxes,
+  CheckCircle2,
+  AlertTriangle,
+  Package,
+  Clock,
+  BarChart3,
+  Activity,
+  Search,
+} from 'lucide-react';
 
 export function GRNListPage() {
   const { grns, loading } = useGRN();
