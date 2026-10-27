@@ -422,7 +422,7 @@ export function OrderCreateEditPage() {
               { asDraft: true, allowUnapproved: true }
             );
             toast.success(`Sales Order ${created.orderNumber} created & converted to Draft Invoice!`);
-            navigate(`/invoices/${draftInvoice.id}/edit`);
+            navigate(`/invoices/${draftInvoice.id}`);
             return;
           } catch (invErr: any) {
             console.error('Failed to create draft invoice:', invErr);

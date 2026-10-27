@@ -1,9 +1,12 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom';
-import { Invoice } from '../../types/invoice';
+import { Invoice, InvoiceItem } from '../../types/invoice';
+import { Product } from '../../types/product';
 import { Payment } from '../../types/payment';
 import { DeliveryNote } from '../../types/deliveryNote';
 import { invoiceService } from '../../services/InvoiceService';
+import { productService } from '../../services/ProductService';
+import { batchInventoryService } from '../../services/BatchInventoryService';
 import { deliveryNoteService } from '../../services/DeliveryNoteService';
 import { InvoiceStatusBadge } from './InvoiceStatusBadge';
 import { InvoicePaymentCollectModal } from './components/InvoicePaymentCollectModal';
@@ -47,6 +50,10 @@ import {
   Eye,
   Check,
   Boxes,
+  Trash2,
+  Plus,
+  Save,
+  ShieldAlert,
 } from 'lucide-react';
 import { RecordWarrantyNoteModal } from '../warranty/RecordWarrantyNoteModal';
 import { WarrantyRecord } from '../../types/warranty';
@@ -67,8 +74,21 @@ export function InvoiceDetailPage() {
   const [loading, setLoading] = useState(true);
   const [loadingDeliveryNotes, setLoadingDeliveryNotes] = useState(false);
   const [finalizing, setFinalizing] = useState(false);
+  const [savingDraft, setSavingDraft] = useState(false);
+  const [isDirty, setIsDirty] = useState(false);
   const [isWarrantyModalOpen, setIsWarrantyModalOpen] = useState(false);
   const [matchingWarranty, setMatchingWarranty] = useState<WarrantyRecord | null>(null);
+
+  // In-place line items editing for DRAFT status
+  const [editableItems, setEditableItems] = useState<InvoiceItem[]>([]);
+  const [allProducts, setAllProducts] = useState<Product[]>([]);
+
+  // Add Item form controls
+  const [selectedProductId, setSelectedProductId] = useState<string>('');
+  const [addQuantity, setAddQuantity] = useState<number>(1);
+  const [addUnitPrice, setAddUnitPrice] = useState<number>(0);
+  const [addDiscountPct, setAddDiscountPct] = useState<number>(0);
+  const [selectedBatchId, setSelectedBatchId] = useState<string>('');
 
   // View Mode: 'SYSTEM' (Default system view & activity log) or 'PDF' (Formal A4 Document)
   const [viewMode, setViewMode] = useState<'SYSTEM' | 'PDF'>('SYSTEM');
@@ -86,6 +106,10 @@ export function InvoiceDetailPage() {
         setLoading(true);
         const data = await invoiceService.getInvoiceById(id);
         setInvoice(data);
+        if (data) {
+          setEditableItems(data.items || []);
+          setIsDirty(false);
+        }
       } catch (err) {
         console.error('Failed to load invoice:', err);
       } finally {
@@ -95,7 +119,20 @@ export function InvoiceDetailPage() {
     load();
   }, [id]);
 
-
+  // Load product catalog for inline additions
+  useEffect(() => {
+    async function loadProducts() {
+      try {
+        const res = await productService.listProducts({ limit: 100 });
+        if (res?.data) {
+          setAllProducts(res.data);
+        }
+      } catch (err) {
+        console.error('Failed to load products in InvoiceDetailPage:', err);
+      }
+    }
+    loadProducts();
+  }, []);
 
   // Load Delivery Notes related to this invoice/order
   useEffect(() => {
@@ -186,27 +223,243 @@ export function InvoiceDetailPage() {
   }
 
   const isDraft = invoice.status === 'DRAFT';
-  const isSalesManager = ['SALES_MANAGER', 'MANAGER', 'DIRECTOR'].includes(
-    currentUser?.role || role
-  );
+  const activeRole = currentUser?.role || role;
+  const isSalesManager = ['SALES_MANAGER', 'MANAGER', 'DIRECTOR'].includes(activeRole);
   const isOverdue = invoice.status === 'OVERDUE';
   const previouslyCollected = invoice.collectedAmount || 0;
-  const uncollectedBalance = Math.max(0, invoice.balanceAmount - previouslyCollected);
+
+  // Real-time recalculation of draft figures
+  const dynamicSubtotal = editableItems.reduce(
+    (sum, item) => sum + item.quantity * item.unitPriceSnapshot,
+    0
+  );
+  const dynamicDiscountTotal = editableItems.reduce(
+    (sum, item) =>
+      sum + (item.quantity * item.unitPriceSnapshot * (item.discountPercentage || 0)) / 100,
+    0
+  );
+  const dynamicTaxableBase = Math.max(0, dynamicSubtotal - dynamicDiscountTotal);
+  const taxRate = invoice.taxRatePercentage || (invoice.taxEnabled ? 15 : 0);
+  const dynamicTaxTotal = (dynamicTaxableBase * taxRate) / 100;
+  const dynamicTotalAmount = dynamicTaxableBase + dynamicTaxTotal;
+
+  const currentSubtotal = isDraft ? dynamicSubtotal : invoice.subtotal;
+  const currentDiscountTotal = isDraft ? dynamicDiscountTotal : invoice.discountTotal;
+  const currentTaxTotal = isDraft ? dynamicTaxTotal : invoice.taxTotal;
+  const currentTotalAmount = isDraft ? dynamicTotalAmount : invoice.totalAmount;
+  const uncollectedBalance = Math.max(0, currentTotalAmount - previouslyCollected);
   const hasRemainingReceivable = !isDraft && uncollectedBalance > 0;
 
-  const handlePaymentSuccess = (payment: Payment, updatedInvoice: Invoice) => {
-    setInvoice(updatedInvoice);
-    setRecordedPayment(payment);
-    setThermalModalOpen(true);
+  // Helper to determine available stock for a product or specific batch
+  const getAvailableQuantityForItem = (item: { productId: string; batchId?: string }) => {
+    if (item.batchId && item.batchId !== 'DEFAULT') {
+      const batch = batchInventoryService.getBatchById(item.batchId);
+      if (batch) return batch.availableQuantity;
+    }
+    const prod = allProducts.find((p) => p.id === item.productId);
+    if (prod) {
+      return Math.max(0, (prod.stockOnHand ?? 0) - (prod.damagedStock ?? 0));
+    }
+    return 0;
+  };
+
+  // Handlers for in-place draft editing
+  const handleQuantityChange = (index: number, newQty: number) => {
+    if (newQty < 1) return;
+    const itm = editableItems[index];
+    const available = getAvailableQuantityForItem(itm);
+    if (available > 0 && newQty > available) {
+      toast.warning(
+        `Quantity cannot exceed available stock (${available} ${itm.uomSnapshot || 'units'}).`
+      );
+    }
+    setEditableItems((prev) => {
+      const copy = [...prev];
+      const item = { ...copy[index], quantity: newQty };
+      const gross = item.quantity * item.unitPriceSnapshot;
+      const discount = (gross * (item.discountPercentage || 0)) / 100;
+      const net = Math.max(0, gross - discount);
+      const itemTaxRate = invoice?.taxRatePercentage || (invoice?.taxEnabled ? 15 : 0);
+      const tax = (net * itemTaxRate) / 100;
+      item.discountAmount = discount;
+      item.taxAmount = tax;
+      item.lineTotal = net + tax;
+      copy[index] = item;
+      return copy;
+    });
+    setIsDirty(true);
+  };
+
+  const handleDiscountChange = (index: number, newDiscountPct: number) => {
+    const clamped = Math.max(0, Math.min(100, isNaN(newDiscountPct) ? 0 : newDiscountPct));
+    setEditableItems((prev) => {
+      const copy = [...prev];
+      const item = { ...copy[index], discountPercentage: clamped };
+      const gross = item.quantity * item.unitPriceSnapshot;
+      const discount = (gross * clamped) / 100;
+      const net = Math.max(0, gross - discount);
+      const itemTaxRate = invoice?.taxRatePercentage || (invoice?.taxEnabled ? 15 : 0);
+      const tax = (net * itemTaxRate) / 100;
+      item.discountAmount = discount;
+      item.taxAmount = tax;
+      item.taxPercentage = itemTaxRate;
+      item.lineTotal = net + tax;
+      copy[index] = item;
+      return copy;
+    });
+    setIsDirty(true);
+  };
+
+  const handleRemoveItem = (index: number) => {
+    if (editableItems.length <= 1) {
+      toast.error('Invoice must contain at least one line item.');
+      return;
+    }
+    setEditableItems((prev) => prev.filter((_, idx) => idx !== index));
+    setIsDirty(true);
+    toast.info('Item removed from draft invoice');
+  };
+
+  const handleProductSelectChange = (prodId: string) => {
+    setSelectedProductId(prodId);
+    const prod = allProducts.find((p) => p.id === prodId);
+    if (prod) {
+      const batches = batchInventoryService.getActiveBatches(prodId);
+      if (batches.length > 0) {
+        setSelectedBatchId(batches[0].id);
+        setAddUnitPrice(batches[0].sellingPrice);
+      } else {
+        setSelectedBatchId('');
+        setAddUnitPrice(prod.pricing?.currentSellingPrice || 0);
+      }
+    }
+  };
+
+  const handleBatchSelectChange = (batchId: string) => {
+    setSelectedBatchId(batchId);
+    if (batchId === 'DEFAULT') {
+      const prod = allProducts.find((p) => p.id === selectedProductId);
+      setAddUnitPrice(prod?.pricing?.currentSellingPrice || 0);
+    } else {
+      const batch = batchInventoryService.getBatchById(batchId);
+      if (batch) {
+        setAddUnitPrice(batch.sellingPrice);
+      }
+    }
+  };
+
+  const handleAddItem = () => {
+    if (!selectedProductId) {
+      toast.error('Please select a product to add.');
+      return;
+    }
+    const prod = allProducts.find((p) => p.id === selectedProductId);
+    if (!prod) return;
+
+    const availableToAdd =
+      selectedBatchId && selectedBatchId !== 'DEFAULT'
+        ? (batchInventoryService.getBatchById(selectedBatchId)?.availableQuantity ?? 0)
+        : Math.max(0, (prod.stockOnHand ?? 0) - (prod.damagedStock ?? 0));
+
+    if (availableToAdd > 0 && addQuantity > availableToAdd) {
+      toast.error(
+        `Quantity (${addQuantity}) cannot exceed available stock (${availableToAdd} ${prod.uomCode || 'units'}).`
+      );
+      return;
+    }
+
+    const gross = addQuantity * addUnitPrice;
+    const discount = (gross * addDiscountPct) / 100;
+    const net = Math.max(0, gross - discount);
+    const itemTaxRate = invoice?.taxRatePercentage || 0;
+    const tax = (net * itemTaxRate) / 100;
+
+    const chosenBatch =
+      selectedBatchId && selectedBatchId !== 'DEFAULT'
+        ? batchInventoryService.getBatchById(selectedBatchId)
+        : undefined;
+
+    const newItem: InvoiceItem = {
+      id: `draft-item-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      productId: prod.id,
+      productNameSnapshot: prod.name,
+      skuSnapshot: prod.sku,
+      unitPriceSnapshot: addUnitPrice,
+      quantity: addQuantity,
+      discountPercentage: addDiscountPct,
+      discountAmount: discount,
+      taxPercentage: itemTaxRate,
+      taxAmount: tax,
+      lineTotal: net + tax,
+      uomSnapshot: prod.uomCode || 'Unit',
+      batchId: chosenBatch?.id,
+      batchNumber: chosenBatch?.batchNumber,
+    };
+
+    setEditableItems((prev) => [...prev, newItem]);
+    setSelectedProductId('');
+    setAddQuantity(1);
+    setAddUnitPrice(0);
+    setAddDiscountPct(0);
+    setSelectedBatchId('');
+    setIsDirty(true);
+    toast.success(`Added ${prod.name} to draft invoice.`);
+  };
+
+  const handleSaveDraft = async () => {
+    if (!invoice || !id) return;
+    const userToUse = currentUser || ({ id: 'usr-sm-1', name: 'Sales Manager', role: 'SALES_MANAGER' } as any);
+
+    // Available stock validation
+    for (const it of editableItems) {
+      const avail = getAvailableQuantityForItem(it);
+      if (avail > 0 && it.quantity > avail) {
+        toast.error(
+          `Cannot save draft: Quantity for "${it.productNameSnapshot}" (${it.quantity}) cannot exceed available stock (${avail}).`
+        );
+        return;
+      }
+    }
+
+    try {
+      setSavingDraft(true);
+      const updated = await invoiceService.updateDraftInvoiceItems(invoice.id, editableItems, userToUse);
+      setInvoice(updated);
+      setEditableItems(updated.items || []);
+      setIsDirty(false);
+      toast.success('Draft invoice line items updated successfully');
+    } catch (err: any) {
+      console.error('Failed to update draft items:', err);
+      toast.error(err.message || 'Failed to update draft invoice');
+    } finally {
+      setSavingDraft(false);
+    }
   };
 
   const handleFinalizeAndIssue = async () => {
     const userToUse = currentUser || ({ id: 'usr-sm-1', name: 'Sales Manager', role: 'SALES_MANAGER' } as any);
     if (!invoice) return;
+
+    // Available stock validation
+    for (const it of editableItems) {
+      const avail = getAvailableQuantityForItem(it);
+      if (avail > 0 && it.quantity > avail) {
+        toast.error(
+          `Cannot finalize: Quantity for "${it.productNameSnapshot}" (${it.quantity}) cannot exceed available stock (${avail}).`
+        );
+        return;
+      }
+    }
+
     try {
       setFinalizing(true);
+      if (isDirty) {
+        await invoiceService.updateDraftInvoiceItems(invoice.id, editableItems, userToUse);
+      }
       const finalized = await invoiceService.finalizeAndIssueInvoice(invoice.id, userToUse);
       setInvoice(finalized);
+      setEditableItems(finalized.items || []);
+      setIsDirty(false);
       toast.success('Draft invoice successfully finalized and issued!');
     } catch (err: any) {
       toast.error(err?.message || 'Failed to finalize invoice');
@@ -214,6 +467,25 @@ export function InvoiceDetailPage() {
       setFinalizing(false);
     }
   };
+
+  const handlePaymentSuccess = (payment: Payment, updatedInvoice: Invoice) => {
+    setInvoice(updatedInvoice);
+    setRecordedPayment(payment);
+    setThermalModalOpen(true);
+  };
+
+  // Preview invoice data for A4/PDF document mode with live draft edits
+  const previewInvoiceData: Invoice = !isDraft
+    ? invoice
+    : {
+        ...invoice,
+        items: editableItems,
+        subtotal: currentSubtotal,
+        discountTotal: currentDiscountTotal,
+        taxTotal: currentTaxTotal,
+        totalAmount: currentTotalAmount,
+        balanceAmount: currentTotalAmount,
+      };
 
   return (
     <div className="w-full space-y-5 pb-20">
@@ -283,19 +555,24 @@ export function InvoiceDetailPage() {
 
           {isDraft && isSalesManager && (
             <>
-              <Link to={`/invoices/${invoice.id}/edit`}>
-                <Button variant="outline" size="sm" className="text-xs gap-1.5 border-slate-300">
-                  <Edit3 className="h-3.5 w-3.5 text-slate-600" /> Edit Draft
-                </Button>
-              </Link>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleSaveDraft}
+                disabled={savingDraft || finalizing}
+                className="text-xs gap-1.5 border-slate-300 font-semibold"
+              >
+                <Save className="h-3.5 w-3.5 text-slate-600" />
+                <span>{savingDraft ? 'Saving...' : 'Save Draft Changes'}</span>
+              </Button>
               <Button
                 size="sm"
                 onClick={handleFinalizeAndIssue}
-                disabled={finalizing}
+                disabled={savingDraft || finalizing}
                 className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs gap-1.5 shadow-sm font-semibold"
               >
                 <CheckCircle2 className="h-3.5 w-3.5" />
-                {finalizing ? 'Finalizing...' : 'Finalize & Issue'}
+                <span>{finalizing ? 'Finalizing...' : 'Finalize & Issue'}</span>
               </Button>
             </>
           )}
@@ -334,34 +611,22 @@ export function InvoiceDetailPage() {
                 <span className="font-mono text-xs font-semibold text-slate-600">
                   Origin: {invoice.orderNumber}
                 </span>
+                {isDirty && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10.5px] font-bold bg-indigo-100 text-indigo-800 border border-indigo-200">
+                    Unsaved Edits
+                  </span>
+                )}
               </div>
               <h3 className="text-base font-bold text-slate-900 mt-1">
-                Awaiting Sales Manager Finalization and Issue
+                Sales Manager Line Item Review Mode
               </h3>
               <p className="text-xs text-slate-600 max-w-2xl">
-                This invoice was converted as a draft. Sales Managers have full authority to modify line item quantities, substitute products, or finalize and issue the invoice.
+                Awaiting Sales Manager Finalization and Issue. This invoice was converted as a draft. You can modify quantities, adjust line discounts, remove items, or add new products directly in this view before issuing. All stock limits and totals update live.
               </p>
             </div>
 
-            <div className="flex items-center gap-2">
-              {isSalesManager ? (
-                <>
-                  <Link to={`/invoices/${invoice.id}/edit`}>
-                    <Button variant="outline" size="sm" className="text-xs gap-1.5 bg-white border-amber-300 hover:bg-amber-50 text-amber-900 font-semibold">
-                      <Edit3 className="h-3.5 w-3.5" /> Edit Draft
-                    </Button>
-                  </Link>
-                  <Button
-                    size="sm"
-                    onClick={handleFinalizeAndIssue}
-                    disabled={finalizing}
-                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs gap-1.5 shadow-xs"
-                  >
-                    <CheckCircle2 className="h-4 w-4" />
-                    <span>{finalizing ? 'Issuing...' : 'Finalize & Issue'}</span>
-                  </Button>
-                </>
-              ) : (
+            <div>
+              {!isSalesManager && (
                 <span className="text-xs text-amber-800 italic bg-amber-50 px-3 py-1.5 rounded-lg border border-amber-200">
                   Editing restricted to Sales Management
                 </span>
@@ -519,29 +784,29 @@ export function InvoiceDetailPage() {
                 <div className="flex justify-between items-center text-slate-600">
                   <span>Gross Subtotal</span>
                   <span className="font-mono font-semibold text-slate-900">
-                    {formatCurrency(invoice.subtotal)}
+                    {formatCurrency(currentSubtotal)}
                   </span>
                 </div>
-                {invoice.discountTotal > 0 && (
+                {currentDiscountTotal > 0 && (
                   <div className="flex justify-between items-center text-amber-700 font-medium">
                     <span>Discount Deducted</span>
                     <span className="font-mono font-semibold">
-                      -{formatCurrency(invoice.discountTotal)}
+                      -{formatCurrency(currentDiscountTotal)}
                     </span>
                   </div>
                 )}
-                {invoice.taxTotal > 0 && (
+                {currentTaxTotal > 0 && (
                   <div className="flex justify-between items-center text-slate-600">
                     <span>VAT ({invoice.taxRatePercentage || 18}%)</span>
                     <span className="font-mono font-semibold text-slate-900">
-                      {formatCurrency(invoice.taxTotal)}
+                      {formatCurrency(currentTaxTotal)}
                     </span>
                   </div>
                 )}
                 <div className="pt-2 border-t border-slate-200 flex justify-between items-center font-bold text-slate-900">
                   <span className="text-sm">Total Invoice Amount</span>
                   <span className="font-mono text-sm text-slate-900">
-                    {formatCurrency(invoice.totalAmount)}
+                    {formatCurrency(currentTotalAmount)}
                   </span>
                 </div>
                 <div className="flex justify-between items-center text-emerald-700 font-semibold pt-1">
@@ -573,12 +838,25 @@ export function InvoiceDetailPage() {
               <CardTitle className="text-sm font-bold text-slate-900 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Package className="h-4 w-4 text-primary" />
-                  <span>Invoiced Commercial Line Items</span>
+                  <span>{isDraft ? 'Draft Invoice Line Items' : 'Invoiced Commercial Line Items'}</span>
                 </div>
-                <Badge variant="outline" className="text-xs font-mono font-normal">
-                  {invoice.items.length} Product Line{invoice.items.length !== 1 ? 's' : ''}
-                </Badge>
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="text-xs font-mono font-normal">
+                    {isDraft ? editableItems.length : invoice.items.length} Product Line
+                    {(isDraft ? editableItems.length : invoice.items.length) !== 1 ? 's' : ''}
+                  </Badge>
+                  {isDraft && isSalesManager && isDirty && (
+                    <Badge variant="outline" className="text-[10px] bg-amber-50 text-amber-800 border-amber-300">
+                      Unsaved Changes
+                    </Badge>
+                  )}
+                </div>
               </CardTitle>
+              {isDraft && isSalesManager && (
+                <p className="text-xs text-slate-500 mt-1">
+                  Adjust product quantities, modify line discounts, or add/remove products. Quantities cannot exceed available warehouse stock.
+                </p>
+              )}
             </CardHeader>
             <CardContent className="p-0 overflow-x-auto">
               <Table>
@@ -586,53 +864,244 @@ export function InvoiceDetailPage() {
                   <TableRow>
                     <TableHead className="text-xs font-bold text-slate-600">Product / SKU</TableHead>
                     <TableHead className="text-xs font-bold text-slate-600 text-center w-20">UOM</TableHead>
-                    <TableHead className="text-xs font-bold text-slate-600 text-right w-24">Qty Invoiced</TableHead>
+                    <TableHead className="text-xs font-bold text-slate-600 text-center w-28">
+                      {isDraft && isSalesManager ? 'Quantity' : 'Qty Invoiced'}
+                    </TableHead>
                     <TableHead className="text-xs font-bold text-slate-600 text-right w-28">Unit Price</TableHead>
-                    <TableHead className="text-xs font-bold text-slate-600 text-center w-24">Discount</TableHead>
+                    <TableHead className="text-xs font-bold text-slate-600 text-center w-28">Discount</TableHead>
                     <TableHead className="text-xs font-bold text-slate-600 text-right w-32">Line Total</TableHead>
+                    {isDraft && isSalesManager && (
+                      <TableHead className="text-xs font-bold text-slate-600 text-center w-16">Action</TableHead>
+                    )}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {invoice.items.map((item, idx) => (
-                    <TableRow key={item.id || idx} className="hover:bg-slate-50/60">
-                      <TableCell className="py-3">
-                        <div className="font-bold text-slate-900 text-xs">{item.productNameSnapshot}</div>
-                        <div className="font-mono text-[11px] text-slate-400">{item.skuSnapshot}</div>
-                        {item.batchNumber && (
-                          <div className="text-[10px] text-indigo-600 font-mono mt-0.5">
-                            Batch: {item.batchNumber}
-                          </div>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-center font-mono text-xs text-slate-600 py-3">
-                        {item.uomSnapshot || 'PCS'}
-                      </TableCell>
-                      <TableCell className="text-right font-mono font-bold text-xs text-slate-900 py-3">
-                        {item.quantity}
-                      </TableCell>
-                      <TableCell className="text-right font-mono text-xs text-slate-700 py-3">
-                        {formatCurrency(item.unitPriceSnapshot)}
-                      </TableCell>
-                      <TableCell className="text-center font-mono text-xs text-slate-600 py-3">
-                        {item.discountPercentage > 0 ? (
-                          <span className="text-amber-700 font-semibold">
-                            {item.discountPercentage}%
-                            <span className="block text-[10px] text-slate-400">
-                              (-{formatCurrency(item.discountAmount)})
-                            </span>
-                          </span>
-                        ) : (
-                          '—'
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right font-mono font-bold text-xs text-slate-900 py-3">
-                        {formatCurrency(item.lineTotal)}
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {isDraft && isSalesManager
+                    ? editableItems.map((item, index) => {
+                        const available = getAvailableQuantityForItem(item);
+                        const isExceeding = available > 0 && item.quantity > available;
+
+                        return (
+                          <TableRow key={item.id || index} className="hover:bg-slate-50/60">
+                            <TableCell className="py-3">
+                              <div className="font-bold text-slate-900 text-xs">{item.productNameSnapshot}</div>
+                              <div className="font-mono text-[11px] text-slate-400">
+                                {item.skuSnapshot}
+                                {item.batchNumber && (
+                                  <span className="ml-2 text-indigo-600 font-semibold">• Batch: {item.batchNumber}</span>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-center font-mono text-xs text-slate-600 py-3">
+                              {item.uomSnapshot || 'PCS'}
+                            </TableCell>
+                            <TableCell className="text-center py-2 align-top">
+                              <input
+                                type="number"
+                                min="1"
+                                max={available > 0 ? available : undefined}
+                                value={item.quantity}
+                                onChange={(e) => handleQuantityChange(index, parseInt(e.target.value) || 1)}
+                                className={cn(
+                                  'w-20 text-center font-mono font-bold text-xs py-1 px-2 border rounded-md focus:ring-1 focus:outline-hidden',
+                                  isExceeding
+                                    ? 'border-rose-500 bg-rose-50 text-rose-800 focus:ring-rose-500'
+                                    : 'border-slate-300 focus:ring-primary'
+                                )}
+                              />
+                              <span
+                                className={cn(
+                                  'text-[9.5px] block mt-0.5 font-mono whitespace-nowrap',
+                                  isExceeding ? 'text-rose-600 font-bold' : 'text-slate-400'
+                                )}
+                              >
+                                {isExceeding ? `Exceeds (${available})` : `Max: ${available}`}
+                              </span>
+                            </TableCell>
+                            <TableCell className="text-right font-mono text-xs text-slate-700 py-3">
+                              {formatCurrency(item.unitPriceSnapshot)}
+                            </TableCell>
+                            <TableCell className="text-center py-2">
+                              <div className="inline-flex items-center gap-1 justify-center">
+                                <input
+                                  type="number"
+                                  min="0"
+                                  max="100"
+                                  step="0.5"
+                                  value={item.discountPercentage ?? 0}
+                                  onChange={(e) => handleDiscountChange(index, parseFloat(e.target.value))}
+                                  className="w-16 text-center font-mono font-bold text-xs py-1 px-1.5 border border-slate-300 rounded-md focus:ring-1 focus:ring-primary focus:outline-hidden"
+                                />
+                                <span className="text-xs text-slate-500 font-bold">%</span>
+                              </div>
+                              {item.discountAmount > 0 && (
+                                <div className="text-[10px] text-amber-700 font-mono mt-0.5">
+                                  -{formatCurrency(item.discountAmount)}
+                                </div>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-right font-mono font-bold text-xs text-slate-900 py-3">
+                              {formatCurrency(item.lineTotal)}
+                            </TableCell>
+                            <TableCell className="text-center py-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleRemoveItem(index)}
+                                className="h-8 w-8 p-0 text-slate-400 hover:text-rose-600 hover:bg-rose-50"
+                                title="Remove Item"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })
+                    : invoice.items.map((item, idx) => (
+                        <TableRow key={item.id || idx} className="hover:bg-slate-50/60">
+                          <TableCell className="py-3">
+                            <div className="font-bold text-slate-900 text-xs">{item.productNameSnapshot}</div>
+                            <div className="font-mono text-[11px] text-slate-400">{item.skuSnapshot}</div>
+                            {item.batchNumber && (
+                              <div className="text-[10px] text-indigo-600 font-mono mt-0.5">
+                                Batch: {item.batchNumber}
+                              </div>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-center font-mono text-xs text-slate-600 py-3">
+                            {item.uomSnapshot || 'PCS'}
+                          </TableCell>
+                          <TableCell className="text-right font-mono font-bold text-xs text-slate-900 py-3">
+                            {item.quantity}
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-xs text-slate-700 py-3">
+                            {formatCurrency(item.unitPriceSnapshot)}
+                          </TableCell>
+                          <TableCell className="text-center font-mono text-xs text-slate-600 py-3">
+                            {item.discountPercentage > 0 ? (
+                              <span className="text-amber-700 font-semibold">
+                                {item.discountPercentage}%
+                                <span className="block text-[10px] text-slate-400">
+                                  (-{formatCurrency(item.discountAmount)})
+                                </span>
+                              </span>
+                            ) : (
+                              '—'
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right font-mono font-bold text-xs text-slate-900 py-3">
+                            {formatCurrency(item.lineTotal)}
+                          </TableCell>
+                        </TableRow>
+                      ))}
                 </TableBody>
               </Table>
             </CardContent>
+
+            {/* Add Product Section (Inline for Draft Invoices) */}
+            {isDraft && isSalesManager && (
+              <div className="p-4 border-t border-slate-200 bg-slate-50/60">
+                <div className="text-xs font-bold text-slate-800 flex items-center gap-2 mb-3">
+                  <Plus className="h-4 w-4 text-primary" />
+                  <span>Add Product to Draft Invoice</span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-6 gap-3 items-end">
+                  <div className="sm:col-span-2 space-y-1">
+                    <label className="text-[11px] font-bold text-slate-700 block">Select Product</label>
+                    <select
+                      value={selectedProductId}
+                      onChange={(e) => handleProductSelectChange(e.target.value)}
+                      className="w-full text-xs py-2 px-3 border border-slate-300 rounded-md bg-white focus:outline-hidden focus:ring-1 focus:ring-primary"
+                    >
+                      <option value="">-- Choose Product --</option>
+                      {allProducts.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.name} ({p.sku})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {selectedProductId && (
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-bold text-slate-700 block">Available Batch</label>
+                      <select
+                        value={selectedBatchId || 'DEFAULT'}
+                        onChange={(e) => handleBatchSelectChange(e.target.value)}
+                        className="w-full text-xs py-2 px-3 border border-slate-300 rounded-md bg-white focus:outline-hidden focus:ring-1 focus:ring-primary font-mono"
+                      >
+                        {batchInventoryService.getActiveBatches(selectedProductId).map((b) => (
+                          <option key={b.id} value={b.id}>
+                            {b.batchNumber} (Avail: {b.availableQuantity}, LKR {b.sellingPrice})
+                          </option>
+                        ))}
+                        <option value="DEFAULT">
+                          Catalog Default (LKR {allProducts.find((p) => p.id === selectedProductId)?.pricing?.currentSellingPrice || 0})
+                        </option>
+                      </select>
+                    </div>
+                  )}
+
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <label className="text-[11px] font-bold text-slate-700 block">Quantity</label>
+                      {selectedProductId && (
+                        <span className="text-[10px] text-slate-500 font-mono">
+                          Avail:{' '}
+                          {selectedBatchId && selectedBatchId !== 'DEFAULT'
+                            ? (batchInventoryService.getBatchById(selectedBatchId)?.availableQuantity ?? 0)
+                            : Math.max(
+                                0,
+                                ((allProducts.find((p) => p.id === selectedProductId)?.stockOnHand ?? 0) -
+                                  (allProducts.find((p) => p.id === selectedProductId)?.damagedStock ?? 0))
+                              )}
+                        </span>
+                      )}
+                    </div>
+                    <input
+                      type="number"
+                      min="1"
+                      value={addQuantity}
+                      onChange={(e) => setAddQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+                      className="w-full text-xs py-2 px-3 border border-slate-300 rounded-md bg-white focus:outline-hidden focus:ring-1 focus:ring-primary font-mono"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-bold text-slate-700 block">Unit Price (LKR)</label>
+                    <input
+                      type="number"
+                      value={addUnitPrice}
+                      onChange={(e) => setAddUnitPrice(parseFloat(e.target.value) || 0)}
+                      className="w-full text-xs py-2 px-3 border border-slate-300 rounded-md bg-white focus:outline-hidden focus:ring-1 focus:ring-primary font-mono"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-bold text-slate-700 block">Discount %</label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={addDiscountPct}
+                      onChange={(e) => setAddDiscountPct(parseFloat(e.target.value) || 0)}
+                      className="w-full text-xs py-2 px-3 border border-slate-300 rounded-md bg-white focus:outline-hidden focus:ring-1 focus:ring-primary font-mono"
+                    />
+                  </div>
+
+                  <div>
+                    <Button
+                      size="sm"
+                      onClick={handleAddItem}
+                      className="w-full text-xs gap-1.5 bg-primary hover:bg-primary/90 text-white font-semibold py-2"
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                      <span>Add Line</span>
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
           </Card>
 
           {/* ────────────────────────────────────────────────────────── */}
@@ -699,52 +1168,52 @@ export function InvoiceDetailPage() {
                   </span>
                   <span
                     className={cn(
-                      'font-mono font-bold text-sm mt-0.5 block',
-                      fulfillmentMetrics.totalRejected > 0 ? 'text-rose-600' : 'text-slate-400'
+                      'font-mono font-bold text-sm mt-0.5 block flex items-center gap-1',
+                      fulfillmentMetrics.hasDamagedOrRejected ? 'text-rose-600' : 'text-slate-600'
                     )}
                   >
+                    {fulfillmentMetrics.hasDamagedOrRejected && <AlertTriangle className="h-3.5 w-3.5" />}
                     {fulfillmentMetrics.totalRejected} Units
                   </span>
                 </div>
               </div>
 
-              {/* Delivery Notes List */}
+              {/* Delivery Notes Itemized Table */}
               {loadingDeliveryNotes ? (
-                <div className="py-8 text-center text-xs text-slate-500">Loading delivery records...</div>
+                <div className="text-center py-6 text-slate-400 text-xs">
+                  Loading related delivery documentation...
+                </div>
               ) : deliveryNotes.length === 0 ? (
-                <div className="py-10 text-center border-2 border-dashed border-slate-200 rounded-xl space-y-2">
-                  <Boxes className="h-8 w-8 text-slate-300 mx-auto" />
-                  <p className="text-xs font-semibold text-slate-700">No Delivery Notes Dispatched Yet</p>
-                  <p className="text-[11px] text-slate-400 max-w-sm mx-auto">
-                    The warehouse has not yet created physical delivery notes for this invoice. Once goods are packed and dispatched, delivery notes and inspection logs will appear here.
+                <div className="text-center py-8 border border-dashed border-slate-200 rounded-xl bg-slate-50/40">
+                  <Truck className="h-8 w-8 text-slate-300 mx-auto mb-2" />
+                  <p className="text-xs font-semibold text-slate-700">No Dispatches Created Yet</p>
+                  <p className="text-[11px] text-slate-400 max-w-sm mx-auto mt-0.5">
+                    Warehouse staff has not yet prepared or dispatched delivery notes for this commercial invoice.
                   </p>
                 </div>
               ) : (
-                <div className="space-y-4">
+                <div className="space-y-3">
                   {deliveryNotes.map((dn) => {
-                    const hasRejection = (dn.totalRejectedUnits || 0) > 0;
                     return (
                       <div
                         key={dn.id}
-                        className="rounded-xl border border-slate-200 bg-white overflow-hidden shadow-2xs"
+                        className="rounded-xl border border-slate-200 bg-white p-3.5 space-y-3 shadow-2xs hover:border-slate-300 transition-all"
                       >
-                        {/* Delivery Note Header */}
-                        <div className="p-3.5 bg-slate-50/80 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-                          <div className="flex items-center gap-2.5 flex-wrap">
-                            <span className="font-mono font-bold text-slate-900 text-sm">
+                        {/* Header: DN number, Status, Date, Driver */}
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-2.5 text-xs">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-mono font-bold text-indigo-700 text-sm">
                               {dn.deliveryNoteNumber}
                             </span>
                             <Badge
+                              variant="outline"
                               className={cn(
-                                'text-[10.5px] font-mono px-2 py-0.5',
+                                'text-[10px] font-bold uppercase tracking-wider',
                                 dn.status === 'DELIVERED'
-                                  ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
-                                  : dn.status === 'DISPATCHED'
-                                  ? 'bg-indigo-100 text-indigo-800 border-indigo-300'
-                                  : dn.status === 'REJECTION_PENDING_APPROVAL' ||
-                                    dn.status === 'REJECTION_APPROVED'
-                                  ? 'bg-rose-100 text-rose-800 border-rose-300'
-                                  : 'bg-slate-100 text-slate-700 border-slate-300'
+                                  ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                                  : dn.status === 'PARTIALLY_DELIVERED'
+                                  ? 'bg-amber-50 text-amber-800 border-amber-200'
+                                  : 'bg-indigo-50 text-indigo-800 border-indigo-200'
                               )}
                             >
                               {dn.status.replace(/_/g, ' ')}
@@ -799,28 +1268,13 @@ export function InvoiceDetailPage() {
                                     {item.dispatchedQuantity}
                                   </td>
                                   <td className="py-2.5 px-3 text-right font-mono font-bold text-emerald-700">
-                                    {item.acceptedQuantity}
+                                    {item.deliveredQuantity || 0}
                                   </td>
-                                  <td className="py-2.5 px-3 text-right font-mono font-bold">
-                                    {item.rejectedQuantity > 0 ? (
-                                      <span className="text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded border border-rose-200">
-                                        {item.rejectedQuantity} Damaged
-                                      </span>
-                                    ) : (
-                                      <span className="text-slate-400">0</span>
-                                    )}
+                                  <td className="py-2.5 px-3 text-right font-mono font-bold text-rose-700">
+                                    {item.rejectedQuantity || item.damagedQuantity || 0}
                                   </td>
-                                  <td className="py-2.5 px-3 text-slate-600 max-w-xs truncate">
-                                    {item.rejectedQuantity > 0 ? (
-                                      <span className="text-rose-700 text-[11px] font-medium">
-                                        {item.rejectionReason?.replace(/_/g, ' ') || 'Damaged in transit'}:{' '}
-                                        {item.rejectionNotes || 'Reported damaged on receipt'}
-                                      </span>
-                                    ) : (
-                                      <span className="text-emerald-700 text-[11px] font-medium flex items-center gap-1">
-                                        <Check className="h-3 w-3" /> All units verified intact
-                                      </span>
-                                    )}
+                                  <td className="py-2.5 px-3 text-slate-500 text-[11px]">
+                                    {item.notes || 'No issues reported'}
                                   </td>
                                 </tr>
                               ))}
@@ -828,25 +1282,10 @@ export function InvoiceDetailPage() {
                           </table>
                         </div>
 
-                        {/* Customer Physical Sign-Off / Rejection Banner */}
-                        {hasRejection && (
-                          <div className="p-3 bg-rose-50/70 border-t border-rose-200 text-xs text-rose-800 flex items-start gap-2">
-                            <AlertTriangle className="h-4 w-4 text-rose-600 shrink-0 mt-0.5" />
-                            <div>
-                              <p className="font-bold text-rose-900">
-                                Customer Rejection &amp; Quarantine Notice:
-                              </p>
-                              <p className="text-[11px] text-rose-800 mt-0.5">
-                                {dn.rejectionNotes ||
-                                  'Damaged units were returned physically to the warehouse quarantine bay. Awaiting Operations review and replacement delivery note generation.'}
-                              </p>
-                            </div>
-                          </div>
-                        )}
-
+                        {/* Store Receiver Acknowledgment */}
                         {dn.customerSignatureName && (
-                          <div className="p-2.5 bg-slate-50 border-t border-slate-100 text-[11px] text-slate-500 flex items-center justify-between">
-                            <span>
+                          <div className="flex items-center justify-between bg-slate-50 p-2.5 rounded-lg border border-slate-100 text-[11px]">
+                            <span className="text-slate-600">
                               Signed by Store Receiver:{' '}
                               <strong className="text-slate-800 font-semibold">{dn.customerSignatureName}</strong>
                             </span>
@@ -972,8 +1411,8 @@ export function InvoiceDetailPage() {
           </Button>
         </div>
 
-        {/* Universal A4 Document Viewer */}
-        <A4InvoiceViewer invoice={invoice} />
+        {/* Universal A4 Document Viewer with live preview */}
+        <A4InvoiceViewer invoice={previewInvoiceData} />
       </div>
 
       {/* Invoice-Wise Payment Collection Modal */}
