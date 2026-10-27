@@ -276,6 +276,7 @@ export class PurchaseOrderService {
       ...(dto.orderDate && { orderDate: dto.orderDate }),
       ...(dto.expectedDeliveryDate && { expectedDeliveryDate: dto.expectedDeliveryDate }),
       ...(dto.paymentTerms && { paymentTerms: dto.paymentTerms }),
+      ...(dto.currency && { currency: dto.currency }),
       ...(dto.notes !== undefined && { notes: dto.notes }),
       ...(dto.deliveryInstructions !== undefined && { deliveryInstructions: dto.deliveryInstructions }),
       ...(calculated && {

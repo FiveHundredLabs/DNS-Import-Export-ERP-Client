@@ -23,6 +23,7 @@ import { Textarea } from '../../components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
 import { toast } from 'sonner';
+import { SUPPORTED_CURRENCIES } from '../../types/purchasing';
 
 interface LineFormState {
   id: string;
@@ -53,6 +54,7 @@ export function PurchaseOrderCreateEditPage() {
     new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
   );
   const [paymentTerms, setPaymentTerms] = useState<string>('Net 30');
+  const [currency, setCurrency] = useState<string>('LKR');
   const [shippingCharges, setShippingCharges] = useState<number>(0);
   const [otherCharges, setOtherCharges] = useState<number>(0);
   const [notes, setNotes] = useState<string>('');
@@ -87,6 +89,7 @@ export function PurchaseOrderCreateEditPage() {
         setShippingCharges(existing.shippingCharges || 0);
         setOtherCharges(existing.otherCharges || 0);
         setNotes(existing.notes || '');
+        setCurrency(existing.currency || 'LKR');
         setDeliveryInstructions(existing.deliveryInstructions || '');
         setLines(
           existing.items.map((item) => ({
@@ -222,7 +225,7 @@ export function PurchaseOrderCreateEditPage() {
         orderDate,
         expectedDeliveryDate,
         paymentTerms,
-        currency: 'LKR',
+        currency,
         items: validLines.map((l) => ({
           productId: l.productId,
           productCode: l.productCode,
@@ -390,7 +393,18 @@ export function PurchaseOrderCreateEditPage() {
             </div>
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-slate-700">Currency</label>
-              <Input value="LKR - Sri Lankan Rupee" disabled className="h-9 text-xs bg-slate-50 text-slate-500" />
+              <select
+                aria-label="Currency"
+                value={currency}
+                onChange={(e) => setCurrency(e.target.value)}
+                className="w-full h-9 text-xs rounded-md border border-slate-300 bg-white px-3 font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-400"
+              >
+                {SUPPORTED_CURRENCIES.map((c) => (
+                  <option key={c.code} value={c.code}>
+                    {c.label} ({c.symbol})
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
         </CardContent>
@@ -422,10 +436,10 @@ export function PurchaseOrderCreateEditPage() {
                   <th className="py-2.5 px-3 w-8 text-center">#</th>
                   <th className="py-2.5 px-3 min-w-[260px]">Product / Description</th>
                   <th className="py-2.5 px-3 w-24 text-right">Quantity</th>
-                  <th className="py-2.5 px-3 w-32 text-right">Unit Price (LKR)</th>
+                  <th className="py-2.5 px-3 w-32 text-right">Unit Price ({currency})</th>
                   <th className="py-2.5 px-3 w-20 text-right">Disc %</th>
                   <th className="py-2.5 px-3 w-20 text-right">Tax %</th>
-                  <th className="py-2.5 px-3 w-32 text-right">Line Total</th>
+                  <th className="py-2.5 px-3 w-32 text-right">Line Total ({currency})</th>
                   <th className="py-2.5 px-2 w-10 text-center"></th>
                 </tr>
               </thead>
@@ -512,7 +526,7 @@ export function PurchaseOrderCreateEditPage() {
                         />
                       </td>
                       <td className="py-2.5 px-3 text-right font-mono font-bold text-slate-900 tabular-nums">
-                        {formatCurrency(lineTotal || 0)}
+                        {formatCurrency(lineTotal || 0, currency)}
                       </td>
                       <td className="py-2.5 px-2 text-center">
                         <button
@@ -579,7 +593,7 @@ export function PurchaseOrderCreateEditPage() {
               <div className="flex justify-between text-slate-600">
                 <span>Subtotal ({lines.length} lines):</span>
                 <span className="font-mono font-semibold tabular-nums">
-                  {formatCurrency(calculation.subtotal)}
+                  {formatCurrency(calculation.subtotal, currency)}
                 </span>
               </div>
 
@@ -587,7 +601,7 @@ export function PurchaseOrderCreateEditPage() {
                 <div className="flex justify-between text-emerald-600">
                   <span>Total Line Discounts:</span>
                   <span className="font-mono font-semibold tabular-nums">
-                    -{formatCurrency(calculation.totalDiscount)}
+                    -{formatCurrency(calculation.totalDiscount, currency)}
                   </span>
                 </div>
               )}
@@ -595,12 +609,12 @@ export function PurchaseOrderCreateEditPage() {
               <div className="flex justify-between text-slate-600">
                 <span>Applicable Tax Total (VAT/SSCL):</span>
                 <span className="font-mono font-semibold tabular-nums">
-                  {formatCurrency(calculation.taxTotal)}
+                  {formatCurrency(calculation.taxTotal, currency)}
                 </span>
               </div>
 
               <div className="flex items-center justify-between text-slate-600 gap-2">
-                <span>Shipping / Freight (LKR):</span>
+                <span>Shipping / Freight ({currency}):</span>
                 <Input
                   type="number"
                   min="0"
@@ -611,7 +625,7 @@ export function PurchaseOrderCreateEditPage() {
               </div>
 
               <div className="flex items-center justify-between text-slate-600 gap-2">
-                <span>Other Handling Charges (LKR):</span>
+                <span>Other Handling Charges ({currency}):</span>
                 <Input
                   type="number"
                   min="0"
@@ -622,9 +636,9 @@ export function PurchaseOrderCreateEditPage() {
               </div>
 
               <div className="border-t-2 border-slate-900 pt-3 flex justify-between items-baseline text-slate-900">
-                <span className="font-bold text-sm">Grand Total (LKR):</span>
+                <span className="font-bold text-sm">Grand Total ({currency}):</span>
                 <span className="font-mono font-black text-xl tabular-nums">
-                  {formatCurrency(calculation.grandTotal)}
+                  {formatCurrency(calculation.grandTotal, currency)}
                 </span>
               </div>
 
@@ -632,7 +646,7 @@ export function PurchaseOrderCreateEditPage() {
                 <div className="p-2.5 bg-amber-50 rounded-lg border border-amber-200 text-[11px] text-amber-800 flex items-start gap-1.5">
                   <AlertCircle className="h-4 w-4 shrink-0 text-amber-600 mt-0.5" />
                   <span>
-                    Orders exceeding LKR 500,000 require executive <strong>Director Authorization</strong> under ERP financial delegation rules.
+                    Orders exceeding {currency} 500,000 equivalent require executive <strong>Director Authorization</strong> under ERP financial delegation rules.
                   </span>
                 </div>
               )}

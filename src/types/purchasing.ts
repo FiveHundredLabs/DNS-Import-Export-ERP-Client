@@ -97,3 +97,21 @@ export interface PurchaseOrderFilter {
   startDate?: string;
   endDate?: string;
 }
+
+export interface CurrencyOption {
+  code: string;
+  name: string;
+  symbol: string;
+}
+
+export const SUPPORTED_CURRENCIES: CurrencyOption[] = [
+  { code: 'LKR', name: 'Sri Lankan Rupee', symbol: 'Rs.' },
+  { code: 'CNY', name: 'Chinese Yuan', symbol: '¥' },
+  { code: 'USD', name: 'US Dollar', symbol: '$' },
+  { code: 'EUR', name: 'Euro', symbol: '€' },
+  { code: 'SGD', name: 'Singapore Dollar', symbol: 'S$' },
+  { code: 'INR', name: 'Indian Rupee', symbol: '₹' },
+  { code: 'GBP', name: 'British Pound', symbol: '£' },
+  { code: 'JPY', name: 'Japanese Yen', symbol: '¥' },
+];
+

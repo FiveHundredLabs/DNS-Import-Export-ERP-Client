@@ -85,31 +85,18 @@ describe('Sales Representative Mobile Dashboard App View', () => {
     expect(screen.getByText('Dispatched')).toBeInTheDocument();
   });
 
-  it('allows switching views with the mobile navigation bar switcher', () => {
+  it('renders all sections and services directly on mobile view without sticky switcher', () => {
     render(
       <MemoryRouter>
         <SalesRepDashboard />
       </MemoryRouter>
     );
 
-    // Switch to Receivables view
-    const receivablesBtn = screen.getByRole('button', { name: /Receivables \(3\)/i });
-    fireEvent.click(receivablesBtn);
-
-    expect(screen.getByText(/Pending Payments & Route Receivables/i)).toBeInTheDocument();
-
-    // Switch to Live Orders view
-    const ordersBtn = screen.getByRole('button', { name: /Live Orders \(2\)/i });
-    fireEvent.click(ordersBtn);
-
-    expect(screen.getByText(/Recent Order Status Tracking/i)).toBeInTheDocument();
-
-    // Switch back to All Overview
-    const allBtn = screen.getByRole('button', { name: /All Overview/i });
-    fireEvent.click(allBtn);
-
+    // Verifies all core sections are rendered directly
+    expect(screen.getByText('Field Services & Shortcuts')).toBeInTheDocument();
     expect(screen.getByText('Monthly Sales')).toBeInTheDocument();
     expect(screen.getByText(/Pending Payments & Route Receivables/i)).toBeInTheDocument();
+    expect(screen.getByText(/Recent Order Status Tracking/i)).toBeInTheDocument();
   });
 
   it('allows mobile filter chips to filter receivables by overdue status', () => {
@@ -119,22 +106,18 @@ describe('Sales Representative Mobile Dashboard App View', () => {
       </MemoryRouter>
     );
 
-    // Switch to receivables view
-    const receivablesBtn = screen.getByRole('button', { name: /Receivables \(3\)/i });
-    fireEvent.click(receivablesBtn);
-
     // Click Overdue chip
     const overdueChip = screen.getByRole('button', { name: /Overdue \(1\)/i });
     fireEvent.click(overdueChip);
 
-    expect(screen.getByText('Lanka Electrical Superstore')).toBeInTheDocument();
+    expect(screen.getAllByText('Lanka Electrical Superstore').length).toBeGreaterThan(0);
     expect(screen.queryByText('Kelani Valley Lighting Mart')).not.toBeInTheDocument();
 
     // Click All chip
     const allChip = screen.getByRole('button', { name: /All \(3\)/i });
     fireEvent.click(allChip);
 
-    expect(screen.getByText('Lanka Electrical Superstore')).toBeInTheDocument();
+    expect(screen.getAllByText('Lanka Electrical Superstore').length).toBeGreaterThan(0);
     expect(screen.getByText('Kelani Valley Lighting Mart')).toBeInTheDocument();
   });
 });
