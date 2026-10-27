@@ -47,8 +47,11 @@ export function InvoiceStatusBadge({ status, className }: InvoiceStatusBadgeProp
       );
     case 'DRAFT':
       return (
-        <Badge variant="secondary" className={`gap-1 font-semibold ${className || ''}`}>
-          <FileEdit className="h-3 w-3" /> Draft
+        <Badge
+          variant="outline"
+          className={`gap-1 font-bold bg-amber-50 text-amber-800 border-amber-300 shadow-2xs ${className || ''}`}
+        >
+          <FileEdit className="h-3 w-3 text-amber-600" /> Draft
         </Badge>
       );
     case 'CANCELLED':

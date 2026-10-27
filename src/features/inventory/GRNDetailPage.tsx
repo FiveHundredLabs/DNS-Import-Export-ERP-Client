@@ -11,6 +11,9 @@ import { useAuth } from '../../hooks/useAuth';
 import { MOCK_PRODUCTS } from '../../mock/mockProducts';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 import { UnitBarcodeModal } from '../../components/inventory/UnitBarcodeModal';
+import { unitBarcodeService } from '../../services/UnitBarcodeService';
+import { PaginationControls } from '../../components/common/PaginationControls';
+import { UnitBarcodeRecord } from '../../types/inventory';
 import { toast } from 'sonner';
 import {
   Barcode,
@@ -18,18 +21,153 @@ import {
   CheckCircle2,
   Clock,
   ShieldCheck,
-  Building2,
-  Lock,
+  ChevronDown,
+  ChevronUp,
+  Copy,
   ArrowLeft,
   AlertTriangle,
-  Boxes,
-  Package,
-  Calendar,
-  FileText,
-  DollarSign,
-  ChevronRight,
-  ExternalLink,
 } from 'lucide-react';
+
+function ItemInlineBarcodes({
+  item,
+  grnNumber,
+  onOpenModal,
+}: {
+  item: any;
+  grnNumber: string;
+  onOpenModal: () => void;
+}) {
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [copiedCode, setCopiedCode] = useState<string | null>(null);
+
+  const records: UnitBarcodeRecord[] = item.unitRecords || [];
+  const total = records.length;
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const safePage = Math.min(Math.max(1, page), totalPages);
+  const pagedRecords = records.slice((safePage - 1) * pageSize, safePage * pageSize);
+
+  const handleCopy = (code: string) => {
+    navigator.clipboard.writeText(code);
+    setCopiedCode(code);
+    toast.success(`Copied barcode: ${code}`);
+    setTimeout(() => setCopiedCode(null), 1500);
+  };
+
+  return (
+    <div className="p-4 bg-slate-50/90 rounded-xl border border-slate-200 space-y-3 my-1">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200 pb-2.5">
+        <div className="flex items-center gap-2 flex-wrap">
+          <Barcode className="h-4 w-4 text-primary shrink-0" />
+          <span className="font-bold text-xs text-slate-800">
+            {item.productNameSnapshot || item.productId} — Unit Barcode Registry
+          </span>
+          <Badge variant="outline" className="text-[10px] bg-white font-mono border-slate-300">
+            {total} Total Units
+          </Badge>
+          <Badge
+            className={
+              item.barcodesConfirmed
+                ? 'bg-emerald-100 text-emerald-800 border-0 text-[10px]'
+                : 'bg-amber-100 text-amber-800 border-0 text-[10px]'
+            }
+          >
+            {item.barcodesConfirmed ? 'All Stickers Affixed' : 'Stickers Pending'}
+          </Badge>
+        </div>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          onClick={onOpenModal}
+          className="h-7 text-xs gap-1 text-primary hover:bg-primary/5 self-start sm:self-auto shadow-2xs font-semibold"
+        >
+          <Printer className="h-3.5 w-3.5" />
+          Open Studio / Print Stickers
+        </Button>
+      </div>
+
+      {total === 0 ? (
+        <p className="text-xs text-slate-400 italic py-2">No unit barcodes generated for this item.</p>
+      ) : (
+        <>
+          <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white shadow-2xs">
+            <table className="w-full text-xs">
+              <thead className="bg-slate-100/80 border-b border-slate-200 text-slate-600 font-semibold">
+                <tr>
+                  <th className="py-2 px-3 text-left w-24">Unit #</th>
+                  <th className="py-2 px-3 text-left">System Barcode (Code-128)</th>
+                  <th className="py-2 px-3 text-left">Unit Serial Number</th>
+                  <th className="py-2 px-3 text-center w-36">Physical Tag Status</th>
+                  <th className="py-2 px-2 text-right w-16">Copy</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 font-mono">
+                {pagedRecords.map((r) => (
+                  <tr key={r.unitBarcode} className="hover:bg-slate-50/80 transition-colors">
+                    <td className="py-1.5 px-3 text-slate-500 font-medium">
+                      Unit {r.unitIndex}/{total}
+                    </td>
+                    <td className="py-1.5 px-3 font-bold text-slate-900 tracking-wider">
+                      {r.unitBarcode}
+                    </td>
+                    <td className="py-1.5 px-3 text-slate-600">
+                      {r.serialNumber ? (
+                        <span className="text-indigo-700 font-semibold">{r.serialNumber}</span>
+                      ) : (
+                        <span className="text-slate-400 italic font-sans text-[11px]">—</span>
+                      )}
+                    </td>
+                    <td className="py-1.5 px-3 text-center">
+                      {r.status === 'LABELED' ? (
+                        <Badge className="bg-emerald-100 text-emerald-800 border-0 text-[10px] py-0 px-2 gap-1 font-sans">
+                          <CheckCircle2 className="h-3 w-3" /> Affixed
+                        </Badge>
+                      ) : (
+                        <Badge
+                          variant="outline"
+                          className="bg-amber-50 text-amber-700 border-amber-200 text-[10px] py-0 px-2 gap-1 font-sans"
+                        >
+                          <Clock className="h-3 w-3" /> Pending
+                        </Badge>
+                      )}
+                    </td>
+                    <td className="py-1.5 px-2 text-right">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleCopy(r.unitBarcode)}
+                        className="h-6 w-6 p-0 text-slate-400 hover:text-slate-700"
+                        title="Copy barcode"
+                      >
+                        <Copy className="h-3 w-3" />
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <PaginationControls
+            currentPage={safePage}
+            totalItems={total}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            onPageSizeChange={(newSize) => {
+              setPageSize(newSize);
+              setPage(1);
+            }}
+            pageSizeOptions={[10, 25, 50, 100]}
+            label="units"
+            compact
+          />
+        </>
+      )}
+    </div>
+  );
+}
 
 export function GRNDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -42,6 +180,8 @@ export function GRNDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [comment, setComment] = useState('');
   const [isBarcodeModalOpen, setIsBarcodeModalOpen] = useState(false);
+  const [selectedProductForModal, setSelectedProductForModal] = useState<string>('ALL');
+  const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     const fetchGRN = async () => {
@@ -63,14 +203,39 @@ export function GRNDetailPage() {
     fetchGRN();
   }, [id, grnService]);
 
-  const handleApprove = async () => {
-    if (comment.length < 3) {
-      toast.error('Comment must be at least 3 characters long');
-      return;
+  // Ensure all GRN items have unitRecords populated
+  const preparedItems = useMemo(() => {
+    if (!grn?.items) return [];
+    return unitBarcodeService.generateAllForGRN(
+      grn.items,
+      grn.grnNumber || grn.id || 'GRN-2025-001'
+    );
+  }, [grn]);
+
+  const totalGood = useMemo(() => {
+    return preparedItems.reduce(
+      (sum, item) => sum + Math.max(0, (item.receivedQuantity || 0) - (item.damagedQuantity || 0)),
+      0
+    );
+  }, [preparedItems]);
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'APPROVED':
+        return <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200">Approved</Badge>;
+      case 'SUBMITTED':
+        return <Badge className="bg-amber-100 text-amber-800 border-amber-200">Submitted</Badge>;
+      case 'REJECTED':
+        return <Badge className="bg-rose-100 text-rose-800 border-rose-200">Rejected</Badge>;
+      default:
+        return <Badge variant="outline">{status}</Badge>;
     }
+  };
+
+  const handleApprove = async () => {
     if (!id || !user) return;
     try {
-      await grnService.approveGRN(id, user.id, user.name);
+      await grnService.approveGRN(id, user.id, comment);
       toast.success('GRN approved successfully');
       navigate('/inventory/grn');
     } catch (err: any) {
@@ -79,88 +244,28 @@ export function GRNDetailPage() {
   };
 
   const handleReject = async () => {
-    if (comment.length < 3) {
-      toast.error('Reason must be at least 3 characters long');
+    if (!id || !user) return;
+    if (!comment || comment.length < 3) {
+      toast.error('Rejection requires a comment (min 3 chars)');
       return;
     }
-    if (!id || !user) return;
     try {
-      await grnService.rejectGRN(id, comment, user.id, user.name);
-      toast.success('GRN rejected successfully');
+      await grnService.rejectGRN(id, user.id, comment);
+      toast.success('GRN rejected');
       navigate('/inventory/grn');
     } catch (err: any) {
       toast.error(err.message || 'Failed to reject GRN');
     }
   };
 
-  const isStockKeeper = user?.role === 'STOCK_KEEPER';
-
-  const totalExpected = useMemo(() => {
-    return grn?.items?.reduce((sum: number, i: any) => sum + (i.expectedQuantity || 0), 0) || 0;
-  }, [grn]);
-
-  const totalReceived = useMemo(() => {
-    return grn?.items?.reduce((sum: number, i: any) => sum + (i.receivedQuantity || 0), 0) || 0;
-  }, [grn]);
-
-  const totalDamaged = useMemo(() => {
-    return grn?.items?.reduce((sum: number, i: any) => sum + (i.damagedQuantity || 0), 0) || 0;
-  }, [grn]);
-
-  const totalGood = Math.max(0, totalReceived - totalDamaged);
-
-  const totalValue = useMemo(() => {
-    return (
-      grn?.items?.reduce(
-        (acc: number, item: any) =>
-          acc +
-          (item.unitCostSnapshot ?? item.unitCost ?? 0) *
-            ((item.receivedQuantity || 0) - (item.damagedQuantity || 0)),
-        0
-      ) || 0
-    );
-  }, [grn]);
-
-  const hasDamagedStock = totalDamaged > 0;
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'APPROVED':
-      case 'COSTED':
-        return (
-          <Badge className="bg-emerald-50 text-emerald-800 border-emerald-300 font-mono text-xs">
-            Approved &amp; Verified
-          </Badge>
-        );
-      case 'SUBMITTED':
-        return (
-          <Badge className="bg-amber-50 text-amber-800 border-amber-300 font-mono text-xs">
-            Pending Finance Review
-          </Badge>
-        );
-      case 'DRAFT':
-        return (
-          <Badge className="bg-slate-100 text-slate-700 border-slate-300 font-mono text-xs">
-            Draft Intake
-          </Badge>
-        );
-      case 'REJECTED':
-        return (
-          <Badge className="bg-rose-50 text-rose-800 border-rose-300 font-mono text-xs">
-            Rejected
-          </Badge>
-        );
-      default:
-        return (
-          <Badge className="bg-slate-100 text-slate-700 border-slate-300 font-mono text-xs">
-            {status}
-          </Badge>
-        );
-    }
+  const toggleExpandRow = (productId: string) => {
+    setExpandedRows((prev) => ({
+      ...prev,
+      [productId]: !prev[productId],
+    }));
   };
 
-  // Determine active workflow step
-  const getWorkflowStep = (status: string) => {
+  const getStatusColor = (status: string) => {
     switch (status) {
       case 'DRAFT':
         return 1;
@@ -170,6 +275,8 @@ export function GRNDetailPage() {
         return 3;
       case 'COSTED':
         return 4;
+      case 'PRICED':
+        return 5;
       default:
         return 1;
     }
@@ -178,10 +285,9 @@ export function GRNDetailPage() {
   if (loading) {
     return (
       <div className="p-6 space-y-4">
-        <Skeleton className="h-8 w-1/3 rounded-lg" />
-        <Skeleton className="h-28 w-full rounded-xl" />
-        <Skeleton className="h-40 w-full rounded-xl" />
-        <Skeleton className="h-64 w-full rounded-xl" />
+        <Skeleton className="h-8 w-64" />
+        <Skeleton className="h-32 w-full" />
+        <Skeleton className="h-64 w-full" />
       </div>
     );
   }
@@ -199,7 +305,22 @@ export function GRNDetailPage() {
     );
   }
 
-  const currentStep = getWorkflowStep(grn.status);
+  const totalValue =
+    preparedItems?.reduce(
+      (acc: number, item: any) =>
+        acc +
+        (item.unitCostSnapshot ?? item.unitCost ?? 0) *
+          (item.receivedQuantity - (item.damagedQuantity || 0)),
+      0
+    ) || 0;
+
+  const isStockKeeper = user?.role === 'STOCK_KEEPER';
+  const hasDamagedStock = preparedItems?.some((i: any) => (i.damagedQuantity || 0) > 0);
+  const totalUnits =
+    preparedItems?.reduce(
+      (acc: number, item: any) => acc + (item.receivedQuantity - (item.damagedQuantity || 0)),
+      0
+    ) || 0;
 
   return (
     <div className="p-6 space-y-6">
@@ -256,323 +377,104 @@ export function GRNDetailPage() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setIsBarcodeModalOpen(true)}
+            onClick={() => {
+              setSelectedProductForModal('ALL');
+              setIsBarcodeModalOpen(true);
+            }}
             className="gap-1.5 text-xs font-semibold text-primary border-primary/30 hover:bg-primary/5"
           >
             <Printer className="h-3.5 w-3.5" />
             Unit Barcodes &amp; Stickers ({totalGood})
           </Button>
 
-          {/* Finance-only action buttons */}
-          {grn.status === 'APPROVED' && !isStockKeeper && (
-            <Button
-              onClick={() => navigate(`/finance/ap/bills/new?grnId=${grn.id}`)}
-              className="bg-primary hover:bg-primary-hover text-white text-xs font-semibold"
-            >
-              Cost in Finance (Create Vendor Bill)
-            </Button>
-          )}
-          {hasDamagedStock && !isStockKeeper && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => navigate(`/finance/ap/debit-notes?grnId=${grn.id}`)}
-              className="border-rose-200 text-rose-700 hover:bg-rose-50 text-xs font-semibold"
-            >
-              Return Damaged Stock (Debit Note)
-            </Button>
-          )}
-
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => window.print()}
-            className="gap-1.5 text-xs bg-white hover:bg-slate-50 text-slate-700"
-          >
-            <Printer className="h-3.5 w-3.5" />
-            <span>Print Summary</span>
-          </Button>
-
-          <Button variant="outline" size="sm" onClick={() => navigate('/inventory/grn')}>
+          <Button variant="outline" onClick={() => navigate('/inventory/grn')}>
             Back to List
           </Button>
         </div>
       </div>
 
-      {/* ── Status Workflow Lifecycle Tracker (Finance-Side Style) ── */}
-      <Card className="border-slate-200 shadow-xs overflow-hidden">
-        <CardHeader className="p-4 pb-2 border-b border-slate-100 bg-slate-50/50">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-xs font-bold uppercase tracking-wider text-slate-600 flex items-center gap-1.5">
-              <Boxes className="h-4 w-4 text-primary" />
-              <span>Inward Intake Workflow Status Tracker</span>
-            </CardTitle>
-            <span className="text-[11px] font-mono text-slate-500">
-              Stage {currentStep} of 4
-            </span>
-          </div>
-        </CardHeader>
-        <CardContent className="p-4 pt-3">
-          <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
-            {/* Step 1: Draft Intake */}
-            <div
-              className={`p-3 rounded-xl border transition-all ${
-                currentStep >= 1
-                  ? 'border-blue-200 bg-blue-50/40 text-blue-900'
-                  : 'border-slate-200 bg-slate-50/60 text-slate-400'
-              }`}
-            >
-              <div className="flex items-center justify-between text-xs font-bold mb-1">
-                <span className="flex items-center gap-1.5">
-                  <span className="h-5 w-5 rounded-full bg-blue-600 text-white text-[10px] flex items-center justify-center font-mono">
-                    1
-                  </span>
-                  Physical Draft
-                </span>
-                <CheckCircle2 className="h-3.5 w-3.5 text-blue-600" />
-              </div>
-              <p className="text-[11px] text-slate-600">
-                Goods offloaded at dock &amp; physical counts entered.
-              </p>
-            </div>
-
-            {/* Step 2: Dock Submission */}
-            <div
-              className={`p-3 rounded-xl border transition-all ${
-                currentStep >= 2
-                  ? 'border-amber-200 bg-amber-50/40 text-amber-900'
-                  : 'border-slate-200 bg-slate-50/60 text-slate-400'
-              }`}
-            >
-              <div className="flex items-center justify-between text-xs font-bold mb-1">
-                <span className="flex items-center gap-1.5">
-                  <span className="h-5 w-5 rounded-full bg-amber-600 text-white text-[10px] flex items-center justify-center font-mono">
-                    2
-                  </span>
-                  Dock Submission
-                </span>
-                {currentStep >= 2 ? (
-                  <CheckCircle2 className="h-3.5 w-3.5 text-amber-600" />
-                ) : (
-                  <Clock className="h-3.5 w-3.5 text-slate-400" />
-                )}
-              </div>
-              <p className="text-[11px] text-slate-600">
-                Barcodes labeled; submitted for inspection.
-              </p>
-            </div>
-
-            {/* Step 3: Manager / Finance Approval */}
-            <div
-              className={`p-3 rounded-xl border transition-all ${
-                currentStep >= 3
-                  ? 'border-emerald-200 bg-emerald-50/40 text-emerald-900'
-                  : 'border-slate-200 bg-slate-50/60 text-slate-400'
-              }`}
-            >
-              <div className="flex items-center justify-between text-xs font-bold mb-1">
-                <span className="flex items-center gap-1.5">
-                  <span className="h-5 w-5 rounded-full bg-emerald-600 text-white text-[10px] flex items-center justify-center font-mono">
-                    3
-                  </span>
-                  Manager Approval
-                </span>
-                {currentStep >= 3 ? (
-                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
-                ) : (
-                  <Clock className="h-3.5 w-3.5 text-slate-400" />
-                )}
-              </div>
-              <p className="text-[11px] text-slate-600">
-                Stock verified &amp; released into live inventory.
-              </p>
-            </div>
-
-            {/* Step 4: Commercial Costing & AP Bill */}
-            <div
-              className={`p-3 rounded-xl border transition-all ${
-                currentStep >= 4
-                  ? 'border-purple-200 bg-purple-50/40 text-purple-900'
-                  : 'border-slate-200 bg-slate-50/60 text-slate-400'
-              }`}
-            >
-              <div className="flex items-center justify-between text-xs font-bold mb-1">
-                <span className="flex items-center gap-1.5">
-                  <span className="h-5 w-5 rounded-full bg-purple-600 text-white text-[10px] flex items-center justify-center font-mono">
-                    4
-                  </span>
-                  Finance Costing
-                </span>
-                {currentStep >= 4 ? (
-                  <CheckCircle2 className="h-3.5 w-3.5 text-purple-600" />
-                ) : (
-                  <Lock className="h-3.5 w-3.5 text-slate-400" />
-                )}
-              </div>
-              <p className="text-[11px] text-slate-600">
-                Landed costs apportioned &amp; vendor bill posted.
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* ── Summary Metrics Bar (Global Cards) ── */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 text-center shadow-xs">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block">
-            Expected Units
-          </span>
-          <span className="text-2xl font-bold font-mono text-slate-900 mt-1 block">
-            {totalExpected}
-          </span>
-          <span className="text-[10px] text-slate-400 mt-0.5 block">PO Delivery Quota</span>
-        </div>
-
-        <div className="p-4 bg-blue-50/60 rounded-2xl border border-blue-200 text-center shadow-xs">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-blue-700 block">
-            Delivered Qty
-          </span>
-          <span className="text-2xl font-bold font-mono text-blue-900 mt-1 block">
-            {totalReceived}
-          </span>
-          <span className="text-[10px] text-blue-600 mt-0.5 block">Dock Intake Count</span>
-        </div>
-
-        <div className="p-4 bg-rose-50/60 rounded-2xl border border-rose-200 text-center shadow-xs">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-rose-700 block">
-            Damaged / Quarantined
-          </span>
-          <span className="text-2xl font-bold font-mono text-rose-900 mt-1 block">
-            {totalDamaged}
-          </span>
-          <span className="text-[10px] text-rose-600 mt-0.5 block">Transit Discrepancy</span>
-        </div>
-
-        <div className="p-4 bg-emerald-50/60 rounded-2xl border border-emerald-200 text-center shadow-xs">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 block">
-            Accepted Good Stock
-          </span>
-          <span className="text-2xl font-bold font-mono text-emerald-900 mt-1 block">
-            {totalGood}
-          </span>
-          <span className="text-[10px] text-emerald-600 mt-0.5 block">Stocked in WH</span>
-        </div>
-      </div>
-
-      {/* ── Meta Details Cards (Dual Card View) ── */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Card 1: Supplier & Purchase Reference */}
-        <Card className="border-slate-200 shadow-xs">
-          <CardHeader className="p-4 border-b border-slate-100">
-            <CardTitle className="text-xs font-bold uppercase tracking-wider text-slate-600 flex items-center gap-1.5">
-              <Building2 className="h-4 w-4 text-blue-600" />
-              <span>GRN Details</span>
-            </CardTitle>
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card>
+          <CardHeader className="py-2">
+            <CardTitle className="text-sm text-slate-500">Supplier</CardTitle>
           </CardHeader>
-          <CardContent className="p-4 space-y-2.5 text-xs">
-            <div>
-              <span className="text-[10px] uppercase font-bold text-slate-400 block">Supplier Name</span>
-              <span className="font-bold text-slate-900 text-sm">{grn.supplierName || 'N/A'}</span>
-            </div>
-            <div className="grid grid-cols-2 gap-2 pt-1 border-t border-slate-100">
-              <div>
-                <span className="text-[10px] uppercase font-bold text-slate-400 block">Supplier Code</span>
-                <span className="font-medium text-slate-700 font-mono">{grn.supplierId || 'N/A'}</span>
-              </div>
-              <div>
-                <span className="text-[10px] uppercase font-bold text-slate-400 block">PO Reference</span>
-                <span className="font-semibold font-mono text-primary">
-                  {grn.poNumber || (grn.sourceType === 'PO' ? 'PO Linked' : 'Manual Receipt')}
-                </span>
-              </div>
-            </div>
-            <div className="pt-1 border-t border-slate-100">
-              <span className="text-[10px] uppercase font-bold text-slate-400 block">Receiving Date</span>
-              <span className="font-medium text-slate-700">
-                {grn.receivingDate
-                  ? formatDate(grn.receivingDate)
-                  : grn.submittedAt
-                  ? formatDate(grn.submittedAt)
-                  : grn.createdAt
-                  ? formatDate(grn.createdAt)
-                  : 'N/A'}
-              </span>
-            </div>
+          <CardContent>
+            <p className="font-semibold text-base">{grn.supplierName || 'N/A'}</p>
           </CardContent>
         </Card>
-
-        {/* Card 2: Warehouse Dock & Receiving Audit */}
-        <Card className="border-slate-200 shadow-xs">
-          <CardHeader className="p-4 border-b border-slate-100">
-            <CardTitle className="text-xs font-bold uppercase tracking-wider text-slate-600 flex items-center gap-1.5">
-              <ShieldCheck className="h-4 w-4 text-emerald-600" />
-              <span>Receiving Dock &amp; Approval Audit</span>
-            </CardTitle>
+        <Card>
+          <CardHeader className="py-2">
+            <CardTitle className="text-sm text-slate-500">Warehouse</CardTitle>
           </CardHeader>
-          <CardContent className="p-4 space-y-2.5 text-xs">
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <span className="text-[10px] uppercase font-bold text-slate-400 block">Receiving Warehouse</span>
-                <span className="font-semibold text-slate-800 font-mono">{grn.warehouseId || 'WH-MAIN'}</span>
-              </div>
-              <div>
-                <span className="text-[10px] uppercase font-bold text-slate-400 block">Received By</span>
-                <span className="font-semibold text-slate-800">{grn.receivedById || 'Stock Keeper Desk'}</span>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-2 pt-1 border-t border-slate-100">
-              <div>
-                <span className="text-[10px] uppercase font-bold text-slate-400 block">Finance / Manager Approval</span>
-                <span className="font-semibold text-slate-800">
-                  {grn.approvedById ? 'Verified & Approved' : 'Pending Review'}
-                </span>
-              </div>
-              <div>
-                <span className="text-[10px] uppercase font-bold text-slate-400 block">Physical Tagging Status</span>
-                <div>
-                  {grn.barcodesConfirmed ? (
-                    <Badge className="bg-emerald-100 text-emerald-800 border-0 text-[10px]">
-                      ✓ All Units Labeled
-                    </Badge>
-                  ) : (
-                    <Badge className="bg-amber-100 text-amber-800 border-0 text-[10px]">
-                      Pending Physical Affixing
-                    </Badge>
-                  )}
-                </div>
-              </div>
-            </div>
-            {grn.approvedAt && (
-              <div className="pt-1 border-t border-slate-100">
-                <span className="text-[10px] uppercase font-bold text-slate-400 block">Approval Timestamp</span>
-                <span className="font-medium text-slate-700 font-mono">{formatDate(grn.approvedAt)}</span>
-              </div>
+          <CardContent>
+            <p className="font-semibold text-base">{grn.warehouseId || 'WH-MAIN'}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="py-2">
+            <CardTitle className="text-sm text-slate-500">Received Date</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="font-semibold text-base">{formatDate(grn.receivedDate || grn.createdAt)}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="py-2">
+            <CardTitle className="text-sm text-slate-500">Physical Labeling Status</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {grn.barcodesConfirmed ? (
+              <Badge className="bg-emerald-100 text-emerald-800 border-0 flex items-center gap-1 w-fit font-medium">
+                <CheckCircle2 className="h-3 w-3 text-emerald-600" /> All Stickers Affixed
+              </Badge>
+            ) : (
+              <Badge variant="outline" className="bg-amber-50 text-amber-800 border-amber-300 flex items-center gap-1 w-fit font-medium">
+                <Clock className="h-3 w-3 text-amber-600" /> Pending Affixing
+              </Badge>
             )}
           </CardContent>
         </Card>
       </div>
 
-      {/* ── Line Items & Barcode Sets Table ── */}
-      <Card className="border-slate-200 shadow-xs overflow-hidden">
-        <CardHeader className="p-4 border-b border-slate-100 flex flex-row items-center justify-between">
+      {hasDamagedStock && (
+        <Card className="border-rose-200 bg-rose-50/40">
+          <CardContent className="p-4 flex items-center justify-between text-xs text-rose-800">
+            <span>
+              <strong>Warehouse Quarantine Alert:</strong> One or more items received with damaged stock. Damaged quantities are excluded from accepted inventory.
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate('/inventory/stock?status=DAMAGED')}
+              className="text-xs h-7 border-rose-300 text-rose-800 hover:bg-rose-100 shrink-0"
+            >
+              View Quarantine Bay
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ── Line Items Table ── */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
           <div>
-            <CardTitle className="text-sm font-bold text-slate-900">
-              Line Items &amp; Barcode Sets ({grn.items?.length || 0})
-            </CardTitle>
+            <CardTitle>Line Items &amp; Barcode Sets</CardTitle>
             <p className="text-xs text-slate-500 mt-0.5">
-              Physical verification counts and unit-wise serial barcode assignments
+              Click &quot;Unit Barcodes&quot; or the arrow on any line to expand its paginated barcode registry.
             </p>
           </div>
           <Button
             type="button"
-            variant="ghost"
+            variant="outline"
             size="sm"
-            onClick={() => setIsBarcodeModalOpen(true)}
-            className="text-xs text-primary gap-1 font-semibold hover:bg-primary/5"
+            onClick={() => {
+              setSelectedProductForModal('ALL');
+              setIsBarcodeModalOpen(true);
+            }}
+            className="gap-1.5 text-xs text-primary border-primary/30"
           >
             <Barcode className="h-3.5 w-3.5" />
-            View Barcode Stickers
+            View All Barcode Stickers
           </Button>
         </CardHeader>
         <CardContent className="p-0">
@@ -591,52 +493,78 @@ export function GRNDetailPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {grn.items?.map((item: any, idx: number) => {
+              {preparedItems?.map((item: any, idx: number) => {
                 const product = MOCK_PRODUCTS.find((p) => p.id === item.productId);
                 const goodQty = (item.receivedQuantity || 0) - (item.damagedQuantity || 0);
                 const unitCost = item.unitCostSnapshot ?? item.unitCost ?? 0;
                 const lineValue = goodQty * unitCost;
                 const barcodesCount = item.unitRecords?.length || item.unitBarcodes?.length || goodQty;
+                const isExpanded = !!expandedRows[item.productId];
 
                 return (
-                  <TableRow key={idx} className="hover:bg-slate-50/60">
-                    <TableCell className="font-medium text-xs text-slate-900">
-                      {product?.name || item.productNameSnapshot || item.productId}
-                    </TableCell>
-                    <TableCell className="font-mono text-xs text-slate-600">
-                      {product?.sku || item.skuSnapshot || 'N/A'}
-                    </TableCell>
-                    <TableCell className="text-right font-mono text-xs">{item.expectedQuantity}</TableCell>
-                    <TableCell className="text-right font-mono text-xs font-semibold text-blue-900">
-                      {item.receivedQuantity}
-                    </TableCell>
-                    <TableCell className="text-right font-mono text-xs text-rose-600 font-semibold">
-                      {item.damagedQuantity || 0}
-                    </TableCell>
-                    <TableCell className="text-right font-mono text-xs font-bold text-slate-900">
-                      {goodQty}
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setIsBarcodeModalOpen(true)}
-                        className="h-7 text-[11px] gap-1 font-mono text-primary border-primary/20 hover:bg-primary/5"
-                      >
-                        <Barcode className="h-3 w-3" />
-                        {barcodesCount} Unit Barcodes
-                      </Button>
-                    </TableCell>
-                    {!isStockKeeper && (
-                      <TableCell className="text-right font-mono text-xs">{formatCurrency(unitCost)}</TableCell>
-                    )}
-                    {!isStockKeeper && (
-                      <TableCell className="text-right font-mono text-xs font-semibold text-slate-900">
-                        {formatCurrency(lineValue)}
+                  <TableRowGroup key={item.productId || idx}>
+                    <TableRow className={isExpanded ? 'bg-slate-50/70 border-b-0' : undefined}>
+                      <TableCell className="font-medium">
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => toggleExpandRow(item.productId)}
+                            className="p-1 rounded hover:bg-slate-200/80 text-slate-500 hover:text-slate-800 transition-colors"
+                            title={isExpanded ? 'Collapse barcodes' : 'Expand barcodes'}
+                          >
+                            {isExpanded ? (
+                              <ChevronUp className="h-3.5 w-3.5" />
+                            ) : (
+                              <ChevronDown className="h-3.5 w-3.5" />
+                            )}
+                          </button>
+                          <span>{product?.name || item.productNameSnapshot || item.productId}</span>
+                        </div>
                       </TableCell>
+                      <TableCell className="font-mono text-xs">{product?.sku || item.skuSnapshot || 'N/A'}</TableCell>
+                      <TableCell className="text-right font-mono">{item.expectedQuantity}</TableCell>
+                      <TableCell className="text-right font-mono font-semibold">{item.receivedQuantity}</TableCell>
+                      <TableCell className="text-right font-mono text-rose-600">{item.damagedQuantity || 0}</TableCell>
+                      <TableCell className="text-right font-mono font-bold text-slate-900">{goodQty}</TableCell>
+                      <TableCell className="text-center">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedProductForModal(item.productId);
+                            setIsBarcodeModalOpen(true);
+                          }}
+                          className="h-7 text-[11px] gap-1 font-mono text-primary hover:bg-primary/5"
+                        >
+                          <Barcode className="h-3 w-3" />
+                          {barcodesCount} Unit Barcodes
+                        </Button>
+                      </TableCell>
+                      {!isStockKeeper && (
+                        <TableCell className="text-right font-mono">{formatCurrency(unitCost)}</TableCell>
+                      )}
+                      {!isStockKeeper && (
+                        <TableCell className="text-right font-mono font-semibold">{formatCurrency(lineValue)}</TableCell>
+                      )}
+                    </TableRow>
+
+                    {/* Inline Paginated Barcodes Row */}
+                    {isExpanded && (
+                      <TableRow className="bg-slate-50/50 hover:bg-slate-50/50 border-t-0">
+                        <TableCell colSpan={isStockKeeper ? 7 : 9} className="p-2 sm:p-4">
+                          <ItemInlineBarcodes
+                            item={item}
+                            grnNumber={grn.grnNumber || grn.id}
+                            onOpenModal={() => {
+                              setSelectedProductForModal(item.productId);
+                              setIsBarcodeModalOpen(true);
+                            }}
+                          />
+                        </TableCell>
+                      </TableRow>
                     )}
-                  </TableRow>
+                  </TableRowGroup>
                 );
               })}
             </TableBody>
@@ -703,15 +631,22 @@ export function GRNDetailPage() {
         <UnitBarcodeModal
           isOpen={isBarcodeModalOpen}
           onClose={() => setIsBarcodeModalOpen(false)}
-          items={grn.items || []}
+          items={preparedItems}
           grnNumber={grn.grnNumber || grn.id}
           supplierName={grn.supplierName || 'Supplier'}
           warehouseId={grn.warehouseId || 'WH-MAIN'}
-          onConfirmLabeled={() => {
+          initialProductId={selectedProductForModal}
+          onConfirmLabeled={(updatedItems) => {
+            setGrn((prev: any) => ({ ...prev, items: updatedItems, barcodesConfirmed: true }));
             setIsBarcodeModalOpen(false);
           }}
         />
       )}
     </div>
   );
+}
+
+// React fragment wrapper helper for table rows
+function TableRowGroup({ children }: { children: React.ReactNode }) {
+  return <>{children}</>;
 }

@@ -79,6 +79,18 @@ export class OrderService {
                 },
               ],
             });
+
+            // Auto-generate draft invoice upon order approval from central engine
+            try {
+              const { invoiceService } = await import('./InvoiceService');
+              await invoiceService.createInvoiceFromOrder(
+                order.id,
+                { id: request.initiatorId, name: `${actorRole} Approval`, role: actorRole } as any,
+                { asDraft: true }
+              );
+            } catch (invErr) {
+              console.warn('Auto-generation of draft invoice on approval skipped:', invErr);
+            }
           } else if (action === 'REJECT' && (order.status === 'PENDING_APPROVAL' || order.status === 'SPECIAL_APPROVAL')) {
             await this.repo.update(order.id, {
               status: 'REJECTED',
@@ -161,7 +173,14 @@ export class OrderService {
    * Product changes in the future will not retroactively alter these snapshots.
    */
   async buildLineItemSnapshots(
-    items: Array<{ productId: string; orderedQuantity: number; requestedDiscountPercentage?: number }>,
+    items: Array<{
+      productId: string;
+      orderedQuantity: number;
+      requestedDiscountPercentage?: number;
+      batchId?: string;
+      batchNumber?: string;
+      unitPrice?: number;
+    }>,
     customerAllowedDiscount: number
   ): Promise<{ items: SalesOrderItem[]; rawForEvaluation: any[] }> {
     const result: SalesOrderItem[] = [];
@@ -182,7 +201,7 @@ export class OrderService {
         throw new Error(`Discount percentage must be between 0% and 100%`);
       }
 
-      const unitPriceSnapshot = product.pricing.currentSellingPrice;
+      const unitPriceSnapshot = inputItem.unitPrice ?? product.pricing.currentSellingPrice;
       const subtotal = Number((unitPriceSnapshot * inputItem.orderedQuantity).toFixed(2));
       const discountAmount = Number(((subtotal * discountPercentage) / 100).toFixed(2));
       const netLine = Number((subtotal - discountAmount).toFixed(2));
@@ -211,6 +230,8 @@ export class OrderService {
         orderedQuantity: inputItem.orderedQuantity,
         approvedQuantity: inputItem.orderedQuantity,
         issuedQuantity: 0,
+        batchId: inputItem.batchId,
+        batchNumber: inputItem.batchNumber,
         requiresSpecialApproval,
         specialApprovalReason,
         discountApprovalStatus: requiresSpecialApproval ? 'PENDING_APPROVAL' : 'NOT_REQUIRED',
@@ -484,8 +505,12 @@ export class OrderService {
       status: nextStatus,
       isSpecialApproval: evalResult.isSpecialApproval,
       specialApprovalReasons: evalResult.specialApprovalReasons,
-      targetApproverRole: evalResult.targetApproverRole,
-      currentApproverRole: evalResult.targetApproverRole,
+      targetApproverRole: isPreApprovalModification && !evalResult.isSpecialApproval
+        ? (existing.targetApproverRole || evalResult.targetApproverRole)
+        : evalResult.targetApproverRole,
+      currentApproverRole: isPreApprovalModification && !evalResult.isSpecialApproval
+        ? (existing.currentApproverRole || evalResult.targetApproverRole)
+        : evalResult.targetApproverRole,
       approvalRequestId,
       approvalHistory: [...existing.approvalHistory, historyEntry],
     });
@@ -612,7 +637,7 @@ export class OrderService {
       return it;
     });
 
-    return this.repo.update(id, {
+    const updated = await this.repo.update(id, {
       items: updatedItems,
       status: 'APPROVED',
       approvedById: currentUser.id,
@@ -620,6 +645,16 @@ export class OrderService {
       approvedAt: new Date().toISOString(),
       approvalHistory: [...order.approvalHistory, historyEntry],
     });
+
+    // Auto-generate draft invoice upon direct order approval
+    try {
+      const { invoiceService } = await import('./InvoiceService');
+      await invoiceService.createInvoiceFromOrder(updated.id, currentUser, { asDraft: true });
+    } catch (invErr) {
+      console.warn('Auto-generation of draft invoice on approveOrder skipped:', invErr);
+    }
+
+    return updated;
   }
 
   async rejectOrder(id: string, currentUser: User, reason: string): Promise<SalesOrder> {
@@ -699,7 +734,7 @@ export class OrderService {
   async escalateOrder(
     id: string,
     currentUser: User,
-    targetRole: 'MANAGER' | 'DIRECTOR',
+    targetRole: 'SALES_MANAGER' | 'MANAGER' | 'DIRECTOR',
     comment: string
   ): Promise<SalesOrder> {
     const order = await this.repo.getById(id);
@@ -740,6 +775,10 @@ export class OrderService {
       }
     }
 
+    const nextStatus: OrderStatus = order.isSpecialApproval || targetRole !== 'SALES_MANAGER'
+      ? 'SPECIAL_APPROVAL'
+      : 'PENDING_APPROVAL';
+
     const historyEntry: OrderApprovalAction = {
       id: `hist-${Date.now().toString().slice(-4)}`,
       stepNumber: order.approvalHistory.length + 1,
@@ -748,15 +787,15 @@ export class OrderService {
       actorRole: currentUser.role,
       action: 'ESCALATE',
       fromStatus: order.status,
-      toStatus: 'SPECIAL_APPROVAL',
+      toStatus: nextStatus,
       targetRole,
       comment,
       timestamp: new Date().toISOString(),
     };
 
     return this.repo.update(id, {
-      status: 'SPECIAL_APPROVAL',
-      isSpecialApproval: true,
+      status: nextStatus,
+      isSpecialApproval: nextStatus === 'SPECIAL_APPROVAL',
       currentApproverRole: targetRole,
       targetApproverRole: targetRole,
       approvalHistory: [...order.approvalHistory, historyEntry],

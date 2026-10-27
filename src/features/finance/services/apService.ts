@@ -60,6 +60,9 @@ export interface VendorBill {
   status: 'OPEN' | 'PARTIALLY_PAID' | 'PAID' | 'POSTED' | 'VOIDED';
   journalEntryId?: string;
   appliedAdvanceId?: string;
+  freightBilledByThirdParty?: boolean;
+  vendorPayableAmount?: number;
+  accruedLandedCost?: number;
   createdAt: string;
 }
 
@@ -74,6 +77,8 @@ const INITIAL_ADVANCES: SupplierAdvance[] = [
     advanceNumber: 'ADV-2026-001',
     supplierId: 'sup-1',
     supplierName: 'DNS Global Logistics & Electronics Ltd',
+    purchaseOrderId: 'PO-2026-001',
+    purchaseOrderNumber: 'PO-2026-001',
     paymentDate: '2026-09-05',
     bankAccountId: 'acc-1010',
     bankAccountCode: '1010',
@@ -140,13 +145,39 @@ const INITIAL_BILLS: VendorBill[] = [
         vatAmount: 198000,
         lineTotal: 1298000,
       },
+      {
+        id: 'bli-1-2',
+        productId: 'prod-002',
+        productName: 'Schneider Acti9 63A Triple Pole MCB',
+        sku: 'DNS-MCB-63A-3P',
+        receivedQuantity: 100,
+        draftUnitCost: 5800,
+        unitCost: 5800,
+        lineDiscount: 0,
+        vatCode: 'STANDARD_18',
+        vatAmount: 104400,
+        lineTotal: 684400,
+      },
+      {
+        id: 'bli-1-3',
+        productId: 'prod-006',
+        productName: 'Schneider Easy9 40A 30mA 2-Pole RCCB',
+        sku: 'DNS-RCCB-40A-2P',
+        receivedQuantity: 150,
+        draftUnitCost: 4850,
+        unitCost: 4850,
+        lineDiscount: 0,
+        vatCode: 'STANDARD_18',
+        vatAmount: 130950,
+        lineTotal: 858450,
+      },
     ],
     freightCharges: 15000,
     otherLandingCosts: 5000,
-    subtotal: 1100000,
-    vatTotal: 198000,
-    totalAmount: 1318000,
-    balanceDue: 1318000,
+    subtotal: 2407500,
+    vatTotal: 433350,
+    totalAmount: 2860850,
+    balanceDue: 2860850,
     status: 'OPEN',
     createdAt: '2026-09-10T10:00:00Z',
   },
@@ -174,13 +205,39 @@ const INITIAL_BILLS: VendorBill[] = [
         vatAmount: 102600,
         lineTotal: 672600,
       },
+      {
+        id: 'bli-2-2',
+        productId: 'prod-007',
+        productName: 'Schneider Acti9 100A 4-Pole Main Isolator Switch',
+        sku: 'DNS-ISO-100A-4P',
+        receivedQuantity: 50,
+        draftUnitCost: 7200,
+        unitCost: 7200,
+        lineDiscount: 0,
+        vatCode: 'STANDARD_18',
+        vatAmount: 64800,
+        lineTotal: 424800,
+      },
+      {
+        id: 'bli-2-3',
+        productId: 'prod-008',
+        productName: 'Schneider Resi9 16A Single Pole Type B MCB',
+        sku: 'DNS-MCB-16A-1P',
+        receivedQuantity: 200,
+        draftUnitCost: 1450,
+        unitCost: 1450,
+        lineDiscount: 0,
+        vatCode: 'STANDARD_18',
+        vatAmount: 52200,
+        lineTotal: 342200,
+      },
     ],
     freightCharges: 8000,
     otherLandingCosts: 2000,
-    subtotal: 570000,
-    vatTotal: 102600,
-    totalAmount: 682600,
-    balanceDue: 682600,
+    subtotal: 1220000,
+    vatTotal: 219600,
+    totalAmount: 1449600,
+    balanceDue: 1449600,
     status: 'OPEN',
     createdAt: '2026-09-20T14:30:00Z',
   },
@@ -208,13 +265,39 @@ const INITIAL_BILLS: VendorBill[] = [
         vatAmount: 278550,
         lineTotal: 1826050,
       },
+      {
+        id: 'bli-3-2',
+        productId: 'prod-004',
+        productName: 'Philips SmartBright 600x600 48W Recessed Panel',
+        sku: 'DNS-LED-PNL-48W',
+        receivedQuantity: 100,
+        draftUnitCost: 4200,
+        unitCost: 4200,
+        lineDiscount: 0,
+        vatCode: 'STANDARD_18',
+        vatAmount: 75600,
+        lineTotal: 495600,
+      },
+      {
+        id: 'bli-3-3',
+        productId: 'prod-010',
+        productName: 'Schneider TeSys D 25A 3-Pole AC3 Magnetic Contactor',
+        sku: 'DNS-CON-25A-3P',
+        receivedQuantity: 40,
+        draftUnitCost: 9600,
+        unitCost: 9600,
+        lineDiscount: 0,
+        vatCode: 'STANDARD_18',
+        vatAmount: 69120,
+        lineTotal: 453120,
+      },
     ],
     freightCharges: 12000,
     otherLandingCosts: 3000,
-    subtotal: 1547500,
-    vatTotal: 278550,
-    totalAmount: 1841050,
-    balanceDue: 1841050,
+    subtotal: 2367500,
+    vatTotal: 423270,
+    totalAmount: 2805770,
+    balanceDue: 2805770,
     status: 'OPEN',
     createdAt: '2026-09-15T09:00:00Z',
   },
@@ -222,7 +305,7 @@ const INITIAL_BILLS: VendorBill[] = [
 
 class AccountsPayableService {
   private bills: VendorBill[] = [];
-  private grnStatuses: Record<string, 'COSTED' | 'SUBMITTED' | 'APPROVED'> = {};
+  private grnStatuses: Record<string, 'COSTED' | 'SUBMITTED' | 'APPROVED' | 'PRICED'> = {};
   private advances: SupplierAdvance[] = [];
   private debitNotes: SupplierDebitNote[] = [];
 
@@ -441,6 +524,11 @@ class AccountsPayableService {
     return all.find((g) => g.id === grnId || g.grnNumber === grnId) || null;
   }
 
+  setGRNStatus(grnId: string, status: 'COSTED' | 'SUBMITTED' | 'APPROVED' | 'PRICED') {
+    this.grnStatuses[grnId] = status;
+    this.save();
+  }
+
   /**
    * Get all open bills for a supplier
    */
@@ -476,6 +564,7 @@ class AccountsPayableService {
     lineItems: VendorBillLineItem[];
     freightCharges: number;
     otherLandingCosts: number;
+    freightBilledByThirdParty?: boolean;
     additionalExpenses?: LandedExpenseItem[];
     applyAdvanceId?: string;
     advanceAmountToApply?: number;
@@ -508,6 +597,13 @@ class AccountsPayableService {
     const vatDebit = totalVAT;
     const totalBillCredit = inventoryDebit.plus(vatDebit);
 
+    const freightBilledByThirdParty = Boolean(params.freightBilledByThirdParty);
+    const landingAccrualAmount = freight.plus(otherCosts);
+    // If freight/landing is billed by third party (FOB terms), vendor AP only owes goods + VAT
+    const vendorPayableCredit = freightBilledByThirdParty
+      ? itemsNetSubtotal.plus(vatDebit)
+      : totalBillCredit;
+
     // Look up GL Accounts
     const accounts = await financeRepository.getAccounts();
     const inventoryAcc =
@@ -522,6 +618,12 @@ class AccountsPayableService {
       accounts.find((a) => a.code === '1025') ||
       accounts.find((a) => a.name.includes('Input VAT')) ||
       accounts.find((a) => a.code === '2020');
+
+    // Landed Cost & Clearing Accruals account (2015)
+    const landedAccrualAcc =
+      accounts.find((a) => a.code === '2015') ||
+      accounts.find((a) => a.name.toLowerCase().includes('landed cost')) ||
+      apAcc;
 
     if (!inventoryAcc || !apAcc) {
       throw new Error(
@@ -549,11 +651,21 @@ class AccountsPayableService {
       {
         accountId: apAcc.id,
         debit: 0,
-        credit: totalBillCredit.toNumber(),
+        credit: vendorPayableCredit.toNumber(),
         description: `Trade Payable to ${grn.supplierName} - Inv #${params.vendorInvoiceNumber}`,
         supplierId: grn.supplierId,
         supplierName: grn.supplierName,
       },
+      ...(freightBilledByThirdParty && landingAccrualAmount.toNumber() > 0
+        ? [
+            {
+              accountId: landedAccrualAcc.id,
+              debit: 0,
+              credit: landingAccrualAmount.toNumber(),
+              description: `Accrued 3rd-Party Freight & Clearing for GRN ${grn.grnNumber}`,
+            },
+          ]
+        : []),
     ];
 
     // Post to General Ledger
@@ -587,7 +699,10 @@ class AccountsPayableService {
       subtotal: itemsNetSubtotal.toNumber(),
       vatTotal: vatDebit.toNumber(),
       totalAmount: totalBillCredit.toNumber(),
-      balanceDue: totalBillCredit.toNumber(),
+      balanceDue: vendorPayableCredit.toNumber(),
+      vendorPayableAmount: vendorPayableCredit.toNumber(),
+      accruedLandedCost: freightBilledByThirdParty ? landingAccrualAmount.toNumber() : 0,
+      freightBilledByThirdParty,
       status: 'POSTED',
       journalEntryId: journalEntry.id,
       appliedAdvanceId: params.applyAdvanceId,
@@ -596,14 +711,40 @@ class AccountsPayableService {
 
     this.bills.unshift(newBill);
 
-    // Record advance application if applied via parameters
-    if (params.applyAdvanceId && params.advanceAmountToApply && params.advanceAmountToApply > 0) {
+    // Record advance application if applied via parameters or auto-detected via linked PO
+    let advanceToApplyId = params.applyAdvanceId;
+    let advanceAmount = params.advanceAmountToApply;
+    const maxApplicableAdvance = vendorPayableCredit.toNumber();
+
+    if (!advanceToApplyId && (grn.purchaseOrderId || grn.purchaseOrderNumber)) {
+      const poAdvance = this.advances.find(
+        (a) =>
+          (a.supplierId === grn.supplierId ||
+            a.supplierName.toLowerCase() === grn.supplierName.toLowerCase() ||
+            ((grn.supplierId === 'sup-001' || grn.supplierId === 'sup-1') &&
+              (a.supplierId === 'sup-001' || a.supplierId === 'sup-1'))) &&
+          a.unappliedBalance > 0 &&
+          ((grn.purchaseOrderId &&
+            (a.purchaseOrderId === grn.purchaseOrderId ||
+              a.purchaseOrderNumber === grn.purchaseOrderId)) ||
+            (grn.purchaseOrderNumber &&
+              (a.purchaseOrderNumber === grn.purchaseOrderNumber ||
+                a.purchaseOrderId === grn.purchaseOrderNumber)))
+      );
+      if (poAdvance) {
+        advanceToApplyId = poAdvance.id;
+        advanceAmount = Math.min(poAdvance.unappliedBalance, maxApplicableAdvance);
+        newBill.appliedAdvanceId = poAdvance.id;
+      }
+    }
+
+    if (advanceToApplyId && advanceAmount && advanceAmount > 0) {
       await this.applyAdvanceToGRNOrBill({
-        advanceId: params.applyAdvanceId,
+        advanceId: advanceToApplyId,
         billId: newBill.id,
         grnId: grn.id,
         grnNumber: grn.grnNumber,
-        amountToApply: Math.min(params.advanceAmountToApply, totalBillCredit.toNumber()),
+        amountToApply: Math.min(advanceAmount, maxApplicableAdvance),
       });
     }
 
@@ -761,6 +902,8 @@ class AccountsPayableService {
     bankAccountCode?: string;
     reference: string;
     amount: number;
+    purchaseOrderId?: string;
+    purchaseOrderNumber?: string;
     notes?: string;
   }): Promise<SupplierAdvance> {
     if (params.amount <= 0) {
@@ -811,6 +954,10 @@ class AccountsPayableService {
       advanceNumber: `ADV-2026-${Math.floor(100 + Math.random() * 900)}`,
       supplierId: params.supplierId,
       supplierName: params.supplierName,
+      purchaseOrderId:
+        params.purchaseOrderId || (params.purchaseOrderNumber ? params.purchaseOrderNumber : undefined),
+      purchaseOrderNumber:
+        params.purchaseOrderNumber || (params.purchaseOrderId ? params.purchaseOrderId : undefined),
       paymentDate: params.paymentDate,
       bankAccountId: bankAcc.id,
       bankAccountCode: bankAcc.code,
@@ -863,6 +1010,14 @@ class AccountsPayableService {
       targetBill = this.bills.find((b) => b.grnId === params.grnId);
     }
 
+    const actualAmount = targetBill
+      ? Math.min(params.amountToApply, targetBill.balanceDue)
+      : params.amountToApply;
+
+    if (actualAmount <= 0) {
+      return { advance, bill: targetBill };
+    }
+
     let jeId: string | undefined;
 
     if (targetBill) {
@@ -880,7 +1035,7 @@ class AccountsPayableService {
           lines: [
             {
               accountId: apAcc.id,
-              debit: params.amountToApply,
+              debit: actualAmount,
               credit: 0,
               description: `Clear Accounts Payable against prepayment (${targetBill.supplierName})`,
               supplierId: targetBill.supplierId,
@@ -889,7 +1044,7 @@ class AccountsPayableService {
             {
               accountId: advanceAcc.id,
               debit: 0,
-              credit: params.amountToApply,
+              credit: actualAmount,
               description: `Draw down Advance ${advance.advanceNumber}`,
               supplierId: targetBill.supplierId,
               supplierName: targetBill.supplierName,
@@ -902,7 +1057,7 @@ class AccountsPayableService {
       // Update bill balance
       const newBillBalance = Math.max(
         0,
-        Number(new Decimal(targetBill.balanceDue).minus(params.amountToApply).toFixed(2))
+        Number(new Decimal(targetBill.balanceDue).minus(actualAmount).toFixed(2))
       );
       targetBill.balanceDue = newBillBalance;
       targetBill.status = newBillBalance === 0 ? 'PAID' : 'PARTIALLY_PAID';
@@ -911,7 +1066,7 @@ class AccountsPayableService {
     // Update advance unapplied balance
     const newUnapplied = Math.max(
       0,
-      Number(new Decimal(advance.unappliedBalance).minus(params.amountToApply).toFixed(2))
+      Number(new Decimal(advance.unappliedBalance).minus(actualAmount).toFixed(2))
     );
     advance.unappliedBalance = newUnapplied;
     advance.status = newUnapplied === 0 ? 'APPLIED' : 'PARTIALLY_APPLIED';
@@ -922,7 +1077,7 @@ class AccountsPayableService {
       billNumber: targetBill?.billNumber,
       grnId: targetBill?.grnId || params.grnId,
       grnNumber: targetBill?.grnNumber || params.grnNumber,
-      appliedAmount: params.amountToApply,
+      appliedAmount: actualAmount,
       appliedAt: new Date().toISOString(),
       journalEntryId: jeId,
     });
@@ -941,6 +1096,10 @@ class AccountsPayableService {
     return this.debitNotes.filter(
       (dn) => dn.supplierId.toLowerCase() === q || dn.supplierName.toLowerCase().includes(q)
     );
+  }
+
+  getSupplierDebitNotes(supplierId?: string): SupplierDebitNote[] {
+    return this.getDebitNotes(supplierId);
   }
 
   /**
@@ -1070,7 +1229,15 @@ class AccountsPayableService {
 
     // Revert GL entry if posted
     if (bill.journalEntryId) {
-      await financeRepository.voidJournalEntry(bill.journalEntryId, reason);
+      try {
+        if (typeof (financeRepository as any).reverseJournalEntry === 'function') {
+          await (financeRepository as any).reverseJournalEntry(bill.journalEntryId, reason);
+        } else {
+          await financeRepository.voidJournalEntry(bill.journalEntryId, reason);
+        }
+      } catch (err: any) {
+        console.warn(`Could not reverse journal entry ${bill.journalEntryId}:`, err);
+      }
     }
 
     // Restore GRN status back to APPROVED so it can be re-costed or inspected

@@ -45,14 +45,21 @@ import {
   Calendar,
   Truck,
   FileSpreadsheet,
+  Boxes,
+  Tag,
 } from 'lucide-react';
+import { batchInventoryService } from '../../services/BatchInventoryService';
 
 interface LocalItem {
   id: string;
   product: Product;
   quantity: number;
   discountPercentage: number;
+  selectedBatchId?: string;
+  selectedBatchNumber?: string;
+  selectedUnitPrice?: number;
 }
+
 
 export function OrderCreateEditPage() {
   const navigate = useNavigate();
@@ -126,6 +133,9 @@ export function OrderCreateEditPage() {
                 product: prod,
                 quantity: it.orderedQuantity,
                 discountPercentage: it.discountPercentage,
+                selectedUnitPrice: it.unitPriceSnapshot,
+                selectedBatchId: it.batchId,
+                selectedBatchNumber: it.batchNumber,
               });
             }
           }
@@ -196,6 +206,8 @@ export function OrderCreateEditPage() {
       next[existingIdx].quantity += 1;
       setItems(next);
     } else {
+      const activeBatches = batchInventoryService.getActiveBatches(product.id);
+      const defaultBatch = activeBatches[0];
       setItems([
         ...items,
         {
@@ -203,10 +215,37 @@ export function OrderCreateEditPage() {
           product,
           quantity: 1,
           discountPercentage: selectedCustomer?.commercialTerms?.defaultDiscountPercentage || 0,
+          selectedBatchId: defaultBatch?.id,
+          selectedBatchNumber: defaultBatch?.batchNumber,
+          selectedUnitPrice: defaultBatch ? defaultBatch.sellingPrice : product.pricing.currentSellingPrice,
         },
       ]);
     }
     setIsProductSelectorOpen(false);
+  };
+
+  const handleSelectBatch = (index: number, batchId: string) => {
+    const next = [...items];
+    const item = next[index];
+    if (batchId === 'DEFAULT') {
+      next[index] = {
+        ...item,
+        selectedBatchId: undefined,
+        selectedBatchNumber: undefined,
+        selectedUnitPrice: item.product.pricing.currentSellingPrice,
+      };
+    } else {
+      const batch = batchInventoryService.getBatchById(batchId);
+      if (batch) {
+        next[index] = {
+          ...item,
+          selectedBatchId: batch.id,
+          selectedBatchNumber: batch.batchNumber,
+          selectedUnitPrice: batch.sellingPrice,
+        };
+      }
+    }
+    setItems(next);
   };
 
   const handleUpdateItem = (
@@ -237,7 +276,7 @@ export function OrderCreateEditPage() {
       items: items.map((i) => ({
         productId: i.product.id,
         productNameSnapshot: i.product.name,
-        unitPriceSnapshot: i.product.pricing.currentSellingPrice,
+        unitPriceSnapshot: i.selectedUnitPrice ?? i.product.pricing.currentSellingPrice,
         orderedQuantity: i.quantity,
         discountPercentage: i.discountPercentage,
         taxPercentage: taxEnabled ? taxRate : 0,
@@ -247,6 +286,28 @@ export function OrderCreateEditPage() {
       userRole: currentUser.role,
     });
   }, [selectedCustomer, items, requestedCreditDays, currentUser.role, taxEnabled, taxRate]);
+
+  // Price floor validation: checks if net price (after discount) drops below minimumSellingPrice
+  const floorBreachedItems = useMemo(() => {
+    return items
+      .map((it) => {
+        const unitPrice = it.selectedUnitPrice ?? it.product.pricing.currentSellingPrice;
+        const netUnitPrice = unitPrice * (1 - it.discountPercentage / 100);
+        const floorPrice = it.product.pricing.minimumSellingPrice || 0;
+        const isBreached = floorPrice > 0 && netUnitPrice < floorPrice;
+        return {
+          id: it.id,
+          product: it.product,
+          unitPrice,
+          netUnitPrice,
+          floorPrice,
+          isBreached,
+          deficit: floorPrice - netUnitPrice,
+        };
+      })
+      .filter((it) => it.isBreached);
+  }, [items]);
+
 
   const handleSubmit = async (saveAsDraft: boolean) => {
     try {
@@ -272,6 +333,9 @@ export function OrderCreateEditPage() {
         productId: i.product.id,
         orderedQuantity: i.quantity,
         requestedDiscountPercentage: i.discountPercentage,
+        batchId: i.selectedBatchId,
+        batchNumber: i.selectedBatchNumber,
+        unitPrice: i.selectedUnitPrice,
       }));
 
       if (isEdit && id) {
@@ -473,6 +537,33 @@ export function OrderCreateEditPage() {
               </div>
             </div>
           )}
+
+          {/* Visible Price Floor Validation Warning Banner */}
+          {floorBreachedItems.length > 0 && (
+            <div className="rounded-lg bg-rose-50 border-2 border-rose-400 p-4 text-xs text-rose-900 shadow-xs flex items-start gap-3">
+              <AlertTriangle className="h-5 w-5 text-rose-600 shrink-0 mt-0.5" />
+              <div className="space-y-1.5 flex-1">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-bold text-rose-950 text-sm">
+                    Price Floor Violation Warning (Selling Below Authorized Minimum)
+                  </h4>
+                  <Badge variant="outline" className="bg-rose-100 text-rose-800 border-rose-300 font-semibold text-[10px]">
+                    Requires Management Approval
+                  </Badge>
+                </div>
+                <p className="text-rose-800 leading-relaxed">
+                  The net selling price on <strong>{floorBreachedItems.length} line item(s)</strong> drops below the minimum commercial floor price. Representatives cannot sell below the minimum price without executive authorization:
+                </p>
+                <ul className="list-disc pl-5 space-y-1 text-rose-900 font-mono text-[11.5px] pt-0.5">
+                  {floorBreachedItems.map((item) => (
+                    <li key={item.id}>
+                      <strong className="font-sans font-bold">{item.product.name}:</strong> Net unit price of {formatCurrency(item.netUnitPrice)} is below minimum selling price of {formatCurrency(item.floorPrice)} (Deficit: -{formatCurrency(item.deficit)} per unit)
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -667,7 +758,7 @@ export function OrderCreateEditPage() {
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {items.map((it, idx) => {
-                    const price = it.product.pricing.currentSellingPrice;
+                    const price = it.selectedUnitPrice ?? it.product.pricing.currentSellingPrice;
                     const sub = price * it.quantity;
                     const disc = (sub * it.discountPercentage) / 100;
                     const effectiveRate = taxEnabled ? taxRate : 0;
@@ -682,6 +773,11 @@ export function OrderCreateEditPage() {
                         ? it.discountPercentage > 0
                         : it.discountPercentage > maxAllowed;
 
+                    const productBatches = batchInventoryService.getActiveBatches(it.product.id);
+                    const isBelowFloor =
+                      (it.product.pricing.minimumSellingPrice || 0) > 0 &&
+                      price * (1 - it.discountPercentage / 100) < (it.product.pricing.minimumSellingPrice || 0);
+
                     return (
                       <tr key={it.id} className="hover:bg-slate-50/60">
                         <td className="py-3 px-4">
@@ -689,9 +785,42 @@ export function OrderCreateEditPage() {
                           <div className="text-xs text-slate-400 font-mono">
                             {it.product.sku} • Stock: {it.product.stockOnHand} {it.product.uomCode}
                           </div>
+                          {productBatches.length > 0 && (
+                            <div className="mt-1.5 flex items-center gap-1.5 flex-wrap">
+                              <span className="text-[10px] font-semibold text-slate-500 uppercase flex items-center gap-1">
+                                <Boxes className="h-3 w-3 text-primary" />
+                                Batch:
+                              </span>
+                              <select
+                                value={it.selectedBatchId || 'DEFAULT'}
+                                onChange={(e) => handleSelectBatch(idx, e.target.value)}
+                                className="text-[11px] h-6 px-1.5 py-0 bg-white border border-slate-200 rounded font-mono text-slate-800 focus:ring-1 focus:ring-primary max-w-[260px]"
+                                title="Select stock batch lot (Strategy 1: batch-specific pricing)"
+                              >
+                                {productBatches.map((b) => (
+                                  <option key={b.id} value={b.id}>
+                                    {b.batchNumber} ({b.warehouseId} • Avail: {b.availableQuantity} • {formatCurrency(b.sellingPrice)})
+                                  </option>
+                                ))}
+                                <option value="DEFAULT">
+                                  Default Catalog ({formatCurrency(it.product.pricing.currentSellingPrice)})
+                                </option>
+                              </select>
+                            </div>
+                          )}
                         </td>
                         <td className="py-3 px-3 text-right font-mono text-slate-700 tabular-nums">
-                          {formatCurrency(price)}
+                          <div>{formatCurrency(price)}</div>
+                          {it.selectedBatchNumber && (
+                            <span className="text-[10px] font-mono text-primary block">
+                              {it.selectedBatchNumber}
+                            </span>
+                          )}
+                          {isBelowFloor && (
+                            <span className="inline-block mt-1 text-[9.5px] font-bold text-rose-700 bg-rose-50 border border-rose-300 rounded px-1 py-0.5 whitespace-nowrap">
+                              Below Floor ({formatCurrency(it.product.pricing.minimumSellingPrice)})
+                            </span>
+                          )}
                         </td>
                         <td className="py-3 px-3 text-center">
                           <Input

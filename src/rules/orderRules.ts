@@ -143,7 +143,7 @@ export function evaluateOrderApproval(
       );
       if (item.discountPercentage > productMaxDisc || item.discountPercentage > 15) {
         hasDirectorDiscount = true;
-      } else {
+      } else if (item.discountPercentage > customerMaxDisc) {
         hasManagerDiscount = true;
       }
     } else if (item.discountPercentage > repMaxDiscount) {
@@ -260,7 +260,7 @@ export function canApproveOrder(
   }
 
   if (userRole === 'AREA_MANAGER') {
-    // Area Manager can only approve standard orders when assigned as approver
+    // Area Manager can approve standard orders within territory when assigned as approver
     return !isSpecialApproval && targetApproverRole === 'AREA_MANAGER';
   }
 

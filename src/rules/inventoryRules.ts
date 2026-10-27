@@ -7,8 +7,12 @@ export function validateGRNReceipt(item: GRNItem): boolean {
 }
 
 export function canIssueFromStock(productId: string, locationId: string, requestedQty: number, stockBalance: StockBalance): boolean {
+  if (requestedQty <= 0) return false;
   if (stockBalance.locationType === 'DAMAGED') return false;
-  return calculateAvailableForSale(stockBalance) >= requestedQty;
+  if (stockBalance.availableQuantity <= 0) return false;
+  const available = calculateAvailableForSale(stockBalance);
+  // System strictly prevents stock from being issued/dispatched when available stock is negative or would become negative
+  return available >= requestedQty && (stockBalance.availableQuantity - requestedQty) >= 0;
 }
 
 export function calculateAvailableForSale(stockBalance: StockBalance): number {

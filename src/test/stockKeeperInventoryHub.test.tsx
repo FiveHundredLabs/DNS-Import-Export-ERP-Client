@@ -3,8 +3,6 @@ import '@testing-library/jest-dom';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { Sidebar } from '../components/common/Sidebar';
-import { SerialNumbersPage } from '../features/inventory/SerialNumbersPage';
-import { BarcodesPage } from '../features/inventory/BarcodesPage';
 import { GRNListPage } from '../features/inventory/GRNListPage';
 import { GRNCreateEditPage } from '../features/inventory/GRNCreateEditPage';
 import { UnitBarcodeModal } from '../components/inventory/UnitBarcodeModal';
@@ -43,7 +41,7 @@ describe('Stock Keeper & Inventory Hub — GRN, Serial Numbers & Bar Codes', () 
   };
 
   describe('1. Sidebar Navigation in Inventory Hub for Stock Keeper', () => {
-    it('displays GRN, Serial Numbers, and Bar Codes in Inventory Hub for Stock Keeper', async () => {
+    it('displays Inventory Hub and GRN, and confirms Serial Numbers and Bar Codes are removed', async () => {
       setupStockKeeper();
 
       render(
@@ -63,8 +61,8 @@ describe('Stock Keeper & Inventory Hub — GRN, Serial Numbers & Bar Codes', () 
       await waitFor(() => {
         expect(screen.getAllByText('Inventory Hub').length).toBeGreaterThan(0);
         expect(screen.getByRole('link', { name: /^grn$/i })).toBeInTheDocument();
-        expect(screen.getByRole('link', { name: /serial numbers/i })).toBeInTheDocument();
-        expect(screen.getByRole('link', { name: /bar codes/i })).toBeInTheDocument();
+        expect(screen.queryByRole('link', { name: /serial numbers/i })).not.toBeInTheDocument();
+        expect(screen.queryByRole('link', { name: /bar codes/i })).not.toBeInTheDocument();
       });
     });
 
@@ -91,193 +89,9 @@ describe('Stock Keeper & Inventory Hub — GRN, Serial Numbers & Bar Codes', () 
     });
   });
 
-  describe('2. Serial Numbers Page (Stock Keeper Serialization Workspace)', () => {
-    it('renders Serial Numbers tracking page with Stock Keeper operations badge and KPI stats', async () => {
-      setupStockKeeper();
 
-      render(
-        <MemoryRouter>
-          <SerialNumbersPage />
-        </MemoryRouter>
-      );
 
-      // Header and badge
-      expect(screen.getByRole('heading', { name: 'Serial Numbers' })).toBeInTheDocument();
-      expect(screen.getByText(/Stock Keeper Operations/i)).toBeInTheDocument();
-      expect(screen.getByText(/Physical Serialization Mode/i)).toBeInTheDocument();
 
-      // KPI stat cards
-      await waitFor(() => {
-        expect(screen.getByText('Total Registered')).toBeInTheDocument();
-        expect(screen.getByText('In Warehouse')).toBeInTheDocument();
-        expect(screen.getByText('Allocated')).toBeInTheDocument();
-        expect(screen.getByText('Dispatched')).toBeInTheDocument();
-        expect(screen.getByText('Damaged')).toBeInTheDocument();
-      });
-
-      // Seeded serial numbers are rendered in the table
-      await waitFor(() => {
-        expect(screen.getByText('SN-RHD-2025-001')).toBeInTheDocument();
-        expect(screen.getAllByText('Schneider Acti9 32A Double Pole MCB').length).toBeGreaterThan(0);
-      });
-    });
-
-    it('filters serial numbers by search keyword', async () => {
-      setupStockKeeper();
-
-      render(
-        <MemoryRouter>
-          <SerialNumbersPage />
-        </MemoryRouter>
-      );
-
-      await waitFor(() => {
-        expect(screen.getByText('SN-RHD-2025-001')).toBeInTheDocument();
-      });
-
-      const searchInput = screen.getByPlaceholderText(/search serial number, product, sku, grn/i);
-      fireEvent.change(searchInput, { target: { value: 'SN-GW-5K' } });
-
-      await waitFor(() => {
-        expect(screen.getByText('SN-GW-5K-0881')).toBeInTheDocument();
-        expect(screen.queryByText('SN-RHD-2025-001')).not.toBeInTheDocument();
-      });
-    });
-
-    it('opens Serial Scanner & Verification modal and tests serial lookup', async () => {
-      setupStockKeeper();
-
-      render(
-        <MemoryRouter>
-          <SerialNumbersPage />
-        </MemoryRouter>
-      );
-
-      const scanBtn = screen.getByRole('button', { name: /scan \/ verify serial/i });
-      fireEvent.click(scanBtn);
-
-      await waitFor(() => {
-        expect(screen.getByText('Serial Scanner & Verification')).toBeInTheDocument();
-      });
-
-      // Type serial into lookup input and click Verify
-      const input = screen.getByPlaceholderText(/scan or enter serial/i);
-      fireEvent.change(input, { target: { value: 'SN-RHD-2025-001' } });
-      const verifyBtn = screen.getByRole('button', { name: /^verify$/i });
-      fireEvent.click(verifyBtn);
-
-      await waitFor(() => {
-        expect(screen.getByText(/Unit Verified in Warehouse/i)).toBeInTheDocument();
-      });
-    });
-
-    it('opens Register Serial Numbers modal and submits new serials', async () => {
-      setupStockKeeper();
-
-      render(
-        <MemoryRouter>
-          <SerialNumbersPage />
-        </MemoryRouter>
-      );
-
-      const registerBtn = screen.getByRole('button', { name: /register serial numbers/i });
-      fireEvent.click(registerBtn);
-
-      await waitFor(() => {
-        expect(screen.getByText('Register Unit Serial Numbers')).toBeInTheDocument();
-      });
-
-      // Enter bulk serials
-      const textarea = screen.getByPlaceholderText(/enter serial numbers separated/i);
-      fireEvent.change(textarea, { target: { value: 'SN-TEST-9901\nSN-TEST-9902' } });
-
-      // Click submit
-      const submitBtn = screen.getByRole('button', { name: /^register serials$/i });
-      fireEvent.click(submitBtn);
-
-      await waitFor(() => {
-        expect(screen.getByText('SN-TEST-9901')).toBeInTheDocument();
-        expect(screen.getByText('SN-TEST-9902')).toBeInTheDocument();
-      });
-    });
-  });
-
-  describe('3. Bar Codes Page (Stock Keeper Barcode & Labels Center)', () => {
-    it('renders Bar Codes workspace with tabs for directory, scanner, and printable labels', async () => {
-      setupStockKeeper();
-
-      render(
-        <MemoryRouter>
-          <BarcodesPage />
-        </MemoryRouter>
-      );
-
-      // Header and badge
-      expect(screen.getByText('Bar Codes')).toBeInTheDocument();
-      expect(screen.getByText(/Stock Keeper Operations/i)).toBeInTheDocument();
-
-      // Tabs
-      expect(screen.getByRole('tab', { name: /barcode directory & print queue/i })).toBeInTheDocument();
-      expect(screen.getByRole('tab', { name: /warehouse scanner station/i })).toBeInTheDocument();
-      expect(screen.getByRole('tab', { name: /printable label studio/i })).toBeInTheDocument();
-
-      // Product barcode records
-      expect(screen.getByText('8901020304011')).toBeInTheDocument();
-      expect(screen.getByText('Schneider Acti9 32A Double Pole MCB')).toBeInTheDocument();
-    });
-
-    it('switches to Warehouse Scanner Station and processes barcode scan', async () => {
-      setupStockKeeper();
-
-      render(
-        <MemoryRouter>
-          <BarcodesPage />
-        </MemoryRouter>
-      );
-
-      const scannerTab = screen.getByRole('tab', { name: /warehouse scanner station/i });
-      fireEvent.click(scannerTab);
-
-      await waitFor(() => {
-        expect(screen.getByText('Barcode Scanner Gun')).toBeInTheDocument();
-        expect(screen.getByPlaceholderText(/ready to scan barcode/i)).toBeInTheDocument();
-      });
-
-      // Type barcode and process scan
-      const input = screen.getByPlaceholderText(/ready to scan barcode/i);
-      fireEvent.change(input, { target: { value: '8901020304011' } });
-      const processBtn = screen.getByRole('button', { name: /process scan/i });
-      fireEvent.click(processBtn);
-
-      await waitFor(() => {
-        expect(screen.getByText(/Valid Product Identified/i)).toBeInTheDocument();
-        expect(screen.getByText(/Session Scan Log & Cycle Count/i)).toBeInTheDocument();
-      });
-    });
-
-    it('adds labels to print queue and switches to Printable Label Studio', async () => {
-      setupStockKeeper();
-
-      render(
-        <MemoryRouter>
-          <BarcodesPage />
-        </MemoryRouter>
-      );
-
-      // Click "+ Label" button for first product
-      const addLabelBtns = screen.getAllByRole('button', { name: /\+ label/i });
-      fireEvent.click(addLabelBtns[0]);
-
-      // Switch to Printable Label Studio tab
-      const studioTab = screen.getByRole('tab', { name: /printable label studio/i });
-      fireEvent.click(studioTab);
-
-      await waitFor(() => {
-        expect(screen.getByText(/Print Layout Preview/i)).toBeInTheDocument();
-        expect(screen.getAllByText(/DNS ERP • WAREHOUSE/i).length).toBeGreaterThan(0);
-      });
-    });
-  });
 
   describe('4. GRN List Page (Stock Keeper Warehouse Isolation)', () => {
     it('displays Warehouse Isolation banner and physical quantity units for Stock Keeper', async () => {

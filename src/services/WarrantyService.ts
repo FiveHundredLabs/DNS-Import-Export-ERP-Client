@@ -4,6 +4,8 @@ import { ICustomerRepository } from '../repositories/ICustomerRepository';
 import { MockCustomerRepository } from '../repositories/mock/MockCustomerRepository';
 import { IProductRepository } from '../repositories/IProductRepository';
 import { MockProductRepository } from '../repositories/mock/MockProductRepository';
+import { IInventoryRepository } from '../repositories/IInventoryRepository';
+import { MockInventoryRepository } from '../repositories/mock/MockInventoryRepository';
 import {
   WarrantyRecord,
   WarrantyClaim,
@@ -43,15 +45,18 @@ export class WarrantyService {
   private repo: IWarrantyRepository;
   private customerRepo: ICustomerRepository;
   private productRepo: IProductRepository;
+  private inventoryRepo: IInventoryRepository;
 
   constructor(
     repo?: IWarrantyRepository,
     customerRepo?: ICustomerRepository,
-    productRepo?: IProductRepository
+    productRepo?: IProductRepository,
+    inventoryRepo?: IInventoryRepository
   ) {
     this.repo = repo || new MockWarrantyRepository();
     this.customerRepo = customerRepo || new MockCustomerRepository();
     this.productRepo = productRepo || new MockProductRepository();
+    this.inventoryRepo = inventoryRepo || new MockInventoryRepository();
   }
 
   /**
@@ -537,13 +542,19 @@ export class WarrantyService {
 
   /**
    * Resolves a warranty claim (REPLACE, REPAIR, or REJECT).
-   * Transitions state machine and attaches immutable resolution audit.
+   * Transitions state machine, attaches resolution audit, and performs stock movements:
+   * - REPLACE: Deducts replacement unit from good stock and adds defective unit into damaged stock
+   * - REPAIR: Deducts selected spare parts used from good stock
    */
   async resolveClaim(
     claimId: string,
     resolution: ClaimResolutionType,
     notes: string,
-    user: User
+    user: User,
+    options?: {
+      replacementSerial?: string;
+      spareParts?: Array<{ productId: string; productName: string; quantity: number; unitCost?: number }>;
+    }
   ): Promise<WarrantyClaim> {
     const claim = await this.repo.getClaimById(claimId);
     if (!claim) {
@@ -552,12 +563,87 @@ export class WarrantyService {
 
     let nextStatus: 'REPLACED' | 'REPAIRED' | 'REJECTED';
     switch (resolution) {
-      case 'REPLACE':
+      case 'REPLACE': {
         nextStatus = 'REPLACED';
+        // Deduct replacement unit from good available stock and add defective unit into damaged stock
+        const balances = await this.inventoryRepo.getAllBalances();
+        let prodBalance = balances.find(
+          (b) => b.productId === claim.productId && (b.locationType === 'WAREHOUSE' || b.locationId === 'WH-MAIN')
+        );
+        if (!prodBalance) {
+          prodBalance = balances.find((b) => b.productId === claim.productId);
+        }
+
+        if (prodBalance) {
+          prodBalance.availableQuantity = Math.max(0, prodBalance.availableQuantity - 1);
+          prodBalance.damagedQuantity = (prodBalance.damagedQuantity || 0) + 1;
+          prodBalance.lastUpdated = new Date().toISOString();
+          await this.inventoryRepo.saveBalance(prodBalance);
+        }
+
+        await this.inventoryRepo.addMovement({
+          id: `mov-${Date.now()}-repl`,
+          productId: claim.productId,
+          sourceLocation: prodBalance?.locationId || 'WH-MAIN',
+          quantity: 1,
+          movementType: 'SALES_ISSUE',
+          referenceDocumentType: 'WARRANTY_CLAIM',
+          referenceDocumentId: claim.claimNumber,
+          performedById: user.id,
+          performedByName: user.name,
+          reason: `Warranty replacement issued for claim ${claim.claimNumber} (${claim.productName})`,
+          timestamp: new Date().toISOString(),
+        });
+
+        await this.inventoryRepo.addMovement({
+          id: `mov-${Date.now()}-dmg`,
+          productId: claim.productId,
+          targetLocation: 'DAMAGED',
+          quantity: 1,
+          movementType: 'ADJUSTMENT',
+          referenceDocumentType: 'WARRANTY_CLAIM',
+          referenceDocumentId: claim.claimNumber,
+          performedById: user.id,
+          performedByName: user.name,
+          reason: `Defective unit returned to damaged stock for claim ${claim.claimNumber}`,
+          timestamp: new Date().toISOString(),
+        });
         break;
-      case 'REPAIR':
+      }
+      case 'REPAIR': {
         nextStatus = 'REPAIRED';
+        if (options?.spareParts && options.spareParts.length > 0) {
+          const allBalances = await this.inventoryRepo.getAllBalances();
+          for (const part of options.spareParts) {
+            let partBalance = allBalances.find(
+              (b) => b.productId === part.productId && (b.locationType === 'WAREHOUSE' || b.locationId === 'WH-MAIN')
+            );
+            if (!partBalance) {
+              partBalance = allBalances.find((b) => b.productId === part.productId);
+            }
+            if (partBalance) {
+              partBalance.availableQuantity = Math.max(0, partBalance.availableQuantity - part.quantity);
+              partBalance.lastUpdated = new Date().toISOString();
+              await this.inventoryRepo.saveBalance(partBalance);
+            }
+
+            await this.inventoryRepo.addMovement({
+              id: `mov-${Date.now()}-spare-${part.productId}`,
+              productId: part.productId,
+              sourceLocation: partBalance?.locationId || 'WH-MAIN',
+              quantity: part.quantity,
+              movementType: 'SALES_ISSUE',
+              referenceDocumentType: 'WARRANTY_CLAIM',
+              referenceDocumentId: claim.claimNumber,
+              performedById: user.id,
+              performedByName: user.name,
+              reason: `Warranty repair spare part consumed (${part.productName || part.productId}) for claim ${claim.claimNumber}`,
+              timestamp: new Date().toISOString(),
+            });
+          }
+        }
         break;
+      }
       case 'REJECT':
         nextStatus = 'REJECTED';
         break;
@@ -571,6 +657,8 @@ export class WarrantyService {
       resolutionNotes: notes,
       resolvedById: user.id,
       resolvedAt: new Date().toISOString(),
+      replacementSerialNumber: options?.replacementSerial,
+      sparePartsUsed: options?.spareParts,
     });
   }
 

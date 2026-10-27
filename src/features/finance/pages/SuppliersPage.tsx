@@ -43,7 +43,11 @@ export function SuppliersPage() {
         sup.contactPerson.toLowerCase().includes(q) ||
         sup.email.toLowerCase().includes(q) ||
         sup.phone.includes(q) ||
-        (sup.taxNumber && sup.taxNumber.toLowerCase().includes(q))
+        (sup.category && sup.category.toLowerCase().includes(q)) ||
+        (sup.taxNumber && sup.taxNumber.toLowerCase().includes(q)) ||
+        (sup.vatNumber && sup.vatNumber.toLowerCase().includes(q)) ||
+        (sup.bankName && sup.bankName.toLowerCase().includes(q)) ||
+        (sup.bankAccountNumber && sup.bankAccountNumber.includes(q))
       );
     });
   }, [suppliers, search, statusFilter]);
@@ -183,10 +187,10 @@ export function SuppliersPage() {
           <table className="w-full text-left text-xs">
             <thead className="border-b border-slate-200 bg-slate-50 text-[11px] font-bold uppercase tracking-wider text-slate-500">
               <tr>
-                <th className="px-4 py-3">Vendor / Code</th>
+                <th className="px-4 py-3">Vendor / Category</th>
                 <th className="px-4 py-3">Contact Person</th>
                 <th className="px-4 py-3">Contact Details</th>
-                <th className="px-4 py-3">Tax Registration</th>
+                <th className="px-4 py-3">Tax / Bank Settlement</th>
                 <th className="px-4 py-3">Payment Terms</th>
                 <th className="px-4 py-3 text-right">Outstanding Balance</th>
                 <th className="px-4 py-3 text-center">Status</th>
@@ -205,7 +209,14 @@ export function SuppliersPage() {
                   <tr key={sup.id} className="hover:bg-slate-50/60 transition-colors">
                     <td className="px-4 py-3.5">
                       <div className="font-semibold text-slate-900">{sup.name}</div>
-                      <div className="font-mono text-[11px] text-primary font-medium">{sup.code}</div>
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        <span className="font-mono text-[11px] text-primary font-medium">{sup.code}</span>
+                        {sup.category && (
+                          <Badge variant="outline" className="text-[10px] py-0 px-1.5 bg-slate-50 text-slate-600 border-slate-200">
+                            {sup.category}
+                          </Badge>
+                        )}
+                      </div>
                     </td>
                     <td className="px-4 py-3.5 font-medium text-slate-800">{sup.contactPerson}</td>
                     <td className="px-4 py-3.5 space-y-0.5">
@@ -218,13 +229,28 @@ export function SuppliersPage() {
                         <span>{sup.email}</span>
                       </div>
                     </td>
-                    <td className="px-4 py-3.5">
-                      {sup.taxNumber ? (
-                        <span className="font-mono text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded text-[11px]">
-                          {sup.taxNumber}
-                        </span>
-                      ) : (
-                        <span className="text-slate-400 italic">Not Registered</span>
+                    <td className="px-4 py-3.5 space-y-1">
+                      {sup.vatNumber ? (
+                        <div className="flex items-center gap-1 text-[11px]">
+                          <span className="text-slate-400 font-semibold">VAT:</span>
+                          <span className="font-mono text-slate-700 font-medium">{sup.vatNumber}</span>
+                        </div>
+                      ) : sup.taxNumber ? (
+                        <div className="flex items-center gap-1 text-[11px]">
+                          <span className="text-slate-400 font-semibold">TIN:</span>
+                          <span className="font-mono text-slate-700 font-medium">{sup.taxNumber}</span>
+                        </div>
+                      ) : null}
+                      {sup.bankName && (
+                        <div className="text-[11px] text-slate-600 font-mono flex items-center gap-1">
+                          <Building2 className="h-3 w-3 text-slate-400 shrink-0" />
+                          <span className="truncate max-w-[160px]" title={`${sup.bankName} - ${sup.bankAccountNumber || ''}`}>
+                            {sup.bankName} {sup.bankAccountNumber ? `• ${sup.bankAccountNumber}` : ''}
+                          </span>
+                        </div>
+                      )}
+                      {!sup.vatNumber && !sup.taxNumber && !sup.bankName && (
+                        <span className="text-slate-400 italic text-[11px]">Unregistered</span>
                       )}
                     </td>
                     <td className="px-4 py-3.5">
@@ -304,6 +330,7 @@ export function SuppliersPage() {
         onOpenChange={setModalOpen}
         onSave={handleSave}
         supplierToEdit={selectedSupplier}
+        existingSuppliers={suppliers}
       />
     </div>
   );

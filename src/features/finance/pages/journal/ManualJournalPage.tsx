@@ -45,6 +45,8 @@ import {
   Clock,
   ShieldCheck,
   UserCheck,
+  ChevronRight,
+  ChevronLeft,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -1102,9 +1104,9 @@ export function ManualJournalPage() {
             </div>
           </Card>
 
-          {/* Out of Balance Red Warning Banner */}
+          {/* Out of Balance Warning Banner */}
           {!isBalanced && (totalDebit > 0 || totalCredit > 0) && (
-            <div className="rounded-lg bg-rose-50 border border-rose-200 p-4 text-rose-800 flex items-center justify-between animate-in fade-in-50">
+            <div className="rounded-lg bg-rose-50 border border-rose-200 p-3.5 text-rose-800 flex items-center justify-between animate-in fade-in-50">
               <div className="flex items-center gap-2.5">
                 <AlertTriangle className="h-5 w-5 text-rose-600 shrink-0" />
                 <div>
@@ -1112,76 +1114,78 @@ export function ManualJournalPage() {
                     Out of Balance by {formatCurrency(differenceAbs)}
                   </span>
                   <span className="text-xs text-rose-700">
-                    Total Debits ({formatCurrency(totalDebit)}) do not equal Total Credits ({formatCurrency(totalCredit)}). Journal cannot be posted.
+                    Total Debits ({formatCurrency(totalDebit)}) do not equal Total Credits ({formatCurrency(totalCredit)}). Equalize using the Auto-Balance button below.
                   </span>
                 </div>
               </div>
-
-              <Button
-                size="sm"
-                variant="outline"
-                type="button"
-                onClick={handleAutoBalance}
-                className="text-xs bg-white text-rose-700 border-rose-300 hover:bg-rose-100/50 shrink-0 gap-1 font-semibold"
-              >
-                <span>Auto-Balance</span>
-                <ArrowRight className="h-3.5 w-3.5" />
-              </Button>
             </div>
           )}
 
-          {/* Line Items Grid */}
-          <Card className="p-5 border-slate-200 shadow-xs bg-white space-y-4">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-600">
-                Ledger Line Items (Debit / Credit)
-              </span>
+          {/* Spreadsheet-Style High-Density Ledger Grid */}
+          <Card className="border-slate-200 shadow-xs bg-white overflow-hidden">
+            <div className="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/50">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-700">
+                  Double-Entry Ledger Grid
+                </span>
+                <Badge variant="outline" className="text-[10px] bg-white text-slate-600 font-mono">
+                  {lines.length} lines
+                </Badge>
+              </div>
 
               {!isAuditLocked && (
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    type="button"
-                    onClick={handleAddLine}
-                    className="gap-1.5 text-xs text-primary hover:bg-primary-light"
-                  >
-                    <Plus className="h-3.5 w-3.5" />
-                    <span>+ Add Line</span>
-                  </Button>
-                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  type="button"
+                  onClick={handleAddLine}
+                  className="gap-1.5 text-xs text-primary bg-white hover:bg-primary-light border-slate-200 font-semibold"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  <span>+ Add Line</span>
+                </Button>
               )}
             </div>
 
-            {/* Spacious Line Items Block Container */}
-            <div className="space-y-3">
-              {lines.map((line, idx) => {
-                const matchedAccount = accounts.find((a) => a.id === line.accountId);
-                const isArLine = matchedAccount?.code === '1020';
-                const isApLine = matchedAccount?.code === '2010';
+            {/* Spreadsheet Table */}
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="border-b border-slate-200 bg-slate-100/70 text-[11px] font-bold uppercase tracking-wider text-slate-600">
+                    <th className="py-2.5 px-3 w-10 text-center">#</th>
+                    <th className="py-2.5 px-3 min-w-[280px]">GL Account & Sub-Ledger</th>
+                    <th className="py-2.5 px-3 min-w-[240px]">Line Narrative / Memo</th>
+                    <th className="py-2.5 px-3 w-44 text-right text-primary">Debit (Dr LKR)</th>
+                    <th className="py-2.5 px-3 w-44 text-right text-emerald-700">Credit (Cr LKR)</th>
+                    <th className="py-2.5 px-2 w-10 text-center"></th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 text-xs">
+                  {lines.map((line, idx) => {
+                    const matchedAccount = accounts.find((a) => a.id === line.accountId);
+                    const isArLine = matchedAccount?.code === '1020';
+                    const isApLine = matchedAccount?.code === '2010';
 
-                return (
-                  <div
-                    key={line.id}
-                    className="p-3.5 rounded-lg border border-slate-200 bg-white hover:border-slate-300 shadow-2xs space-y-3 transition-all"
-                  >
-                    {/* Top Tier: Line Index, Account Selector, Debit, Credit, Remove */}
-                    <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3">
-                      <div className="flex items-center gap-2 flex-1 min-w-0">
-                        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-100 text-[10px] font-bold text-slate-600 font-mono">
-                          #{idx + 1}
-                        </span>
-                        <div className="flex-1 min-w-0">
-                          <label className="block text-[10.5px] font-semibold text-slate-500 uppercase tracking-wider mb-1">
-                            GL Account <span className="text-rose-500">*</span>
-                          </label>
+                    return (
+                      <tr
+                        key={line.id}
+                        className={cn(
+                          "transition-colors hover:bg-slate-50/70",
+                          idx % 2 === 1 ? "bg-slate-50/30" : "bg-white"
+                        )}
+                      >
+                        {/* Row # */}
+                        <td className="py-2.5 px-3 text-center align-top pt-3 font-mono text-[11px] font-bold text-slate-400">
+                          {idx + 1}
+                        </td>
+
+                        {/* Account + Inline Subledger Tagging Chip */}
+                        <td className="py-2 px-3 align-top">
                           <Select
                             value={line.accountId}
-                            onChange={(e) =>
-                              handleUpdateLine(line.id, 'accountId', e.target.value)
-                            }
+                            onChange={(e) => handleUpdateLine(line.id, 'accountId', e.target.value)}
                             disabled={isAuditLocked}
-                            className="h-9 text-xs w-full"
+                            className="h-8 text-xs w-full bg-white border-slate-200"
                           >
                             <option value="">Select GL Account...</option>
                             {activeAccounts.map((a) => (
@@ -1190,127 +1194,120 @@ export function ManualJournalPage() {
                               </option>
                             ))}
                           </Select>
-                        </div>
-                      </div>
 
-                      {/* Debit (Dr) Input */}
-                      <div className="w-full md:w-44 shrink-0">
-                        <label className="block text-[10.5px] font-semibold text-primary uppercase tracking-wider mb-1">
-                          Debit (Dr LKR)
-                        </label>
-                        <CurrencyInput
-                          value={line.debit || ''}
-                          onChange={(val) => handleUpdateLine(line.id, 'debit', val)}
-                          placeholder="0.00"
-                          disabled={submitting || isAuditLocked}
-                        />
-                      </div>
+                          {/* Inline Subledger Tagging Chips */}
+                          {isArLine && (
+                            <div className="mt-1.5 flex items-center gap-1.5 px-2 py-1 rounded-md bg-blue-50 border border-blue-200/90 text-blue-800 text-[11px] shadow-2xs">
+                              <Building2 className="h-3.5 w-3.5 shrink-0 text-blue-600" />
+                              <span className="font-bold text-[10px] uppercase shrink-0">Subledger Customer *:</span>
+                              <select
+                                value={line.customerId || ''}
+                                onChange={(e) => {
+                                  const cId = e.target.value;
+                                  const cust = MOCK_CUSTOMERS.find((c) => c.id === cId);
+                                  handleUpdateLine(line.id, 'customerId', cId);
+                                  handleUpdateLine(line.id, 'customerName', cust?.name || cId);
+                                }}
+                                disabled={isAuditLocked}
+                                className="h-6 w-full text-[11px] rounded border border-blue-300 bg-white px-1.5 focus:border-blue-500 font-medium"
+                              >
+                                <option value="">Select Customer Sub-Ledger *</option>
+                                {MOCK_CUSTOMERS.map((c) => (
+                                  <option key={c.id} value={c.id}>
+                                    {c.code} - {c.name}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                          )}
 
-                      {/* Credit (Cr) Input */}
-                      <div className="w-full md:w-44 shrink-0">
-                        <label className="block text-[10.5px] font-semibold text-emerald-700 uppercase tracking-wider mb-1">
-                          Credit (Cr LKR)
-                        </label>
-                        <CurrencyInput
-                          value={line.credit || ''}
-                          onChange={(val) => handleUpdateLine(line.id, 'credit', val)}
-                          placeholder="0.00"
-                          disabled={submitting || isAuditLocked}
-                        />
-                      </div>
+                          {isApLine && (
+                            <div className="mt-1.5 flex items-center gap-1.5 px-2 py-1 rounded-md bg-amber-50 border border-amber-200/90 text-amber-900 text-[11px] shadow-2xs">
+                              <Receipt className="h-3.5 w-3.5 shrink-0 text-amber-600" />
+                              <span className="font-bold text-[10px] uppercase shrink-0">Subledger Supplier *:</span>
+                              <select
+                                value={line.supplierId || ''}
+                                onChange={(e) => {
+                                  const sId = e.target.value;
+                                  const sup = suppliers.find((s) => s.id === sId);
+                                  handleUpdateLine(line.id, 'supplierId', sId);
+                                  handleUpdateLine(line.id, 'supplierName', sup?.name || sId);
+                                }}
+                                disabled={isAuditLocked}
+                                className="h-6 w-full text-[11px] rounded border border-amber-300 bg-white px-1.5 focus:border-amber-500 font-medium"
+                              >
+                                <option value="">Select Supplier Sub-Ledger *</option>
+                                {suppliers.map((s) => (
+                                  <option key={s.id} value={s.id}>
+                                    {s.code} - {s.name}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                          )}
+                        </td>
 
-                      {/* Delete Action */}
-                      <div className="flex items-end justify-end md:self-end pb-0.5 shrink-0">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          type="button"
-                          onClick={() => handleRemoveLine(line.id)}
-                          disabled={lines.length <= 2 || isAuditLocked}
-                          className="h-8 w-8 p-0 text-slate-400 hover:text-rose-600 hover:bg-rose-50 disabled:opacity-30"
-                          title="Remove line"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-
-                    {/* Bottom Tier: Line Narrative & Sub-Ledger Dimensions with ample room */}
-                    <div className="grid grid-cols-1 md:grid-cols-12 gap-3 pt-2 border-t border-slate-100 items-center">
-                      <div className={cn('space-y-1', (isArLine || isApLine) ? 'md:col-span-7' : 'md:col-span-12')}>
-                        <Input
-                          value={line.description}
-                          onChange={(e) =>
-                            handleUpdateLine(line.id, 'description', e.target.value)
-                          }
-                          disabled={isAuditLocked}
-                          placeholder="Line explanation / narrative memo..."
-                          className="h-8 text-xs bg-slate-50/50"
-                        />
-                      </div>
-
-                      {/* 1020 A/R Customer Tag */}
-                      {isArLine && (
-                        <div className="md:col-span-5 flex items-center gap-2 p-1.5 rounded-md bg-blue-50/70 border border-blue-200">
-                          <span className="text-[10px] font-bold text-blue-700 uppercase shrink-0">
-                            Customer *:
-                          </span>
-                          <select
-                            value={line.customerId || ''}
-                            onChange={(e) => {
-                              const cId = e.target.value;
-                              const cust = MOCK_CUSTOMERS.find((c) => c.id === cId);
-                              handleUpdateLine(line.id, 'customerId', cId);
-                              handleUpdateLine(line.id, 'customerName', cust?.name || cId);
-                            }}
+                        {/* Line Description / Narrative */}
+                        <td className="py-2 px-3 align-top">
+                          <Input
+                            value={line.description}
+                            onChange={(e) => handleUpdateLine(line.id, 'description', e.target.value)}
                             disabled={isAuditLocked}
-                            className="h-7 w-full text-[11px] rounded border border-blue-300 bg-white px-2 focus:border-blue-500 font-medium"
-                          >
-                            <option value="">Select Customer Sub-Ledger *</option>
-                            {MOCK_CUSTOMERS.map((c) => (
-                              <option key={c.id} value={c.id}>
-                                {c.code} - {c.name}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                      )}
+                            placeholder="Line narrative / memo..."
+                            className="h-8 text-xs bg-white border-slate-200"
+                          />
+                        </td>
 
-                      {/* 2010 A/P Supplier Tag */}
-                      {isApLine && (
-                        <div className="md:col-span-5 flex items-center gap-2 p-1.5 rounded-md bg-amber-50/70 border border-amber-200">
-                          <span className="text-[10px] font-bold text-amber-700 uppercase shrink-0">
-                            Supplier *:
-                          </span>
-                          <select
-                            value={line.supplierId || ''}
-                            onChange={(e) => {
-                              const sId = e.target.value;
-                              const sup = suppliers.find((s) => s.id === sId);
-                              handleUpdateLine(line.id, 'supplierId', sId);
-                              handleUpdateLine(line.id, 'supplierName', sup?.name || sId);
-                            }}
-                            disabled={isAuditLocked}
-                            className="h-7 w-full text-[11px] rounded border border-amber-300 bg-white px-2 focus:border-amber-500 font-medium"
+                        {/* Debit (Dr) Column */}
+                        <td className="py-2 px-3 align-top">
+                          <div className={cn(line.debit > 0 && "ring-1 ring-primary/20 rounded")}>
+                            <CurrencyInput
+                              value={line.debit || ''}
+                              onChange={(val) => handleUpdateLine(line.id, 'debit', val)}
+                              placeholder="0.00"
+                              disabled={submitting || isAuditLocked}
+                              className="h-8 text-xs text-right font-mono"
+                            />
+                          </div>
+                        </td>
+
+                        {/* Credit (Cr) Column */}
+                        <td className="py-2 px-3 align-top">
+                          <div className={cn(line.credit > 0 && "ring-1 ring-emerald-500/20 rounded")}>
+                            <CurrencyInput
+                              value={line.credit || ''}
+                              onChange={(val) => handleUpdateLine(line.id, 'credit', val)}
+                              placeholder="0.00"
+                              disabled={submitting || isAuditLocked}
+                              className="h-8 text-xs text-right font-mono"
+                            />
+                          </div>
+                        </td>
+
+                        {/* Remove Action */}
+                        <td className="py-2 px-2 text-center align-top pt-2.5">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            type="button"
+                            onClick={() => handleRemoveLine(line.id)}
+                            disabled={lines.length <= 2 || isAuditLocked}
+                            className="h-7 w-7 p-0 text-slate-400 hover:text-rose-600 hover:bg-rose-50 disabled:opacity-30"
+                            title="Remove line"
                           >
-                            <option value="">Select Supplier Sub-Ledger *</option>
-                            {suppliers.map((s) => (
-                              <option key={s.id} value={s.id}>
-                                {s.code} - {s.name}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
 
             {/* Live Impact Preview */}
             {hasActiveEntries && (
-              <div className="rounded-lg border border-slate-200 bg-slate-50/70 p-3.5 text-xs space-y-1.5">
+              <div className="p-3.5 border-t border-slate-200 bg-slate-50/70 text-xs space-y-1.5">
                 <div className="flex items-center gap-1.5 font-semibold text-slate-700">
                   <Info className="h-3.5 w-3.5 text-primary" />
                   <span>Live Ledger Impact Preview:</span>
@@ -1360,29 +1357,29 @@ export function ManualJournalPage() {
               </div>
             )}
 
-            {/* Bottom Total Debits, Total Credits, and Actions */}
-            <div className="pt-4 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4">
-              <div className="flex items-center gap-6 text-xs">
+            {/* Sticky Bottom Balancing Bar */}
+            <div className="sticky bottom-0 z-20 bg-white/95 backdrop-blur-sm border-t border-slate-200 p-4 shadow-md flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="flex flex-wrap items-center gap-5 text-xs">
                 <div>
-                  <span className="text-slate-400 block text-[11px] font-semibold uppercase">
+                  <span className="text-slate-400 block text-[10px] font-bold uppercase tracking-wider">
                     Total Debits
                   </span>
                   <span className="text-base font-bold font-mono text-primary tabular-nums">
                     {formatCurrency(totalDebit)}
                   </span>
                 </div>
-                <div className="h-8 w-px bg-slate-200" />
+                <div className="h-8 w-px bg-slate-200 hidden sm:block" />
                 <div>
-                  <span className="text-slate-400 block text-[11px] font-semibold uppercase">
+                  <span className="text-slate-400 block text-[10px] font-bold uppercase tracking-wider">
                     Total Credits
                   </span>
                   <span className="text-base font-bold font-mono text-emerald-700 tabular-nums">
                     {formatCurrency(totalCredit)}
                   </span>
                 </div>
-                <div className="h-8 w-px bg-slate-200" />
+                <div className="h-8 w-px bg-slate-200 hidden sm:block" />
                 <div>
-                  <span className="text-slate-400 block text-[11px] font-semibold uppercase">
+                  <span className="text-slate-400 block text-[10px] font-bold uppercase tracking-wider">
                     Balance Status
                   </span>
                   {isBalanced ? (
@@ -1390,9 +1387,24 @@ export function ManualJournalPage() {
                       <CheckCircle2 className="h-4 w-4" /> Balanced (0.00)
                     </span>
                   ) : (
-                    <span className="inline-flex items-center gap-1 text-rose-600 font-bold font-mono tabular-nums">
-                      <AlertTriangle className="h-4 w-4" /> Out by {formatCurrency(differenceAbs)}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="inline-flex items-center gap-1 text-rose-600 font-bold font-mono tabular-nums">
+                        <AlertTriangle className="h-4 w-4" /> Out by {formatCurrency(differenceAbs)}
+                      </span>
+                      {!isAuditLocked && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          type="button"
+                          onClick={handleAutoBalance}
+                          className="h-7 text-xs bg-amber-50 text-amber-900 border-amber-300 hover:bg-amber-100 font-bold shrink-0 gap-1 shadow-2xs ml-1"
+                          title="Auto-Balance 1-click"
+                        >
+                          <Zap className="h-3 w-3 fill-amber-500 text-amber-600" />
+                          <span>Auto-Balance</span>
+                        </Button>
+                      )}
+                    </div>
                   )}
                 </div>
               </div>
@@ -1484,8 +1496,46 @@ export function ManualJournalPage() {
           </Card>
         </div>
 
-        {/* Collapsible Sidebar: Templates Library */}
-        {isTemplatesOpen && (
+        {/* Collapsible Sidebar: Templates Library / Slim Icon Rail */}
+        {!isTemplatesOpen ? (
+          <aside className="hidden lg:flex flex-col items-center py-4 px-2 w-14 bg-white border border-slate-200 rounded-xl space-y-3 shrink-0 shadow-2xs self-start sticky top-4">
+            <button
+              type="button"
+              onClick={() => setIsTemplatesOpen(true)}
+              className="p-2 rounded-lg bg-slate-50 border border-slate-200 text-slate-700 hover:text-primary hover:border-primary-border hover:bg-primary-light transition-all shadow-2xs group relative"
+              title="Expand Templates Library (Slide-over)"
+              aria-label="Expand Templates Library"
+            >
+              <Bookmark className="h-4 w-4 text-primary" />
+              <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[9px] font-bold text-white font-mono">
+                {allTemplates.length}
+              </span>
+            </button>
+            <div className="w-8 h-px bg-slate-200" />
+            <button
+              type="button"
+              onClick={() => {
+                setIsTemplatesOpen(true);
+                handleOpenCreateTemplate(false);
+              }}
+              className="p-2 rounded-lg bg-white border border-dashed border-slate-300 text-slate-500 hover:text-primary hover:border-primary-border transition-all shadow-2xs"
+              title="Create New Template"
+              aria-label="Create New Template"
+            >
+              <Plus className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsTemplatesOpen(true)}
+              className="mt-6 flex flex-col items-center gap-2 cursor-pointer group text-slate-400 hover:text-primary"
+            >
+              <ChevronLeft className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" />
+              <span className="text-[10px] font-mono font-bold tracking-widest text-slate-400 group-hover:text-primary [writing-mode:vertical-rl] rotate-180 uppercase">
+                Templates ({allTemplates.length})
+              </span>
+            </button>
+          </aside>
+        ) : (
           <div className="w-full lg:w-88 space-y-3 shrink-0">
             <Card className="p-4 border-slate-200 bg-slate-50/90 shadow-xs space-y-3">
               {/* Header with Title and "New Template" */}
@@ -1500,16 +1550,29 @@ export function ManualJournalPage() {
                   </Badge>
                 </div>
 
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  onClick={() => handleOpenCreateTemplate(false)}
-                  className="h-7 px-2 text-[11px] font-semibold gap-1 text-primary border-primary-border bg-white hover:bg-primary-light/50"
-                >
-                  <Plus className="h-3 w-3" />
-                  New
-                </Button>
+                <div className="flex items-center gap-1.5">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleOpenCreateTemplate(false)}
+                    className="h-7 px-2 text-[11px] font-semibold gap-1 text-primary border-primary-border bg-white hover:bg-primary-light/50"
+                  >
+                    <Plus className="h-3 w-3" />
+                    New
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setIsTemplatesOpen(false)}
+                    className="h-7 w-7 p-0 text-slate-400 hover:text-slate-600"
+                    title="Collapse to icon rail"
+                    aria-label="Collapse to icon rail"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
 
               {/* SEARCH BAR */}
