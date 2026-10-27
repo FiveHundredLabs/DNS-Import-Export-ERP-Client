@@ -52,6 +52,7 @@ export function ApprovalsPage() {
     if (app.documentType === 'GRN_RECEIPT') return `/finance/ap/bills/new?grnId=${app.documentId}`;
     if (app.documentType === 'CUSTOMER_CREATION') return `/customers/${app.documentId}`;
     if (app.documentType === 'PRODUCT_PRICE_CHANGE') return `/inventory`;
+    if (app.documentType === 'PURCHASE_ORDER') return `/purchasing/orders/${app.documentId}`;
     return null;
   };
 

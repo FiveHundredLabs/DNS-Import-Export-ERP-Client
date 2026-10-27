@@ -24,6 +24,8 @@ import { StockMovementsPage } from './features/inventory/StockMovementsPage';
 import { OrderPickingPage } from './features/inventory/OrderPickingPage';
 import { DispatchPage } from './features/inventory/DispatchPage';
 import { DamagedStockPage } from './features/inventory/DamagedStockPage';
+import { SerialNumbersPage } from './features/inventory/SerialNumbersPage';
+import { BarcodesPage } from './features/inventory/BarcodesPage';
 import { InvoiceListPage } from './features/invoices/InvoiceListPage';
 import { InvoiceDetailPage } from './features/invoices/InvoiceDetailPage';
 import { InvoiceDraftEditPage } from './features/invoices/InvoiceDraftEditPage';
@@ -70,6 +72,16 @@ import { LoginPage } from './features/auth/LoginPage';
 import { Toaster } from 'sonner';
 import { AreaListPage } from './features/administration/AreaListPage';
 import { TeamListPage } from './features/administration/TeamListPage';
+import { PurchasingDashboard } from './features/purchasing/PurchasingDashboard';
+import { PurchasingSuppliersPage } from './features/purchasing/PurchasingSuppliersPage';
+import { PurchaseOrderListPage } from './features/purchasing/PurchaseOrderListPage';
+import { PurchaseOrderCreateEditPage } from './features/purchasing/PurchaseOrderCreateEditPage';
+import { PurchaseOrderDetailPage } from './features/purchasing/PurchaseOrderDetailPage';
+import { PurchaseOrderPrintPage } from './features/purchasing/PurchaseOrderPrintPage';
+import { PurchasingGRNListPage } from './features/purchasing/PurchasingGRNListPage';
+import { PurchasingGRNDetailPage } from './features/purchasing/PurchasingGRNDetailPage';
+import { PurchasingReportsPage } from './features/purchasing/PurchasingReportsPage';
+import { PurchaseReturnsPlaceholderPage } from './features/purchasing/PurchaseReturnsPlaceholderPage';
 
 export function App() {
   return (
@@ -301,6 +313,38 @@ export function App() {
             </ProtectedRoute>
           }
         />
+        <Route
+          path="inventory/serial-numbers"
+          element={
+            <ProtectedRoute>
+              <SerialNumbersPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="inventory/serials"
+          element={
+            <ProtectedRoute>
+              <SerialNumbersPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="inventory/barcodes"
+          element={
+            <ProtectedRoute>
+              <BarcodesPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="inventory/bar-codes"
+          element={
+            <ProtectedRoute>
+              <BarcodesPage />
+            </ProtectedRoute>
+          }
+        />
 
         {/* Phase 7: Invoice & Payments Management */}
         <Route
@@ -457,6 +501,104 @@ export function App() {
           element={
             <ProtectedRoute>
               <TeamListPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Dedicated Purchasing Officer & Procurement Module */}
+        <Route
+          path="purchasing"
+          element={
+            <ProtectedRoute>
+              <PurchasingDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="purchasing/dashboard"
+          element={
+            <ProtectedRoute>
+              <PurchasingDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="purchasing/suppliers"
+          element={
+            <ProtectedRoute>
+              <PurchasingSuppliersPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="purchasing/orders"
+          element={
+            <ProtectedRoute>
+              <PurchaseOrderListPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="purchasing/orders/new"
+          element={
+            <ProtectedRoute>
+              <PurchaseOrderCreateEditPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="purchasing/orders/:id"
+          element={
+            <ProtectedRoute>
+              <PurchaseOrderDetailPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="purchasing/orders/:id/edit"
+          element={
+            <ProtectedRoute>
+              <PurchaseOrderCreateEditPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="purchasing/orders/:id/print"
+          element={
+            <ProtectedRoute>
+              <PurchaseOrderPrintPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="purchasing/grn"
+          element={
+            <ProtectedRoute>
+              <PurchasingGRNListPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="purchasing/grn/:id"
+          element={
+            <ProtectedRoute>
+              <PurchasingGRNDetailPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="purchasing/reports"
+          element={
+            <ProtectedRoute>
+              <PurchasingReportsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="purchasing/returns"
+          element={
+            <ProtectedRoute>
+              <PurchaseReturnsPlaceholderPage />
             </ProtectedRoute>
           }
         />

@@ -38,6 +38,10 @@ import {
   Percent,
   Layers,
   Barcode,
+  Hash,
+  ArrowLeftRight,
+  CheckSquare,
+  Truck,
   Banknote,
 } from 'lucide-react';
 import { useEffect } from 'react';
@@ -54,6 +58,7 @@ interface SidebarProps {
 
 type RailCategory =
   | 'all'
+  | 'purchasing'
   | 'sales'
   | 'customers'
   | 'inventory'
@@ -70,6 +75,8 @@ interface SidebarItem {
   category: RailCategory;
   exact?: boolean;
   directorOnly?: boolean;
+  excludedRoles?: string[];
+  badge?: string;
 }
 
 export function Sidebar({ isOpen, onClose }: SidebarProps) {
@@ -81,12 +88,24 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const [activeCategory, setActiveCategory] = useState<RailCategory>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Automatically activate finance category when navigating within finance module (if authorized)
+  // Automatically activate purchasing or finance category when navigating within their modules
   useEffect(() => {
-    if (location.pathname.startsWith('/finance') && canAccessRoute('/finance')) {
+    if (location.pathname.startsWith('/purchasing') && canAccessRoute('/purchasing')) {
+      setActiveCategory('purchasing');
+    } else if (location.pathname.startsWith('/finance') && canAccessRoute('/finance')) {
       setActiveCategory('finance');
     }
   }, [location.pathname, canAccessRoute]);
+
+  // 0. Purchasing & Procurement Module
+  const purchasingItems: SidebarItem[] = [
+    { id: 'purchasing-dashboard', name: 'Purchasing Dashboard', path: '/purchasing', icon: LayoutGrid, category: 'purchasing', exact: true },
+    { id: 'purchasing-suppliers', name: 'Supplier Management', path: '/purchasing/suppliers', icon: Store, category: 'purchasing' },
+    { id: 'purchasing-orders', name: 'Purchase Orders', path: '/purchasing/orders', icon: ShoppingCart, category: 'purchasing' },
+    { id: 'purchasing-grn', name: 'Goods Received (View Only)', path: '/purchasing/grn', icon: Boxes, category: 'purchasing' },
+    { id: 'purchasing-reports', name: 'Purchase Reports', path: '/purchasing/reports', icon: BarChart3, category: 'purchasing' },
+    { id: 'purchasing-returns', name: 'Purchase Returns', path: '/purchasing/returns', icon: RotateCcw, category: 'purchasing', badge: 'Under Dev' },
+  ];
 
   // 1. Procurement, Orders & Approvals
   const procurementItems: SidebarItem[] = [
@@ -107,8 +126,11 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
 
   // 3. Products & Inventory
   const inventoryItems: SidebarItem[] = [
-    { id: 'products', name: 'Product Master', path: '/products', icon: Package, category: 'inventory' },
-    { id: 'inventory', name: 'Inventory & GRN', path: '/inventory', icon: Boxes, category: 'inventory', exact: true },
+    { id: 'inventory', name: 'Inventory Hub', path: '/inventory', icon: Boxes, category: 'inventory', exact: true },
+    { id: 'grn', name: 'GRN', path: '/inventory/grn', icon: Receipt, category: 'inventory' },
+    { id: 'serials', name: 'Serial Numbers', path: '/inventory/serial-numbers', icon: Hash, category: 'inventory' },
+    { id: 'barcodes', name: 'Bar Codes', path: '/inventory/barcodes', icon: Barcode, category: 'inventory' },
+    { id: 'products', name: 'Product Master', path: '/products', icon: Package, category: 'inventory', excludedRoles: ['STOCK_KEEPER'] },
     { id: 'damaged-stock', name: 'Damaged Stock & RMA', path: '/inventory/damaged-stock', icon: ShieldAlert, category: 'inventory' },
   ];
 
@@ -157,6 +179,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
 
   // Combined item list in canonical Quick Links order
   const allRawItems: SidebarItem[] = [
+    ...purchasingItems,
     ...procurementItems,
     ...customerItems,
     ...inventoryItems,
@@ -168,6 +191,9 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const authorizedItems = useMemo(() => {
     return allRawItems.filter((item) => {
       if (item.directorOnly && currentUser.role !== 'DIRECTOR') {
+        return false;
+      }
+      if (item.excludedRoles && item.excludedRoles.includes(currentUser.role)) {
         return false;
       }
       if (item.path.includes('tab=settings') && !canAccessRoute('/settings')) {
@@ -204,6 +230,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   // Rail category definition (No separate favorites rail item)
   const railItems = [
     { id: 'all' as RailCategory, label: 'Dashboard & Quick Links', icon: LayoutGrid },
+    { id: 'purchasing' as RailCategory, label: 'Purchasing & Procurement', icon: ShoppingCart },
     { id: 'sales' as RailCategory, label: 'Sales & Orders', icon: Calendar },
     { id: 'customers' as RailCategory, label: 'Customers & CRM', icon: Users2 },
     { id: 'inventory' as RailCategory, label: 'Inventory & Products', icon: Boxes },
@@ -242,6 +269,8 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   // Determine panel title
   const panelTitle = useMemo(() => {
     switch (activeCategory) {
+      case 'purchasing':
+        return 'Purchasing & Procurement';
       case 'sales':
         return 'Sales & Orders';
       case 'customers':
@@ -302,6 +331,11 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         >
           <Icon className={cn('h-3.5 w-3.5 shrink-0 transition-colors text-slate-500 group-hover:text-slate-700', active && 'text-slate-900')} />
           <span className="truncate">{item.name}</span>
+          {item.badge && (
+            <span className="ml-auto mr-1.5 text-[9px] font-mono px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200 shrink-0">
+              {item.badge}
+            </span>
+          )}
         </NavLink>
 
         {/* Right: Interactive Star Toggle Button (Clean Gray, Small) */}

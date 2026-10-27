@@ -864,15 +864,15 @@ export function OrderActivityTimeline({
                           {evt.productChanges.modified.map((m, mIdx) => (
                             <div
                               key={mIdx}
-                              className="flex items-center justify-between p-2 rounded-md bg-white border border-orange-200/60 text-xs"
+                              className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 p-2 rounded-md bg-white border border-orange-200/60 text-xs"
                             >
-                              <div>
+                              <div className="min-w-0">
                                 <span className="font-semibold text-slate-900">{m.productName}</span>
                                 <span className="text-[10px] text-slate-400 font-mono ml-1.5">
                                   {m.sku}
                                 </span>
                               </div>
-                              <div className="flex items-center gap-2 font-mono">
+                              <div className="flex items-center gap-2 font-mono shrink-0">
                                 <span className="line-through text-slate-400">{m.previousQuantity}</span>
                                 <span className="text-slate-300">→</span>
                                 <span className="font-bold text-slate-900">{m.newQuantity}</span>
@@ -898,18 +898,18 @@ export function OrderActivityTimeline({
                           {evt.productChanges.added.map((a, aIdx) => (
                             <div
                               key={aIdx}
-                              className="flex items-center justify-between p-2 rounded-md bg-emerald-50/60 border border-emerald-200 text-xs"
+                              className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 p-2 rounded-md bg-emerald-50/60 border border-emerald-200 text-xs"
                             >
-                              <div className="flex items-center gap-1.5">
+                              <div className="flex items-center gap-1.5 min-w-0">
                                 <PlusCircle className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
-                                <div>
-                                  <span className="font-semibold text-emerald-900">{a.productName}</span>
-                                  <span className="text-[10px] text-emerald-600 font-mono ml-1.5">
+                                <div className="min-w-0">
+                                  <span className="font-semibold text-emerald-900 truncate block">{a.productName}</span>
+                                  <span className="text-[10px] text-emerald-600 font-mono">
                                     {a.sku}
                                   </span>
                                 </div>
                               </div>
-                              <span className="font-bold text-emerald-800 font-mono">
+                              <span className="font-bold text-emerald-800 font-mono shrink-0">
                                 +{a.quantity} units
                               </span>
                             </div>
@@ -923,18 +923,18 @@ export function OrderActivityTimeline({
                           {evt.productChanges.removed.map((r, rIdx) => (
                             <div
                               key={rIdx}
-                              className="flex items-center justify-between p-2 rounded-md bg-rose-50/60 border border-rose-200 text-xs"
+                              className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 p-2 rounded-md bg-rose-50/60 border border-rose-200 text-xs"
                             >
-                              <div className="flex items-center gap-1.5">
+                              <div className="flex items-center gap-1.5 min-w-0">
                                 <MinusCircle className="h-3.5 w-3.5 text-rose-600 shrink-0" />
-                                <div>
-                                  <span className="font-semibold text-rose-900">{r.productName}</span>
-                                  <span className="text-[10px] text-rose-600 font-mono ml-1.5">
+                                <div className="min-w-0">
+                                  <span className="font-semibold text-rose-900 truncate block">{r.productName}</span>
+                                  <span className="text-[10px] text-rose-600 font-mono">
                                     {r.sku}
                                   </span>
                                 </div>
                               </div>
-                              <span className="font-bold text-rose-800 font-mono">
+                              <span className="font-bold text-rose-800 font-mono shrink-0">
                                 Removed ({r.previousQuantity} units)
                               </span>
                             </div>
@@ -967,14 +967,14 @@ export function OrderActivityTimeline({
 
                       <div className="divide-y divide-teal-100 bg-white rounded-md border border-teal-200/60 overflow-hidden">
                         {evt.stockReservations.map((st, sIdx) => (
-                          <div key={sIdx} className="p-2 flex items-center justify-between text-xs">
-                            <div>
-                              <div className="font-semibold text-slate-900">{st.productName}</div>
+                          <div key={sIdx} className="p-2 flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-xs">
+                            <div className="min-w-0">
+                              <div className="font-semibold text-slate-900 truncate">{st.productName}</div>
                               <div className="text-[10.5px] text-slate-400 font-mono">
                                 SKU: {st.sku} • {st.warehouseName || 'Main Logistics Warehouse'}
                               </div>
                             </div>
-                            <div className="text-right font-mono font-bold text-teal-800">
+                            <div className="text-left sm:text-right font-mono font-bold text-teal-800 shrink-0">
                               {st.reservedQuantity} PCS
                             </div>
                           </div>
@@ -986,9 +986,9 @@ export function OrderActivityTimeline({
                   {/* C. Delivery Note Created Details */}
                   {evt.deliveryNote && (
                     <div className="mt-3 p-3 rounded-lg bg-indigo-50/60 border border-indigo-200/80 space-y-2">
-                      <div className="flex items-center justify-between text-xs font-bold text-indigo-900">
+                      <div className="flex flex-wrap items-center justify-between gap-1.5 text-xs font-bold text-indigo-900">
                         <span className="flex items-center gap-1.5">
-                          <FileText className="h-3.5 w-3.5 text-indigo-600" />
+                          <FileText className="h-3.5 w-3.5 text-indigo-600 shrink-0" />
                           Delivery Note #{evt.deliveryNote.deliveryNoteNumber}
                         </span>
                         <span className="text-[10.5px] font-mono font-semibold text-indigo-700 bg-indigo-100 px-2 py-0.5 rounded">
@@ -1001,7 +1001,7 @@ export function OrderActivityTimeline({
                           Items Included for Dispatch:
                         </div>
                         {evt.deliveryNote.items.map((it, iIdx) => (
-                          <div key={iIdx} className="flex justify-between text-xs py-0.5">
+                          <div key={iIdx} className="flex flex-wrap justify-between gap-1 text-xs py-0.5">
                             <span className="text-slate-800">{it.productName}</span>
                             <span className="font-mono font-bold text-indigo-800">{it.quantity} PCS</span>
                           </div>
@@ -1013,9 +1013,9 @@ export function OrderActivityTimeline({
                   {/* D. Dispatch Details */}
                   {evt.dispatchDetails && (
                     <div className="mt-3 p-3 rounded-lg bg-cyan-50/60 border border-cyan-200/80 space-y-2">
-                      <div className="flex items-center justify-between text-xs font-bold text-cyan-900">
+                      <div className="flex flex-wrap items-center justify-between gap-1.5 text-xs font-bold text-cyan-900">
                         <span className="flex items-center gap-1.5">
-                          <Truck className="h-3.5 w-3.5 text-cyan-600" />
+                          <Truck className="h-3.5 w-3.5 text-cyan-600 shrink-0" />
                           Dispatch Details ({evt.dispatchDetails.dispatchNumber})
                         </span>
                         <span className="text-[10.5px] font-semibold text-cyan-700 bg-cyan-100 px-2 py-0.5 rounded">
@@ -1057,9 +1057,9 @@ export function OrderActivityTimeline({
                   {/* E. Customer Return / Refusal Details */}
                   {evt.returnDetails && (
                     <div className="mt-3 p-3 rounded-lg bg-rose-50/70 border border-rose-200 space-y-2">
-                      <div className="flex items-center justify-between text-xs font-bold text-rose-900">
+                      <div className="flex flex-wrap items-center justify-between gap-1.5 text-xs font-bold text-rose-900">
                         <span className="flex items-center gap-1.5">
-                          <RotateCcw className="h-3.5 w-3.5 text-rose-600" />
+                          <RotateCcw className="h-3.5 w-3.5 text-rose-600 shrink-0" />
                           Customer Refusal &amp; Return Record
                         </span>
                         <span className="text-[10.5px] font-semibold text-rose-700 bg-rose-100 px-2 py-0.5 rounded">
@@ -1068,7 +1068,7 @@ export function OrderActivityTimeline({
                       </div>
 
                       <div className="bg-white rounded-md border border-rose-200/80 p-2.5 text-xs space-y-1">
-                        <div className="flex justify-between font-semibold text-slate-900">
+                        <div className="flex flex-wrap justify-between gap-1 font-semibold text-slate-900">
                           <span>{evt.returnDetails.productName}</span>
                           <span className="font-mono text-rose-700">
                             Refused: {evt.returnDetails.returnedQuantity} PCS

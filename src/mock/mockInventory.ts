@@ -1,4 +1,4 @@
-import { StockBalance, StockMovement, GRN } from '../types/inventory';
+import { StockBalance, StockMovement, GRN, PurchaseOrder } from '../types/inventory';
 
 // ─── Seed Stock Balances ──────────────────────────────────────────────────────
 export const MOCK_STOCK_BALANCES: StockBalance[] = [
@@ -681,3 +681,112 @@ export const MOCK_GRNS: GRN[] = [
   },
 ];
 
+
+
+// ─── Seed Purchase Orders (PO Intake) ──────────────────────────────────────────
+export const MOCK_PURCHASE_ORDERS: PurchaseOrder[] = [
+  {
+    id: 'po-2026-0891',
+    poNumber: 'PO-2026-0891',
+    supplierId: 'sup-001',
+    supplierName: 'Schneider Electric Lanka (Pvt) Ltd',
+    orderDate: '2026-10-15T08:30:00Z',
+    expectedDeliveryDate: '2026-10-28T17:00:00Z',
+    warehouseId: 'WH-MAIN',
+    status: 'APPROVED',
+    items: [
+      {
+        productId: 'prod-001',
+        productName: 'Schneider Acti9 32A Double Pole MCB',
+        sku: 'DNS-MCB-32A-2P',
+        expectedQuantity: 150,
+        unitCost: 2200,
+      },
+      {
+        productId: 'prod-002',
+        productName: 'Schneider Acti9 63A Triple Pole MCB',
+        sku: 'DNS-MCB-63A-3P',
+        expectedQuantity: 60,
+        unitCost: 5800,
+      },
+      {
+        productId: 'prod-006',
+        productName: 'Schneider Easy9 40A 30mA 2-Pole RCCB',
+        sku: 'DNS-RCCB-40A-2P',
+        expectedQuantity: 40,
+        unitCost: 4500,
+      },
+    ],
+  },
+  {
+    id: 'po-2026-0904',
+    poNumber: 'PO-2026-0904',
+    supplierId: 'sup-002',
+    supplierName: 'Kelani Cables PLC',
+    orderDate: '2026-10-18T09:00:00Z',
+    expectedDeliveryDate: '2026-10-29T16:00:00Z',
+    warehouseId: 'WH-MAIN',
+    status: 'APPROVED',
+    items: [
+      {
+        productId: 'prod-004',
+        productName: 'Kelani 2.5mm Earth Cable 100m',
+        sku: 'DNS-CBL-2.5-E',
+        expectedQuantity: 80,
+        unitCost: 8900,
+      },
+      {
+        productId: 'prod-005',
+        productName: 'Kelani 4.0mm Twin Flat Cable 100m',
+        sku: 'DNS-CBL-4.0-TF',
+        expectedQuantity: 50,
+        unitCost: 14500,
+      },
+    ],
+  },
+  {
+    id: 'po-2026-0922',
+    poNumber: 'PO-2026-0922',
+    supplierId: 'sup-003',
+    supplierName: 'Signify Lanka (Philips)',
+    orderDate: '2026-10-20T11:00:00Z',
+    expectedDeliveryDate: '2026-10-30T14:00:00Z',
+    warehouseId: 'WH-MAIN',
+    status: 'APPROVED',
+    items: [
+      {
+        productId: 'prod-003',
+        productName: 'Philips CoreLine LED Panel 60x60',
+        sku: 'DNS-LED-6060-40W',
+        expectedQuantity: 100,
+        unitCost: 7500,
+      },
+      {
+        productId: 'prod-007',
+        productName: 'Philips LED Floodlight 50W IP65',
+        sku: 'DNS-FL-50W-IP65',
+        expectedQuantity: 75,
+        unitCost: 4200,
+      },
+    ],
+  },
+  {
+    id: 'po-2026-0945',
+    poNumber: 'PO-2026-0945',
+    supplierId: 'sup-004',
+    supplierName: 'Growatt Energy Solutions',
+    orderDate: '2026-10-22T13:45:00Z',
+    expectedDeliveryDate: '2026-11-02T12:00:00Z',
+    warehouseId: 'WH-MAIN',
+    status: 'APPROVED',
+    items: [
+      {
+        productId: 'prod-008',
+        productName: 'Growatt 5kW Grid-Tie Solar Inverter',
+        sku: 'DNS-INV-5KW-GT',
+        expectedQuantity: 20,
+        unitCost: 185000,
+      },
+    ],
+  },
+];

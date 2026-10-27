@@ -80,4 +80,13 @@ export const MOCK_USERS: User[] = [
     phone: '+94 77 901 2345',
     isActive: true,
   },
+  {
+    id: 'usr-110',
+    name: 'Ruwan Wickramasinghe',
+    email: 'purchasing@dnserp.com',
+    role: 'PURCHASING_OFFICER',
+    title: 'Senior Purchasing Officer',
+    phone: '+94 77 987 6543',
+    isActive: true,
+  },
 ];

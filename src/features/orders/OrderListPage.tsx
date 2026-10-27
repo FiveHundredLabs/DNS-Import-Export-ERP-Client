@@ -18,6 +18,7 @@ import {
 } from '../../components/ui/select';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../../components/ui/table';
+import { cn } from '../../utils/cn';
 
 import {
   ShoppingCart,
@@ -119,25 +120,25 @@ export function OrderListPage() {
   const totalValue = orders.reduce((sum, o) => sum + (o.status !== 'CANCELLED' ? o.totalAmount : 0), 0);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6 max-w-7xl mx-auto w-full pb-24 md:pb-6">
       {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-slate-900 flex items-center gap-2">
-            <ShoppingCart className="h-6 w-6 text-primary" />
-            Sales Orders & Approvals
+          <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-slate-900 flex items-center gap-2">
+            <ShoppingCart className="h-5 w-5 sm:h-6 sm:w-6 text-primary shrink-0" />
+            <span>Sales Orders &amp; Approvals</span>
           </h1>
           <p className="text-xs text-slate-500 mt-1">
             Standard vs Special Sales Orders, commercial credit limits, and fulfillment state machine.
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5">
+        <div className="grid grid-cols-2 sm:flex sm:items-center gap-2 w-full sm:w-auto">
           <Button
             variant="outline"
             size="sm"
             onClick={() => navigate('/orders/activity-log')}
-            className="gap-1.5 border-teal-300 text-teal-800 hover:bg-teal-50"
+            className="gap-1.5 border-teal-300 text-teal-800 hover:bg-teal-50 text-xs w-full sm:w-auto justify-center"
           >
             <Clock className="h-3.5 w-3.5 text-teal-600" />
             Activity Log
@@ -147,7 +148,7 @@ export function OrderListPage() {
             variant="outline"
             size="sm"
             onClick={() => navigate('/orders/tracking')}
-            className="gap-1.5 border-primary-border text-primary-text hover:bg-primary-light"
+            className="gap-1.5 border-primary-border text-primary-text hover:bg-primary-light text-xs w-full sm:w-auto justify-center"
           >
             <Activity className="h-3.5 w-3.5 text-primary" />
             Pipeline Tracking
@@ -156,7 +157,7 @@ export function OrderListPage() {
           <Button
             size="sm"
             onClick={() => navigate('/orders/new')}
-            className="bg-primary hover:bg-primary-hover text-primary-foreground gap-1.5 shadow-xs"
+            className="col-span-2 sm:col-span-1 bg-primary hover:bg-primary-hover text-primary-foreground gap-1.5 shadow-xs text-xs w-full sm:w-auto justify-center font-semibold"
           >
             <Plus className="h-3.5 w-3.5" />
             New Sales Order
@@ -215,103 +216,107 @@ export function OrderListPage() {
 
       {/* Filter and Search Bar */}
       <Card>
-        <CardContent className="p-4 space-y-4">
-          <div className="flex flex-col md:flex-row gap-3">
+        <CardContent className="p-3.5 sm:p-4 space-y-3 sm:space-y-4">
+          <div className="flex flex-col lg:flex-row gap-2.5 sm:gap-3">
             {/* Search Input */}
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+            <div className="relative flex-1 min-w-0">
+              <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400 pointer-events-none" />
               <Input
-                placeholder="Search by order #, customer code, or name..."
+                placeholder="Search by order #, customer, or code..."
                 value={filters.search || ''}
                 onChange={(e) => handleSearchChange(e.target.value)}
-                className="pl-9 text-xs"
+                className="pl-9 text-xs h-9 w-full"
               />
             </div>
 
-            {/* Customer Filter */}
-            <div className="w-full md:w-64">
-              <div className="relative">
-                <Building2 className="absolute left-3 top-2.5 h-4 w-4 text-slate-400 pointer-events-none z-10" />
-                <Select
-                  value={filters.customerId || '__all__'}
-                  onValueChange={(val) => handleCustomerFilter(val === '__all__' ? '' : val)}
-                >
-                  <SelectTrigger className="w-full pl-9 pr-3 py-2 text-xs rounded-md border border-slate-200 bg-white">
-                    <SelectValue placeholder="All Customers" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__all__">All Customers</SelectItem>
-                    {customers.map((c) => (
-                      <SelectItem key={c.id} value={c.id}>
-                        {c.name} ({c.code})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+            {/* Filter controls row */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:flex items-center gap-2 w-full lg:w-auto">
+              {/* Customer Filter */}
+              <div className="w-full lg:w-56">
+                <div className="relative">
+                  <Building2 className="absolute left-3 top-2.5 h-4 w-4 text-slate-400 pointer-events-none z-10" />
+                  <Select
+                    value={filters.customerId || '__all__'}
+                    onValueChange={(val) => handleCustomerFilter(val === '__all__' ? '' : val)}
+                  >
+                    <SelectTrigger className="w-full pl-9 pr-3 py-2 text-xs rounded-md border border-slate-200 bg-white h-9">
+                      <SelectValue placeholder="All Customers" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__all__">All Customers</SelectItem>
+                      {customers.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.name} ({c.code})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
-            </div>
 
-            {/* Date Range Filter */}
-            <div className="flex items-center gap-1.5 w-full sm:w-auto">
-              <div className="relative flex-1 min-w-0 sm:flex-initial sm:w-36">
-                <Calendar className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-slate-400 pointer-events-none" />
-                <Input
-                  type="date"
-                  value={filters.startDate || ''}
-                  onChange={(e) =>
-                    setFilters({ ...filters, startDate: e.target.value || undefined, page: 1 })
-                  }
-                  className="pl-7 pr-1 text-xs h-9 w-full sm:w-36"
-                  title="Filter orders from date"
-                  aria-label="From Date"
-                />
+              {/* Date Range Filter */}
+              <div className="flex items-center gap-1.5 w-full">
+                <div className="relative flex-1 min-w-0 sm:w-36">
+                  <Calendar className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-slate-400 pointer-events-none" />
+                  <Input
+                    type="date"
+                    value={filters.startDate || ''}
+                    onChange={(e) =>
+                      setFilters({ ...filters, startDate: e.target.value || undefined, page: 1 })
+                    }
+                    className="pl-7 pr-1 text-xs h-9 w-full"
+                    title="Filter orders from date"
+                    aria-label="From Date"
+                  />
+                </div>
+                <span className="text-xs text-slate-400 shrink-0">to</span>
+                <div className="relative flex-1 min-w-0 sm:w-36">
+                  <Calendar className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-slate-400 pointer-events-none" />
+                  <Input
+                    type="date"
+                    value={filters.endDate || ''}
+                    onChange={(e) =>
+                      setFilters({ ...filters, endDate: e.target.value || undefined, page: 1 })
+                    }
+                    className="pl-7 pr-1 text-xs h-9 w-full"
+                    title="Filter orders to date"
+                    aria-label="To Date"
+                  />
+                </div>
+                {(filters.startDate || filters.endDate) && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() =>
+                      setFilters({ ...filters, startDate: undefined, endDate: undefined, page: 1 })
+                    }
+                    className="h-9 px-2 text-xs text-slate-500 hover:text-rose-600 shrink-0"
+                    title="Clear Date Filter"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </Button>
+                )}
               </div>
-              <span className="text-xs text-slate-400 shrink-0">to</span>
-              <div className="relative flex-1 min-w-0 sm:flex-initial sm:w-36">
-                <Calendar className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-slate-400 pointer-events-none" />
-                <Input
-                  type="date"
-                  value={filters.endDate || ''}
-                  onChange={(e) =>
-                    setFilters({ ...filters, endDate: e.target.value || undefined, page: 1 })
-                  }
-                  className="pl-7 pr-1 text-xs h-9 w-full sm:w-36"
-                  title="Filter orders to date"
-                  aria-label="To Date"
-                />
-              </div>
-              {(filters.startDate || filters.endDate) && (
+
+              {/* Special Approval Filter Toggle */}
+              <div className="flex items-center gap-1.5">
                 <Button
-                  variant="ghost"
+                  variant={filters.isSpecialApproval ? 'default' : 'outline'}
                   size="sm"
                   onClick={() =>
-                    setFilters({ ...filters, startDate: undefined, endDate: undefined, page: 1 })
+                    handleSpecialApprovalFilter(filters.isSpecialApproval ? undefined : true)
                   }
-                  className="h-9 px-2 text-xs text-slate-500 hover:text-rose-600"
-                  title="Clear Date Filter"
+                  className={cn(
+                    'w-full sm:w-auto text-xs gap-1.5 h-9 justify-center',
+                    filters.isSpecialApproval
+                      ? 'bg-amber-600 hover:bg-amber-700 text-white'
+                      : 'text-slate-700'
+                  )}
                 >
-                  <X className="h-3.5 w-3.5" />
+                  <AlertTriangle className="h-3.5 w-3.5" />
+                  Special Approval Only
                 </Button>
-              )}
-            </div>
-
-            {/* Special Approval Filter Toggle */}
-            <div className="flex items-center gap-1.5">
-              <Button
-                variant={filters.isSpecialApproval ? 'default' : 'outline'}
-                size="sm"
-                onClick={() =>
-                  handleSpecialApprovalFilter(filters.isSpecialApproval ? undefined : true)
-                }
-                className={
-                  filters.isSpecialApproval
-                    ? 'bg-amber-600 hover:bg-amber-700 text-white text-xs gap-1.5'
-                    : 'text-xs gap-1.5 text-slate-700'
-                }
-              >
-                <AlertTriangle className="h-3.5 w-3.5" />
-                Special Approval Only
-              </Button>
+              </div>
             </div>
           </div>
 

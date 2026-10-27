@@ -176,4 +176,25 @@ describe('Order Activity Log & Multi-Role Lifecycle Workflow', () => {
     expect(submitEvt).toBeDefined();
     expect(submitEvt?.actorId).toBe(salesRep.id);
   });
+
+  it('correctly compiles comprehensive user activity log across orders, payments and quotations', async () => {
+    const userLog = await orderActivityService.getUserActivityLog(salesRep.id, salesRep.role);
+    expect(userLog.length).toBeGreaterThan(0);
+
+    // Verify it includes multiple categories
+    const orderItems = userLog.filter((item) => item.category === 'ORDER');
+    const paymentItems = userLog.filter((item) => item.category === 'PAYMENT');
+    const quoteItems = userLog.filter((item) => item.category === 'QUOTATION');
+
+    expect(orderItems.length).toBeGreaterThan(0);
+    expect(paymentItems.length).toBeGreaterThan(0);
+    expect(quoteItems.length).toBeGreaterThan(0);
+
+    // Verify sorted chronologically descending
+    for (let i = 0; i < userLog.length - 1; i++) {
+      expect(new Date(userLog[i].timestamp).getTime()).toBeGreaterThanOrEqual(
+        new Date(userLog[i + 1].timestamp).getTime()
+      );
+    }
+  });
 });

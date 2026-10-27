@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useInventory } from '../../hooks/useInventory';
 import { useGRN } from '../../hooks/useGRN';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
@@ -7,134 +7,61 @@ import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table';
 import { Skeleton } from '../../components/ui/skeleton';
+import { StatCard } from '../../components/common/StatCard';
 import { MOCK_PRODUCTS } from '../../mock/mockProducts';
 import { calculateAvailableForSale } from '../../rules/inventoryRules';
 import { formatCurrency, formatDate } from '../../utils/formatters';
-import { AmountDisplay } from '../../components/common/AmountDisplay';
+import {
+  Package,
+  AlertTriangle,
+  ClipboardList,
+  Truck,
+  ArrowRight,
+  Boxes,
+  CheckCircle2,
+  Clock,
+  Layers,
+  Store,
+  PlusCircle,
+  BarChart3,
+  TrendingUp,
+} from 'lucide-react';
 
-// ─── Mini Icon Components ────────────────────────────────────────────────────
-function PackageIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
-    </svg>
-  );
-}
-
-function AlertIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
-    </svg>
-  );
-}
-
-function TruckIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.125-.504 1.125-1.125v-4.5A3.375 3.375 0 0017.625 9h-1.5a1.125 1.125 0 00-1.125 1.125v9.75m-9-4.5H15" />
-    </svg>
-  );
-}
-
-function ClipboardIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z" />
-    </svg>
-  );
-}
-
-function ArrowRightIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
-    </svg>
-  );
-}
-
-interface KpiCardProps {
-  title: string;
-  value: string | number;
-  subtitle?: string;
-  accent?: 'default' | 'danger' | 'warning' | 'success';
-  icon: React.ReactNode;
-  to?: string;
-}
-
-function KpiCard({ title, value, subtitle, accent = 'default', icon, to }: KpiCardProps) {
-  const accentClasses = {
-    default: 'bg-blue-50 text-blue-600 border-blue-100',
-    danger: 'bg-red-50 text-red-600 border-red-100',
-    warning: 'bg-amber-50 text-amber-600 border-amber-100',
-    success: 'bg-green-50 text-green-600 border-green-100',
-  };
-
-  const valueClasses = {
-    default: 'text-foreground',
-    danger: 'text-red-600',
-    warning: 'text-amber-600',
-    success: 'text-green-600',
-  };
-
-  const isCurrency =
-    typeof value === 'string' &&
-    (/^(LKR|Rs\.?|\$)\s*[\d,]+/i.test(value.trim()) || value.includes('LKR'));
-
-  const content = (
-    <Card className={`hover:shadow-md transition-shadow min-w-0 overflow-hidden ${to ? 'cursor-pointer' : ''}`}>
-      <CardContent className="p-5 min-w-0">
-        <div className="flex items-start justify-between gap-2">
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-muted-foreground truncate">{title}</p>
-            {isCurrency ? (
-              <div className="mt-1 min-w-0">
-                <AmountDisplay amount={value} className={`font-bold ${valueClasses[accent]}`} />
-              </div>
-            ) : (
-              <p className={`text-2xl sm:text-3xl font-bold mt-1 tabular-nums [overflow-wrap:anywhere] break-words ${valueClasses[accent]}`}>{value}</p>
-            )}
-            {subtitle && <p className="text-xs text-muted-foreground mt-1 truncate">{subtitle}</p>}
-          </div>
-          <div className={`flex-shrink-0 ml-3 p-2.5 rounded-lg border ${accentClasses[accent]}`}>
-            {icon}
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
-
-  return to ? <Link to={to}>{content}</Link> : content;
-}
-
-// ─── Stock Level Bar ──────────────────────────────────────────────────────────
+// ─── Global Styled Stock Level Progress Bar ───────────────────────────────────
 function StockBar({ available, reserved }: { available: number; reserved: number }) {
   const total = Math.max(available + reserved, 1);
-  const availPct = Math.min((available / total) * 100, 100);
+  const availPct = Math.min(Math.round((available / total) * 100), 100);
+
+  const getGradient = () => {
+    if (available <= 0) return 'bg-gradient-to-r from-rose-500 to-red-500';
+    if (available < 10) return 'bg-gradient-to-r from-amber-500 to-orange-500';
+    return 'bg-gradient-to-r from-emerald-500 to-teal-500';
+  };
+
   return (
-    <div className="flex items-center gap-2">
-      <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
+    <div className="flex items-center gap-2.5 w-full">
+      <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden shadow-inner">
         <div
-          className={`h-full rounded-full transition-all ${
-            available <= 0 ? 'bg-red-500' : available < 10 ? 'bg-amber-400' : 'bg-green-500'
-          }`}
+          className={`h-full rounded-full transition-all duration-500 ${getGradient()}`}
           style={{ width: `${availPct}%` }}
         />
       </div>
-      <span className="text-xs text-muted-foreground whitespace-nowrap">{available} avail.</span>
+      <span className="text-xs font-mono font-medium text-slate-600 whitespace-nowrap min-w-16 text-right">
+        {available} avail.
+      </span>
     </div>
   );
 }
 
 // ─── Movement Activity ─────────────────────────────────────────────────────────
-const MOVEMENT_LABELS: Record<string, { label: string; color: string }> = {
-  GRN_INWARD:       { label: 'GRN Inward',       color: 'bg-green-500' },
-  SALES_ISSUE:      { label: 'Sales Issue',       color: 'bg-blue-500' },
-  TRANSFER_OUT:     { label: 'Transfer Out',      color: 'bg-orange-500' },
-  TRANSFER_IN:      { label: 'Transfer In',       color: 'bg-cyan-500' },
-  DAMAGE_WRITE_OFF: { label: 'Damage Write-Off',  color: 'bg-red-500' },
-  DAMAGE_REVERSAL:  { label: 'Damage Reversal',   color: 'bg-purple-500' },
-  ADJUSTMENT:       { label: 'Adjustment',        color: 'bg-slate-500' },
+const MOVEMENT_LABELS: Record<string, { label: string; cls: string }> = {
+  GRN_INWARD:       { label: 'GRN Inward',       cls: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+  SALES_ISSUE:      { label: 'Sales Issue',      cls: 'bg-blue-50 text-blue-700 border-blue-200' },
+  TRANSFER_OUT:     { label: 'Transfer Out',     cls: 'bg-orange-50 text-orange-700 border-orange-200' },
+  TRANSFER_IN:      { label: 'Transfer In',      cls: 'bg-cyan-50 text-cyan-700 border-cyan-200' },
+  DAMAGE_WRITE_OFF: { label: 'Damage Write-Off', cls: 'bg-rose-50 text-rose-700 border-rose-200' },
+  DAMAGE_REVERSAL:  { label: 'Damage Reversal',  cls: 'bg-purple-50 text-purple-700 border-purple-200' },
+  ADJUSTMENT:       { label: 'Adjustment',       cls: 'bg-slate-100 text-slate-700 border-slate-300' },
 };
 
 const QUICK_LINKS = [
@@ -142,7 +69,7 @@ const QUICK_LINKS = [
     label: 'Goods Receipt Notes',
     description: 'Receive and approve inbound stock',
     to: '/inventory/grn',
-    color: 'from-green-500 to-emerald-600',
+    color: 'from-emerald-500 to-teal-600',
   },
   {
     label: 'Stock Balance',
@@ -166,7 +93,13 @@ const QUICK_LINKS = [
     label: 'Dispatch & Delivery',
     description: 'Manage outbound shipments',
     to: '/inventory/dispatch',
-    color: 'from-red-500 to-rose-600',
+    color: 'from-rose-500 to-red-600',
+  },
+  {
+    label: 'Serial Numbers',
+    description: 'Unit-wise serialization & bins',
+    to: '/inventory/serial-numbers',
+    color: 'from-slate-700 to-slate-900',
   },
   {
     label: 'Damaged Stock & RMA',
@@ -177,6 +110,7 @@ const QUICK_LINKS = [
 ];
 
 export function InventoryDashboardPage() {
+  const navigate = useNavigate();
   const { stockBalances, movements, loading } = useInventory();
   const { grns, loading: grnsLoading } = useGRN();
 
@@ -202,7 +136,7 @@ export function InventoryDashboardPage() {
       return sum + (b.availableForSale * (product?.pricing?.costPrice ?? 0));
     }, 0);
 
-    // Recent movements (last 5)
+    // Recent movements (last 8)
     const recentMovements = [...(movements ?? [])]
       .sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
       .slice(0, 8);
@@ -233,65 +167,90 @@ export function InventoryDashboardPage() {
     return Object.values(map).sort((a, b) => b.value - a.value);
   }, [kpis.balancesWithProduct]);
 
+  const getGRNStatusChipClass = (status: string) => {
+    switch (status) {
+      case 'APPROVED':
+      case 'COSTED':
+        return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+      case 'SUBMITTED':
+        return 'bg-amber-50 text-amber-700 border-amber-200';
+      case 'REJECTED':
+        return 'bg-rose-50 text-rose-700 border-rose-200';
+      default:
+        return 'bg-slate-100 text-slate-700 border-slate-300';
+    }
+  };
+
   return (
     <div className="p-6 space-y-6">
       {/* ── Page Header ────────────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Inventory</h1>
-          <p className="text-muted-foreground mt-1">
-            Warehouse &amp; showroom stock overview — real-time balances, movements, and GRNs.
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">
+            Inventory Hub
+          </h1>
+          <p className="text-xs sm:text-sm text-slate-500 mt-1">
+            Warehouse &amp; showroom stock overview — real-time balances, movements, and GRN tracking.
           </p>
         </div>
-        <div className="flex gap-2 flex-shrink-0">
-          <Link to="/inventory/grn/new">
-            <Button variant="default" size="sm">+ New GRN</Button>
-          </Link>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <Button
+            size="sm"
+            onClick={() => navigate('/inventory/grn/new')}
+            className="gap-1.5 text-xs font-semibold shadow-xs"
+          >
+            <PlusCircle className="h-4 w-4" />
+            New GRN
+          </Button>
         </div>
       </div>
 
-      {/* ── KPI Cards ──────────────────────────────────────────────────── */}
+      {/* ── Global KPI Cards Strip ─────────────────────────────────────── */}
       {loading || grnsLoading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-28 w-full rounded-xl" />)}
+          {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-28 w-full rounded-2xl" />)}
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <KpiCard
+          <StatCard
             title="Total Stock Lines"
             value={kpis.totalLines}
             subtitle={`Est. value: ${formatCurrency(kpis.stockValue)}`}
-            accent="default"
-            to="/inventory/stock"
-            icon={<PackageIcon className="w-5 h-5" />}
+            icon={Package}
+            variant="blue"
+            badge="Catalog SKUs"
+            onClick={() => navigate('/inventory/stock')}
           />
-          <KpiCard
+          <StatCard
             title="Low Stock Alerts"
             value={kpis.lowStockLines.length}
             subtitle={
               kpis.outOfStockLines.length > 0
-                ? `${kpis.outOfStockLines.length} out of stock`
-                : 'All other items healthy'
+                ? `${kpis.outOfStockLines.length} out of stock items`
+                : 'All other catalog lines healthy'
             }
-            accent={kpis.lowStockLines.length > 0 ? 'warning' : 'success'}
-            to="/inventory/stock"
-            icon={<AlertIcon className="w-5 h-5" />}
+            icon={AlertTriangle}
+            variant={kpis.lowStockLines.length > 0 ? 'amber' : 'emerald'}
+            badge={kpis.lowStockLines.length > 0 ? 'Reorder Needed' : 'Adequate'}
+            onClick={() => navigate('/inventory/stock')}
           />
-          <KpiCard
+          <StatCard
             title="Pending GRN Approvals"
             value={kpis.pendingGRNs}
             subtitle={`${kpis.draftGRNs} draft${kpis.draftGRNs !== 1 ? 's' : ''} in progress`}
-            accent={kpis.pendingGRNs > 0 ? 'danger' : 'default'}
-            to="/inventory/grn"
-            icon={<ClipboardIcon className="w-5 h-5" />}
+            icon={ClipboardList}
+            variant={kpis.pendingGRNs > 0 ? 'indigo' : 'emerald'}
+            badge={kpis.pendingGRNs > 0 ? `${kpis.pendingGRNs} In Queue` : 'Up to date'}
+            onClick={() => navigate('/inventory/grn')}
           />
-          <KpiCard
+          <StatCard
             title="Damaged Units"
             value={kpis.damagedUnits}
-            subtitle="Across all locations"
-            accent={kpis.damagedUnits > 0 ? 'warning' : 'success'}
-            to="/inventory/damaged-stock"
-            icon={<TruckIcon className="w-5 h-5" />}
+            subtitle="Across warehouse & showroom"
+            icon={Truck}
+            variant={kpis.damagedUnits > 0 ? 'rose' : 'emerald'}
+            badge={kpis.damagedUnits > 0 ? 'Quarantined' : 'Zero Defect'}
+            onClick={() => navigate('/inventory/damaged-stock')}
           />
         </div>
       )}
@@ -299,56 +258,86 @@ export function InventoryDashboardPage() {
       {/* ── Main Grid: Stock Alerts + Recent Activity ───────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left: Low / Out-of-Stock Products */}
-        <div className="lg:col-span-2 space-y-4">
-          <Card>
-            <CardHeader className="pb-3">
+        <div className="lg:col-span-2 space-y-6">
+          <Card className="border-slate-200 shadow-xs">
+            <CardHeader className="pb-3 border-b border-slate-100">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-base">Stock Level Overview</CardTitle>
+                <div>
+                  <CardTitle className="text-base font-bold text-slate-900">
+                    Stock Level Overview
+                  </CardTitle>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Live availability &amp; allocation status across warehouse bays
+                  </p>
+                </div>
                 <Link to="/inventory/stock">
-                  <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
-                    View all <ArrowRightIcon className="w-4 h-4 ml-1 inline" />
+                  <Button variant="ghost" size="sm" className="text-xs text-slate-600 hover:text-slate-900 font-semibold gap-1">
+                    <span>View all</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
                   </Button>
                 </Link>
               </div>
             </CardHeader>
-            <CardContent className="pt-0">
+            <CardContent className="p-0">
               {loading ? (
-                <div className="space-y-3">
-                  {[1, 2, 3, 4, 5].map(i => <Skeleton key={i} className="h-10 w-full" />)}
+                <div className="p-4 space-y-3">
+                  {[1, 2, 3, 4, 5].map(i => <Skeleton key={i} className="h-10 w-full rounded-lg" />)}
                 </div>
               ) : kpis.balancesWithProduct.length === 0 ? (
-                <p className="text-center py-8 text-muted-foreground">No stock balances found.</p>
+                <p className="text-center py-10 text-slate-400 text-sm">No stock balances found.</p>
               ) : (
                 <Table>
                   <TableHeader>
-                    <TableRow>
-                      <TableHead>Product</TableHead>
-                      <TableHead>Location</TableHead>
-                      <TableHead className="text-right">Reserved</TableHead>
-                      <TableHead className="w-48">Availability</TableHead>
-                      <TableHead className="text-center">Status</TableHead>
+                    <TableRow className="bg-slate-50/70 hover:bg-slate-50/70">
+                      <TableHead className="text-xs font-semibold">Product</TableHead>
+                      <TableHead className="text-xs font-semibold text-center">Location</TableHead>
+                      <TableHead className="text-right text-xs font-semibold">Reserved</TableHead>
+                      <TableHead className="w-56 text-xs font-semibold">Availability</TableHead>
+                      <TableHead className="text-center text-xs font-semibold">Status</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {kpis.balancesWithProduct.slice(0, 10).map((b: any) => {
-                      let status = { label: 'In Stock', cls: 'bg-green-500' };
-                      if (b.availableForSale <= 0) status = { label: 'Out of Stock', cls: 'bg-red-500' };
-                      else if (b.availableForSale < 10) status = { label: 'Low Stock', cls: 'bg-amber-500' };
+                      let status = {
+                        label: 'In Stock',
+                        cls: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+                      };
+                      if (b.availableForSale <= 0) {
+                        status = {
+                          label: 'Out of Stock',
+                          cls: 'bg-rose-50 text-rose-700 border-rose-200',
+                        };
+                      } else if (b.availableForSale < 10) {
+                        status = {
+                          label: 'Low Stock',
+                          cls: 'bg-amber-50 text-amber-700 border-amber-200',
+                        };
+                      }
 
                       return (
-                        <TableRow key={b.id}>
-                          <TableCell>
-                            <p className="font-medium text-sm leading-tight">{b.productName}</p>
+                        <TableRow key={b.id} className="hover:bg-slate-50/60 transition-colors">
+                          <TableCell className="font-medium text-xs text-slate-900">
+                            {b.productName}
                           </TableCell>
-                          <TableCell>
-                            <Badge variant="outline" className="text-xs">{b.locationType}</Badge>
+                          <TableCell className="text-center">
+                            <Badge variant="outline" className="text-[10px] font-mono bg-slate-50 text-slate-700">
+                              {b.locationType}
+                            </Badge>
                           </TableCell>
-                          <TableCell className="text-right text-sm">{b.reservedQuantity}</TableCell>
+                          <TableCell className="text-right text-xs font-mono text-slate-500">
+                            {b.reservedQuantity}
+                          </TableCell>
                           <TableCell>
                             <StockBar available={b.availableForSale} reserved={b.reservedQuantity} />
                           </TableCell>
                           <TableCell className="text-center">
-                            <Badge className={`${status.cls} text-white border-0 text-xs`}>{status.label}</Badge>
+                            {/* Status Chip Styled exactly as Global Specification */}
+                            <Badge
+                              variant="outline"
+                              className={`${status.cls} text-[10px] font-mono font-semibold uppercase tracking-wider rounded-md px-2.5 py-0.5`}
+                            >
+                              {status.label}
+                            </Badge>
                           </TableCell>
                         </TableRow>
                       );
@@ -359,148 +348,191 @@ export function InventoryDashboardPage() {
             </CardContent>
           </Card>
 
-          {/* Category Stock Value Breakdown */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">Stock Value by Category</CardTitle>
+          {/* Category Stock Value Breakdown with Global Progress Bars */}
+          <Card className="border-slate-200 shadow-xs">
+            <CardHeader className="pb-3 border-b border-slate-100">
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-base font-bold text-slate-900">
+                    Stock Value by Category
+                  </CardTitle>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Distribution of capital and inventory depth across merchandise categories
+                  </p>
+                </div>
+                <Badge variant="outline" className="text-[11px] font-mono bg-slate-50">
+                  {categoryBreakdown.length} Categories
+                </Badge>
+              </div>
             </CardHeader>
-            <CardContent className="pt-0">
+            <CardContent className="p-4 space-y-4">
               {loading ? (
-                <div className="space-y-2">
-                  {[1, 2, 3].map(i => <Skeleton key={i} className="h-8 w-full" />)}
+                <div className="space-y-3">
+                  {[1, 2, 3].map(i => <Skeleton key={i} className="h-8 w-full rounded-lg" />)}
                 </div>
               ) : categoryBreakdown.length === 0 ? (
-                <p className="text-center py-4 text-muted-foreground">No data</p>
+                <p className="text-center py-6 text-slate-400 text-sm">No inventory category data</p>
               ) : (
-                <div className="space-y-3">
-                  {(() => {
-                    const maxVal = Math.max(...categoryBreakdown.map(c => c.value), 1);
-                    return categoryBreakdown.map((cat, idx) => {
-                      const pct = (cat.value / maxVal) * 100;
-                      const barColors = [
-                        'bg-blue-500', 'bg-green-500', 'bg-purple-500', 'bg-amber-500',
-                        'bg-cyan-500', 'bg-rose-500',
-                      ];
-                      return (
-                        <div key={cat.name}>
-                          <div className="flex justify-between text-sm mb-1">
-                            <span className="font-medium truncate max-w-[55%]">{cat.name}</span>
-                            <span className="text-muted-foreground">
-                              {cat.qty} units · {formatCurrency(cat.value)}
-                            </span>
-                          </div>
-                          <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                            <div
-                              className={`h-full rounded-full transition-all ${barColors[idx % barColors.length]}`}
-                              style={{ width: `${pct}%` }}
-                            />
-                          </div>
+                (() => {
+                  const maxVal = Math.max(...categoryBreakdown.map(c => c.value), 1);
+                  const gradientBars = [
+                    'bg-gradient-to-r from-blue-500 to-sky-500',
+                    'bg-gradient-to-r from-emerald-500 to-teal-500',
+                    'bg-gradient-to-r from-indigo-500 to-purple-500',
+                    'bg-gradient-to-r from-amber-500 to-orange-500',
+                    'bg-gradient-to-r from-rose-500 to-pink-500',
+                    'bg-gradient-to-r from-cyan-500 to-blue-500',
+                  ];
+                  return categoryBreakdown.map((cat, idx) => {
+                    const pct = Math.min(Math.round((cat.value / maxVal) * 100), 100);
+                    return (
+                      <div key={cat.name} className="space-y-1.5">
+                        <div className="flex justify-between text-xs items-center">
+                          <span className="font-semibold text-slate-800 truncate max-w-[55%]">
+                            {cat.name}
+                          </span>
+                          <span className="text-slate-500 font-mono text-[11px]">
+                            <strong className="text-slate-800">{cat.qty}</strong> units · {formatCurrency(cat.value)}
+                          </span>
                         </div>
-                      );
-                    });
-                  })()}
-                </div>
+                        {/* Global Progress Bar */}
+                        <div className="h-2 bg-slate-100 rounded-full overflow-hidden shadow-inner">
+                          <div
+                            className={`h-full rounded-full transition-all duration-500 ${gradientBars[idx % gradientBars.length]}`}
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  });
+                })()
               )}
             </CardContent>
           </Card>
         </div>
 
         {/* Right: Recent GRNs + Recent Movements */}
-        <div className="space-y-4">
-          <Card>
-            <CardHeader className="pb-3">
+        <div className="space-y-6">
+          <Card className="border-slate-200 shadow-xs">
+            <CardHeader className="pb-3 border-b border-slate-100">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-base">Recent GRNs</CardTitle>
+                <div>
+                  <CardTitle className="text-base font-bold text-slate-900">
+                    Recent GRNs
+                  </CardTitle>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Latest warehouse inward receipts
+                  </p>
+                </div>
                 <Link to="/inventory/grn">
-                  <Button variant="ghost" size="sm" className="text-muted-foreground text-xs">
-                    All GRNs <ArrowRightIcon className="w-3 h-3 ml-1 inline" />
+                  <Button variant="ghost" size="sm" className="text-xs text-slate-600 hover:text-slate-900 font-semibold gap-1">
+                    <span>All GRNs</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
                   </Button>
                 </Link>
               </div>
             </CardHeader>
-            <CardContent className="pt-0 space-y-2">
+            <CardContent className="p-4 space-y-2.5">
               {grnsLoading ? (
                 <div className="space-y-2">
-                  {[1, 2, 3].map(i => <Skeleton key={i} className="h-14 w-full" />)}
+                  {[1, 2, 3].map(i => <Skeleton key={i} className="h-16 w-full rounded-xl" />)}
                 </div>
               ) : (grns ?? []).length === 0 ? (
-                <p className="text-center py-6 text-muted-foreground text-sm">No GRNs found</p>
+                <p className="text-center py-6 text-slate-400 text-sm">No GRNs recorded</p>
               ) : (
                 [...(grns ?? [])]
                   .sort((a, b) => new Date(b.submittedAt ?? b.approvedAt ?? '').getTime() - new Date(a.submittedAt ?? a.approvedAt ?? '').getTime())
                   .slice(0, 5)
                   .map(grn => {
-                    const statusColors: Record<string, string> = {
-                      DRAFT:     'bg-slate-500',
-                      SUBMITTED: 'bg-amber-500',
-                      APPROVED:  'bg-green-500',
-                      REJECTED:  'bg-red-500',
-                    };
                     const totalValue = grn.items?.reduce((s: number, item: any) =>
                       s + (item.unitCostSnapshot ?? 0) * ((item.receivedQuantity ?? 0) - (item.damagedQuantity ?? 0)), 0) ?? 0;
                     return (
                       <Link key={grn.id} to={`/inventory/grn/${grn.id}`}>
-                        <div className="p-3 rounded-lg border hover:bg-muted/50 transition-colors cursor-pointer">
+                        <div className="p-3 rounded-xl border border-slate-200/80 hover:border-slate-300 hover:bg-slate-50/70 transition-all cursor-pointer">
                           <div className="flex items-start justify-between gap-2">
                             <div className="min-w-0">
-                              <p className="font-medium text-sm truncate">{grn.id}</p>
-                              <p className="text-xs text-muted-foreground truncate">{grn.supplierName}</p>
+                              <p className="font-mono font-bold text-xs text-slate-900 truncate">{grn.id}</p>
+                              <p className="text-[11px] text-slate-500 truncate mt-0.5">{grn.supplierName}</p>
                             </div>
-                            <Badge className={`${statusColors[grn.status] ?? 'bg-gray-500'} text-white border-0 text-xs flex-shrink-0`}>
+                            {/* Status Chip Styled as Global Specification */}
+                            <Badge
+                              variant="outline"
+                              className={`${getGRNStatusChipClass(grn.status)} text-[10px] font-mono font-semibold uppercase tracking-wider rounded-md px-2.5 py-0.5 shrink-0`}
+                            >
                               {grn.status}
                             </Badge>
                           </div>
-                          <div className="flex justify-between mt-1.5 text-xs text-muted-foreground">
-                            <span>{grn.items?.length ?? 0} items</span>
-                            <span>{formatCurrency(totalValue)}</span>
+                          <div className="flex justify-between mt-2 pt-2 border-t border-slate-100 text-[11px] text-slate-500 font-mono">
+                            <span>{grn.items?.length ?? 0} line items</span>
+                            <span className="font-semibold text-slate-800">{formatCurrency(totalValue)}</span>
                           </div>
                         </div>
                       </Link>
                     );
                   })
               )}
-              <Link to="/inventory/grn/new">
-                <Button variant="outline" size="sm" className="w-full mt-1">
-                  + Create New GRN
+              <Link to="/inventory/grn/new" className="block pt-1">
+                <Button variant="outline" size="sm" className="w-full text-xs font-semibold gap-1.5">
+                  <PlusCircle className="h-3.5 w-3.5 text-primary" />
+                  <span>Create New GRN</span>
                 </Button>
               </Link>
             </CardContent>
           </Card>
 
           {/* Recent Stock Movements */}
-          <Card>
-            <CardHeader className="pb-3">
+          <Card className="border-slate-200 shadow-xs">
+            <CardHeader className="pb-3 border-b border-slate-100">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-base">Recent Movements</CardTitle>
+                <div>
+                  <CardTitle className="text-base font-bold text-slate-900">
+                    Recent Movements
+                  </CardTitle>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Immutable audit transactions
+                  </p>
+                </div>
                 <Link to="/inventory/movements">
-                  <Button variant="ghost" size="sm" className="text-muted-foreground text-xs">
-                    All <ArrowRightIcon className="w-3 h-3 ml-1 inline" />
+                  <Button variant="ghost" size="sm" className="text-xs text-slate-600 hover:text-slate-900 font-semibold gap-1">
+                    <span>All</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
                   </Button>
                 </Link>
               </div>
             </CardHeader>
-            <CardContent className="pt-0 space-y-2">
+            <CardContent className="p-4 space-y-2.5">
               {loading ? (
                 <div className="space-y-2">
-                  {[1, 2, 3].map(i => <Skeleton key={i} className="h-12 w-full" />)}
+                  {[1, 2, 3].map(i => <Skeleton key={i} className="h-12 w-full rounded-xl" />)}
                 </div>
               ) : kpis.recentMovements.length === 0 ? (
-                <p className="text-center py-4 text-muted-foreground text-sm">No movements yet</p>
+                <p className="text-center py-6 text-slate-400 text-sm">No recent movements</p>
               ) : (
                 kpis.recentMovements.map((m: any) => {
                   const product = MOCK_PRODUCTS.find(p => p.id === m.productId);
-                  const meta = MOVEMENT_LABELS[m.movementType] ?? MOVEMENT_LABELS[m.type] ?? { label: m.movementType ?? m.type, color: 'bg-gray-500' };
+                  const meta = MOVEMENT_LABELS[m.movementType] ?? MOVEMENT_LABELS[m.type] ?? {
+                    label: m.movementType ?? m.type,
+                    cls: 'bg-slate-100 text-slate-700 border-slate-300',
+                  };
                   return (
-                    <div key={m.id} className="flex items-start gap-2.5 py-1.5 border-b last:border-0">
-                      <span className={`mt-0.5 flex-shrink-0 w-2 h-2 rounded-full ${meta.color}`} />
+                    <div key={m.id} className="flex items-center justify-between gap-2.5 py-2 border-b border-slate-100 last:border-0">
                       <div className="min-w-0 flex-1">
-                        <p className="text-xs font-medium truncate">{product?.name ?? m.productId}</p>
-                        <div className="flex justify-between items-center mt-0.5">
-                          <span className="text-xs text-muted-foreground">{meta.label}</span>
-                          <span className="text-xs font-medium">×{m.quantity}</span>
+                        <p className="text-xs font-semibold text-slate-900 truncate">
+                          {product?.name ?? m.productId}
+                        </p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <Badge
+                            variant="outline"
+                            className={`${meta.cls} text-[9px] font-mono font-semibold uppercase tracking-wider rounded-md px-1.5 py-0.2`}
+                          >
+                            {meta.label}
+                          </Badge>
+                          <span className="text-[11px] font-mono font-bold text-slate-800">
+                            ×{m.quantity}
+                          </span>
                         </div>
                       </div>
-                      <span className="text-[11px] text-muted-foreground flex-shrink-0">
+                      <span className="text-[10px] text-slate-400 font-mono shrink-0">
                         {formatDate(m.timestamp)}
                       </span>
                     </div>
@@ -514,15 +546,15 @@ export function InventoryDashboardPage() {
 
       {/* ── Quick Links Grid ────────────────────────────────────────────── */}
       <div>
-        <h2 className="text-lg font-semibold mb-3">Quick Navigation</h2>
+        <h2 className="text-base font-bold text-slate-900 mb-3">Quick Navigation Hub</h2>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
           {QUICK_LINKS.map(link => (
             <Link key={link.to} to={link.to}>
-              <div className="group relative rounded-xl overflow-hidden border hover:shadow-lg transition-all h-28">
+              <div className="group relative rounded-2xl overflow-hidden border border-slate-200/90 hover:shadow-md transition-all h-28">
                 <div className={`absolute inset-0 bg-gradient-to-br ${link.color} opacity-90 group-hover:opacity-100 transition-opacity`} />
-                <div className="relative h-full flex flex-col justify-end p-3">
-                  <p className="text-white font-semibold text-sm leading-tight">{link.label}</p>
-                  <p className="text-white/75 text-xs mt-0.5 leading-tight">{link.description}</p>
+                <div className="relative h-full flex flex-col justify-end p-3.5">
+                  <p className="text-white font-bold text-xs leading-tight">{link.label}</p>
+                  <p className="text-white/80 text-[10px] mt-0.5 leading-tight">{link.description}</p>
                 </div>
               </div>
             </Link>

@@ -15,6 +15,7 @@ import { Textarea } from '../../components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table';
 import { Skeleton } from '../../components/ui/skeleton';
+import { StatCard } from '../../components/common/StatCard';
 import { useInventory } from '../../hooks/useInventory';
 import { useAuth } from '../../hooks/useAuth';
 import { MOCK_PRODUCTS } from '../../mock/mockProducts';
@@ -22,6 +23,7 @@ import { calculateAvailableForSale } from '../../rules/inventoryRules';
 import { formatCurrency } from '../../utils/formatters';
 import { exportToCSV } from '../../utils/exportUtils';
 import { toast } from 'sonner';
+import { DollarSign, AlertTriangle, Package, Boxes, TrendingDown } from 'lucide-react';
 
 type AdjustDirection = 'ADD' | 'REMOVE';
 
@@ -154,9 +156,9 @@ export function StockBalancePage() {
   };
 
   const getStatusInfo = (avail: number) => {
-    if (avail <= 0)  return { label: 'Out of Stock', cls: 'bg-red-500' };
-    if (avail < 10)  return { label: 'Low Stock',    cls: 'bg-amber-500' };
-    return            { label: 'In Stock',           cls: 'bg-green-500' };
+    if (avail <= 0) return { label: 'Out of Stock', cls: 'bg-rose-50 text-rose-700 border-rose-200' };
+    if (avail < 10) return { label: 'Low Stock', cls: 'bg-amber-50 text-amber-700 border-amber-200' };
+    return { label: 'In Stock', cls: 'bg-emerald-50 text-emerald-700 border-emerald-200' };
   };
 
   const handleExportCSV = () => {
@@ -227,20 +229,41 @@ export function StockBalancePage() {
         </button>
       </div>
 
-      {/* ── Summary Strips ──────────────────────────────────────────────── */}
+      {/* ── Summary Strips (Global Cards) ── */}
       {!loading && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {[
-            { label: 'Est. Stock Value', value: formatCurrency(totalValue), accent: 'text-foreground' },
-            { label: 'Out of Stock',     value: outCount,  accent: outCount  > 0 ? 'text-red-600' : 'text-muted-foreground' },
-            { label: 'Low Stock Lines',  value: lowCount,  accent: lowCount  > 0 ? 'text-amber-600' : 'text-muted-foreground' },
-            { label: 'Damaged Units',    value: totalDmg,  accent: totalDmg  > 0 ? 'text-orange-600' : 'text-muted-foreground' },
-          ].map(kpi => (
-            <div key={kpi.label} className="bg-card border rounded-lg p-3 text-center">
-              <p className="text-xs text-muted-foreground">{kpi.label}</p>
-              <p className={`text-xl font-bold mt-0.5 ${kpi.accent}`}>{kpi.value}</p>
-            </div>
-          ))}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <StatCard
+            title="Est. Stock Value"
+            value={formatCurrency(totalValue)}
+            subtitle="Current available inventory basis"
+            icon={DollarSign}
+            variant="blue"
+            badge="Valuation"
+          />
+          <StatCard
+            title="Out of Stock"
+            value={outCount}
+            subtitle={outCount > 0 ? 'Urgent procurement required' : 'Zero depleted SKUs'}
+            icon={AlertTriangle}
+            variant={outCount > 0 ? 'rose' : 'emerald'}
+            badge={outCount > 0 ? 'Stockout Alert' : 'Healthy'}
+          />
+          <StatCard
+            title="Low Stock Lines"
+            value={lowCount}
+            subtitle={lowCount > 0 ? 'Below reorder threshold (< 10 units)' : 'Adequate safety stock'}
+            icon={AlertTriangle}
+            variant={lowCount > 0 ? 'amber' : 'emerald'}
+            badge={lowCount > 0 ? 'Low Buffer' : 'Balanced'}
+          />
+          <StatCard
+            title="Damaged Units"
+            value={totalDmg}
+            subtitle={totalDmg > 0 ? 'Quarantined for disposal or debit' : 'Zero warehouse defect'}
+            icon={Boxes}
+            variant={totalDmg > 0 ? 'rose' : 'emerald'}
+            badge={totalDmg > 0 ? 'Quarantined' : 'Zero Defect'}
+          />
         </div>
       )}
 
@@ -354,7 +377,12 @@ export function StockBalancePage() {
                         </TableCell>
                         <TableCell className="text-right text-sm">{formatCurrency(estValue)}</TableCell>
                         <TableCell className="text-center">
-                          <Badge className={`${cls} text-white border-0 text-xs`}>{label}</Badge>
+                          <Badge
+                            variant="outline"
+                            className={`${cls} text-[10px] font-mono font-semibold uppercase tracking-wider rounded-md px-2.5 py-0.5`}
+                          >
+                            {label}
+                          </Badge>
                         </TableCell>
                         <TableCell className="text-center">
                           <Button

@@ -1,6 +1,6 @@
 import { IProductRepository, ProductFilters } from '../repositories/IProductRepository';
 import { MockProductRepository } from '../repositories/mock/MockProductRepository';
-import { Product, PriceChangeProposal } from '../types/product';
+import { Product, PriceChangeProposal, Category } from '../types/product';
 import { PaginatedResult } from '../types/common';
 import { validateProductData } from '../rules/productRules';
 import { determinePriceApprovalRoute } from '../rules/approvalRules';
