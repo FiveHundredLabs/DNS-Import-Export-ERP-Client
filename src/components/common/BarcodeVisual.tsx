@@ -12,6 +12,7 @@ interface BarcodeVisualProps {
 /**
  * Deterministic SVG Barcode Renderer
  * Converts string into Code-128 styled vertical bar patterns with human readable caption.
+ * Automatically constrained with max-w-full to prevent horizontal layout overflow.
  */
 export const BarcodeVisual: React.FC<BarcodeVisualProps> = ({
   value,
@@ -57,11 +58,11 @@ export const BarcodeVisual: React.FC<BarcodeVisualProps> = ({
   });
 
   return (
-    <div className={`inline-flex flex-col items-center select-none ${className}`}>
+    <div className={`inline-flex flex-col items-center select-none max-w-full overflow-hidden ${className}`}>
       <svg
         viewBox={`0 0 ${totalUnits} ${height}`}
-        style={{ width: `${width}px`, height: `${height}px` }}
-        className="overflow-visible"
+        style={{ width: width ? `${width}px` : '100%', maxWidth: '100%', height: `${height}px` }}
+        className="overflow-hidden"
         preserveAspectRatio="none"
         aria-label={`Barcode: ${value}`}
         role="img"
@@ -69,7 +70,7 @@ export const BarcodeVisual: React.FC<BarcodeVisualProps> = ({
         {barSvgElements}
       </svg>
       {showText && (
-        <span className="font-mono text-[10px] tracking-widest text-slate-700 mt-1 font-semibold">
+        <span className="font-mono text-[10px] tracking-wider text-slate-700 mt-1 font-semibold truncate max-w-full text-center">
           {value}
         </span>
       )}

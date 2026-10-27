@@ -72,6 +72,7 @@ interface SidebarItem {
   category: RailCategory;
   exact?: boolean;
   directorOnly?: boolean;
+  excludedRoles?: string[];
 }
 
 export function Sidebar({ isOpen, onClose }: SidebarProps) {
@@ -123,11 +124,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     { id: 'grn', name: 'GRN', path: '/inventory/grn', icon: Receipt, category: 'inventory' },
     { id: 'serials', name: 'Serial Numbers', path: '/inventory/serial-numbers', icon: Hash, category: 'inventory' },
     { id: 'barcodes', name: 'Bar Codes', path: '/inventory/barcodes', icon: Barcode, category: 'inventory' },
-    { id: 'stock', name: 'Stock Balances', path: '/inventory/stock', icon: Layers, category: 'inventory' },
-    { id: 'movements', name: 'Stock Movements', path: '/inventory/movements', icon: ArrowLeftRight, category: 'inventory' },
-    { id: 'picking', name: 'Order Picking', path: '/inventory/picking', icon: CheckSquare, category: 'inventory' },
-    { id: 'dispatch', name: 'Dispatch', path: '/inventory/dispatch', icon: Truck, category: 'inventory' },
-    { id: 'products', name: 'Product Master', path: '/products', icon: Package, category: 'inventory' },
+    { id: 'products', name: 'Product Master', path: '/products', icon: Package, category: 'inventory', excludedRoles: ['STOCK_KEEPER'] },
   ];
 
   // 4. Finance, Banking & Ledger Core
@@ -173,6 +170,9 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const authorizedItems = useMemo(() => {
     return allRawItems.filter((item) => {
       if (item.directorOnly && currentUser.role !== 'DIRECTOR') {
+        return false;
+      }
+      if (item.excludedRoles && item.excludedRoles.includes(currentUser.role)) {
         return false;
       }
       if (item.path.includes('tab=settings') && !canAccessRoute('/settings')) {
