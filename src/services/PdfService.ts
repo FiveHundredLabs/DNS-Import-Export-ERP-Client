@@ -659,15 +659,12 @@ export class PdfService implements IPdfService {
                 </div>
               </div>
               <div style="text-align: right;">
-                <div style="display: flex; align-items: center; justify-content: flex-end; gap: 6px;">
-                  <span style="background: #0f172a; color: #fff; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; font-family: monospace;">PURCHASE ORDER</span>
-                  <span style="font-size: 10px; font-weight: 600; color: #475569; background: #f1f5f9; padding: 2px 6px; border-radius: 4px; border: 1px solid #cbd5e1;">Page ${p.pageNumber} of ${p.totalPages}</span>
-                </div>
-                <div style="font-family: monospace; font-size: 18px; font-weight: 800; color: #0f172a; margin-top: 4px;">${purchaseOrder.poNumber}</div>
-                <div style="font-size: 10.5px; color: #475569; margin-top: 4px; line-height: 1.4;">
+                <div style="font-size: 20px; font-weight: 900; letter-spacing: 0.5px; color: #0f172a; text-transform: uppercase;">PURCHASE ORDER</div>
+                <div style="font-family: monospace; font-size: 13px; font-weight: 700; color: #475569; margin-top: 2px;">${purchaseOrder.poNumber}</div>
+                <div style="font-size: 10.5px; color: #475569; margin-top: 6px; line-height: 1.4;">
                   PO Date: <strong>${formatDate(purchaseOrder.orderDate)}</strong><br/>
                   Delivery Due: <strong>${formatDate(purchaseOrder.expectedDeliveryDate)}</strong><br/>
-                  Terms: <strong>${purchaseOrder.paymentTerms}</strong>
+                  Payment Terms: <strong>${purchaseOrder.paymentTerms}</strong>
                 </div>
               </div>
             </div>
@@ -735,7 +732,6 @@ export class PdfService implements IPdfService {
               <tr>
                 <td style="width: 55%; vertical-align: top; padding-right: 14px; font-size: 10px; color: #475569;">
                   ${purchaseOrder.notes ? `<div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 8px; border-radius: 6px; margin-bottom: 8px;"><strong>Order Notes:</strong> ${purchaseOrder.notes}</div>` : ''}
-                  ${purchaseOrder.deliveryInstructions ? `<div style="background: #fffbeb; border: 1px solid #fde68a; padding: 8px; border-radius: 6px; margin-bottom: 8px; color: #92400e;"><strong>Delivery Instructions:</strong> ${purchaseOrder.deliveryInstructions}</div>` : ''}
                   <div style="background: #f0fdf4; border: 1px solid #bbf7d0; padding: 8px; border-radius: 6px; color: #166534; line-height: 1.4;">
                     <strong>General Terms & Policy:</strong><br/>
                     1. Reference PO number on all commercial correspondence.<br/>

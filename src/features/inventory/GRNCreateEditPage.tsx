@@ -16,6 +16,7 @@ import { MOCK_PRODUCTS } from '../../mock/mockProducts';
 import { MOCK_PURCHASE_ORDERS } from '../../mock/mockInventory';
 import { GRN, GRNItem, UnitBarcodeRecord } from '../../types/inventory';
 import { unitBarcodeService } from '../../services/UnitBarcodeService';
+import { serialNumberService } from '../../services/SerialNumberService';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 import { toast } from 'sonner';
 import { cn } from '../../utils/cn';
@@ -67,13 +68,31 @@ interface LineItem extends GRNItem {
   unitCost: number;
 }
 
+export const checkProductRequiresSerial = (item: {
+  productId: string;
+  skuSnapshot?: string;
+  productNameSnapshot?: string;
+}): boolean => {
+  const prod = MOCK_PRODUCTS.find((p) => p.id === item.productId || p.sku === item.skuSnapshot);
+  if (prod?.requiresSerialNumber !== undefined) {
+    return prod.requiresSerialNumber;
+  }
+  const text = `${item.skuSnapshot || ''} ${item.productNameSnapshot || ''} ${prod?.name || ''} ${prod?.sku || ''}`.toLowerCase();
+  return text.includes('chainsaw') || text.includes('inverter') || text.includes('solar') || text.includes('generator');
+};
+
 export function GRNCreateEditPage() {
   const navigate = useNavigate();
   const { grnService } = useGRN();
   const { user, currentUser } = useAuth();
 
-  // Stepper state: 1: Inbound Details, 2: Product Counts, 3: Barcode Stickers, 4: Review & Sign-Off
-  const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4>(1);
+  // Stepper state: 1: Inbound Details, 2: Product Counts, 3: Serial Numbers, 4: Barcode Stickers, 5: Review & Sign-Off
+  const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4 | 5>(1);
+
+  // Step 3 Serial Numbers state
+  const [bulkPasteOpen, setBulkPasteOpen] = useState<Record<string, boolean>>({});
+  const [bulkPasteText, setBulkPasteText] = useState<Record<string, string>>({});
+  const [scanInputs, setScanInputs] = useState<Record<string, string>>({});
 
   // Intake source mode: from Purchase Order (PO) or Manual one-by-one entry
   const [sourceType, setSourceType] = useState<'PO' | 'MANUAL'>('PO');
@@ -378,6 +397,176 @@ export function GRNCreateEditPage() {
     return unitBarcodeService.getSummary(items);
   }, [items]);
 
+  // Serial Number step calculations
+  const serializedItems = useMemo(() => {
+    return items.filter((item) => {
+      const goodQty = Math.max(0, item.receivedQuantity - item.damagedQuantity);
+      return goodQty > 0 && checkProductRequiresSerial(item);
+    });
+  }, [items]);
+
+  const totalSerialsRequired = useMemo(() => {
+    return serializedItems.reduce((acc, item) => {
+      return acc + Math.max(0, item.receivedQuantity - item.damagedQuantity);
+    }, 0);
+  }, [serializedItems]);
+
+  const totalSerialsEntered = useMemo(() => {
+    return serializedItems.reduce((acc, item) => {
+      const goodQty = Math.max(0, item.receivedQuantity - item.damagedQuantity);
+      const valid = (item.serialNumbers || []).slice(0, goodQty).filter((s) => s && s.trim().length > 0);
+      return acc + valid.length;
+    }, 0);
+  }, [serializedItems]);
+
+  const isSerialStepComplete = totalSerialsRequired === 0 || totalSerialsEntered === totalSerialsRequired;
+
+  // Handlers for individual serial numbers
+  const handleUpdateItemSerial = (tempId: string, index: number, value: string) => {
+    setItems((prev) =>
+      prev.map((item) => {
+        if (item._tempId !== tempId) return item;
+        const goodQty = Math.max(0, item.receivedQuantity - item.damagedQuantity);
+        const serials = [...(item.serialNumbers || [])];
+        while (serials.length < goodQty) serials.push('');
+        serials[index] = value;
+
+        // Sync with unitRecords so Step 4 Barcode Stickers immediately displays SN
+        const unitRecords = (item.unitRecords || []).map((rec, rIdx) => {
+          if (rIdx === index) {
+            return { ...rec, serialNumber: value.trim() || undefined };
+          }
+          return rec;
+        });
+
+        return {
+          ...item,
+          serialNumbers: serials,
+          unitRecords,
+        };
+      })
+    );
+  };
+
+  const handleApplyBulkSerials = (tempId: string) => {
+    const text = bulkPasteText[tempId] || '';
+    const lines = text
+      .split(/[\n,\r\t;]+/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+
+    if (lines.length === 0) {
+      toast.error('No serial numbers found in paste box');
+      return;
+    }
+
+    setItems((prev) =>
+      prev.map((item) => {
+        if (item._tempId !== tempId) return item;
+        const goodQty = Math.max(0, item.receivedQuantity - item.damagedQuantity);
+        const existing = [...(item.serialNumbers || [])];
+        while (existing.length < goodQty) existing.push('');
+
+        for (let i = 0; i < goodQty && i < lines.length; i++) {
+          existing[i] = lines[i];
+        }
+
+        const unitRecords = (item.unitRecords || []).map((rec, rIdx) => ({
+          ...rec,
+          serialNumber: existing[rIdx]?.trim() || undefined,
+        }));
+
+        return {
+          ...item,
+          serialNumbers: existing,
+          unitRecords,
+        };
+      })
+    );
+
+    setBulkPasteOpen((prev) => ({ ...prev, [tempId]: false }));
+    setBulkPasteText((prev) => ({ ...prev, [tempId]: '' }));
+    toast.success(`Imported ${lines.length} serial number(s)`);
+  };
+
+  const handleAutoGenerateSerials = (tempId: string) => {
+    setItems((prev) =>
+      prev.map((item) => {
+        if (item._tempId !== tempId) return item;
+        const goodQty = Math.max(0, item.receivedQuantity - item.damagedQuantity);
+        const prefix = item.skuSnapshot
+          ? item.skuSnapshot.replace(/[^A-Za-z0-9]/g, '').slice(0, 6).toUpperCase()
+          : 'SN';
+        const year = new Date().getFullYear();
+        const rand = Math.floor(1000 + Math.random() * 9000);
+        const serials: string[] = [];
+
+        for (let i = 1; i <= goodQty; i++) {
+          serials.push(`${prefix}-${year}-${rand}-${String(i).padStart(3, '0')}`);
+        }
+
+        const unitRecords = (item.unitRecords || []).map((rec, rIdx) => ({
+          ...rec,
+          serialNumber: serials[rIdx],
+        }));
+
+        return {
+          ...item,
+          serialNumbers: serials,
+          unitRecords,
+        };
+      })
+    );
+    toast.success('Generated sequential serial numbers');
+  };
+
+  const handleScanNextSerial = (tempId: string) => {
+    const scanVal = (scanInputs[tempId] || '').trim();
+    if (!scanVal) return;
+
+    const target = items.find((i) => i._tempId === tempId);
+    if (!target) return;
+    const goodQty = Math.max(0, target.receivedQuantity - target.damagedQuantity);
+    const currentSerials = target.serialNumbers || [];
+
+    let firstEmptyIndex = -1;
+    for (let i = 0; i < goodQty; i++) {
+      if (!currentSerials[i] || !currentSerials[i].trim()) {
+        firstEmptyIndex = i;
+        break;
+      }
+    }
+
+    if (firstEmptyIndex === -1) {
+      toast.info('All units already have serial numbers entered.');
+      setScanInputs((prev) => ({ ...prev, [tempId]: '' }));
+      return;
+    }
+
+    handleUpdateItemSerial(tempId, firstEmptyIndex, scanVal);
+    setScanInputs((prev) => ({ ...prev, [tempId]: '' }));
+    toast.success(`Scanned serial for Unit ${firstEmptyIndex + 1}: ${scanVal}`);
+  };
+
+  const handleClearSerials = (tempId: string) => {
+    setItems((prev) =>
+      prev.map((item) => {
+        if (item._tempId !== tempId) return item;
+        const goodQty = Math.max(0, item.receivedQuantity - item.damagedQuantity);
+        const unitRecords = (item.unitRecords || []).map((rec) => ({
+          ...rec,
+          serialNumber: undefined,
+        }));
+        return {
+          ...item,
+          serialNumbers: new Array(goodQty).fill(''),
+          unitRecords,
+        };
+      })
+    );
+    toast.info('Cleared serial numbers');
+  };
+
   // Flattened stickers list for Step 3 preview
   const allStickers = useMemo(() => {
     const list: {
@@ -526,6 +715,18 @@ export function GRNCreateEditPage() {
         return `Unit cost cannot be negative for ${item.productNameSnapshot}`;
       }
     }
+
+    // Validate serial numbers for serialized products
+    for (const item of items) {
+      if (checkProductRequiresSerial(item)) {
+        const goodQty = Math.max(0, item.receivedQuantity - item.damagedQuantity);
+        const enteredCount = (item.serialNumbers || []).slice(0, goodQty).filter((s) => s && s.trim()).length;
+        if (enteredCount < goodQty) {
+          return `Please enter all ${goodQty} serial numbers for "${item.productNameSnapshot}" (${enteredCount}/${goodQty} entered).`;
+        }
+      }
+    }
+
     return null;
   };
 
@@ -589,6 +790,24 @@ export function GRNCreateEditPage() {
         await grnService.createGRN(grn, activeUser);
       }
 
+      // Register serial numbers with SerialNumberService
+      for (const item of grnItems) {
+        if (item.serialNumbers && item.serialNumbers.length > 0) {
+          const validSerials = item.serialNumbers.map((s) => s?.trim()).filter(Boolean);
+          if (validSerials.length > 0) {
+            serialNumberService.registerBatch({
+              productId: item.productId,
+              locationId: warehouseId,
+              locationName: warehouseId === 'WH-MAIN' ? 'Central Distribution Hub' : warehouseId,
+              grnId,
+              grnNumber: generatedGrnNumber,
+              receivedBy: activeUser.name,
+              serialNumbers: validSerials as string[],
+            });
+          }
+        }
+      }
+
       toast.success(
         `GRN ${generatedGrnNumber} saved as ${status}${
           isFullyLabeled ? ' with all unit barcodes confirmed' : ''
@@ -628,7 +847,7 @@ export function GRNCreateEditPage() {
     await executeSave('SUBMITTED', updated);
   };
 
-  // Stepper definition metadata
+  // Stepper definition metadata (5-step workflow)
   const STEPS = [
     {
       step: 1 as const,
@@ -646,13 +865,23 @@ export function GRNCreateEditPage() {
     },
     {
       step: 3 as const,
+      title: 'Serial Numbers',
+      subtitle:
+        totalSerialsRequired > 0
+          ? `${totalSerialsEntered}/${totalSerialsRequired} recorded`
+          : 'None required',
+      icon: Hash,
+      isComplete: isSerialStepComplete,
+    },
+    {
+      step: 4 as const,
       title: 'Barcode Stickers',
       subtitle: `${barcodeSummary.generatedBarcodes} barcodes · ${barcodeSummary.confirmedUnits}/${barcodeSummary.totalUnits} affixed`,
       icon: Barcode,
       isComplete: barcodeSummary.isFullyConfirmed,
     },
     {
-      step: 4 as const,
+      step: 5 as const,
       title: 'Review & Approval',
       subtitle: 'Manager sign-off ready',
       icon: FileCheck,
@@ -716,7 +945,7 @@ export function GRNCreateEditPage() {
 
       {/* ── Smart Stepper Navigation Bar ── */}
       <div className="bg-white border border-slate-200/90 rounded-2xl p-2 sm:p-3 shadow-xs">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
           {STEPS.map((s) => {
             const Icon = s.icon;
             const isActive = currentStep === s.step;
@@ -890,7 +1119,7 @@ export function GRNCreateEditPage() {
               )}
 
               {/* Supplier Name */}
-              <div className="space-y-1.5">
+              <div className="space-y-1.5 sm:col-span-2">
                 <label className="text-xs font-semibold text-slate-700">
                   Supplier Name <span className="text-red-500">*</span>
                 </label>
@@ -914,25 +1143,6 @@ export function GRNCreateEditPage() {
                     ))}
                   </div>
                 )}
-              </div>
-
-              {/* Warehouse Location */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-slate-700">
-                  Receiving Warehouse <span className="text-red-500">*</span>
-                </label>
-                <Select value={warehouseId} onValueChange={(val) => setWarehouseId(val)}>
-                  <SelectTrigger className="h-9 text-xs">
-                    <SelectValue placeholder="Select Warehouse" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {LOCATIONS.map((l) => (
-                      <SelectItem key={l.value} value={l.value} className="text-xs">
-                        {l.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
               </div>
 
               {/* Delivery Note / Ref */}
@@ -1410,7 +1620,7 @@ export function GRNCreateEditPage() {
                 onClick={() => setCurrentStep(3)}
                 className="gap-2 text-xs font-semibold h-9"
               >
-                Continue to Barcode Stickers ({barcodeSummary.totalUnits} Units)
+                Continue to Serial Numbers ({totalSerialsRequired > 0 ? `${totalSerialsRequired} Units` : 'Step 3'})
                 <ArrowRight className="h-4 w-4" />
               </Button>
             </div>
@@ -1419,7 +1629,7 @@ export function GRNCreateEditPage() {
       </div>
 
       {/* ────────────────────────────────────────────────────────── */}
-      {/* ── STEP 3: UNIT BARCODE STICKERS STUDIO (EMBEDDED NATIVE) ── */}
+      {/* ── STEP 3: MANUFACTURER SERIAL NUMBERS INTAKE ───────────── */}
       {/* ────────────────────────────────────────────────────────── */}
       <div className={cn('space-y-6', currentStep !== 3 && 'hidden')}>
         <Card className="shadow-2xs border-primary/20">
@@ -1428,8 +1638,331 @@ export function GRNCreateEditPage() {
               <div>
                 <div className="flex items-center gap-2 flex-wrap">
                   <CardTitle className="text-base font-bold text-slate-900 flex items-center gap-2">
+                    <Hash className="h-5 w-5 text-indigo-600" />
+                    Step 3: Manufacturer Serial Numbers Intake
+                  </CardTitle>
+                  <Badge className="bg-indigo-50 text-indigo-700 border-indigo-200 text-[10px]">
+                    Serialization Control
+                  </Badge>
+                </div>
+                <CardDescription className="text-xs text-slate-500 mt-0.5">
+                  Record individual manufacturer serial numbers for serialized items (e.g. chainsaws, solar inverters, generators). Unit stickers in Step 4 will embed these serial numbers.
+                </CardDescription>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Badge
+                  variant="outline"
+                  className={cn(
+                    'text-xs font-mono px-2.5 py-1',
+                    isSerialStepComplete
+                      ? 'bg-emerald-50 text-emerald-700 border-emerald-300 font-semibold'
+                      : 'bg-amber-50 text-amber-800 border-amber-300'
+                  )}
+                >
+                  {totalSerialsRequired > 0
+                    ? `${totalSerialsEntered} / ${totalSerialsRequired} Serial Numbers Recorded`
+                    : 'No Serial Tracking Required'}
+                </Badge>
+              </div>
+            </div>
+          </CardHeader>
+
+          <CardContent className="pt-4 space-y-6">
+            {serializedItems.length === 0 ? (
+              <div className="p-8 text-center border-2 border-dashed border-slate-200 rounded-2xl bg-slate-50/50 space-y-3">
+                <div className="w-12 h-12 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
+                  <Hash className="h-6 w-6" />
+                </div>
+                <div className="max-w-md mx-auto space-y-1">
+                  <h4 className="text-sm font-semibold text-slate-800">
+                    No Serialized Products in this Inbound
+                  </h4>
+                  <p className="text-xs text-slate-500">
+                    None of the {items.length} product line(s) in this GRN require individual manufacturer serial numbers. You can proceed directly to unit barcode stickers.
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  onClick={() => setCurrentStep(4)}
+                  className="gap-2 text-xs font-semibold h-9 mt-2"
+                >
+                  Continue to Barcode Stickers
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {serializedItems.map((item) => {
+                  const goodQty = Math.max(0, item.receivedQuantity - item.damagedQuantity);
+                  const currentSerials = item.serialNumbers || [];
+                  const validCount = currentSerials.slice(0, goodQty).filter((s) => s && s.trim()).length;
+                  const isItemComplete = validCount >= goodQty;
+                  const isBulkOpen = Boolean(bulkPasteOpen[item._tempId]);
+
+                  return (
+                    <Card
+                      key={item._tempId}
+                      className={cn(
+                        'border transition-all overflow-hidden',
+                        isItemComplete ? 'border-emerald-200 bg-white' : 'border-slate-200 bg-white shadow-2xs'
+                      )}
+                    >
+                      {/* Product Header */}
+                      <div className="p-4 bg-slate-50/70 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-3">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-bold text-sm text-slate-900">
+                              {item.productNameSnapshot}
+                            </span>
+                            <Badge variant="outline" className="text-[10px] font-mono bg-white text-slate-600">
+                              SKU: {item.skuSnapshot}
+                            </Badge>
+                            <Badge
+                              className={cn(
+                                'text-[10px] font-semibold',
+                                isItemComplete
+                                  ? 'bg-emerald-100 text-emerald-800'
+                                  : 'bg-amber-100 text-amber-800'
+                              )}
+                            >
+                              {validCount} of {goodQty} Recorded
+                            </Badge>
+                          </div>
+                          <p className="text-[11px] text-slate-500">
+                            {goodQty} good units to intake · {item.damagedQuantity > 0 ? `${item.damagedQuantity} damaged (excluded)` : '0 damaged'}
+                          </p>
+                        </div>
+
+                        {/* Quick action toolbar for this product */}
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() =>
+                              setBulkPasteOpen((prev) => ({
+                                ...prev,
+                                [item._tempId]: !prev[item._tempId],
+                              }))
+                            }
+                            className="text-xs h-8 gap-1.5"
+                          >
+                            <FileText className="h-3.5 w-3.5 text-slate-500" />
+                            {isBulkOpen ? 'Close Paste Box' : 'Bulk Paste'}
+                          </Button>
+
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleAutoGenerateSerials(item._tempId)}
+                            className="text-xs h-8 gap-1.5"
+                          >
+                            <Sparkles className="h-3.5 w-3.5 text-indigo-500" />
+                            Auto-Fill
+                          </Button>
+
+                          {validCount > 0 && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleClearSerials(item._tempId)}
+                              className="text-xs h-8 text-rose-600 hover:text-rose-700 hover:bg-rose-50"
+                            >
+                              Clear
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+
+                      <CardContent className="p-4 space-y-4">
+                        {/* Rapid Scanner Input */}
+                        <div className="p-3 bg-indigo-50/60 rounded-xl border border-indigo-100 flex flex-col sm:flex-row items-center gap-2.5">
+                          <div className="flex items-center gap-2 text-indigo-900 font-semibold text-xs shrink-0">
+                            <ScanLine className="h-4 w-4 text-indigo-600" />
+                            Rapid Scan Input:
+                          </div>
+                          <div className="flex-1 w-full flex items-center gap-2">
+                            <Input
+                              type="text"
+                              value={scanInputs[item._tempId] || ''}
+                              onChange={(e) =>
+                                setScanInputs((prev) => ({ ...prev, [item._tempId]: e.target.value }))
+                              }
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  e.preventDefault();
+                                  handleScanNextSerial(item._tempId);
+                                }
+                              }}
+                              placeholder={`Scan next serial barcode for ${item.productNameSnapshot}...`}
+                              className="h-8 text-xs font-mono bg-white"
+                            />
+                            <Button
+                              type="button"
+                              size="sm"
+                              onClick={() => handleScanNextSerial(item._tempId)}
+                              className="h-8 text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white shrink-0"
+                            >
+                              Add
+                            </Button>
+                          </div>
+                        </div>
+
+                        {/* Bulk Paste Drawer */}
+                        {isBulkOpen && (
+                          <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-bold text-slate-800">
+                                Bulk Paste Serial Numbers (one per line or comma-separated)
+                              </span>
+                              <span className="text-[11px] text-slate-500 font-mono">
+                                Expecting up to {goodQty} serials
+                              </span>
+                            </div>
+                            <Textarea
+                              rows={4}
+                              value={bulkPasteText[item._tempId] || ''}
+                              onChange={(e) =>
+                                setBulkPasteText((prev) => ({
+                                  ...prev,
+                                  [item._tempId]: e.target.value,
+                                }))
+                              }
+                              placeholder="SN-10001&#10;SN-10002&#10;SN-10003..."
+                              className="font-mono text-xs bg-white"
+                            />
+                            <div className="flex items-center justify-end gap-2">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() =>
+                                  setBulkPasteOpen((prev) => ({ ...prev, [item._tempId]: false }))
+                                }
+                                className="h-7 text-xs"
+                              >
+                                Cancel
+                              </Button>
+                              <Button
+                                type="button"
+                                size="sm"
+                                onClick={() => handleApplyBulkSerials(item._tempId)}
+                                className="h-7 text-xs bg-indigo-600 hover:bg-indigo-700 text-white font-semibold"
+                              >
+                                Apply to {goodQty} Units
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Grid of Individual Unit Inputs (e.g. 20 Units) */}
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between text-xs text-slate-600 font-medium">
+                            <span>Individual Unit Serial Number Assignment ({goodQty} Units):</span>
+                            <span className="font-mono text-[11px]">
+                              {validCount} of {goodQty} completed
+                            </span>
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-2.5">
+                            {Array.from({ length: goodQty }).map((_, unitIdx) => {
+                              const val = (item.serialNumbers || [])[unitIdx] || '';
+                              const hasVal = Boolean(val.trim());
+
+                              return (
+                                <div
+                                  key={unitIdx}
+                                  className={cn(
+                                    'p-2 rounded-lg border text-left transition-all',
+                                    hasVal
+                                      ? 'bg-emerald-50/40 border-emerald-200'
+                                      : 'bg-white border-slate-200 focus-within:border-indigo-400'
+                                  )}
+                                >
+                                  <div className="flex items-center justify-between mb-1">
+                                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                                      Unit #{unitIdx + 1}
+                                    </span>
+                                    {hasVal ? (
+                                      <CheckCircle2 className="h-3 w-3 text-emerald-600" />
+                                    ) : (
+                                      <span className="text-[9px] text-amber-600 font-medium">Required</span>
+                                    )}
+                                  </div>
+                                  <Input
+                                    type="text"
+                                    value={val}
+                                    onChange={(e) =>
+                                      handleUpdateItemSerial(item._tempId, unitIdx, e.target.value)
+                                    }
+                                    placeholder={`SN #${unitIdx + 1}`}
+                                    className={cn(
+                                      'h-7 text-[11px] font-mono px-2',
+                                      hasVal
+                                        ? 'bg-white border-emerald-300 font-bold text-emerald-950'
+                                        : 'bg-slate-50 border-slate-200'
+                                    )}
+                                  />
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Step 3 Actions */}
+            <div className="flex items-center justify-between pt-4 border-t border-slate-100">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentStep(2)}
+                className="gap-1.5 text-xs h-9"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                Back to Product Counts
+              </Button>
+              <Button
+                type="button"
+                onClick={() => {
+                  if (!isSerialStepComplete) {
+                    toast.error(
+                      `Please enter all ${totalSerialsRequired} serial numbers before proceeding (${totalSerialsEntered}/${totalSerialsRequired} entered)`
+                    );
+                    return;
+                  }
+                  setCurrentStep(4);
+                }}
+                className="gap-2 text-xs font-semibold h-9 bg-primary text-primary-foreground"
+              >
+                Continue to Barcode Stickers Studio
+                <ArrowRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* ────────────────────────────────────────────────────────── */}
+      {/* ── STEP 4: UNIT BARCODE STICKERS STUDIO (EMBEDDED NATIVE) ── */}
+      {/* ────────────────────────────────────────────────────────── */}
+      <div className={cn('space-y-6', currentStep !== 4 && 'hidden')}>
+        <Card className="shadow-2xs border-primary/20">
+          <CardHeader className="pb-3 border-b border-slate-100 bg-slate-50/50">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <CardTitle className="text-base font-bold text-slate-900 flex items-center gap-2">
                     <Barcode className="h-5 w-5 text-primary" />
-                    Step 3: Unit Barcode Stickers Studio
+                    Step 4: Unit Barcode Stickers Studio
                   </CardTitle>
                   <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[10px]">
                     Physical Intake Studio
@@ -1649,21 +2182,21 @@ export function GRNCreateEditPage() {
               </Button>
             </div>
 
-            {/* Step 3 Actions */}
+            {/* Step 4 Actions */}
             <div className="flex items-center justify-between pt-4 border-t border-slate-100">
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={() => setCurrentStep(2)}
+                onClick={() => setCurrentStep(3)}
                 className="gap-1.5 text-xs h-9"
               >
                 <ArrowLeft className="h-4 w-4" />
-                Back to Product Counts
+                Back to Serial Numbers
               </Button>
               <Button
                 type="button"
-                onClick={() => setCurrentStep(4)}
+                onClick={() => setCurrentStep(5)}
                 className="gap-2 text-xs font-semibold h-9"
               >
                 Continue to Review &amp; Approval
@@ -1675,23 +2208,23 @@ export function GRNCreateEditPage() {
       </div>
 
       {/* ────────────────────────────────────────────────────────── */}
-      {/* ── STEP 4: RECONCILIATION SUMMARY & MANAGER APPROVAL ───── */}
+      {/* ── STEP 5: RECONCILIATION SUMMARY & MANAGER APPROVAL ───── */}
       {/* ────────────────────────────────────────────────────────── */}
-      <div className={cn('space-y-6', currentStep !== 4 && 'hidden')}>
+      <div className={cn('space-y-6', currentStep !== 5 && 'hidden')}>
         <Card className="shadow-2xs">
           <CardHeader className="pb-3 border-b border-slate-100">
             <div className="flex items-center justify-between">
               <div>
                 <CardTitle className="text-base font-bold text-slate-900 flex items-center gap-2">
                   <FileCheck className="h-5 w-5 text-primary" />
-                  Step 4: Final Reconciliation &amp; Manager Sign-Off
+                  Step 5: Final Reconciliation &amp; Manager Sign-Off
                 </CardTitle>
                 <CardDescription className="text-xs text-slate-500 mt-0.5">
-                  Verify physical quantities, barcode tagging compliance, and submit to the Inventory Manager for commercial approval.
+                  Verify physical quantities, serial numbers, barcode tagging compliance, and submit to the Inventory Manager for commercial approval.
                 </CardDescription>
               </div>
               <Badge variant="outline" className="text-xs bg-slate-50 font-mono">
-                Step 4 of 4
+                Step 5 of 5
               </Badge>
             </div>
           </CardHeader>
@@ -1786,45 +2319,70 @@ export function GRNCreateEditPage() {
                     <th className="py-2.5 px-3 text-right">Received</th>
                     <th className="py-2.5 px-3 text-right">Damaged</th>
                     <th className="py-2.5 px-3 text-right">Net Good</th>
+                    <th className="py-2.5 px-3 text-center">Serial Numbers</th>
                     <th className="py-2.5 px-3 text-center">Barcodes</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {items.map((i) => (
-                    <tr key={i._tempId}>
-                      <td className="py-2 px-3">
-                        <span className="font-semibold text-slate-900 block truncate">{i.productNameSnapshot}</span>
-                        <span className="font-mono text-[10px] text-slate-400">SKU: {i.skuSnapshot}</span>
-                      </td>
-                      <td className="py-2 px-3 text-right font-mono">{i.receivedQuantity}</td>
-                      <td className="py-2 px-3 text-right font-mono text-rose-600">{i.damagedQuantity}</td>
-                      <td className="py-2 px-3 text-right font-mono font-semibold text-emerald-700">
-                        {i.receivedQuantity - i.damagedQuantity}
-                      </td>
-                      <td className="py-2 px-3 text-center">
-                        <Badge
-                          variant="outline"
-                          className={cn(
-                            'text-[10px] font-mono',
-                            i.barcodesConfirmed ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-amber-50 text-amber-700 border-amber-200'
+                  {items.map((i) => {
+                    const isSerialized = checkProductRequiresSerial(i);
+                    const goodCount = Math.max(0, i.receivedQuantity - i.damagedQuantity);
+                    const serialCount = (i.serialNumbers || []).slice(0, goodCount).filter((s) => s && s.trim()).length;
+
+                    return (
+                      <tr key={i._tempId}>
+                        <td className="py-2 px-3">
+                          <span className="font-semibold text-slate-900 block truncate">{i.productNameSnapshot}</span>
+                          <span className="font-mono text-[10px] text-slate-400">SKU: {i.skuSnapshot}</span>
+                        </td>
+                        <td className="py-2 px-3 text-right font-mono">{i.receivedQuantity}</td>
+                        <td className="py-2 px-3 text-right font-mono text-rose-600">{i.damagedQuantity}</td>
+                        <td className="py-2 px-3 text-right font-mono font-semibold text-emerald-700">
+                          {goodCount}
+                        </td>
+                        <td className="py-2 px-3 text-center">
+                          {isSerialized ? (
+                            <Badge
+                              variant="outline"
+                              className={cn(
+                                'text-[10px] font-mono',
+                                serialCount >= goodCount
+                                  ? 'bg-indigo-50 text-indigo-700 border-indigo-200'
+                                  : 'bg-amber-50 text-amber-700 border-amber-200'
+                              )}
+                            >
+                              <Hash className="h-3 w-3 mr-0.5 inline text-indigo-500" />
+                              {serialCount}/{goodCount} Serials
+                            </Badge>
+                          ) : (
+                            <span className="text-[10px] text-slate-400 italic">Not Required</span>
                           )}
-                        >
-                          {i.unitRecords?.length || 0} Units {i.barcodesConfirmed ? '✓' : 'Pending'}
-                        </Badge>
-                      </td>
-                    </tr>
-                  ))}
+                        </td>
+                        <td className="py-2 px-3 text-center">
+                          <Badge
+                            variant="outline"
+                            className={cn(
+                              'text-[10px] font-mono',
+                              i.barcodesConfirmed ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-amber-50 text-amber-700 border-amber-200'
+                            )}
+                          >
+                            {i.unitRecords?.length || 0} Units {i.barcodesConfirmed ? '✓' : 'Pending'}
+                          </Badge>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
 
-            {/* Step 4 Actions */}
+            {/* Step 5 Actions */}
             <div className="flex items-center justify-between pt-4 border-t border-slate-100">
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={() => setCurrentStep(3)}
+                onClick={() => setCurrentStep(4)}
                 className="gap-1.5 text-xs h-9"
               >
                 <ArrowLeft className="h-4 w-4" />
@@ -1860,13 +2418,14 @@ export function GRNCreateEditPage() {
       <div className="sticky bottom-3 z-30 bg-white/95 backdrop-blur-md border border-slate-200/90 rounded-2xl p-3 shadow-lg flex flex-col sm:flex-row items-center justify-between gap-3">
         <div className="text-xs text-slate-600 flex items-center gap-2 w-full sm:w-auto">
           <Badge variant="outline" className="text-[11px] bg-slate-50 font-mono">
-            Step {currentStep} of 4
+            Step {currentStep} of 5
           </Badge>
           <span className="truncate">
             {currentStep === 1 && 'Step 1: Inbound Source & Supplier'}
             {currentStep === 2 && `Step 2: ${items.length} Product(s) · ${totalReceivedUnits} Units Counted`}
-            {currentStep === 3 && `Step 3: Barcode Studio · ${barcodeSummary.confirmedUnits}/${barcodeSummary.totalUnits} Stickers Affixed`}
-            {currentStep === 4 && 'Step 4: Final Sign-off & Manager Approval'}
+            {currentStep === 3 && `Step 3: Serial Numbers · ${totalSerialsEntered}/${totalSerialsRequired} Recorded`}
+            {currentStep === 4 && `Step 4: Barcode Studio · ${barcodeSummary.confirmedUnits}/${barcodeSummary.totalUnits} Stickers Affixed`}
+            {currentStep === 5 && 'Step 5: Final Sign-off & Manager Approval'}
           </span>
         </div>
 
@@ -1884,7 +2443,7 @@ export function GRNCreateEditPage() {
             </Button>
           )}
 
-          {currentStep < 4 ? (
+          {currentStep < 5 ? (
             <Button
               type="button"
               size="sm"
@@ -1895,6 +2454,12 @@ export function GRNCreateEditPage() {
                 }
                 if (currentStep === 2 && items.length === 0) {
                   toast.error('At least one product line is required');
+                  return;
+                }
+                if (currentStep === 3 && !isSerialStepComplete) {
+                  toast.error(
+                    `Please enter all ${totalSerialsRequired} serial numbers before proceeding (${totalSerialsEntered}/${totalSerialsRequired} entered)`
+                  );
                   return;
                 }
                 setCurrentStep((prev) => (prev + 1) as any);
@@ -1969,7 +2534,7 @@ export function GRNCreateEditPage() {
               size="sm"
               onClick={() => {
                 setUnlabeledPromptOpen(false);
-                setCurrentStep(3);
+                setCurrentStep(4);
               }}
               className="text-xs gap-1.5"
             >
