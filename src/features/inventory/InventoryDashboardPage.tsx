@@ -433,111 +433,125 @@ export function InventoryDashboardPage() {
         </div>
       </div>
 
-      {/* ── Top Operational KPI Metrics ── */}
-      <div className="grid grid-cols-2 lg:grid-cols-6 gap-3">
+      {/* ── Top Operational KPI Metrics matching Global Card Style ── */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2.5 sm:gap-3">
         {/* KPI 1: Available Units */}
-        <Card className="border-slate-200 shadow-2xs bg-gradient-to-br from-white to-emerald-50/30">
-          <CardContent className="p-3.5">
-            <div className="flex items-center justify-between text-slate-500 mb-1">
-              <span className="text-[10.5px] font-bold uppercase tracking-wider text-emerald-800">Available Stock</span>
-              <Package className="h-4 w-4 text-emerald-600" />
+        <Card className="border-slate-200 min-w-0 overflow-hidden shadow-2xs bg-white">
+          <CardContent className="p-2.5 sm:p-3.5">
+            <div className="flex items-center justify-between gap-2">
+              <div className="min-w-0 flex-1">
+                <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider truncate">Available Stock</p>
+                <div className="text-base sm:text-xl font-bold font-mono text-slate-900 tabular-nums mt-0.5">
+                  {kpis.totalAvailableUnits.toLocaleString()}
+                </div>
+                <p className="text-[10.5px] text-emerald-600 font-semibold truncate mt-0.5">
+                  Ready for sale
+                </p>
+              </div>
+              <div className="h-8 w-8 sm:h-9 sm:w-9 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                <Package className="h-4 w-4 sm:h-5 sm:w-5" />
+              </div>
             </div>
-            <div className="text-xl sm:text-2xl font-black font-mono text-emerald-900 tabular-nums">
-              {kpis.totalAvailableUnits.toLocaleString()}
-            </div>
-            <p className="text-[10px] text-slate-500 mt-0.5 truncate">
-              Ready for dispatch &amp; sale
-            </p>
           </CardContent>
         </Card>
 
-        {/* KPI 2: Reserved (Order Allocated) */}
-        <Card className="border-slate-200 shadow-2xs bg-gradient-to-br from-white to-blue-50/30">
-          <CardContent className="p-3.5">
-            <div className="flex items-center justify-between text-slate-500 mb-1">
-              <span className="text-[10.5px] font-bold uppercase tracking-wider text-blue-800">Reserved (Orders)</span>
-              <Layers className="h-4 w-4 text-blue-600" />
+        {/* KPI 2: Reserved Orders */}
+        <Card className="border-slate-200 min-w-0 overflow-hidden shadow-2xs bg-white">
+          <CardContent className="p-2.5 sm:p-3.5">
+            <div className="flex items-center justify-between gap-2">
+              <div className="min-w-0 flex-1">
+                <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider truncate">Reserved Orders</p>
+                <div className="text-base sm:text-xl font-bold font-mono text-slate-900 tabular-nums mt-0.5">
+                  {kpis.totalReservedUnits.toLocaleString()}
+                </div>
+                <p className="text-[10.5px] text-blue-600 font-semibold truncate mt-0.5">
+                  Allocated to SOs
+                </p>
+              </div>
+              <div className="h-8 w-8 sm:h-9 sm:w-9 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                <Layers className="h-4 w-4 sm:h-5 sm:w-5" />
+              </div>
             </div>
-            <div className="text-xl sm:text-2xl font-black font-mono text-blue-900 tabular-nums">
-              {kpis.totalReservedUnits.toLocaleString()}
-            </div>
-            <p className="text-[10px] text-slate-500 mt-0.5 truncate">
-              Allocated to approved orders
-            </p>
           </CardContent>
         </Card>
 
-        {/* KPI 3: Dispatched Units */}
-        <Card className="border-slate-200 shadow-2xs bg-gradient-to-br from-white to-indigo-50/30">
-          <CardContent className="p-3.5">
-            <div className="flex items-center justify-between text-slate-500 mb-1">
-              <span className="text-[10.5px] font-bold uppercase tracking-wider text-indigo-800">Dispatched</span>
-              <Truck className="h-4 w-4 text-indigo-600" />
+        {/* KPI 3: Dispatched Transit */}
+        <Card className="border-slate-200 min-w-0 overflow-hidden shadow-2xs bg-white">
+          <CardContent className="p-2.5 sm:p-3.5">
+            <div className="flex items-center justify-between gap-2">
+              <div className="min-w-0 flex-1">
+                <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider truncate">Dispatched</p>
+                <div className="text-base sm:text-xl font-bold font-mono text-slate-900 tabular-nums mt-0.5">
+                  {kpis.totalDispatchedUnits.toLocaleString()}
+                </div>
+                <p className="text-[10.5px] text-indigo-600 font-semibold truncate mt-0.5">
+                  In delivery transit
+                </p>
+              </div>
+              <div className="h-8 w-8 sm:h-9 sm:w-9 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+                <Truck className="h-4 w-4 sm:h-5 sm:w-5" />
+              </div>
             </div>
-            <div className="text-xl sm:text-2xl font-black font-mono text-indigo-900 tabular-nums">
-              {kpis.totalDispatchedUnits.toLocaleString()}
-            </div>
-            <p className="text-[10px] text-slate-500 mt-0.5 truncate">
-              Out for delivery / transit
-            </p>
           </CardContent>
         </Card>
 
         {/* KPI 4: Delivered Units */}
-        <Card className="border-slate-200 shadow-2xs bg-gradient-to-br from-white to-teal-50/30">
-          <CardContent className="p-3.5">
-            <div className="flex items-center justify-between text-slate-500 mb-1">
-              <span className="text-[10.5px] font-bold uppercase tracking-wider text-teal-800">Delivered</span>
-              <CheckCircle2 className="h-4 w-4 text-teal-600" />
+        <Card className="border-slate-200 min-w-0 overflow-hidden shadow-2xs bg-white">
+          <CardContent className="p-2.5 sm:p-3.5">
+            <div className="flex items-center justify-between gap-2">
+              <div className="min-w-0 flex-1">
+                <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider truncate">Delivered</p>
+                <div className="text-base sm:text-xl font-bold font-mono text-slate-900 tabular-nums mt-0.5">
+                  {kpis.totalDeliveredUnits.toLocaleString()}
+                </div>
+                <p className="text-[10.5px] text-teal-600 font-semibold truncate mt-0.5">
+                  Fulfilled to clients
+                </p>
+              </div>
+              <div className="h-8 w-8 sm:h-9 sm:w-9 rounded-lg bg-teal-50 text-teal-600 flex items-center justify-center shrink-0">
+                <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5" />
+              </div>
             </div>
-            <div className="text-xl sm:text-2xl font-black font-mono text-teal-900 tabular-nums">
-              {kpis.totalDeliveredUnits.toLocaleString()}
-            </div>
-            <p className="text-[10px] text-slate-500 mt-0.5 truncate">
-              Fulfilled to customers
-            </p>
           </CardContent>
         </Card>
 
         {/* KPI 5: Damaged Stock in Quarantine */}
-        <Card
-          className={cn(
-            'border-slate-200 shadow-2xs bg-gradient-to-br from-white',
-            kpis.totalDamagedUnits > 0 ? 'to-rose-50/40 border-rose-300' : 'to-slate-50'
-          )}
-        >
-          <CardContent className="p-3.5">
-            <div className="flex items-center justify-between text-slate-500 mb-1">
-              <span className="text-[10.5px] font-bold uppercase tracking-wider text-rose-800">Rejected / Damaged</span>
-              <AlertTriangle className={cn('h-4 w-4', kpis.totalDamagedUnits > 0 ? 'text-rose-600' : 'text-slate-400')} />
+        <Card className="border-slate-200 min-w-0 overflow-hidden shadow-2xs bg-white">
+          <CardContent className="p-2.5 sm:p-3.5">
+            <div className="flex items-center justify-between gap-2">
+              <div className="min-w-0 flex-1">
+                <p className="text-[11px] font-semibold text-rose-600 uppercase tracking-wider truncate">Quarantined</p>
+                <div className="text-base sm:text-xl font-bold font-mono text-rose-600 tabular-nums mt-0.5">
+                  {kpis.totalDamagedUnits.toLocaleString()}
+                </div>
+                <p className="text-[10.5px] text-rose-600 font-semibold truncate mt-0.5">
+                  Bay Q-01 defects
+                </p>
+              </div>
+              <div className="h-8 w-8 sm:h-9 sm:w-9 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center shrink-0">
+                <AlertTriangle className="h-4 w-4 sm:h-5 sm:w-5" />
+              </div>
             </div>
-            <div
-              className={cn(
-                'text-xl sm:text-2xl font-black font-mono tabular-nums',
-                kpis.totalDamagedUnits > 0 ? 'text-rose-600' : 'text-slate-800'
-              )}
-            >
-              {kpis.totalDamagedUnits} Units
-            </div>
-            <p className="text-[10px] text-rose-700 font-medium mt-0.5 truncate">
-              Quarantine Bay Q-01
-            </p>
           </CardContent>
         </Card>
 
         {/* KPI 6: Available Stock Valuation */}
-        <Card className="border-slate-200 shadow-2xs bg-gradient-to-br from-white to-amber-50/30">
-          <CardContent className="p-3.5">
-            <div className="flex items-center justify-between text-slate-500 mb-1">
-              <span className="text-[10.5px] font-bold uppercase tracking-wider text-amber-800">Available Valuation</span>
-              <DollarSign className="h-4 w-4 text-amber-600" />
+        <Card className="border-slate-200 min-w-0 overflow-hidden shadow-2xs bg-white">
+          <CardContent className="p-2.5 sm:p-3.5">
+            <div className="flex items-center justify-between gap-2">
+              <div className="min-w-0 flex-1">
+                <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider truncate">Valuation</p>
+                <div className="text-sm sm:text-base font-bold font-mono text-slate-900 tabular-nums mt-0.5 truncate">
+                  {formatCurrency(kpis.totalStockValue)}
+                </div>
+                <p className="text-[10.5px] text-slate-500 font-medium truncate mt-0.5">
+                  Landed cost basis
+                </p>
+              </div>
+              <div className="h-8 w-8 sm:h-9 sm:w-9 rounded-lg bg-primary-light text-primary flex items-center justify-center shrink-0">
+                <DollarSign className="h-4 w-4 sm:h-5 sm:w-5" />
+              </div>
             </div>
-            <div className="text-lg sm:text-xl font-black font-mono text-amber-950 truncate tabular-nums">
-              {formatCurrency(kpis.totalStockValue)}
-            </div>
-            <p className="text-[10px] text-slate-500 mt-0.5 truncate">
-              Free stock landed cost value
-            </p>
           </CardContent>
         </Card>
       </div>
@@ -640,136 +654,46 @@ export function InventoryDashboardPage() {
             </select>
           </div>
 
-          {/* Quick filter pills */}
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <Button
-              type="button"
-              size="sm"
-              variant={quickFilter === 'ALL' ? 'default' : 'outline'}
-              onClick={() => {
-                setQuickFilter('ALL');
-                setCurrentPage(1);
-              }}
-              className="h-7 text-[11px] px-2.5 shadow-2xs font-semibold"
-            >
-              All Items ({flatStockItems.length})
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant={quickFilter === 'AVAILABLE' ? 'default' : 'outline'}
-              onClick={() => {
-                setQuickFilter('AVAILABLE');
-                setCurrentPage(1);
-              }}
-              className={cn(
-                'h-7 text-[11px] px-2.5 shadow-2xs gap-1 font-semibold',
-                quickFilter === 'AVAILABLE'
-                  ? 'bg-emerald-600 text-white hover:bg-emerald-700'
-                  : 'text-emerald-700 border-emerald-200 hover:bg-emerald-50'
-              )}
-            >
-              <Package className="h-3 w-3" />
-              Available ({flatStockItems.filter((i) => i.availableQuantity > 0).length})
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant={quickFilter === 'RESERVED' ? 'default' : 'outline'}
-              onClick={() => {
-                setQuickFilter('RESERVED');
-                setCurrentPage(1);
-              }}
-              className={cn(
-                'h-7 text-[11px] px-2.5 shadow-2xs gap-1 font-semibold',
-                quickFilter === 'RESERVED'
-                  ? 'bg-blue-600 text-white hover:bg-blue-700'
-                  : 'text-blue-700 border-blue-200 hover:bg-blue-50'
-              )}
-            >
-              <Layers className="h-3 w-3" />
-              Reserved ({flatStockItems.filter((i) => i.reservedQuantity > 0).length})
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant={quickFilter === 'DISPATCHED' ? 'default' : 'outline'}
-              onClick={() => {
-                setQuickFilter('DISPATCHED');
-                setCurrentPage(1);
-              }}
-              className={cn(
-                'h-7 text-[11px] px-2.5 shadow-2xs gap-1 font-semibold',
-                quickFilter === 'DISPATCHED'
-                  ? 'bg-indigo-600 text-white hover:bg-indigo-700'
-                  : 'text-indigo-700 border-indigo-200 hover:bg-indigo-50'
-              )}
-            >
-              <Truck className="h-3 w-3" />
-              Dispatched ({flatStockItems.filter((i) => i.dispatchedQuantity > 0).length})
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant={quickFilter === 'DELIVERED' ? 'default' : 'outline'}
-              onClick={() => {
-                setQuickFilter('DELIVERED');
-                setCurrentPage(1);
-              }}
-              className={cn(
-                'h-7 text-[11px] px-2.5 shadow-2xs gap-1 font-semibold',
-                quickFilter === 'DELIVERED'
-                  ? 'bg-teal-600 text-white hover:bg-teal-700'
-                  : 'text-teal-700 border-teal-200 hover:bg-teal-50'
-              )}
-            >
-              <CheckCircle2 className="h-3 w-3" />
-              Delivered ({flatStockItems.filter((i) => i.deliveredQuantity > 0).length})
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant={quickFilter === 'DAMAGED' ? 'default' : 'outline'}
-              onClick={() => {
-                setQuickFilter('DAMAGED');
-                setCurrentPage(1);
-              }}
-              className={cn(
-                'h-7 text-[11px] px-2.5 shadow-2xs gap-1 font-semibold',
-                quickFilter === 'DAMAGED'
-                  ? 'bg-rose-600 text-white hover:bg-rose-700'
-                  : 'text-rose-700 border-rose-200 hover:bg-rose-50'
-              )}
-            >
-              <AlertTriangle className="h-3 w-3" />
-              Rejected / Damaged ({kpis.totalDamagedUnits})
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant={quickFilter === 'SERIALIZED' ? 'default' : 'outline'}
-              onClick={() => {
-                setQuickFilter('SERIALIZED');
-                setCurrentPage(1);
-              }}
-              className="h-7 text-[11px] px-2.5 shadow-2xs gap-1 text-slate-700 border-slate-200"
-            >
-              <Hash className="h-3 w-3" />
-              Serialized
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant={quickFilter === 'PENDING_STICKERS' ? 'default' : 'outline'}
-              onClick={() => {
-                setQuickFilter('PENDING_STICKERS');
-                setCurrentPage(1);
-              }}
-              className="h-7 text-[11px] px-2.5 shadow-2xs gap-1 text-amber-700 border-amber-200"
-            >
-              <Clock className="h-3 w-3" />
-              Pending Stickers
-            </Button>
+          {/* Global Standard Status Filter Tabs matching Invoice & Collection Hub */}
+          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1 text-xs flex-wrap">
+            {[
+              { label: 'All Items', value: 'ALL', count: flatStockItems.length, icon: Boxes },
+              { label: 'Available', value: 'AVAILABLE', count: flatStockItems.filter((i) => i.availableQuantity > 0).length, icon: CheckCircle2 },
+              { label: 'Reserved', value: 'RESERVED', count: flatStockItems.filter((i) => i.reservedQuantity > 0).length, icon: Layers },
+              { label: 'Dispatched', value: 'DISPATCHED', count: flatStockItems.filter((i) => i.dispatchedQuantity > 0).length, icon: Truck },
+              { label: 'Delivered', value: 'DELIVERED', count: flatStockItems.filter((i) => i.deliveredQuantity > 0).length, icon: CheckCircle2 },
+              { label: 'Quarantined', value: 'DAMAGED', count: kpis.totalDamagedUnits, icon: AlertTriangle },
+              { label: 'Serialized', value: 'SERIALIZED', count: flatStockItems.filter((i) => i.serialNumbers?.length > 0).length, icon: Hash },
+              { label: 'Pending Stickers', value: 'PENDING_STICKERS', count: flatStockItems.filter((i) => !i.barcodesConfirmed).length, icon: Clock },
+            ].map((st) => {
+              const Icon = st.icon;
+              const isActive = quickFilter === st.value;
+              return (
+                <button
+                  key={st.value}
+                  type="button"
+                  onClick={() => {
+                    setQuickFilter(st.value as any);
+                    setCurrentPage(1);
+                  }}
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-bold transition-all text-xs whitespace-nowrap cursor-pointer active:scale-95 ${
+                    isActive
+                      ? 'bg-slate-900 text-white shadow-xs'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-900'
+                  }`}
+                >
+                  <Icon className="h-3.5 w-3.5" />
+                  <span>{st.label}</span>
+                  <span
+                    className={`ml-0.5 px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+                      isActive ? 'bg-white/20 text-white' : 'bg-slate-200/80 text-slate-700'
+                    }`}
+                  >
+                    {st.count}
+                  </span>
+                </button>
+              );
+            })}
           </div>
         </div>
 
