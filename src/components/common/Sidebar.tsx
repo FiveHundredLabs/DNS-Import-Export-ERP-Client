@@ -37,7 +37,6 @@ import {
   Percent,
   Layers,
   Barcode,
-  Hash,
   ArrowLeftRight,
   CheckSquare,
   Truck,
@@ -67,6 +66,8 @@ type RailCategory =
   | 'admin';
 
 interface SidebarItem {
+  excludedRoles?: string[];
+  badge?: string;
   id: string;
   name: string;
   path: string;
@@ -94,6 +95,16 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     }
   }, [location.pathname, canAccessRoute]);
 
+  // 0. Purchasing & Procurement Module
+  const purchasingItems: SidebarItem[] = [
+    { id: 'purchasing-dashboard', name: 'Purchasing Dashboard', path: '/purchasing', icon: LayoutGrid, category: 'purchasing', exact: true },
+    { id: 'purchasing-suppliers', name: 'Supplier Management', path: '/purchasing/suppliers', icon: Store, category: 'purchasing' },
+    { id: 'purchasing-orders', name: 'Purchase Orders', path: '/purchasing/orders', icon: ShoppingCart, category: 'purchasing' },
+    { id: 'purchasing-grn', name: 'Goods Received (View Only)', path: '/purchasing/grn', icon: Boxes, category: 'purchasing' },
+    { id: 'purchasing-reports', name: 'Purchase Reports', path: '/purchasing/reports', icon: BarChart3, category: 'purchasing' },
+    { id: 'purchasing-returns', name: 'Purchase Returns', path: '/purchasing/returns', icon: RotateCcw, category: 'purchasing', badge: 'Under Dev' },
+  ];
+
   // 1. Procurement, Orders & Approvals
   const procurementItems: SidebarItem[] = [
     { id: 'quotations', name: 'Quotations', path: '/quotations', icon: FileSpreadsheet, category: 'sales' },
@@ -116,8 +127,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const inventoryItems: SidebarItem[] = [
     { id: 'inventory', name: 'Inventory Hub', path: '/inventory', icon: Boxes, category: 'inventory', exact: true },
     { id: 'grn', name: 'GRN', path: '/inventory/grn', icon: Receipt, category: 'inventory' },
-    { id: 'serials', name: 'Serial Numbers', path: '/inventory/serial-numbers', icon: Hash, category: 'inventory' },
-    { id: 'barcodes', name: 'Bar Codes', path: '/inventory/barcodes', icon: Barcode, category: 'inventory' },
+    { id: 'delivery-notes', name: 'Delivery Notes', path: '/inventory/delivery-notes', icon: Truck, category: 'inventory' },
     { id: 'products', name: 'Product Master', path: '/products', icon: Package, category: 'inventory', excludedRoles: ['STOCK_KEEPER'] },
   ];
 

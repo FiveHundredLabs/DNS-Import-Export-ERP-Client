@@ -48,6 +48,7 @@ import {
 } from 'lucide-react';
 
 export function OrderDetailPage() {
+  const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const { currentUser } = useAuth();
   const isSalesRep = currentUser.role === 'SALES_REP';

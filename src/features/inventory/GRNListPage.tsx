@@ -9,7 +9,7 @@ import { Skeleton } from '../../components/ui/skeleton';
 import { useGRN } from '../../hooks/useGRN';
 import { useAuth } from '../../hooks/useAuth';
 import { formatCurrency, formatDate } from '../../utils/formatters';
-import { PlusCircle, ShieldCheck, Hash, Barcode, ClipboardList, Boxes } from 'lucide-react';
+import { PlusCircle, ShieldCheck } from 'lucide-react';
 
 export function GRNListPage() {
   const { grns, loading } = useGRN();
@@ -70,15 +70,6 @@ export function GRNListPage() {
         </div>
 
         <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => navigate('/inventory/serial-numbers')}
-            className="gap-1.5 text-xs font-medium"
-          >
-            <Hash className="h-3.5 w-3.5 text-primary" />
-            Unit Serials
-          </Button>
           <Button
             size="sm"
             onClick={() => navigate('/inventory/grn/new')}

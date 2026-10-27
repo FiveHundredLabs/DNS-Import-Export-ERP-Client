@@ -69,6 +69,7 @@ export function OrderActivityTimeline({
   compactHeader = false,
 }: OrderActivityTimelineProps) {
   const { currentUser } = useAuth();
+  const navigate = useNavigate();
   const isSalesRep = currentUser.role === 'SALES_REP';
 
   const [activeFilter, setActiveFilter] = useState<'ALL' | 'APPROVALS' | 'DISPATCH' | 'RETURNS' | 'INVOICES'>('ALL');
