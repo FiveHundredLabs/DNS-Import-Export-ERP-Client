@@ -83,6 +83,8 @@ export function GRNCreateEditPage() {
 
   // General GRN Header State
   const [supplierName, setSupplierName] = useState<string>('');
+  const [supplierInvoiceNumber, setSupplierInvoiceNumber] = useState<string>('');
+  const [receivedDate, setReceivedDate] = useState<string>(new Date().toISOString().slice(0, 10));
   const [deliveryNoteRef, setDeliveryNoteRef] = useState<string>('');
   const [warehouseId, setWarehouseId] = useState<string>('WH-MAIN');
   const [notes, setNotes] = useState<string>('');
@@ -223,6 +225,9 @@ export function GRNCreateEditPage() {
         unitCostSnapshot: cost,
         unitCost: cost,
         lineValue: good * cost,
+        barcode: product.barcode || '',
+        serialNumber: '',
+        uom: (product as any).uomCode || 'PCS',
       };
 
       const unitRecords = unitBarcodeService.generateUnitBarcodesForLine(
@@ -260,6 +265,9 @@ export function GRNCreateEditPage() {
       unitCostSnapshot: product.pricing.costPrice,
       unitCost: product.pricing.costPrice,
       lineValue: qty * product.pricing.costPrice,
+      barcode: product.barcode || '',
+      serialNumber: '',
+      uom: (product as any).uomCode || 'PCS',
     };
 
     const unitRecords = unitBarcodeService.generateUnitBarcodesForLine(
@@ -294,6 +302,15 @@ export function GRNCreateEditPage() {
           }
         }
         return updated;
+      })
+    );
+  };
+
+  const updateItemString = (tempId: string, field: 'barcode' | 'serialNumber' | 'uom', value: string) => {
+    setItems(prev =>
+      prev.map(item => {
+        if (item._tempId !== tempId) return item;
+        return { ...item, [field]: value };
       })
     );
   };
@@ -432,6 +449,9 @@ export function GRNCreateEditPage() {
         damagedQuantity: i.damagedQuantity,
         unitCostSnapshot: i.unitCost,
         lineValue: i.lineValue,
+        barcode: i.barcode?.trim() || undefined,
+        serialNumber: i.serialNumber?.trim() || undefined,
+        uom: i.uom || 'PCS',
         serialNumbers: i.serialNumbers,
         unitBarcodes: i.unitBarcodes,
         unitRecords: i.unitRecords,
@@ -451,6 +471,8 @@ export function GRNCreateEditPage() {
         poNumber: sourceType === 'PO' ? poNumber : deliveryNoteRef.trim() || undefined,
         supplierId: 'sup-manual',
         supplierName: supplierName.trim(),
+        supplierInvoiceNumber: supplierInvoiceNumber.trim() || undefined,
+        receivedDate,
         warehouseId,
         status: 'DRAFT' as const,
         items: grnItems,

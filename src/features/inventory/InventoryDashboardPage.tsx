@@ -101,6 +101,12 @@ const QUICK_LINKS = [
     to: '/inventory/serial-numbers',
     color: 'from-slate-700 to-slate-900',
   },
+  {
+    label: 'Damaged Stock & RMA',
+    description: 'Quarantine, supplier returns & repairs',
+    to: '/inventory/damaged-stock',
+    color: 'from-rose-500 to-red-600',
+  },
 ];
 
 export function InventoryDashboardPage() {
@@ -244,6 +250,7 @@ export function InventoryDashboardPage() {
             icon={Truck}
             variant={kpis.damagedUnits > 0 ? 'rose' : 'emerald'}
             badge={kpis.damagedUnits > 0 ? 'Quarantined' : 'Zero Defect'}
+            onClick={() => navigate('/inventory/damaged-stock')}
           />
         </div>
       )}

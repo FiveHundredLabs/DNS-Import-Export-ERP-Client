@@ -16,6 +16,7 @@ import { PaymentStatusBadge } from '../payments/PaymentStatusBadge';
 import { WarrantyRecord, WarrantyClaim } from '../../types/warranty';
 import { warrantyService } from '../../services/WarrantyService';
 import { WarrantyStatusBadge, ClaimStatusBadge } from '../warranty/WarrantyStatusBadge';
+import { RecordWarrantyNoteModal } from '../warranty/RecordWarrantyNoteModal';
 import { calculatePendingWarrantyNotes } from '../../rules/warrantyRules';
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
@@ -59,6 +60,8 @@ export function CustomerHubView({ customer }: { customer: Customer }) {
   const [warrantiesLoading, setWarrantiesLoading] = useState(true);
   const [customerClaims, setCustomerClaims] = useState<WarrantyClaim[]>([]);
   const [claimsLoading, setClaimsLoading] = useState(true);
+  const [isWarrantyNoteModalOpen, setIsWarrantyNoteModalOpen] = useState(false);
+  const [preselectedWarrantyRecord, setPreselectedWarrantyRecord] = useState<WarrantyRecord | null>(null);
   const [invoiceFilter, setInvoiceFilter] = useState<'ALL' | 'OVERDUE' | 'NEAR_DUE' | 'PENDING' | 'PAID'>('ALL');
   const isCreditOverdue = customer.financials.overdue > 0;
 
@@ -269,6 +272,18 @@ export function CustomerHubView({ customer }: { customer: Customer }) {
             className="gap-1.5 text-xs text-emerald-700 border-emerald-300 hover:bg-emerald-50"
           >
             <Send className="h-3.5 w-3.5" /> WhatsApp Statement
+          </Button>
+
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              setPreselectedWarrantyRecord(null);
+              setIsWarrantyNoteModalOpen(true);
+            }}
+            className="gap-1.5 text-xs text-indigo-700 border-indigo-300 hover:bg-indigo-50"
+          >
+            <ShieldCheck className="h-3.5 w-3.5 text-indigo-600" /> Warranty Apply / Register Card
           </Button>
         </div>
       </div>
@@ -956,10 +971,22 @@ export function CustomerHubView({ customer }: { customer: Customer }) {
 
           {/* Customer Registered Warranties */}
           <Card>
-            <CardHeader className="pb-3">
+            <CardHeader className="pb-3 flex flex-row items-center justify-between">
               <CardTitle className="text-base font-semibold text-slate-900">
                 Registered Warranties ({customerWarranties.length})
               </CardTitle>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  setPreselectedWarrantyRecord(null);
+                  setIsWarrantyNoteModalOpen(true);
+                }}
+                className="h-8 text-xs gap-1.5 text-emerald-700 border-emerald-300 hover:bg-emerald-50"
+              >
+                <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
+                Warranty Apply / Register Card
+              </Button>
             </CardHeader>
             <CardContent>
               {warrantiesLoading ? (
@@ -979,6 +1006,7 @@ export function CustomerHubView({ customer }: { customer: Customer }) {
                         <TableHead>Sale Type</TableHead>
                         <TableHead>Expiry Date</TableHead>
                         <TableHead className="text-center">Status</TableHead>
+                        <TableHead className="text-right">Action</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -1008,6 +1036,20 @@ export function CustomerHubView({ customer }: { customer: Customer }) {
                           </TableCell>
                           <TableCell className="text-center">
                             <WarrantyStatusBadge status={w.status} />
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-7 text-xs text-primary hover:text-primary hover:bg-primary/10 gap-1"
+                              onClick={() => {
+                                setPreselectedWarrantyRecord(w);
+                                setIsWarrantyNoteModalOpen(true);
+                              }}
+                            >
+                              <ShieldCheck className="h-3.5 w-3.5" />
+                              Apply Card
+                            </Button>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -1111,6 +1153,15 @@ export function CustomerHubView({ customer }: { customer: Customer }) {
           </Card>
         </TabsContent>
       </Tabs>
+
+      <RecordWarrantyNoteModal
+        open={isWarrantyNoteModalOpen}
+        onOpenChange={setIsWarrantyNoteModalOpen}
+        preselectedRecord={preselectedWarrantyRecord}
+        onSuccess={() => {
+          warrantyService.getWarrantiesByCustomerId(customer.id).then(setCustomerWarranties);
+        }}
+      />
     </div>
   );
 }

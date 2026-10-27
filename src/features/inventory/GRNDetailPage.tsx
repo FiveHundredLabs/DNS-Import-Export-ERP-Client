@@ -126,10 +126,21 @@ export function GRNDetailPage() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'APPROVED':
-      case 'COSTED':
         return (
           <Badge className="bg-emerald-50 text-emerald-800 border-emerald-300 font-mono text-xs">
             Approved &amp; Verified
+          </Badge>
+        );
+      case 'COSTED':
+        return (
+          <Badge className="bg-emerald-100 text-emerald-800 border-emerald-300 font-mono text-xs">
+            Costed
+          </Badge>
+        );
+      case 'PRICED':
+        return (
+          <Badge className="bg-indigo-50 text-indigo-800 border-indigo-300 font-mono text-xs">
+            Priced &amp; Released
           </Badge>
         );
       case 'SUBMITTED':
@@ -170,6 +181,8 @@ export function GRNDetailPage() {
         return 3;
       case 'COSTED':
         return 4;
+      case 'PRICED':
+        return 5;
       default:
         return 1;
     }
@@ -264,7 +277,7 @@ export function GRNDetailPage() {
           </Button>
 
           {/* Finance-only action buttons */}
-          {grn.status === 'APPROVED' && !isStockKeeper && (
+          {(grn.status === 'APPROVED' || grn.status === 'SUBMITTED') && !isStockKeeper && (
             <Button
               onClick={() => navigate(`/finance/ap/bills/new?grnId=${grn.id}`)}
               className="bg-primary hover:bg-primary-hover text-white text-xs font-semibold"

@@ -222,7 +222,7 @@ export function OrderListPage() {
             <div className="relative flex-1 min-w-0">
               <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400 pointer-events-none" />
               <Input
-                placeholder="Search order #, customer, or code..."
+                placeholder="Search by order #, customer, or code..."
                 value={filters.search || ''}
                 onChange={(e) => handleSearchChange(e.target.value)}
                 className="pl-9 text-xs h-9 w-full"

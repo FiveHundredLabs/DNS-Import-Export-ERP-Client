@@ -59,6 +59,7 @@ export function SupplierAdvancePaymentsPage() {
   );
   const [bankAccountId, setBankAccountId] = useState<string>('');
   const [paymentReference, setPaymentReference] = useState<string>('');
+  const [purchaseOrderNumber, setPurchaseOrderNumber] = useState<string>('');
   const [advanceAmount, setAdvanceAmount] = useState<number>(0);
   const [advanceNotes, setAdvanceNotes] = useState<string>('');
   const [submitting, setSubmitting] = useState(false);
@@ -146,6 +147,8 @@ export function SupplierAdvancePaymentsPage() {
         bankAccountCode: bank?.code || '1010',
         reference: paymentReference.trim(),
         amount: advanceAmount,
+        purchaseOrderId: purchaseOrderNumber.trim() || undefined,
+        purchaseOrderNumber: purchaseOrderNumber.trim() || undefined,
         notes: advanceNotes.trim() || undefined,
       });
 
@@ -156,6 +159,7 @@ export function SupplierAdvancePaymentsPage() {
       setActiveTab('REGISTRY');
       setAdvanceAmount(0);
       setPaymentReference('');
+      setPurchaseOrderNumber('');
       setAdvanceNotes('');
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : 'Failed to record advance payment');
@@ -419,6 +423,29 @@ export function SupplierAdvancePaymentsPage() {
             </div>
 
             <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-semibold text-slate-700">
+                  Link to Purchase Order (Optional)
+                </label>
+                <span className="text-[11px] text-slate-400">Enables auto-settlement upon GRN billing</span>
+              </div>
+              <Input
+                placeholder="e.g. PO-2026-001, PO-2025-001"
+                value={purchaseOrderNumber}
+                onChange={(e) => setPurchaseOrderNumber(e.target.value)}
+                className="h-9 text-xs font-mono uppercase"
+                list="po-suggestions"
+              />
+              <datalist id="po-suggestions">
+                <option value="PO-2026-001" />
+                <option value="PO-2026-002" />
+                <option value="PO-2026-003" />
+                <option value="PO-2025-001" />
+                <option value="PO-2025-002" />
+              </datalist>
+            </div>
+
+            <div className="space-y-1.5">
               <label className="text-xs font-semibold text-slate-700">
                 Procurement Notes / Intended Order Ref
               </label>
@@ -547,7 +574,12 @@ export function SupplierAdvancePaymentsPage() {
                   filteredAdvances.map((adv) => (
                     <tr key={adv.id} className="hover:bg-slate-50/80 transition-colors">
                       <td className="py-2.5 px-3 font-mono font-bold text-slate-900">
-                        {adv.advanceNumber}
+                        <div>{adv.advanceNumber}</div>
+                        {adv.purchaseOrderNumber && (
+                          <span className="inline-block mt-0.5 text-[10px] font-mono text-indigo-700 bg-indigo-50 border border-indigo-200 rounded px-1.5 py-0.5">
+                            PO: {adv.purchaseOrderNumber}
+                          </span>
+                        )}
                       </td>
                       <td className="py-2.5 px-3 text-slate-600">{formatDate(adv.paymentDate)}</td>
                       <td className="py-2.5 px-3 font-semibold text-slate-800">{adv.supplierName}</td>

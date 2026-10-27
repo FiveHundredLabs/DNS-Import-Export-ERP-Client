@@ -210,7 +210,7 @@ export function WarrantyHubPage() {
               className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold h-9 gap-1.5 shadow-sm"
             >
               <FileCheck2 className="h-4 w-4" />
-              Record Warranty Note
+              Warranty Apply / Register Warranty Card
             </Button>
           )}
           {role !== 'SALES_REP' && hasPermission('warranty:claims') && (

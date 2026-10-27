@@ -23,10 +23,13 @@ import { StockBalancePage } from './features/inventory/StockBalancePage';
 import { StockMovementsPage } from './features/inventory/StockMovementsPage';
 import { OrderPickingPage } from './features/inventory/OrderPickingPage';
 import { DispatchPage } from './features/inventory/DispatchPage';
+import { DamagedStockPage } from './features/inventory/DamagedStockPage';
 import { SerialNumbersPage } from './features/inventory/SerialNumbersPage';
 import { BarcodesPage } from './features/inventory/BarcodesPage';
 import { InvoiceListPage } from './features/invoices/InvoiceListPage';
 import { InvoiceDetailPage } from './features/invoices/InvoiceDetailPage';
+import { InvoiceDraftEditPage } from './features/invoices/InvoiceDraftEditPage';
+import { OrderApprovalDetailPage } from './features/approvals/OrderApprovalDetailPage';
 import { PaymentListPage } from './features/payments/PaymentListPage';
 import { PaymentCollectionPage } from './features/payments/PaymentCollectionPage';
 import { PaymentDetailPage } from './features/payments/PaymentDetailPage';
@@ -133,6 +136,14 @@ export function App() {
           element={
             <ProtectedRoute>
               <ApprovalsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="approvals/orders/:id"
+          element={
+            <ProtectedRoute>
+              <OrderApprovalDetailPage />
             </ProtectedRoute>
           }
         />
@@ -295,6 +306,14 @@ export function App() {
           }
         />
         <Route
+          path="inventory/damaged-stock"
+          element={
+            <ProtectedRoute>
+              <DamagedStockPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="inventory/serial-numbers"
           element={
             <ProtectedRoute>
@@ -341,6 +360,14 @@ export function App() {
           element={
             <ProtectedRoute>
               <InvoiceDetailPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="invoices/:id/edit"
+          element={
+            <ProtectedRoute>
+              <InvoiceDraftEditPage />
             </ProtectedRoute>
           }
         />

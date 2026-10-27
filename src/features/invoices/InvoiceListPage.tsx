@@ -45,12 +45,17 @@ import {
   ShieldCheck,
   X,
   Lock,
+  FileEdit,
+  Edit3,
 } from 'lucide-react';
+import { cn } from '../../utils/cn';
 
 export function InvoiceListPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { role, currentUser } = useAuth();
+  const activeRole = currentUser?.role || role;
+  const isSalesManager = ['SALES_MANAGER', 'MANAGER', 'DIRECTOR', 'ADMIN'].includes(activeRole);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [customerIdFilter, setCustomerIdFilter] = useState(searchParams.get('customerId') || '');
@@ -93,13 +98,13 @@ export function InvoiceListPage() {
           startDate: startDate || undefined,
           endDate: endDate || undefined,
           page,
-          pageSize: 10,
-          salesRepId: isRep ? currentUser.id : undefined,
+          pageSize: 50,
+          salesRepId: isRep ? currentUser?.id : undefined,
         }),
         invoiceService.getInvoices({
           pageSize: 200,
           customerId: customerIdFilter || undefined,
-          salesRepId: isRep ? currentUser.id : undefined,
+          salesRepId: isRep ? currentUser?.id : undefined,
         }),
       ]);
       setInvoices(res.data);
@@ -115,7 +120,7 @@ export function InvoiceListPage() {
 
   useEffect(() => {
     fetchInvoices();
-  }, [search, statusFilter, customerIdFilter, startDate, endDate, page, role, currentUser.id]);
+  }, [search, statusFilter, customerIdFilter, startDate, endDate, page, role, currentUser?.id]);
 
   // Compute live filter counts across customer invoices
   const counts = useMemo(() => {
@@ -127,8 +132,10 @@ export function InvoiceListPage() {
     let nearDue = 0;
     let pendingCollection = 0;
     let settled = 0;
+    let draft = 0;
 
     for (const inv of allInvoicesForCounts) {
+      if (inv.status === 'DRAFT') draft++;
       const uncollected = Math.max(0, inv.balanceAmount - (inv.collectedAmount || 0));
       const [y, m, d] = inv.dueDate.split('-').map(Number);
       const dueTime = new Date(y, m - 1, d, 23, 59, 59, 999).getTime();
@@ -150,6 +157,7 @@ export function InvoiceListPage() {
 
     return {
       all: allInvoicesForCounts.length,
+      draft,
       outstanding,
       overdue,
       nearDue,
@@ -357,6 +365,7 @@ export function InvoiceListPage() {
             {(
               [
                 { label: 'All Invoices', value: 'ALL', count: counts.all, icon: Receipt },
+                { label: 'Drafts', value: 'DRAFT', count: counts.draft, icon: FileEdit },
                 { label: 'Outstanding', value: 'OUTSTANDING', count: counts.outstanding, icon: DollarSign },
                 { label: 'Overdue', value: 'OVERDUE', count: counts.overdue, icon: AlertTriangle },
                 { label: 'Near Due', value: 'NEAR_DUE', count: counts.nearDue, icon: Clock },
@@ -426,10 +435,10 @@ export function InvoiceListPage() {
                       className="rounded-2xl border border-slate-200/90 bg-white p-3 sm:p-3.5 shadow-2xs hover:border-primary/50 transition-all cursor-pointer active:scale-[0.99]"
                     >
                       {/* Top: Invoice #, Order #, Status */}
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-1.5 min-w-0">
-                          <span className="font-mono text-xs font-bold text-primary tabular-nums truncate">
-                            {inv.invoiceNumber}
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <div className="flex items-center gap-1.5 flex-wrap shrink-0 min-w-0">
+                          <span className="font-mono text-xs font-bold text-primary tabular-nums whitespace-nowrap shrink-0">
+                            Inv #{inv.invoiceNumber}
                           </span>
                           <span className="text-[10.5px] text-slate-400 font-mono shrink-0">
                             • SO: {inv.orderNumber}
@@ -532,7 +541,20 @@ export function InvoiceListPage() {
                           </Button>
                         </div>
 
-                        {inv.balanceAmount > 0 ? (
+                        {inv.status === 'DRAFT' && isSalesManager ? (
+                          <Button
+                            variant="default"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`/invoices/${inv.id}/edit`);
+                            }}
+                            className="h-8 px-3 text-xs bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl cursor-pointer gap-1 shadow-xs shrink-0"
+                          >
+                            <Edit3 className="h-3.5 w-3.5" />
+                            <span>Edit Draft</span>
+                          </Button>
+                        ) : inv.balanceAmount > 0 ? (
                           <Button
                             variant="default"
                             size="sm"
@@ -577,7 +599,10 @@ export function InvoiceListPage() {
                     {invoices.map((inv) => (
                       <TableRow
                         key={inv.id}
-                        className="hover:bg-slate-50/80 cursor-pointer transition-colors focus:outline-hidden focus:bg-slate-50"
+                        className={cn(
+                          "hover:bg-slate-50/80 cursor-pointer transition-colors focus:outline-hidden focus:bg-slate-50",
+                          inv.status === 'DRAFT' && "bg-amber-50/20 hover:bg-amber-50/50"
+                        )}
                         tabIndex={0}
                         onClick={() => navigate(`/invoices/${inv.id}`)}
                         onKeyDown={(e) => {
@@ -639,6 +664,21 @@ export function InvoiceListPage() {
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-1">
+                            {inv.status === 'DRAFT' && isSalesManager && (
+                              <Button
+                                variant="default"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  navigate(`/invoices/${inv.id}/edit`);
+                                }}
+                                className="h-7 px-2 text-xs bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-lg cursor-pointer gap-1 shadow-2xs shrink-0"
+                                title="Edit Draft Invoice"
+                              >
+                                <Edit3 className="h-3.5 w-3.5" />
+                                <span>Edit Draft</span>
+                              </Button>
+                            )}
                             <Button
                               variant="ghost"
                               size="sm"

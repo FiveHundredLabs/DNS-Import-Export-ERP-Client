@@ -1,6 +1,8 @@
 import { BaseEntity } from './common';
+export type { StockBatch, StockBatchStatus, PriceStrategyType, ProductSellingPriceHistory } from './inventory';
 
 export type ProductStatus = 'ACTIVE' | 'INACTIVE' | 'DISCONTINUED';
+
 export type ApprovalStatus = 'APPROVED' | 'PENDING_APPROVAL' | 'REJECTED';
 
 export interface Category extends BaseEntity {

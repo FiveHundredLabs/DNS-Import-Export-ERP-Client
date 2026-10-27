@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
@@ -44,6 +45,7 @@ interface StockRow {
 }
 
 export function StockBalancePage() {
+  const navigate = useNavigate();
   const { stockBalances, loading, inventoryService } = useInventory();
   const { user } = useAuth();
 
@@ -188,6 +190,43 @@ export function StockBalancePage() {
             Export CSV
           </Button>
         </div>
+      </div>
+
+      {/* Inventory Navigation Tabs */}
+      <div className="flex items-center gap-1 border-b border-border pb-2 text-xs font-medium">
+        <button
+          type="button"
+          onClick={() => navigate('/inventory')}
+          className="px-3 py-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+        >
+          Overview
+        </button>
+        <button
+          type="button"
+          onClick={() => navigate('/inventory/stock')}
+          className="px-3 py-1.5 rounded-lg bg-primary/10 text-primary font-semibold border border-primary/20 shadow-2xs"
+        >
+          Stock Balances
+        </button>
+        <button
+          type="button"
+          onClick={() => navigate('/inventory/grn')}
+          className="px-3 py-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+        >
+          Goods Receipt (GRN)
+        </button>
+        <button
+          type="button"
+          onClick={() => navigate('/inventory/damaged-stock')}
+          className="px-3 py-1.5 rounded-lg text-rose-700 hover:text-rose-800 hover:bg-rose-50 transition-colors font-medium flex items-center gap-1.5"
+        >
+          <span>Damaged Stock &amp; RMA</span>
+          {totalDmg > 0 && (
+            <Badge variant="outline" className="text-[10px] bg-rose-50 text-rose-700 border-rose-300 px-1 py-0 h-4">
+              {totalDmg}
+            </Badge>
+          )}
+        </button>
       </div>
 
       {/* ── Summary Strips (Global Cards) ── */}
