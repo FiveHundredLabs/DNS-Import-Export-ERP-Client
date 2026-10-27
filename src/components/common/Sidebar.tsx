@@ -74,6 +74,8 @@ interface SidebarItem {
   category: RailCategory;
   exact?: boolean;
   directorOnly?: boolean;
+  excludedRoles?: string[];
+  badge?: string;
 }
 
 export function Sidebar({ isOpen, onClose }: SidebarProps) {
@@ -93,6 +95,16 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       setActiveCategory('finance');
     }
   }, [location.pathname, canAccessRoute]);
+
+  // 0. Purchasing & Procurement Module
+  const purchasingItems: SidebarItem[] = [
+    { id: 'purchasing-dashboard', name: 'Purchasing Dashboard', path: '/purchasing', icon: LayoutGrid, category: 'purchasing', exact: true },
+    { id: 'purchasing-suppliers', name: 'Supplier Management', path: '/purchasing/suppliers', icon: Store, category: 'purchasing' },
+    { id: 'purchasing-orders', name: 'Purchase Orders', path: '/purchasing/orders', icon: ShoppingCart, category: 'purchasing' },
+    { id: 'purchasing-grn', name: 'Goods Received (View Only)', path: '/purchasing/grn', icon: Boxes, category: 'purchasing' },
+    { id: 'purchasing-reports', name: 'Purchase Reports', path: '/purchasing/reports', icon: BarChart3, category: 'purchasing' },
+    { id: 'purchasing-returns', name: 'Purchase Returns', path: '/purchasing/returns', icon: RotateCcw, category: 'purchasing', badge: 'Under Dev' },
+  ];
 
   // 1. Procurement, Orders & Approvals
   const procurementItems: SidebarItem[] = [
