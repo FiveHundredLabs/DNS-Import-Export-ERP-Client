@@ -10,7 +10,7 @@ export function validateProductData(input: {
   name: string;
   categoryId: string;
   uomId: string;
-  barcode: string;
+  barcode?: string;
   pricing: ProductPricing;
 }): ProductValidationResult {
   const errors: Record<string, string> = {};
@@ -31,8 +31,8 @@ export function validateProductData(input: {
     errors.uomId = 'Unit of measure is required.';
   }
 
-  if (!input.barcode || input.barcode.trim().length < 6) {
-    errors.barcode = 'A valid barcode of at least 6 digits is required.';
+  if (input.barcode && input.barcode.trim().length > 0 && input.barcode.trim().length < 6) {
+    errors.barcode = 'A valid barcode of at least 6 digits is required if provided.';
   }
 
   if (input.pricing.costPrice <= 0) {

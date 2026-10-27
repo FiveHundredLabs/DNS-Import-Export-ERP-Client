@@ -35,7 +35,7 @@ export interface Product extends BaseEntity {
   categoryName: string;
   uomId: string;
   uomCode: string;
-  barcode: string;
+  barcode?: string;
   pricing: ProductPricing;
   discountLevels?: number[]; // Up to 3 product-level discount levels ordered lowest to highest (e.g. [5, 10, 15])
   isPromotional: boolean;
