@@ -6,7 +6,7 @@ interface DialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   children: React.ReactNode;
-  size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl';
+  size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl' | '5xl' | 'full';
   className?: string;
 }
 
@@ -16,6 +16,10 @@ const sizeClasses: Record<string, string> = {
   lg: 'max-w-lg',
   xl: 'max-w-xl',
   '2xl': 'max-w-2xl',
+  '3xl': 'max-w-3xl',
+  '4xl': 'max-w-4xl',
+  '5xl': 'max-w-5xl',
+  full: 'max-w-6xl',
 };
 
 export function Dialog({ open, onOpenChange, children, size = 'lg', className }: DialogProps) {
@@ -112,4 +116,3 @@ export function DialogContent({
 }: React.HTMLAttributes<HTMLDivElement>) {
   return <div className={cn('space-y-4', className)} {...props} />;
 }
-

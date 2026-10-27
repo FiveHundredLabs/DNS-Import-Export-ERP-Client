@@ -31,6 +31,14 @@ export interface StockMovement {
 
 export type GRNStatus = 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'COSTED' | 'REJECTED';
 
+export interface UnitBarcodeRecord {
+  unitIndex: number;
+  unitBarcode: string;
+  serialNumber?: string;
+  status: 'PENDING_LABEL' | 'LABELED';
+  labeledAt?: string;
+}
+
 export interface GRNItem {
   productId: string;
   productNameSnapshot: string;
@@ -41,11 +49,18 @@ export interface GRNItem {
   unitCostSnapshot: number;
   lineValue: number;
   serialNumbers?: string[];
+  unitBarcodes?: string[];
+  unitRecords?: UnitBarcodeRecord[];
+  barcodesConfirmed?: boolean;
+  barcodesConfirmedAt?: string;
 }
 
 export interface GRN {
   id: string;
   grnNumber: string;
+  sourceType?: 'PO' | 'MANUAL';
+  poId?: string;
+  poNumber?: string;
   supplierId: string;
   supplierName: string;
   warehouseId: string;
@@ -53,10 +68,35 @@ export interface GRN {
   items: GRNItem[];
   totalValue: number;
   receivedById: string;
+  notes?: string;
+  barcodesGenerated?: boolean;
+  barcodesConfirmed?: boolean;
+  barcodesConfirmedAt?: string;
+  barcodesConfirmedBy?: string;
   submittedAt?: string;
   approvedById?: string;
   approvedAt?: string;
   rejectedReason?: string;
+}
+
+export interface PurchaseOrderItem {
+  productId: string;
+  productName: string;
+  sku: string;
+  expectedQuantity: number;
+  unitCost: number;
+}
+
+export interface PurchaseOrder {
+  id: string;
+  poNumber: string;
+  supplierId: string;
+  supplierName: string;
+  orderDate: string;
+  expectedDeliveryDate: string;
+  warehouseId: string;
+  status: 'APPROVED' | 'PARTIALLY_RECEIVED' | 'OPEN';
+  items: PurchaseOrderItem[];
 }
 
 export interface StockTransfer {
@@ -70,4 +110,29 @@ export interface StockTransfer {
   approvedById?: string;
   dispatchedAt?: string;
   receivedAt?: string;
+}
+
+export type SerialNumberStatus = 'IN_STOCK' | 'ALLOCATED' | 'DISPATCHED' | 'DAMAGED' | 'RETURNED';
+
+export interface SerialNumberRecord {
+  id: string;
+  serialNumber: string;
+  productId: string;
+  productName: string;
+  sku: string;
+  barcode: string;
+  locationId: string;
+  locationName: string;
+  binLocation?: string;
+  status: SerialNumberStatus;
+  grnId?: string;
+  grnNumber?: string;
+  orderId?: string;
+  orderNumber?: string;
+  customerId?: string;
+  customerName?: string;
+  receivedDate: string;
+  receivedBy: string;
+  dispatchedDate?: string;
+  notes?: string;
 }

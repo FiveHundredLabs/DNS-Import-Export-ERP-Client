@@ -37,6 +37,10 @@ import {
   Percent,
   Layers,
   Barcode,
+  Hash,
+  ArrowLeftRight,
+  CheckSquare,
+  Truck,
   Banknote,
 } from 'lucide-react';
 import { useEffect } from 'react';
@@ -70,7 +74,6 @@ interface SidebarItem {
   category: RailCategory;
   exact?: boolean;
   directorOnly?: boolean;
-  badge?: string;
 }
 
 export function Sidebar({ isOpen, onClose }: SidebarProps) {
@@ -90,16 +93,6 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       setActiveCategory('finance');
     }
   }, [location.pathname, canAccessRoute]);
-
-  // 0. Purchasing & Procurement Module
-  const purchasingItems: SidebarItem[] = [
-    { id: 'purchasing-dashboard', name: 'Purchasing Dashboard', path: '/purchasing', icon: LayoutGrid, category: 'purchasing', exact: true },
-    { id: 'purchasing-suppliers', name: 'Supplier Management', path: '/purchasing/suppliers', icon: Store, category: 'purchasing' },
-    { id: 'purchasing-orders', name: 'Purchase Orders', path: '/purchasing/orders', icon: ShoppingCart, category: 'purchasing' },
-    { id: 'purchasing-grn', name: 'Goods Received (View Only)', path: '/purchasing/grn', icon: Boxes, category: 'purchasing' },
-    { id: 'purchasing-reports', name: 'Purchase Reports', path: '/purchasing/reports', icon: BarChart3, category: 'purchasing' },
-    { id: 'purchasing-returns', name: 'Purchase Returns', path: '/purchasing/returns', icon: RotateCcw, category: 'purchasing', badge: 'Under Dev' },
-  ];
 
   // 1. Procurement, Orders & Approvals
   const procurementItems: SidebarItem[] = [
@@ -121,8 +114,11 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
 
   // 3. Products & Inventory
   const inventoryItems: SidebarItem[] = [
-    { id: 'products', name: 'Product Master', path: '/products', icon: Package, category: 'inventory' },
-    { id: 'inventory', name: 'Inventory & GRN', path: '/inventory', icon: Boxes, category: 'inventory', exact: true },
+    { id: 'inventory', name: 'Inventory Hub', path: '/inventory', icon: Boxes, category: 'inventory', exact: true },
+    { id: 'grn', name: 'GRN', path: '/inventory/grn', icon: Receipt, category: 'inventory' },
+    { id: 'serials', name: 'Serial Numbers', path: '/inventory/serial-numbers', icon: Hash, category: 'inventory' },
+    { id: 'barcodes', name: 'Bar Codes', path: '/inventory/barcodes', icon: Barcode, category: 'inventory' },
+    { id: 'products', name: 'Product Master', path: '/products', icon: Package, category: 'inventory', excludedRoles: ['STOCK_KEEPER'] },
   ];
 
   // 4. Finance, Banking & Ledger Core
@@ -169,6 +165,9 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const authorizedItems = useMemo(() => {
     return allRawItems.filter((item) => {
       if (item.directorOnly && currentUser.role !== 'DIRECTOR') {
+        return false;
+      }
+      if (item.excludedRoles && item.excludedRoles.includes(currentUser.role)) {
         return false;
       }
       if (item.path.includes('tab=settings') && !canAccessRoute('/settings')) {
