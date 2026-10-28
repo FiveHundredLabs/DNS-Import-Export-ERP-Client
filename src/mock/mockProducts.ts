@@ -150,6 +150,7 @@ export const MOCK_PRODUCTS: Product[] = [
     discountLevels: [5, 10, 15],
     isPromotional: false,
     warrantyPeriodMonths: 60,
+    requiresSerialNumber: true,
     status: 'ACTIVE',
     approvalStatus: 'APPROVED',
     stockOnHand: 22,

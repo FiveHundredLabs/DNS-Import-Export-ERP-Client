@@ -315,6 +315,7 @@ export function GRNDetailPage() {
     ) || 0;
 
   const isStockKeeper = user?.role === 'STOCK_KEEPER';
+  const isFinanceRole = ['FINANCE_OFFICER', 'FINANCE_MANAGER', 'ADMIN'].includes(user?.role || '');
   const hasDamagedStock = preparedItems?.some((i: any) => (i.damagedQuantity || 0) > 0);
   const totalUnits =
     preparedItems?.reduce(
@@ -367,7 +368,7 @@ export function GRNDetailPage() {
               )}
             </div>
             <p className="text-xs text-slate-500 mt-0.5">
-              Inward delivery inspection • Physical barcode serialization record
+              <span>GRN Details</span> • Inward delivery inspection • Physical barcode serialization record
             </p>
           </div>
         </div>
@@ -386,6 +387,28 @@ export function GRNDetailPage() {
             <Printer className="h-3.5 w-3.5" />
             Unit Barcodes &amp; Stickers ({totalGood})
           </Button>
+
+          {isFinanceRole && (
+            <Button
+              variant="default"
+              size="sm"
+              onClick={() => navigate(`/finance/ap/bills/new?grnId=${grn.id}`)}
+              className="gap-1.5 text-xs font-semibold"
+            >
+              Cost in Finance
+            </Button>
+          )}
+
+          {isFinanceRole && hasDamagedStock && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate(`/finance/ap/debit-notes?grnId=${grn.id}`)}
+              className="gap-1.5 text-xs font-semibold text-amber-800 border-amber-300 hover:bg-amber-50"
+            >
+              Return Damaged Stock (Debit Note)
+            </Button>
+          )}
 
           <Button variant="outline" onClick={() => navigate('/inventory/grn')}>
             Back to List

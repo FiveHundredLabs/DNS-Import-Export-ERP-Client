@@ -235,7 +235,7 @@ describe('Vendor Bill Costing Workflow: Selling Price Modal & Redirection Preven
     expect(screen.getByText(/Step 1: Inbound & Invoice Items/i)).toBeInTheDocument();
   });
 
-  it('6. Synchronizes approvals engine and updates status to PRICED after applying strategy', async () => {
+  it('6. Synchronizes approvals engine and updates status to APPROVED after applying strategy', async () => {
     // Seed pending approval for GRN-2025-005 in localStorage
     localStorage.setItem(
       'dns_erp_approval_requests',
@@ -281,10 +281,10 @@ describe('Vendor Bill Costing Workflow: Selling Price Modal & Redirection Preven
     const applyBtn = await screen.findByRole('button', { name: /confirm & apply selling price strategy/i });
     fireEvent.click(applyBtn);
 
-    // Verify GRN status updated to PRICED
+    // Verify GRN status updated to APPROVED
     await waitFor(() => {
       const grn = apService.getGRNById('GRN-2025-005');
-      expect(grn?.status).toBe('PRICED');
+      expect(grn?.status).toBe('APPROVED');
     });
   });
 });

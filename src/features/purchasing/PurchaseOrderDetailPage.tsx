@@ -355,12 +355,6 @@ export function PurchaseOrderDetailPage() {
                 <span className="text-slate-700">{po.approvedByName || 'Pending Authorization'}</span>
               </div>
             </div>
-            {po.deliveryInstructions && (
-              <div className="pt-2 border-t border-slate-100 text-[11px] text-slate-600">
-                <span className="font-semibold text-slate-700 block">Delivery Notes:</span>
-                {po.deliveryInstructions}
-              </div>
-            )}
           </CardContent>
         </Card>
       </div>
