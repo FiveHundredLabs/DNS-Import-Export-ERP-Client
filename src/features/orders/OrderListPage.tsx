@@ -120,7 +120,7 @@ export function OrderListPage() {
   const totalValue = orders.reduce((sum, o) => sum + (o.status !== 'CANCELLED' ? o.totalAmount : 0), 0);
 
   return (
-    <div className="space-y-4 sm:space-y-6 max-w-7xl mx-auto w-full pb-24 md:pb-6">
+    <div className="space-y-4 sm:space-y-6 w-full pb-24 md:pb-6">
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
         <div>

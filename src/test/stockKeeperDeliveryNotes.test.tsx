@@ -346,4 +346,158 @@ describe('Stock Keeper Delivery Notes Flow', () => {
       });
     });
   });
+
+  describe('6. Delivery Note Stepper & 3-Tier Barcode Sticker Printing (Bulk, Item-wise, One-by-One)', () => {
+    it('supports smart 4-step stepper navigation and all 3 printing levels during creation', async () => {
+      setupStockKeeper();
+
+      render(
+        <MemoryRouter initialEntries={['/inventory/delivery-notes/create?invoiceId=inv-draft-002']}>
+          <Routes>
+            <Route path="/inventory/delivery-notes/create" element={<DeliveryNoteCreatePage />} />
+            <Route path="/inventory/delivery-notes/:id" element={<DeliveryNoteDetailPage />} />
+          </Routes>
+        </MemoryRouter>
+      );
+
+      // Verify Stepper Header is rendered
+      expect(screen.getByText(/1\. Invoice & Logistics/i)).toBeInTheDocument();
+      expect(screen.getByText(/2\. Unit Barcode Allocation/i)).toBeInTheDocument();
+      expect(screen.getByText(/3\. Barcode Stickers Studio/i)).toBeInTheDocument();
+      expect(screen.getByText(/4\. Review & Dispatch Note/i)).toBeInTheDocument();
+
+      // Wait for preselected draft invoice items to load
+      await waitFor(() => {
+        expect(screen.getByText('ABB 100A 4P MCCB Adjustable 36kA')).toBeInTheDocument();
+      });
+
+      // Fill Logistics info
+      const driverInput = screen.getByPlaceholderText(/e\.g\. Kamal Silva/i);
+      fireEvent.change(driverInput, { target: { value: 'Saman Kumara' } });
+      const vehicleInput = screen.getByPlaceholderText(/e\.g\. WP WP-8921/i);
+      fireEvent.change(vehicleInput, { target: { value: 'WP CAD-4488' } });
+
+      // Step 2: Allocate barcodes using "Quick Allocate All from Stock"
+      const quickAllocateAllBtn = screen.getByRole('button', { name: /quick allocate all from stock/i });
+      fireEvent.click(quickAllocateAllBtn);
+
+      // Now "Bulk Print Barcodes (2)" appears in header
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /bulk print barcodes \(2\)/i })).toBeInTheDocument();
+      });
+
+      // Navigate to Step 3: Barcode Studio
+      const toStudioBtn = screen.getByRole('button', { name: /open barcode studio \(step 3\)/i });
+      fireEvent.click(toStudioBtn);
+
+      // Verify Step 3 Barcode Studio is active
+      expect(screen.getByText('Delivery Note Barcode Stickers Studio')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /bulk print all stickers \(2\)/i })).toBeInTheDocument();
+
+      // Test Laser Scan Verification Gun input
+      const laserInput = screen.getByPlaceholderText(/test laser scan sticker/i);
+      fireEvent.change(laserInput, { target: { value: 'DNS-1004-MCB32-001' } });
+      const verifyBtn = screen.getByRole('button', { name: /verify/i });
+      fireEvent.click(verifyBtn);
+
+      // Test One-by-One Print Button on a sticker card
+      const printOneBtns = screen.getAllByRole('button', { name: /print one/i });
+      expect(printOneBtns.length).toBeGreaterThan(0);
+      fireEvent.click(printOneBtns[0]);
+
+      // Verify Barcode Modal opened for Single Sticker
+      await waitFor(() => {
+        expect(screen.getByText(/Delivery Note Barcode Stickers \(Code-128\)/i)).toBeInTheDocument();
+      });
+      // Close Modal
+      const closeBtn = screen.getByRole('button', { name: 'Close' });
+      fireEvent.click(closeBtn);
+
+      // Test Bulk Print Modal
+      const bulkPrintBtn = screen.getByRole('button', { name: /bulk print all stickers \(2\)/i });
+      fireEvent.click(bulkPrintBtn);
+
+      await waitFor(() => {
+        expect(screen.getByText(/Delivery Note Barcode Stickers \(Code-128\)/i)).toBeInTheDocument();
+      });
+      const closeBtn2 = screen.getByRole('button', { name: 'Close' });
+      fireEvent.click(closeBtn2);
+
+      // Navigate to Step 4: Review & Dispatch
+      const toReviewBtn = screen.getByRole('button', { name: /proceed to review & dispatch \(step 4\)/i });
+      fireEvent.click(toReviewBtn);
+
+      // Step 4: Review summary & customer signature notice
+      expect(screen.getByText('Delivery Note Dispatch Sign-Off Summary')).toBeInTheDocument();
+      expect(screen.getByText(/Official Customer Signature & Rubber Stamp Spaces Included/i)).toBeInTheDocument();
+
+      // Item-wise print button in Step 4 breakdown table
+      const itemWisePrintBtns = screen.getAllByRole('button', { name: /print \(2\)/i });
+      expect(itemWisePrintBtns.length).toBe(1);
+      fireEvent.click(itemWisePrintBtns[0]);
+
+      // Verify Modal opens filtered for this item
+      await waitFor(() => {
+        expect(screen.getByText(/Delivery Note Barcode Stickers \(Code-128\)/i)).toBeInTheDocument();
+      });
+      const closeBtn3 = screen.getByRole('button', { name: 'Close' });
+      fireEvent.click(closeBtn3);
+
+      // Dispatch Delivery Note from Step 4
+      const dispatchBtn = screen.getByRole('button', { name: /save & dispatch delivery note/i });
+      fireEvent.click(dispatchBtn);
+
+      // Navigates to Delivery Note Details
+      await waitFor(() => {
+        expect(screen.getByText(/Dispatched \/ In Transit/i)).toBeInTheDocument();
+        expect(screen.getByText('Saman Kumara')).toBeInTheDocument();
+      });
+    });
+
+    it('allows reprinting barcode stickers (bulk, item-wise, one-by-one) from Delivery Note Details', async () => {
+      setupStockKeeper();
+
+      render(
+        <MemoryRouter initialEntries={['/inventory/delivery-notes/dn-001']}>
+          <Routes>
+            <Route path="/inventory/delivery-notes/:id" element={<DeliveryNoteDetailPage />} />
+          </Routes>
+        </MemoryRouter>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('DN-2026-0001')).toBeInTheDocument();
+      });
+
+      // 1. Bulk Print Barcodes Button in Header
+      const headerBarcodeBtn = screen.getByRole('button', { name: /print barcode stickers/i });
+      expect(headerBarcodeBtn).toBeInTheDocument();
+      fireEvent.click(headerBarcodeBtn);
+
+      await waitFor(() => {
+        expect(screen.getByText(/Delivery Note Barcode Stickers \(Code-128\)/i)).toBeInTheDocument();
+      });
+      fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+
+      // 2. Item-wise Print Button on Line Item row
+      const linePrintBtns = screen.getAllByRole('button', { name: /print \(\d+\)/i });
+      expect(linePrintBtns.length).toBeGreaterThan(0);
+      fireEvent.click(linePrintBtns[0]);
+
+      await waitFor(() => {
+        expect(screen.getByText(/Delivery Note Barcode Stickers \(Code-128\)/i)).toBeInTheDocument();
+      });
+      fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+
+      // 3. One-by-one print button next to unit barcode chip
+      const singlePrintBtns = screen.getAllByTitle(/print this single unit barcode sticker/i);
+      expect(singlePrintBtns.length).toBeGreaterThan(0);
+      fireEvent.click(singlePrintBtns[0]);
+
+      await waitFor(() => {
+        expect(screen.getByText(/Delivery Note Barcode Stickers \(Code-128\)/i)).toBeInTheDocument();
+      });
+      fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+    });
+  });
 });

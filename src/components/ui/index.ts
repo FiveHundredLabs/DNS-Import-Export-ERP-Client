@@ -23,6 +23,7 @@ export * from './card';
 export * from './badge';
 export * from './table';
 export * from './tabs';
+export * from './chart';
 
 // Overlays & Feedback
 export * from './dialog';
