@@ -194,7 +194,12 @@ export function hasPermission(role: UserRole, permission: Permission): boolean {
 export function canAccessRoute(role: UserRole, path: string): boolean {
   if (role === 'DIRECTOR') return true;
 
-  if (path === '/' || path.startsWith('/dashboard')) {
+  if (
+    path === '/' ||
+    path.startsWith('/dashboard') ||
+    path === '/profile' ||
+    path.startsWith('/profile')
+  ) {
     return true;
   }
   if (path.startsWith('/products')) {

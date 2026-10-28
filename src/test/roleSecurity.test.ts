@@ -84,6 +84,7 @@ describe('Phase 12 — Role Security & Permission Boundary Testing (Section 83)'
       expect(canAccessRoute('SALES_REP', '/orders')).toBe(true);
       expect(canAccessRoute('SALES_REP', '/warranty')).toBe(true);
       expect(canAccessRoute('SALES_REP', '/commissions')).toBe(true);
+      expect(canAccessRoute('SALES_REP', '/profile')).toBe(true);
     });
 
     it('cannot view customers outside assigned portfolio (assignedRepId filtering)', async () => {

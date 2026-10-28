@@ -88,7 +88,7 @@ export function Header({ onToggleSidebar }: HeaderProps) {
      'DNS ERP Workspace');
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 w-full items-center justify-between bg-primary text-primary-foreground px-3 sm:px-6 backdrop-blur-md transition-all shrink-0">
+    <header className="sticky top-0 z-30 flex h-14 sm:h-16 w-full items-center justify-between bg-primary text-primary-foreground px-3 sm:px-6 backdrop-blur-md transition-all shrink-0">
       {/* Left: Mobile Toggle & Enterprise Brand / Page Title */}
       <div className="flex items-center gap-2 sm:gap-4 min-w-0">
         {location.pathname !== '/' ? (
@@ -114,23 +114,23 @@ export function Header({ onToggleSidebar }: HeaderProps) {
 
         {location.pathname === '/' ? (
           <Link to="/" className="flex items-center gap-2.5 min-w-0 group">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white p-1 shadow-sm ring-1 ring-white/20 transition-transform group-hover:scale-105 overflow-hidden">
+            <div className="flex h-8.5 w-8.5 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-xl bg-white p-1 shadow-xs ring-1 ring-white/20 transition-transform group-hover:scale-105 overflow-hidden">
               <img
                 src="/logo.png"
                 alt="DNS IMPORT & EXPORT"
                 className="h-full w-full object-contain"
               />
             </div>
-            <div className="hidden sm:block min-w-0">
+            <div className="flex flex-col min-w-0">
               <div className="flex items-center gap-1.5">
-                <h1 className="text-sm sm:text-lg md:text-xl font-bold text-primary-foreground tracking-tight truncate leading-tight">
-                  LabsCore ERP
+                <h1 className="text-sm sm:text-lg md:text-xl font-extrabold text-primary-foreground tracking-tight truncate leading-tight">
+                  DNS ERP
                 </h1>
-                <span className="sm:hidden text-[9px] bg-white/20 text-white font-bold px-1.5 py-0.2 rounded-full uppercase tracking-wider">
+                <span className="text-[9px] bg-white/20 text-white font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wider">
                   Sales
                 </span>
               </div>
-              <span className="hidden sm:block text-[10.5px] sm:text-[11.5px] text-primary-foreground/80 font-semibold uppercase tracking-wider -mt-0.5 truncate">
+              <span className="hidden sm:block text-[10.5px] sm:text-[11.5px] text-primary-foreground/80 font-medium uppercase tracking-wider -mt-0.5 truncate">
                 DNS IMPORT & EXPORT (PVT) LTD.
               </span>
             </div>
@@ -173,8 +173,8 @@ export function Header({ onToggleSidebar }: HeaderProps) {
 
       {/* Right: Enterprise Utility Toolbar & Far-Right User Profile Avatar */}
       <div className="flex items-center gap-1 sm:gap-1.5 md:gap-2 shrink-0">
-        {/* Enterprise Notifications (Hidden on mobile, visible sm+) */}
-        <div className="hidden sm:flex items-center">
+        {/* Enterprise Notifications (Visible on both mobile & desktop) */}
+        <div className="flex items-center">
           <NotificationsPopover />
         </div>
 

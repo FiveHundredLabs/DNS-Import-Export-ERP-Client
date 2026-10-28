@@ -298,175 +298,155 @@ export function MobileNav() {
           </button>
         </div>
 
-        {/* SALES Section */}
-        <div className="space-y-2 mt-4">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 px-1">
-            SALES
-          </span>
-          <div className="grid grid-cols-2 gap-2.5">
-            {canAccessRoute('/orders') && (
-              <button
-                onClick={() => handleNavClick('/orders')}
-                className={cn(
-                  'flex items-center gap-3 p-3 rounded-2xl border text-left transition-all',
-                  location.pathname === '/orders'
-                    ? 'border-primary bg-primary-light/50 text-primary-text font-semibold'
-                    : 'border-slate-200/80 bg-white hover:bg-slate-50 text-slate-700'
-                )}
-              >
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary-light text-primary">
-                  <ShoppingCart className="h-4 w-4" />
-                </div>
-                <div className="min-w-0">
-                  <div className="text-xs font-semibold truncate">Sales Orders</div>
-                  <div className="text-[10.5px] text-slate-400 truncate">Registry &amp; Pipeline</div>
-                </div>
-              </button>
-            )}
-
-            {canAccessRoute('/payments') && (
-              <button
-                onClick={() => handleNavClick('/payments')}
-                className={cn(
-                  'flex items-center gap-3 p-3 rounded-2xl border text-left transition-all',
-                  location.pathname.startsWith('/payments') && !location.pathname.includes('/collect')
-                    ? 'border-primary bg-primary-light/50 text-primary-text font-semibold'
-                    : 'border-slate-200/80 bg-white hover:bg-slate-50 text-slate-700'
-                )}
-              >
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
-                  <CreditCard className="h-4 w-4" />
-                </div>
-                <div className="min-w-0">
-                  <div className="text-xs font-semibold truncate">Payments</div>
-                  <div className="text-[10.5px] text-slate-400 truncate">PDC &amp; Receipts</div>
-                </div>
-              </button>
-            )}
-
-            {canAccessRoute('/payments') && (
-              <button
-                onClick={() => handleNavClick('/payments/collect')}
-                className={cn(
-                  'flex items-center gap-3 p-3 rounded-2xl border text-left transition-all',
-                  location.pathname.includes('/collect')
-                    ? 'border-emerald-500 bg-emerald-50 text-emerald-800 font-semibold'
-                    : 'border-slate-200/80 bg-white hover:bg-slate-50 text-slate-700'
-                )}
-              >
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
-                  <DollarSign className="h-4 w-4" />
-                </div>
-                <div className="min-w-0">
-                  <div className="text-xs font-semibold truncate">Collect Payments</div>
-                  <div className="text-[10.5px] text-emerald-600 font-medium truncate">Instant FIFO</div>
-                </div>
-              </button>
-            )}
-
-            {canAccessRoute('/quotations') && (
-              <button
-                onClick={() => handleNavClick('/quotations')}
-                className={cn(
-                  'flex items-center gap-3 p-3 rounded-2xl border text-left transition-all',
-                  location.pathname.startsWith('/quotations')
-                    ? 'border-primary bg-primary-light/50 text-primary-text font-semibold'
-                    : 'border-slate-200/80 bg-white hover:bg-slate-50 text-slate-700'
-                )}
-              >
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
-                  <FileSpreadsheet className="h-4 w-4" />
-                </div>
-                <div className="min-w-0">
-                  <div className="text-xs font-semibold truncate">Quotations</div>
-                  <div className="text-[10.5px] text-slate-400 truncate">Quotes &amp; WhatsApp</div>
-                </div>
-              </button>
-            )}
-
-            {canAccessRoute('/invoices') && (
-              <button
-                onClick={() => handleNavClick('/invoices')}
-                className={cn(
-                  'flex items-center gap-3 p-3 rounded-2xl border text-left transition-all',
-                  location.pathname.startsWith('/invoices')
-                    ? 'border-primary bg-primary-light/50 text-primary-text font-semibold'
-                    : 'border-slate-200/80 bg-white hover:bg-slate-50 text-slate-700'
-                )}
-              >
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-violet-50 text-violet-600">
-                  <Receipt className="h-4 w-4" />
-                </div>
-                <div className="min-w-0">
-                  <div className="text-xs font-semibold truncate">Invoices</div>
-                  <div className="text-[10.5px] text-slate-400 truncate">Tax &amp; Billing</div>
-                </div>
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* PERFORMANCE Section */}
-        {canAccessRoute('/commissions') && (
-          <div className="space-y-2 mt-5">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 px-1">
-              PERFORMANCE
-            </span>
-            <div className="grid grid-cols-2 gap-2.5">
-              <button
-                onClick={() => handleNavClick('/commissions')}
-                className={cn(
-                  'flex items-center gap-3 p-3 rounded-2xl border text-left transition-all',
-                  location.pathname.startsWith('/commissions')
-                    ? 'border-primary bg-primary-light/50 text-primary-text font-semibold'
-                    : 'border-slate-200/80 bg-white hover:bg-slate-50 text-slate-700'
-                )}
-              >
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
-                  <Award className="h-4 w-4" />
-                </div>
-                <div className="min-w-0">
-                  <div className="text-xs font-semibold truncate">Targets &amp; Incentives</div>
-                  <div className="text-[10.5px] text-slate-400 truncate">Commission Hub</div>
-                </div>
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* ACCOUNT Section */}
-        <div className="space-y-2 mt-5 pt-3 border-t border-slate-100">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 px-1">
-            ACCOUNT
-          </span>
-          <div className="grid grid-cols-2 gap-2.5">
+        {/* All Features Grid (All together without separate section headers) */}
+        <div className="grid grid-cols-2 gap-2.5 mt-4">
+          {canAccessRoute('/orders') && (
             <button
-              onClick={() => handleNavClick('/profile')}
+              onClick={() => handleNavClick('/orders')}
               className={cn(
                 'flex items-center gap-3 p-3 rounded-2xl border text-left transition-all',
-                location.pathname === '/profile'
+                location.pathname === '/orders'
                   ? 'border-primary bg-primary-light/50 text-primary-text font-semibold'
                   : 'border-slate-200/80 bg-white hover:bg-slate-50 text-slate-700'
               )}
             >
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary-light text-primary">
-                <User className="h-4 w-4" />
+                <ShoppingCart className="h-4 w-4" />
               </div>
               <div className="min-w-0">
-                <div className="text-xs font-semibold truncate">Profile</div>
-                <div className="text-[10.5px] text-slate-400 truncate">Account Details</div>
+                <div className="text-xs font-semibold truncate">Sales Orders</div>
+                <div className="text-[10.5px] text-slate-400 truncate">Registry &amp; Pipeline</div>
               </div>
             </button>
-          </div>
+          )}
+
+          {canAccessRoute('/payments') && (
+            <button
+              onClick={() => handleNavClick('/payments')}
+              className={cn(
+                'flex items-center gap-3 p-3 rounded-2xl border text-left transition-all',
+                location.pathname.startsWith('/payments') && !location.pathname.includes('/collect')
+                  ? 'border-primary bg-primary-light/50 text-primary-text font-semibold'
+                  : 'border-slate-200/80 bg-white hover:bg-slate-50 text-slate-700'
+              )}
+            >
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+                <CreditCard className="h-4 w-4" />
+              </div>
+              <div className="min-w-0">
+                <div className="text-xs font-semibold truncate">Payments</div>
+                <div className="text-[10.5px] text-slate-400 truncate">PDC &amp; Receipts</div>
+              </div>
+            </button>
+          )}
+
+          {canAccessRoute('/payments') && (
+            <button
+              onClick={() => handleNavClick('/payments/collect')}
+              className={cn(
+                'flex items-center gap-3 p-3 rounded-2xl border text-left transition-all',
+                location.pathname.includes('/collect')
+                  ? 'border-emerald-500 bg-emerald-50 text-emerald-800 font-semibold'
+                  : 'border-slate-200/80 bg-white hover:bg-slate-50 text-slate-700'
+              )}
+            >
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+                <DollarSign className="h-4 w-4" />
+              </div>
+              <div className="min-w-0">
+                <div className="text-xs font-semibold truncate">Collect Payments</div>
+                <div className="text-[10.5px] text-emerald-600 font-medium truncate">Instant FIFO</div>
+              </div>
+            </button>
+          )}
+
+          {canAccessRoute('/quotations') && (
+            <button
+              onClick={() => handleNavClick('/quotations')}
+              className={cn(
+                'flex items-center gap-3 p-3 rounded-2xl border text-left transition-all',
+                location.pathname.startsWith('/quotations')
+                  ? 'border-primary bg-primary-light/50 text-primary-text font-semibold'
+                  : 'border-slate-200/80 bg-white hover:bg-slate-50 text-slate-700'
+              )}
+            >
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
+                <FileSpreadsheet className="h-4 w-4" />
+              </div>
+              <div className="min-w-0">
+                <div className="text-xs font-semibold truncate">Quotations</div>
+                <div className="text-[10.5px] text-slate-400 truncate">Quotes &amp; WhatsApp</div>
+              </div>
+            </button>
+          )}
+
+          {canAccessRoute('/invoices') && (
+            <button
+              onClick={() => handleNavClick('/invoices')}
+              className={cn(
+                'flex items-center gap-3 p-3 rounded-2xl border text-left transition-all',
+                location.pathname.startsWith('/invoices')
+                  ? 'border-primary bg-primary-light/50 text-primary-text font-semibold'
+                  : 'border-slate-200/80 bg-white hover:bg-slate-50 text-slate-700'
+              )}
+            >
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-violet-50 text-violet-600">
+                <Receipt className="h-4 w-4" />
+              </div>
+              <div className="min-w-0">
+                <div className="text-xs font-semibold truncate">Invoices</div>
+                <div className="text-[10.5px] text-slate-400 truncate">Tax &amp; Billing</div>
+              </div>
+            </button>
+          )}
+
+          {canAccessRoute('/commissions') && (
+            <button
+              onClick={() => handleNavClick('/commissions')}
+              className={cn(
+                'flex items-center gap-3 p-3 rounded-2xl border text-left transition-all',
+                location.pathname.startsWith('/commissions')
+                  ? 'border-primary bg-primary-light/50 text-primary-text font-semibold'
+                  : 'border-slate-200/80 bg-white hover:bg-slate-50 text-slate-700'
+              )}
+            >
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
+                <Award className="h-4 w-4" />
+              </div>
+              <div className="min-w-0">
+                <div className="text-xs font-semibold truncate">Targets &amp; Incentives</div>
+                <div className="text-[10.5px] text-slate-400 truncate">Commission Hub</div>
+              </div>
+            </button>
+          )}
 
           <button
-            onClick={handleLogout}
-            className="w-full mt-3 flex items-center justify-center gap-2 p-2.5 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 text-xs font-bold text-rose-700 transition-colors"
+            onClick={() => handleNavClick('/profile')}
+            className={cn(
+              'flex items-center gap-3 p-3 rounded-2xl border text-left transition-all',
+              location.pathname === '/profile'
+                ? 'border-primary bg-primary-light/50 text-primary-text font-semibold'
+                : 'border-slate-200/80 bg-white hover:bg-slate-50 text-slate-700'
+            )}
           >
-            <LogOut className="h-4 w-4 text-rose-600" />
-            <span>Logout</span>
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary-light text-primary">
+              <User className="h-4 w-4" />
+            </div>
+            <div className="min-w-0">
+              <div className="text-xs font-semibold truncate">Profile</div>
+              <div className="text-[10.5px] text-slate-400 truncate">Account Details</div>
+            </div>
           </button>
         </div>
+
+        {/* Logout Button */}
+        <button
+          onClick={handleLogout}
+          className="w-full mt-4 flex items-center justify-center gap-2 p-2.5 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 text-xs font-bold text-rose-700 transition-colors"
+        >
+          <LogOut className="h-4 w-4 text-rose-600" />
+          <span>Logout</span>
+        </button>
       </div>
     </>
   );

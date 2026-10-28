@@ -175,6 +175,30 @@ export function SalesRepDashboard() {
     },
   ];
 
+  // Personalized dynamic greeting based on current local time
+  const greetingMessage = useMemo(() => {
+    const hour = new Date().getHours();
+    let timeOfDay = 'Good morning';
+    if (hour >= 12 && hour < 17) {
+      timeOfDay = 'Good afternoon';
+    } else if (hour >= 17) {
+      timeOfDay = 'Good evening';
+    }
+    const firstName = currentUser?.name?.split(' ')[0] || 'Kasun';
+    return `${timeOfDay}, ${firstName}`;
+  }, [currentUser?.name]);
+
+  // Compute initials for avatar fallback
+  const userInitials = useMemo(() => {
+    if (currentUser?.initials) return currentUser.initials;
+    if (currentUser?.name) {
+      const parts = currentUser.name.trim().split(/\s+/);
+      if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+      return parts[0].slice(0, 2).toUpperCase();
+    }
+    return 'KW';
+  }, [currentUser]);
+
   // Filtered accounts for mobile search & filter pills
   const filteredAccounts = useMemo(() => {
     let list = pendingAccounts;
@@ -196,48 +220,157 @@ export function SalesRepDashboard() {
   }, [pendingAccounts, receivablesFilter, searchQuery]);
 
   return (
-    <div className="space-y-4 sm:space-y-6 pb-24 md:pb-6 max-w-7xl mx-auto">
-      {/* 1. Header Banner:
-          - MOBILE (< md): Curved brand header with deeper 32px+ radius, fluid ambient glow, avatar & territory
-          - DESKTOP (md:): Clean enterprise white card, standard layout, desktop actions
-      */}
-      <div className="relative -mx-3.5 -mt-3.5 md:mx-0 md:mt-0 px-4 pt-3 pb-6 sm:px-6 sm:pt-4 sm:pb-7 md:p-6 rounded-b-[2rem] sm:rounded-b-[2.5rem] md:rounded-2xl bg-gradient-to-br from-primary via-primary-hover to-primary-active md:from-white md:via-white md:to-white text-primary-foreground md:text-slate-900 shadow-md md:shadow-xs shadow-primary/20 md:border md:border-slate-200/90 overflow-hidden md:overflow-visible transition-all">
-        {/* Fluid Decorative Ambient Glows (Mobile only) */}
-        <div className="block md:hidden absolute -top-10 -right-8 w-44 h-44 rounded-full bg-white/10 blur-2xl pointer-events-none" />
-        <div className="block md:hidden absolute -bottom-10 -left-8 w-40 h-40 rounded-full bg-white/10 blur-xl pointer-events-none" />
+    <div className="space-y-4 sm:space-y-6 pb-28 sm:pb-32 md:pb-8 max-w-7xl mx-auto">
+      {/* 1. Top Greeting & Territory Card (Seamless Navy Header Extension) */}
+      <div className="relative -mx-3.5 -mt-3.5 md:mx-0 md:mt-0 px-4 pt-3 pb-4 sm:px-6 sm:pt-4 sm:pb-5 md:p-6 rounded-b-2xl md:rounded-2xl bg-gradient-to-b from-primary to-[#0f2452] md:from-white md:to-white text-primary-foreground md:text-slate-900 border-b border-primary/20 md:border md:border-slate-200/90 shadow-sm md:shadow-xs transition-all">
+        <div className="flex items-center gap-3.5">
+          {/* User Avatar Squircle (Mobile only - Links to Profile) */}
+          <Link
+            to="/profile"
+            className="flex md:hidden h-11 w-11 shrink-0 items-center justify-center rounded-xl overflow-hidden bg-white/15 text-white font-bold text-xs ring-1.5 ring-white/25 shadow-xs transition-transform active:scale-95"
+            title="View Profile"
+          >
+            {currentUser?.avatarUrl ? (
+              <img
+                src={currentUser.avatarUrl}
+                alt={currentUser.name || 'User'}
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <span>{userInitials}</span>
+            )}
+          </Link>
 
-        <div className="relative z-10 space-y-2.5 md:space-y-0 md:flex md:items-center md:justify-between md:gap-4">
-          {/* Left: Avatar (mobile) + Greeting & Territory */}
-          <div className="flex items-center gap-3">
-            {/* User Avatar Squircle (Mobile only) */}
-            <div className="flex md:hidden h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white/20 backdrop-blur-md text-white font-black text-xs ring-2 ring-white/30 shadow-xs">
-              KW
+          <div className="min-w-0 flex-1">
+            {/* 1. Greeting & Name (First) */}
+            <h1 className="text-base sm:text-lg md:text-xl font-extrabold tracking-tight text-white md:text-slate-900 leading-tight truncate">
+              {greetingMessage}
+            </h1>
+
+            {/* 2. Territory (Second) */}
+            <div className="flex items-center gap-1.5 text-xs text-white/90 md:text-slate-600 font-medium mt-1 truncate">
+              <MapPin className="h-3.5 w-3.5 text-rose-300 md:text-rose-500 shrink-0" />
+              <span className="truncate">Kottawa Central Territory</span>
             </div>
 
-            <div className="min-w-0">
-              <h1 className="text-lg sm:text-xl md:text-2xl font-extrabold tracking-tight text-white md:text-slate-900 leading-tight">
-                Good Day, Kasun
-              </h1>
-              <p className="text-[11.5px] sm:text-xs text-white/90 md:text-slate-500 mt-1 flex items-center gap-1.5 flex-wrap font-medium">
-                <MapPin className="h-3.5 w-3.5 text-rose-300 md:text-rose-500 shrink-0" />
-                <span>Kottawa Central Territory</span>
-                <span className="opacity-60">•</span>
+            {/* 3. Dealer Information (Third) */}
+            <div className="flex items-center gap-2 text-[11px] text-white/80 md:text-slate-500 font-medium mt-1">
+              <div className="flex items-center gap-1 shrink-0">
+                <Users className="h-3 w-3 text-sky-300 md:text-sky-600 shrink-0" />
                 <span>14 Assigned Dealers</span>
-              </p>
+              </div>
+              <span className="opacity-40">•</span>
+              <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-300 md:text-emerald-700 bg-emerald-500/20 md:bg-emerald-50 px-1.5 py-0.5 rounded-md border border-emerald-400/30 md:border-emerald-200">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 md:bg-emerald-500 animate-pulse" />
+                Active Route
+              </span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* 2. Quick Actions & Services Grid (Mobile Only) */}
-      <div className="block md:hidden bg-white rounded-3xl p-4 sm:p-5 border border-slate-200/80 shadow-xs">
-        <div className="flex items-center justify-between pb-3 px-1">
-          <span className="text-xs font-bold uppercase tracking-wider text-slate-700">
+      {/* 2. Field Services & Shortcuts Grid (Mobile Only) */}
+      <div className="block md:hidden bg-white rounded-2xl p-3.5 sm:p-4 border border-slate-200/80 shadow-xs">
+        <div className="flex items-center justify-between pb-3 px-0.5">
+          <span className="text-xs font-bold uppercase tracking-wider text-slate-800">
             Field Services & Shortcuts
           </span>
           <span className="text-[11px] text-slate-400 font-medium">Quick Access</span>
         </div>
-        <div className="grid grid-cols-4 gap-3 text-center">
+        <div className="grid grid-cols-4 gap-2.5 text-center">
+          {/* 1. Order Desk */}
+          <Link to="/orders" className="flex flex-col items-center group active:scale-95 transition-transform">
+            <div className="h-11 w-11 rounded-xl bg-primary/10 text-primary flex items-center justify-center shadow-2xs group-hover:bg-primary group-hover:text-white transition-colors">
+              <PlusCircle className="h-5 w-5" />
+            </div>
+            <span className="text-[11px] font-medium text-slate-700 mt-1.5 truncate max-w-full group-hover:text-primary transition-colors">
+              Order Desk
+            </span>
+          </Link>
+
+          {/* 2. Dealer Directory */}
+          <Link to="/customers" className="flex flex-col items-center group active:scale-95 transition-transform">
+            <div className="h-11 w-11 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shadow-2xs group-hover:bg-emerald-600 group-hover:text-white transition-colors">
+              <Users className="h-5 w-5" />
+            </div>
+            <span className="text-[11px] font-medium text-slate-700 mt-1.5 truncate max-w-full group-hover:text-emerald-700 transition-colors">
+              Dealer Hub
+            </span>
+          </Link>
+
+          {/* 3. Collect Payment */}
+          <Link to="/payments/collect" className="flex flex-col items-center group active:scale-95 transition-transform">
+            <div className="h-11 w-11 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shadow-2xs group-hover:bg-blue-600 group-hover:text-white transition-colors">
+              <CreditCard className="h-5 w-5" />
+            </div>
+            <span className="text-[11px] font-medium text-slate-700 mt-1.5 truncate max-w-full group-hover:text-blue-700 transition-colors">
+              Collections
+            </span>
+          </Link>
+
+          {/* 4. Warranty Desk */}
+          <Link to="/warranty" className="flex flex-col items-center group active:scale-95 transition-transform">
+            <div className="h-11 w-11 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shadow-2xs group-hover:bg-amber-600 group-hover:text-white transition-colors">
+              <ShieldAlert className="h-5 w-5" />
+            </div>
+            <span className="text-[11px] font-medium text-slate-700 mt-1.5 truncate max-w-full group-hover:text-amber-700 transition-colors">
+              Warranty
+            </span>
+          </Link>
+
+          {/* 5. Quotations */}
+          <Link to="/quotations" className="flex flex-col items-center group active:scale-95 transition-transform">
+            <div className="h-11 w-11 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center shadow-2xs group-hover:bg-purple-600 group-hover:text-white transition-colors">
+              <FileSpreadsheet className="h-5 w-5" />
+            </div>
+            <span className="text-[11px] font-medium text-slate-700 mt-1.5 truncate max-w-full group-hover:text-purple-700 transition-colors">
+              Quotations
+            </span>
+          </Link>
+
+          {/* 6. Invoices */}
+          <Link to="/invoices" className="flex flex-col items-center group active:scale-95 transition-transform">
+            <div className="h-11 w-11 rounded-xl bg-teal-50 text-teal-600 flex items-center justify-center shadow-2xs group-hover:bg-teal-600 group-hover:text-white transition-colors">
+              <FileCheck2 className="h-5 w-5" />
+            </div>
+            <span className="text-[11px] font-medium text-slate-700 mt-1.5 truncate max-w-full group-hover:text-teal-700 transition-colors">
+              Invoices
+            </span>
+          </Link>
+
+          {/* 7. Live Tracking */}
+          <button
+            type="button"
+            onClick={() => navigate('/orders')}
+            className="flex flex-col items-center group active:scale-95 transition-transform cursor-pointer"
+          >
+            <div className="h-11 w-11 rounded-xl bg-sky-50 text-sky-600 flex items-center justify-center shadow-2xs group-hover:bg-sky-600 group-hover:text-white transition-colors">
+              <Clock className="h-5 w-5" />
+            </div>
+            <span className="text-[11px] font-medium text-slate-700 mt-1.5 truncate max-w-full group-hover:text-sky-700 transition-colors">
+              Tracking
+            </span>
+          </button>
+
+          {/* 8. Overdue Receivables */}
+          <button
+            type="button"
+            onClick={() => {
+              setReceivablesFilter('overdue');
+              const el = document.getElementById('pending-receivables-section');
+              if (el) el.scrollIntoView({ behavior: 'smooth' });
+            }}
+            className="flex flex-col items-center group active:scale-95 transition-transform cursor-pointer"
+          >
+            <div className="h-11 w-11 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center shadow-2xs group-hover:bg-rose-600 group-hover:text-white transition-colors">
+              <AlertCircle className="h-5 w-5" />
+            </div>
+            <span className="text-[11px] font-medium text-slate-700 mt-1.5 truncate max-w-full group-hover:text-rose-700 transition-colors">
+              Overdue
+            </span>
+          </button>
+        </div>
+      </div>
           {/* 1. Quick Order */}
           <Link to="/orders" className="flex flex-col items-center group active:scale-95 transition-transform">
             <div className="h-12 w-12 rounded-2xl bg-primary-light text-primary flex items-center justify-center shadow-2xs group-hover:bg-primary group-hover:text-white transition-colors">
