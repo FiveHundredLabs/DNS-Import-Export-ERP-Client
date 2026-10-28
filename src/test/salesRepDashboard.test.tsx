@@ -22,11 +22,11 @@ describe('Sales Representative Mobile Dashboard App View', () => {
       </MemoryRouter>
     );
 
-    expect(screen.getByText(/Field Representative Hub/i)).toBeInTheDocument();
-    expect(screen.getByText(/Good Day, Kasun/i)).toBeInTheDocument();
-    expect(screen.getByText(/Colombo Central Territory/i)).toBeInTheDocument();
-    expect(screen.getByText('Customer Collections')).toBeInTheDocument();
-    expect(screen.getByText('New Order')).toBeInTheDocument();
+    expect(screen.getByText(/Kasun/i)).toBeInTheDocument();
+    expect(screen.getByText(/Kottawa Central Territory/i)).toBeInTheDocument();
+    expect(screen.getByText(/14 Assigned Dealers/i)).toBeInTheDocument();
+    expect(screen.getByText('Order Desk')).toBeInTheDocument();
+    expect(screen.getByText('Dealer Hub')).toBeInTheDocument();
   });
 
   it('renders all 4 existing KPI cards arranged nicely for mobile screens', () => {
@@ -45,16 +45,22 @@ describe('Sales Representative Mobile Dashboard App View', () => {
     expect(screen.getByText('2 Dealers')).toBeInTheDocument();
   });
 
-  it('renders existing Section 23 warranty note follow-up alert', () => {
+  it('renders Field Services & Shortcuts with 8 quick access shortcuts', () => {
     render(
       <MemoryRouter>
         <SalesRepDashboard />
       </MemoryRouter>
     );
 
-    expect(screen.getByText(/Warranty Note Follow-Up Required/i)).toBeInTheDocument();
-    expect(screen.getByText(/22 Pending Notes/i)).toBeInTheDocument();
-    expect(screen.getAllByText(/Muthurajawela Engineering/i).length).toBeGreaterThan(0);
+    expect(screen.getByText('Field Services & Shortcuts')).toBeInTheDocument();
+    expect(screen.getByText('Order Desk')).toBeInTheDocument();
+    expect(screen.getByText('Dealer Hub')).toBeInTheDocument();
+    expect(screen.getByText('Collections')).toBeInTheDocument();
+    expect(screen.getByText('Warranty')).toBeInTheDocument();
+    expect(screen.getByText('Quotations')).toBeInTheDocument();
+    expect(screen.getByText('Invoices')).toBeInTheDocument();
+    expect(screen.getByText('Tracking')).toBeInTheDocument();
+    expect(screen.getByText('Overdue')).toBeInTheDocument();
   });
 
   it('renders Pending Payments & Route Receivables as mobile app cards', () => {

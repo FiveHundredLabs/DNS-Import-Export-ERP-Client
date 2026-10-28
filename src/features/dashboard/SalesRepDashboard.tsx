@@ -371,451 +371,361 @@ export function SalesRepDashboard() {
           </button>
         </div>
       </div>
-          {/* 1. Quick Order */}
-          <Link to="/orders" className="flex flex-col items-center group active:scale-95 transition-transform">
-            <div className="h-12 w-12 rounded-2xl bg-primary-light text-primary flex items-center justify-center shadow-2xs group-hover:bg-primary group-hover:text-white transition-colors">
-              <PlusCircle className="h-6 w-6" />
-            </div>
-            <span className="text-[11px] font-semibold text-slate-700 mt-1.5 group-hover:text-primary transition-colors">
-              Order Desk
-            </span>
-          </Link>
+      {/* 3. Performance Snapshot (Clean, High-Scannability KPI Grid) */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between px-1">
+          <span className="text-xs font-bold uppercase tracking-wider text-slate-800">
+            Performance Snapshot
+          </span>
+          <span className="text-xs text-emerald-600 font-semibold flex items-center gap-1">
+            <TrendingUp className="h-3.5 w-3.5" /> 85% Target Pace
+          </span>
+        </div>
 
-          {/* 2. Dealer Directory */}
-          <Link to="/customers" className="flex flex-col items-center group active:scale-95 transition-transform">
-            <div className="h-12 w-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center shadow-2xs group-hover:bg-emerald-600 group-hover:text-white transition-colors">
-              <Users className="h-6 w-6" />
+        {/* 5-Card Grid: Hero card spans 2 cols on mobile, 4 secondary cards in 2x2 grid */}
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-2.5 sm:gap-4">
+          {/* Card 1: Monthly Sales Target (Hero Card) */}
+          <div className="col-span-2 lg:col-span-1 rounded-2xl border border-emerald-200/90 bg-gradient-to-br from-emerald-500/[0.07] via-emerald-50/40 to-white p-3 sm:p-4 shadow-xs hover:shadow-sm transition-all relative overflow-hidden group">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="h-8 w-8 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0 shadow-2xs">
+                  <DollarSign className="h-4 w-4" />
+                </div>
+                <span className="text-xs font-bold text-slate-800 truncate">
+                  Monthly Sales
+                </span>
+              </div>
+              <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-800 bg-emerald-100/90 px-2 py-0.5 rounded-full border border-emerald-200/80 shrink-0">
+                <TrendingUp className="h-3 w-3" />
+                85.0%
+              </span>
             </div>
-            <span className="text-[11px] font-semibold text-slate-700 mt-1.5 group-hover:text-emerald-700 transition-colors">
-              Dealer Hub
-            </span>
-          </Link>
 
-          {/* 3. Collect Payment */}
-          <Link to="/payments/collect" className="flex flex-col items-center group active:scale-95 transition-transform">
-            <div className="h-12 w-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center shadow-2xs group-hover:bg-blue-600 group-hover:text-white transition-colors">
-              <CreditCard className="h-6 w-6" />
+            <div className="mt-2 min-w-0">
+              <div className="text-lg sm:text-xl font-extrabold text-slate-900 tracking-tight font-mono">
+                {formatCurrency(4250000)}
+              </div>
             </div>
-            <span className="text-[11px] font-semibold text-slate-700 mt-1.5 group-hover:text-blue-700 transition-colors">
-              Collections
-            </span>
-          </Link>
 
-          {/* 4. Warranty Desk */}
-          <Link to="/warranty" className="flex flex-col items-center group active:scale-95 transition-transform">
-            <div className="h-12 w-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center shadow-2xs group-hover:bg-amber-600 group-hover:text-white transition-colors">
-              <ShieldAlert className="h-6 w-6" />
+            {/* Target Progress Bar & Pace */}
+            <div className="mt-2 space-y-1">
+              <div className="h-1.5 w-full bg-emerald-100 rounded-full overflow-hidden">
+                <div className="h-full bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full w-[85%]" />
+              </div>
+              <div className="flex items-center justify-between text-[11px] text-slate-500 pt-0.5 font-medium">
+                <span>Target: {formatCurrency(5000000)}</span>
+                <span className="font-semibold text-emerald-700">85% Pace</span>
+              </div>
             </div>
-            <span className="text-[11px] font-semibold text-slate-700 mt-1.5 group-hover:text-amber-700 transition-colors">
-              Warranty
-            </span>
-          </Link>
+          </div>
 
-          {/* 5. Quotations */}
-          <Link to="/quotations" className="flex flex-col items-center group active:scale-95 transition-transform">
-            <div className="h-12 w-12 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center shadow-2xs group-hover:bg-purple-600 group-hover:text-white transition-colors">
-              <FileSpreadsheet className="h-6 w-6" />
+          {/* Card 2: Route Collections */}
+          <div className="col-span-1 rounded-2xl border border-blue-200/90 bg-gradient-to-br from-blue-500/[0.07] via-sky-50/40 to-white p-3 sm:p-4 shadow-xs hover:shadow-sm transition-all relative overflow-hidden group flex flex-col justify-between">
+            <div>
+              <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+                <div className="h-8 w-8 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center shrink-0 shadow-2xs">
+                  <FileCheck2 className="h-4 w-4" />
+                </div>
+                <span className="text-xs font-bold text-slate-800 leading-tight truncate">
+                  Route Collections
+                </span>
+              </div>
+
+              <div className="mt-2 min-w-0">
+                <div className="text-base sm:text-lg font-extrabold text-slate-900 tracking-tight font-mono">
+                  {formatCurrency(2650000)}
+                </div>
+              </div>
             </div>
-            <span className="text-[11px] font-semibold text-slate-700 mt-1.5 group-hover:text-purple-700 transition-colors">
-              Quotations
-            </span>
-          </Link>
 
-          {/* 6. Invoices */}
-          <Link to="/invoices" className="flex flex-col items-center group active:scale-95 transition-transform">
-            <div className="h-12 w-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center shadow-2xs group-hover:bg-indigo-600 group-hover:text-white transition-colors">
-              <FileCheck2 className="h-6 w-6" />
+            <div className="mt-2 text-[11px] text-blue-700 font-semibold flex items-center gap-1">
+              <CheckCircle2 className="h-3 w-3 text-blue-600" />
+              <span>89% verified</span>
             </div>
-            <span className="text-[11px] font-semibold text-slate-700 mt-1.5 group-hover:text-indigo-700 transition-colors">
-              Invoices
-            </span>
-          </Link>
+          </div>
 
-          {/* 7. Live Tracking */}
-          <button
-            type="button"
-            onClick={() => navigate('/orders')}
-            className="flex flex-col items-center group active:scale-95 transition-transform"
-          >
-            <div className="h-12 w-12 rounded-2xl bg-sky-50 text-sky-600 flex items-center justify-center shadow-2xs group-hover:bg-sky-600 group-hover:text-white transition-colors">
-              <Clock className="h-6 w-6" />
+          {/* Card 3: Cash to Hand */}
+          <div className="col-span-1 rounded-2xl border border-amber-200/90 bg-gradient-to-br from-amber-500/[0.07] via-amber-50/40 to-white p-3 sm:p-4 shadow-xs hover:shadow-sm transition-all relative overflow-hidden group flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between gap-1.5">
+                <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+                  <div className="h-8 w-8 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center shrink-0 shadow-2xs">
+                    <Banknote className="h-4 w-4" />
+                  </div>
+                  <span className="text-xs font-bold text-slate-800 leading-tight truncate">
+                    Cash to Hand Over
+                  </span>
+                </div>
+              </div>
+
+              <div className="mt-2 min-w-0">
+                <div className="text-base sm:text-lg font-extrabold text-slate-900 tracking-tight font-mono">
+                  {formatCurrency(cashToHandOver)}
+                </div>
+                <div className="text-[10.5px] text-slate-500 font-medium mt-0.5 truncate">
+                  {pendingHandoverCount > 0
+                    ? `Field Cash: ${pendingHandoverCount} ${pendingHandoverCount === 1 ? 'collection' : 'collections'}`
+                    : 'All handed over'}
+                </div>
+              </div>
             </div>
-            <span className="text-[11px] font-semibold text-slate-700 mt-1.5 group-hover:text-sky-700 transition-colors">
-              Tracking
-            </span>
-          </button>
 
-          {/* 8. Overdue Receivables */}
-          <button
-            type="button"
+            <div className="mt-2 flex items-center justify-between gap-1 pt-1 border-t border-amber-100/60">
+              {cashToHandOver > 0 ? (
+                <>
+                  <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-800 bg-amber-100/90 px-1.5 py-0.5 rounded-full border border-amber-200 shrink-0">
+                    <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
+                    <span>To Hand Over</span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setCashHandoverModalOpen(true)}
+                    className="inline-flex items-center gap-0.5 text-[10.5px] font-bold text-amber-900 bg-amber-200 hover:bg-amber-300 py-0.5 px-1.5 rounded-md active:scale-95 transition-all shadow-2xs cursor-pointer"
+                  >
+                    <Send className="h-2.5 w-2.5" /> Hand Over
+                  </button>
+                </>
+              ) : (
+                <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-800 bg-emerald-100/90 px-1.5 py-0.5 rounded-full border border-emerald-200 shrink-0">
+                  <CheckCircle2 className="h-3 w-3 text-emerald-600" /> Settled
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Card 4: Earned Incentive */}
+          <div className="col-span-1 rounded-2xl border border-indigo-200/90 bg-gradient-to-br from-indigo-500/[0.07] via-purple-50/40 to-white p-3 sm:p-4 shadow-xs hover:shadow-sm transition-all relative overflow-hidden group flex flex-col justify-between">
+            <div>
+              <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+                <div className="h-8 w-8 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center shrink-0 shadow-2xs">
+                  <Target className="h-4 w-4" />
+                </div>
+                <span className="text-xs font-bold text-slate-800 leading-tight truncate">
+                  Earned Incentive
+                </span>
+              </div>
+
+              <div className="mt-2 min-w-0">
+                <div className="text-base sm:text-lg font-extrabold text-slate-900 tracking-tight font-mono">
+                  {formatCurrency(127500)}
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-2 text-[11px] text-indigo-700 font-semibold truncate">
+              Tier 2 Commission (3%)
+            </div>
+          </div>
+
+          {/* Card 5: Overdue Accounts */}
+          <div
             onClick={() => {
               setReceivablesFilter('overdue');
               const el = document.getElementById('pending-receivables-section');
               if (el) el.scrollIntoView({ behavior: 'smooth' });
             }}
-            className="flex flex-col items-center group active:scale-95 transition-transform"
+            className="col-span-1 rounded-2xl border border-rose-200/90 bg-gradient-to-br from-rose-500/[0.07] via-red-50/40 to-white p-3 sm:p-4 shadow-xs hover:shadow-sm transition-all relative overflow-hidden group flex flex-col justify-between cursor-pointer active:scale-[0.99]"
           >
-            <div className="h-12 w-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center shadow-2xs group-hover:bg-rose-600 group-hover:text-white transition-colors">
-              <AlertCircle className="h-6 w-6" />
-            </div>
-            <span className="text-[11px] font-semibold text-slate-700 mt-1.5 group-hover:text-rose-700 transition-colors">
-              Overdue
-            </span>
-          </button>
-        </div>
-      </div>
-
-      {/* 3. Mobile KPI Cards (Clean, Simple, High-Scannability Layout) */}
-      <div className="space-y-1.5 sm:space-y-0">
-          <div className="flex sm:hidden items-center justify-between px-1">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
-              Performance Snapshot
-            </span>
-            <span className="text-[11px] text-emerald-600 font-semibold">85% Target Pace</span>
-          </div>
-
-          {/* Clean KPI Grid: Full-width Hero card on mobile, 5-col on desktop */}
-          <div className="grid grid-cols-2 lg:grid-cols-5 gap-2 sm:gap-4">
-            {/* Card 1: Monthly Sales Target */}
-            <div className="col-span-2 lg:col-span-1 rounded-2xl sm:rounded-3xl border border-emerald-200/90 bg-gradient-to-br from-emerald-500/[0.08] via-emerald-50/40 to-white p-2.5 sm:p-5 shadow-xs hover:shadow-sm transition-all relative overflow-hidden group">
-              <div className="flex items-center justify-between gap-1.5 sm:gap-2">
-                <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
-                  <div className="h-7 w-7 sm:h-9 sm:w-9 rounded-lg sm:rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0 shadow-2xs">
-                    <DollarSign className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                  </div>
-                  <span className="text-xs sm:text-sm font-bold text-slate-800 truncate">
-                    Monthly Sales
-                  </span>
+            <div>
+              <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+                <div className="h-8 w-8 rounded-lg bg-rose-100 text-rose-700 flex items-center justify-center shrink-0 shadow-2xs">
+                  <AlertCircle className="h-4 w-4" />
                 </div>
-                <span className="hidden sm:inline-flex items-center gap-1 text-[11px] font-bold text-emerald-800 bg-emerald-100/90 px-2 py-0.5 rounded-full border border-emerald-200/80 shrink-0">
-                  <TrendingUp className="h-3 w-3" />
-                  85.0%
+                <span className="text-xs font-bold text-slate-800 leading-tight truncate">
+                  Overdue Accounts
                 </span>
               </div>
 
-              <div className="mt-1.5 sm:mt-3 min-w-0">
-                <AmountDisplay amount={4250000} className="text-slate-900 font-extrabold" />
-              </div>
-
-              {/* Progress bar on desktop only */}
-              <div className="hidden sm:block mt-2 space-y-1">
-                <div className="h-1.5 w-full bg-emerald-100/90 rounded-full overflow-hidden">
-                  <div className="h-full bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full w-[85%]" />
-                </div>
-                <div className="flex items-center justify-between text-xs text-slate-500 pt-0.5">
-                  <span className="text-[10.5px] text-slate-500">Target: LKR 5,000,000.00</span>
-                  <span className="font-semibold text-emerald-700 text-[10.5px]">85% Pace</span>
+              <div className="mt-2">
+                <div className="text-base sm:text-lg font-extrabold text-rose-600 tracking-tight">
+                  2 Dealers
                 </div>
               </div>
             </div>
 
-            {/* Card 2: Route Collections */}
-            <div className="col-span-1 rounded-2xl sm:rounded-3xl border border-blue-200/90 bg-gradient-to-br from-blue-500/[0.08] via-sky-50/40 to-white p-2.5 sm:p-5 shadow-xs hover:shadow-sm transition-all relative overflow-hidden group min-w-0 flex flex-col justify-between">
-              <div>
-                <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
-                  <div className="h-7 w-7 sm:h-9 sm:w-9 rounded-lg sm:rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center shrink-0 shadow-2xs">
-                    <FileCheck2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                  </div>
-                  <span className="text-xs sm:text-sm font-bold text-slate-800 leading-tight truncate">
-                    Route Collections
-                  </span>
-                </div>
-
-                <div className="mt-1.5 sm:mt-3 min-w-0">
-                  <AmountDisplay amount={2650000} className="text-slate-900 font-extrabold" />
-                </div>
-              </div>
-
-              <div className="hidden sm:block mt-2 text-[11px] sm:text-xs text-blue-700 font-semibold">
-                89% verified
-              </div>
-            </div>
-
-            {/* Card 3: Cash to Hand Over */}
-            <div className="col-span-1 rounded-2xl sm:rounded-3xl border border-amber-200/90 bg-gradient-to-br from-amber-500/[0.08] via-amber-50/40 to-white p-2.5 sm:p-5 shadow-xs hover:shadow-sm transition-all relative overflow-hidden group min-w-0 flex flex-col justify-between">
-              <div>
-                <div className="flex items-center justify-between gap-1.5 sm:gap-2">
-                  <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
-                    <div className="h-7 w-7 sm:h-9 sm:w-9 rounded-lg sm:rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0 shadow-2xs">
-                      <Banknote className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                    </div>
-                    <span className="text-xs sm:text-sm font-bold text-slate-800 leading-tight truncate">
-                      Cash to Hand Over
-                    </span>
-                  </div>
-                  {cashToHandOver > 0 ? (
-                    <span className="hidden sm:inline-flex items-center gap-1 text-[10px] font-bold text-amber-800 bg-amber-100/90 px-2 py-0.5 rounded-full border border-amber-200/80 shrink-0">
-                      <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
-                      <span>To Hand Over</span>
-                    </span>
-                  ) : (
-                    <span className="hidden sm:inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-800 bg-emerald-100/90 px-2 py-0.5 rounded-full border border-emerald-200/80 shrink-0">
-                      <CheckCircle2 className="h-3 w-3 text-emerald-600" />
-                      <span>Settled</span>
-                    </span>
-                  )}
-                </div>
-
-                <div className="mt-1.5 sm:mt-3 min-w-0">
-                  <AmountDisplay amount={cashToHandOver} className="text-slate-900 font-extrabold" />
-                </div>
-              </div>
-
-              {/* Supporting info on desktop only */}
-              <div className="hidden sm:block mt-2 space-y-1.5">
-                <div className="text-[10.5px] sm:text-xs text-slate-500 flex items-center justify-between">
-                  <span>
-                    {pendingHandoverCount > 0
-                      ? `Field Cash: ${pendingHandoverCount} ${pendingHandoverCount === 1 ? 'collection' : 'collections'}`
-                      : 'All handed over'}
-                  </span>
-                  {cashToHandOver > 0 && (
-                    <span className="text-[10px] font-bold text-amber-700">
-                      <span>To Hand Over</span>
-                    </span>
-                  )}
-                </div>
-                {cashToHandOver > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => setCashHandoverModalOpen(true)}
-                    className="w-full inline-flex items-center justify-center gap-1 text-[10.5px] font-bold text-amber-900 bg-amber-200/80 hover:bg-amber-300 py-1 px-2 rounded-lg transition-all active:scale-95 shadow-2xs"
-                    title="Hand over collected cash to Finance Department"
-                  >
-                    <Send className="h-3 w-3" />
-                    <span>Hand Over</span>
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* Card 4: Earned Incentive */}
-            <div className="col-span-1 rounded-2xl sm:rounded-3xl border border-indigo-200/90 bg-gradient-to-br from-indigo-500/[0.08] via-purple-50/40 to-white p-2.5 sm:p-5 shadow-xs hover:shadow-sm transition-all relative overflow-hidden group min-w-0 flex flex-col justify-between">
-              <div>
-                <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
-                  <div className="h-7 w-7 sm:h-9 sm:w-9 rounded-lg sm:rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center shrink-0 shadow-2xs">
-                    <Target className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                  </div>
-                  <span className="text-xs sm:text-sm font-bold text-slate-800 leading-tight truncate">
-                    Earned Incentive
-                  </span>
-                </div>
-
-                <div className="mt-1.5 sm:mt-3 min-w-0">
-                  <AmountDisplay amount={127500} className="text-slate-900 font-extrabold" />
-                </div>
-              </div>
-
-              <div className="hidden sm:block mt-2 text-[11px] sm:text-xs text-indigo-700 font-semibold">
-                Tier 2 Commission (3.0%)
-              </div>
-            </div>
-
-            {/* Card 5: Overdue Accounts */}
-            <div className="col-span-1 rounded-2xl sm:rounded-3xl border border-rose-200/90 bg-gradient-to-br from-rose-500/[0.08] via-red-50/40 to-white p-2.5 sm:p-5 shadow-xs hover:shadow-sm transition-all relative overflow-hidden group min-w-0 flex flex-col justify-between">
-              <div>
-                <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
-                  <div className="h-7 w-7 sm:h-9 sm:w-9 rounded-lg sm:rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center shrink-0 shadow-2xs">
-                    <AlertCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                  </div>
-                  <span className="text-xs sm:text-sm font-bold text-slate-800 leading-tight truncate">
-                    Overdue Accounts
-                  </span>
-                </div>
-
-                <div className="mt-1.5 sm:mt-3">
-                  <div className="text-base sm:text-[22px] font-extrabold tracking-tight tabular-nums text-rose-600 leading-tight">
-                    2 Dealers
-                  </div>
-                </div>
-              </div>
-
-              <div className="hidden sm:block mt-2 text-[11px] sm:text-xs text-rose-700 font-semibold">
-                Total: LKR 450,000
-              </div>
+            <div className="mt-2 text-[11px] text-rose-700 font-semibold truncate">
+              Total: {formatCurrency(450000)}
             </div>
           </div>
         </div>
+      </div>
 
-      {/* 5. Main Dashboard Content Grid */}
+      {/* 4. Main Dashboard Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
-        {/* Pending Payments & Route Receivables (Formatted as native Mobile App Cards on phone screens) */}
-        <Card id="pending-receivables-section" className="lg:col-span-2 rounded-2xl sm:rounded-3xl border border-slate-200/80 shadow-xs bg-white overflow-hidden">
-            <CardHeader className="flex flex-row items-center justify-between pb-3 p-4 sm:p-6 border-b border-slate-100">
-              <div>
-                <CardTitle className="text-sm font-semibold text-slate-900 flex items-center gap-2">
-                  <CreditCard className="h-4 w-4 text-emerald-600" />
-                  Pending Payments & Route Receivables
-                </CardTitle>
-              </div>
-              <Link to="/payments/collect">
-                <Button variant="ghost" size="sm" className="text-xs text-primary gap-1 font-semibold hover:bg-primary-light">
-                  All Collections <ArrowRight className="h-3 w-3" />
-                </Button>
-              </Link>
-            </CardHeader>
+        {/* Pending Payments & Route Receivables */}
+        <Card id="pending-receivables-section" className="lg:col-span-2 rounded-2xl border border-slate-200/80 shadow-xs bg-white overflow-hidden">
+          <CardHeader className="flex flex-row items-center justify-between pb-3 p-3.5 sm:p-5 border-b border-slate-100">
+            <div>
+              <CardTitle className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                <CreditCard className="h-4 w-4 text-emerald-600" />
+                Pending Payments & Route Receivables
+              </CardTitle>
+            </div>
+            <Link to="/payments/collect">
+              <Button variant="ghost" size="sm" className="text-xs text-primary gap-1 font-semibold hover:bg-primary-light h-8 px-2">
+                All Collections <ArrowRight className="h-3 w-3" />
+              </Button>
+            </Link>
+          </CardHeader>
 
-            <CardContent className="p-3.5 sm:p-6 space-y-3">
-              {/* Mobile Filter Chips Bar (Quick touch toggles for field reps) */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-1">
-                <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
-                  <button
-                    type="button"
-                    onClick={() => setReceivablesFilter('all')}
-                    className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all ${
-                      receivablesFilter === 'all'
-                        ? 'bg-slate-900 text-white'
-                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                    }`}
-                  >
-                    All ({pendingAccounts.length})
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setReceivablesFilter('overdue')}
-                    className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all ${
-                      receivablesFilter === 'overdue'
-                        ? 'bg-rose-600 text-white'
-                        : 'bg-rose-50 text-rose-700 hover:bg-rose-100'
-                    }`}
-                  >
-                    Overdue (1)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setReceivablesFilter('current')}
-                    className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all ${
-                      receivablesFilter === 'current'
-                        ? 'bg-amber-600 text-white'
-                        : 'bg-amber-50 text-amber-700 hover:bg-amber-100'
-                    }`}
-                  >
-                    Within Terms (2)
-                  </button>
-                </div>
-                <div className="relative w-full sm:w-48">
-                  <Search className="absolute left-2.5 top-2 h-3.5 w-3.5 text-slate-400" />
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search dealer..."
-                    className="w-full h-7 pl-8 pr-7 rounded-lg bg-slate-50 border border-slate-200 text-slate-900 placeholder-slate-400 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
-                  />
-                  {searchQuery && (
-                    <button
-                      onClick={() => setSearchQuery('')}
-                      className="absolute right-2 top-1.5 text-slate-400 hover:text-slate-600"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  )}
-                </div>
+          <CardContent className="p-3.5 sm:p-5 space-y-3">
+            {/* Filter Chips Bar & Search Field */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-1">
+              <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+                <button
+                  type="button"
+                  onClick={() => setReceivablesFilter('all')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                    receivablesFilter === 'all'
+                      ? 'bg-slate-900 text-white shadow-2xs'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  All ({pendingAccounts.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setReceivablesFilter('overdue')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                    receivablesFilter === 'overdue'
+                      ? 'bg-rose-600 text-white shadow-2xs'
+                      : 'bg-rose-50 text-rose-700 hover:bg-rose-100'
+                  }`}
+                >
+                  Overdue (1)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setReceivablesFilter('current')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                    receivablesFilter === 'current'
+                      ? 'bg-amber-600 text-white shadow-2xs'
+                      : 'bg-amber-50 text-amber-700 hover:bg-amber-100'
+                  }`}
+                >
+                  Within Terms (2)
+                </button>
               </div>
 
-              {/* Account Rows / Mobile App Cards */}
-              <div className="space-y-3">
-                {filteredAccounts.map((pending) => (
-                  <div
-                    key={pending.id}
-                    className="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 sm:p-4 rounded-2xl border border-slate-200/80 bg-white hover:bg-slate-50/60 transition-all gap-3.5 shadow-2xs hover:shadow-xs"
+              <div className="relative w-full sm:w-56">
+                <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-slate-400" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search dealer or code..."
+                  className="w-full h-8 pl-8 pr-7 rounded-lg bg-slate-50 border border-slate-200 text-slate-900 placeholder-slate-400 text-xs focus:outline-none focus:ring-1 focus:ring-primary focus:bg-white transition-all"
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-2 top-2 text-slate-400 hover:text-slate-600 cursor-pointer"
                   >
-                    {/* Left: Dealer Avatar, Name, Code, Terms */}
-                    <div className="flex items-start gap-3 min-w-0">
-                      <div className="h-10 w-10 rounded-2xl bg-gradient-to-tr from-emerald-50 to-teal-50 text-emerald-700 border border-emerald-100 flex items-center justify-center shrink-0 mt-0.5 shadow-2xs">
-                        <CreditCard className="h-4 w-4" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <Link
-                            to={`/customers/${pending.id}`}
-                            className="text-xs sm:text-sm font-bold text-slate-900 hover:text-emerald-700 transition-colors truncate"
-                          >
-                            {pending.name}
-                          </Link>
-                          <span className="font-mono text-[10px] bg-slate-100 text-slate-700 px-2 py-0.5 rounded-md font-semibold whitespace-nowrap shrink-0">
-                            {pending.code}
-                          </span>
-                        </div>
-
-                        <div className="text-[11px] text-slate-500 flex items-center gap-1.5 mt-0.5">
-                          <span>Terms: {pending.creditDays}d</span>
-                          <span>•</span>
-                          <span className="text-slate-600 font-medium">{pending.contactPerson}</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Right: Amount, Status Badge, and Mobile Touch Actions */}
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between sm:justify-end gap-3 pt-2.5 sm:pt-0 border-t sm:border-0 border-slate-100">
-                      {/* Amount & Due Status */}
-                      <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-center">
-                        <div className="font-mono text-sm sm:text-xs font-extrabold text-slate-900">
-                          {formatCurrency(pending.amount)}
-                        </div>
-                        <Badge variant={pending.statusVariant} className="text-[10px] mt-0.5 rounded-full px-2">
-                          {pending.dueStatus}
-                        </Badge>
-                      </div>
-
-                      {/* Mobile Action Buttons: 1-Tap Call, WhatsApp, Collect */}
-                      <div className="flex items-center gap-2">
-                        {/* 1-Tap Call Dealer (Mobile Specific) */}
-                        <a
-                          href={`tel:${pending.phone.replace(/[^0-9+]/g, '')}`}
-                          aria-label={`Call ${pending.name}`}
-                          className="sm:hidden flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 active:scale-95 transition-all shrink-0 shadow-2xs"
-                          title="Call dealer"
-                        >
-                          <Phone className="h-4 w-4" />
-                        </a>
-
-                        {/* 1-Tap WhatsApp (Mobile Specific) */}
-                        <a
-                          href={whatsAppService.generateShareUrl(
-                            pending.phone,
-                            `Hello ${pending.contactPerson}, Kasun here from DNS Distribution regarding collection balance on account ${pending.code}.`
-                          )}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          aria-label={`WhatsApp ${pending.name}`}
-                          className="sm:hidden flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 active:scale-95 transition-all shrink-0 shadow-2xs"
-                          title="WhatsApp chat"
-                        >
-                          <MessageSquare className="h-4 w-4" />
-                        </a>
-
-                        {/* Collect Payment Button */}
-                        <Link
-                          to={`/payments/collect/${pending.id}`}
-                          className="flex-1 sm:flex-none"
-                        >
-                          <Button
-                            size="sm"
-                            className="w-full sm:w-auto h-10 sm:h-9 text-xs bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-semibold gap-1.5 shadow-xs rounded-xl active:scale-[0.98] border-0"
-                          >
-                            <DollarSign className="h-3.5 w-3.5 hidden sm:inline" /> Collect Payment
-                          </Button>
-                        </Link>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-
-                {filteredAccounts.length === 0 && (
-                  <div className="p-6 text-center bg-slate-50 rounded-2xl border border-slate-200 text-xs text-slate-500">
-                    No matching pending accounts found.
-                  </div>
+                    <X className="h-3.5 w-3.5" />
+                  </button>
                 )}
               </div>
-            </CardContent>
-          </Card>
+            </div>
 
-        {/* Live Order Tracking (Section 20 - Arranged as Mobile App Delivery Tracking Cards) */}
-        <Card className="rounded-2xl sm:rounded-3xl border border-slate-200/80 shadow-xs bg-white overflow-hidden">
-          <CardHeader className="p-4 sm:p-6 pb-3 border-b border-slate-100 flex flex-row items-center justify-between">
+            {/* Dealer Account Cards */}
+            <div className="space-y-2.5">
+              {filteredAccounts.map((pending) => (
+                <div
+                  key={pending.id}
+                  className={`p-3.5 rounded-xl border transition-all ${
+                    pending.isOverdue
+                      ? 'border-l-4 border-l-rose-500 border-slate-200/90 bg-rose-50/20 hover:bg-rose-50/40'
+                      : 'border-l-4 border-l-amber-400 border-slate-200/90 bg-white hover:bg-slate-50/80'
+                  } shadow-2xs hover:shadow-xs`}
+                >
+                  {/* Top Line: Dealer Name, Code, and Balance Amount */}
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <Link
+                          to={`/customers/${pending.id}`}
+                          className="text-xs sm:text-sm font-bold text-slate-900 hover:text-primary transition-colors"
+                        >
+                          {pending.name}
+                        </Link>
+                        <span className="font-mono text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded font-semibold shrink-0">
+                          {pending.code}
+                        </span>
+                      </div>
+                      <div className="text-[11px] text-slate-500 flex items-center gap-1.5 mt-0.5 flex-wrap">
+                        <span>Terms: {pending.creditDays}d</span>
+                        <span>•</span>
+                        <span className="text-slate-600 font-medium">{pending.contactPerson}</span>
+                      </div>
+                    </div>
+
+                    <div className="text-right shrink-0">
+                      <div className="font-mono text-xs sm:text-sm font-extrabold text-slate-900">
+                        {formatCurrency(pending.amount)}
+                      </div>
+                      <Badge variant={pending.statusVariant} className="text-[10px] mt-0.5 rounded-full px-2">
+                        {pending.dueStatus}
+                      </Badge>
+                    </div>
+                  </div>
+
+                  {/* Bottom Line: Touch Actions (Call, WhatsApp, Collect Payment) */}
+                  <div className="flex items-center gap-2 pt-2.5 mt-2.5 border-t border-slate-100/90">
+                    {/* Call Dealer */}
+                    <a
+                      href={`tel:${pending.phone.replace(/[^0-9+]/g, '')}`}
+                      aria-label={`Call ${pending.name}`}
+                      className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 active:scale-95 transition-all shrink-0 shadow-2xs cursor-pointer"
+                      title="Call dealer"
+                    >
+                      <Phone className="h-4 w-4" />
+                    </a>
+
+                    {/* WhatsApp */}
+                    <a
+                      href={whatsAppService.generateShareUrl(
+                        pending.phone,
+                        `Hello ${pending.contactPerson}, Kasun here from DNS Distribution regarding collection balance on account ${pending.code}.`
+                      )}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label={`WhatsApp ${pending.name}`}
+                      className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 active:scale-95 transition-all shrink-0 shadow-2xs cursor-pointer"
+                      title="WhatsApp chat"
+                    >
+                      <MessageSquare className="h-4 w-4" />
+                    </a>
+
+                    {/* Collect Payment */}
+                    <Link
+                      to={`/payments/collect/${pending.id}`}
+                      className="flex-1"
+                    >
+                      <Button
+                        size="sm"
+                        className="w-full h-9 text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-semibold gap-1.5 shadow-2xs rounded-lg active:scale-[0.98] border-0"
+                      >
+                        <DollarSign className="h-3.5 w-3.5" /> Collect Payment
+                      </Button>
+                    </Link>
+                  </div>
+                </div>
+              ))}
+
+              {filteredAccounts.length === 0 && (
+                <div className="p-6 text-center bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-500">
+                  No matching pending accounts found.
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Recent Order Status Tracking */}
+        <Card className="rounded-2xl border border-slate-200/80 shadow-xs bg-white overflow-hidden">
+          <CardHeader className="p-3.5 sm:p-5 pb-3 border-b border-slate-100 flex flex-row items-center justify-between">
             <div>
-              <CardTitle className="text-sm font-semibold text-slate-900">
+              <CardTitle className="text-sm font-bold text-slate-900">
                 Recent Order Status Tracking
               </CardTitle>
               <p className="text-xs text-slate-500 mt-0.5">
@@ -823,52 +733,61 @@ export function SalesRepDashboard() {
               </p>
             </div>
             <Link to="/orders">
-              <Button variant="ghost" size="sm" className="text-xs text-emerald-700 font-semibold gap-0.5 p-1 h-7 hover:bg-emerald-50">
-                All <ChevronRight className="h-3 w-3" />
+              <Button variant="ghost" size="sm" className="text-xs text-primary font-semibold gap-0.5 p-1 h-7 hover:bg-primary-light">
+                All <ChevronRight className="h-3.5 w-3.5" />
               </Button>
             </Link>
           </CardHeader>
 
-          <CardContent className="p-3.5 sm:p-6">
-            <div className="space-y-3 sm:space-y-4">
+          <CardContent className="p-3.5 sm:p-5">
+            <div className="space-y-3">
               {recentOrders.map((order) => (
                 <div
                   key={order.id}
                   onClick={() => navigate('/orders')}
-                  className="p-3.5 sm:p-4 rounded-2xl border border-slate-200/80 bg-white hover:bg-slate-50/50 transition-all shadow-2xs space-y-2.5 cursor-pointer active:scale-[0.99]"
+                  className="p-3.5 rounded-xl border border-slate-200/80 bg-white hover:border-slate-300 transition-all shadow-2xs space-y-2.5 cursor-pointer active:scale-[0.99]"
                 >
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-1.5">
-                      <span className="font-mono font-bold text-xs text-emerald-800 bg-emerald-50 border border-emerald-200/60 px-2 py-0.5 rounded-md whitespace-nowrap shrink-0">
+                      <span className="font-mono font-bold text-xs text-primary bg-primary-light/60 border border-primary/20 px-2 py-0.5 rounded-md whitespace-nowrap shrink-0">
                         {order.orderNumber}
                       </span>
+                      <span className="text-xs font-bold text-slate-900 truncate">
+                        {order.customerName}
+                      </span>
                     </div>
-                    <Badge variant={order.statusVariant} className="text-[10px] rounded-full px-2">
+                    <Badge variant={order.statusVariant} className="text-[10px] rounded-full px-2 shrink-0">
                       {order.status}
                     </Badge>
                   </div>
 
-                  <div className="text-xs font-semibold text-slate-800">
-                    {order.customerName}
-                  </div>
-
-                  {/* Native App Stepper Indicator */}
-                  <div className="p-2.5 rounded-xl bg-slate-50/80 border border-slate-100 space-y-1.5 text-[11px]">
+                  {/* Clean Timeline Stepper without heavy nested borders */}
+                  <div className="pt-1 space-y-1.5">
                     {order.steps.map((step, idx) => (
                       <div
                         key={idx}
-                        className={`flex items-center gap-2 ${
+                        className={`flex items-center gap-2 text-xs ${
                           step.state === 'done'
                             ? 'text-emerald-700 font-medium'
                             : step.state === 'current'
-                            ? 'text-amber-700 font-semibold'
+                            ? 'text-amber-700 font-bold'
                             : 'text-slate-400'
                         }`}
                       >
-                        <span className="shrink-0 text-xs">
-                          {step.state === 'done' && '✓'}
-                          {step.state === 'current' && '●'}
-                          {step.state === 'pending' && '○'}
+                        <span className="flex h-4 w-4 items-center justify-center rounded-full shrink-0 text-[10px]">
+                          {step.state === 'done' && (
+                            <span className="flex h-3.5 w-3.5 items-center justify-center rounded-full bg-emerald-500 text-white font-bold text-[9px]">
+                              ✓
+                            </span>
+                          )}
+                          {step.state === 'current' && (
+                            <span className="flex h-3.5 w-3.5 items-center justify-center rounded-full bg-amber-400 text-amber-900 font-black text-[9px] animate-pulse">
+                              ●
+                            </span>
+                          )}
+                          {step.state === 'pending' && (
+                            <span className="h-3 w-3 rounded-full border border-slate-300" />
+                          )}
                         </span>
                         <span className="truncate">{step.label}</span>
                       </div>
