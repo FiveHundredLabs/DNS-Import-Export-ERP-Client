@@ -196,7 +196,7 @@ export function SalesRepDashboard() {
   }, [pendingAccounts, receivablesFilter, searchQuery]);
 
   return (
-    <div className="space-y-4 sm:space-y-6 pb-24 md:pb-6 max-w-7xl mx-auto">
+    <div className="w-full space-y-4 sm:space-y-6 pb-24 md:pb-6">
       {/* 1. Header Banner:
           - MOBILE (< md): Curved brand header in primary gradient, fluid waves, mobile search
           - DESKTOP (md:): Clean enterprise white card, standard layout, desktop actions

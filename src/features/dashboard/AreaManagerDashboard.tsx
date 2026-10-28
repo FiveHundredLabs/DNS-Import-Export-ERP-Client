@@ -124,7 +124,7 @@ export function AreaManagerDashboard() {
   ];
 
   return (
-    <div className="space-y-4 max-w-5xl mx-auto pb-4">
+    <div className="w-full space-y-4 pb-4">
       {/* 1. Mobile Header & Territory Banner */}
       <div className="rounded-2xl bg-white text-slate-900 p-4 sm:p-6 shadow-xs border border-slate-200">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">

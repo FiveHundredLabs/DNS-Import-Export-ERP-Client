@@ -19,7 +19,7 @@ export function PurchaseReturnsPlaceholderPage() {
   const navigate = useNavigate();
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto py-6">
+    <div className="space-y-6 w-full py-6">
       {/* Header */}
       <div className="flex items-center gap-3 pb-2 border-b border-slate-200">
         <Button
