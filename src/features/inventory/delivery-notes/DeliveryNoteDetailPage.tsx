@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card';
 import { Button } from '../../../components/ui/button';
@@ -10,6 +10,7 @@ import { deliveryNoteService } from '../../../services/DeliveryNoteService';
 import { DeliveryNote, SubmitRejectionPayload } from '../../../types/deliveryNote';
 import { PrintableDeliveryNote } from './PrintableDeliveryNote';
 import { CustomerRejectionModal } from './CustomerRejectionModal';
+import { DeliveryNoteBarcodeModal } from './DeliveryNoteBarcodeModal';
 import { useAuth } from '../../../hooks/useAuth';
 import {
   Truck,
@@ -41,6 +42,9 @@ export const DeliveryNoteDetailPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [showPrintModal, setShowPrintModal] = useState(false);
   const [showRejectionModal, setShowRejectionModal] = useState(false);
+  const [showBarcodeModal, setShowBarcodeModal] = useState(false);
+  const [barcodeFilterProduct, setBarcodeFilterProduct] = useState<string>('ALL');
+  const [barcodeSingleCode, setBarcodeSingleCode] = useState<string | undefined>(undefined);
 
   // Quick edit mode for driver/vehicle
   const [isEditing, setIsEditing] = useState(false);
@@ -96,6 +100,17 @@ export const DeliveryNoteDetailPage: React.FC = () => {
       [itemId]: !prev[itemId],
     }));
   };
+
+  const barcodeItems = useMemo(() => {
+    if (!note) return [];
+    return note.items.map((i) => ({
+      productId: i.productId,
+      productName: i.productName,
+      sku: i.sku,
+      uom: i.uom || 'PCS',
+      unitBarcodes: i.unitBarcodes,
+    }));
+  }, [note]);
 
   const handleSaveEdit = async () => {
     if (!note) return;
@@ -308,6 +323,20 @@ export const DeliveryNoteDetailPage: React.FC = () => {
           >
             <Printer className="h-3.5 w-3.5 text-primary" />
             Print Delivery Note
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setBarcodeFilterProduct('ALL');
+              setBarcodeSingleCode(undefined);
+              setShowBarcodeModal(true);
+            }}
+            className="text-xs gap-1.5 border-slate-300 text-slate-800 hover:text-primary font-semibold"
+          >
+            <Barcode className="h-3.5 w-3.5 text-primary" />
+            Print Barcode Stickers
           </Button>
 
           {note.status === 'DISPATCHED' && (
@@ -642,22 +671,38 @@ export const DeliveryNoteDetailPage: React.FC = () => {
                         {item.rejectedQuantity > 0 ? item.rejectedQuantity : '0'}
                       </TableCell>
                       <TableCell className="text-center">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => handleToggleExpand(item.id)}
-                          className="h-7 px-2 text-xs text-primary gap-1"
-                        >
-                          {isExpanded ? (
-                            <>
-                              Hide <ChevronUp className="h-3 w-3" />
-                            </>
-                          ) : (
-                            <>
-                              View ({item.unitBarcodes.length}) <ChevronDown className="h-3 w-3" />
-                            </>
-                          )}
-                        </Button>
+                        <div className="flex items-center justify-center gap-1">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleToggleExpand(item.id)}
+                            className="h-7 px-2 text-xs text-primary gap-1"
+                          >
+                            {isExpanded ? (
+                              <>
+                                Hide <ChevronUp className="h-3 w-3" />
+                              </>
+                            ) : (
+                              <>
+                                View ({item.unitBarcodes.length}) <ChevronDown className="h-3 w-3" />
+                              </>
+                            )}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              setBarcodeFilterProduct(item.productId);
+                              setBarcodeSingleCode(undefined);
+                              setShowBarcodeModal(true);
+                            }}
+                            title={`Print ${item.unitBarcodes.length} unit barcode stickers`}
+                            className="h-7 px-2 text-[11px] gap-1 text-primary border-primary/30 hover:bg-primary/5 font-semibold"
+                          >
+                            <Printer className="h-3 w-3" />
+                            Print ({item.unitBarcodes.length})
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
 
@@ -700,6 +745,20 @@ export const DeliveryNoteDetailPage: React.FC = () => {
                                     ) : (
                                       <Check className="h-3 w-3 text-emerald-600" />
                                     )}
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => {
+                                        setBarcodeFilterProduct('ALL');
+                                        setBarcodeSingleCode(barcode);
+                                        setShowBarcodeModal(true);
+                                      }}
+                                      title="Print this single unit barcode sticker"
+                                      className="h-5 w-5 p-0 text-slate-400 hover:text-primary ml-0.5"
+                                    >
+                                      <Printer className="h-3 w-3" />
+                                    </Button>
                                   </span>
                                 );
                               })}
@@ -728,6 +787,20 @@ export const DeliveryNoteDetailPage: React.FC = () => {
           isOpen={showRejectionModal}
           onClose={() => setShowRejectionModal(false)}
           onSubmit={handleSubmitRejection}
+        />
+      )}
+
+      {/* ── Unit Barcode Stickers Modal (Bulk, Item-wise & One-by-One Print) ── */}
+      {note && showBarcodeModal && (
+        <DeliveryNoteBarcodeModal
+          isOpen={showBarcodeModal}
+          onClose={() => setShowBarcodeModal(false)}
+          deliveryNoteNumber={note.deliveryNoteNumber}
+          invoiceNumber={note.invoiceNumber}
+          customerName={note.customerName}
+          items={barcodeItems}
+          initialProductId={barcodeFilterProduct}
+          initialSingleBarcode={barcodeSingleCode}
         />
       )}
     </div>
