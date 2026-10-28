@@ -29,10 +29,9 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { formatCurrency } from '../../utils/formatters';
+import { DirectorInteractiveBarChart } from './components/DirectorInteractiveBarChart';
 import {
   ResponsiveContainer,
-  LineChart,
-  Line,
   XAxis,
   YAxis,
   Tooltip,
@@ -42,16 +41,6 @@ import {
   AreaChart,
   Area,
 } from 'recharts';
-
-// Sales Trends by Products data (Monthly in thousands)
-const PRODUCT_TRENDS_DATA = [
-  { month: 'January', pumps: 240, solar: 180, switchgear: 310, cables: 200, generators: 220 },
-  { month: 'February', pumps: 350, solar: 290, switchgear: 420, cables: 310, generators: 260 },
-  { month: 'March', pumps: 280, solar: 220, switchgear: 340, cables: 250, generators: 380 },
-  { month: 'April', pumps: 510, solar: 380, switchgear: 490, cables: 410, generators: 320 },
-  { month: 'May', pumps: 440, solar: 420, switchgear: 390, cables: 350, generators: 450 },
-  { month: 'June', pumps: 590, solar: 460, switchgear: 540, cables: 480, generators: 370 },
-];
 
 // Daily settlement payment mix for Donut chart
 const SETTLEMENT_MIX = [
@@ -87,20 +76,6 @@ export function DirectorDashboard() {
     } else {
       setSearchParams({});
     }
-  };
-
-  // Custom Tooltip matching reference screenshot floating pill
-  const CustomLineTooltip = ({ active, payload, label }: any) => {
-    if (active && payload && payload.length) {
-      const topVal = payload[0].value;
-      return (
-        <div className="bg-white text-slate-900 px-3 py-1.5 rounded-full text-xs font-semibold shadow-md border border-slate-200 flex items-center gap-1.5 animate-in fade-in zoom-in-95">
-          <span className="h-2 w-2 rounded-full bg-emerald-500" />
-          <span>{label}: LKR {topVal}k</span>
-        </div>
-      );
-    }
-    return null;
   };
 
   if (activeTab === 'settings' && isDirector) {
@@ -219,105 +194,9 @@ export function DirectorDashboard() {
 
       {/* Middle Section: Sales Trends by Products (8 cols) + Regional Performance (4 cols) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left: Sales Trends by Products (8 cols) */}
-        <Card className="lg:col-span-8 bg-white border border-slate-200/80 rounded-2xl shadow-sm p-5 sm:p-6 flex flex-col justify-between">
-          <div>
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-              <div className="flex items-center gap-2">
-                <h2 className="text-base font-bold text-slate-800 tracking-tight">
-                  Sales Trends by Products
-                </h2>
-                <Info className="h-3.5 w-3.5 text-slate-300 hover:text-slate-400 cursor-pointer" />
-              </div>
-
-              {/* Product Color Legend (as in screenshot) */}
-              <div className="flex flex-wrap items-center gap-3 text-xs font-semibold text-slate-600">
-                <span className="flex items-center gap-1.5">
-                  <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
-                  Pumps
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <span className="h-2.5 w-2.5 rounded-full bg-amber-500" />
-                  Solar
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <span className="h-2.5 w-2.5 rounded-full bg-primary-light" />
-                  Switchgear
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <span className="h-2.5 w-2.5 rounded-full bg-purple-500" />
-                  Cables
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <span className="h-2.5 w-2.5 rounded-full bg-rose-500" />
-                  Generators
-                </span>
-              </div>
-            </div>
-
-            {/* Recharts Line Chart */}
-            <div className="h-[250px] w-full pt-2">
-              <ResponsiveContainer width="100%" height="100%" minWidth={200}>
-                <LineChart data={PRODUCT_TRENDS_DATA} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                  <XAxis
-                    dataKey="month"
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fill: '#94A3B8', fontSize: 11, fontWeight: 500 }}
-                    dy={8}
-                  />
-                  <YAxis
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fill: '#94A3B8', fontSize: 10 }}
-                    tickFormatter={(val) => `LKR ${val}k`}
-                  />
-                  <Tooltip content={<CustomLineTooltip />} />
-                  <Line
-                    type="monotone"
-                    dataKey="pumps"
-                    stroke="#10B981"
-                    strokeWidth={2.5}
-                    dot={{ r: 3, fill: '#10B981' }}
-                    activeDot={{ r: 6, fill: '#10B981', stroke: '#fff', strokeWidth: 2 }}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="solar"
-                    stroke="#F59E0B"
-                    strokeWidth={2.5}
-                    dot={{ r: 3, fill: '#F59E0B' }}
-                    activeDot={{ r: 6, fill: '#F59E0B', stroke: '#fff', strokeWidth: 2 }}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="switchgear"
-                    stroke="var(--primary-color)"
-                    strokeWidth={2.5}
-                    dot={{ r: 3, fill: 'var(--primary-color)' }}
-                    activeDot={{ r: 6, fill: 'var(--primary-color)', stroke: '#fff', strokeWidth: 2 }}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="cables"
-                    stroke="#8B5CF6"
-                    strokeWidth={2.5}
-                    dot={{ r: 3, fill: '#8B5CF6' }}
-                    activeDot={{ r: 6, fill: '#8B5CF6', stroke: '#fff', strokeWidth: 2 }}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="generators"
-                    stroke="#F43F5E"
-                    strokeWidth={2.5}
-                    dot={{ r: 3, fill: '#F43F5E' }}
-                    activeDot={{ r: 6, fill: '#F43F5E', stroke: '#fff', strokeWidth: 2 }}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-        </Card>
+        {/* Left: Interactive Bar Chart (8 cols) — Shadcn Component in Light Mode */}
+        <DirectorInteractiveBarChart />
+        
 
         {/* Right: Regional Performance / Growth (4 cols) (Reference screenshot "User Growth") */}
         <Card className="lg:col-span-4 bg-white border border-slate-200/80 rounded-2xl shadow-sm p-5 sm:p-6 flex flex-col justify-between">

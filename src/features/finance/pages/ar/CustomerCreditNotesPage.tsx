@@ -748,7 +748,7 @@ export function CustomerCreditNotesPage() {
 
       {/* CREATE TAB: Issue Customer Credit Note Form */}
       {activeTab === 'CREATE' && (
-        <div className="space-y-4 max-w-4xl">
+        <div className="space-y-4 w-full">
           <Button
             variant="ghost"
             size="sm"

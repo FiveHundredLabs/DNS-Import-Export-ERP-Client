@@ -220,26 +220,15 @@ export function SalesRepDashboard() {
   }, [pendingAccounts, receivablesFilter, searchQuery]);
 
   return (
-    <div className="space-y-4 sm:space-y-6 pb-28 sm:pb-32 md:pb-8 max-w-7xl mx-auto">
-      {/* 1. Top Greeting & Territory Card (Seamless Navy Header Extension) */}
-      <div className="relative -mx-3.5 -mt-3.5 md:mx-0 md:mt-0 px-4 pt-3 pb-4 sm:px-6 sm:pt-4 sm:pb-5 md:p-6 rounded-b-2xl md:rounded-2xl bg-gradient-to-b from-primary to-[#0f2452] md:from-white md:to-white text-primary-foreground md:text-slate-900 border-b border-primary/20 md:border md:border-slate-200/90 shadow-sm md:shadow-xs transition-all">
-        <div className="flex items-center gap-3.5">
-          {/* User Avatar Squircle (Mobile only - Links to Profile) */}
-          <Link
-            to="/profile"
-            className="flex md:hidden h-11 w-11 shrink-0 items-center justify-center rounded-xl overflow-hidden bg-white/15 text-white font-bold text-xs ring-1.5 ring-white/25 shadow-xs transition-transform active:scale-95"
-            title="View Profile"
-          >
-            {currentUser?.avatarUrl ? (
-              <img
-                src={currentUser.avatarUrl}
-                alt={currentUser.name || 'User'}
-                className="h-full w-full object-cover"
-              />
-            ) : (
-              <span>{userInitials}</span>
-            )}
-          </Link>
+    <div className="w-full space-y-4 sm:space-y-6 pb-24 md:pb-6">
+      {/* 1. Header Banner:
+          - MOBILE (< md): Curved brand header in primary gradient, fluid waves, mobile search
+          - DESKTOP (md:): Clean enterprise white card, standard layout, desktop actions
+      */}
+      <div className="relative -mx-3.5 -mt-3.5 md:mx-0 md:mt-0 p-5 md:p-6 pb-7 md:pb-6 rounded-b-[2.5rem] md:rounded-2xl bg-gradient-to-br from-primary via-primary-hover to-primary-active md:from-white md:via-white md:to-white text-primary-foreground md:text-slate-900 shadow-md md:shadow-xs shadow-primary/20 md:border md:border-slate-200/90 overflow-hidden md:overflow-visible transition-all">
+        {/* Fluid Decorative Ambient Waves (Mobile only) */}
+        <div className="block md:hidden absolute -top-12 -right-12 w-48 h-48 rounded-full bg-white/10 blur-2xl pointer-events-none" />
+        <div className="block md:hidden absolute -bottom-10 -left-10 w-40 h-40 rounded-full bg-white/5 blur-xl pointer-events-none" />
 
           <div className="min-w-0 flex-1">
             {/* 1. Greeting & Name (First) */}

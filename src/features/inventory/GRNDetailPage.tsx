@@ -324,7 +324,7 @@ export function GRNDetailPage() {
     ) || 0;
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="w-full space-y-6">
       {/* ── Finance & Warehouse Read-Only Inspection Mode Banner ── */}
       <div className="p-4 bg-slate-900 text-white rounded-2xl shadow-xs flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs">
         <div className="flex items-center gap-2.5">

@@ -199,7 +199,7 @@ export function OrderActivityLogPage() {
   }, [filteredActivities]);
 
   return (
-    <div className="space-y-4 w-full pb-24 md:pb-10 max-w-5xl mx-auto px-2 sm:px-4">
+    <div className="space-y-4 w-full pb-24 md:pb-10">
       {/* 1. Header with Title & Navigation */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
         <div>

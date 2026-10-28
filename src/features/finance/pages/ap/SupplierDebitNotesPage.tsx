@@ -361,7 +361,7 @@ export function SupplierDebitNotesPage() {
 
       {/* View 1: ISSUE DEBIT NOTE FORM */}
       {activeTab === 'CREATE' && (
-        <Card className="p-6 border-slate-200 max-w-4xl mx-auto bg-white shadow-xs">
+        <Card className="p-6 border-slate-200 w-full bg-white shadow-xs">
           <form onSubmit={handlePostDebitNote} className="space-y-6">
             <div className="border-b border-slate-100 pb-3 flex items-center justify-between">
               <div>

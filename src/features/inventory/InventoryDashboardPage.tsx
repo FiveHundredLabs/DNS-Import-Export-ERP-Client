@@ -114,28 +114,30 @@ export function InventoryDashboardPage() {
     serialNumberService.getAll().then((data) => setSerials(data));
   }, []);
 
-  // Compute product-level sales order commitments (Reserved, Dispatched, Delivered)
-  const productOrderStats = useMemo(() => {
-    const map: Record<string, { reserved: number; dispatched: number; delivered: number }> = {};
-    orders.forEach((ord) => {
-      ord.items?.forEach((it) => {
-        if (!map[it.productId]) {
-          map[it.productId] = { reserved: 0, dispatched: 0, delivered: 0 };
-        }
-        const qty = it.approvedQuantity || it.orderedQuantity || 0;
-        if (['APPROVED', 'PICKING', 'PARTIALLY_ISSUED', 'ISSUED', 'INVOICED'].includes(ord.status)) {
-          map[it.productId].reserved += qty;
-        } else if (ord.status === 'DISPATCHED') {
-          map[it.productId].dispatched += qty;
-        } else if (ord.status === 'DELIVERED') {
-          map[it.productId].delivered += qty;
-        }
-      });
-    });
-    return map;
-  }, [orders]);
+// Helper: Strict Power Tools classification filter for Stock Keeper Inventory Hub
+function isPowerToolItem(item: { productId?: string; sku?: string; categoryName?: string; productName?: string }): boolean {
+  if (item.productId?.startsWith('prod-pt-')) return true;
+  if (item.sku?.startsWith('DNS-PT-')) return true;
+  if (item.categoryName?.toLowerCase().includes('power tool')) return true;
+  const name = (item.productName || '').toLowerCase();
+  return (
+    name.includes('bosch') ||
+    name.includes('makita') ||
+    name.includes('dewalt') ||
+    name.includes('milwaukee') ||
+    name.includes('stanley') ||
+    name.includes('rotary hammer') ||
+    name.includes('angle grinder') ||
+    name.includes('impact wrench') ||
+    name.includes('circular saw') ||
+    name.includes('demolition breaker') ||
+    name.includes('jigsaw') ||
+    name.includes('router') ||
+    name.includes('multi-tool')
+  );
+}
 
-  // Compute flattened stock items directly generated and received from all GRNs with lifecycle status breakdown
+  // Compute flattened stock items directly generated and received from all GRNs
   const flatStockItems: FlatGRNStockItem[] = useMemo(() => {
     if (!grns || grns.length === 0) return [];
 
@@ -174,6 +176,14 @@ export function InventoryDashboardPage() {
         const unitCost = item.unitCostSnapshot ?? item.unitCost ?? product?.pricing?.costPrice ?? 0;
         const lineValue = availableQty * unitCost;
         const barcodesCount = item.unitRecords?.length || item.unitBarcodes?.length || goodQty;
+        const pName = product?.name || item.productNameSnapshot || item.productId;
+        const pSku = product?.sku || item.skuSnapshot || 'N/A';
+        const pCategory = product?.categoryName || 'Industrial Power Tools';
+
+        // Filter: Storekeeper inventory hub strictly keeps ONLY realistic power tools!
+        if (!isPowerToolItem({ productId: item.productId, sku: pSku, categoryName: pCategory, productName: pName })) {
+          return;
+        }
 
         list.push({
           keyId: `${grn.id}-${item.productId}-${idx}`,
@@ -184,9 +194,9 @@ export function InventoryDashboardPage() {
           grnStatus: grn.status,
           grnDate: grn.receivedDate || grn.createdAt || grn.submittedAt || '',
           productId: item.productId,
-          productName: product?.name || item.productNameSnapshot || item.productId,
-          sku: product?.sku || item.skuSnapshot || 'N/A',
-          categoryName: product?.categoryName || 'Electrical Components',
+          productName: pName,
+          sku: pSku,
+          categoryName: pCategory,
           expectedQuantity: item.expectedQuantity || item.receivedQuantity || 0,
           receivedQuantity: item.receivedQuantity || 0,
           damagedQuantity: damagedQty,
@@ -209,7 +219,33 @@ export function InventoryDashboardPage() {
     return list;
   }, [grns, productOrderStats]);
 
-  // Operational KPIs reflecting the 5 key operational statuses
+  // Power tool filtered GRNs for Storekeeper inventory hub
+  const powerToolGrns = useMemo(() => {
+    return (grns || []).filter((g) =>
+      g.items?.some((item: any) => {
+        const prod = MOCK_PRODUCTS.find((p) => p.id === item.productId);
+        return isPowerToolItem({
+          productId: item.productId,
+          sku: prod?.sku || item.skuSnapshot,
+          categoryName: prod?.categoryName,
+          productName: prod?.name || item.productNameSnapshot,
+        });
+      })
+    );
+  }, [grns]);
+
+  // Power tool filtered serials for Storekeeper inventory hub
+  const powerToolSerials = useMemo(() => {
+    return serials.filter((sn) =>
+      isPowerToolItem({
+        productId: sn.productId,
+        sku: sn.sku,
+        productName: sn.productName,
+      })
+    );
+  }, [serials]);
+
+  // Operational KPIs
   const kpis = useMemo(() => {
     let totalAvailableUnits = 0;
     let totalReservedUnits = 0;
@@ -255,7 +291,7 @@ export function InventoryDashboardPage() {
       pendingGRNs,
       approvedGRNs,
     };
-  }, [flatStockItems, grns]);
+  }, [flatStockItems, powerToolGrns]);
 
   // Filtered stock items based on search, GRN, and status-wise quick filters
   const filteredStockItems = useMemo(() => {
@@ -408,7 +444,7 @@ export function InventoryDashboardPage() {
       kpis.totalDamagedUnits) || 1;
 
   return (
-    <div className="p-4 sm:p-6 space-y-6 max-w-7xl mx-auto">
+    <div className="w-full space-y-6">
       {/* ── Page Header ── */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-200">
         <div>
@@ -424,9 +460,12 @@ export function InventoryDashboardPage() {
             <Badge variant="outline" className="text-slate-600 text-[11px] bg-slate-50 font-mono">
               Stock Keeper Operations
             </Badge>
+            <Badge className="bg-blue-600 text-white font-mono text-[11px] gap-1 shadow-2xs">
+              Industrial Power Tools Division
+            </Badge>
           </div>
           <p className="text-xs sm:text-sm text-slate-500 mt-1 max-w-3xl">
-            Real-time physical stock registry generated directly from inward Goods Receipt Notes (GRN).
+            Real-time physical stock registry for professional power tools (Bosch, Makita, DeWalt, Milwaukee, Stanley FatMax) generated directly from inward Goods Receipt Notes (GRN).
             Track received quantities, damaged quarantine units, landed costs, Code-128 unit barcodes, and manufacturer serial numbers.
           </p>
         </div>
@@ -593,6 +632,12 @@ export function InventoryDashboardPage() {
                 <DollarSign className="h-4 w-4 sm:h-5 sm:w-5" />
               </div>
             </div>
+            <div className="text-xl sm:text-2xl font-black font-mono text-slate-900 tabular-nums">
+              {powerToolGrns.length} Total
+            </div>
+            <p className="text-[10px] text-slate-500 mt-0.5 truncate">
+              {kpis.approvedGRNs} approved · {kpis.pendingGRNs} pending
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -625,7 +670,7 @@ export function InventoryDashboardPage() {
             )}
           >
             <Warehouse className="h-4 w-4" />
-            Inward GRN Shipments ({grns?.length || 0})
+            Inward GRN Shipments ({powerToolGrns.length})
           </button>
 
           <button
@@ -653,7 +698,7 @@ export function InventoryDashboardPage() {
             )}
           >
             <Hash className="h-4 w-4" />
-            Serial Registry ({serials.length})
+            Serial Registry ({powerToolSerials.length})
           </button>
         </div>
       </div>
@@ -1002,7 +1047,7 @@ export function InventoryDashboardPage() {
       {activeTab === 'GRN_LIST' && (
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {grns?.map((grn) => {
+            {powerToolGrns.map((grn) => {
               const itemsCount = grn.items?.length || 0;
               const totalUnits =
                 grn.items?.reduce(
@@ -1193,7 +1238,7 @@ export function InventoryDashboardPage() {
                 Physical Unit Serial Numbers Registry
               </CardTitle>
               <p className="text-xs text-slate-500 mt-0.5">
-                Every serialized electrical unit tracked from inward GRN receiving through warehouse bins.
+                Every serialized industrial power tool tracked from inward GRN receiving through warehouse bays.
               </p>
             </div>
           </CardHeader>
@@ -1212,7 +1257,7 @@ export function InventoryDashboardPage() {
                 </TableRow>
               </TableHeader>
               <TableBody className="divide-y divide-slate-100 font-mono">
-                {serials.slice(0, 15).map((sn) => (
+                {powerToolSerials.map((sn) => (
                   <TableRow key={sn.id} className="hover:bg-slate-50">
                     <TableCell className="font-bold text-indigo-800">{sn.serialNumber}</TableCell>
                     <TableCell className="font-sans font-medium text-slate-900">{sn.productName}</TableCell>

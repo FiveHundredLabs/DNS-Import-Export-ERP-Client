@@ -126,7 +126,7 @@ export function GRNListPage() {
   };
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="w-full space-y-6">
       {/* ── Page Header & Quick Actions ── */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
