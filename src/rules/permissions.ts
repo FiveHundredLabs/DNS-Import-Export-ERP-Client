@@ -25,6 +25,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'inventory:grn_create',
     'inventory:grn_approve',
     'inventory:pick_issue',
+    'inventory:damaged_recover',
     'invoices:view',
     'invoices:create',
     'payments:view',
@@ -78,6 +79,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'orders:close',
     'inventory:view',
     'inventory:grn_approve',
+    'inventory:damaged_recover',
     'invoices:view',
     'payments:view',
     'pos:operate',
@@ -183,6 +185,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'inventory:view',
     'inventory:grn_create',
     'inventory:pick_issue',
+    'inventory:damaged_recover',
     'pos:operate',
   ],
   CASHIER: [

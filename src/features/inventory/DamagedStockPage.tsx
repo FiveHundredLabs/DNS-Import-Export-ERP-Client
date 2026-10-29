@@ -269,7 +269,9 @@ export function DamagedStockPage() {
         activeItem.product.id,
         activeItem.balance.locationId,
         actionQuantity,
-        currentUser
+        currentUser,
+        currentUser?.name,
+        actionReason
       );
 
       toast.success(
