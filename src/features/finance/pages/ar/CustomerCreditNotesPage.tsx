@@ -11,6 +11,7 @@ import { Badge } from '../../../../components/ui/badge';
 import { Card } from '../../../../components/ui/card';
 import { Dialog, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../../../../components/ui/dialog';
 import { Textarea } from '../../../../components/ui/textarea';
+import { PageHeader } from '../../../../components/common/PageHeader';
 import { formatCurrency, formatDate } from '../../../../utils/formatters';
 import Decimal from 'decimal.js';
 import { DoubleEntryHoverBadge } from '../../components/DoubleEntryHoverBadge';
@@ -339,64 +340,63 @@ export function CustomerCreditNotesPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-slate-200 pb-4">
-        <div>
+      <PageHeader
+        title="Customer Credit Notes"
+        badge={
+          <Badge variant="outline" className="bg-primary-light text-primary-text border-primary-border text-xs">
+            AR Returns & Revenue Reversal
+          </Badge>
+        }
+        breadcrumbs={[
+          { label: 'Finance', href: '/finance' },
+          { label: 'Accounts Receivable', href: '/finance/ar' },
+          { label: 'Credit Notes' },
+        ]}
+        actions={
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-              Customer Credit Notes
-            </h1>
-            <Badge variant="outline" className="bg-primary-light text-primary-text border-primary-border text-xs">
-              AR Returns & Revenue Reversal
-            </Badge>
-          </div>
-          <p className="text-sm text-slate-500 mt-1">
-            Process customer sales returns: reversing revenue & output tax (Debit 4010, Debit 2020, Credit 1020 A/R), and restoring stock to physical inventory (Debit 1100, Credit 5010 COGS).
-          </p>
-        </div>
+            {activeTab === 'REGISTRY' ? (
+              <Button
+                size="sm"
+                onClick={() => setActiveTab('CREATE')}
+                className="text-xs gap-1.5 bg-primary hover:bg-primary-hover text-white shadow-xs font-semibold"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                <span>Issue Credit Note</span>
+              </Button>
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setActiveTab('REGISTRY')}
+                className="text-xs gap-1.5"
+              >
+                <ArrowLeft className="h-3.5 w-3.5" />
+                <span>Back to Registry</span>
+              </Button>
+            )}
 
-        <div className="flex items-center gap-2">
-          {activeTab === 'REGISTRY' ? (
-            <Button
-              size="sm"
-              onClick={() => setActiveTab('CREATE')}
-              className="text-xs gap-1.5 bg-primary hover:bg-primary-hover text-white shadow-xs font-semibold"
-            >
-              <Plus className="h-3.5 w-3.5" />
-              <span>Issue Credit Note</span>
-            </Button>
-          ) : (
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setActiveTab('REGISTRY')}
+              onClick={() => navigate('/finance/ar/approvals')}
               className="text-xs gap-1.5"
             >
-              <ArrowLeft className="h-3.5 w-3.5" />
-              <span>Back to Registry</span>
+              <Receipt className="h-3.5 w-3.5 text-primary" />
+              <span>Receipt Approvals</span>
             </Button>
-          )}
 
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => navigate('/finance/ar/approvals')}
-            className="text-xs gap-1.5"
-          >
-            <Receipt className="h-3.5 w-3.5 text-primary" />
-            <span>Receipt Approvals</span>
-          </Button>
-
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => navigate('/finance/ar/pdc-vault')}
-            className="text-xs gap-1.5 border-amber-300 bg-amber-50/50 text-amber-800"
-          >
-            <Landmark className="h-3.5 w-3.5 text-amber-700" />
-            <span>PDC Vault (1018)</span>
-          </Button>
-        </div>
-      </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate('/finance/ar/pdc-vault')}
+              className="text-xs gap-1.5 border-amber-300 bg-amber-50/50 text-amber-800"
+            >
+              <Landmark className="h-3.5 w-3.5 text-amber-700" />
+              <span>PDC Vault (1018)</span>
+            </Button>
+          </div>
+        }
+      />
 
       {/* Tabs Header */}
       <div className="flex items-center justify-between border-b border-slate-200">

@@ -7,6 +7,9 @@ export class GRNService {
   constructor(private grnRepo: IGRNRepository, private invRepo: IInventoryRepository) {}
 
   async submitGRN(grn: GRN) {
+    if (!grn.purchaseOrderId && !grn.poId && !grn.poNumber) {
+      throw new Error('BR-01 Violation: GRN must originate from an approved Purchase Order. Unlinked GRN creation is prohibited.');
+    }
     grn.items.forEach(validateGRNReceipt);
     grn.status = 'SUBMITTED';
     grn.submittedAt = new Date().toISOString();
@@ -66,6 +69,9 @@ export class GRNService {
   }
 
   async createGRN(grn: GRN, _user?: any): Promise<GRN> {
+    if (!grn.purchaseOrderId && !grn.poId && !grn.poNumber) {
+      throw new Error('BR-01 Violation: GRN must originate from an approved Purchase Order. Unlinked GRN creation is prohibited.');
+    }
     grn.status = 'DRAFT';
     await this.grnRepo.save(grn);
     return grn;

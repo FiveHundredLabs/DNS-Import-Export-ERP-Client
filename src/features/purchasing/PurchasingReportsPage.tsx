@@ -23,6 +23,7 @@ import { Input } from '../../components/ui/input';
 import { Badge } from '../../components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { TableLoadingSkeleton } from '../../components/common/LoadingSkeleton';
+import { PageHeader } from '../../components/common/PageHeader';
 
 type ReportType =
   | 'PO_SUMMARY'
@@ -206,42 +207,42 @@ export function PurchasingReportsPage() {
   return (
     <div className="space-y-6 pb-12">
       {/* Header & Controls */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 print:hidden">
-        <div>
-          <div className="flex items-center gap-2.5">
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-              Procurement & Purchasing Reports
-            </h1>
+      <div className="print:hidden">
+        <PageHeader
+          title="Purchasing Reports"
+          badge={
             <Badge variant="outline" className="bg-slate-100 text-slate-800 border-slate-300 text-xs">
-              Live Analytics Hub
+              Live Analytics
             </Badge>
-          </div>
-          <p className="text-sm text-slate-500 mt-1">
-            Real transactional reports covering Purchase Order summaries, supplier spends, product analytics, and fulfillment.
-          </p>
-        </div>
+          }
+          breadcrumbs={[
+            { label: 'Purchasing', href: '/purchasing' },
+            { label: 'Reports' },
+          ]}
+          actions={
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handlePrint}
+                className="gap-1.5 text-xs bg-white hover:bg-slate-50"
+              >
+                <Printer className="h-3.5 w-3.5 text-slate-600" />
+                <span>Print Report</span>
+              </Button>
 
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handlePrint}
-            className="gap-1.5 text-xs bg-white hover:bg-slate-50"
-          >
-            <Printer className="h-3.5 w-3.5 text-slate-600" />
-            <span>Print Report</span>
-          </Button>
-
-          <Button
-            variant="default"
-            size="sm"
-            onClick={handleExportCSV}
-            className="gap-1.5 text-xs bg-primary hover:bg-primary-hover text-primary-foreground font-semibold shadow-xs"
-          >
-            <Download className="h-3.5 w-3.5" />
-            <span>Export CSV</span>
-          </Button>
-        </div>
+              <Button
+                variant="default"
+                size="sm"
+                onClick={handleExportCSV}
+                className="gap-1.5 text-xs bg-primary hover:bg-primary-hover text-primary-foreground font-semibold shadow-xs"
+              >
+                <Download className="h-3.5 w-3.5" />
+                <span>Export CSV</span>
+              </Button>
+            </div>
+          }
+        />
       </div>
 
       {/* KPI Cards */}

@@ -9,6 +9,8 @@ import { OrderStatusBadge } from './OrderStatusBadge';
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
+import { Badge } from '../../components/ui/badge';
+import { PageHeader } from '../../components';
 import {
   Select,
   SelectContent,
@@ -121,49 +123,49 @@ export function OrderListPage() {
 
   return (
     <div className="space-y-4 sm:space-y-6 w-full pb-24 md:pb-6">
-      {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-slate-900 flex items-center gap-2">
+      {/* Top Standardized Page Header */}
+      <PageHeader
+        title={
+          <span className="flex items-center gap-2">
             <ShoppingCart className="h-5 w-5 sm:h-6 sm:w-6 text-primary shrink-0" />
             <span>Sales Orders &amp; Approvals</span>
-          </h1>
-          <p className="text-xs text-slate-500 mt-1">
-            Standard vs Special Sales Orders, commercial credit limits, and fulfillment state machine.
-          </p>
-        </div>
+          </span>
+        }
+        subtitle="Standard vs Special Sales Orders, commercial credit limits, and fulfillment state machine."
+        badge={<Badge variant="outline" className="text-xs">Sales</Badge>}
+        actions={
+          <div className="grid grid-cols-2 sm:flex sm:items-center gap-2 w-full sm:w-auto">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate('/orders/activity-log')}
+              className="gap-1.5 border-teal-300 text-teal-800 hover:bg-teal-50 text-xs w-full sm:w-auto justify-center"
+            >
+              <Clock className="h-3.5 w-3.5 text-teal-600" />
+              <span>Activity Log</span>
+            </Button>
 
-        <div className="grid grid-cols-2 sm:flex sm:items-center gap-2 w-full sm:w-auto">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => navigate('/orders/activity-log')}
-            className="gap-1.5 border-teal-300 text-teal-800 hover:bg-teal-50 text-xs w-full sm:w-auto justify-center"
-          >
-            <Clock className="h-3.5 w-3.5 text-teal-600" />
-            Activity Log
-          </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate('/orders/tracking')}
+              className="gap-1.5 border-primary-border text-primary-text hover:bg-primary-light text-xs w-full sm:w-auto justify-center"
+            >
+              <Activity className="h-3.5 w-3.5 text-primary" />
+              <span>Pipeline Tracking</span>
+            </Button>
 
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => navigate('/orders/tracking')}
-            className="gap-1.5 border-primary-border text-primary-text hover:bg-primary-light text-xs w-full sm:w-auto justify-center"
-          >
-            <Activity className="h-3.5 w-3.5 text-primary" />
-            Pipeline Tracking
-          </Button>
-
-          <Button
-            size="sm"
-            onClick={() => navigate('/orders/new')}
-            className="col-span-2 sm:col-span-1 bg-primary hover:bg-primary-hover text-primary-foreground gap-1.5 shadow-xs text-xs w-full sm:w-auto justify-center font-semibold"
-          >
-            <Plus className="h-3.5 w-3.5" />
-            New Sales Order
-          </Button>
-        </div>
-      </div>
+            <Button
+              size="sm"
+              onClick={() => navigate('/orders/new')}
+              className="col-span-2 sm:col-span-1 bg-primary hover:bg-primary-hover text-primary-foreground gap-1.5 shadow-xs text-xs w-full sm:w-auto justify-center font-semibold"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              <span>New Sales Order</span>
+            </Button>
+          </div>
+        }
+      />
 
       {/* Metrics Row */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 sm:gap-4">

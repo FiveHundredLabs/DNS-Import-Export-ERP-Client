@@ -10,6 +10,7 @@ import { QuotationConvertModal } from './QuotationConvertModal';
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
+import { Badge } from '../../components/ui/badge';
 import {
   Select,
   SelectContent,
@@ -20,6 +21,7 @@ import {
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../../components/ui/table';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 import { AmountDisplay } from '../../components/common/AmountDisplay';
+import { PageHeader } from '../../components';
 import { whatsAppService } from '../../services/WhatsAppService';
 import { printerService } from '../../services/PrinterService';
 import {
@@ -114,26 +116,26 @@ export function QuotationListPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header and Action */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-slate-900 flex items-center gap-2.5">
+      {/* Standardized Page Header and Action */}
+      <PageHeader
+        title={
+          <span className="flex items-center gap-2.5">
             <FileSpreadsheet className="h-7 w-7 text-primary" />
-            Quotation Management
-          </h1>
-          <p className="text-xs text-slate-500 mt-1">
-            Standard customer price proposals, discount threshold approvals, and sales order conversions.
-          </p>
-        </div>
-
-        <Button
-          onClick={() => navigate('/quotations/new')}
-          className="bg-primary hover:bg-primary-hover text-primary-foreground gap-2 shadow-xs"
-        >
-          <Plus className="h-4 w-4" />
-          New Quotation
-        </Button>
-      </div>
+            <span>Quotation Management</span>
+          </span>
+        }
+        subtitle="Standard customer price proposals, discount threshold approvals, and sales order conversions."
+        badge={<Badge variant="outline" className="text-xs">Sales</Badge>}
+        actions={
+          <Button
+            onClick={() => navigate('/quotations/new')}
+            className="bg-primary hover:bg-primary-hover text-primary-foreground gap-2 shadow-xs font-semibold"
+          >
+            <Plus className="h-4 w-4" />
+            <span>New Quotation</span>
+          </Button>
+        }
+      />
 
       {/* Role Scoping Banner */}
       {currentUser.role === 'SALES_REP' ? (

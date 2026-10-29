@@ -11,6 +11,7 @@ import {
 } from '../../components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table';
 import { Skeleton } from '../../components/ui/skeleton';
+import { PageHeader } from '../../components/common/PageHeader';
 import { useInventory } from '../../hooks/useInventory';
 import { MOCK_PRODUCTS } from '../../mock/mockProducts';
 import { formatDate } from '../../utils/formatters';
@@ -60,12 +61,13 @@ export function StockMovementsPage() {
 
   return (
     <div className="w-full space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Stock Movements</h1>
-        <p className="text-sm text-muted-foreground mt-1 text-amber-600 font-medium">
-          Note: Stock movements are immutable audit records.
-        </p>
-      </div>
+      <PageHeader
+        title="Stock Movements"
+        breadcrumbs={[
+          { label: 'Inventory', href: '/inventory' },
+          { label: 'Stock Movements' },
+        ]}
+      />
       
       <Card>
         <CardHeader>

@@ -20,6 +20,7 @@ import { Input } from '../../components/ui/input';
 import { Badge } from '../../components/ui/badge';
 import { Card, CardContent } from '../../components/ui/card';
 import { TableLoadingSkeleton } from '../../components/common/LoadingSkeleton';
+import { PageHeader, StatusBadge } from '../../components';
 
 export function PurchasingGRNListPage() {
   const navigate = useNavigate();
@@ -73,33 +74,7 @@ export function PurchasingGRNListPage() {
   }, [filteredGRNs, page, pageSize]);
 
   const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'APPROVED':
-      case 'COSTED':
-        return (
-          <Badge variant="outline" className="bg-emerald-50 text-emerald-800 border-emerald-300 font-mono text-[10px]">
-            Approved & Verified
-          </Badge>
-        );
-      case 'SUBMITTED':
-        return (
-          <Badge variant="outline" className="bg-amber-50 text-amber-800 border-amber-300 font-mono text-[10px]">
-            Pending Finance Review
-          </Badge>
-        );
-      case 'REJECTED':
-        return (
-          <Badge variant="outline" className="bg-rose-50 text-rose-800 border-rose-300 font-mono text-[10px]">
-            Rejected
-          </Badge>
-        );
-      default:
-        return (
-          <Badge variant="outline" className="bg-slate-100 text-slate-700 border-slate-300 font-mono text-[10px]">
-            {status}
-          </Badge>
-        );
-    }
+    return <StatusBadge status={status} size="sm" />;
   };
 
   if (loading && (!grns || grns.length === 0)) {
@@ -113,26 +88,21 @@ export function PurchasingGRNListPage() {
   return (
     <div className="space-y-6">
       {/* Header with Read-Only Notice */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <div className="flex items-center gap-2.5">
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-              Goods Received Notes (GRN)
-            </h1>
-            <Badge variant="outline" className="bg-indigo-50 text-indigo-700 border-indigo-300 text-xs font-mono">
-              READ-ONLY VIEW
-            </Badge>
+      <PageHeader
+        title="Goods Received Notes (GRN)"
+        subtitle="Warehouse inward inspection records, delivery fulfillment audits, and receiving verification."
+        badge={
+          <Badge variant="outline" className="bg-indigo-50 text-indigo-700 border-indigo-300 text-xs font-mono">
+            READ-ONLY VIEW
+          </Badge>
+        }
+        actions={
+          <div className="flex items-center gap-1.5 p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-600">
+            <ShieldCheck className="h-4 w-4 text-emerald-600" />
+            <span>Stock Keeper & Finance operational domain</span>
           </div>
-          <p className="text-sm text-slate-500 mt-1">
-            Warehouse inward inspection records, delivery fulfillment audits, and receiving verification.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-1.5 p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-600 self-start sm:self-auto">
-          <ShieldCheck className="h-4 w-4 text-emerald-600" />
-          <span>Stock Keeper & Finance operational domain</span>
-        </div>
-      </div>
+        }
+      />
 
       {/* Filter Toolbar */}
       <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs">

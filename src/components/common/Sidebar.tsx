@@ -74,6 +74,7 @@ interface SidebarItem {
   category: RailCategory;
   exact?: boolean;
   directorOnly?: boolean;
+  allowedRoles?: string[];
   excludedRoles?: string[];
   badge?: string;
 }
@@ -120,7 +121,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     { id: 'customer-collections', name: 'Customer Collections', path: '/payments/collect', icon: Banknote, category: 'sales' },
     { id: 'customers', name: 'Customer Master', path: '/customers', icon: Users2, category: 'customers' },
     { id: 'invoices', name: 'Invoices', path: '/invoices', icon: Receipt, category: 'sales' },
-    { id: 'pos', name: 'Showroom POS', path: '/pos', icon: Store, category: 'sales' },
+    { id: 'pos', name: 'Showroom POS', path: '/pos', icon: Store, category: 'sales', excludedRoles: ['STOCK_KEEPER'] },
   ];
 
   // 3. Products & Inventory
@@ -130,6 +131,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     { id: 'delivery-notes', name: 'Delivery Notes', path: '/inventory/delivery-notes', icon: Truck, category: 'inventory' },
     { id: 'products', name: 'Product Master', path: '/products', icon: Package, category: 'inventory', excludedRoles: ['STOCK_KEEPER'] },
     { id: 'damaged-stock', name: 'Damaged Stock & RMA', path: '/inventory/damaged-stock', icon: ShieldAlert, category: 'inventory' },
+    { id: 'inventory-pos', name: 'Showroom POS', path: '/pos', icon: Store, category: 'inventory', allowedRoles: ['STOCK_KEEPER'] },
   ];
 
   // 4. Finance, Banking & Ledger Core (arranged in logical lifecycle order)
@@ -189,6 +191,9 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const authorizedItems = useMemo(() => {
     return allRawItems.filter((item) => {
       if (item.directorOnly && currentUser.role !== 'DIRECTOR') {
+        return false;
+      }
+      if (item.allowedRoles && !item.allowedRoles.includes(currentUser.role)) {
         return false;
       }
       if (item.excludedRoles && item.excludedRoles.includes(currentUser.role)) {

@@ -27,6 +27,7 @@ import {
   Landmark,
   Layers,
 } from 'lucide-react';
+import { PageHeader, StatusBadge } from '../../components';
 import { formatDateTime } from '../../utils/formatters';
 import { cn } from '../../utils/cn';
 
@@ -46,12 +47,12 @@ export function ApprovalsPage() {
   };
 
   const getDocumentLink = (app: ApprovalRequest): string | null => {
-    if (app.documentType === 'PAYMENT_RECEIPT') return `/finance/ar/receipt-approvals`;
+    if (app.documentType === 'PAYMENT_RECEIPT') return `/payments/${app.documentId}`;
     if (app.documentType === 'SPECIAL_SALES_ORDER') return `/approvals/orders/${app.documentId}`;
     if (app.documentType === 'QUOTATION_DISCOUNT') return `/quotations/${app.documentId}`;
-    if (app.documentType === 'GRN_RECEIPT') return `/finance/ap/bills/new?grnId=${app.documentId}`;
+    if (app.documentType === 'GRN_RECEIPT') return `/inventory/grn/${app.documentId}`;
     if (app.documentType === 'CUSTOMER_CREATION') return `/customers/${app.documentId}`;
-    if (app.documentType === 'PRODUCT_PRICE_CHANGE') return `/inventory`;
+    if (app.documentType === 'PRODUCT_PRICE_CHANGE') return app.documentId ? `/products/${app.documentId}` : `/products`;
     if (app.documentType === 'PURCHASE_ORDER') return `/purchasing/orders/${app.documentId}`;
     return null;
   };
@@ -84,17 +85,17 @@ export function ApprovalsPage() {
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Enterprise Approvals Engine</h1>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Unified multi-tier hierarchical decision workflows for orders, discount tiers, price floors, quotations, and inbound GRNs.
-          </p>
-        </div>
-        <Button variant="outline" size="sm" onClick={() => refetch()} className="gap-1.5">
-          <RefreshCw className="h-3.5 w-3.5" /> Refresh Requests
-        </Button>
-      </div>
+      <PageHeader
+        title="Enterprise Approvals Engine"
+        subtitle="Unified multi-tier hierarchical decision workflows for orders, discount tiers, price floors, quotations, and inbound GRNs."
+        badge={<StatusBadge status="ACTIVE" label="Central Engine" />}
+        actions={
+          <Button variant="outline" size="sm" onClick={() => refetch()} className="gap-1.5 bg-white hover:bg-slate-50 text-slate-700">
+            <RefreshCw className="h-3.5 w-3.5" />
+            <span>Refresh Requests</span>
+          </Button>
+        }
+      />
 
       {/* Filter and Search Bar */}
       <Card className="border-slate-200 shadow-2xs">
@@ -241,11 +242,22 @@ export function ApprovalsPage() {
                 </CardHeader>
 
                 <CardContent className="p-4 space-y-4">
-                  <div className="text-xs text-slate-700">
-                    <span className="font-semibold text-slate-900">Initiator:</span> {app.initiatorName}
-                    <p className="mt-1 text-slate-600 bg-slate-50 p-2.5 rounded border border-slate-100">
-                      {app.description}
-                    </p>
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 bg-slate-50/80 rounded-lg border border-slate-200/80 text-xs">
+                    <div className="flex-1">
+                      <span className="font-semibold text-slate-900">Initiator:</span> {app.initiatorName}
+                      <p className="mt-1 text-slate-600 leading-relaxed">
+                        {app.description}
+                      </p>
+                    </div>
+                    {getDocumentLink(app) && (
+                      <Link
+                        to={getDocumentLink(app)!}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-white border border-slate-200 text-primary hover:bg-slate-50 font-semibold text-xs whitespace-nowrap self-start sm:self-center shadow-2xs"
+                      >
+                        <ExternalLink className="h-3.5 w-3.5" />
+                        <span>Inspect Full Document</span>
+                      </Link>
+                    )}
                   </div>
 
                   {app.isSpecialScenario && app.specialReason && (

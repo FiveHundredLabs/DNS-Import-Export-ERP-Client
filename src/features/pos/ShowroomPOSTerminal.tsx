@@ -561,7 +561,7 @@ export function ShowroomPOSTerminal() {
       )}
 
       {/* Main Terminal Split Screen */}
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 min-h-0 overflow-hidden">
         {/* Left Side: Product Search, Barcode Input, Catalog Grid */}
         <div className="flex flex-1 flex-col overflow-hidden p-4 space-y-3">
           {/* Quick Scanner Bar & Customer Selector */}
@@ -901,6 +901,7 @@ export function ShowroomPOSTerminal() {
                 showFeedback('success', `Assigned customer: ${c.name}`);
               }}
               selectedCustomerId={selectedCustomer?.id}
+              isModalMode
             />
           </div>
           <DialogFooter className="flex justify-between items-center sm:justify-between">

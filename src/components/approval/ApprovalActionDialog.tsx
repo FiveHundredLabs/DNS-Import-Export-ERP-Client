@@ -169,7 +169,7 @@ export function ApprovalActionDialog({
             type="submit"
             size="sm"
             disabled={loading}
-            variant={action === 'REJECT' ? 'destructive' : 'default'}
+            variant={action === 'REJECT' ? 'destructive' : action === 'APPROVE' ? 'success' : 'default'}
           >
             {loading ? 'Processing...' : `Confirm ${action}`}
           </Button>
