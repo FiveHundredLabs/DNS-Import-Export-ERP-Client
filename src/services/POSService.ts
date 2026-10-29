@@ -14,6 +14,7 @@ import {
 import { StockBalance, StockMovement } from '../types/inventory';
 import {
   validatePOSDiscount,
+  verifySupervisorDiscountKey,
   calculateReconciliation,
   validateCashierSession,
   validateShowroomStock,
@@ -32,6 +33,8 @@ export interface CheckoutItemInput {
   barcodeSnapshot?: string;
   unitPriceSnapshot?: number;
   taxPercentage?: number;
+  supervisorAuthKey?: string;
+  authorizedBySupervisor?: boolean;
 }
 
 export interface CheckoutData {
@@ -42,6 +45,7 @@ export interface CheckoutData {
   paymentMethod: POSPaymentMethod;
   cashTendered?: number;
   chequeDetails?: ChequeDetails;
+  supervisorAuthKey?: string;
 }
 
 export class POSService {
@@ -75,6 +79,13 @@ export class POSService {
     }
     await this.invRepo.saveBalance(bal);
     return bal;
+  }
+
+  /**
+   * Validates a supervisor authorization key for discount override (BR-03).
+   */
+  verifySupervisorDiscountKey(key?: string) {
+    return verifySupervisorDiscountKey(key);
   }
 
   /**
@@ -297,7 +308,8 @@ export class POSService {
       }
 
       const requestedDiscount = item.discountPercentage || 0;
-      validatePOSDiscount(requestedDiscount, maxDiscount, 5);
+      const authKey = item.supervisorAuthKey || data.supervisorAuthKey;
+      const discountAuth = validatePOSDiscount(requestedDiscount, maxDiscount, 5, authKey);
 
       const itemSubtotal = Number((unitPrice * item.quantity).toFixed(2));
       const itemDiscount = Number(((itemSubtotal * requestedDiscount) / 100).toFixed(2));
@@ -318,6 +330,9 @@ export class POSService {
         taxPercentage: taxRate,
         lineTotal: lineNet,
         quantity: item.quantity,
+        supervisorAuthKey: discountAuth.requiresSupervisorKey ? authKey : undefined,
+        authorizedBySupervisor: discountAuth.requiresSupervisorKey,
+        supervisorName: discountAuth.supervisorName,
       });
     }
 
@@ -345,6 +360,8 @@ export class POSService {
     const randSuffix = Math.floor(1000 + Math.random() * 9000);
     const receiptNumber = `POS-REC-${dateStr}-${randSuffix}`;
 
+    const hasSupervisorOverride = processedItems.some((it) => it.authorizedBySupervisor);
+
     const tx: POSTransaction = {
       id: `pos-tx-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
       receiptNumber,
@@ -365,6 +382,8 @@ export class POSService {
       createdAt: new Date().toISOString(),
       cashierId: user.id,
       cashierName: user.name,
+      supervisorAuthorized: hasSupervisorOverride,
+      supervisorAuthKey: hasSupervisorOverride ? (data.supervisorAuthKey || processedItems.find((p) => p.supervisorAuthKey)?.supervisorAuthKey) : undefined,
     };
 
     // Deduct Showroom stock in Central Inventory Ledger via SALES_ISSUE

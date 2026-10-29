@@ -60,6 +60,7 @@ export type Permission =
   | 'payments:create'
   | 'payments:approve'
   | 'pos:operate'
+  | 'pos:override_discount'
   | 'finance:expenses'
   | 'finance:petty_cash'
   | 'finance:reports'
