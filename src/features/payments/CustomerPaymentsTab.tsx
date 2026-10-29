@@ -85,6 +85,7 @@ export function CustomerPaymentsTab({ onSelectCustomer, className }: CustomerPay
   const counts = useMemo(() => {
     let outstanding = 0;
     let overdue = 0;
+    let dueNext24h = 0;
     let nearby = 0;
     let pendingCollection = 0;
     let settled = 0;
@@ -93,6 +94,7 @@ export function CustomerPaymentsTab({ onSelectCustomer, className }: CustomerPay
       const meta = evaluateCustomerPaymentStatus(c, invoices);
       if (meta.totalOutstanding > 0 || meta.openInvoicesCount > 0) outstanding++;
       if (meta.overdueCount > 0 || meta.totalOverdue > 0) overdue++;
+      if (meta.isDueNext24h || meta.dueNext24hCount > 0) dueNext24h++;
       if (meta.isNearby) nearby++;
       if (meta.pendingCollectionAmount > 0 || meta.filterStatus === 'PENDING_COLLECTION') pendingCollection++;
       if (meta.totalOutstanding <= 0 && meta.openInvoicesCount === 0) settled++;
@@ -102,6 +104,7 @@ export function CustomerPaymentsTab({ onSelectCustomer, className }: CustomerPay
       all: customers.length,
       outstanding,
       overdue,
+      dueNext24h,
       nearby,
       pendingCollection,
       settled,
