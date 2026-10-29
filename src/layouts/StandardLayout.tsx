@@ -2,7 +2,7 @@ import { Outlet, useLocation } from 'react-router-dom';
 
 export function StandardLayout() {
   const location = useLocation();
-  const isPosTerminal = location.pathname === '/pos';
+  const isPosTerminal = location.pathname.startsWith('/pos');
 
   if (isPosTerminal) {
     return (

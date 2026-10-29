@@ -104,7 +104,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     { id: 'purchasing-orders', name: 'Purchase Orders', path: '/purchasing/orders', icon: ShoppingCart, category: 'purchasing' },
     { id: 'purchasing-grn', name: 'Goods Received (View Only)', path: '/purchasing/grn', icon: Boxes, category: 'purchasing' },
     { id: 'purchasing-reports', name: 'Purchase Reports', path: '/purchasing/reports', icon: BarChart3, category: 'purchasing' },
-    { id: 'purchasing-returns', name: 'Purchase Returns', path: '/purchasing/returns', icon: RotateCcw, category: 'purchasing', badge: 'Under Dev' },
+    { id: 'purchasing-returns', name: 'Supplier Returns & RMA', path: '/purchasing/returns', icon: RotateCcw, category: 'purchasing' },
   ];
 
   // 1. Procurement, Orders & Approvals
@@ -155,7 +155,8 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     // 4. Core Universal Journal & Adjustments
     { id: 'journal', name: 'Journal Entry Voucher', path: '/finance/journal/new', icon: Zap, category: 'finance' },
 
-    // 5. Banking & Reconciliation
+    // 5. Banking & Cash Book (BR-09)
+    { id: 'cash-book', name: 'Cash Book & Vouchers', path: '/finance/cash-book', icon: Coins, category: 'finance' },
     { id: 'reconciliation', name: 'Bank Reconciliation', path: '/finance/reconciliation', icon: Landmark, category: 'finance' },
 
     // 6. Period Control & Year-End Close

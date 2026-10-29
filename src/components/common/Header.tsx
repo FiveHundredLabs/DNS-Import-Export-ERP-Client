@@ -32,6 +32,7 @@ const ROUTE_TITLES: Record<string, string> = {
   '/inventory': 'Inventory & Warehouse Hub',
   '/pos': 'Showroom POS Terminal',
   '/finance': 'Finance & Double-Entry Ledger',
+  '/finance/cash-book': 'Cash Book & Payment Vouchers',
   '/warranty': 'Warranty Claim Hub',
   '/commissions': 'Sales Commissions',
   '/reports': 'Enterprise Analytics',
@@ -42,7 +43,7 @@ const ROUTE_TITLES: Record<string, string> = {
   '/purchasing/orders/new': 'Create Purchase Order',
   '/purchasing/grn': 'Goods Received Notes (Read-Only)',
   '/purchasing/reports': 'Procurement & Purchasing Reports',
-  '/purchasing/returns': 'Purchase Returns (Under Development)',
+  '/purchasing/returns': 'Supplier Returns & Debit Notes',
 };
 
 export function Header({ onToggleSidebar }: HeaderProps) {

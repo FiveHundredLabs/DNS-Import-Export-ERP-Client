@@ -64,6 +64,9 @@ export type Permission =
   | 'finance:expenses'
   | 'finance:petty_cash'
   | 'finance:reports'
+  | 'finance:cashbook_view'
+  | 'finance:voucher_create'
+  | 'finance:voucher_approve'
   | 'warranty:view'
   | 'warranty:claims'
   | 'warranty:record_notes'
@@ -79,4 +82,7 @@ export type Permission =
   | 'purchasing:po_create'
   | 'purchasing:po_edit'
   | 'purchasing:grn_view'
-  | 'purchasing:reports';
+  | 'purchasing:reports'
+  | 'purchasing:returns_view'
+  | 'purchasing:returns_create'
+  | 'purchasing:returns_approve';
