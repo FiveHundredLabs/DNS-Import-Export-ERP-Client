@@ -11,16 +11,16 @@
 
 | Requirement ID | Domain | Description | Canonical Target Component / Service | Implementation Status |
 |---|---|---|---|---|
-| **BR-01** | Inventory / Purchasing | Mandatory Purchase Order linkage on all new GRN creation and receiving paths. No unlinked GRNs allowed. | `GRNCreateEditPage.tsx`, `GRNService.ts` | **In Progress (Batch 1)** |
-| **BR-02** | Inventory / Receiving | Official Print-ready GRN (A4 format) with linked PO, batch & serial logs, Stock Manager & Finance sign-off blocks. | `PrintableGRN.tsx`, `GRNDetailPage.tsx`, `PurchasingGRNDetailPage.tsx` | **In Progress (Batch 1)** |
-| **BR-03** | Retail POS | Server-validated POS discount authorization key workflow for cashier discounts exceeding standard 5% limit. | `ShowroomPOSTerminal.tsx`, `posRules.ts`, `POSService.ts` | **Pending (Batch 3)** |
-| **BR-04** | Sales & Invoicing | Multiple sales invoices permitted against a single Sales Order with line-item invoiced vs remaining quantity tracking. | `InvoiceService.ts`, `OrderCreateEditPage.tsx`, `OrderDetailPage.tsx` | **Pending (Batch 2)** |
-| **BR-05** | Sales & Orders | Full and partial Sales Order closure with non-destructive audit preservation. | `orderService.ts`, `OrderDetailPage.tsx` | **Pending (Batch 2)** |
-| **BR-06** | Finance / Collections | Unified Payment Collection interface supporting invoice-wise breakdown and one-click complete collection for selected invoice. | `PaymentCollectionPage.tsx`, `PaymentService.ts` | **Pending (Batch 4)** |
-| **BR-07** | Sales Operations | Sales Representative next-24-hours collections due view with portfolio filtering and reminder action. | `CustomerCollectionsPage.tsx`, `CollectionService.ts` | **Pending (Batch 5)** |
-| **BR-08** | Purchasing / AP | Supplier returns create and link an Accounts Payable Debit Note with double-entry ledger impact. | `SupplierReturnsPage.tsx`, `SupplierDebitNotesPage.tsx`, `FinanceAPService.ts` | **Pending (Batch 6)** |
-| **BR-09** | Finance / Banking | Cash Book workflow integrated through Payment Vouchers linked directly to Account 1010 (Cash in Hand). | `CashBookPage.tsx`, `PaymentVoucherModal.tsx`, `MockFinanceRepository.ts` | **Pending (Batch 7)** |
-| **BR-10** | Inventory Control | Traceable damaged-stock recovery flow returning inspected items into usable inventory. | `DamagedStockPage.tsx`, `DamagedStockRecoveryModal.tsx`, `InventoryService.ts` | **Pending (Batch 8)** |
+| **BR-01** | Inventory / Purchasing | Mandatory Purchase Order linkage on all new GRN creation and receiving paths. No unlinked GRNs allowed. | `GRNCreateEditPage.tsx`, `GRNService.ts` | **Complete (Batch 1)** |
+| **BR-02** | Inventory / Receiving | Official Print-ready GRN (A4 format) with linked PO, batch & serial logs, Stock Manager & Finance sign-off blocks. | `PrintableGRN.tsx`, `GRNDetailPage.tsx`, `PurchasingGRNDetailPage.tsx` | **Complete (Batch 1)** |
+| **BR-03** | Retail POS | Server-validated POS discount authorization key workflow for cashier discounts exceeding standard 5% limit. | `ShowroomPOSTerminal.tsx`, `posRules.ts`, `POSService.ts` | **Complete (Batch 3)** |
+| **BR-04** | Sales & Invoicing | Multiple sales invoices permitted against a single Sales Order with line-item invoiced vs remaining quantity tracking. | `InvoiceService.ts`, `OrderCreateEditPage.tsx`, `OrderDetailPage.tsx` | **Complete (Batch 2)** |
+| **BR-05** | Sales & Orders | Full and partial Sales Order closure with non-destructive audit preservation. | `orderService.ts`, `OrderDetailPage.tsx` | **Complete (Batch 2)** |
+| **BR-06** | Finance / Collections | Unified Payment Collection interface supporting invoice-wise breakdown and one-click complete collection for selected invoice. | `PaymentCollectionPage.tsx`, `PaymentService.ts` | **Complete (Batch 4)** |
+| **BR-07** | Sales Operations | Sales Representative next-24-hours collections due view with portfolio filtering and reminder action. | `SalesRepDashboard.tsx`, `CustomerPaymentsTab.tsx`, `customerPaymentRules.ts` | **Complete (Batch 5)** |
+| **BR-08** | Purchasing / AP | Supplier returns create and link an Accounts Payable Debit Note with double-entry ledger impact. | `SupplierReturnsPage.tsx`, `SupplierReturnService.ts`, `apService.ts` | **Complete (Batch 6)** |
+| **BR-09** | Finance / Banking | Cash Book workflow integrated through Payment Vouchers linked directly to Account 1010 and 1040. | `CashBookPage.tsx`, `CashBookService.ts`, `financeRepository.ts` | **Complete (Batch 7)** |
+| **BR-10** | Inventory Control | Traceable damaged-stock recovery flow returning inspected items into usable inventory. | `DamagedStockPage.tsx`, `InventoryService.ts` | **Complete (Batch 8)** |
 
 ---
 

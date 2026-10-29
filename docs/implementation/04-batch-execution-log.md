@@ -127,3 +127,41 @@
      - Linked `GRN_RECEIPT` directly to canonical `/inventory/grn/${app.documentId}`.
 - **Verification:** `npm run build`: 0 errors. All 28 batch tests passing.
 
+---
+
+### Batch 6: Supplier Returns & AP Debit Notes (BR-08, PM-02)
+- **Date:** 2026-10-30
+- **Scope Implemented:**
+  - `src/types/purchasing.ts`: Added `SupplierReturn`, `SupplierReturnStatus`, `SupplierReturnReason`, `CreateSupplierReturnDTO`.
+  - `src/types/auth.ts` & `src/rules/permissions.ts`: Added `purchasing:returns_view`, `purchasing:returns_create`, `purchasing:returns_approve` for `PURCHASING_OFFICER`, `MANAGER`, and `DIRECTOR`.
+  - `src/services/SupplierReturnService.ts`: Created singleton service with `createReturn()`, `approveReturn()` (which triggers `apService.postSupplierDebitNote` with Dr 2010 A/P, Cr 1100 Inventory and links debit note number), and `rejectReturn()`.
+  - `src/features/purchasing/SupplierReturnsPage.tsx`: Built canonical management page replacing the placeholder, complete with `PageHeader`, KPI metrics, `SupplierSelector`, and line item editor.
+  - `src/App.tsx`, `src/components/common/Sidebar.tsx`, `src/components/common/Header.tsx`: Wired active route `/purchasing/returns`, removed "Under Dev" badge, and updated header title.
+  - `src/test/batch6SupplierReturnsDebitNotes.test.tsx`: Vitest suite verifying officer draft creation, approval security boundary (PM-02), and AP Debit Note integration.
+- **Verification:** `npx vitest run src/test/batch6SupplierReturnsDebitNotes.test.tsx`: 4/4 passed.
+
+---
+
+### Batch 7: Cash Book & Payment Vouchers (BR-09, MG-02)
+- **Date:** 2026-10-30
+- **Scope Implemented:**
+  - `src/types/cashbook.ts`: Created `PaymentVoucher`, `CashVoucherType`, `CashVoucherCategory`, `CashBookSummary`.
+  - `src/types/auth.ts` & `src/rules/permissions.ts`: Added `finance:cashbook_view`, `finance:voucher_create`, `finance:voucher_approve` for `DIRECTOR`, `MANAGER`, and `FINANCE_MANAGER`.
+  - `src/services/CashBookService.ts`: Built cash book service managing live balances for Account 1010 (Cash in Hand / Bank Operating Float) and Account 1040 (Petty Cash Float), disbursement validation, manager approval workflow (MG-02), and automated balanced GL double-entry posting.
+  - `src/features/finance/pages/CashBookPage.tsx`: Built complete Cash Book page with canonical `PageHeader`, live float KPI cards, multi-criteria filters, record data table, New Voucher dialog, and Rejection reason modal.
+  - `src/App.tsx`, `src/components/common/Sidebar.tsx`, `src/features/finance/pages/FinanceDashboardPage.tsx`: Wired route `/finance/cash-book`, sidebar item under Banking, and dashboard daily operational workflow quick link.
+  - `src/test/batch7CashBookPaymentVouchers.test.tsx`: Vitest suite verifying voucher drafting, balance limit checks, manager authorization boundary (MG-02), live status update, and GL linkage.
+- **Verification:** `npx vitest run src/test/batch7CashBookPaymentVouchers.test.tsx`: 5/5 passed.
+
+---
+
+### Batch 8: Damaged-Stock Traceable Recovery (BR-10, ST-02)
+- **Date:** 2026-10-30
+- **Scope Implemented:**
+  - `src/types/auth.ts` & `src/rules/permissions.ts`: Added `inventory:damaged_recover` permission granted to `STOCK_KEEPER`, `MANAGER`, and `DIRECTOR` (ST-02).
+  - `src/services/InventoryService.ts`: Enhanced `executeDamageReversal()` to enforce role authorization (ST-02), validate positive quantity within quarantine balance, and record QA inspection certification notes in auditable `DAMAGE_REVERSAL` stock movements.
+  - `src/features/inventory/DamagedStockPage.tsx`: Connected inspection notes into the recovery action and verified modal workflows.
+  - `src/test/batch8DamagedStockRecovery.test.tsx`: Vitest suite verifying stock keeper recovery to available inventory, rejection of unauthorized roles (e.g. Sales Rep), quarantine quantity limits, and UI rendering.
+- **Verification:** `npx vitest run src/test/batch8DamagedStockRecovery.test.tsx`: 4/4 passed. All 41 batch tests passing.
+
+
