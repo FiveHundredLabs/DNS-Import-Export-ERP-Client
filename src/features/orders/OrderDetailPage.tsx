@@ -23,6 +23,7 @@ import {
   DialogFooter,
 } from '../../components/ui/dialog';
 import { formatCurrency, formatDate, formatDateTime } from '../../utils/formatters';
+import { cn } from '../../utils/cn';
 import {
   canApproveOrder,
   canEscalateOrder,
