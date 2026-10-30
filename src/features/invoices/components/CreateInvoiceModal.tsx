@@ -184,7 +184,7 @@ export function CreateInvoiceModal({ isOpen, onClose }: CreateInvoiceModalProps)
                   placeholder="Search order #, customer name, or code..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-8 text-xs h-8.5 rounded-lg w-full"
+                  className="pl-8 text-xs h-9 rounded-lg w-full"
                 />
               </div>
 

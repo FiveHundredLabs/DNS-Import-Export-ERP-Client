@@ -78,7 +78,7 @@ export function UserProfileMenu({ className }: UserProfileMenuProps) {
       <button
         type="button"
         onClick={() => setIsOpen((prev) => !prev)}
-        className="flex h-8.5 w-8.5 sm:h-9 sm:w-9 items-center justify-center rounded-full bg-white text-primary font-bold text-[11px] sm:text-xs shadow-xs ring-1.5 ring-white/40 hover:ring-white/80 transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-white cursor-pointer select-none"
+        className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full bg-white text-primary font-bold text-[11px] sm:text-xs shadow-xs ring-1.5 ring-white/40 hover:ring-white/80 transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-white cursor-pointer select-none"
         aria-expanded={isOpen}
         aria-haspopup="true"
         aria-label="User profile menu"

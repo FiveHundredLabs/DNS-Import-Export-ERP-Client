@@ -254,6 +254,30 @@ export function SalesRepDashboard() {
           contactPerson: 'Mr. Sunil Weerasinghe',
           isOverdue: true,
         },
+        {
+          id: 'cust-002',
+          name: 'Muthurajawela Engineering',
+          code: 'DLR-GAM-002',
+          amount: 280000,
+          dueStatus: 'Due in 3 Days',
+          statusVariant: 'warning',
+          creditDays: 45,
+          phone: '+94 31 223 4567',
+          contactPerson: 'Mr. Jude Rodrigo',
+          isOverdue: false,
+        },
+        {
+          id: 'cust-003',
+          name: 'Kelani Valley Lighting Mart',
+          code: 'DLR-KEL-003',
+          amount: 195000,
+          dueStatus: 'Within Terms',
+          statusVariant: 'outline',
+          creditDays: 30,
+          phone: '+94 33 228 1122',
+          contactPerson: 'Mr. Rohan Gunasekara',
+          isOverdue: false,
+        },
       ];
     }
 

@@ -127,11 +127,11 @@ export function Header({ onToggleSidebar }: HeaderProps) {
 
         {location.pathname === '/' ? (
           <Link to="/" className="flex items-center gap-2.5 min-w-0 group">
-            <div className="flex h-8.5 w-8.5 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-xl bg-white p-1 shadow-xs ring-1 ring-white/20 transition-transform group-hover:scale-105 overflow-hidden">
+            <div className="flex h-8 w-8 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-xl bg-white p-1 shadow-xs ring-1 ring-white/20 transition-transform group-hover:scale-105 overflow-hidden">
               <img
                 src="/logo.png"
                 alt="DNS IMPORT & EXPORT"
-                className="h-full w-full object-contain"
+                className="h-full w-full max-h-full max-w-full object-contain pointer-events-none select-none"
               />
             </div>
             <div className="flex flex-col min-w-0">
@@ -247,7 +247,7 @@ export function Header({ onToggleSidebar }: HeaderProps) {
         </div>
 
         {/* Subtle Separator (Desktop/Tablet only) */}
-        <div className="hidden sm:block h-4.5 w-px bg-white/20 mx-1 sm:mx-1.5" aria-hidden="true" />
+        <div className="hidden sm:block h-4 w-px bg-white/20 mx-1 sm:mx-1.5" aria-hidden="true" />
 
         {/* User Profile / Avatar (Hidden on mobile, visible sm+) */}
         <div className="hidden sm:flex items-center">
