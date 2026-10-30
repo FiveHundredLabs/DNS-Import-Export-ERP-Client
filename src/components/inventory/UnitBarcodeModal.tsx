@@ -58,6 +58,14 @@ export function UnitBarcodeModal({
   const [pageSize, setPageSize] = useState<number>(12);
   const [isPrinting, setIsPrinting] = useState<boolean>(false);
 
+  // Print scope state: 'ALL' (bulk), 'PRODUCT' (product-wise), or 'UNIT' (individual unit)
+  const [printScope, setPrintScope] = useState<{
+    mode: 'ALL' | 'PRODUCT' | 'UNIT';
+    productId?: string;
+    productName?: string;
+    unitBarcode?: string;
+  } | null>(null);
+
   // Keep activeItems synced when preparedItems change
   React.useEffect(() => {
     setActiveItems(preparedItems);
@@ -106,6 +114,20 @@ export function UnitBarcodeModal({
     return list;
   }, [activeItems, selectedProductFilter]);
 
+  // Subset of stickers for active print job (Bulk, Product-wise, or Individual Unit)
+  const stickersToPrint = useMemo(() => {
+    if (!printScope || printScope.mode === 'ALL') {
+      return allStickers;
+    }
+    if (printScope.mode === 'UNIT') {
+      return allStickers.filter((s) => s.record.unitBarcode === printScope.unitBarcode);
+    }
+    if (printScope.mode === 'PRODUCT') {
+      return allStickers.filter((s) => s.productId === printScope.productId);
+    }
+    return allStickers;
+  }, [allStickers, printScope]);
+
   // Paginated subset of stickers for display
   const totalStickers = allStickers.length;
   const totalPages = Math.max(1, Math.ceil(totalStickers / pageSize));
@@ -116,17 +138,48 @@ export function UnitBarcodeModal({
     return allStickers.slice(startIndex, endIndex);
   }, [allStickers, startIndex, endIndex]);
 
-  // Handle printing stickers via window.print()
-  const handlePrintStickers = () => {
+  // 1. Bulk print: all stickers across the GRN
+  const handlePrintBulk = () => {
     if (allStickers.length === 0) {
-      toast.error('No stickers to print');
+      toast.error('No stickers available to print');
       return;
     }
-    toast.info(`Preparing print job for ${allStickers.length} barcode stickers...`);
+    setPrintScope({ mode: 'ALL' });
     setIsPrinting(true);
+    toast.info(`Preparing bulk print for ${allStickers.length} barcode stickers...`);
     setTimeout(() => {
       window.print();
       setIsPrinting(false);
+      setPrintScope(null);
+    }, 250);
+  };
+
+  // 2. Product-wise print: stickers for a specific product
+  const handlePrintProduct = (productId: string, productName: string) => {
+    const productStickers = allStickers.filter((s) => s.productId === productId);
+    if (productStickers.length === 0) {
+      toast.error(`No barcode stickers found for ${productName}`);
+      return;
+    }
+    setPrintScope({ mode: 'PRODUCT', productId, productName });
+    setIsPrinting(true);
+    toast.info(`Preparing product-wise print for ${productName} (${productStickers.length} units)...`);
+    setTimeout(() => {
+      window.print();
+      setIsPrinting(false);
+      setPrintScope(null);
+    }, 250);
+  };
+
+  // 3. Individual unit print: single sticker
+  const handlePrintUnit = (unitBarcode: string, unitIndex: number, productName: string) => {
+    setPrintScope({ mode: 'UNIT', unitBarcode });
+    setIsPrinting(true);
+    toast.info(`Preparing single unit sticker print: Unit #${unitIndex} (${productName})...`);
+    setTimeout(() => {
+      window.print();
+      setIsPrinting(false);
+      setPrintScope(null);
     }, 250);
   };
 
@@ -216,17 +269,24 @@ export function UnitBarcodeModal({
           </Badge>
         </div>
 
-        {/* SVG Barcode Visual */}
+        {/* SVG Barcode Visual + Serial Number Directly Below */}
         <div className="py-2 px-1 flex flex-col items-center justify-center bg-slate-50/50 rounded my-1.5 overflow-hidden">
           <BarcodeVisual
             value={sticker.record.unitBarcode}
             width={180}
             height={40}
             showText={false}
+            serialNumber={sticker.record.serialNumber}
           />
           <span className="font-mono font-bold text-[11px] text-slate-800 tracking-wider mt-1 truncate max-w-full text-center">
             {sticker.record.unitBarcode}
           </span>
+          {sticker.record.serialNumber && (
+            <div className="mt-1 flex items-center justify-center gap-1 px-2 py-0.5 bg-indigo-50 border border-indigo-200/80 rounded font-mono text-[10px] font-bold text-indigo-900 tracking-wider">
+              <Hash className="h-3 w-3 text-indigo-600 shrink-0" />
+              <span>SN: {sticker.record.serialNumber}</span>
+            </div>
+          )}
         </div>
 
         {/* Sticker Footer Metadata */}
@@ -245,24 +305,41 @@ export function UnitBarcodeModal({
           </span>
         </div>
 
-        {/* Sticker Physical Affix Status */}
+        {/* Sticker Actions: Individual Unit Print & Physical Affix Status */}
         <div className="mt-2 pt-1 border-t border-dashed border-slate-100 flex items-center justify-between text-[10px]">
-          {isAffixed ? (
-            <span className="inline-flex items-center gap-1 text-emerald-700 font-semibold">
-              <CheckCircle2 className="h-3 w-3 text-emerald-600" />
-              Sticker Affixed
-            </span>
-          ) : (
-            <span className="inline-flex items-center gap-1 text-amber-700 font-medium">
-              <Clock className="h-3 w-3 text-amber-600" />
-              Pending Affixing
-            </span>
-          )}
-          {isVerified && (
-            <Badge className="bg-emerald-600 text-white text-[9px] px-1 py-0">
-              Verified
-            </Badge>
-          )}
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation();
+              handlePrintUnit(sticker.record.unitBarcode, sticker.unitIndex, sticker.productName);
+            }}
+            className="h-6 px-2 text-[10px] font-semibold text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 gap-1 rounded print:hidden"
+            title="Print individual unit barcode sticker"
+          >
+            <Printer className="h-3 w-3" />
+            Print Unit
+          </Button>
+
+          <div className="flex items-center gap-1.5">
+            {isAffixed ? (
+              <span className="inline-flex items-center gap-1 text-emerald-700 font-semibold">
+                <CheckCircle2 className="h-3 w-3 text-emerald-600" />
+                Affixed
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1 text-amber-700 font-medium">
+                <Clock className="h-3 w-3 text-amber-600" />
+                Pending
+              </span>
+            )}
+            {isVerified && (
+              <Badge className="bg-emerald-600 text-white text-[9px] px-1 py-0">
+                Verified
+              </Badge>
+            )}
+          </div>
         </div>
       </div>
     );
@@ -290,16 +367,33 @@ export function UnitBarcodeModal({
               </DialogDescription>
             </div>
 
-            <div className="flex items-center gap-2 shrink-0">
+            {/* Print Controls: Bulk & Product-Wise */}
+            <div className="flex items-center gap-2 shrink-0 flex-wrap">
+              {selectedProductFilter !== 'ALL' && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const prod = activeItems.find((i) => i.productId === selectedProductFilter);
+                    handlePrintProduct(selectedProductFilter, prod?.productNameSnapshot || 'Product');
+                  }}
+                  className="gap-1.5 text-xs font-semibold h-8 border-indigo-200 text-indigo-700 bg-indigo-50/60 hover:bg-indigo-100/80 shadow-xs"
+                >
+                  <Printer className="h-3.5 w-3.5 text-indigo-600" />
+                  Print Product ({allStickers.length})
+                </Button>
+              )}
+
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={handlePrintStickers}
-                className="gap-1.5 text-xs font-semibold h-8 shadow-xs"
+                onClick={handlePrintBulk}
+                className="gap-1.5 text-xs font-semibold h-8 shadow-xs text-slate-800"
               >
                 <Printer className="h-3.5 w-3.5 text-slate-600" />
-                Print Stickers ({allStickers.length})
+                Print All ({summary.totalUnits})
               </Button>
             </div>
           </div>
@@ -365,6 +459,22 @@ export function UnitBarcodeModal({
                   ))}
                 </SelectContent>
               </Select>
+
+              {selectedProductFilter !== 'ALL' && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const prod = activeItems.find((i) => i.productId === selectedProductFilter);
+                    handlePrintProduct(selectedProductFilter, prod?.productNameSnapshot || 'Product');
+                  }}
+                  className="h-8 text-xs font-semibold gap-1.5 border-indigo-200 text-indigo-700 bg-indigo-50/60 hover:bg-indigo-100/80"
+                >
+                  <Printer className="h-3.5 w-3.5" />
+                  Print Product ({allStickers.length})
+                </Button>
+              )}
             </div>
 
             {/* Test Scan Barcode input */}
@@ -436,10 +546,10 @@ export function UnitBarcodeModal({
                   {pagedStickers.map((sticker, idx) => renderStickerCard(sticker, idx))}
                 </div>
 
-                {/* Print View: Full unpaginated grid during print job */}
+                {/* Print View: Filtered stickers matching active print job (Bulk, Product, or Unit) */}
                 {isPrinting && (
                   <div className="hidden print:grid print:grid-cols-2 gap-3">
-                    {allStickers.map((sticker, idx) => renderStickerCard(sticker, idx))}
+                    {stickersToPrint.map((sticker, idx) => renderStickerCard(sticker, idx))}
                   </div>
                 )}
 

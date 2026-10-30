@@ -1,17 +1,19 @@
 import React from 'react';
 
-interface BarcodeVisualProps {
+export interface BarcodeVisualProps {
   value: string;
   width?: number;
   height?: number;
   showText?: boolean;
   className?: string;
   barColor?: string;
+  serialNumber?: string;
 }
 
 /**
  * Deterministic SVG Barcode Renderer
  * Converts string into Code-128 styled vertical bar patterns with human readable caption.
+ * Displays serial number directly below the barcode when available.
  * Automatically constrained with max-w-full to prevent horizontal layout overflow.
  */
 export const BarcodeVisual: React.FC<BarcodeVisualProps> = ({
@@ -21,6 +23,7 @@ export const BarcodeVisual: React.FC<BarcodeVisualProps> = ({
   showText = true,
   className = '',
   barColor = '#0f172a',
+  serialNumber,
 }) => {
   // Deterministic bar widths derived from string characters
   const bars = React.useMemo(() => {
@@ -72,6 +75,11 @@ export const BarcodeVisual: React.FC<BarcodeVisualProps> = ({
       {showText && (
         <span className="font-mono text-[10px] tracking-wider text-slate-700 mt-1 font-semibold truncate max-w-full text-center">
           {value}
+        </span>
+      )}
+      {serialNumber && (
+        <span className="font-mono text-[9px] font-bold text-indigo-950 tracking-wider text-center mt-0.5 px-1.5 py-0.5 bg-indigo-50 border border-indigo-200/80 rounded">
+          SN: {serialNumber}
         </span>
       )}
     </div>

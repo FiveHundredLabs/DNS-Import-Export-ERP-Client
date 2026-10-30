@@ -662,6 +662,12 @@ class SerialNumberService {
     return this.records.find((r) => r.serialNumber.toUpperCase() === trimmed) || null;
   }
 
+  public isSerialRegistered(serial: string): boolean {
+    if (!serial) return false;
+    const trimmed = serial.trim().toUpperCase();
+    return this.records.some((r) => r.serialNumber.toUpperCase() === trimmed);
+  }
+
   public async registerBatch(params: {
     productId: string;
     locationId: string;

@@ -343,15 +343,73 @@ export function GRNCreateEditPage() {
     setItems((prev) => prev.filter((i) => i._tempId !== tempId));
   };
 
-  // Step 3 Sticker Print Trigger
-  const handlePrintAllStickers = () => {
-    toast.info(`Sending ${barcodeSummary.totalUnits} barcode stickers to printer...`);
+  // Step 4 Print Scope State: 'ALL' (bulk), 'PRODUCT' (product-wise), or 'UNIT' (individual unit)
+  const [step4PrintScope, setStep4PrintScope] = useState<{
+    mode: 'ALL' | 'PRODUCT' | 'UNIT';
+    productId?: string;
+    productName?: string;
+    unitBarcode?: string;
+  } | null>(null);
+
+  const stickersToPrintInStep4 = useMemo(() => {
+    if (!step4PrintScope || step4PrintScope.mode === 'ALL') {
+      return allStickers;
+    }
+    if (step4PrintScope.mode === 'UNIT') {
+      return allStickers.filter((s) => s.record.unitBarcode === step4PrintScope.unitBarcode);
+    }
+    if (step4PrintScope.mode === 'PRODUCT') {
+      return allStickers.filter((s) => s.productId === step4PrintScope.productId);
+    }
+    return allStickers;
+  }, [allStickers, step4PrintScope]);
+
+  // Bulk print all stickers
+  const handlePrintBulk = () => {
+    if (allStickers.length === 0) {
+      toast.error('No barcode stickers available to print');
+      return;
+    }
+    setStep4PrintScope({ mode: 'ALL' });
     setIsPrintingStep3(true);
+    toast.info(`Preparing bulk print for all ${allStickers.length} barcode stickers...`);
     setTimeout(() => {
       window.print();
       setIsPrintingStep3(false);
+      setStep4PrintScope(null);
     }, 250);
   };
+
+  // Product-wise print
+  const handlePrintProduct = (productId: string, productName: string) => {
+    const pStickers = allStickers.filter((s) => s.productId === productId);
+    if (pStickers.length === 0) {
+      toast.error(`No stickers found for ${productName}`);
+      return;
+    }
+    setStep4PrintScope({ mode: 'PRODUCT', productId, productName });
+    setIsPrintingStep3(true);
+    toast.info(`Preparing product-wise print for ${productName} (${pStickers.length} units)...`);
+    setTimeout(() => {
+      window.print();
+      setIsPrintingStep3(false);
+      setStep4PrintScope(null);
+    }, 250);
+  };
+
+  // Individual unit sticker print
+  const handlePrintSingleUnit = (unitBarcode: string, unitIndex: number, productName: string) => {
+    setStep4PrintScope({ mode: 'UNIT', unitBarcode });
+    setIsPrintingStep3(true);
+    toast.info(`Preparing single unit sticker print: Unit #${unitIndex} (${productName})...`);
+    setTimeout(() => {
+      window.print();
+      setIsPrintingStep3(false);
+      setStep4PrintScope(null);
+    }, 250);
+  };
+
+  const handlePrintAllStickers = handlePrintBulk;
 
   // Step 3 Barcode Scanner Verification Test
   const handleTestScan = (codeToTest?: string) => {
@@ -420,7 +478,43 @@ export function GRNCreateEditPage() {
     }, 0);
   }, [serializedItems]);
 
-  const isSerialStepComplete = totalSerialsRequired === 0 || totalSerialsEntered === totalSerialsRequired;
+  // Real-time duplicate serial tracking across all items in GRN and existing DB records
+  const serialDuplicateStats = useMemo(() => {
+    const counts = new Map<string, number>();
+    const intraDuplicates = new Set<string>();
+    const dbDuplicates = new Set<string>();
+
+    items.forEach((item) => {
+      const goodQty = Math.max(0, item.receivedQuantity - item.damagedQuantity);
+      (item.serialNumbers || []).slice(0, goodQty).forEach((sn) => {
+        const clean = sn ? sn.trim() : '';
+        if (clean) {
+          const upper = clean.toUpperCase();
+          const current = counts.get(upper) || 0;
+          counts.set(upper, current + 1);
+          if (current >= 1) {
+            intraDuplicates.add(upper);
+          }
+          if (serialNumberService.isSerialRegistered(clean)) {
+            dbDuplicates.add(upper);
+          }
+        }
+      });
+    });
+
+    const hasAnyDuplicate = intraDuplicates.size > 0 || dbDuplicates.size > 0;
+    return {
+      counts,
+      intraDuplicates,
+      dbDuplicates,
+      hasAnyDuplicate,
+      totalDuplicates: intraDuplicates.size + dbDuplicates.size,
+    };
+  }, [items]);
+
+  const isSerialStepComplete =
+    (totalSerialsRequired === 0 || totalSerialsEntered === totalSerialsRequired) &&
+    !serialDuplicateStats.hasAnyDuplicate;
 
   // Handlers for individual serial numbers
   const handleUpdateItemSerial = (tempId: string, index: number, value: string) => {
@@ -461,6 +555,41 @@ export function GRNCreateEditPage() {
       return;
     }
 
+    // Collect serials from other items in this GRN
+    const otherSerials = new Set<string>();
+    items.forEach((it) => {
+      if (it._tempId !== tempId) {
+        (it.serialNumbers || []).forEach((s) => {
+          if (s && s.trim()) otherSerials.add(s.trim().toUpperCase());
+        });
+      }
+    });
+
+    const uniqueLines: string[] = [];
+    const duplicates: string[] = [];
+    const seenInBulk = new Set<string>();
+
+    lines.forEach((line) => {
+      const upper = line.toUpperCase();
+      if (seenInBulk.has(upper) || otherSerials.has(upper) || serialNumberService.isSerialRegistered(line)) {
+        duplicates.push(line);
+      } else {
+        seenInBulk.add(upper);
+        uniqueLines.push(line);
+      }
+    });
+
+    if (duplicates.length > 0) {
+      toast.error(
+        `Rejected ${duplicates.length} duplicate serial(s): ${duplicates.slice(0, 3).join(', ')}${duplicates.length > 3 ? '...' : ''}. All serials must be unique.`
+      );
+    }
+
+    if (uniqueLines.length === 0) {
+      toast.warning('No unique serial numbers to apply.');
+      return;
+    }
+
     setItems((prev) =>
       prev.map((item) => {
         if (item._tempId !== tempId) return item;
@@ -468,8 +597,8 @@ export function GRNCreateEditPage() {
         const existing = [...(item.serialNumbers || [])];
         while (existing.length < goodQty) existing.push('');
 
-        for (let i = 0; i < goodQty && i < lines.length; i++) {
-          existing[i] = lines[i];
+        for (let i = 0; i < goodQty && i < uniqueLines.length; i++) {
+          existing[i] = uniqueLines[i];
         }
 
         const unitRecords = (item.unitRecords || []).map((rec, rIdx) => ({
@@ -487,7 +616,7 @@ export function GRNCreateEditPage() {
 
     setBulkPasteOpen((prev) => ({ ...prev, [tempId]: false }));
     setBulkPasteText((prev) => ({ ...prev, [tempId]: '' }));
-    toast.success(`Imported ${lines.length} serial number(s)`);
+    toast.success(`Imported ${uniqueLines.length} unique serial number(s)`);
   };
 
   const handleAutoGenerateSerials = (tempId: string) => {
@@ -544,6 +673,18 @@ export function GRNCreateEditPage() {
       return;
     }
 
+    const upperScan = scanVal.toUpperCase();
+    const alreadyInGRN = items.some((it) =>
+      (it.serialNumbers || []).some((s) => s && s.trim().toUpperCase() === upperScan)
+    );
+    if (alreadyInGRN) {
+      toast.error(`Duplicate Serial Rejected: "${scanVal}" is already entered for another unit in this GRN.`);
+      return;
+    }
+    if (serialNumberService.isSerialRegistered(scanVal)) {
+      toast.error(`Duplicate Serial Rejected: "${scanVal}" is already registered in warehouse stock.`);
+      return;
+    }
     handleUpdateItemSerial(tempId, firstEmptyIndex, scanVal);
     setScanInputs((prev) => ({ ...prev, [tempId]: '' }));
     toast.success(`Scanned serial for Unit ${firstEmptyIndex + 1}: ${scanVal}`);
@@ -646,17 +787,24 @@ export function GRNCreateEditPage() {
           </Badge>
         </div>
 
-        {/* SVG Barcode Visual */}
+        {/* SVG Barcode Visual + Serial Number Directly Below */}
         <div className="py-2 px-1 flex flex-col items-center justify-center bg-slate-50/50 rounded my-1.5 overflow-hidden">
           <BarcodeVisual
             value={sticker.record.unitBarcode}
             width={180}
             height={40}
             showText={false}
+            serialNumber={sticker.record.serialNumber}
           />
           <span className="font-mono font-bold text-[11px] text-slate-800 tracking-wider mt-1 truncate max-w-full text-center">
             {sticker.record.unitBarcode}
           </span>
+          {sticker.record.serialNumber && (
+            <div className="mt-1 flex items-center justify-center gap-1 px-2 py-0.5 bg-indigo-50 border border-indigo-200/80 rounded font-mono text-[10px] font-bold text-indigo-900 tracking-wider">
+              <Hash className="h-3 w-3 text-indigo-600 shrink-0" />
+              <span>SN: {sticker.record.serialNumber}</span>
+            </div>
+          )}
         </div>
 
         {/* Sticker Footer Metadata */}
@@ -675,8 +823,22 @@ export function GRNCreateEditPage() {
           </span>
         </div>
 
-        {/* Sticker Physical Affix Status */}
+        {/* Sticker Actions: Individual Unit Print & Physical Affix Status */}
         <div className="mt-2 pt-1 border-t border-dashed border-slate-100 flex items-center justify-between text-[10px]">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation();
+              handlePrintSingleUnit(sticker.record.unitBarcode, sticker.unitIndex, sticker.productName);
+            }}
+            className="h-6 px-2 text-[10px] font-semibold text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 gap-1 rounded print:hidden"
+            title="Print individual unit barcode sticker"
+          >
+            <Printer className="h-3 w-3" />
+            Print Unit
+          </Button>
           {isAffixed ? (
             <span className="inline-flex items-center gap-1 text-emerald-700 font-semibold">
               <CheckCircle2 className="h-3 w-3 text-emerald-600" />
@@ -715,6 +877,10 @@ export function GRNCreateEditPage() {
       if (item.unitCost < 0) {
         return `Unit cost cannot be negative for ${item.productNameSnapshot}`;
       }
+    }
+
+    if (serialDuplicateStats.hasAnyDuplicate) {
+      return 'Duplicate serial numbers detected! Each unit serial number must be unique across all products and existing stock.';
     }
 
     // Validate serial numbers for serialized products
@@ -1840,14 +2006,21 @@ export function GRNCreateEditPage() {
                           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-2.5">
                             {Array.from({ length: goodQty }).map((_, unitIdx) => {
                               const val = (item.serialNumbers || [])[unitIdx] || '';
-                              const hasVal = Boolean(val.trim());
+                              const cleanVal = val.trim();
+                              const hasVal = Boolean(cleanVal);
+                              const upperVal = cleanVal.toUpperCase();
+                              const isIntraDup = hasVal && (serialDuplicateStats.counts.get(upperVal) || 0) > 1;
+                              const isDbDup = hasVal && serialDuplicateStats.dbDuplicates.has(upperVal);
+                              const isDuplicate = isIntraDup || isDbDup;
 
                               return (
                                 <div
                                   key={unitIdx}
                                   className={cn(
                                     'p-2 rounded-lg border text-left transition-all',
-                                    hasVal
+                                    isDuplicate
+                                      ? 'bg-rose-50/70 border-rose-400 ring-1 ring-rose-400/40 text-rose-950'
+                                      : hasVal
                                       ? 'bg-emerald-50/40 border-emerald-200'
                                       : 'bg-white border-slate-200 focus-within:border-indigo-400'
                                   )}
@@ -1856,7 +2029,12 @@ export function GRNCreateEditPage() {
                                     <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
                                       Unit #{unitIdx + 1}
                                     </span>
-                                    {hasVal ? (
+                                    {isDuplicate ? (
+                                      <span className="inline-flex items-center gap-0.5 text-[9px] font-bold text-rose-700 bg-rose-100 px-1 py-0.5 rounded border border-rose-200">
+                                        <AlertTriangle className="h-2.5 w-2.5 text-rose-600" />
+                                        Duplicate
+                                      </span>
+                                    ) : hasVal ? (
                                       <CheckCircle2 className="h-3 w-3 text-emerald-600" />
                                     ) : (
                                       <span className="text-[9px] text-amber-600 font-medium">Required</span>
@@ -1871,11 +2049,18 @@ export function GRNCreateEditPage() {
                                     placeholder={`SN #${unitIdx + 1}`}
                                     className={cn(
                                       'h-7 text-[11px] font-mono px-2',
-                                      hasVal
+                                      isDuplicate
+                                        ? 'bg-white border-rose-400 text-rose-900 font-bold focus:border-rose-500 focus:ring-rose-300'
+                                        : hasVal
                                         ? 'bg-white border-emerald-300 font-bold text-emerald-950'
                                         : 'bg-slate-50 border-slate-200'
                                     )}
                                   />
+                                  {isDuplicate && (
+                                    <span className="text-[9px] text-rose-600 font-semibold block mt-1 leading-tight">
+                                      {isDbDup ? 'Already in warehouse stock!' : 'Duplicate serial! Must be unique.'}
+                                    </span>
+                                  )}
                                 </div>
                               );
                             })}
@@ -1903,6 +2088,12 @@ export function GRNCreateEditPage() {
               <Button
                 type="button"
                 onClick={() => {
+                  if (serialDuplicateStats.hasAnyDuplicate) {
+                    toast.error(
+                      'Duplicate serial numbers detected! Each unit serial number must be unique before proceeding.'
+                    );
+                    return;
+                  }
                   if (!isSerialStepComplete) {
                     toast.error(
                       `Please enter all ${totalSerialsRequired} serial numbers before proceeding (${totalSerialsEntered}/${totalSerialsRequired} entered)`
@@ -1946,17 +2137,32 @@ export function GRNCreateEditPage() {
                 </CardDescription>
               </div>
 
-              <div className="flex items-center gap-2 shrink-0">
+              <div className="flex items-center gap-2 shrink-0 flex-wrap">
+                {selectedProductFilter !== 'ALL' && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const prod = items.find((i) => i.productId === selectedProductFilter);
+                      handlePrintProduct(selectedProductFilter, prod?.productNameSnapshot || 'Product');
+                    }}
+                    className="gap-1.5 text-xs font-semibold h-8 border-indigo-200 text-indigo-700 bg-indigo-50/60 hover:bg-indigo-100/80 shadow-xs"
+                  >
+                    <Printer className="h-3.5 w-3.5 text-indigo-600" />
+                    Print Product ({allStickers.length})
+                  </Button>
+                )}
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={handlePrintAllStickers}
+                  onClick={handlePrintBulk}
                   disabled={allStickers.length === 0}
-                  className="gap-1.5 text-xs font-semibold h-8 shadow-xs text-slate-700"
+                  className="gap-1.5 text-xs font-semibold h-8 shadow-xs text-slate-800"
                 >
                   <Printer className="h-3.5 w-3.5 text-slate-600" />
-                  Print Stickers ({allStickers.length})
+                  Print All ({barcodeSummary.totalUnits})
                 </Button>
               </div>
             </div>
@@ -2021,6 +2227,22 @@ export function GRNCreateEditPage() {
                     ))}
                   </SelectContent>
                 </Select>
+
+                {selectedProductFilter !== 'ALL' && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const prod = items.find((i) => i.productId === selectedProductFilter);
+                      handlePrintProduct(selectedProductFilter, prod?.productNameSnapshot || 'Product');
+                    }}
+                    className="h-8 text-xs font-semibold gap-1.5 border-indigo-200 text-indigo-700 bg-indigo-50/60 hover:bg-indigo-100/80"
+                  >
+                    <Printer className="h-3.5 w-3.5" />
+                    Print Product ({allStickers.length})
+                  </Button>
+                )}
               </div>
 
               {/* Handheld Scanner Verification Sandbox */}
@@ -2095,10 +2317,10 @@ export function GRNCreateEditPage() {
                     {pagedBarcodeStickers.map((sticker, idx) => renderStickerCard(sticker, idx))}
                   </div>
 
-                  {/* Print View: Full unpaginated grid for print media */}
+                  {/* Print View: Filtered stickers matching active print job (Bulk, Product, or Unit) */}
                   {isPrintingStep3 && (
                     <div className="hidden print:grid print:grid-cols-2 gap-3">
-                      {allStickers.map((sticker, idx) => renderStickerCard(sticker, idx))}
+                      {stickersToPrintInStep4.map((sticker, idx) => renderStickerCard(sticker, idx))}
                     </div>
                   )}
 
@@ -2426,11 +2648,19 @@ export function GRNCreateEditPage() {
                   toast.error('At least one product line is required');
                   return;
                 }
-                if (currentStep === 3 && !isSerialStepComplete) {
-                  toast.error(
-                    `Please enter all ${totalSerialsRequired} serial numbers before proceeding (${totalSerialsEntered}/${totalSerialsRequired} entered)`
-                  );
-                  return;
+                if (currentStep === 3) {
+                  if (serialDuplicateStats.hasAnyDuplicate) {
+                    toast.error(
+                      'Duplicate serial numbers detected! Each unit serial number must be unique before proceeding.'
+                    );
+                    return;
+                  }
+                  if (!isSerialStepComplete) {
+                    toast.error(
+                      `Please enter all ${totalSerialsRequired} serial numbers before proceeding (${totalSerialsEntered}/${totalSerialsRequired} entered)`
+                    );
+                    return;
+                  }
                 }
                 setCurrentStep((prev) => (prev + 1) as any);
               }}
