@@ -224,7 +224,7 @@ export function ProfilePage() {
               <span>{email}</span>
               <span>•</span>
               <MapPin className="h-3 w-3 text-rose-500" />
-              <span>{currentUser?.areaName || 'Western Province Territory'}</span>
+              <span>{currentUser?.areaName || 'Kelaniya Territory'}</span>
             </p>
             <div className="flex items-center justify-center sm:justify-start gap-2 mt-2.5 flex-wrap">
               <span className="text-[11px] font-semibold text-slate-600 bg-slate-100 px-2.5 py-0.5 rounded-md">
@@ -424,7 +424,7 @@ export function ProfilePage() {
                 <div className="relative">
                   <MapPin className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
                   <Input
-                    value={currentUser?.areaName || 'Western Province Central'}
+                    value={currentUser?.areaName || 'Kelaniya'}
                     readOnly
                     className="pl-9 text-xs h-9 bg-slate-50 text-slate-600 cursor-not-allowed"
                   />

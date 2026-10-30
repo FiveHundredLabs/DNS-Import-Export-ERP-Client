@@ -414,8 +414,8 @@ describe('Phase 12 — Role Security & Permission Boundary Testing (Section 83)'
   });
 
   describe('3. CASHIER Role Boundaries', () => {
-    it('cannot access restricted modules (/inventory, /finance, /approvals, /commissions, /settings)', () => {
-      const restrictedRoutes = ['/inventory', '/finance', '/approvals', '/commissions', '/settings'];
+    it('cannot access restricted modules (/inventory, /finance, /approvals, /commissions, /settings, /customers, /invoices, /payments)', () => {
+      const restrictedRoutes = ['/inventory', '/finance', '/approvals', '/commissions', '/settings', '/customers', '/invoices', '/payments'];
       for (const route of restrictedRoutes) {
         expect(canAccessRoute('CASHIER', route)).toBe(false);
       }
@@ -517,6 +517,22 @@ describe('Phase 12 — Role Security & Permission Boundary Testing (Section 83)'
       // Open session succeeds
       const openSession = { ...closedSession, status: 'OPEN' as const, closedAt: undefined };
       expect(validateCashierSession(openSession)).toBe(true);
+    });
+  });
+
+  describe('3b. SHOWROOM_MANAGER Role Boundaries & Management Functions', () => {
+    it('can access Showroom POS and Terminal Management modules', () => {
+      expect(canAccessRoute('SHOWROOM_MANAGER', '/pos')).toBe(true);
+      expect(canAccessRoute('SHOWROOM_MANAGER', '/products')).toBe(true);
+      expect(canAccessRoute('SHOWROOM_MANAGER', '/customers')).toBe(false);
+      expect(hasPermission('SHOWROOM_MANAGER', 'pos:operate')).toBe(true);
+      expect(hasPermission('SHOWROOM_MANAGER', 'pos:override_discount')).toBe(true);
+      expect(hasPermission('SHOWROOM_MANAGER', 'reports:all')).toBe(true);
+    });
+
+    it('cannot access restricted back-office modules (/finance, /settings)', () => {
+      expect(canAccessRoute('SHOWROOM_MANAGER', '/finance')).toBe(false);
+      expect(canAccessRoute('SHOWROOM_MANAGER', '/settings')).toBe(false);
     });
   });
 

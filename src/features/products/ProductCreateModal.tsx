@@ -34,6 +34,7 @@ export function ProductCreateModal({
   const [costPrice, setCostPrice] = useState<number>(0);
   const [sellingPrice, setSellingPrice] = useState<number>(0);
   const [minSellingPrice, setMinSellingPrice] = useState<number>(0);
+  const [showroomDiscountPercentage, setShowroomDiscountPercentage] = useState<number>(5);
   const [showDiscountInfo, setShowDiscountInfo] = useState(false);
   const [warrantyMonths, setWarrantyMonths] = useState<number>(12);
   const [isPromotional, setIsPromotional] = useState(false);
@@ -69,6 +70,7 @@ export function ProductCreateModal({
         currentSellingPrice: Number(sellingPrice),
         minimumSellingPrice: Number(minSellingPrice || costPrice),
         maxDiscountPercentage: discountLevels.length > 0 ? Math.max(...discountLevels) : 0,
+        showroomDiscountPercentage: Number(showroomDiscountPercentage || 5),
         taxRatePercentage: 18,
         discountLevels,
       },
@@ -206,7 +208,7 @@ export function ProductCreateModal({
           </label>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 border-t border-slate-100 pt-3">
+        <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 border-t border-slate-100 pt-3">
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1">
               Cost Price (LKR) <span className="text-rose-500">*</span>
@@ -241,6 +243,17 @@ export function ProductCreateModal({
               onChange={(e) => setMinSellingPrice(Number(e.target.value))}
               placeholder="Floor limit"
               error={errors.minimumSellingPrice}
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">
+              Showroom Disc (%)
+            </label>
+            <Input
+              type="number"
+              value={showroomDiscountPercentage || ''}
+              onChange={(e) => setShowroomDiscountPercentage(Number(e.target.value))}
+              placeholder="5"
             />
           </div>
         </div>

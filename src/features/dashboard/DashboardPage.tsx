@@ -21,6 +21,7 @@ import {
   Target,
   Users,
   Store,
+  Monitor,
   Boxes,
   Truck,
   ArrowRight,
@@ -85,11 +86,19 @@ export function DashboardPage() {
             <StatCard title="Damaged Stock Items" value="11 Units" variant="danger" icon={AlertCircle} />
           </>
         )}
+        {role === 'SHOWROOM_MANAGER' && (
+          <>
+            <StatCard title="Active Terminals" value="3 Online" variant="success" icon={Monitor} />
+            <StatCard title="Drawer Float Total" value={formatCurrency(125000)} variant="blue" icon={DollarSign} />
+            <StatCard title="Pending Shift Closings" value="1 Review" variant="warning" icon={Clock} />
+            <StatCard title="Today's Showroom Sales" value={formatCurrency(485000)} trend={{ value: '18.4%', isPositive: true }} variant="indigo" icon={Store} />
+          </>
+        )}
         {role === 'CASHIER' && (
           <>
             <StatCard title="Showroom Register" value="ACTIVE" variant="success" icon={CheckCircle2} />
             <StatCard title="Shift Cash In Hand" value={formatCurrency(84500)} variant="blue" icon={DollarSign} />
-            <StatCard title="Transactions Today" value="18 Invoices" trend={{ value: '24%', isPositive: true }} variant="indigo" icon={Receipt} />
+            <StatCard title="Transactions Today" value="18 Sales" trend={{ value: '24%', isPositive: true }} variant="indigo" icon={Receipt} />
             <StatCard title="Cash Variance" value="LKR 0.00" variant="success" icon={CheckCircle2} />
           </>
         )}

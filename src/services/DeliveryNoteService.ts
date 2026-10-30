@@ -1,3 +1,4 @@
+import { orderService } from './OrderService';
 import {
   DeliveryNote,
   DeliveryNoteItem,
@@ -79,13 +80,34 @@ export class DeliveryNoteService {
     return found ? { ...found } : null;
   }
 
+  async getByOrderId(orderId: string): Promise<DeliveryNote[]> {
+    return this.notes.filter(
+      (n) => n.orderId === orderId || n.orderNumber === orderId
+    );
+  }
+
+  async addDeliveryNote(note: DeliveryNote): Promise<DeliveryNote> {
+    const exists = this.notes.findIndex((n) => n.id === note.id || n.deliveryNoteNumber === note.deliveryNoteNumber);
+    if (exists >= 0) {
+      this.notes[exists] = note;
+    } else {
+      this.notes.unshift(note);
+    }
+    this.persist();
+    return note;
+  }
+
   /**
    * Retrieves invoices eligible for delivery note generation (status: DRAFT or unfulfilled).
    */
   async getDraftInvoices(): Promise<Invoice[]> {
-    // Look up invoices with status DRAFT or ISSUED
+    const ordersRes = await orderService.listOrders({ pageSize: 1000 });
+    const closedOrderIds = new Set(
+      (ordersRes.data || []).filter((o) => o.status === 'CLOSED').map((o) => o.id)
+    );
+    // Look up invoices with status DRAFT or ISSUED that are not on closed orders
     return MOCK_INVOICES.filter(
-      (inv) => inv.status === 'DRAFT' || inv.status === 'ISSUED'
+      (inv) => (inv.status === 'DRAFT' || inv.status === 'ISSUED') && (!inv.orderId || !closedOrderIds.has(inv.orderId))
     );
   }
 
@@ -110,8 +132,17 @@ export class DeliveryNoteService {
     payload: CreateDeliveryNotePayload,
     currentUser: User
   ): Promise<DeliveryNote> {
-    const invoice = MOCK_INVOICES.find((inv) => inv.id === payload.invoiceId);
-    if (!invoice) {
+    const targetOrderId = payload.orderId;
+    if (targetOrderId) {
+      const targetOrder = await orderService.getOrderById(targetOrderId);
+      if (targetOrder && targetOrder.status === 'CLOSED') {
+        throw new Error(
+          `Cannot create delivery note: Sales Order ${targetOrder.orderNumber} is closed. No further deliveries allowed.`
+        );
+      }
+    }
+    const invoice = payload.invoiceId ? MOCK_INVOICES.find((inv) => inv.id === payload.invoiceId) : null;
+    if (payload.invoiceId && !invoice) {
       throw new Error(`Invoice with ID ${payload.invoiceId} not found.`);
     }
 
@@ -123,7 +154,8 @@ export class DeliveryNoteService {
     let totalDispatchedUnits = 0;
 
     const deliveryItems: DeliveryNoteItem[] = payload.items.map((i, idx) => {
-      totalInvoicedUnits += i.invoicedQuantity;
+      const invQty = i.invoicedQuantity ?? i.unitBarcodes.length;
+      totalInvoicedUnits += invQty;
       totalDispatchedUnits += i.unitBarcodes.length;
 
       return {
@@ -132,7 +164,7 @@ export class DeliveryNoteService {
         productName: i.productName,
         sku: i.sku,
         uom: i.uom || 'PCS',
-        invoicedQuantity: i.invoicedQuantity,
+        invoicedQuantity: invQty,
         dispatchedQuantity: i.unitBarcodes.length,
         unitBarcodes: [...i.unitBarcodes],
         acceptedQuantity: i.unitBarcodes.length, // By default all allocated units are dispatched
@@ -144,16 +176,16 @@ export class DeliveryNoteService {
     const newNote: DeliveryNote = {
       id: `dn-${Date.now()}`,
       deliveryNoteNumber,
-      invoiceId: invoice.id,
-      invoiceNumber: invoice.invoiceNumber,
-      orderId: invoice.orderId,
-      orderNumber: invoice.orderNumber,
-      customerId: invoice.customerId,
-      customerName: invoice.customerName,
-      customerCode: invoice.customerCode,
-      customerAddress: invoice.customerAddress,
-      customerPhone: invoice.customerPhone,
-      customerVatNumber: invoice.customerVatNumber,
+      invoiceId: invoice?.id,
+      invoiceNumber: invoice?.invoiceNumber,
+      orderId: payload.orderId || invoice?.orderId,
+      orderNumber: payload.orderNumber || invoice?.orderNumber,
+      customerId: payload.customerId || invoice?.customerId || 'cust-001',
+      customerName: payload.customerName || invoice?.customerName || 'General Customer',
+      customerCode: payload.customerCode || invoice?.customerCode || 'GEN-001',
+      customerAddress: payload.customerAddress || invoice?.customerAddress,
+      customerPhone: payload.customerPhone || invoice?.customerPhone,
+      customerVatNumber: payload.customerVatNumber || invoice?.customerVatNumber,
       driverName: payload.driverName,
       driverPhone: payload.driverPhone,
       vehicleNumber: payload.vehicleNumber.toUpperCase(),

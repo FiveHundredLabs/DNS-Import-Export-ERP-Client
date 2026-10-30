@@ -41,7 +41,7 @@ export function ReportsFilterToolbar({
       return `Portfolio: ${user.name} (Sales Rep)`;
     }
     if (user?.role === 'AREA_MANAGER') {
-      return `Territory: ${user.areaName || 'Western Province Central'} (Locked)`;
+      return `Territory: ${user.areaName || 'Kelaniya'} (Locked)`;
     }
     if (filter.areaId) {
       const area = MOCK_AREAS.find((a) => a.id === filter.areaId);

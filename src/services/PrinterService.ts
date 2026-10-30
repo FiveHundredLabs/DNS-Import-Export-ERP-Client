@@ -209,9 +209,9 @@ export class ThermalPrinterService implements IPrinterService {
               line-height: 1;
             }
             .company {
-              font-size: 6.5pt;
+              font-size: 5.6pt;
               font-weight: 900;
-              letter-spacing: 0.3px;
+              letter-spacing: 0.2px;
               text-transform: uppercase;
               white-space: nowrap;
               overflow: hidden;

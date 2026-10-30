@@ -118,9 +118,9 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
 
   // 2. Customers, Invoices & POS (hiding legacy /payments from navigation bar)
   const customerItems: SidebarItem[] = [
-    { id: 'customer-collections', name: 'Customer Collections', path: '/payments/collect', icon: Banknote, category: 'sales' },
-    { id: 'customers', name: 'Customer Master', path: '/customers', icon: Users2, category: 'customers' },
-    { id: 'invoices', name: 'Invoices', path: '/invoices', icon: Receipt, category: 'sales' },
+    { id: 'customer-collections', name: 'Customer Collections', path: '/payments/collect', icon: Banknote, category: 'sales', excludedRoles: ['CASHIER', 'SHOWROOM_MANAGER'] },
+    { id: 'customers', name: 'Customer Master', path: '/customers', icon: Users2, category: 'customers', excludedRoles: ['CASHIER', 'SHOWROOM_MANAGER'] },
+    { id: 'invoices', name: 'Invoices', path: '/invoices', icon: Receipt, category: 'sales', excludedRoles: ['CASHIER', 'SHOWROOM_MANAGER'] },
     { id: 'pos', name: 'Showroom POS', path: '/pos', icon: Store, category: 'sales', excludedRoles: ['STOCK_KEEPER'] },
   ];
 

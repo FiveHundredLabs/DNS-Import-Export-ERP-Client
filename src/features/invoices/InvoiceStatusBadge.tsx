@@ -17,14 +17,14 @@ export function InvoiceStatusBadge({ status, className }: InvoiceStatusBadgeProp
       );
     case 'COLLECTED':
       return (
-        <Badge variant="secondary" className={`gap-1 font-semibold bg-blue-100 text-blue-800 border-blue-200 ${className || ''}`}>
-          <CheckCircle2 className="h-3 w-3 text-blue-600" /> Collected
+        <Badge variant="info" className={`gap-1 font-semibold ${className || ''}`}>
+          <CheckCircle2 className="h-3 w-3" /> Collected
         </Badge>
       );
     case 'PARTIALLY_COLLECTED':
       return (
-        <Badge variant="secondary" className={`gap-1 font-semibold bg-amber-50 text-amber-800 border-amber-200 ${className || ''}`}>
-          <Clock className="h-3 w-3 text-amber-600" /> Partially Collected
+        <Badge variant="warning" className={`gap-1 font-semibold ${className || ''}`}>
+          <Clock className="h-3 w-3" /> Partially Collected
         </Badge>
       );
     case 'PARTIALLY_PAID':
@@ -41,7 +41,7 @@ export function InvoiceStatusBadge({ status, className }: InvoiceStatusBadgeProp
       );
     case 'ISSUED':
       return (
-        <Badge variant="default" className={`gap-1 font-semibold bg-primary hover:bg-primary-hover text-primary-foreground ${className || ''}`}>
+        <Badge variant="primary" className={`gap-1 font-semibold ${className || ''}`}>
           <FileText className="h-3 w-3" /> Issued
         </Badge>
       );
@@ -49,18 +49,18 @@ export function InvoiceStatusBadge({ status, className }: InvoiceStatusBadgeProp
       return (
         <Badge
           variant="outline"
-          className={`gap-1 font-bold bg-amber-50 text-amber-800 border-amber-300 shadow-2xs ${className || ''}`}
+          className={`gap-1 font-semibold bg-amber-50 text-amber-800 border-amber-300 ${className || ''}`}
         >
-          <FileEdit className="h-3 w-3 text-amber-600" /> Draft
+          <FileEdit className="h-3 w-3" /> Draft
         </Badge>
       );
     case 'CANCELLED':
       return (
-        <Badge variant="outline" className={`gap-1 text-slate-500 line-through ${className || ''}`}>
+        <Badge variant="outline" className={`gap-1 line-through text-slate-500 ${className || ''}`}>
           <XCircle className="h-3 w-3" /> Cancelled
         </Badge>
       );
     default:
-      return <Badge variant="outline">{status}</Badge>;
+      return <Badge variant="outline" className={className}>{status}</Badge>;
   }
 }

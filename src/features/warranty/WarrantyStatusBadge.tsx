@@ -12,7 +12,7 @@ export function WarrantyStatusBadge({
     case 'ACTIVE':
       return (
         <span
-          className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200/80 shadow-2xs ${className || ''}`}
+          className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-[11px] font-semibold uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-300 shadow-2xs ${className || ''}`}
         >
           <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
           Active
@@ -21,7 +21,7 @@ export function WarrantyStatusBadge({
     case 'EXPIRING_SOON':
       return (
         <span
-          className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200/80 shadow-2xs ${className || ''}`}
+          className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-[11px] font-semibold uppercase tracking-wider bg-amber-50 text-amber-800 border border-amber-300 shadow-2xs ${className || ''}`}
         >
           <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
           Expiring Soon
@@ -30,7 +30,7 @@ export function WarrantyStatusBadge({
     case 'EXPIRED':
       return (
         <span
-          className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-50 text-rose-700 border border-rose-200/80 shadow-2xs ${className || ''}`}
+          className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-[11px] font-semibold uppercase tracking-wider bg-rose-50 text-rose-800 border border-rose-300 shadow-2xs ${className || ''}`}
         >
           <span className="h-1.5 w-1.5 rounded-full bg-rose-500" />
           Expired
@@ -39,7 +39,7 @@ export function WarrantyStatusBadge({
     case 'NOT_REGISTERED':
       return (
         <span
-          className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-600 border border-slate-200 shadow-2xs ${className || ''}`}
+          className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-[11px] font-semibold uppercase tracking-wider bg-slate-50 text-slate-700 border border-slate-300 shadow-2xs ${className || ''}`}
         >
           <span className="h-1.5 w-1.5 rounded-full bg-slate-400" />
           Not Registered
@@ -48,9 +48,9 @@ export function WarrantyStatusBadge({
     case 'CLAIMED':
       return (
         <span
-          className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200/80 shadow-2xs ${className || ''}`}
+          className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-[11px] font-semibold uppercase tracking-wider bg-sky-50 text-sky-800 border border-sky-300 shadow-2xs ${className || ''}`}
         >
-          <span className="h-1.5 w-1.5 rounded-full bg-blue-500" />
+          <span className="h-1.5 w-1.5 rounded-full bg-sky-500" />
           Claimed
         </span>
       );
@@ -66,7 +66,7 @@ export function ClaimStatusBadge({ status }: { status: ClaimStatus }) {
     case 'IN_INSPECTION':
       return <Badge variant="warning">In Inspection</Badge>;
     case 'APPROVED':
-      return <Badge variant="default">Approved</Badge>;
+      return <Badge variant="success">Approved</Badge>;
     case 'REPLACED':
       return <Badge variant="success">Replaced</Badge>;
     case 'REPAIRED':

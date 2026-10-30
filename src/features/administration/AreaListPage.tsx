@@ -158,7 +158,7 @@ export function AreaListPage() {
               <Input 
                 value={formData.code} 
                 onChange={e => setFormData({...formData, code: e.target.value})} 
-                placeholder="e.g. WP-CTR"
+                placeholder="e.g. KEL"
                 className="focus-visible:ring-indigo-500"
               />
             </div>
@@ -169,7 +169,7 @@ export function AreaListPage() {
               <Input 
                 value={formData.name} 
                 onChange={e => setFormData({...formData, name: e.target.value})} 
-                placeholder="e.g. Western Province"
+                placeholder="e.g. Kelaniya, Maharagama, Malabe, Kottawa"
                 className="focus-visible:ring-indigo-500"
               />
             </div>

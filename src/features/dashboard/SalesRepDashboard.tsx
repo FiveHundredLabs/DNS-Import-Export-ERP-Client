@@ -283,41 +283,34 @@ export function SalesRepDashboard() {
 
   return (
     <div className="w-full space-y-4 sm:space-y-6 pb-24 md:pb-6">
-      {/* 1. Header Banner:
-          - MOBILE (< md): Curved brand header in primary gradient, fluid waves, mobile search
-          - DESKTOP (md:): Clean enterprise white card, standard layout, desktop actions
-      */}
-      <div className="relative -mx-3.5 -mt-3.5 md:mx-0 md:mt-0 p-5 md:p-6 pb-7 md:pb-6 rounded-b-[2.5rem] md:rounded-2xl bg-gradient-to-br from-primary via-primary-hover to-primary-active md:from-white md:via-white md:to-white text-primary-foreground md:text-slate-900 shadow-md md:shadow-xs shadow-primary/20 md:border md:border-slate-200/90 overflow-hidden md:overflow-visible transition-all">
-        {/* Fluid Decorative Ambient Waves (Mobile only) */}
-        <div className="block md:hidden absolute -top-12 -right-12 w-48 h-48 rounded-full bg-white/10 blur-2xl pointer-events-none" />
-        <div className="block md:hidden absolute -bottom-10 -left-10 w-40 h-40 rounded-full bg-white/5 blur-xl pointer-events-none" />
+      {/* 1. Header Banner (Desktop Only — on mobile screens, greeting card is rendered above header in AppLayout) */}
+      <div className="hidden md:block p-6 rounded-2xl bg-white text-slate-900 shadow-xs border border-slate-200/90 transition-all">
+        <div className="min-w-0 flex-1">
+          {/* 1. Greeting & Name */}
+          <h1 className="text-xl font-extrabold tracking-tight text-slate-900 leading-tight truncate">
+            {greetingMessage}
+          </h1>
 
-          <div className="min-w-0 flex-1">
-            {/* 1. Greeting & Name (First) */}
-            <h1 className="text-base sm:text-lg md:text-xl font-extrabold tracking-tight text-white md:text-slate-900 leading-tight truncate">
-              {greetingMessage}
-            </h1>
+          {/* 2. Territory */}
+          <div className="flex items-center gap-1.5 text-xs text-slate-600 font-medium mt-1 truncate">
+            <MapPin className="h-3.5 w-3.5 text-rose-500 shrink-0" />
+            <span className="truncate">{currentUser?.areaName ? `${currentUser.areaName} Territory` : 'Kelaniya Territory'}</span>
+          </div>
 
-            {/* 2. Territory (Second) */}
-            <div className="flex items-center gap-1.5 text-xs text-white/90 md:text-slate-600 font-medium mt-1 truncate">
-              <MapPin className="h-3.5 w-3.5 text-rose-300 md:text-rose-500 shrink-0" />
-              <span className="truncate">Kottawa Central Territory</span>
+          {/* 3. Dealer Information */}
+          <div className="flex items-center gap-2 text-[11px] text-slate-500 font-medium mt-1">
+            <div className="flex items-center gap-1 shrink-0">
+              <Users className="h-3 w-3 text-sky-600 shrink-0" />
+              <span>{currentUser?.assignedCustomersCount || 14} Assigned Dealers</span>
             </div>
-
-            {/* 3. Dealer Information (Third) */}
-            <div className="flex items-center gap-2 text-[11px] text-white/80 md:text-slate-500 font-medium mt-1">
-              <div className="flex items-center gap-1 shrink-0">
-                <Users className="h-3 w-3 text-sky-300 md:text-sky-600 shrink-0" />
-                <span>14 Assigned Dealers</span>
-              </div>
-              <span className="opacity-40">•</span>
-              <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-300 md:text-emerald-700 bg-emerald-500/20 md:bg-emerald-50 px-1.5 py-0.5 rounded-md border border-emerald-400/30 md:border-emerald-200">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 md:bg-emerald-500 animate-pulse" />
-                Active Route
-              </span>
-            </div>
+            <span className="opacity-40">•</span>
+            <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded-md border border-emerald-200">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              Active Route
+            </span>
           </div>
         </div>
+      </div>
 
       {/* 2. Field Services & Shortcuts Grid (Mobile Only) */}
       <div className="block md:hidden bg-white rounded-2xl p-3.5 sm:p-4 border border-slate-200/80 shadow-xs">
@@ -388,17 +381,17 @@ export function SalesRepDashboard() {
             </span>
           </Link>
 
-          {/* 7. Live Tracking */}
+          {/* 7. Cash in Hand */}
           <button
             type="button"
-            onClick={() => navigate('/orders')}
+            onClick={() => navigate('/payments')}
             className="flex flex-col items-center group active:scale-95 transition-transform cursor-pointer"
           >
-            <div className="h-11 w-11 rounded-xl bg-sky-50 text-sky-600 flex items-center justify-center shadow-2xs group-hover:bg-sky-600 group-hover:text-white transition-colors">
-              <Clock className="h-5 w-5" />
+            <div className="h-11 w-11 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shadow-2xs group-hover:bg-amber-600 group-hover:text-white transition-colors">
+              <Banknote className="h-5 w-5" />
             </div>
-            <span className="text-[11px] font-medium text-slate-700 mt-1.5 truncate max-w-full group-hover:text-sky-700 transition-colors">
-              Tracking
+            <span className="text-[11px] font-medium text-slate-700 mt-1.5 truncate max-w-full group-hover:text-amber-700 transition-colors">
+              Cash in Hand
             </span>
           </button>
 
@@ -419,178 +412,94 @@ export function SalesRepDashboard() {
           </button>
         </div>
       </div>
-      {/* 3. Performance Snapshot (Clean, High-Scannability KPI Grid) */}
-      <div className="space-y-2">
+      {/* 3. Performance Snapshot (Clean, Modern 3-Element KPI Cards) */}
+      <div className="space-y-3">
         <div className="flex items-center justify-between px-1">
           <span className="text-xs font-bold uppercase tracking-wider text-slate-800">
             Performance Snapshot
           </span>
-          <span className="text-xs text-emerald-600 font-semibold flex items-center gap-1">
-            <TrendingUp className="h-3.5 w-3.5" /> 85% Target Pace
-          </span>
         </div>
 
-        {/* 5-Card Grid: Hero card spans 2 cols on mobile, 4 secondary cards in 2x2 grid */}
+        {/* 5-Card Grid: 2 cols on mobile, 5 cols on lg */}
         <div className="grid grid-cols-2 lg:grid-cols-5 gap-2.5 sm:gap-4">
-          {/* Card 1: Monthly Sales Target (Hero Card) */}
-          <div className="col-span-2 lg:col-span-1 rounded-2xl border border-emerald-200/90 bg-gradient-to-br from-emerald-500/[0.07] via-emerald-50/40 to-white p-3 sm:p-4 shadow-xs hover:shadow-sm transition-all relative overflow-hidden group">
+          {/* Card 1: Monthly Sales */}
+          <div className="col-span-1 rounded-2xl border border-slate-200/90 bg-white p-3.5 sm:p-4 shadow-xs hover:shadow-sm transition-all flex flex-col justify-between">
             <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2 min-w-0">
-                <div className="h-8 w-8 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0 shadow-2xs">
-                  <DollarSign className="h-4 w-4" />
-                </div>
-                <span className="text-xs font-bold text-slate-800 truncate">
-                  Monthly Sales
-                </span>
-              </div>
-              <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-800 bg-emerald-100/90 px-2 py-0.5 rounded-full border border-emerald-200/80 shrink-0">
-                <TrendingUp className="h-3 w-3" />
-                85.0%
+              <span className="text-xs font-bold text-slate-700 truncate">
+                Monthly Sales
               </span>
-            </div>
-
-            <div className="mt-2 min-w-0">
-              <div className="text-lg sm:text-xl font-extrabold text-slate-900 tracking-tight font-mono">
-                {formatCurrency(4250000)}
+              <div className="h-8 w-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                <DollarSign className="h-4 w-4" />
               </div>
             </div>
-
-            {/* Target Progress Bar & Pace */}
-            <div className="mt-2 space-y-1">
-              <div className="h-1.5 w-full bg-emerald-100 rounded-full overflow-hidden">
-                <div className="h-full bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full w-[85%]" />
-              </div>
-              <div className="flex items-center justify-between text-[11px] text-slate-500 pt-0.5 font-medium">
-                <span>Target: {formatCurrency(5000000)}</span>
-                <span className="font-semibold text-emerald-700">85% Pace</span>
-              </div>
+            <div className="mt-3 text-base sm:text-lg lg:text-xl font-extrabold text-slate-900 tracking-tight font-mono">
+              {formatCurrency(4250000)}
             </div>
           </div>
 
           {/* Card 2: Route Collections */}
-          <div className="col-span-1 rounded-2xl border border-blue-200/90 bg-gradient-to-br from-blue-500/[0.07] via-sky-50/40 to-white p-3 sm:p-4 shadow-xs hover:shadow-sm transition-all relative overflow-hidden group flex flex-col justify-between">
-            <div>
-              <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
-                <div className="h-8 w-8 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center shrink-0 shadow-2xs">
-                  <FileCheck2 className="h-4 w-4" />
-                </div>
-                <span className="text-xs font-bold text-slate-800 leading-tight truncate">
-                  Route Collections
-                </span>
-              </div>
-
-              <div className="mt-2 min-w-0">
-                <div className="text-base sm:text-lg font-extrabold text-slate-900 tracking-tight font-mono">
-                  {formatCurrency(2650000)}
-                </div>
+          <div className="col-span-1 rounded-2xl border border-slate-200/90 bg-white p-3.5 sm:p-4 shadow-xs hover:shadow-sm transition-all flex flex-col justify-between">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs font-bold text-slate-700 truncate">
+                Route Collections
+              </span>
+              <div className="h-8 w-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                <FileCheck2 className="h-4 w-4" />
               </div>
             </div>
-
-            <div className="mt-2 text-[11px] text-blue-700 font-semibold flex items-center gap-1">
-              <CheckCircle2 className="h-3 w-3 text-blue-600" />
-              <span>89% verified</span>
+            <div className="mt-3 text-base sm:text-lg lg:text-xl font-extrabold text-slate-900 tracking-tight font-mono">
+              {formatCurrency(2650000)}
             </div>
           </div>
 
-          {/* Card 3: Cash to Hand */}
-          <div className="col-span-1 rounded-2xl border border-amber-200/90 bg-gradient-to-br from-amber-500/[0.07] via-amber-50/40 to-white p-3 sm:p-4 shadow-xs hover:shadow-sm transition-all relative overflow-hidden group flex flex-col justify-between">
-            <div>
-              <div className="flex items-center justify-between gap-1.5">
-                <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
-                  <div className="h-8 w-8 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center shrink-0 shadow-2xs">
-                    <Banknote className="h-4 w-4" />
-                  </div>
-                  <span className="text-xs font-bold text-slate-800 leading-tight truncate">
-                    Cash to Hand Over
-                  </span>
-                </div>
-              </div>
-
-              <div className="mt-2 min-w-0">
-                <div className="text-base sm:text-lg font-extrabold text-slate-900 tracking-tight font-mono">
-                  {formatCurrency(cashToHandOver)}
-                </div>
-                <div className="text-[10.5px] text-slate-500 font-medium mt-0.5 truncate">
-                  {pendingHandoverCount > 0
-                    ? `Field Cash: ${pendingHandoverCount} ${pendingHandoverCount === 1 ? 'collection' : 'collections'}`
-                    : 'All handed over'}
-                </div>
+          {/* Card 3: Cash in Hand */}
+          <div
+            onClick={() => navigate('/payments')}
+            className="col-span-1 rounded-2xl border border-slate-200/90 bg-white p-3.5 sm:p-4 shadow-xs hover:shadow-sm transition-all flex flex-col justify-between cursor-pointer group active:scale-[0.99]"
+          >
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs font-bold text-slate-700 truncate group-hover:text-amber-700 transition-colors">
+                Cash in Hand
+              </span>
+              <div className="h-8 w-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0 group-hover:bg-amber-100 transition-colors">
+                <Banknote className="h-4 w-4" />
               </div>
             </div>
-
-            <div className="mt-2 flex items-center justify-between gap-1 pt-1 border-t border-amber-100/60">
-              {cashToHandOver > 0 ? (
-                <>
-                  <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-800 bg-amber-100/90 px-1.5 py-0.5 rounded-full border border-amber-200 shrink-0">
-                    <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
-                    <span>To Hand Over</span>
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setCashHandoverModalOpen(true)}
-                    className="inline-flex items-center gap-0.5 text-[10.5px] font-bold text-amber-900 bg-amber-200 hover:bg-amber-300 py-0.5 px-1.5 rounded-md active:scale-95 transition-all shadow-2xs cursor-pointer"
-                  >
-                    <Send className="h-2.5 w-2.5" /> Hand Over
-                  </button>
-                </>
-              ) : (
-                <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-800 bg-emerald-100/90 px-1.5 py-0.5 rounded-full border border-emerald-200 shrink-0">
-                  <CheckCircle2 className="h-3 w-3 text-emerald-600" /> Settled
-                </span>
-              )}
+            <div className="mt-3 text-base sm:text-lg lg:text-xl font-extrabold text-slate-900 tracking-tight font-mono">
+              {formatCurrency(cashToHandOver)}
             </div>
           </div>
 
           {/* Card 4: Earned Incentive */}
-          <div className="col-span-1 rounded-2xl border border-indigo-200/90 bg-gradient-to-br from-indigo-500/[0.07] via-purple-50/40 to-white p-3 sm:p-4 shadow-xs hover:shadow-sm transition-all relative overflow-hidden group flex flex-col justify-between">
-            <div>
-              <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
-                <div className="h-8 w-8 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center shrink-0 shadow-2xs">
-                  <Target className="h-4 w-4" />
-                </div>
-                <span className="text-xs font-bold text-slate-800 leading-tight truncate">
-                  Earned Incentive
-                </span>
-              </div>
-
-              <div className="mt-2 min-w-0">
-                <div className="text-base sm:text-lg font-extrabold text-slate-900 tracking-tight font-mono">
-                  {formatCurrency(127500)}
-                </div>
+          <div className="col-span-1 rounded-2xl border border-slate-200/90 bg-white p-3.5 sm:p-4 shadow-xs hover:shadow-sm transition-all flex flex-col justify-between">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs font-bold text-slate-700 truncate">
+                Earned Incentive
+              </span>
+              <div className="h-8 w-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+                <Target className="h-4 w-4" />
               </div>
             </div>
-
-            <div className="mt-2 text-[11px] text-indigo-700 font-semibold truncate">
-              Tier 2 Commission (3%)
+            <div className="mt-3 text-base sm:text-lg lg:text-xl font-extrabold text-slate-900 tracking-tight font-mono">
+              {formatCurrency(127500)}
             </div>
           </div>
 
           {/* Card 5: Overdue Accounts */}
           <div
-            onClick={() => {
-              navigate('/payments/collect?filter=OVERDUE');
-            }}
-            className="col-span-1 rounded-2xl border border-rose-200/90 bg-gradient-to-br from-rose-500/[0.07] via-red-50/40 to-white p-3 sm:p-4 shadow-xs hover:shadow-sm transition-all relative overflow-hidden group flex flex-col justify-between cursor-pointer active:scale-[0.99]"
+            onClick={() => navigate('/payments/collect?filter=OVERDUE')}
+            className="col-span-2 sm:col-span-1 rounded-2xl border border-slate-200/90 bg-white p-3.5 sm:p-4 shadow-xs hover:shadow-sm transition-all flex flex-col justify-between cursor-pointer group active:scale-[0.99]"
           >
-            <div>
-              <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
-                <div className="h-8 w-8 rounded-lg bg-rose-100 text-rose-700 flex items-center justify-center shrink-0 shadow-2xs">
-                  <AlertCircle className="h-4 w-4" />
-                </div>
-                <span className="text-xs font-bold text-slate-800 leading-tight truncate">
-                  Overdue Accounts
-                </span>
-              </div>
-
-              <div className="mt-2">
-                <div className="text-base sm:text-lg font-extrabold text-rose-600 tracking-tight">
-                  2 Dealers
-                </div>
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs font-bold text-slate-700 truncate group-hover:text-rose-700 transition-colors">
+                Overdue Accounts
+              </span>
+              <div className="h-8 w-8 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center shrink-0 group-hover:bg-rose-100 transition-colors">
+                <AlertCircle className="h-4 w-4" />
               </div>
             </div>
-
-            <div className="mt-2 text-[11px] text-rose-700 font-semibold truncate">
-              Total: {formatCurrency(450000)}
+            <div className="mt-3 text-base sm:text-lg lg:text-xl font-extrabold text-rose-600 tracking-tight">
+              2 Dealers
             </div>
           </div>
         </div>

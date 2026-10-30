@@ -69,14 +69,14 @@ describe('Role-Based Sidebar Navigation & Access Control', () => {
       expect(screen.queryByTitle('Administration')).not.toBeInTheDocument();
     });
 
-    it('CASHIER cannot see Approvals & Warranty, Enterprise Reports, or Administration categories', () => {
+    it('CASHIER cannot see Approvals & Warranty, Enterprise Reports, Customers & CRM, or Administration categories', () => {
       setupSidebarForRole('CASHIER');
 
       expect(screen.getByTitle('Dashboard & Quick Links')).toBeInTheDocument();
-      expect(screen.getByTitle('Sales & Orders')).toBeInTheDocument(); // POS & Invoices
-      expect(screen.getByTitle('Customers & CRM')).toBeInTheDocument();
+      expect(screen.getByTitle('Sales & Orders')).toBeInTheDocument(); // POS
 
-      // Unauthorized categories hidden
+      // Unauthorized categories hidden (including Customers & CRM)
+      expect(screen.queryByTitle('Customers & CRM')).not.toBeInTheDocument();
       expect(screen.queryByTitle('Approvals & Warranty')).not.toBeInTheDocument();
       expect(screen.queryByTitle('Enterprise Reports')).not.toBeInTheDocument();
       expect(screen.queryByTitle('Administration')).not.toBeInTheDocument();

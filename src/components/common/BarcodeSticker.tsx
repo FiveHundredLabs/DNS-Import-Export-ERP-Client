@@ -78,16 +78,11 @@ export const BarcodeSticker: React.FC<BarcodeStickerProps> = ({
         breakInside: 'avoid',
       }}
     >
-      {/* 1. Header: Company Name & Unit Tag (Unit tag visible in application, hidden on print) */}
-      <div className="w-full flex items-center justify-between border-b border-black/80 pb-[1px] px-[0.5mm] print:justify-center">
-        <span className="font-extrabold uppercase tracking-wider text-[8px] sm:text-[8.5px] leading-tight truncate text-black print:text-center">
+      {/* 1. Header: Company Name (Unit counter moved outside sticker card; company name scaled down to prevent truncation) */}
+      <div className="w-full flex items-center justify-center border-b border-black/80 pb-[1px] px-[0.5mm] text-center">
+        <span className="font-extrabold uppercase tracking-tight text-[6.5px] sm:text-[7px] leading-tight truncate text-black text-center">
           {companyName}
         </span>
-        {unitCaption && (
-          <span className="font-mono font-bold text-[7px] sm:text-[7.5px] text-black shrink-0 ml-1 print:hidden">
-            {unitCaption}
-          </span>
-        )}
       </div>
 
       {/* 2. Product Name & SKU (Center-aligned) */}

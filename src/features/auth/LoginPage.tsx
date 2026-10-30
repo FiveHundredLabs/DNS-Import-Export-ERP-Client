@@ -99,7 +99,7 @@ const ROLE_METAS: Record<UserRole, RoleMeta> = {
     role: 'AREA_MANAGER',
     title: 'Area Manager',
     department: 'Regional Hub Oversight',
-    description: 'Western Province Central regional hub management, local customer accounts & area order visibility.',
+    description: 'Kelaniya regional hub management, local customer accounts & area order visibility.',
     keyPermissions: ['Regional Territory Orders', 'Territory Customers', 'Rep Allocation', 'Area Performance'],
     defaultPath: '/orders',
     badgeBg: 'bg-cyan-100',
@@ -145,6 +145,19 @@ const ROLE_METAS: Record<UserRole, RoleMeta> = {
     badgeText: 'text-rose-800 border-rose-200',
     accentBorder: 'hover:border-rose-400 group-hover:border-rose-400',
     avatarBg: 'bg-rose-600 text-white',
+    icon: Store,
+  },
+  SHOWROOM_MANAGER: {
+    role: 'SHOWROOM_MANAGER',
+    title: 'Showroom Manager',
+    department: 'Retail Showroom Operations',
+    description: 'Terminal management, cash drawer limit controls, shift & handover approvals, discount override reviews & POS analytics.',
+    keyPermissions: ['Terminal Configuration', 'Cash Drawer Limits', 'Shift & Handover Approvals', 'Discount & Price Overrides', 'Showroom Inventory Reorder'],
+    defaultPath: '/pos',
+    badgeBg: 'bg-emerald-100',
+    badgeText: 'text-emerald-800 border-emerald-200',
+    accentBorder: 'hover:border-emerald-400 group-hover:border-emerald-400',
+    avatarBg: 'bg-emerald-600 text-white',
     icon: Store,
   },
   PURCHASING_OFFICER: {
@@ -230,11 +243,11 @@ export function LoginPage() {
 
       // Category filter
       if (activeCategory === 'MANAGEMENT') {
-        if (!['DIRECTOR', 'MANAGER', 'SALES_MANAGER'].includes(user.role)) return false;
+        if (!['DIRECTOR', 'MANAGER', 'SALES_MANAGER', 'SHOWROOM_MANAGER'].includes(user.role)) return false;
       } else if (activeCategory === 'FINANCE_OPS') {
         if (!['FINANCE_MANAGER', 'STOCK_KEEPER', 'PURCHASING_OFFICER'].includes(user.role)) return false;
       } else if (activeCategory === 'SALES_RETAIL') {
-        if (!['AREA_MANAGER', 'SALES_REP', 'CASHIER'].includes(user.role)) return false;
+        if (!['AREA_MANAGER', 'SALES_REP', 'CASHIER', 'SHOWROOM_MANAGER'].includes(user.role)) return false;
       }
 
       // Search query filter
@@ -478,7 +491,7 @@ export function LoginPage() {
                 {
                   id: 'MANAGEMENT',
                   label: `Executive & Management (${
-                    MOCK_USERS.filter((u) => ['DIRECTOR', 'MANAGER', 'SALES_MANAGER'].includes(u.role)).length
+                    MOCK_USERS.filter((u) => ['DIRECTOR', 'MANAGER', 'SALES_MANAGER', 'SHOWROOM_MANAGER'].includes(u.role)).length
                   })`,
                 },
                 {
@@ -490,7 +503,7 @@ export function LoginPage() {
                 {
                   id: 'SALES_RETAIL',
                   label: `Sales & POS Retail (${
-                    MOCK_USERS.filter((u) => ['AREA_MANAGER', 'SALES_REP', 'CASHIER'].includes(u.role)).length
+                    MOCK_USERS.filter((u) => ['AREA_MANAGER', 'SALES_REP', 'CASHIER', 'SHOWROOM_MANAGER'].includes(u.role)).length
                   })`,
                 },
               ].map((tab) => (

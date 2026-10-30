@@ -18,7 +18,8 @@ export const ROLES: { label: string; shortLabel: string; role: UserRole }[] = [
   { label: 'Area Manager (Regional Hub)', shortLabel: 'Area Manager', role: 'AREA_MANAGER' },
   { label: 'Sales Representative (Field Rep)', shortLabel: 'Sales Rep', role: 'SALES_REP' },
   { label: 'Stock Keeper (Warehouse/GRN)', shortLabel: 'Stock Keeper', role: 'STOCK_KEEPER' },
-  { label: 'Cashier (Showroom POS)', shortLabel: 'Cashier', role: 'CASHIER' },
+  { label: 'Showroom Manager (POS & Terminals)', shortLabel: 'Showroom Manager', role: 'SHOWROOM_MANAGER' },
+  { label: 'Cashier (Showroom POS Terminal)', shortLabel: 'Cashier', role: 'CASHIER' },
   { label: 'Purchasing Officer (Procurement)', shortLabel: 'Purchasing Officer', role: 'PURCHASING_OFFICER' },
 ];
 

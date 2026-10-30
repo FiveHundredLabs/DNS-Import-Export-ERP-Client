@@ -144,7 +144,7 @@ export function CustomerPaymentsTab({ onSelectCustomer, className }: CustomerPay
           <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 mt-1">
             Customer Payments & Balances
           </h2>
-          <p className="text-xs text-slate-500 mt-0.5">
+          <p className="text-xs text-slate-500 mt-0.5 hidden sm:block">
             Identify outstanding accounts, view open invoices, and collect multi-invoice bulk payments via FIFO.
           </p>
         </div>
