@@ -5,6 +5,7 @@ import { formatCurrency, formatDate } from '../../../utils/formatters';
 import { AmountDisplay } from '../../../components/common/AmountDisplay';
 import {
   DollarSign,
+  Coins,
   TrendingUp,
   Scale,
   BookOpen,

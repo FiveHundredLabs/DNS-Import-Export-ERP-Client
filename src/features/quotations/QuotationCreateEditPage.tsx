@@ -186,7 +186,7 @@ export function QuotationCreateEditPage() {
           id: `tmp-${Date.now()}-${items.length}`,
           product,
           quantity: 1,
-          discountPercentage: selectedCustomer?.commercialTerms.defaultDiscountPercentage || 0,
+          discountPercentage: 0,
           selectedBatchId: defaultBatch?.id,
           selectedBatchNumber: defaultBatch?.batchNumber,
         },

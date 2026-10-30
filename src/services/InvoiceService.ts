@@ -39,6 +39,10 @@ export class InvoiceService {
     return this.repo.getByCustomerId(customerId);
   }
 
+  async getInvoicesByOrder(orderId: string): Promise<Invoice[]> {
+    return this.repo.getByOrderId(orderId);
+  }
+
   async updateInvoice(id: string, updates: Partial<Invoice>): Promise<Invoice> {
     return this.repo.update(id, updates);
   }

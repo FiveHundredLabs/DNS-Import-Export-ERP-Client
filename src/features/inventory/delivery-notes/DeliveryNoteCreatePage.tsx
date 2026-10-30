@@ -511,9 +511,7 @@ export const DeliveryNoteCreatePage: React.FC = () => {
                     <FileText className="h-4 w-4 text-primary" />
                     1. Select Draft Invoice
                   </CardTitle>
-                  <p className="text-[11px] text-slate-500 mt-0.5">
-                    Invoices converted from approved Sales Orders
-                  </p>
+
                 </div>
                 {selectedInvoice && (
                   <Button
@@ -992,11 +990,7 @@ export const DeliveryNoteCreatePage: React.FC = () => {
                 <Barcode className="h-5 w-5 text-primary" />
                 Delivery Note Barcode Stickers Studio
               </CardTitle>
-              <CardDescription className="text-xs text-slate-500 mt-0.5">
-                Code-128 physical unit barcode stickers generated for goods delivery to{' '}
-                <strong className="text-slate-800">{selectedInvoice?.customerName || 'Customer'}</strong>.
-                Print in bulk, item-wise, or one-by-one.
-              </CardDescription>
+
             </div>
 
             <div className="flex items-center gap-2 flex-wrap">
@@ -1217,9 +1211,7 @@ export const DeliveryNoteCreatePage: React.FC = () => {
                   <Truck className="h-5 w-5 text-primary" />
                   Delivery Note Dispatch Sign-Off Summary
                 </CardTitle>
-                <CardDescription className="text-xs text-slate-500 mt-0.5">
-                  Verify customer details, driver logistics, and physical item barcode allocations before generating the official dispatch receipt.
-                </CardDescription>
+
               </div>
 
               <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200 font-mono text-xs px-2.5 py-1">

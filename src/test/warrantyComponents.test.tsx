@@ -10,17 +10,20 @@ vi.mock('react-router-dom', () => ({
   useParams: () => ({ id: 'cust-001' }),
 }));
 
+let mockCurrentRole = 'SALES_REP';
+let mockCurrentUser = {
+  id: 'usr-106',
+  name: 'Kasun Wickramasinghe',
+  role: 'SALES_REP',
+  areaId: 'area-01',
+};
+
 vi.mock('../hooks/useAuth', () => ({
   useAuth: () => ({
-    currentUser: {
-      id: 'usr-106',
-      name: 'Kasun Wickramasinghe',
-      role: 'SALES_REP',
-      areaId: 'area-01',
-    },
-    role: 'SALES_REP',
+    currentUser: mockCurrentUser,
+    role: mockCurrentRole,
     canAccessRoute: () => true,
-    hasPermission: () => true,
+    hasPermission: (perm: string) => perm !== 'warranty:claims' && perm !== 'warranty:record_notes',
   }),
 }));
 
@@ -54,11 +57,43 @@ describe('Phase 10 — Warranty & Commission UI Components', () => {
   });
 
   it('renders WarrantyHubPage with header, metric cards, and hides claim button for SALES_REP', async () => {
+    mockCurrentRole = 'SALES_REP';
+    mockCurrentUser = {
+      id: 'usr-106',
+      name: 'Kasun Wickramasinghe',
+      role: 'SALES_REP',
+      areaId: 'area-01',
+    };
+
     render(<WarrantyHubPage />);
     expect(screen.getByText('Warranty & Claims Hub')).toBeTruthy();
     expect(screen.getByText('Active Warranties')).toBeTruthy();
     expect(screen.getByText('Missing Warranty Notes')).toBeTruthy();
-    // Sales Rep cannot file warranty claims per RBAC
+    // Sales Rep cannot file warranty claims or register warranties per RBAC
+    expect(screen.queryByText('Lodge Warranty Claim')).toBeNull();
+    expect(screen.queryByText('1. Warranty Registration & Barcode')).toBeNull();
+    expect(screen.queryByText(/2. Warranty Claims/)).toBeNull();
+
+    await waitFor(() => {
+      expect(screen.getByText(/Registered Warranties Master Ledger/i)).toBeTruthy();
+    });
+  });
+
+  it('renders WarrantyHubPage for AREA_MANAGER strictly restricted to customer-wise assigned viewing', async () => {
+    mockCurrentRole = 'AREA_MANAGER';
+    mockCurrentUser = {
+      id: 'usr-105',
+      name: 'Nimal Bandara',
+      role: 'AREA_MANAGER',
+      areaId: 'area-01',
+    };
+
+    render(<WarrantyHubPage />);
+    expect(screen.getByText('Warranty & Claims Hub')).toBeTruthy();
+    // Area Manager cannot register warranties or lodge claims
+    expect(screen.queryByText('1. Warranty Registration & Barcode')).toBeNull();
+    expect(screen.queryByText(/2. Warranty Claims/)).toBeNull();
+    expect(screen.queryByText('Distributor Notes')).toBeNull();
     expect(screen.queryByText('Lodge Warranty Claim')).toBeNull();
 
     await waitFor(() => {
@@ -67,6 +102,7 @@ describe('Phase 10 — Warranty & Commission UI Components', () => {
   });
 
   it('renders CommissionHubPage with target progress and hides leaderboard for SALES_REP', async () => {
+    mockCurrentRole = 'SALES_REP';
     render(<CommissionHubPage />);
     expect(screen.getByText('Sales Target & Commission Hub')).toBeTruthy();
     expect(screen.getByText(/Enterprise Sales Commission Tier Policy/)).toBeTruthy();

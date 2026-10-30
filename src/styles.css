@@ -541,4 +541,33 @@ body,
     page-break-after: auto !important;
     break-after: auto !important;
   }
+  /* 50mm x 30mm Unit-Wise Thermal Barcode Label Print Specifications */
+  .barcode-sticker-print-mount {
+    width: 50mm !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+  }
+
+  .barcode-sticker-print-item {
+    width: 50mm !important;
+    height: 30mm !important;
+    max-width: 50mm !important;
+    max-height: 30mm !important;
+    box-sizing: border-box !important;
+    margin: 0 !important;
+    padding: 1.2mm 2mm !important;
+    page-break-after: always !important;
+    break-after: page !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    overflow: hidden !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+
+  .barcode-sticker-print-item:last-child {
+    page-break-after: auto !important;
+    break-after: auto !important;
+  }
 }

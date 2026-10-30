@@ -22,6 +22,9 @@ export interface User {
   avatar?: string;
   title?: string;
   isActive: boolean;
+  birthDate?: string;
+  nationalId?: string;
+  address?: string;
 }
 
 export type Permission =

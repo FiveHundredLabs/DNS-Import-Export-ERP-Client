@@ -223,7 +223,6 @@ export function AreaManagerDashboard() {
         <StatCard
           title="Outstanding"
           value={formatCurrency(8420000)}
-          subtitle="Dealer credit line"
           variant="warning"
           icon={DollarSign}
           onClick={() => navigate('/customers')}
@@ -234,7 +233,6 @@ export function AreaManagerDashboard() {
         <StatCard
           title="Pending Pmt"
           value="5 Receipts"
-          subtitle="LKR 650,000.00 verification"
           variant="blue"
           icon={FileCheck2}
           onClick={() => navigate('/payments')}
@@ -245,7 +243,6 @@ export function AreaManagerDashboard() {
         <StatCard
           title="Field Officers"
           value="6 Active"
-          subtitle="18 Visits logged"
           variant="indigo"
           icon={Users}
         />
@@ -254,7 +251,6 @@ export function AreaManagerDashboard() {
         <StatCard
           title="Overdue"
           value="2 Dealers"
-          subtitle="LKR 450,000.00 overdue"
           variant="danger"
           icon={AlertCircle}
           onClick={() => navigate('/customers')}
@@ -339,7 +335,7 @@ export function AreaManagerDashboard() {
             <CardTitle className="text-sm font-bold text-slate-900">
               Field Team Performance
             </CardTitle>
-            <p className="text-[11px] text-slate-400 mt-0.5">Today's target tracking by representative</p>
+            
           </div>
           <Link to="/reports" className="text-xs font-semibold text-primary hover:underline">
             View Reports →

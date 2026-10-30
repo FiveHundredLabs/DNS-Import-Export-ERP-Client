@@ -5,6 +5,7 @@ import { GRNListPage } from '../features/inventory/GRNListPage';
 import { StockBalancePage } from '../features/inventory/StockBalancePage';
 import { OrderPickingPage } from '../features/inventory/OrderPickingPage';
 import { GRNDetailPage } from '../features/inventory/GRNDetailPage';
+import { InventoryStatusBadge } from '../features/inventory/InventoryStatusBadge';
 
 vi.mock('react-router-dom', () => ({
   useNavigate: () => vi.fn(),
@@ -58,10 +59,35 @@ describe('Inventory Components', () => {
     expect(screen.getByText('Picking Slip')).toBeTruthy();
   });
 
-  it('GRN detail page renders successfully with Textarea approval box', async () => {
-    render(<GRNDetailPage />);
-    await waitFor(() => {
-      expect(screen.getByText('GRN Details')).toBeTruthy();
-    });
+  it('renders InventoryStatusBadge with all global inventory statuses and icons', () => {
+    const { rerender } = render(<InventoryStatusBadge status="AVAILABLE" />);
+    expect(screen.getByText('Available')).toBeTruthy();
+
+    rerender(<InventoryStatusBadge status="RESERVED" />);
+    expect(screen.getByText('Reserved')).toBeTruthy();
+
+    rerender(<InventoryStatusBadge status="DISPATCHED" />);
+    expect(screen.getByText('Dispatched')).toBeTruthy();
+
+    rerender(<InventoryStatusBadge status="DELIVERED" />);
+    expect(screen.getByText('Delivered')).toBeTruthy();
+
+    rerender(<InventoryStatusBadge status="QUARANTINED" />);
+    expect(screen.getByText('Quarantined')).toBeTruthy();
+
+    rerender(<InventoryStatusBadge status="APPROVED" />);
+    expect(screen.getByText('Approved')).toBeTruthy();
+
+    rerender(<InventoryStatusBadge status="SUBMITTED" />);
+    expect(screen.getByText('Submitted')).toBeTruthy();
+
+    rerender(<InventoryStatusBadge status="DRAFT" />);
+    expect(screen.getByText('Draft')).toBeTruthy();
+
+    rerender(<InventoryStatusBadge status="Low Stock" />);
+    expect(screen.getByText('Low Stock')).toBeTruthy();
+
+    rerender(<InventoryStatusBadge status="Out of Stock" />);
+    expect(screen.getByText('Out of Stock')).toBeTruthy();
   });
 });

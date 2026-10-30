@@ -14,9 +14,12 @@ import { MOCK_PRODUCTS } from '../../mock/mockProducts';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 import { unitBarcodeService } from '../../services/UnitBarcodeService';
 import { serialNumberService } from '../../services/SerialNumberService';
+import { orderService } from '../../services/OrderService';
+import { SalesOrder } from '../../types/order';
 import { UnitBarcodeModal } from '../../components/inventory/UnitBarcodeModal';
 import { PaginationControls } from '../../components/common/PaginationControls';
 import { SerialNumberRecord, UnitBarcodeRecord } from '../../types/inventory';
+import { InventoryStatusBadge } from './InventoryStatusBadge';
 import { toast } from 'sonner';
 import { cn } from '../../utils/cn';
 import {
@@ -41,6 +44,7 @@ import {
   Filter,
   DollarSign,
   Warehouse,
+  Truck,
 } from 'lucide-react';
 
 interface FlatGRNStockItem {
@@ -59,6 +63,11 @@ interface FlatGRNStockItem {
   receivedQuantity: number;
   damagedQuantity: number;
   goodQuantity: number;
+  availableQuantity: number;
+  reservedQuantity: number;
+  dispatchedQuantity: number;
+  deliveredQuantity: number;
+  primaryStatus: 'AVAILABLE' | 'RESERVED' | 'DISPATCHED' | 'DELIVERED' | 'REJECTED';
   unitCost: number;
   lineValue: number;
   serialNumbers: string[];
@@ -71,11 +80,18 @@ export function InventoryDashboardPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { grns, loading: grnsLoading } = useGRN();
+  const [orders, setOrders] = useState<SalesOrder[]>([]);
+
+  useEffect(() => {
+    orderService.getOrders().then(setOrders).catch(console.error);
+  }, []);
 
   const [activeTab, setActiveTab] = useState<'LEDGER' | 'GRN_LIST' | 'QUARANTINE' | 'SERIALS'>('LEDGER');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedGrnFilter, setSelectedGrnFilter] = useState<string>('ALL');
-  const [quickFilter, setQuickFilter] = useState<'ALL' | 'DAMAGED' | 'SERIALIZED' | 'PENDING_STICKERS'>('ALL');
+  const [quickFilter, setQuickFilter] = useState<
+    'ALL' | 'AVAILABLE' | 'RESERVED' | 'DISPATCHED' | 'DELIVERED' | 'DAMAGED' | 'SERIALIZED' | 'PENDING_STICKERS'
+  >('ALL');
   const [scannerTestInput, setScannerTestInput] = useState('');
 
   // Pagination for main items ledger
@@ -122,6 +138,27 @@ function isPowerToolItem(item: { productId?: string; sku?: string; categoryName?
   );
 }
 
+  // Compute product-level sales order commitments (Reserved, Dispatched, Delivered)
+  const productOrderStats = useMemo(() => {
+    const map: Record<string, { reserved: number; dispatched: number; delivered: number }> = {};
+    orders.forEach((ord) => {
+      ord.items?.forEach((it) => {
+        if (!map[it.productId]) {
+          map[it.productId] = { reserved: 0, dispatched: 0, delivered: 0 };
+        }
+        const qty = it.approvedQuantity || it.orderedQuantity || 0;
+        if (['APPROVED', 'PICKING', 'PARTIALLY_ISSUED', 'ISSUED', 'INVOICED'].includes(ord.status)) {
+          map[it.productId].reserved += qty;
+        } else if (ord.status === 'DISPATCHED') {
+          map[it.productId].dispatched += qty;
+        } else if (ord.status === 'DELIVERED') {
+          map[it.productId].delivered += qty;
+        }
+      });
+    });
+    return map;
+  }, [orders]);
+
   // Compute flattened stock items directly generated and received from all GRNs
   const flatStockItems: FlatGRNStockItem[] = useMemo(() => {
     if (!grns || grns.length === 0) return [];
@@ -137,13 +174,33 @@ function isPowerToolItem(item: { productId?: string; sku?: string; categoryName?
 
       itemsWithBarcodes.forEach((item: any, idx: number) => {
         const product = MOCK_PRODUCTS.find((p) => p.id === item.productId);
-        const goodQty = Math.max(0, (item.receivedQuantity || 0) - (item.damagedQuantity || 0));
+        const damagedQty = item.damagedQuantity || 0;
+        const goodQty = Math.max(0, (item.receivedQuantity || 0) - damagedQty);
+        const stats = productOrderStats[item.productId] || { reserved: 0, dispatched: 0, delivered: 0 };
+
+        // Available for Sale = Net Good intake minus reserved for active orders
+        const availableQty = Math.max(0, goodQty - stats.reserved);
+
+        // Determine primary status for status-wise representation
+        let primaryStatus: 'AVAILABLE' | 'RESERVED' | 'DISPATCHED' | 'DELIVERED' | 'REJECTED' = 'AVAILABLE';
+        if (damagedQty > 0 && availableQty === 0) {
+          primaryStatus = 'REJECTED';
+        } else if (stats.reserved > 0 && availableQty === 0) {
+          primaryStatus = 'RESERVED';
+        } else if (availableQty > 0) {
+          primaryStatus = 'AVAILABLE';
+        } else if (stats.dispatched > 0) {
+          primaryStatus = 'DISPATCHED';
+        } else if (stats.delivered > 0) {
+          primaryStatus = 'DELIVERED';
+        }
+
         const unitCost = item.unitCostSnapshot ?? item.unitCost ?? product?.pricing?.costPrice ?? 0;
-        const lineValue = goodQty * unitCost;
+        const lineValue = availableQty * unitCost;
         const barcodesCount = item.unitRecords?.length || item.unitBarcodes?.length || goodQty;
         const pName = product?.name || item.productNameSnapshot || item.productId;
         const pSku = product?.sku || item.skuSnapshot || 'N/A';
-        const pCategory = product?.categoryName || 'Industrial Power Tools';
+        const pCategory = product?.categoryName || 'Electrical Components';
 
         // Filter: Storekeeper inventory hub strictly keeps ONLY realistic power tools!
         if (!isPowerToolItem({ productId: item.productId, sku: pSku, categoryName: pCategory, productName: pName })) {
@@ -164,8 +221,13 @@ function isPowerToolItem(item: { productId?: string; sku?: string; categoryName?
           categoryName: pCategory,
           expectedQuantity: item.expectedQuantity || item.receivedQuantity || 0,
           receivedQuantity: item.receivedQuantity || 0,
-          damagedQuantity: item.damagedQuantity || 0,
+          damagedQuantity: damagedQty,
           goodQuantity: goodQty,
+          availableQuantity: availableQty,
+          reservedQuantity: stats.reserved,
+          dispatchedQuantity: stats.dispatched,
+          deliveredQuantity: stats.delivered,
+          primaryStatus,
           unitCost,
           lineValue,
           serialNumbers: item.serialNumbers || [],
@@ -177,7 +239,7 @@ function isPowerToolItem(item: { productId?: string; sku?: string; categoryName?
     });
 
     return list;
-  }, [grns]);
+  }, [grns, productOrderStats]);
 
   // Power tool filtered GRNs for Storekeeper inventory hub
   const powerToolGrns = useMemo(() => {
@@ -207,8 +269,10 @@ function isPowerToolItem(item: { productId?: string; sku?: string; categoryName?
 
   // Operational KPIs
   const kpis = useMemo(() => {
-    let totalReceivedUnits = 0;
-    let totalAcceptedUnits = 0;
+    let totalAvailableUnits = 0;
+    let totalReservedUnits = 0;
+    let totalDispatchedUnits = 0;
+    let totalDeliveredUnits = 0;
     let totalDamagedUnits = 0;
     let totalStockValue = 0;
     let totalBarcodes = 0;
@@ -216,8 +280,10 @@ function isPowerToolItem(item: { productId?: string; sku?: string; categoryName?
     let serializedUnitsCount = 0;
 
     flatStockItems.forEach((item) => {
-      totalReceivedUnits += item.receivedQuantity;
-      totalAcceptedUnits += item.goodQuantity;
+      totalAvailableUnits += item.availableQuantity;
+      totalReservedUnits += item.reservedQuantity;
+      totalDispatchedUnits += item.dispatchedQuantity;
+      totalDeliveredUnits += item.deliveredQuantity;
       totalDamagedUnits += item.damagedQuantity;
       totalStockValue += item.lineValue;
       totalBarcodes += item.barcodesCount;
@@ -235,8 +301,11 @@ function isPowerToolItem(item: { productId?: string; sku?: string; categoryName?
     const approvedGRNs = (grns || []).filter((g) => g.status === 'APPROVED').length;
 
     return {
-      totalReceivedUnits,
-      totalAcceptedUnits,
+      totalAcceptedUnits: totalAvailableUnits,
+      totalAvailableUnits,
+      totalReservedUnits,
+      totalDispatchedUnits,
+      totalDeliveredUnits,
       totalDamagedUnits,
       totalStockValue,
       totalBarcodes,
@@ -247,7 +316,7 @@ function isPowerToolItem(item: { productId?: string; sku?: string; categoryName?
     };
   }, [flatStockItems, powerToolGrns]);
 
-  // Filtered stock items based on search, GRN, and quick filters
+  // Filtered stock items based on search, GRN, and status-wise quick filters
   const filteredStockItems = useMemo(() => {
     return flatStockItems.filter((item) => {
       // 1. GRN dropdown filter
@@ -255,7 +324,19 @@ function isPowerToolItem(item: { productId?: string; sku?: string; categoryName?
         return false;
       }
 
-      // 2. Quick status filters
+      // 2. Status-wise quick filters
+      if (quickFilter === 'AVAILABLE' && item.availableQuantity <= 0) {
+        return false;
+      }
+      if (quickFilter === 'RESERVED' && item.reservedQuantity <= 0) {
+        return false;
+      }
+      if (quickFilter === 'DISPATCHED' && item.dispatchedQuantity <= 0) {
+        return false;
+      }
+      if (quickFilter === 'DELIVERED' && item.deliveredQuantity <= 0) {
+        return false;
+      }
       if (quickFilter === 'DAMAGED' && item.damagedQuantity <= 0) {
         return false;
       }
@@ -378,6 +459,13 @@ function isPowerToolItem(item: { productId?: string; sku?: string; categoryName?
     );
   }
 
+  const totalTrackedUnits =
+    (kpis.totalAvailableUnits +
+      kpis.totalReservedUnits +
+      kpis.totalDispatchedUnits +
+      kpis.totalDeliveredUnits +
+      kpis.totalDamagedUnits) || 1;
+
   return (
     <div className="w-full space-y-6">
       {/* ── Standardized Page Header ── */}
@@ -388,10 +476,13 @@ function isPowerToolItem(item: { productId?: string; sku?: string; categoryName?
           <div className="flex items-center gap-1.5 flex-wrap">
             <Badge className="bg-emerald-600 text-white font-mono text-[11px] gap-1 shadow-2xs">
               <Warehouse className="h-3 w-3" />
-              WH-MAIN
+              Main Facility: WH-MAIN
             </Badge>
             <Badge variant="outline" className="text-slate-600 text-[11px] bg-slate-50 font-mono">
               Stock Keeper Operations
+            </Badge>
+            <Badge className="bg-blue-600 text-white font-mono text-[11px] gap-1 shadow-2xs">
+              Industrial Power Tools Division
             </Badge>
           </div>
         }
@@ -406,53 +497,76 @@ function isPowerToolItem(item: { productId?: string; sku?: string; categoryName?
         }
       />
 
-      {/* ── Top Operational KPI Metrics ── */}
-      <div className="grid grid-cols-2 lg:grid-cols-6 gap-3">
+{/* ── Top Operational KPI Metrics ── */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
         <StatCard
-          title="Accepted Stock"
-          value={kpis.totalAcceptedUnits.toLocaleString()}
-          subtitle="Saleable units in warehouse"
+          title="Available Stock"
+          value={kpis.totalAvailableUnits.toLocaleString()}
           icon={Package}
           variant="emerald"
+          progress={{
+            value: kpis.totalAvailableUnits,
+            max: totalTrackedUnits,
+            label: 'Available',
+          }}
         />
 
         <StatCard
-          title="Intake Valuation"
-          value={formatCurrency(kpis.totalStockValue)}
-          subtitle="Based on GRN landed costs"
-          icon={DollarSign}
+          title="Reserved Orders"
+          value={kpis.totalReservedUnits.toLocaleString()}
+          icon={Layers}
           variant="blue"
+          progress={{
+            value: kpis.totalReservedUnits,
+            max: totalTrackedUnits,
+            label: 'Allocated',
+          }}
         />
 
         <StatCard
-          title="Unit Barcodes"
-          value={kpis.totalBarcodes.toLocaleString()}
-          subtitle={`✓ ${kpis.confirmedBarcodes.toLocaleString()} Affixed in Bay`}
-          icon={Barcode}
+          title="Dispatched"
+          value={kpis.totalDispatchedUnits.toLocaleString()}
+          icon={Truck}
           variant="indigo"
+          progress={{
+            value: kpis.totalDispatchedUnits,
+            max: totalTrackedUnits,
+            label: 'Transit',
+          }}
         />
 
         <StatCard
-          title="Serialized Units"
-          value={`${kpis.serializedUnitsCount} Units`}
-          subtitle="Tracked with OEM serials"
-          icon={Hash}
-          variant="purple"
+          title="Delivered"
+          value={kpis.totalDeliveredUnits.toLocaleString()}
+          icon={CheckCircle2}
+          variant="teal"
+          progress={{
+            value: kpis.totalDeliveredUnits,
+            max: totalTrackedUnits,
+            label: 'Fulfilled',
+          }}
         />
 
         <StatCard
           title="Damaged Stock"
-          value={`${kpis.totalDamagedUnits} Units`}
-          subtitle="Quarantine holding area"
+          value={`${kpis.totalDamagedUnits.toLocaleString()} Units`}
           icon={AlertTriangle}
           variant="rose"
+          progress={
+            kpis.totalDamagedUnits > 0
+              ? {
+                  value: kpis.totalDamagedUnits,
+                  max: totalTrackedUnits,
+                  label: 'Quarantined',
+                }
+              : undefined
+          }
         />
 
         <StatCard
-          title="GRN Shipments"
-          value={`${powerToolGrns.length} Total`}
-          subtitle={`${kpis.approvedGRNs} approved · ${kpis.pendingGRNs} pending`}
-          icon={Clock}
+          title="Valuation"
+          value={formatCurrency(kpis.totalStockValue)}
+          icon={DollarSign}
           variant="amber"
         />
       </div>
@@ -555,64 +669,46 @@ function isPowerToolItem(item: { productId?: string; sku?: string; categoryName?
             </select>
           </div>
 
-          {/* Quick filter pills */}
-          <div className="flex items-center gap-1 flex-wrap">
-            <Button
-              type="button"
-              size="sm"
-              variant={quickFilter === 'ALL' ? 'default' : 'outline'}
-              onClick={() => {
-                setQuickFilter('ALL');
-                setCurrentPage(1);
-              }}
-              className="h-7 text-[11px] px-2.5 shadow-2xs"
-            >
-              All Items
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant={quickFilter === 'DAMAGED' ? 'default' : 'outline'}
-              onClick={() => {
-                setQuickFilter('DAMAGED');
-                setCurrentPage(1);
-              }}
-              className={cn(
-                'h-7 text-[11px] px-2.5 shadow-2xs gap-1',
-                quickFilter === 'DAMAGED'
-                  ? 'bg-rose-600 text-white hover:bg-rose-700'
-                  : 'text-rose-700 border-rose-200 hover:bg-rose-50'
-              )}
-            >
-              <AlertTriangle className="h-3 w-3" />
-              Damaged Only ({kpis.totalDamagedUnits})
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant={quickFilter === 'SERIALIZED' ? 'default' : 'outline'}
-              onClick={() => {
-                setQuickFilter('SERIALIZED');
-                setCurrentPage(1);
-              }}
-              className="h-7 text-[11px] px-2.5 shadow-2xs gap-1 text-indigo-700 border-indigo-200"
-            >
-              <Hash className="h-3 w-3" />
-              Serialized Only
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant={quickFilter === 'PENDING_STICKERS' ? 'default' : 'outline'}
-              onClick={() => {
-                setQuickFilter('PENDING_STICKERS');
-                setCurrentPage(1);
-              }}
-              className="h-7 text-[11px] px-2.5 shadow-2xs gap-1 text-amber-700 border-amber-200"
-            >
-              <Clock className="h-3 w-3" />
-              Pending Stickers
-            </Button>
+          {/* Global Standard Status Filter Tabs matching Invoice & Collection Hub */}
+          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1 text-xs flex-wrap">
+            {[
+              { label: 'All Items', value: 'ALL', count: flatStockItems.length, icon: Boxes },
+              { label: 'Available', value: 'AVAILABLE', count: flatStockItems.filter((i) => i.availableQuantity > 0).length, icon: CheckCircle2 },
+              { label: 'Reserved', value: 'RESERVED', count: flatStockItems.filter((i) => i.reservedQuantity > 0).length, icon: Layers },
+              { label: 'Dispatched', value: 'DISPATCHED', count: flatStockItems.filter((i) => i.dispatchedQuantity > 0).length, icon: Truck },
+              { label: 'Delivered', value: 'DELIVERED', count: flatStockItems.filter((i) => i.deliveredQuantity > 0).length, icon: CheckCircle2 },
+              { label: 'Quarantined', value: 'DAMAGED', count: kpis.totalDamagedUnits, icon: AlertTriangle },
+              { label: 'Serialized', value: 'SERIALIZED', count: flatStockItems.filter((i) => i.serialNumbers?.length > 0).length, icon: Hash },
+              { label: 'Pending Stickers', value: 'PENDING_STICKERS', count: flatStockItems.filter((i) => !i.barcodesConfirmed).length, icon: Clock },
+            ].map((st) => {
+              const Icon = st.icon;
+              const isActive = quickFilter === st.value;
+              return (
+                <button
+                  key={st.value}
+                  type="button"
+                  onClick={() => {
+                    setQuickFilter(st.value as any);
+                    setCurrentPage(1);
+                  }}
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-bold transition-all text-xs whitespace-nowrap cursor-pointer active:scale-95 ${
+                    isActive
+                      ? 'bg-slate-900 text-white shadow-xs'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-900'
+                  }`}
+                >
+                  <Icon className="h-3.5 w-3.5" />
+                  <span>{st.label}</span>
+                  <span
+                    className={`ml-0.5 px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+                      isActive ? 'bg-white/20 text-white' : 'bg-slate-200/80 text-slate-700'
+                    }`}
+                  >
+                    {st.count}
+                  </span>
+                </button>
+              );
+            })}
           </div>
         </div>
 
@@ -651,9 +747,7 @@ function isPowerToolItem(item: { productId?: string; sku?: string; categoryName?
                 <Boxes className="h-4 w-4 text-primary" />
                 Inward Stock Registry (All GRN Intake Lines)
               </CardTitle>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Showing physical receiving batches with supplier lineage, good vs damaged breakdown, landed costs, barcodes, and serials.
-              </p>
+
             </div>
             <Badge variant="outline" className="font-mono text-xs bg-white text-slate-700">
               {filteredStockItems.length} Products Tracked
@@ -673,15 +767,18 @@ function isPowerToolItem(item: { productId?: string; sku?: string; categoryName?
                     <TableHeader className="bg-slate-100/70 border-b border-slate-200">
                       <TableRow>
                         <TableHead className="w-10"></TableHead>
-                        <TableHead className="min-w-[200px]">Product &amp; SKU</TableHead>
-                        <TableHead className="min-w-[150px]">Source GRN</TableHead>
-                        <TableHead className="text-right">Received</TableHead>
-                        <TableHead className="text-right font-bold text-slate-900">Good Units</TableHead>
-                        <TableHead className="text-right text-rose-600">Damaged</TableHead>
+                        <TableHead className="min-w-[180px]">Product &amp; SKU</TableHead>
+                        <TableHead className="min-w-[120px]">Source GRN</TableHead>
+                        <TableHead className="text-center min-w-[100px]">Status</TableHead>
+                        <TableHead className="text-right font-bold text-emerald-700">Available</TableHead>
+                        <TableHead className="text-right font-semibold text-blue-700">Reserved (Order)</TableHead>
+                        <TableHead className="text-right font-semibold text-indigo-700">Dispatched</TableHead>
+                        <TableHead className="text-right font-semibold text-teal-700">Delivered</TableHead>
+                        <TableHead className="text-right font-semibold text-rose-600">Rejected (Damage)</TableHead>
                         <TableHead className="text-right">Unit Cost</TableHead>
                         <TableHead className="text-right font-bold">Line Value</TableHead>
-                        <TableHead className="text-center min-w-[130px]">Unit Barcodes</TableHead>
-                        <TableHead className="text-center min-w-[110px]">Serials</TableHead>
+                        <TableHead className="text-center min-w-[110px]">Unit Barcodes</TableHead>
+                        <TableHead className="text-center min-w-[100px]">Serials</TableHead>
                         <TableHead className="text-right w-16">Action</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -734,17 +831,50 @@ function isPowerToolItem(item: { productId?: string; sku?: string; categoryName?
                                 </p>
                               </TableCell>
 
-                              {/* Received */}
-                              <TableCell className="py-2.5 px-3 text-right font-mono font-semibold text-slate-600">
-                                {item.receivedQuantity}
+                              {/* Status Badge */}
+                              <TableCell className="py-2.5 px-2 text-center">
+                                <InventoryStatusBadge status={item.primaryStatus} />
                               </TableCell>
 
-                              {/* Good */}
-                              <TableCell className="py-2.5 px-3 text-right font-mono font-bold text-slate-900">
-                                {item.goodQuantity}
+                              {/* 1. Available */}
+                              <TableCell className="py-2.5 px-3 text-right font-mono font-bold text-emerald-700">
+                                {item.availableQuantity}
                               </TableCell>
 
-                              {/* Damaged */}
+                              {/* 2. Reserved (Allocated to Order) */}
+                              <TableCell className="py-2.5 px-3 text-right font-mono">
+                                {item.reservedQuantity > 0 ? (
+                                  <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 text-[10.5px] py-0 px-1.5 font-mono">
+                                    {item.reservedQuantity}
+                                  </Badge>
+                                ) : (
+                                  <span className="text-slate-400 text-xs">0</span>
+                                )}
+                              </TableCell>
+
+                              {/* 3. Dispatched */}
+                              <TableCell className="py-2.5 px-3 text-right font-mono">
+                                {item.dispatchedQuantity > 0 ? (
+                                  <Badge variant="outline" className="bg-indigo-50 text-indigo-700 border-indigo-200 text-[10.5px] py-0 px-1.5 font-mono">
+                                    {item.dispatchedQuantity}
+                                  </Badge>
+                                ) : (
+                                  <span className="text-slate-400 text-xs">0</span>
+                                )}
+                              </TableCell>
+
+                              {/* 4. Delivered */}
+                              <TableCell className="py-2.5 px-3 text-right font-mono">
+                                {item.deliveredQuantity > 0 ? (
+                                  <Badge variant="outline" className="bg-teal-50 text-teal-700 border-teal-200 text-[10.5px] py-0 px-1.5 font-mono">
+                                    {item.deliveredQuantity}
+                                  </Badge>
+                                ) : (
+                                  <span className="text-slate-400 text-xs">0</span>
+                                )}
+                              </TableCell>
+
+                              {/* 5. Rejected / Damaged */}
                               <TableCell className="py-2.5 px-3 text-right font-mono">
                                 {item.damagedQuantity > 0 ? (
                                   <Badge className="bg-rose-100 text-rose-800 border-rose-200 text-[10px] py-0 px-1 font-mono">
@@ -804,7 +934,7 @@ function isPowerToolItem(item: { productId?: string; sku?: string; categoryName?
                             {/* ── Expanded Detail Drawer for This Inward Item ── */}
                             {isExpanded && (
                               <TableRow className="bg-slate-50/60 hover:bg-slate-50/60 border-t-0">
-                                <TableCell colSpan={11} className="p-3 sm:p-5">
+                                <TableCell colSpan={14} className="p-3 sm:p-5">
                                   <ItemDetailsDrawer
                                     item={item}
                                     onOpenStudio={() => handleOpenStudioForItem(item)}
@@ -873,17 +1003,7 @@ function isPowerToolItem(item: { productId?: string; sku?: string; categoryName?
                       </span>
                       <p className="text-xs text-slate-500 truncate max-w-[180px]">{grn.supplierName}</p>
                     </div>
-                    <Badge
-                      className={cn(
-                        'text-[10px] font-mono px-2 py-0.5 border-0',
-                        grn.status === 'APPROVED' && 'bg-emerald-600 text-white',
-                        grn.status === 'SUBMITTED' && 'bg-amber-500 text-white',
-                        grn.status === 'DRAFT' && 'bg-slate-500 text-white',
-                        grn.status === 'REJECTED' && 'bg-rose-600 text-white'
-                      )}
-                    >
-                      {grn.status}
-                    </Badge>
+                    <InventoryStatusBadge status={grn.status} />
                   </CardHeader>
 
                   <CardContent className="p-4 space-y-3 flex-1 text-xs">
@@ -1044,9 +1164,7 @@ function isPowerToolItem(item: { productId?: string; sku?: string; categoryName?
                 <Hash className="h-4 w-4 text-indigo-600" />
                 Physical Unit Serial Numbers Registry
               </CardTitle>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Every serialized industrial power tool tracked from inward GRN receiving through warehouse bays.
-              </p>
+
             </div>
           </CardHeader>
 

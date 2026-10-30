@@ -6,7 +6,7 @@ import { Quotation, QuotationStatus } from '../../types/quotation';
 import { Customer } from '../../types/customer';
 import { customerService } from '../../services/CustomerService';
 import { QuotationStatusBadge } from './QuotationStatusBadge';
-import { QuotationConvertModal } from './QuotationConvertModal';
+import { toast } from 'sonner';
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -74,7 +74,27 @@ export function QuotationListPage() {
   );
 
   const [customers, setCustomers] = useState<Customer[]>([]);
-  const [convertingQuotation, setConvertingQuotation] = useState<Quotation | null>(null);
+  const [convertingId, setConvertingId] = useState<string | null>(null);
+
+  const handleConvertToOrder = async (q: Quotation) => {
+    try {
+      setConvertingId(q.id);
+      const res = await convertToSalesOrder(q.id, {
+        deliveryAddress: q.customerAddressSnapshot,
+        deliveryDate: new Date(Date.now() + 3 * 86400000).toISOString().split('T')[0],
+      });
+      toast.success(`Quotation ${q.quotationNumber} successfully converted to Sales Order ${res.orderNumber}!`, {
+        action: {
+          label: 'View Order',
+          onClick: () => navigate(`/orders/${res.convertedToOrderId || res.orderNumber}`),
+        },
+      });
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Failed to convert quotation to order.');
+    } finally {
+      setConvertingId(null);
+    }
+  };
 
   useEffect(() => {
     async function loadCustomers() {
@@ -169,7 +189,6 @@ export function QuotationListPage() {
         <StatCard
           title="Total Quotes"
           value={total}
-          subtitle="Pipeline opportunities"
           icon={FileSpreadsheet}
           variant="indigo"
         />
@@ -177,7 +196,6 @@ export function QuotationListPage() {
         <StatCard
           title="Pending Approval"
           value={pendingCount}
-          subtitle="Awaiting discount approval"
           icon={Clock}
           variant="amber"
         />
@@ -185,7 +203,6 @@ export function QuotationListPage() {
         <StatCard
           title="Converted Orders"
           value={convertedCount}
-          subtitle="Successfully converted"
           icon={ShoppingCart}
           variant="emerald"
         />
@@ -193,7 +210,6 @@ export function QuotationListPage() {
         <StatCard
           title="Pipeline Value"
           value={totalPipelineValue}
-          subtitle="Gross quotation pipeline"
           icon={DollarSign}
           variant="blue"
         />
@@ -498,15 +514,16 @@ export function QuotationListPage() {
                               <Button
                                 variant="outline"
                                 size="xs"
+                                disabled={convertingId === q.id}
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  setConvertingQuotation(q);
+                                  handleConvertToOrder(q);
                                 }}
                                 className="text-primary border-primary-border hover:bg-primary-light font-medium"
                                 title="Convert to Sales Order"
                               >
                                 <ShoppingCart className="h-3 w-3 mr-1" />
-                                Order
+                                {convertingId === q.id ? '...' : 'Order'}
                               </Button>
                             )}
                           </div>
@@ -520,16 +537,6 @@ export function QuotationListPage() {
           )}
         </CardContent>
       </Card>
-
-      {/* Convert to Sales Order Modal */}
-      {convertingQuotation && (
-        <QuotationConvertModal
-          isOpen={!!convertingQuotation}
-          onClose={() => setConvertingQuotation(null)}
-          quotation={convertingQuotation}
-          onConfirmConvert={(details) => convertToSalesOrder(convertingQuotation.id, details)}
-        />
-      )}
     </div>
   );
 }

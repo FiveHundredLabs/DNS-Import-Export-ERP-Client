@@ -12,6 +12,7 @@ import {
 } from '../rules/warrantyRules';
 import { User } from '../types/auth';
 import { Invoice } from '../types/invoice';
+import { MOCK_CUSTOMERS } from '../mock/mockCustomers';
 
 describe('Phase 10 — Warranty Domain & Dealer Reconciliation', () => {
   let warrantyRepo: MockWarrantyRepository;
@@ -37,6 +38,15 @@ describe('Phase 10 — Warranty Domain & Dealer Reconciliation', () => {
     email: 'manager@dnserp.com',
     role: 'MANAGER',
     phone: '+94 77 234 5678',
+    isActive: true,
+  };
+
+  const mockSalesManagerUser: User = {
+    id: 'usr-103',
+    name: 'Chaminda Silva',
+    email: 'sales.manager@dnserp.com',
+    role: 'SALES_MANAGER',
+    phone: '+94 77 345 6789',
     isActive: true,
   };
 
@@ -219,7 +229,7 @@ describe('Phase 10 — Warranty Domain & Dealer Reconciliation', () => {
           complaintReason: 'Unit fails to latch under nominal current test.',
           serialNumber: 'SN-SCH-2025-88190',
         },
-        mockSalesRepUser
+        mockManagerUser
       );
 
       expect(claim.id).toBeDefined();
@@ -243,7 +253,7 @@ describe('Phase 10 — Warranty Domain & Dealer Reconciliation', () => {
             complaintDate: '2025-02-15',
             complaintReason: 'Socket switch loose',
           },
-          mockSalesRepUser
+          mockManagerUser
         )
       ).rejects.toThrow(/Warranty expired on 2025-01-10/);
     });
@@ -257,7 +267,7 @@ describe('Phase 10 — Warranty Domain & Dealer Reconciliation', () => {
             complaintDate: '2025-01-10', // 10 days before warranty started
             complaintReason: 'Pre-sale defect allegation',
           },
-          mockSalesRepUser
+          mockManagerUser
         )
       ).rejects.toThrow(/cannot precede warranty start date/);
     });
@@ -269,7 +279,7 @@ describe('Phase 10 — Warranty Domain & Dealer Reconciliation', () => {
           complaintDate: '2025-02-01',
           complaintReason: 'Trip coil open circuit',
         },
-        mockSalesRepUser
+        mockManagerUser
       );
       expect(claim.status).toBe('SUBMITTED');
 
@@ -312,7 +322,7 @@ describe('Phase 10 — Warranty Domain & Dealer Reconciliation', () => {
           complaintDate: '2025-02-05',
           complaintReason: 'Aux contact loose screw',
         },
-        mockSalesRepUser
+        mockManagerUser
       );
 
       const spareBefore = await invRepo.getBalance('prod-002', 'WH-MAIN');
@@ -343,7 +353,7 @@ describe('Phase 10 — Warranty Domain & Dealer Reconciliation', () => {
           complaintDate: '2025-02-06',
           complaintReason: 'Water ingress damage',
         },
-        mockSalesRepUser
+        mockManagerUser
       );
 
       const rejected = await warrantySvc.resolveClaim(
@@ -354,6 +364,89 @@ describe('Phase 10 — Warranty Domain & Dealer Reconciliation', () => {
       );
       expect(rejected.status).toBe('REJECTED');
       expect(rejected.resolutionType).toBe('REJECT');
+    });
+    it('strictly blocks SALES_REP and AREA_MANAGER from registering warranties or creating claims', async () => {
+      const mockAreaManagerUser: User = {
+        id: 'usr-105',
+        name: 'Nimal Bandara',
+        email: 'area.western@dnserp.com',
+        role: 'AREA_MANAGER',
+        areaId: 'area-01',
+        isActive: true,
+      };
+
+      // Sales Rep blocked from claim creation
+      await expect(
+        warrantySvc.createClaim(
+          {
+            warrantyRecordId: 'war-001',
+            complaintDate: '2025-03-01',
+            complaintReason: 'Rep attempt',
+          },
+          mockSalesRepUser
+        )
+      ).rejects.toThrow(/Permission Denied: Area Managers and Sales Representatives cannot create warranty claims/);
+
+      // Area Manager blocked from claim creation
+      await expect(
+        warrantySvc.createClaim(
+          {
+            warrantyRecordId: 'war-001',
+            complaintDate: '2025-03-01',
+            complaintReason: 'AM attempt',
+          },
+          mockAreaManagerUser
+        )
+      ).rejects.toThrow(/Permission Denied: Area Managers and Sales Representatives cannot create warranty claims/);
+
+      // Sales Rep blocked from warranty registration
+      await expect(
+        warrantySvc.registerEndCustomerWarranty(
+          {
+            barcode: '8901020304011',
+            sellingDate: '2025-03-01',
+            customerId: 'cust-001',
+          },
+          mockSalesRepUser
+        )
+      ).rejects.toThrow(/Permission Denied: Area Managers and Sales Representatives cannot register warranties/);
+
+      // Area Manager blocked from warranty registration
+      await expect(
+        warrantySvc.registerEndCustomerWarranty(
+          {
+            barcode: '8901020304011',
+            sellingDate: '2025-03-01',
+            customerId: 'cust-001',
+          },
+          mockAreaManagerUser
+        )
+      ).rejects.toThrow(/Permission Denied: Area Managers and Sales Representatives cannot register warranties/);
+    });
+
+    it('scopes warranty records customer-wise for SALES_REP and AREA_MANAGER', async () => {
+      const mockAreaManagerUser: User = {
+        id: 'usr-105',
+        name: 'Nimal Bandara',
+        email: 'area.western@dnserp.com',
+        role: 'AREA_MANAGER',
+        areaId: 'area-01',
+        isActive: true,
+      };
+
+      const repRecords = await warrantySvc.getWarrantyRecords({}, mockSalesRepUser);
+      expect(repRecords.data.length).toBeGreaterThan(0);
+      repRecords.data.forEach((r) => {
+        const cust = MOCK_CUSTOMERS.find((c) => c.id === r.customerId);
+        expect(cust?.assignedRepId).toBe(mockSalesRepUser.id);
+      });
+
+      const amRecords = await warrantySvc.getWarrantyRecords({}, mockAreaManagerUser);
+      expect(amRecords.data.length).toBeGreaterThan(0);
+      amRecords.data.forEach((r) => {
+        const cust = MOCK_CUSTOMERS.find((c) => c.areaId === mockAreaManagerUser.areaId);
+        expect(cust?.areaId).toBe(mockAreaManagerUser.areaId);
+      });
     });
   });
 

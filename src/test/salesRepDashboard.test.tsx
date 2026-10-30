@@ -22,11 +22,11 @@ describe('Sales Representative Mobile Dashboard App View', () => {
       </MemoryRouter>
     );
 
-    expect(screen.getByText(/Field Representative Hub/i)).toBeInTheDocument();
-    expect(screen.getByText(/Good Day, Kasun/i)).toBeInTheDocument();
-    expect(screen.getByText(/Colombo Central Territory/i)).toBeInTheDocument();
-    expect(screen.getByText('Customer Collections')).toBeInTheDocument();
-    expect(screen.getByText('New Order')).toBeInTheDocument();
+    expect(screen.getByText(/Kasun/i)).toBeInTheDocument();
+    expect(screen.getByText(/Kottawa Central Territory/i)).toBeInTheDocument();
+    expect(screen.getByText(/14 Assigned Dealers/i)).toBeInTheDocument();
+    expect(screen.getByText('Order Desk')).toBeInTheDocument();
+    expect(screen.getByText('Dealer Hub')).toBeInTheDocument();
   });
 
   it('renders all 4 existing KPI cards arranged nicely for mobile screens', () => {
@@ -45,32 +45,32 @@ describe('Sales Representative Mobile Dashboard App View', () => {
     expect(screen.getByText('2 Dealers')).toBeInTheDocument();
   });
 
-  it('renders existing Section 23 warranty note follow-up alert', () => {
+  it('renders Field Services & Shortcuts with 8 quick access shortcuts', () => {
     render(
       <MemoryRouter>
         <SalesRepDashboard />
       </MemoryRouter>
     );
 
-    expect(screen.getByText(/Warranty Note Follow-Up Required/i)).toBeInTheDocument();
-    expect(screen.getByText(/22 Pending Notes/i)).toBeInTheDocument();
-    expect(screen.getAllByText(/Muthurajawela Engineering/i).length).toBeGreaterThan(0);
+    expect(screen.getByText('Field Services & Shortcuts')).toBeInTheDocument();
+    expect(screen.getByText('Order Desk')).toBeInTheDocument();
+    expect(screen.getByText('Dealer Hub')).toBeInTheDocument();
+    expect(screen.getByText('Collections')).toBeInTheDocument();
+    expect(screen.getByText('Warranty')).toBeInTheDocument();
+    expect(screen.getByText('Quotations')).toBeInTheDocument();
+    expect(screen.getByText('Invoices')).toBeInTheDocument();
+    expect(screen.getByText('Tracking')).toBeInTheDocument();
+    expect(screen.getByText('Overdue')).toBeInTheDocument();
   });
 
-  it('renders Pending Payments & Route Receivables as mobile app cards', () => {
+  it('does NOT render legacy redundant Pending Payments & Route Receivables section', () => {
     render(
       <MemoryRouter>
         <SalesRepDashboard />
       </MemoryRouter>
     );
 
-    expect(screen.getByText(/Pending Payments & Route Receivables/i)).toBeInTheDocument();
-    expect(screen.getAllByText('Lanka Electrical Superstore').length).toBeGreaterThan(0);
-    expect(screen.getByText('DLR-COL-001')).toBeInTheDocument();
-    expect(screen.getByText('Overdue by 12 Days')).toBeInTheDocument();
-
-    const collectButtons = screen.getAllByRole('button', { name: /Collect Payment/i });
-    expect(collectButtons.length).toBeGreaterThan(0);
+    expect(screen.queryByText(/Pending Payments & Route Receivables/i)).not.toBeInTheDocument();
   });
 
   it('renders Recent Order Status Tracking (Section 20) with stepper states', () => {
@@ -97,30 +97,19 @@ describe('Sales Representative Mobile Dashboard App View', () => {
     // Verifies all core sections are rendered directly
     expect(screen.getByText('Field Services & Shortcuts')).toBeInTheDocument();
     expect(screen.getByText('Monthly Sales')).toBeInTheDocument();
-    expect(screen.getByText(/Pending Payments & Route Receivables/i)).toBeInTheDocument();
+    expect(screen.queryByText(/Pending Payments & Route Receivables/i)).not.toBeInTheDocument();
     expect(screen.getByText(/Recent Order Status Tracking/i)).toBeInTheDocument();
   });
 
-  it('allows mobile filter chips to filter receivables by overdue status', () => {
+  it('navigates to collections when Overdue shortcut is clicked', () => {
     render(
       <MemoryRouter>
         <SalesRepDashboard />
       </MemoryRouter>
     );
 
-    // Click Overdue chip
-    const overdueChip = screen.getByRole('button', { name: /Overdue \(1\)/i });
-    fireEvent.click(overdueChip);
-
-    expect(screen.getAllByText('Lanka Electrical Superstore').length).toBeGreaterThan(0);
-    expect(screen.queryByText('Kelani Valley Lighting Mart')).not.toBeInTheDocument();
-
-    // Click All chip
-    const allChip = screen.getByRole('button', { name: /All \(3\)/i });
-    fireEvent.click(allChip);
-
-    expect(screen.getAllByText('Lanka Electrical Superstore').length).toBeGreaterThan(0);
-    expect(screen.getByText('Kelani Valley Lighting Mart')).toBeInTheDocument();
+    const overdueBtn = screen.getByRole('button', { name: /Overdue/i });
+    expect(overdueBtn).toBeInTheDocument();
   });
 
   describe('5 KPI Cards & Cash to Hand Over Workflow', () => {

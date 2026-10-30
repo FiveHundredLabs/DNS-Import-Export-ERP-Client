@@ -431,7 +431,7 @@ export function SupplierAdvancePaymentsPage() {
                 <span className="text-[11px] text-slate-400">Enables auto-settlement upon GRN billing</span>
               </div>
               <PurchaseOrderSelector
-                supplierId={supplierId}
+                supplierId={selectedSupplierId}
                 selectedPoNumber={purchaseOrderNumber}
                 onSelect={(po) => setPurchaseOrderNumber(po.poNumber)}
                 placeholder="Choose or search Purchase Order..."

@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
@@ -19,12 +19,15 @@ import { StatCard } from '../../components/common/StatCard';
 import { PageHeader } from '../../components/common/PageHeader';
 import { useInventory } from '../../hooks/useInventory';
 import { useAuth } from '../../hooks/useAuth';
+import { orderService } from '../../services/OrderService';
+import { SalesOrder } from '../../types/order';
 import { MOCK_PRODUCTS } from '../../mock/mockProducts';
 import { calculateAvailableForSale } from '../../rules/inventoryRules';
 import { formatCurrency } from '../../utils/formatters';
+import { InventoryStatusBadge } from './InventoryStatusBadge';
 import { exportToCSV } from '../../utils/exportUtils';
 import { toast } from 'sonner';
-import { DollarSign, AlertTriangle, Package, Boxes, TrendingDown } from 'lucide-react';
+import { DollarSign, AlertTriangle, Package, Boxes, TrendingDown, Truck, Layers, CheckCircle2 } from 'lucide-react';
 
 type AdjustDirection = 'ADD' | 'REMOVE';
 
@@ -40,6 +43,8 @@ interface StockRow {
   showroomQuantity: number;
   damagedQuantity: number;
   reservedQuantity: number;
+  dispatchedQuantity: number;
+  deliveredQuantity: number;
   availableForSale: number;
   physicalStock: number;
   costPrice: number;
@@ -49,6 +54,11 @@ export function StockBalancePage() {
   const navigate = useNavigate();
   const { stockBalances, loading, inventoryService } = useInventory();
   const { user } = useAuth();
+  const [orders, setOrders] = useState<SalesOrder[]>([]);
+
+  useEffect(() => {
+    orderService.getOrders().then(setOrders).catch(console.error);
+  }, []);
 
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('All');
@@ -62,28 +72,57 @@ export function StockBalancePage() {
   const [adjReason, setAdjReason] = useState('');
   const [adjProcessing, setAdjProcessing] = useState(false);
 
+  // Map product sales orders
+  const productOrderStats = useMemo(() => {
+    const map: Record<string, { reserved: number; dispatched: number; delivered: number }> = {};
+    orders.forEach((ord) => {
+      ord.items?.forEach((it) => {
+        if (!map[it.productId]) {
+          map[it.productId] = { reserved: 0, dispatched: 0, delivered: 0 };
+        }
+        const qty = it.approvedQuantity || it.orderedQuantity || 0;
+        if (['APPROVED', 'PICKING', 'PARTIALLY_ISSUED', 'ISSUED', 'INVOICED'].includes(ord.status)) {
+          map[it.productId].reserved += qty;
+        } else if (ord.status === 'DISPATCHED') {
+          map[it.productId].dispatched += qty;
+        } else if (ord.status === 'DELIVERED') {
+          map[it.productId].delivered += qty;
+        }
+      });
+    });
+    return map;
+  }, [orders]);
+
   const enrichedBalances: StockRow[] = useMemo(() => {
-    return (stockBalances ?? []).map((b: any) => {
+    return (stockBalances ?? []).map((b: any, idx: number) => {
       const product = MOCK_PRODUCTS.find(p => p.id === b.productId);
-      const availableForSale = calculateAvailableForSale(b) ?? 0;
+      const availRaw = typeof b.availableQuantity === 'number' ? b.availableQuantity : 0;
+      const resRaw = typeof b.reservedQuantity === 'number' ? b.reservedQuantity : 0;
+      const stats = productOrderStats[b.productId] || { reserved: 0, dispatched: 0, delivered: 0 };
+      const reservedQty = Math.max(resRaw, stats.reserved);
+      const calculatedAvail = Math.max(0, availRaw - reservedQty);
+      const availableForSale = isNaN(calculatedAvail) ? 0 : calculatedAvail;
+
       return {
-        id: b.id,
+        id: b.id || `${b.productId}-${b.locationId || idx}-${idx}`,
         productId: b.productId,
         locationId: b.locationId,
         locationType: b.locationType,
         productName: product?.name ?? b.productId,
         sku: product?.sku ?? 'N/A',
         category: product?.categoryName ?? 'N/A',
-        warehouseQuantity: b.locationType === 'WAREHOUSE' ? (b.availableQuantity ?? 0) : 0,
-        showroomQuantity: b.locationType === 'SHOWROOM' ? (b.availableQuantity ?? 0) : 0,
+        warehouseQuantity: b.locationType === 'WAREHOUSE' ? availRaw : 0,
+        showroomQuantity: b.locationType === 'SHOWROOM' ? availRaw : 0,
         damagedQuantity: b.damagedQuantity ?? 0,
-        reservedQuantity: b.reservedQuantity ?? 0,
+        reservedQuantity: reservedQty,
+        dispatchedQuantity: stats.dispatched,
+        deliveredQuantity: stats.delivered,
         availableForSale,
-        physicalStock: b.availableQuantity ?? (availableForSale + (b.reservedQuantity ?? 0)),
+        physicalStock: availRaw,
         costPrice: product?.pricing?.costPrice ?? 0,
       } as StockRow;
     });
-  }, [stockBalances]);
+  }, [stockBalances, productOrderStats]);
 
   const categories = useMemo(() => {
     const cats = new Set(enrichedBalances.map(b => b.category));
@@ -163,15 +202,16 @@ export function StockBalancePage() {
   };
 
   const handleExportCSV = () => {
-    const headers = ['SKU', 'Product Name', 'Category', 'Location', 'Physical Stock', 'Reserved', 'Available Stock', 'Damaged', 'Est. Value'];
+    const headers = ['SKU', 'Product Name', 'Category', 'Location', 'Available Stock', 'Reserved (Allocated)', 'Dispatched', 'Delivered', 'Rejected (Damage)', 'Est. Value'];
     const rows = filteredBalances.map(b => [
       b.sku,
       b.productName,
       b.category,
       b.locationType,
-      b.physicalStock,
-      b.reservedQuantity,
       b.availableForSale,
+      b.reservedQuantity,
+      b.dispatchedQuantity,
+      b.deliveredQuantity,
       b.damagedQuantity,
       (b.availableForSale * b.costPrice).toFixed(2),
     ]);
@@ -242,7 +282,6 @@ export function StockBalancePage() {
           <StatCard
             title="Est. Stock Value"
             value={formatCurrency(totalValue)}
-            subtitle="Current available inventory basis"
             icon={DollarSign}
             variant="blue"
             badge="Valuation"
@@ -250,7 +289,6 @@ export function StockBalancePage() {
           <StatCard
             title="Out of Stock"
             value={outCount}
-            subtitle={outCount > 0 ? 'Urgent procurement required' : 'Zero depleted SKUs'}
             icon={AlertTriangle}
             variant={outCount > 0 ? 'rose' : 'emerald'}
             badge={outCount > 0 ? 'Stockout Alert' : 'Healthy'}
@@ -258,7 +296,6 @@ export function StockBalancePage() {
           <StatCard
             title="Low Stock Lines"
             value={lowCount}
-            subtitle={lowCount > 0 ? 'Below reorder threshold (< 10 units)' : 'Adequate safety stock'}
             icon={AlertTriangle}
             variant={lowCount > 0 ? 'amber' : 'emerald'}
             badge={lowCount > 0 ? 'Low Buffer' : 'Balanced'}
@@ -266,7 +303,6 @@ export function StockBalancePage() {
           <StatCard
             title="Damaged Units"
             value={totalDmg}
-            subtitle={totalDmg > 0 ? 'Quarantined for disposal or debit' : 'Zero warehouse defect'}
             icon={Boxes}
             variant={totalDmg > 0 ? 'rose' : 'emerald'}
             badge={totalDmg > 0 ? 'Quarantined' : 'Zero Defect'}
@@ -353,10 +389,11 @@ export function StockBalancePage() {
                     <TableHead>Product Name</TableHead>
                     <TableHead>Category</TableHead>
                     <TableHead className="text-center">Location</TableHead>
-                    <TableHead className="text-right">Physical Stock</TableHead>
-                    <TableHead className="text-right">Reserved</TableHead>
-                    <TableHead className="text-right">Available Stock</TableHead>
-                    <TableHead className="text-right">Damaged</TableHead>
+                    <TableHead className="text-right font-bold text-emerald-700">Available</TableHead>
+                    <TableHead className="text-right font-semibold text-blue-700">Reserved (Order)</TableHead>
+                    <TableHead className="text-right font-semibold text-indigo-700">Dispatched</TableHead>
+                    <TableHead className="text-right font-semibold text-teal-700">Delivered</TableHead>
+                    <TableHead className="text-right font-semibold text-rose-600">Rejected (Damage)</TableHead>
                     <TableHead className="text-right">Est. Value</TableHead>
                     <TableHead className="text-center">Status</TableHead>
                     <TableHead className="text-center">Action</TableHead>
@@ -376,20 +413,46 @@ export function StockBalancePage() {
                         <TableCell className="text-center">
                           <Badge variant="outline" className="text-xs">{b.locationType}</Badge>
                         </TableCell>
-                        <TableCell className="text-right font-mono font-medium text-slate-700">{b.physicalStock}</TableCell>
-                        <TableCell className="text-right text-muted-foreground">{b.reservedQuantity}</TableCell>
-                        <TableCell className="text-right font-bold text-slate-900">{b.availableForSale}</TableCell>
-                        <TableCell className={`text-right ${b.damagedQuantity > 0 ? 'text-orange-600 font-medium' : 'text-muted-foreground'}`}>
-                          {b.damagedQuantity}
+                        <TableCell className="text-right font-bold text-emerald-700 font-mono">{b.availableForSale}</TableCell>
+                        <TableCell className="text-right font-mono">
+                          {b.reservedQuantity > 0 ? (
+                            <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 text-[10.5px] py-0 px-1.5 font-mono">
+                              {b.reservedQuantity}
+                            </Badge>
+                          ) : (
+                            <span className="text-muted-foreground text-xs">0</span>
+                          )}
                         </TableCell>
-                        <TableCell className="text-right text-sm">{formatCurrency(estValue)}</TableCell>
+                        <TableCell className="text-right font-mono">
+                          {b.dispatchedQuantity > 0 ? (
+                            <Badge variant="outline" className="bg-indigo-50 text-indigo-700 border-indigo-200 text-[10.5px] py-0 px-1.5 font-mono">
+                              {b.dispatchedQuantity}
+                            </Badge>
+                          ) : (
+                            <span className="text-muted-foreground text-xs">0</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right font-mono">
+                          {b.deliveredQuantity > 0 ? (
+                            <Badge variant="outline" className="bg-teal-50 text-teal-700 border-teal-200 text-[10.5px] py-0 px-1.5 font-mono">
+                              {b.deliveredQuantity}
+                            </Badge>
+                          ) : (
+                            <span className="text-muted-foreground text-xs">0</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right font-mono">
+                          {b.damagedQuantity > 0 ? (
+                            <Badge className="bg-rose-100 text-rose-800 border-rose-200 text-[10px] py-0 px-1 font-mono">
+                              {b.damagedQuantity}
+                            </Badge>
+                          ) : (
+                            <span className="text-muted-foreground text-xs">0</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right text-sm font-mono">{formatCurrency(estValue)}</TableCell>
                         <TableCell className="text-center">
-                          <Badge
-                            variant="outline"
-                            className={`${cls} text-[10px] font-mono font-semibold uppercase tracking-wider rounded-md px-2.5 py-0.5`}
-                          >
-                            {label}
-                          </Badge>
+                          <InventoryStatusBadge status={label} />
                         </TableCell>
                         <TableCell className="text-center">
                           <Button

@@ -188,7 +188,6 @@ export function CustomerPaymentsTab({ onSelectCustomer, className }: CustomerPay
         <StatCard
           title="Total Receivables"
           value={formatCurrency(territoryTotals.totalOutstanding)}
-          subtitle="Portfolio outstanding"
           variant="warning"
           icon={DollarSign}
         />
@@ -196,7 +195,6 @@ export function CustomerPaymentsTab({ onSelectCustomer, className }: CustomerPay
         <StatCard
           title="Past Due Debt"
           value={formatCurrency(territoryTotals.totalOverdue)}
-          subtitle={`${counts.overdue} Dealers overdue`}
           variant="danger"
           icon={AlertCircle}
         />
@@ -204,7 +202,6 @@ export function CustomerPaymentsTab({ onSelectCustomer, className }: CustomerPay
         <StatCard
           title="Assigned Accounts"
           value={`${counts.all} Dealers`}
-          subtitle={`${counts.outstanding} With active balances`}
           variant="indigo"
           icon={Users}
         />
@@ -212,7 +209,6 @@ export function CustomerPaymentsTab({ onSelectCustomer, className }: CustomerPay
         <StatCard
           title="Settled Accounts"
           value={`${counts.settled} Dealers`}
-          subtitle="Zero balance on record"
           variant="success"
           icon={CheckCircle2}
         />

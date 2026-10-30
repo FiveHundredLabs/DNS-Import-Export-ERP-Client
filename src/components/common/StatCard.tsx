@@ -265,7 +265,7 @@ export function StatCard({
               theme.iconBg
             )}
           >
-            <EffectiveIcon className="h-4 w-4" />
+            <EffectiveIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
           </div>
         </div>
       </div>
@@ -286,9 +286,9 @@ export function StatCard({
         )}
       </div>
 
-      {/* Progress Bar (if provided) */}
+      {/* Progress Bar (if provided, desktop only) */}
       {typeof progress === 'number' ? (
-        <div className="mt-2.5 space-y-1">
+        <div className="hidden sm:block mt-2.5 space-y-1">
           <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
             <div
               className={cn('h-full rounded-full transition-all duration-500', theme.progressBar)}

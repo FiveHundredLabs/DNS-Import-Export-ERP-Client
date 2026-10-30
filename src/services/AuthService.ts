@@ -98,6 +98,14 @@ export class AuthService {
     this.currentUser = null;
     this.notify();
   }
+
+  updateProfile(updates: Partial<User>): User {
+    if (!this.currentUser) throw new Error('Not authenticated');
+    this.currentUser = { ...this.currentUser, ...updates };
+    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(this.currentUser));
+    this.notify();
+    return this.currentUser;
+  }
 }
 
 export const authService = new AuthService();

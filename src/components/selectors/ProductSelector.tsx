@@ -4,7 +4,6 @@ import { useProducts } from '../../hooks/useProducts';
 import { formatCurrency } from '../../utils/formatters';
 import { Search, PackageCheck } from 'lucide-react';
 import { Input } from '../ui/input';
-import { Badge } from '../ui/badge';
 
 interface ProductSelectorProps {
   onSelect: (product: Product) => void;
@@ -44,9 +43,8 @@ export function ProductSelector({ onSelect, selectedProductId }: ProductSelector
                 }`}
               >
                 <div>
-                  <div className="font-semibold text-slate-900 flex items-center gap-1.5">
+                  <div className="font-semibold text-slate-900">
                     {p.name}
-                    {p.isPromotional && <Badge variant="warning">Promo</Badge>}
                   </div>
                   <div className="font-mono text-[11px] text-slate-500">
                     SKU: {p.sku} | Barcode: {p.barcode} | Stock: {p.stockOnHand} {p.uomCode}

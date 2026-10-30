@@ -171,7 +171,6 @@ export const DeliveryNoteListPage: React.FC = () => {
         <StatCard
           title="Total Notes"
           value={totalCount}
-          subtitle="All created dispatch notes"
           icon={Truck}
           variant="indigo"
         />
@@ -179,7 +178,6 @@ export const DeliveryNoteListPage: React.FC = () => {
         <StatCard
           title="In Transit / Dispatched"
           value={inTransitCount}
-          subtitle="With delivery drivers"
           icon={Clock}
           variant="blue"
         />
@@ -187,7 +185,6 @@ export const DeliveryNoteListPage: React.FC = () => {
         <StatCard
           title="Delivered & Accepted"
           value={deliveredCount}
-          subtitle="100% Customer accepted"
           icon={CheckCircle2}
           variant="emerald"
         />
@@ -195,7 +192,6 @@ export const DeliveryNoteListPage: React.FC = () => {
         <StatCard
           title="Rejection Approvals"
           value={pendingApprovalCount}
-          subtitle="Requires Manager Sign-Off"
           icon={ShieldAlert}
           variant="amber"
         />
@@ -203,7 +199,6 @@ export const DeliveryNoteListPage: React.FC = () => {
         <StatCard
           title="Total Rejected Units"
           value={totalRejectedUnitsCount}
-          subtitle="Quarantine / Return log"
           icon={AlertTriangle}
           variant="rose"
         />

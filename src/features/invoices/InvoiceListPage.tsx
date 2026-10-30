@@ -223,7 +223,6 @@ export function InvoiceListPage() {
         <StatCard
           title="Total Receivables"
           value={formatCurrency(totalReceivables)}
-          subtitle="Net outstanding invoices"
           icon={Receipt}
           variant="indigo"
         />
@@ -231,7 +230,6 @@ export function InvoiceListPage() {
         <StatCard
           title="Overdue Invoices"
           value={overdueCount}
-          subtitle={`${formatCurrency(overdueAmount)} pending`}
           icon={AlertTriangle}
           variant="rose"
         />
@@ -239,7 +237,6 @@ export function InvoiceListPage() {
         <StatCard
           title="Active"
           value={`${invoices.filter((i) => i.status === 'ISSUED' || i.status === 'PARTIALLY_PAID').length} open`}
-          subtitle="Awaiting full settlement"
           icon={Clock}
           variant="blue"
         />
@@ -247,7 +244,6 @@ export function InvoiceListPage() {
         <StatCard
           title="Settled"
           value={`${paidCount} Paid`}
-          subtitle="Fully settled receivables"
           icon={CheckCircle}
           variant="emerald"
         />

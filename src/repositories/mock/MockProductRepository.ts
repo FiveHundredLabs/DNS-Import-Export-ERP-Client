@@ -21,7 +21,7 @@ export class MockProductRepository implements IProductRepository {
         (p) =>
           p.name.toLowerCase().includes(q) ||
           p.sku.toLowerCase().includes(q) ||
-          p.barcode.includes(q)
+          Boolean(p.barcode && p.barcode.includes(q))
       );
     }
 
@@ -65,7 +65,7 @@ export class MockProductRepository implements IProductRepository {
     if (this.products.some((p) => p.sku.toLowerCase() === input.sku.toLowerCase())) {
       throw new Error(`A product with SKU "${input.sku}" already exists in Product Master.`);
     }
-    if (this.products.some((p) => p.barcode === input.barcode)) {
+    if (input.barcode && this.products.some((p) => p.barcode === input.barcode)) {
       throw new Error(`A product with Barcode "${input.barcode}" already exists in Product Master.`);
     }
 

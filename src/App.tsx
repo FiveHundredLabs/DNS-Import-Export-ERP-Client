@@ -83,6 +83,7 @@ import { PurchaseOrderPrintPage } from './features/purchasing/PurchaseOrderPrint
 import { PurchasingGRNListPage } from './features/purchasing/PurchasingGRNListPage';
 import { PurchasingGRNDetailPage } from './features/purchasing/PurchasingGRNDetailPage';
 import { PurchasingReportsPage } from './features/purchasing/PurchasingReportsPage';
+import { ProfilePage } from './features/profile/ProfilePage';
 import { SupplierReturnsPage } from './features/purchasing/SupplierReturnsPage';
 
 export function App() {
@@ -470,6 +471,15 @@ export function App() {
           element={
             <ProtectedRoute>
               <CommissionHubPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="profile"
+          element={
+            <ProtectedRoute>
+              <ProfilePage />
             </ProtectedRoute>
           }
         />

@@ -239,7 +239,7 @@ export function OrderCreateEditPage() {
           id: `line-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
           product,
           quantity: 1,
-          discountPercentage: selectedCustomer?.commercialTerms?.defaultDiscountPercentage || 0,
+          discountPercentage: 0,
           selectedBatchId: defaultBatch?.id,
           selectedBatchNumber: defaultBatch?.batchNumber,
           selectedUnitPrice: defaultBatch ? defaultBatch.sellingPrice : product.pricing.currentSellingPrice,
@@ -492,7 +492,6 @@ export function OrderCreateEditPage() {
             <StatCard
               title="Credit Limit"
               value={formatCurrency(selectedCustomer.commercialTerms?.creditLimit || 0)}
-              subtitle={`Current Due: ${formatCurrency(selectedCustomer.financials?.totalOutstanding || 0)}`}
               icon={CreditCard}
               variant="default"
             />
@@ -500,14 +499,6 @@ export function OrderCreateEditPage() {
             <StatCard
               title="Available Credit"
               value={formatCurrency(evaluation.availableCredit)}
-              subtitle={
-                evaluation.availableCredit >= evaluation.totalAmount
-                  ? 'Sufficient credit available'
-                  : `Breached by ${formatCurrency(
-                      evaluation.projectedOutstanding -
-                        (selectedCustomer.commercialTerms?.creditLimit || 0)
-                    )}`
-              }
               icon={evaluation.creditLimitBreached ? AlertTriangle : CheckCircle}
               variant={evaluation.creditLimitBreached ? 'rose' : 'emerald'}
             />
@@ -515,7 +506,6 @@ export function OrderCreateEditPage() {
             <StatCard
               title="Credit Days"
               value={`${requestedCreditDays} days req.`}
-              subtitle={`Customer limit: ${selectedCustomer.commercialTerms?.creditDays || 30} days`}
               icon={Clock}
               variant={evaluation.creditDaysBreached ? 'rose' : 'default'}
             />
@@ -523,7 +513,6 @@ export function OrderCreateEditPage() {
             <StatCard
               title="Projected Total"
               value={formatCurrency(evaluation.totalAmount)}
-              subtitle={`New balance: ${formatCurrency(evaluation.projectedOutstanding)}`}
               icon={ShoppingCart}
               variant={evaluation.creditLimitBreached ? 'amber' : 'default'}
             />

@@ -104,9 +104,34 @@ export function OrderDetailPage() {
         } catch {
           // ignore
         }
-        // Check invoicing progress & linked invoices (BR-04)
+        // Check invoicing progress & linked invoices (BR-04) with auto-draft invoice fallback
         try {
-          const progress = await invoiceService.getOrderInvoicingProgress(data.id);
+          let progress = await invoiceService.getOrderInvoicingProgress(data.id);
+          let existing = progress.existingInvoices;
+
+          // If no linked invoices found via progress, check fallback by search or auto-create draft if approved
+          if (existing.length === 0) {
+            let matching: Invoice | undefined;
+            const fallback = await invoiceService.getInvoices({ search: data.orderNumber });
+            matching = fallback.data.find((i) => i.orderId === data.id);
+
+            if (!matching && ['APPROVED', 'PICKING', 'PARTIALLY_ISSUED', 'ISSUED'].includes(data.status)) {
+              try {
+                matching = await invoiceService.createInvoiceFromOrder(data.id, currentUser, { asDraft: true });
+              } catch (e) {
+                console.warn('Auto draft invoice fallback on order load:', e);
+              }
+            }
+
+            if (matching) {
+              try {
+                progress = await invoiceService.getOrderInvoicingProgress(data.id);
+              } catch {
+                // ignore
+              }
+            }
+          }
+
           setInvoicingProgress(progress);
           setOrderInvoices(progress.existingInvoices);
           if (progress.existingInvoices.length > 0) {
@@ -127,14 +152,18 @@ export function OrderDetailPage() {
     fetchOrder();
   }, [id, currentUser]);
 
-  const handleGenerateInvoice = async (asDraft: boolean = true) => {
+  const handleGoToDraftInvoice = async () => {
     if (!order) return;
     try {
       setLoading(true);
-      const invoice = await invoiceService.createInvoiceFromOrder(order.id, currentUser, { asDraft });
+      if (orderInvoice) {
+        navigate(`/invoices/${orderInvoice.id}`);
+        return;
+      }
+      const invoice = await invoiceService.createInvoiceFromOrder(order.id, currentUser, { asDraft: true });
       navigate(`/invoices/${invoice.id}`);
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : 'Invoice generation failed.');
+      alert(err instanceof Error ? err.message : 'Unable to open draft invoice.');
     } finally {
       setLoading(false);
     }
@@ -190,6 +219,12 @@ export function OrderDetailPage() {
           currentUser,
           actionComment || 'Approved as requested.'
         );
+        try {
+          const autoDraft = await invoiceService.createInvoiceFromOrder(order.id, currentUser, { asDraft: true });
+          if (autoDraft) setOrderInvoice(autoDraft);
+        } catch (invErr) {
+          console.warn('Auto-generation of draft invoice on approveOrder:', invErr);
+        }
       } else if (actionType === 'REJECT') {
         await orderService.rejectOrder(order.id, currentUser, actionComment);
       } else if (actionType === 'ESCALATE_SALES_MANAGER') {
@@ -415,25 +450,34 @@ export function OrderDetailPage() {
                   </Button>
                   <Button
                     size="sm"
-                    onClick={() => handleGenerateInvoice(true)}
-                    className="bg-purple-600 hover:bg-purple-700 text-white text-xs gap-1.5 shadow-sm"
+                    onClick={handleGoToDraftInvoice}
+                    className="bg-purple-600 hover:bg-purple-700 text-white text-xs gap-1.5 shadow-sm font-semibold"
                   >
                     <FileText className="h-3.5 w-3.5" />
-                    Convert to Draft Invoice
+                    Go to Draft Invoice
                   </Button>
                 </>
               )}
 
-
               {order.status === 'PICKING' && (
-                <Button
-                  size="sm"
-                  onClick={() => handleFulfillmentAdvance('ISSUED')}
-                  className="bg-primary hover:bg-primary-hover text-primary-foreground text-xs gap-1.5"
-                >
-                  <PackageCheck className="h-3.5 w-3.5" />
-                  Issue Goods
-                </Button>
+                <>
+                  <Button
+                    size="sm"
+                    onClick={() => handleFulfillmentAdvance('ISSUED')}
+                    className="bg-primary hover:bg-primary-hover text-primary-foreground text-xs gap-1.5"
+                  >
+                    <PackageCheck className="h-3.5 w-3.5" />
+                    Issue Goods
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={handleGoToDraftInvoice}
+                    className="bg-purple-600 hover:bg-purple-700 text-white text-xs gap-1.5 shadow-sm font-semibold"
+                  >
+                    <FileText className="h-3.5 w-3.5" />
+                    Go to Draft Invoice
+                  </Button>
+                </>
               )}
 
               {order.status === 'PARTIALLY_ISSUED' && (
@@ -448,11 +492,11 @@ export function OrderDetailPage() {
                   </Button>
                   <Button
                     size="sm"
-                    onClick={() => handleGenerateInvoice(true)}
-                    className="bg-purple-600 hover:bg-purple-700 text-white text-xs gap-1.5"
+                    onClick={handleGoToDraftInvoice}
+                    className="bg-purple-600 hover:bg-purple-700 text-white text-xs gap-1.5 shadow-sm font-semibold"
                   >
                     <FileText className="h-3.5 w-3.5" />
-                    Invoice Partial (Draft)
+                    Go to Draft Invoice
                   </Button>
                 </>
               )}
@@ -460,11 +504,11 @@ export function OrderDetailPage() {
               {order.status === 'ISSUED' && (
                 <Button
                   size="sm"
-                  onClick={() => handleGenerateInvoice(true)}
-                  className="bg-purple-600 hover:bg-purple-700 text-white text-xs gap-1.5 shadow-sm"
+                  onClick={handleGoToDraftInvoice}
+                  className="bg-purple-600 hover:bg-purple-700 text-white text-xs gap-1.5 shadow-sm font-semibold"
                 >
                   <FileText className="h-3.5 w-3.5" />
-                  Convert to Draft Invoice
+                  Go to Draft Invoice
                 </Button>
               )}
 
