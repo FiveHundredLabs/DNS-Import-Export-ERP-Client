@@ -1187,27 +1187,6 @@ export function GRNCreateEditPage() {
           </CardHeader>
 
           <CardContent className="pt-4 space-y-5">
-            {/* Source Mode Toggle Cards */}
-            {/* Mandatory PO Intake Banner (BR-01 Enforcement) */}
-            <div className="p-4 rounded-xl border border-primary/30 bg-primary/5 flex items-start gap-3.5 shadow-2xs">
-              <div className="p-2.5 rounded-lg bg-primary text-primary-foreground shrink-0 mt-0.5">
-                <FileText className="h-5 w-5" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center justify-between flex-wrap gap-2">
-                  <span className="font-bold text-sm text-slate-900">
-                    Purchase Order Receiving (Mandatory Linkage)
-                  </span>
-                  <Badge className="bg-primary text-primary-foreground text-[10px] px-2 py-0.5 font-semibold">
-                    BR-01 Enforced
-                  </Badge>
-                </div>
-                <p className="text-xs text-slate-600 mt-1 leading-relaxed">
-                  In compliance with inventory governance rules, all Goods Received Notes must originate from an approved Purchase Order. Unlinked or manual intake is disabled to guarantee procurement auditability.
-                </p>
-              </div>
-            </div>
-
             {/* Inbound Fields */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
               {sourceType === 'PO' && (

@@ -151,8 +151,8 @@ describe('Stock Keeper & Inventory Hub — GRN, Serial Numbers & Bar Codes', () 
       );
 
       expect(screen.getByRole('heading', { name: /create goods receipt note/i })).toBeInTheDocument();
-      expect(screen.getByText(/Purchase Order Receiving \(Mandatory Linkage\)/i)).toBeInTheDocument();
-      expect(screen.getByText(/BR-01 Enforced/i)).toBeInTheDocument();
+      expect(screen.getByText(/Select Approved Purchase Order/i)).toBeInTheDocument();
+
       expect(screen.getByText(/Warehouse Isolation Mode Active/i)).toBeInTheDocument();
     });
 
