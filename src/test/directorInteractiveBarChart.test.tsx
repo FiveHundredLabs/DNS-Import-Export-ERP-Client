@@ -1,10 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import React from 'react';
 import {
   DirectorInteractiveBarChart,
   ERP_SALES_TRENDS_DATA,
 } from '../features/dashboard/components/DirectorInteractiveBarChart';
+import { themeService } from '../services/ThemeService';
 
 describe('Director Dashboard — Shadcn Interactive Bar Chart Component', () => {
   it('renders the interactive bar chart header with proper ERP revenue records', () => {
@@ -66,5 +67,29 @@ describe('Director Dashboard — Shadcn Interactive Bar Chart Component', () => 
     // Switch back to Total Revenue
     fireEvent.click(totalButton!);
     expect(totalButton).toHaveAttribute('data-active', 'true');
+  });
+
+  it('updates SVG linearGradient stops reactively when ERP theme color changes', () => {
+    const { container } = render(<DirectorInteractiveBarChart />);
+
+    // Initially check gradient stop color exists
+    const initialStop = container.querySelector('#barThemeTotalGradient stop');
+    expect(initialStop).not.toBeNull();
+
+    // Change theme color to Red (#EC1B27) as DIRECTOR
+    act(() => {
+      themeService.setPrimaryColor('#EC1B27', 'DIRECTOR');
+    });
+
+    const redStop = container.querySelector('#barThemeTotalGradient stop');
+    expect(redStop).toHaveAttribute('stop-color', '#F43F5E');
+
+    // Restore back to default Dark Blue (#263183) as DIRECTOR
+    act(() => {
+      themeService.setPrimaryColor('#263183', 'DIRECTOR');
+    });
+
+    const blueStop = container.querySelector('#barThemeTotalGradient stop');
+    expect(blueStop).toHaveAttribute('stop-color', '#3B82F6');
   });
 });
