@@ -56,15 +56,18 @@ interface SalesRepWarrantyPageProps {
 export function SalesRepWarrantyPage({ preselectedCustomerId }: SalesRepWarrantyPageProps) {
   const { role, currentUser } = useAuth();
   const isSalesRep = role === 'SALES_REP';
+  const isAreaManager = role === 'AREA_MANAGER';
 
-  // Customer Selection state
+  // Customer Selection state - scoped strictly to assigned customers
   const availableCustomers = useMemo(() => {
     if (isSalesRep) {
-      const repCusts = MOCK_CUSTOMERS.filter((c) => c.assignedRepId === currentUser.id);
-      return repCusts.length > 0 ? repCusts : MOCK_CUSTOMERS;
+      return MOCK_CUSTOMERS.filter((c) => c.assignedRepId === currentUser.id);
+    }
+    if (isAreaManager) {
+      return MOCK_CUSTOMERS.filter((c) => c.areaId === currentUser.areaId);
     }
     return MOCK_CUSTOMERS;
-  }, [isSalesRep, currentUser.id]);
+  }, [isSalesRep, isAreaManager, currentUser.id, currentUser.areaId]);
 
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>(
     preselectedCustomerId || availableCustomers[0]?.id || 'cust-001'
@@ -82,9 +85,14 @@ export function SalesRepWarrantyPage({ preselectedCustomerId }: SalesRepWarranty
   const [viewingUnit, setViewingUnit] = useState<CustomerWarrantyTallyItem | null>(null);
 
   const loadTally = async (custId: string) => {
+    if (!custId) {
+      setTally(null);
+      setLoading(false);
+      return;
+    }
     try {
       setLoading(true);
-      const data = await warrantyService.getCustomerWarrantyTally(custId);
+      const data = await warrantyService.getCustomerWarrantyTally(custId, currentUser);
       setTally(data);
     } catch (err) {
       console.error('Failed to load customer warranty tally:', err);
@@ -144,7 +152,11 @@ export function SalesRepWarrantyPage({ preselectedCustomerId }: SalesRepWarranty
           <div className="flex items-center gap-2 flex-wrap">
             <h1 className="text-xl font-bold text-slate-900 flex items-center gap-2">
               <Store className="h-6 w-6 text-primary" />
-              Sales Representative – Warranty Follow-up
+              {isAreaManager
+                ? 'Area Manager – Customer Warranty Follow-up'
+                : isSalesRep
+                ? 'Sales Representative – Warranty Follow-up'
+                : 'Customer Warranty Follow-up'}
             </h1>
             <Badge className="bg-amber-100 text-amber-900 hover:bg-amber-100 border-amber-300 font-semibold text-xs gap-1">
               <Lock className="h-3 w-3" />
@@ -176,13 +188,13 @@ export function SalesRepWarrantyPage({ preselectedCustomerId }: SalesRepWarranty
         </div>
         <div className="space-y-0.5">
           <h4 className="font-semibold text-slate-900 flex items-center gap-2">
-            <span>Sales Representative View-Only Mode</span>
+            <span>{isAreaManager ? 'Area Manager View-Only Access' : 'Sales Representative View-Only Mode'}</span>
             <span className="px-1.5 py-0.2 bg-amber-200 text-amber-900 rounded text-[10px] uppercase font-bold">
               Company Policy
             </span>
           </h4>
           <p className="text-slate-600 leading-relaxed text-[11px]">
-            Sales Representatives have <strong>read-only monitoring access</strong>. You cannot edit warranty information, change selling dates, alter warranty periods, register warranties, or file warranty claims. Use this tally to request missing warranty counterfoils from the dealer.
+            Area Managers and Sales Representatives have <strong>read-only monitoring access</strong> for assigned customers. You cannot edit warranty information, change selling dates, alter warranty periods, register warranties, or file warranty claims. Use this tally to monitor customer units and request missing warranty counterfoils.
           </p>
         </div>
       </div>

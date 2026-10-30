@@ -212,5 +212,16 @@ export function calculateRemainingWarranty(
     status,
   };
 }
+/**
+ * Area Managers and Sales Representatives must not have permission to register warranties or create warranty claims.
+ * They should only be able to view registered warranties on a customer-wise basis, and only for customers assigned to them.
+ */
+export function canRegisterWarranty(role?: string): boolean {
+  if (!role) return false;
+  return role !== 'SALES_REP' && role !== 'AREA_MANAGER';
+}
 
-
+export function canCreateWarrantyClaim(role?: string): boolean {
+  if (!role) return false;
+  return role !== 'SALES_REP' && role !== 'AREA_MANAGER';
+}

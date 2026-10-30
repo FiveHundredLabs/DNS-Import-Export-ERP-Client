@@ -200,7 +200,45 @@ export class WarrantyService {
     return record;
   }
 
-  async getWarrantyRecords(filters?: WarrantyFilters): Promise<PaginatedResult<WarrantyRecord>> {
+  async getWarrantyRecords(filters?: WarrantyFilters, user?: User): Promise<PaginatedResult<WarrantyRecord>> {
+    const effectiveFilters = { ...filters };
+
+    if (user?.role === 'SALES_REP') {
+      const allowedCusts = MOCK_CUSTOMERS.filter((c) => c.assignedRepId === user.id);
+      const allowedCustIds = new Set(allowedCusts.map((c) => c.id));
+
+      if (effectiveFilters.customerId && !allowedCustIds.has(effectiveFilters.customerId)) {
+        return { data: [], total: 0, page: 1, pageSize: filters?.pageSize || 10, totalPages: 0 };
+      }
+
+      const res = await this.repo.getAllRecords({ ...effectiveFilters, pageSize: 1000 });
+      const scoped = res.data.filter((r) => allowedCustIds.has(r.customerId));
+      return {
+        data: scoped,
+        total: scoped.length,
+        page: 1,
+        pageSize: filters?.pageSize || 100,
+        totalPages: 1,
+      };
+    } else if (user?.role === 'AREA_MANAGER') {
+      const allowedCusts = MOCK_CUSTOMERS.filter((c) => c.areaId === user.areaId);
+      const allowedCustIds = new Set(allowedCusts.map((c) => c.id));
+
+      if (effectiveFilters.customerId && !allowedCustIds.has(effectiveFilters.customerId)) {
+        return { data: [], total: 0, page: 1, pageSize: filters?.pageSize || 10, totalPages: 0 };
+      }
+
+      const res = await this.repo.getAllRecords({ ...effectiveFilters, pageSize: 1000 });
+      const scoped = res.data.filter((r) => allowedCustIds.has(r.customerId));
+      return {
+        data: scoped,
+        total: scoped.length,
+        page: 1,
+        pageSize: filters?.pageSize || 100,
+        totalPages: 1,
+      };
+    }
+
     return this.repo.getAllRecords(filters);
   }
 
@@ -244,7 +282,7 @@ export class WarrantyService {
    * - Sales Representative
    * - Existing End-Customer Warranty Registration details & remaining validity
    */
-  async lookupProductByBarcode(barcodeQuery: string): Promise<ProductBarcodeDossier | null> {
+  async lookupProductByBarcode(barcodeQuery: string, user?: User): Promise<ProductBarcodeDossier | null> {
     const query = barcodeQuery.trim().toLowerCase();
     if (!query) return null;
 
@@ -335,8 +373,8 @@ export class WarrantyService {
           'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=600&auto=format&fit=crop&q=80',
         endCustomerName: existingRecord.endCustomerName || 'Perera Constructions',
         endCustomerPhone: existingRecord.endCustomerPhone || '+94 77 123 4567',
-        canRegister: true,
-        canClaim,
+        canRegister: user && (user.role === 'AREA_MANAGER' || user.role === 'SALES_REP') ? false : true,
+        canClaim: user && (user.role === 'AREA_MANAGER' || user.role === 'SALES_REP') ? false : canClaim,
         isExpired,
         claimBlockReason: isExpired
           ? `Warranty Expired: Product warranty expired on ${existingRecord.warrantyExpiryDate}. Under company policy, expired products cannot be registered for warranty claims.`
@@ -371,7 +409,7 @@ export class WarrantyService {
       isRegistered: false,
       warrantyStatus: 'NOT_REGISTERED',
       remainingPeriodText: 'Not Registered',
-      canRegister: true,
+      canRegister: user && (user.role === 'AREA_MANAGER' || user.role === 'SALES_REP') ? false : true,
       canClaim: false,
       isExpired: false,
       claimBlockReason: 'Warranty Not Registered: End-customer selling date must be registered before filing a claim.',
@@ -386,8 +424,13 @@ export class WarrantyService {
    */
   async registerEndCustomerWarranty(
     dto: RegisterEndCustomerWarrantyDTO,
-    _user?: User
+    user?: User
   ): Promise<WarrantyRecord> {
+    if (user && (user.role === 'AREA_MANAGER' || user.role === 'SALES_REP')) {
+      throw new Error(
+        'Permission Denied: Area Managers and Sales Representatives cannot register warranties.'
+      );
+    }
     if (!dto.barcode) throw new Error('Product barcode is required.');
     if (!dto.sellingDate) throw new Error('End-customer selling date is required.');
     if (!dto.customerId) throw new Error('Distributor customer selection is required.');
@@ -460,7 +503,18 @@ export class WarrantyService {
    * Pending Registration: e.g. 7
    * Provides items list for Sales Rep follow-up visits.
    */
-  async getCustomerWarrantyTally(customerId: string): Promise<CustomerWarrantyTally> {
+  async getCustomerWarrantyTally(customerId: string, user?: User): Promise<CustomerWarrantyTally> {
+    if (user?.role === 'SALES_REP') {
+      const targetCustomer = MOCK_CUSTOMERS.find((c) => c.id === customerId);
+      if (targetCustomer && targetCustomer.assignedRepId !== user.id) {
+        throw new Error('Permission Denied: Customer is not assigned to this Sales Representative.');
+      }
+    } else if (user?.role === 'AREA_MANAGER') {
+      const targetCustomer = MOCK_CUSTOMERS.find((c) => c.id === customerId);
+      if (targetCustomer && targetCustomer.areaId !== user.areaId) {
+        throw new Error('Permission Denied: Customer is outside your assigned area.');
+      }
+    }
     const customer = MOCK_CUSTOMERS.find((c) => c.id === customerId) || MOCK_CUSTOMERS[0];
     const records = await this.repo.getRecordsByCustomerId(customerId);
     const customerInvoices = MOCK_INVOICES.filter((inv) => inv.customerId === customerId);
@@ -541,7 +595,12 @@ export class WarrantyService {
    * Enforces strict expiration check against complaint date.
    * Enforces validation based on distributor warranty note for dealer/distributor sales.
    */
-  async createClaim(data: CreateClaimDTO, _user?: User): Promise<WarrantyClaim> {
+  async createClaim(data: CreateClaimDTO, user?: User): Promise<WarrantyClaim> {
+    if (user && (user.role === 'AREA_MANAGER' || user.role === 'SALES_REP')) {
+      throw new Error(
+        'Permission Denied: Area Managers and Sales Representatives cannot create warranty claims.'
+      );
+    }
     const record = await this.repo.getRecordById(data.warrantyRecordId);
     if (!record) {
       throw new Error(`Warranty record with ID ${data.warrantyRecordId} not found`);

@@ -62,11 +62,31 @@ import {
 export function WarrantyHubPage() {
   const { role, currentUser, hasPermission } = useAuth();
   const isSalesRep = role === 'SALES_REP';
+  const isAreaManager = role === 'AREA_MANAGER';
+  const isFieldUser = isSalesRep || isAreaManager;
 
-  // Active Hub Tab
+  // Assigned customers based on strict RBAC
+  const assignedCustomers = useMemo(() => {
+    if (role === 'SALES_REP') {
+      return MOCK_CUSTOMERS.filter((c) => c.assignedRepId === currentUser?.id);
+    }
+    if (role === 'AREA_MANAGER') {
+      return MOCK_CUSTOMERS.filter((c) => c.areaId === currentUser?.areaId);
+    }
+    return MOCK_CUSTOMERS;
+  }, [role, currentUser?.id, currentUser?.areaId]);
+
+  // Active Hub Tab - restricted for Area Managers & Sales Reps
   const [activeTab, setActiveTab] = useState<
     'registration' | 'claims' | 'records' | 'followups' | 'notes'
   >('records');
+
+  const handleTabChange = (val: string) => {
+    if (isFieldUser && (val === 'registration' || val === 'claims' || val === 'notes')) {
+      return;
+    }
+    setActiveTab(val as any);
+  };
 
   // -------------------------------------------------------------
   // 1. SALES MANAGER – WARRANTY REGISTRATION FLOW STATE
@@ -258,6 +278,7 @@ export function WarrantyHubPage() {
   const [recordsLoading, setRecordsLoading] = useState(true);
   const [recordSearch, setRecordSearch] = useState('');
   const [recordStatusFilter, setRecordStatusFilter] = useState<string>('ALL');
+  const [recordCustomerFilter, setRecordCustomerFilter] = useState<string>('ALL');
 
   const [claims, setClaims] = useState<WarrantyClaim[]>([]);
   const [claimsLoading, setClaimsLoading] = useState(true);
@@ -287,11 +308,15 @@ export function WarrantyHubPage() {
   const loadRecords = async () => {
     try {
       setRecordsLoading(true);
-      const res = await warrantyService.getWarrantyRecords({
-        search: recordSearch || undefined,
-        status: recordStatusFilter !== 'ALL' ? (recordStatusFilter as any) : undefined,
-        pageSize: 100,
-      });
+      const res = await warrantyService.getWarrantyRecords(
+        {
+          search: recordSearch || undefined,
+          status: recordStatusFilter !== 'ALL' ? (recordStatusFilter as any) : undefined,
+          customerId: recordCustomerFilter !== 'ALL' ? recordCustomerFilter : undefined,
+          pageSize: 100,
+        },
+        currentUser
+      );
       setRecords(res.data);
     } catch (err) {
       console.error('Failed to load warranty records', err);
@@ -346,7 +371,7 @@ export function WarrantyHubPage() {
 
   useEffect(() => {
     loadRecords();
-  }, [recordSearch, recordStatusFilter]);
+  }, [recordSearch, recordStatusFilter, recordCustomerFilter]);
 
   useEffect(() => {
     loadClaims();
@@ -397,7 +422,11 @@ export function WarrantyHubPage() {
               Warranty & Claims Hub
             </h1>
             <Badge className="bg-primary/10 text-primary border-primary/20 font-semibold text-xs">
-              Sales Manager / Admin Console
+              {isAreaManager
+                ? 'Area Manager Console (Assigned Customers Only)'
+                : isSalesRep
+                ? 'Sales Rep Console (Assigned Customers Only)'
+                : 'Sales Manager / Admin Console'}
             </Badge>
           </div>
           <p className="text-xs text-slate-500 mt-1">
@@ -406,7 +435,7 @@ export function WarrantyHubPage() {
         </div>
 
         <div className="flex items-center gap-2">
-          {canRecordNotes && !isSalesRep && (
+          {canRecordNotes && !isFieldUser && (
             <Button
               onClick={() => {
                 setPreselectedRecordForNote(null);
@@ -421,7 +450,7 @@ export function WarrantyHubPage() {
             </Button>
           )}
 
-          {!isSalesRep && hasPermission('warranty:claims') && (
+          {!isFieldUser && hasPermission('warranty:claims') && (
             <Button
               onClick={() => {
                 setActiveTab('claims');
@@ -458,45 +487,89 @@ export function WarrantyHubPage() {
           </span>
         </Card>
 
-        <Card className="p-4 bg-white border-slate-200 shadow-xs">
-          <div className="flex items-center justify-between">
-            <div>
-              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block">
-                Active Claims In Pipeline
+        {isFieldUser ? (
+          <>
+            <Card className="p-4 bg-white border-slate-200 shadow-xs">
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block">
+                    Assigned Customers
+                  </span>
+                  <span className="text-2xl font-bold tabular-nums text-indigo-700 mt-1 block">
+                    {assignedCustomers.length}
+                  </span>
+                </div>
+                <div className="p-2.5 bg-indigo-50 rounded-lg text-indigo-600">
+                  <Store className="h-5 w-5" />
+                </div>
+              </div>
+              <span className="text-xs text-indigo-700 mt-2 block font-medium">
+                {isAreaManager ? 'Distributors in assigned territory' : 'Assigned customer accounts'}
               </span>
-              <span className="text-2xl font-bold tabular-nums text-amber-700 mt-1 block">
-                {pendingClaimsCount}
-              </span>
-            </div>
-            <div className="p-2.5 bg-amber-50 rounded-lg text-amber-600">
-              <ShieldAlert className="h-5 w-5" />
-            </div>
-          </div>
-          <span className="text-xs text-amber-800 mt-2 block font-medium">
-            Pending technical inspection & resolution
-          </span>
-        </Card>
+            </Card>
 
-        <Card className="p-4 bg-white border-slate-200 shadow-xs">
-          <div className="flex items-center justify-between">
-            <div>
-              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block">
-                Distributor Notes
+            <Card className="p-4 bg-white border-slate-200 shadow-xs">
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block">
+                    Monitored Units
+                  </span>
+                  <span className="text-2xl font-bold tabular-nums text-primary mt-1 block">
+                    {records.length}
+                  </span>
+                </div>
+                <div className="p-2.5 bg-sky-50 rounded-lg text-sky-600">
+                  <Package className="h-5 w-5" />
+                </div>
+              </div>
+              <span className="text-xs text-sky-700 mt-2 block font-medium">
+                Protected customer units
               </span>
-              <span className="text-2xl font-bold tabular-nums text-primary mt-1 block">
-                {notes.length}
+            </Card>
+          </>
+        ) : (
+          <>
+            <Card className="p-4 bg-white border-slate-200 shadow-xs">
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block">
+                    Active Claims In Pipeline
+                  </span>
+                  <span className="text-2xl font-bold tabular-nums text-amber-700 mt-1 block">
+                    {pendingClaimsCount}
+                  </span>
+                </div>
+                <div className="p-2.5 bg-amber-50 rounded-lg text-amber-600">
+                  <ShieldAlert className="h-5 w-5" />
+                </div>
+              </div>
+              <span className="text-xs text-amber-800 mt-2 block font-medium">
+                Pending technical inspection & resolution
               </span>
-            </div>
-            <div className="p-2.5 bg-sky-50 rounded-lg text-sky-600">
-              <FileCheck2 className="h-5 w-5" />
-            </div>
-          </div>
-          <span className="text-xs text-sky-700 mt-2 block font-medium">
-            {pendingNotesCount > 0
-              ? `${pendingNotesCount} pending review`
-              : `All distributor notes reviewed`}
-          </span>
-        </Card>
+            </Card>
+
+            <Card className="p-4 bg-white border-slate-200 shadow-xs">
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block">
+                    Distributor Notes
+                  </span>
+                  <span className="text-2xl font-bold tabular-nums text-primary mt-1 block">
+                    {notes.length}
+                  </span>
+                </div>
+                <div className="p-2.5 bg-sky-50 rounded-lg text-sky-600">
+                  <FileCheck2 className="h-5 w-5" />
+                </div>
+              </div>
+              <span className="text-xs text-sky-700 mt-2 block font-medium">
+                {pendingNotesCount > 0
+                  ? `${pendingNotesCount} pending review`
+                  : `All distributor notes reviewed`}
+              </span>
+            </Card>
+          </>
+        )}
 
         <Card className="p-4 bg-white border-slate-200 shadow-xs">
           <div className="flex items-center justify-between">
@@ -519,9 +592,9 @@ export function WarrantyHubPage() {
       </div>
 
       {/* Main Tabs Navigation */}
-      <Tabs value={activeTab} onValueChange={(v: any) => setActiveTab(v)}>
+      <Tabs value={activeTab} onValueChange={handleTabChange}>
         <TabsList className="bg-slate-100/90 p-1 border border-slate-200/80 rounded-xl flex-wrap">
-          {!isSalesRep && (
+          {!isFieldUser && (
             <>
               <TabsTrigger value="registration" className="gap-1.5">
                 <Barcode className="h-3.5 w-3.5" />
@@ -539,9 +612,13 @@ export function WarrantyHubPage() {
           </TabsTrigger>
           <TabsTrigger value="followups" className="gap-1.5">
             <Store className="h-3.5 w-3.5" />
-            Sales Rep Field Follow-up & Tally
+            {isAreaManager
+              ? 'Area Manager Customer Follow-up & Tally'
+              : isSalesRep
+              ? 'Sales Rep Field Follow-up & Tally'
+              : 'Customer Field Follow-up & Tally'}
           </TabsTrigger>
-          {!isSalesRep && (
+          {!isFieldUser && (
             <TabsTrigger value="notes" className="gap-1.5">
               <FileCheck2 className="h-3.5 w-3.5" />
               Distributor Notes ({notes.length})
@@ -552,7 +629,8 @@ export function WarrantyHubPage() {
         {/* ------------------------------------------------------------- */}
         {/* TAB 1: SALES MANAGER WARRANTY REGISTRATION & BARCODE SCANNER */}
         {/* ------------------------------------------------------------- */}
-        <TabsContent value="registration" className="space-y-6 pt-2">
+        {!isFieldUser && (
+          <TabsContent value="registration" className="space-y-6 pt-2">
           {/* CORE BUSINESS RULE BANNER */}
           <div className="bg-gradient-to-r from-emerald-50 via-teal-50 to-sky-50 border border-emerald-200 rounded-xl p-4 text-xs shadow-xs">
             <div className="flex items-start gap-3">
@@ -980,11 +1058,13 @@ export function WarrantyHubPage() {
             </div>
           ) : null}
         </TabsContent>
+        )}
 
         {/* ------------------------------------------------------------- */}
         {/* TAB 2: WARRANTY CLAIM WORKFLOW (ACTIVE VS EXPIRED GATING) */}
         {/* ------------------------------------------------------------- */}
-        <TabsContent value="claims" className="space-y-6 pt-2">
+        {!isFieldUser && (
+          <TabsContent value="claims" className="space-y-6 pt-2">
           <Card className="border-slate-200 shadow-xs bg-white">
             <CardHeader className="p-4 border-b border-slate-100 bg-slate-50/60">
               <CardTitle className="text-sm font-bold text-slate-900 flex items-center justify-between">
@@ -1259,6 +1339,7 @@ export function WarrantyHubPage() {
             </div>
           ) : null}
         </TabsContent>
+        )}
 
         {/* ------------------------------------------------------------- */}
         {/* TAB 3: REGISTERED WARRANTIES MASTER LEDGER */}
@@ -1287,6 +1368,27 @@ export function WarrantyHubPage() {
                     className="pl-8 text-xs h-8"
                   />
                 </div>
+
+                <Select
+                  value={recordCustomerFilter}
+                  onValueChange={(val) => setRecordCustomerFilter(val)}
+                >
+                  <SelectTrigger className="rounded-md border border-slate-300 text-xs h-8 px-2 bg-white text-slate-700 min-w-44 max-w-64 truncate">
+                    <SelectValue placeholder="Filter by Customer" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ALL">
+                      {isFieldUser
+                        ? `All Assigned Customers (${assignedCustomers.length})`
+                        : `All Customers (${MOCK_CUSTOMERS.length})`}
+                    </SelectItem>
+                    {assignedCustomers.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.name} ({c.code})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
 
                 <Select
                   value={recordStatusFilter}
@@ -1324,7 +1426,7 @@ export function WarrantyHubPage() {
                         <th className="py-3 px-3">Warranty Expiry</th>
                         <th className="py-3 px-3 text-center">Remaining</th>
                         <th className="py-3 px-3 text-center">Status</th>
-                        <th className="py-3 px-4 text-right">Action</th>
+                        <th className="py-3 px-4 text-right">{!isFieldUser ? 'Action' : 'Status'}</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 bg-white">
@@ -1366,21 +1468,27 @@ export function WarrantyHubPage() {
                             </td>
 
                             <td className="py-3 px-4 text-right whitespace-nowrap">
-                              <Button
-                                onClick={() => {
-                                  if (r.barcode) {
-                                    setClaimBarcode(r.barcode);
-                                    handleLookupClaimBarcode(r.barcode);
-                                    setActiveTab('claims');
-                                  }
-                                }}
-                                variant="ghost"
-                                size="sm"
-                                className="h-7 px-2 text-xs text-primary hover:text-primary-hover hover:bg-primary/10 gap-1 font-medium"
-                              >
-                                Claim
-                                <ArrowRight className="h-3 w-3" />
-                              </Button>
+                              {!isFieldUser ? (
+                                <Button
+                                  onClick={() => {
+                                    if (r.barcode) {
+                                      setClaimBarcode(r.barcode);
+                                      handleLookupClaimBarcode(r.barcode);
+                                      setActiveTab('claims');
+                                    }
+                                  }}
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-7 px-2 text-xs text-primary hover:text-primary-hover hover:bg-primary/10 gap-1 font-medium"
+                                >
+                                  Claim
+                                  <ArrowRight className="h-3 w-3" />
+                                </Button>
+                              ) : (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                  Registered
+                                </span>
+                              )}
                             </td>
                           </tr>
                         );
@@ -1403,6 +1511,7 @@ export function WarrantyHubPage() {
         {/* ------------------------------------------------------------- */}
         {/* TAB 5: DISTRIBUTOR WARRANTY NOTES */}
         {/* ------------------------------------------------------------- */}
+        {!isFieldUser && (
         <TabsContent value="notes" className="space-y-4 pt-2">
           <Card className="border-slate-200 shadow-xs">
             <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-3">
@@ -1517,10 +1626,11 @@ export function WarrantyHubPage() {
             </CardContent>
           </Card>
         </TabsContent>
+        )}
       </Tabs>
 
       {/* MODALS */}
-      {isNewClaimOpen && (
+      {!isFieldUser && isNewClaimOpen && (
         <NewClaimModal
           open={isNewClaimOpen}
           onOpenChange={setIsNewClaimOpen}
@@ -1555,7 +1665,7 @@ export function WarrantyHubPage() {
         />
       )}
 
-      {isRecordNoteOpen && (
+      {!isFieldUser && isRecordNoteOpen && (
         <RecordWarrantyNoteModal
           open={isRecordNoteOpen}
           onOpenChange={setIsRecordNoteOpen}
