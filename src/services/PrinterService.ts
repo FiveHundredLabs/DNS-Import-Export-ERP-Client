@@ -1,3 +1,4 @@
+import { encodeCode128, generateCode128SvgPath } from '../utils/code128';
 import { Quotation } from '../types/quotation';
 import { Invoice } from '../types/invoice';
 import { Payment } from '../types/payment';
@@ -20,6 +21,18 @@ export interface ThermalReceiptData {
   paperWidth?: '80mm' | '58mm';
 }
 
+export interface BarcodeStickerData {
+  companyName?: string;
+  productName: string;
+  sku: string;
+  unitBarcode: string;
+  serialNumber?: string;
+  unitIndex?: number;
+  totalUnits?: number;
+  batchNumber?: string;
+  poNumber?: string;
+}
+
 export interface IPrinterService {
   printThermalReceipt(data: ThermalReceiptData): Promise<boolean>;
   printPOSTransactionReceipt(tx: POSTransaction): Promise<boolean>;
@@ -27,10 +40,266 @@ export interface IPrinterService {
   printInvoice(invoice: Invoice, format?: 'STANDARD' | 'IRD_TAX'): Promise<boolean>;
   printPaymentReceipt(payment: Payment, remainingBalance?: number, paperWidth?: '80mm' | '58mm'): Promise<boolean>;
   printPurchaseOrder(purchaseOrder: PurchaseOrder): Promise<boolean>;
+  printBarcodeStickers(stickers: BarcodeStickerData[]): Promise<boolean>;
   isPrinterConnected(): Promise<boolean>;
 }
 
 export class ThermalPrinterService implements IPrinterService {
+  /**
+   * Prints unit-wise barcode stickers formatted strictly for 50mm x 30mm thermal label printers (203/300 DPI).
+   * Spools each sticker onto an exact 50mm x 30mm continuous label roll without browser headers/footers.
+   */
+  async printBarcodeStickers(stickers: BarcodeStickerData[]): Promise<boolean> {
+    if (typeof window === 'undefined' || !stickers || stickers.length === 0) return false;
+    try {
+      // 1. Prepare clean, isolated printing iframe
+      let printFrame = document.getElementById('barcode-printer-iframe') as HTMLIFrameElement;
+      if (!printFrame) {
+        printFrame = document.createElement('iframe');
+        printFrame.id = 'barcode-printer-iframe';
+        printFrame.style.position = 'fixed';
+        printFrame.style.right = '0';
+        printFrame.style.bottom = '0';
+        printFrame.style.width = '0';
+        printFrame.style.height = '0';
+        printFrame.style.border = '0';
+        printFrame.style.visibility = 'hidden';
+        document.body.appendChild(printFrame);
+      }
+
+      const html = this.buildBarcodeStickerHtml(stickers);
+
+      const frameDoc = printFrame.contentWindow?.document || printFrame.contentDocument;
+      if (frameDoc) {
+        frameDoc.open();
+        frameDoc.write(html);
+        frameDoc.close();
+
+        setTimeout(() => {
+          printFrame.contentWindow?.focus();
+          printFrame.contentWindow?.print();
+        }, 250);
+        return true;
+      }
+
+      // Fallback to window.open if iframe is blocked
+      const printWindow = window.open('', '_blank', 'width=350,height=300');
+      if (!printWindow) return false;
+      printWindow.document.write(html);
+      printWindow.document.close();
+      printWindow.focus();
+      setTimeout(() => {
+        printWindow.print();
+        printWindow.close();
+      }, 300);
+      return true;
+    } catch (err) {
+      console.error('Failed to print 50mm x 30mm barcode stickers:', err);
+      return false;
+    }
+  }
+
+  private buildBarcodeStickerHtml(stickers: BarcodeStickerData[]): string {
+    const escapeHtml = (str: string = '') =>
+      str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+    const stickerElements = stickers
+      .map((s) => {
+        const hasSerial = Boolean(s.serialNumber && s.serialNumber.trim().length > 0);
+        const barcodeHeight = hasSerial ? 26 : 32;
+        const codeData = encodeCode128(s.unitBarcode, 10);
+        const pathD = generateCode128SvgPath(codeData, barcodeHeight);
+
+        const unitCaption =
+          typeof s.unitIndex === 'number' && typeof s.totalUnits === 'number'
+            ? `Unit ${s.unitIndex}/${s.totalUnits}`
+            : typeof s.unitIndex === 'number'
+            ? `Unit #${s.unitIndex}`
+            : '';
+
+        return `
+          <div class="sticker-label">
+            <div class="header">
+              <span class="company">${escapeHtml(s.companyName || 'DNS DISTRIBUTION')}</span>
+              ${unitCaption ? `<span class="unit-tag">${escapeHtml(unitCaption)}</span>` : ''}
+            </div>
+
+            <div class="product-info">
+              <div class="product-name" title="${escapeHtml(s.productName)}">${escapeHtml(s.productName)}</div>
+              <div class="sku-row">
+                <span>SKU: ${escapeHtml(s.sku)}</span>
+                ${s.batchNumber ? `<span>BATCH: ${escapeHtml(s.batchNumber)}</span>` : ''}
+              </div>
+            </div>
+
+            <div class="barcode-box">
+              <svg viewBox="0 0 ${codeData.totalModules} ${barcodeHeight}" class="barcode-svg" preserveAspectRatio="none">
+                <path d="${pathD}" fill="#000000" shape-rendering="crispEdges" />
+              </svg>
+              <div class="barcode-number">${escapeHtml(s.unitBarcode)}</div>
+            </div>
+
+            ${
+              hasSerial
+                ? `<div class="serial-box">SN: ${escapeHtml(s.serialNumber)}</div>`
+                : s.poNumber
+                ? `<div class="footer-row"><span>PO: ${escapeHtml(s.poNumber)}</span><span>INTAKE OK</span></div>`
+                : ''
+            }
+          </div>
+        `;
+      })
+      .join('\n');
+
+    return `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8" />
+          <title>DNS ERP - Barcode Labels (50mm x 30mm)</title>
+          <style>
+            @page {
+              size: 50mm 30mm;
+              margin: 0mm;
+            }
+            * {
+              box-sizing: border-box;
+              margin: 0;
+              padding: 0;
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
+            }
+            html, body {
+              width: 50mm;
+              margin: 0;
+              padding: 0;
+              background: #ffffff;
+              font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+              color: #000000;
+            }
+            .sticker-label {
+              width: 50mm;
+              height: 30mm;
+              max-width: 50mm;
+              max-height: 30mm;
+              padding: 1.2mm 2mm;
+              box-sizing: border-box;
+              background: #ffffff;
+              color: #000000;
+              display: flex;
+              flex-direction: column;
+              justify-content: space-between;
+              align-items: center;
+              text-align: center;
+              overflow: hidden;
+              page-break-after: always;
+              break-after: page;
+              page-break-inside: avoid;
+              break-inside: avoid;
+            }
+            .sticker-label:last-child {
+              page-break-after: auto;
+              break-after: auto;
+            }
+            .header {
+              width: 100%;
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              border-bottom: 0.6pt solid #000000;
+              padding-bottom: 0.3mm;
+              line-height: 1;
+            }
+            .company {
+              font-size: 6.5pt;
+              font-weight: 900;
+              letter-spacing: 0.3px;
+              text-transform: uppercase;
+              white-space: nowrap;
+              overflow: hidden;
+              text-overflow: ellipsis;
+            }
+            .unit-tag {
+              font-family: monospace;
+              font-size: 5.5pt;
+              font-weight: 700;
+              white-space: nowrap;
+            }
+            .product-info {
+              width: 100%;
+              margin-top: 0.3mm;
+              line-height: 1.1;
+            }
+            .product-name {
+              font-size: 7pt;
+              font-weight: 800;
+              white-space: nowrap;
+              overflow: hidden;
+              text-overflow: ellipsis;
+            }
+            .sku-row {
+              font-family: monospace;
+              font-size: 5.5pt;
+              font-weight: 600;
+              display: flex;
+              justify-content: space-between;
+              margin-top: 0.2mm;
+              line-height: 1;
+            }
+            .barcode-box {
+              width: 100%;
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              justify-content: center;
+              margin: 0.3mm 0;
+            }
+            .barcode-svg {
+              width: 95%;
+              height: 9mm;
+              display: block;
+            }
+            .barcode-number {
+              font-family: 'Courier New', Courier, monospace;
+              font-size: 6.5pt;
+              font-weight: 800;
+              letter-spacing: 0.8px;
+              margin-top: 0.3mm;
+              line-height: 1;
+            }
+            .serial-box {
+              width: 100%;
+              border-top: 0.6pt solid #000000;
+              padding-top: 0.3mm;
+              font-family: 'Courier New', Courier, monospace;
+              font-size: 6.5pt;
+              font-weight: 900;
+              letter-spacing: 0.4px;
+              white-space: nowrap;
+              overflow: hidden;
+              text-overflow: ellipsis;
+              line-height: 1;
+            }
+            .footer-row {
+              width: 100%;
+              border-top: 0.5pt dashed #555555;
+              padding-top: 0.2mm;
+              font-family: monospace;
+              font-size: 5pt;
+              display: flex;
+              justify-content: space-between;
+              color: #333333;
+              line-height: 1;
+            }
+          </style>
+        </head>
+        <body>
+          ${stickerElements}
+        </body>
+      </html>
+    `;
+  }
+
   async isPrinterConnected(): Promise<boolean> {
     return true; // Virtual / browser print driver available
   }

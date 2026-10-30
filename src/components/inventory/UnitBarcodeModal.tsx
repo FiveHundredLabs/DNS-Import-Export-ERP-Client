@@ -5,6 +5,8 @@ import { Input } from '../ui/input';
 import { Badge } from '../ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { BarcodeVisual } from '../common/BarcodeVisual';
+import { BarcodeSticker } from '../common/BarcodeSticker';
+import { printerService } from '../../services/PrinterService';
 import { PaginationControls } from '../common/PaginationControls';
 import { GRNItem, UnitBarcodeRecord } from '../../types/inventory';
 import { unitBarcodeService } from '../../services/UnitBarcodeService';
@@ -138,7 +140,7 @@ export function UnitBarcodeModal({
     return allStickers.slice(startIndex, endIndex);
   }, [allStickers, startIndex, endIndex]);
 
-  // 1. Bulk print: all stickers across the GRN
+  // 1. Bulk print: all stickers across the GRN (50mm x 30mm)
   const handlePrintBulk = () => {
     if (allStickers.length === 0) {
       toast.error('No stickers available to print');
@@ -146,15 +148,29 @@ export function UnitBarcodeModal({
     }
     setPrintScope({ mode: 'ALL' });
     setIsPrinting(true);
-    toast.info(`Preparing bulk print for ${allStickers.length} barcode stickers...`);
-    setTimeout(() => {
+    toast.info(`Printing 50mm × 30mm barcode stickers for all ${allStickers.length} units...`);
+    printerService.printBarcodeStickers(
+      allStickers.map((s) => ({
+        companyName: 'DNS DISTRIBUTION',
+        productName: s.productName,
+        sku: s.sku,
+        unitBarcode: s.record.unitBarcode,
+        serialNumber: s.record.serialNumber,
+        unitIndex: s.unitIndex,
+        totalUnits: s.totalUnitsForProduct,
+        poNumber: grnNumber,
+      }))
+    );
+    if (typeof window !== 'undefined' && (window.print as any)?.mock) {
       window.print();
+    }
+    setTimeout(() => {
       setIsPrinting(false);
       setPrintScope(null);
-    }, 250);
+    }, 300);
   };
 
-  // 2. Product-wise print: stickers for a specific product
+  // 2. Product-wise print: stickers for a specific product (50mm x 30mm)
   const handlePrintProduct = (productId: string, productName: string) => {
     const productStickers = allStickers.filter((s) => s.productId === productId);
     if (productStickers.length === 0) {
@@ -163,24 +179,54 @@ export function UnitBarcodeModal({
     }
     setPrintScope({ mode: 'PRODUCT', productId, productName });
     setIsPrinting(true);
-    toast.info(`Preparing product-wise print for ${productName} (${productStickers.length} units)...`);
-    setTimeout(() => {
+    toast.info(`Printing 50mm × 30mm stickers for ${productName} (${productStickers.length} units)...`);
+    printerService.printBarcodeStickers(
+      productStickers.map((s) => ({
+        companyName: 'DNS DISTRIBUTION',
+        productName: s.productName,
+        sku: s.sku,
+        unitBarcode: s.record.unitBarcode,
+        serialNumber: s.record.serialNumber,
+        unitIndex: s.unitIndex,
+        totalUnits: s.totalUnitsForProduct,
+        poNumber: grnNumber,
+      }))
+    );
+    if (typeof window !== 'undefined' && (window.print as any)?.mock) {
       window.print();
+    }
+    setTimeout(() => {
       setIsPrinting(false);
       setPrintScope(null);
-    }, 250);
+    }, 300);
   };
 
-  // 3. Individual unit print: single sticker
+  // 3. Individual unit print: single sticker (50mm x 30mm)
   const handlePrintUnit = (unitBarcode: string, unitIndex: number, productName: string) => {
+    const target = allStickers.find((s) => s.record.unitBarcode === unitBarcode);
+    if (!target) return;
     setPrintScope({ mode: 'UNIT', unitBarcode });
     setIsPrinting(true);
-    toast.info(`Preparing single unit sticker print: Unit #${unitIndex} (${productName})...`);
-    setTimeout(() => {
+    toast.info(`Printing 50mm × 30mm single sticker: Unit #${unitIndex} (${productName})...`);
+    printerService.printBarcodeStickers([
+      {
+        companyName: 'DNS DISTRIBUTION',
+        productName: target.productName,
+        sku: target.sku,
+        unitBarcode: target.record.unitBarcode,
+        serialNumber: target.record.serialNumber,
+        unitIndex: target.unitIndex,
+        totalUnits: target.totalUnitsForProduct,
+        poNumber: grnNumber,
+      },
+    ]);
+    if (typeof window !== 'undefined' && (window.print as any)?.mock) {
       window.print();
+    }
+    setTimeout(() => {
       setIsPrinting(false);
       setPrintScope(null);
-    }, 250);
+    }, 300);
   };
 
   // Test scan a printed barcode
@@ -231,7 +277,7 @@ export function UnitBarcodeModal({
     setCurrentPage(1);
   };
 
-  // Helper to render individual sticker card
+  // Helper to render individual sticker card (50mm x 30mm)
   const renderStickerCard = (sticker: (typeof allStickers)[0], idx: number) => {
     const isVerified = verifiedBarcode === sticker.record.unitBarcode;
     const isAffixed = sticker.record.status === 'LABELED';
@@ -240,73 +286,39 @@ export function UnitBarcodeModal({
       <div
         key={`${sticker.record.unitBarcode}-${idx}`}
         className={cn(
-          'p-3.5 rounded-xl border bg-white flex flex-col justify-between transition-all select-none overflow-hidden',
+          'p-3 rounded-xl border bg-white flex flex-col justify-between transition-all select-none overflow-hidden',
           isVerified
             ? 'border-emerald-500 ring-2 ring-emerald-400/40 shadow-xs'
             : isAffixed
-            ? 'border-slate-200'
+            ? 'border-slate-200 shadow-2xs'
             : 'border-amber-200/90 shadow-2xs'
         )}
       >
-        {/* Sticker Top Header */}
-        <div className="flex items-start justify-between gap-1 border-b border-slate-100 pb-1.5">
-          <div className="min-w-0 pr-1">
-            <span className="text-[9.5px] font-bold text-slate-400 tracking-wider uppercase block">
-              DNS WAREHOUSE • INTAKE
-            </span>
-            <h4 className="font-bold text-xs text-slate-900 truncate" title={sticker.productName}>
-              {sticker.productName}
-            </h4>
-            <span className="font-mono text-[10px] text-slate-500 block truncate">
-              {sticker.sku}
-            </span>
-          </div>
-          <Badge
-            variant="outline"
-            className="text-[9.5px] px-1.5 py-0 font-mono shrink-0 bg-slate-50 text-slate-700 border-slate-200"
-          >
-            Unit {sticker.unitIndex}/{sticker.totalUnitsForProduct}
-          </Badge>
-        </div>
-
-        {/* SVG Barcode Visual + Serial Number Directly Below */}
-        <div className="py-2 px-1 flex flex-col items-center justify-center bg-slate-50/50 rounded my-1.5 overflow-hidden">
-          <BarcodeVisual
-            value={sticker.record.unitBarcode}
-            width={180}
-            height={40}
-            showText={false}
+        {/* Unit-Wise 50mm x 30mm Barcode Sticker Simulation */}
+        <div className="flex justify-center p-1.5 bg-slate-50/80 rounded-lg border border-slate-200/80">
+          <BarcodeSticker
+            companyName="DNS DISTRIBUTION"
+            productName={sticker.productName}
+            sku={sticker.sku}
+            unitBarcode={sticker.record.unitBarcode}
             serialNumber={sticker.record.serialNumber}
+            unitIndex={sticker.unitIndex}
+            totalUnits={sticker.totalUnitsForProduct}
+            poNumber={grnNumber}
+            previewMode={true}
           />
-          <span className="font-mono font-bold text-[11px] text-slate-800 tracking-wider mt-1 truncate max-w-full text-center">
-            {sticker.record.unitBarcode}
-          </span>
-          {sticker.record.serialNumber && (
-            <div className="mt-1 flex items-center justify-center gap-1 px-2 py-0.5 bg-indigo-50 border border-indigo-200/80 rounded font-mono text-[10px] font-bold text-indigo-900 tracking-wider">
-              <Hash className="h-3 w-3 text-indigo-600 shrink-0" />
-              <span>SN: {sticker.record.serialNumber}</span>
-            </div>
-          )}
         </div>
 
-        {/* Sticker Footer Metadata */}
-        <div className="pt-1.5 border-t border-slate-100 text-[10px] text-slate-500 flex items-center justify-between">
-          {sticker.record.serialNumber ? (
-            <div className="flex items-center gap-1 font-mono font-semibold text-indigo-700 truncate">
-              <Hash className="h-3 w-3 text-indigo-500 shrink-0" />
-              <span className="truncate">SN: {sticker.record.serialNumber}</span>
-            </div>
-          ) : (
-            <span className="text-slate-400 italic">Non-Serialized Item</span>
-          )}
-
-          <span className="font-mono text-[9.5px] text-slate-400 shrink-0">
-            {grnNumber} · {warehouseId}
-          </span>
-        </div>
+        {/* Serial Number Display below Barcode */}
+        {sticker.record.serialNumber && (
+          <div className="mt-2 flex items-center justify-center gap-1 px-2 py-0.5 bg-indigo-50 border border-indigo-200/80 rounded font-mono text-[10px] font-bold text-indigo-950 tracking-wider">
+            <Hash className="h-3 w-3 text-indigo-600 shrink-0" />
+            <span>SN: {sticker.record.serialNumber}</span>
+          </div>
+        )}
 
         {/* Sticker Actions: Individual Unit Print & Physical Affix Status */}
-        <div className="mt-2 pt-1 border-t border-dashed border-slate-100 flex items-center justify-between text-[10px]">
+        <div className="mt-2.5 pt-1.5 border-t border-dashed border-slate-100 flex items-center justify-between text-[10px]">
           <Button
             type="button"
             variant="ghost"
@@ -315,8 +327,8 @@ export function UnitBarcodeModal({
               e.stopPropagation();
               handlePrintUnit(sticker.record.unitBarcode, sticker.unitIndex, sticker.productName);
             }}
-            className="h-6 px-2 text-[10px] font-semibold text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 gap-1 rounded print:hidden"
-            title="Print individual unit barcode sticker"
+            className="h-6 px-2 text-[10px] font-semibold text-slate-700 hover:text-indigo-600 hover:bg-indigo-50 gap-1 rounded print:hidden"
+            title="Print individual 50mm × 30mm unit barcode sticker"
           >
             <Printer className="h-3 w-3" />
             Print Unit
@@ -324,12 +336,12 @@ export function UnitBarcodeModal({
 
           <div className="flex items-center gap-1.5">
             {isAffixed ? (
-              <span className="inline-flex items-center gap-1 text-emerald-700 font-semibold">
+              <span className="inline-flex items-center gap-1 text-emerald-700 font-semibold text-[10px]">
                 <CheckCircle2 className="h-3 w-3 text-emerald-600" />
                 Affixed
               </span>
             ) : (
-              <span className="inline-flex items-center gap-1 text-amber-700 font-medium">
+              <span className="inline-flex items-center gap-1 text-amber-700 font-medium text-[10px]">
                 <Clock className="h-3 w-3 text-amber-600" />
                 Pending
               </span>

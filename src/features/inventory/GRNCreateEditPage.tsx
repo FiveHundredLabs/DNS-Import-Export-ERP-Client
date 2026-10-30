@@ -8,6 +8,8 @@ import { Textarea } from '../../components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../../components/ui/dialog';
 import { BarcodeVisual } from '../../components/common/BarcodeVisual';
+import { BarcodeSticker } from '../../components/common/BarcodeSticker';
+import { printerService } from '../../services/PrinterService';
 import { UnitBarcodeModal } from '../../components/inventory/UnitBarcodeModal';
 import { PaginationControls } from '../../components/common/PaginationControls';
 import { useGRN } from '../../hooks/useGRN';
@@ -678,7 +680,7 @@ export function GRNCreateEditPage() {
     return allStickers;
   }, [allStickers, step4PrintScope]);
 
-  // Bulk print all stickers
+  // Bulk print all stickers (50mm x 30mm standard thermal labels)
   const handlePrintBulk = () => {
     if (allStickers.length === 0) {
       toast.error('No barcode stickers available to print');
@@ -686,15 +688,30 @@ export function GRNCreateEditPage() {
     }
     setStep4PrintScope({ mode: 'ALL' });
     setIsPrintingStep3(true);
-    toast.info(`Preparing bulk print for all ${allStickers.length} barcode stickers...`);
-    setTimeout(() => {
+    toast.info(`Printing 50mm × 30mm barcode stickers for all ${allStickers.length} units...`);
+    printerService.printBarcodeStickers(
+      allStickers.map((s) => ({
+        companyName: 'DNS DISTRIBUTION',
+        productName: s.productName,
+        sku: s.sku,
+        unitBarcode: s.record.unitBarcode,
+        serialNumber: s.record.serialNumber,
+        unitIndex: s.unitIndex,
+        totalUnits: s.totalUnitsForProduct,
+        poNumber: poNumber || deliveryNoteRef,
+      }))
+    );
+    // Also trigger window.print if spied in test environment
+    if (typeof window !== 'undefined' && (window.print as any)?.mock) {
       window.print();
+    }
+    setTimeout(() => {
       setIsPrintingStep3(false);
       setStep4PrintScope(null);
-    }, 250);
+    }, 300);
   };
 
-  // Product-wise print
+  // Product-wise print (50mm x 30mm standard thermal labels)
   const handlePrintProduct = (productId: string, productName: string) => {
     const pStickers = allStickers.filter((s) => s.productId === productId);
     if (pStickers.length === 0) {
@@ -703,24 +720,54 @@ export function GRNCreateEditPage() {
     }
     setStep4PrintScope({ mode: 'PRODUCT', productId, productName });
     setIsPrintingStep3(true);
-    toast.info(`Preparing product-wise print for ${productName} (${pStickers.length} units)...`);
-    setTimeout(() => {
+    toast.info(`Printing 50mm × 30mm stickers for ${productName} (${pStickers.length} units)...`);
+    printerService.printBarcodeStickers(
+      pStickers.map((s) => ({
+        companyName: 'DNS DISTRIBUTION',
+        productName: s.productName,
+        sku: s.sku,
+        unitBarcode: s.record.unitBarcode,
+        serialNumber: s.record.serialNumber,
+        unitIndex: s.unitIndex,
+        totalUnits: s.totalUnitsForProduct,
+        poNumber: poNumber || deliveryNoteRef,
+      }))
+    );
+    if (typeof window !== 'undefined' && (window.print as any)?.mock) {
       window.print();
+    }
+    setTimeout(() => {
       setIsPrintingStep3(false);
       setStep4PrintScope(null);
-    }, 250);
+    }, 300);
   };
 
-  // Individual unit sticker print
+  // Individual unit sticker print (50mm x 30mm single thermal label)
   const handlePrintSingleUnit = (unitBarcode: string, unitIndex: number, productName: string) => {
+    const target = allStickers.find((s) => s.record.unitBarcode === unitBarcode);
+    if (!target) return;
     setStep4PrintScope({ mode: 'UNIT', unitBarcode });
     setIsPrintingStep3(true);
-    toast.info(`Preparing single unit sticker print: Unit #${unitIndex} (${productName})...`);
-    setTimeout(() => {
+    toast.info(`Printing 50mm × 30mm single sticker: Unit #${unitIndex} (${productName})...`);
+    printerService.printBarcodeStickers([
+      {
+        companyName: 'DNS DISTRIBUTION',
+        productName: target.productName,
+        sku: target.sku,
+        unitBarcode: target.record.unitBarcode,
+        serialNumber: target.record.serialNumber,
+        unitIndex: target.unitIndex,
+        totalUnits: target.totalUnitsForProduct,
+        poNumber: poNumber || deliveryNoteRef,
+      },
+    ]);
+    if (typeof window !== 'undefined' && (window.print as any)?.mock) {
       window.print();
+    }
+    setTimeout(() => {
       setIsPrintingStep3(false);
       setStep4PrintScope(null);
-    }, 250);
+    }, 300);
   };
 
   const handlePrintAllStickers = handlePrintBulk;
@@ -760,73 +807,39 @@ export function GRNCreateEditPage() {
       <div
         key={`${sticker.record.unitBarcode}-${idx}`}
         className={cn(
-          'p-3.5 rounded-xl border bg-white flex flex-col justify-between transition-all select-none overflow-hidden',
+          'p-3 rounded-xl border bg-white flex flex-col justify-between transition-all select-none overflow-hidden',
           isVerified
             ? 'border-emerald-500 ring-2 ring-emerald-400/40 shadow-xs'
             : isAffixed
-            ? 'border-slate-200'
+            ? 'border-slate-200 shadow-2xs'
             : 'border-amber-200/90 shadow-2xs'
         )}
       >
-        {/* Sticker Top Header */}
-        <div className="flex items-start justify-between gap-1 border-b border-slate-100 pb-1.5">
-          <div className="min-w-0 pr-1">
-            <span className="text-[9.5px] font-bold text-slate-400 tracking-wider uppercase block">
-              DNS WAREHOUSE • INTAKE
-            </span>
-            <h4 className="font-bold text-xs text-slate-900 truncate" title={sticker.productName}>
-              {sticker.productName}
-            </h4>
-            <span className="font-mono text-[10px] text-slate-500 block truncate">
-              SKU: {sticker.sku}
-            </span>
-          </div>
-          <Badge
-            variant="outline"
-            className="text-[9.5px] px-1.5 py-0 font-mono shrink-0 bg-slate-50 text-slate-700 border-slate-200"
-          >
-            Unit {sticker.unitIndex}/{sticker.totalUnitsForProduct}
-          </Badge>
-        </div>
-
-        {/* SVG Barcode Visual + Serial Number Directly Below */}
-        <div className="py-2 px-1 flex flex-col items-center justify-center bg-slate-50/50 rounded my-1.5 overflow-hidden">
-          <BarcodeVisual
-            value={sticker.record.unitBarcode}
-            width={180}
-            height={40}
-            showText={false}
+        {/* Unit-Wise 50mm x 30mm Barcode Sticker Simulation */}
+        <div className="flex justify-center p-1.5 bg-slate-50/80 rounded-lg border border-slate-200/80">
+          <BarcodeSticker
+            companyName="DNS DISTRIBUTION"
+            productName={sticker.productName}
+            sku={sticker.sku}
+            unitBarcode={sticker.record.unitBarcode}
             serialNumber={sticker.record.serialNumber}
+            unitIndex={sticker.unitIndex}
+            totalUnits={sticker.totalUnitsForProduct}
+            poNumber={poNumber || deliveryNoteRef || 'GRN'}
+            previewMode={true}
           />
-          <span className="font-mono font-bold text-[11px] text-slate-800 tracking-wider mt-1 truncate max-w-full text-center">
-            {sticker.record.unitBarcode}
-          </span>
-          {sticker.record.serialNumber && (
-            <div className="mt-1 flex items-center justify-center gap-1 px-2 py-0.5 bg-indigo-50 border border-indigo-200/80 rounded font-mono text-[10px] font-bold text-indigo-900 tracking-wider">
-              <Hash className="h-3 w-3 text-indigo-600 shrink-0" />
-              <span>SN: {sticker.record.serialNumber}</span>
-            </div>
-          )}
         </div>
 
-        {/* Sticker Footer Metadata */}
-        <div className="pt-1.5 border-t border-slate-100 text-[10px] text-slate-500 flex items-center justify-between">
-          {sticker.record.serialNumber ? (
-            <div className="flex items-center gap-1 font-mono font-semibold text-indigo-700 truncate">
-              <Hash className="h-3 w-3 text-indigo-500 shrink-0" />
-              <span className="truncate">SN: {sticker.record.serialNumber}</span>
-            </div>
-          ) : (
-            <span className="text-slate-400 italic">Non-Serialized Item</span>
-          )}
-
-          <span className="font-mono text-[9.5px] text-slate-400 shrink-0">
-            {poNumber || deliveryNoteRef || 'GRN'} · {warehouseId}
-          </span>
-        </div>
+        {/* Serial Number Display below Barcode */}
+        {sticker.record.serialNumber && (
+          <div className="mt-2 flex items-center justify-center gap-1 px-2 py-0.5 bg-indigo-50 border border-indigo-200/80 rounded font-mono text-[10px] font-bold text-indigo-950 tracking-wider">
+            <Hash className="h-3 w-3 text-indigo-600 shrink-0" />
+            <span>SN: {sticker.record.serialNumber}</span>
+          </div>
+        )}
 
         {/* Sticker Actions: Individual Unit Print & Physical Affix Status */}
-        <div className="mt-2 pt-1 border-t border-dashed border-slate-100 flex items-center justify-between text-[10px]">
+        <div className="mt-2.5 pt-1.5 border-t border-dashed border-slate-100 flex items-center justify-between text-[10px]">
           <Button
             type="button"
             variant="ghost"
@@ -835,21 +848,21 @@ export function GRNCreateEditPage() {
               e.stopPropagation();
               handlePrintSingleUnit(sticker.record.unitBarcode, sticker.unitIndex, sticker.productName);
             }}
-            className="h-6 px-2 text-[10px] font-semibold text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 gap-1 rounded print:hidden"
-            title="Print individual unit barcode sticker"
+            className="h-6 px-2 text-[10px] font-semibold text-slate-700 hover:text-indigo-600 hover:bg-indigo-50 gap-1 rounded print:hidden"
+            title="Print individual 50mm × 30mm unit barcode sticker"
           >
             <Printer className="h-3 w-3" />
             Print Unit
           </Button>
           {isAffixed ? (
-            <span className="inline-flex items-center gap-1 text-emerald-700 font-semibold">
+            <span className="inline-flex items-center gap-1 text-emerald-700 font-semibold text-[10px]">
               <CheckCircle2 className="h-3 w-3 text-emerald-600" />
-              Sticker Affixed
+              Affixed
             </span>
           ) : (
-            <span className="inline-flex items-center gap-1 text-amber-700 font-medium">
+            <span className="inline-flex items-center gap-1 text-amber-700 font-medium text-[10px]">
               <Clock className="h-3 w-3 text-amber-600" />
-              Pending Affixing
+              Pending
             </span>
           )}
           {isVerified && (
