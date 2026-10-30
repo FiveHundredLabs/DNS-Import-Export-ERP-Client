@@ -61,19 +61,6 @@ export interface RepInvoiceItem {
   overdueDays: number;
 }
 
-interface PendingAccount {
-  id: string;
-  name: string;
-  code: string;
-  amount: number;
-  dueStatus: string;
-  statusVariant: 'destructive' | 'warning' | 'outline';
-  creditDays: number;
-  phone: string;
-  contactPerson: string;
-  isOverdue: boolean;
-}
-
 interface OrderTrackingItem {
   id: string;
   orderNumber: string;
@@ -91,8 +78,6 @@ export function SalesRepDashboard() {
   const { currentUser, role } = useAuth();
   const effectiveRepId = role === 'SALES_REP' && currentUser?.id ? currentUser.id : (currentUser?.id || 'usr-106');
 
-  const [receivablesFilter, setReceivablesFilter] = useState<'all' | 'overdue' | 'current'>('all');
-  const [searchQuery, setSearchQuery] = useState('');
   const [cashToHandOver, setCashToHandOver] = useState<number>(0);
   const [pendingHandoverCount, setPendingHandoverCount] = useState<number>(0);
   const [loadingHandover, setLoadingHandover] = useState<boolean>(true);
@@ -238,78 +223,6 @@ export function SalesRepDashboard() {
       });
   }, [liveInvoices]);
 
-  // Aggregate customer pending accounts dynamically from live invoices
-  const pendingAccounts = useMemo<PendingAccount[]>(() => {
-    if (liveInvoices.length === 0) {
-      return [
-        {
-          id: 'cust-001',
-          name: 'Lanka Electrical Superstore',
-          code: 'DLR-COL-001',
-          amount: 450000,
-          dueStatus: 'Overdue by 12 Days',
-          statusVariant: 'destructive',
-          creditDays: 30,
-          phone: '+94 11 258 9632',
-          contactPerson: 'Mr. Sunil Weerasinghe',
-          isOverdue: true,
-        },
-        {
-          id: 'cust-002',
-          name: 'Muthurajawela Engineering',
-          code: 'DLR-GAM-002',
-          amount: 280000,
-          dueStatus: 'Due in 3 Days',
-          statusVariant: 'warning',
-          creditDays: 45,
-          phone: '+94 31 223 4567',
-          contactPerson: 'Mr. Jude Rodrigo',
-          isOverdue: false,
-        },
-        {
-          id: 'cust-003',
-          name: 'Kelani Valley Lighting Mart',
-          code: 'DLR-KEL-003',
-          amount: 195000,
-          dueStatus: 'Within Terms',
-          statusVariant: 'outline',
-          creditDays: 30,
-          phone: '+94 33 228 1122',
-          contactPerson: 'Mr. Rohan Gunasekara',
-          isOverdue: false,
-        },
-      ];
-    }
-
-    const accMap = new Map<string, PendingAccount>();
-    for (const inv of liveInvoices) {
-      const existing = accMap.get(inv.customerId);
-      const isOverdue = inv.dueStatus === 'OVERDUE';
-      if (!existing) {
-        accMap.set(inv.customerId, {
-          id: inv.customerId,
-          name: inv.customerName,
-          code: inv.customerCode,
-          amount: inv.balanceAmount,
-          dueStatus: inv.dueStatusLabel,
-          statusVariant: inv.dueVariant,
-          creditDays: 30,
-          phone: inv.phone,
-          contactPerson: inv.contactPerson,
-          isOverdue,
-        });
-      } else {
-        existing.amount += inv.balanceAmount;
-        if (isOverdue) {
-          existing.isOverdue = true;
-          existing.statusVariant = 'destructive';
-          existing.dueStatus = inv.dueStatusLabel;
-        }
-      }
-    }
-    return Array.from(accMap.values());
-  }, [liveInvoices]);
-
   const handleSendWhatsAppReminder = (inv: RepInvoiceItem) => {
     const msg = `Dear ${inv.customerName}, this is a gentle reminder from DNS ERP regarding Invoice ${inv.invoiceNumber} for ${formatCurrency(inv.balanceAmount)} which is ${inv.dueStatus === 'OVERDUE' ? 'overdue' : 'due on ' + inv.dueDate}. Please arrange for settlement upon delivery or representative visit. Thank you.`;
     whatsAppService.openChat(inv.phone, msg);
@@ -367,26 +280,6 @@ export function SalesRepDashboard() {
     }
     return 'KW';
   }, [currentUser]);
-
-  // Filtered accounts for mobile search & filter pills
-  const filteredAccounts = useMemo(() => {
-    let list = pendingAccounts;
-    if (receivablesFilter === 'overdue') {
-      list = list.filter((a) => a.isOverdue);
-    } else if (receivablesFilter === 'current') {
-      list = list.filter((a) => !a.isOverdue);
-    }
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
-      list = list.filter(
-        (a) =>
-          a.name.toLowerCase().includes(q) ||
-          a.code.toLowerCase().includes(q) ||
-          a.phone.includes(q)
-      );
-    }
-    return list;
-  }, [pendingAccounts, receivablesFilter, searchQuery]);
 
   return (
     <div className="w-full space-y-4 sm:space-y-6 pb-24 md:pb-6">
@@ -513,9 +406,7 @@ export function SalesRepDashboard() {
           <button
             type="button"
             onClick={() => {
-              setReceivablesFilter('overdue');
-              const el = document.getElementById('pending-receivables-section');
-              if (el) el.scrollIntoView({ behavior: 'smooth' });
+              navigate('/payments/collect?filter=OVERDUE');
             }}
             className="flex flex-col items-center group active:scale-95 transition-transform cursor-pointer"
           >
@@ -677,9 +568,7 @@ export function SalesRepDashboard() {
           {/* Card 5: Overdue Accounts */}
           <div
             onClick={() => {
-              setReceivablesFilter('overdue');
-              const el = document.getElementById('pending-receivables-section');
-              if (el) el.scrollIntoView({ behavior: 'smooth' });
+              navigate('/payments/collect?filter=OVERDUE');
             }}
             className="col-span-1 rounded-2xl border border-rose-200/90 bg-gradient-to-br from-rose-500/[0.07] via-red-50/40 to-white p-3 sm:p-4 shadow-xs hover:shadow-sm transition-all relative overflow-hidden group flex flex-col justify-between cursor-pointer active:scale-[0.99]"
           >
@@ -822,180 +711,8 @@ export function SalesRepDashboard() {
           </div>
         )}
 
-        {/* Pending Payments & Route Receivables (Formatted as native Mobile App Cards on phone screens) */}
-        <Card id="pending-receivables-section" className="lg:col-span-2 rounded-2xl sm:rounded-3xl border border-slate-200/80 shadow-xs bg-white overflow-hidden">
-            <CardHeader className="flex flex-row items-center justify-between pb-3 p-4 sm:p-6 border-b border-slate-100">
-              <div>
-                <CardTitle className="text-sm font-semibold text-slate-900 flex items-center gap-2">
-                  <CreditCard className="h-4 w-4 text-emerald-600" />
-                  Pending Payments & Route Receivables
-                </CardTitle>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  Outstanding balances for your assigned territory accounts requiring field collection.
-                </p>
-              </div>
-              <Link to="/payments/collect">
-                <Button variant="ghost" size="sm" className="text-xs text-primary gap-1 font-semibold hover:bg-primary-light">
-                  All Collections <ArrowRight className="h-3 w-3" />
-                </Button>
-              </Link>
-            </CardHeader>
-
-          <CardContent className="p-3.5 sm:p-5 space-y-3">
-            {/* Filter Chips Bar & Search Field */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-1">
-              <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
-                <button
-                  type="button"
-                  onClick={() => setReceivablesFilter('all')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                    receivablesFilter === 'all'
-                      ? 'bg-slate-900 text-white shadow-2xs'
-                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                  }`}
-                >
-                  All ({pendingAccounts.length})
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setReceivablesFilter('overdue')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                    receivablesFilter === 'overdue'
-                      ? 'bg-rose-600 text-white shadow-2xs'
-                      : 'bg-rose-50 text-rose-700 hover:bg-rose-100'
-                  }`}
-                >
-                  Overdue (1)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setReceivablesFilter('current')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                    receivablesFilter === 'current'
-                      ? 'bg-amber-600 text-white shadow-2xs'
-                      : 'bg-amber-50 text-amber-700 hover:bg-amber-100'
-                  }`}
-                >
-                  Within Terms (2)
-                </button>
-              </div>
-
-              <div className="relative w-full sm:w-56">
-                <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-slate-400" />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search dealer or code..."
-                  className="w-full h-8 pl-8 pr-7 rounded-lg bg-slate-50 border border-slate-200 text-slate-900 placeholder-slate-400 text-xs focus:outline-none focus:ring-1 focus:ring-primary focus:bg-white transition-all"
-                />
-                {searchQuery && (
-                  <button
-                    onClick={() => setSearchQuery('')}
-                    className="absolute right-2 top-2 text-slate-400 hover:text-slate-600 cursor-pointer"
-                  >
-                    <X className="h-3.5 w-3.5" />
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* Dealer Account Cards */}
-            <div className="space-y-2.5">
-              {filteredAccounts.map((pending) => (
-                <div
-                  key={pending.id}
-                  className={`p-3.5 rounded-xl border transition-all ${
-                    pending.isOverdue
-                      ? 'border-l-4 border-l-rose-500 border-slate-200/90 bg-rose-50/20 hover:bg-rose-50/40'
-                      : 'border-l-4 border-l-amber-400 border-slate-200/90 bg-white hover:bg-slate-50/80'
-                  } shadow-2xs hover:shadow-xs`}
-                >
-                  {/* Top Line: Dealer Name, Code, and Balance Amount */}
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <Link
-                          to={`/customers/${pending.id}`}
-                          className="text-xs sm:text-sm font-bold text-slate-900 hover:text-primary transition-colors"
-                        >
-                          {pending.name}
-                        </Link>
-                        <span className="font-mono text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded font-semibold shrink-0">
-                          {pending.code}
-                        </span>
-                      </div>
-                      <div className="text-[11px] text-slate-500 flex items-center gap-1.5 mt-0.5 flex-wrap">
-                        <span>Terms: {pending.creditDays}d</span>
-                        <span>•</span>
-                        <span className="text-slate-600 font-medium">{pending.contactPerson}</span>
-                      </div>
-                    </div>
-
-                    <div className="text-right shrink-0">
-                      <div className="font-mono text-xs sm:text-sm font-extrabold text-slate-900">
-                        {formatCurrency(pending.amount)}
-                      </div>
-                      <Badge variant={pending.statusVariant} className="text-[10px] mt-0.5 rounded-full px-2">
-                        {pending.dueStatus}
-                      </Badge>
-                    </div>
-                  </div>
-
-                  {/* Bottom Line: Touch Actions (Call, WhatsApp, Collect Payment) */}
-                  <div className="flex items-center gap-2 pt-2.5 mt-2.5 border-t border-slate-100/90">
-                    {/* Call Dealer */}
-                    <a
-                      href={`tel:${pending.phone.replace(/[^0-9+]/g, '')}`}
-                      aria-label={`Call ${pending.name}`}
-                      className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 active:scale-95 transition-all shrink-0 shadow-2xs cursor-pointer"
-                      title="Call dealer"
-                    >
-                      <Phone className="h-4 w-4" />
-                    </a>
-
-                    {/* WhatsApp */}
-                    <a
-                      href={whatsAppService.generateShareUrl(
-                        pending.phone,
-                        `Hello ${pending.contactPerson}, Kasun here from DNS Distribution regarding collection balance on account ${pending.code}.`
-                      )}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      aria-label={`WhatsApp ${pending.name}`}
-                      className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 active:scale-95 transition-all shrink-0 shadow-2xs cursor-pointer"
-                      title="WhatsApp chat"
-                    >
-                      <MessageSquare className="h-4 w-4" />
-                    </a>
-
-                    {/* Collect Payment */}
-                    <Link
-                      to={`/payments/collect/${pending.id}`}
-                      className="flex-1"
-                    >
-                      <Button
-                        size="sm"
-                        className="w-full h-9 text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-semibold gap-1.5 shadow-2xs rounded-lg active:scale-[0.98] border-0"
-                      >
-                        <DollarSign className="h-3.5 w-3.5" /> Collect Payment
-                      </Button>
-                    </Link>
-                  </div>
-                </div>
-              ))}
-
-              {filteredAccounts.length === 0 && (
-                <div className="p-6 text-center bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-500">
-                  No matching pending accounts found.
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
         {/* Recent Order Status Tracking */}
-        <Card className="rounded-2xl border border-slate-200/80 shadow-xs bg-white overflow-hidden">
+        <Card className={cn("rounded-2xl border border-slate-200/80 shadow-xs bg-white overflow-hidden", dueNext24hInvoices.length > 0 ? "lg:col-span-1" : "lg:col-span-3")}>
           <CardHeader className="p-3.5 sm:p-5 pb-3 border-b border-slate-100 flex flex-row items-center justify-between">
             <div>
               <CardTitle className="text-sm font-bold text-slate-900">
