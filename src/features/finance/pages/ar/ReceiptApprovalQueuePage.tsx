@@ -4,6 +4,7 @@ import { arService, ARReceiptItem, AROpenInvoice } from '../../services/arServic
 import { DoubleEntryHoverBadge } from '../../components/DoubleEntryHoverBadge';
 import { PageHeader } from '../../../../components/common/PageHeader';
 import { StatusBadge } from '../../../../components/common/StatusBadge';
+import { StatCard } from '../../../../components/common/StatCard';
 import { Button } from '../../../../components/ui/button';
 import { Input } from '../../../../components/ui/input';
 import { Badge } from '../../../../components/ui/badge';
@@ -235,9 +236,9 @@ export function ReceiptApprovalQueuePage() {
               variant="outline"
               size="sm"
               onClick={() => navigate('/finance/ar/pdc-vault')}
-              className="text-xs h-8 gap-1.5 border-amber-300 bg-amber-50/50 text-amber-800 hover:bg-amber-100/60 font-medium"
+              className="text-xs h-8 gap-1.5 font-medium"
             >
-              <Clock className="h-3.5 w-3.5 text-amber-700" />
+              <Clock className="h-3.5 w-3.5 text-primary" />
               <span>PDC Vault (1018)</span>
             </Button>
 
@@ -267,23 +268,20 @@ export function ReceiptApprovalQueuePage() {
       {/* Queue Metric Cards & Tabs */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { id: 'PENDING_APPROVAL', label: 'Pending Approval', count: pendingCount, color: 'text-amber-700 bg-amber-50 border-amber-200' },
-          { id: 'APPROVED', label: 'Approved & Cleared', count: approvedCount, color: 'text-emerald-700 bg-emerald-50 border-emerald-200' },
-          { id: 'REJECTED', label: 'Rejected / Returned', count: rejectedCount, color: 'text-rose-700 bg-rose-50 border-rose-200' },
-          { id: 'ALL', label: 'All Receipts', count: receipts.length, color: 'text-slate-700 bg-slate-50 border-slate-200' },
+          { id: 'PENDING_APPROVAL', label: 'Pending Approval', count: pendingCount, icon: Clock, variant: 'amber' as const },
+          { id: 'APPROVED', label: 'Approved & Cleared', count: approvedCount, icon: CheckCircle2, variant: 'emerald' as const },
+          { id: 'REJECTED', label: 'Rejected / Returned', count: rejectedCount, icon: AlertCircle, variant: 'rose' as const },
+          { id: 'ALL', label: 'All Receipts', count: receipts.length, icon: FileText, variant: 'indigo' as const },
         ].map((tab) => (
-          <button
+          <StatCard
             key={tab.id}
+            title={tab.label}
+            value={tab.count}
+            icon={tab.icon}
+            variant={tab.variant}
+            selected={statusFilter === tab.id}
             onClick={() => setStatusFilter(tab.id as any)}
-            className={`p-3.5 rounded-xl border text-left transition-all ${
-              statusFilter === tab.id
-                ? `${tab.color} ring-2 ring-primary/20 shadow-xs font-semibold`
-                : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
-            }`}
-          >
-            <div className="text-xs font-medium text-slate-500">{tab.label}</div>
-            <div className="text-xl font-bold font-mono mt-1 tabular-nums">{tab.count}</div>
-          </button>
+          />
         ))}
       </div>
 

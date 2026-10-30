@@ -389,9 +389,9 @@ export function CustomerCreditNotesPage() {
               variant="outline"
               size="sm"
               onClick={() => navigate('/finance/ar/pdc-vault')}
-              className="text-xs gap-1.5 border-amber-300 bg-amber-50/50 text-amber-800"
+              className="text-xs gap-1.5"
             >
-              <Landmark className="h-3.5 w-3.5 text-amber-700" />
+              <Landmark className="h-3.5 w-3.5 text-primary" />
               <span>PDC Vault (1018)</span>
             </Button>
           </div>
@@ -496,12 +496,22 @@ export function CustomerCreditNotesPage() {
           </div>
 
           {/* Search & Filter Bar */}
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs">
+            <div className="relative flex-1 max-w-md w-full">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+              <Input
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search credit note #, customer, reason..."
+                className="pl-9 text-xs h-9"
+              />
+            </div>
+
             <div className="flex items-center gap-2 w-full sm:w-auto">
               <select
                 value={filterCustomer}
                 onChange={(e) => setFilterCustomer(e.target.value)}
-                className="h-9 text-xs rounded-md border border-slate-300 px-3 bg-white text-slate-800"
+                className="h-9 text-xs px-2.5 rounded-lg border border-slate-200 bg-white font-medium text-slate-700"
               >
                 <option value="ALL">All Customers</option>
                 {MOCK_CUSTOMERS.map((c) => (
@@ -510,16 +520,6 @@ export function CustomerCreditNotesPage() {
                   </option>
                 ))}
               </select>
-            </div>
-
-            <div className="relative w-full sm:w-72">
-              <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-400" />
-              <Input
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search credit note #, customer, reason..."
-                className="pl-8 text-xs h-9"
-              />
             </div>
           </div>
 

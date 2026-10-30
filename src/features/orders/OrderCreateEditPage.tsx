@@ -17,6 +17,7 @@ import { DocumentActionBar } from '../../components/common/DocumentActionBar';
 import { PageHeader } from '../../components/common/PageHeader';
 import { FormSection } from '../../components/common/FormSection';
 import { FormField } from '../../components/common/FormField';
+import { StatCard } from '../../components/common/StatCard';
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -488,77 +489,44 @@ export function OrderCreateEditPage() {
       {selectedCustomer && evaluation && (
         <div className="space-y-3">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <Card
-              className={`p-3 border ${
-                evaluation.creditLimitBreached
-                  ? 'bg-rose-50 border-rose-300'
-                  : 'bg-slate-50 border-slate-200'
-              }`}
-            >
-              <div className="flex items-center justify-between text-xs text-slate-500 font-medium">
-                <span>Credit Limit</span>
-                <CreditCard className="h-3.5 w-3.5 text-slate-400" />
-              </div>
-              <div className="mt-1 text-xl font-semibold font-mono text-slate-900 tabular-nums">
-                {formatCurrency(selectedCustomer.commercialTerms?.creditLimit || 0)}
-              </div>
-              <div className="text-xs text-slate-500 mt-0.5">
-                Current Due: {formatCurrency(selectedCustomer.financials?.totalOutstanding || 0)}
-              </div>
-            </Card>
+            <StatCard
+              title="Credit Limit"
+              value={formatCurrency(selectedCustomer.commercialTerms?.creditLimit || 0)}
+              subtitle={`Current Due: ${formatCurrency(selectedCustomer.financials?.totalOutstanding || 0)}`}
+              icon={CreditCard}
+              variant="default"
+            />
 
-            <Card
-              className={`p-3 border ${
-                evaluation.creditLimitBreached
-                  ? 'bg-rose-50 border-rose-300 text-rose-900'
-                  : 'bg-emerald-50 border-emerald-200 text-emerald-900'
-              }`}
-            >
-              <div className="flex items-center justify-between text-xs font-medium">
-                <span>Available Credit</span>
-                <CheckCircle className="h-3.5 w-3.5" />
-              </div>
-              <div className="mt-1 text-xl font-semibold font-mono tabular-nums">
-                {formatCurrency(evaluation.availableCredit)}
-              </div>
-              <div className="text-xs opacity-80 mt-0.5">
-                {evaluation.availableCredit >= evaluation.totalAmount
+            <StatCard
+              title="Available Credit"
+              value={formatCurrency(evaluation.availableCredit)}
+              subtitle={
+                evaluation.availableCredit >= evaluation.totalAmount
                   ? 'Sufficient credit available'
-                  : `Breached by ${formatCurrency(evaluation.projectedOutstanding - (selectedCustomer.commercialTerms?.creditLimit || 0))}`}
-              </div>
-            </Card>
+                  : `Breached by ${formatCurrency(
+                      evaluation.projectedOutstanding -
+                        (selectedCustomer.commercialTerms?.creditLimit || 0)
+                    )}`
+              }
+              icon={evaluation.creditLimitBreached ? AlertTriangle : CheckCircle}
+              variant={evaluation.creditLimitBreached ? 'rose' : 'emerald'}
+            />
 
-            <Card
-              className={`p-3 border ${
-                evaluation.creditDaysBreached
-                  ? 'bg-amber-50 border-amber-300 text-amber-900'
-                  : 'bg-slate-50 border-slate-200 text-slate-800'
-              }`}
-            >
-              <div className="flex items-center justify-between text-xs text-slate-500 font-medium">
-                <span>Credit Days</span>
-                <Clock className="h-3.5 w-3.5 text-slate-400" />
-              </div>
-              <div className="mt-1 text-xl font-semibold tabular-nums">
-                {requestedCreditDays} <span className="text-xs font-normal text-slate-500">days req.</span>
-              </div>
-              <div className="text-xs text-slate-500 mt-0.5">
-                Customer limit: {selectedCustomer.commercialTerms?.creditDays || 30} days
-              </div>
-            </Card>
+            <StatCard
+              title="Credit Days"
+              value={`${requestedCreditDays} days req.`}
+              subtitle={`Customer limit: ${selectedCustomer.commercialTerms?.creditDays || 30} days`}
+              icon={Clock}
+              variant={evaluation.creditDaysBreached ? 'rose' : 'default'}
+            />
 
-            <Card className="p-3 bg-primary-light border border-primary-border text-indigo-900">
-              <div className="flex items-center justify-between text-xs font-medium">
-                <span>Projected Total</span>
-                <ShoppingCart className="h-3.5 w-3.5 text-primary" />
-              </div>
-              <div className="mt-1 text-xl font-semibold font-mono text-indigo-950 tabular-nums">
-                {formatCurrency(evaluation.totalAmount)}
-              </div>
-              <div className="text-xs text-primary mt-0.5">
-                New balance: {formatCurrency(evaluation.projectedOutstanding)}
-              </div>
-            </Card>
+            <StatCard
+              title="Projected Total"
+              value={formatCurrency(evaluation.totalAmount)}
+              subtitle={`New balance: ${formatCurrency(evaluation.projectedOutstanding)}`}
+              icon={ShoppingCart}
+              variant={evaluation.creditLimitBreached ? 'amber' : 'default'}
+            />
           </div>
 
           {/* Visible Special Approval Warning Banner */}

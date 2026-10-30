@@ -21,6 +21,7 @@ import {
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../../components/ui/table';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 import { AmountDisplay } from '../../components/common/AmountDisplay';
+import { StatCard } from '../../components/common/StatCard';
 import { PageHeader } from '../../components';
 import { whatsAppService } from '../../services/WhatsAppService';
 import { printerService } from '../../services/PrinterService';
@@ -163,57 +164,39 @@ export function QuotationListPage() {
         </div>
       )}
 
-      {/* Metrics Row */}
-      <div className="grid grid-cols-2 gap-2.5 sm:gap-4 sm:grid-cols-4">
-        <Card className="shadow-xs">
-          <CardContent className="p-3 sm:p-4 flex items-center justify-between">
-            <div className="min-w-0 flex-1">
-              <p className="text-[11px] sm:text-xs font-medium text-slate-500 truncate">Total Quotes</p>
-              <h3 className="text-lg sm:text-xl font-bold text-slate-900 mt-0.5 sm:mt-1">{total}</h3>
-            </div>
-            <div className="rounded-lg bg-primary-light p-2 sm:p-2.5 text-primary shrink-0">
-              <FileSpreadsheet className="h-4 w-4 sm:h-5 sm:w-5" />
-            </div>
-          </CardContent>
-        </Card>
+      {/* Metrics Row (Standardized Summary Cards) */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <StatCard
+          title="Total Quotes"
+          value={total}
+          subtitle="Pipeline opportunities"
+          icon={FileSpreadsheet}
+          variant="indigo"
+        />
 
-        <Card className="shadow-xs">
-          <CardContent className="p-3 sm:p-4 flex items-center justify-between">
-            <div className="min-w-0 flex-1">
-              <p className="text-[11px] sm:text-xs font-medium text-slate-500 truncate">Pending Approval</p>
-              <h3 className="text-lg sm:text-xl font-bold text-amber-600 mt-0.5 sm:mt-1">{pendingCount}</h3>
-            </div>
-            <div className="rounded-lg bg-amber-50 p-2 sm:p-2.5 text-amber-600 shrink-0">
-              <Clock className="h-4 w-4 sm:h-5 sm:w-5" />
-            </div>
-          </CardContent>
-        </Card>
+        <StatCard
+          title="Pending Approval"
+          value={pendingCount}
+          subtitle="Awaiting discount approval"
+          icon={Clock}
+          variant="amber"
+        />
 
-        <Card className="shadow-xs">
-          <CardContent className="p-3 sm:p-4 flex items-center justify-between">
-            <div className="min-w-0 flex-1">
-              <p className="text-[11px] sm:text-xs font-medium text-slate-500 truncate">Converted Orders</p>
-              <h3 className="text-lg sm:text-xl font-bold text-primary mt-0.5 sm:mt-1">{convertedCount}</h3>
-            </div>
-            <div className="rounded-lg bg-primary-light p-2 sm:p-2.5 text-primary shrink-0">
-              <ShoppingCart className="h-4 w-4 sm:h-5 sm:w-5" />
-            </div>
-          </CardContent>
-        </Card>
+        <StatCard
+          title="Converted Orders"
+          value={convertedCount}
+          subtitle="Successfully converted"
+          icon={ShoppingCart}
+          variant="emerald"
+        />
 
-        <Card className="shadow-xs col-span-2 sm:col-span-1 min-w-0 overflow-hidden">
-          <CardContent className="p-3 sm:p-4 flex items-center justify-between gap-2 min-w-0">
-            <div className="min-w-0 flex-1">
-              <p className="text-[11px] sm:text-xs font-medium text-slate-500 truncate">Pipeline Value</p>
-              <div className="mt-0.5 sm:mt-1 min-w-0">
-                <AmountDisplay amount={totalPipelineValue} className="text-emerald-700 font-bold" />
-              </div>
-            </div>
-            <div className="rounded-lg bg-emerald-50 p-2 sm:p-2.5 text-emerald-600 shrink-0">
-              <DollarSign className="h-4 w-4 sm:h-5 sm:w-5" />
-            </div>
-          </CardContent>
-        </Card>
+        <StatCard
+          title="Pipeline Value"
+          value={totalPipelineValue}
+          subtitle="Gross quotation pipeline"
+          icon={DollarSign}
+          variant="blue"
+        />
       </div>
 
       {/* Filters and Search Bar */}
@@ -487,39 +470,39 @@ export function QuotationListPage() {
                           <div className="flex items-center justify-end gap-1">
                             <Button
                               variant="ghost"
-                              size="sm"
+                              size="icon-sm"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 whatsAppService.shareQuotation(q);
                               }}
-                              className="h-8 w-8 p-0 text-emerald-600 hover:bg-emerald-50"
+                              className="text-emerald-600 hover:bg-emerald-50"
                               title="Share via WhatsApp"
                             >
-                              <Share2 className="h-4 w-4" />
+                              <Share2 className="h-3.5 w-3.5" />
                             </Button>
 
                             <Button
                               variant="ghost"
-                              size="sm"
+                              size="icon-sm"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 printerService.printQuotation(q);
                               }}
-                              className="h-8 w-8 p-0 text-slate-600 hover:bg-slate-100"
+                              className="text-slate-600 hover:bg-slate-100"
                               title="Print Quotation"
                             >
-                              <Printer className="h-4 w-4" />
+                              <Printer className="h-3.5 w-3.5" />
                             </Button>
 
                             {q.status === 'APPROVED' && (
                               <Button
                                 variant="outline"
-                                size="sm"
+                                size="xs"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   setConvertingQuotation(q);
                                 }}
-                                className="text-xs h-7 px-2.5 text-primary border-primary-border hover:bg-primary-light font-medium"
+                                className="text-primary border-primary-border hover:bg-primary-light font-medium"
                                 title="Convert to Sales Order"
                               >
                                 <ShoppingCart className="h-3 w-3 mr-1" />

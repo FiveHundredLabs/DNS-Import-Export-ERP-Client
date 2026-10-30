@@ -24,6 +24,8 @@ import { Input } from '../../components/ui/input';
 import { Badge } from '../../components/ui/badge';
 import { Card, CardContent } from '../../components/ui/card';
 import { TableLoadingSkeleton } from '../../components/common/LoadingSkeleton';
+import { PageHeader } from '../../components/common/PageHeader';
+import { StatCard } from '../../components/common/StatCard';
 import { PurchaseOrderStatus } from '../../types/purchasing';
 
 export function PurchaseOrderListPage() {
@@ -104,113 +106,53 @@ export function PurchaseOrderListPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <div className="flex items-center gap-2.5">
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-              Purchase Orders
-            </h1>
-            <Badge variant="outline" className="bg-primary-light text-primary border-primary-border text-xs font-medium">
-              Procurement Lifecycle
-            </Badge>
-          </div>
-          <p className="text-sm text-slate-500 mt-1">
-            Manage procurement requests, internal approvals, vendor dispatches, and print A4 documents.
-          </p>
-        </div>
-
-        <Button
-          onClick={() => navigate('/purchasing/orders/new')}
-          className="gap-1.5 bg-primary hover:bg-primary-hover text-primary-foreground font-semibold shadow-xs self-start sm:self-auto text-xs h-9 px-4 rounded-lg"
-        >
-          <Plus className="h-4 w-4" />
-          <span>New Purchase Order</span>
-        </Button>
-      </div>
+      {/* Standardized PageHeader */}
+      <PageHeader
+        title="Purchase Orders"
+        subtitle="Manage procurement requests, internal approvals, vendor dispatches, and print A4 documents."
+        badge={
+          <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 text-xs font-mono">
+            Procurement Lifecycle
+          </Badge>
+        }
+        breadcrumbs={[
+          { label: 'Purchasing', href: '/purchasing' },
+          { label: 'Purchase Orders' },
+        ]}
+        actions={
+          <Button
+            onClick={() => navigate('/purchasing/orders/new')}
+            className="gap-1.5 bg-primary hover:bg-primary-hover text-primary-foreground font-semibold shadow-xs text-xs h-9 px-4 rounded-lg"
+          >
+            <Plus className="h-4 w-4" />
+            <span>New Purchase Order</span>
+          </Button>
+        }
+      />
 
       {/* Metric Tabs Bar */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         {[
-          {
-            id: 'ALL',
-            label: 'All Orders',
-            count: metrics.all,
-            icon: ShoppingCart,
-            iconBg: 'bg-primary-light text-primary',
-            activeClass: 'border-primary ring-2 ring-primary/20 bg-primary-light/30',
-          },
-          {
-            id: 'DRAFT',
-            label: 'Drafts',
-            count: metrics.draft,
-            icon: FileText,
-            iconBg: 'bg-slate-100 text-slate-600',
-            activeClass: 'border-slate-500 ring-2 ring-slate-300 bg-slate-50',
-          },
-          {
-            id: 'PENDING_APPROVAL',
-            label: 'Pending Approval',
-            count: metrics.pending,
-            icon: Clock,
-            iconBg: 'bg-amber-100/70 text-amber-700',
-            activeClass: 'border-amber-500 ring-2 ring-amber-200 bg-amber-50/60',
-          },
-          {
-            id: 'APPROVED',
-            label: 'Approved',
-            count: metrics.approved,
-            icon: CheckCircle2,
-            iconBg: 'bg-emerald-100/70 text-emerald-700',
-            activeClass: 'border-emerald-500 ring-2 ring-emerald-200 bg-emerald-50/60',
-          },
-          {
-            id: 'SENT_TO_SUPPLIER',
-            label: 'Sent to Vendor',
-            count: metrics.sent,
-            icon: Send,
-            iconBg: 'bg-sky-100/70 text-sky-700',
-            activeClass: 'border-sky-500 ring-2 ring-sky-200 bg-sky-50/60',
-          },
-          {
-            id: 'REJECTED',
-            label: 'Rejected',
-            count: metrics.rejected,
-            icon: Filter,
-            iconBg: 'bg-rose-100/70 text-rose-700',
-            activeClass: 'border-rose-500 ring-2 ring-rose-200 bg-rose-50/60',
-          },
-        ].map((tab) => {
-          const isActive = statusFilter === tab.id;
-          const Icon = tab.icon;
-          return (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => {
-                setStatusFilter(tab.id as any);
-                setPage(1);
-              }}
-              className={`p-3.5 rounded-xl border text-left transition-all ${
-                isActive
-                  ? `${tab.activeClass} shadow-xs font-semibold`
-                  : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50 hover:border-slate-300 shadow-2xs'
-              }`}
-            >
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-slate-600">
-                  {tab.label}
-                </span>
-                <div className={`h-7 w-7 rounded-lg ${tab.iconBg} flex items-center justify-center shrink-0`}>
-                  <Icon className="h-3.5 w-3.5" />
-                </div>
-              </div>
-              <div className="text-xl font-bold mt-2 font-mono tabular-nums text-slate-900">
-                {tab.count}
-              </div>
-            </button>
-          );
-        })}
+          { id: 'ALL', label: 'All Orders', count: metrics.all, icon: ShoppingCart, variant: 'indigo' as const },
+          { id: 'DRAFT', label: 'Drafts', count: metrics.draft, icon: FileText, variant: 'default' as const },
+          { id: 'PENDING_APPROVAL', label: 'Pending Approval', count: metrics.pending, icon: Clock, variant: 'amber' as const },
+          { id: 'APPROVED', label: 'Approved', count: metrics.approved, icon: CheckCircle2, variant: 'emerald' as const },
+          { id: 'SENT_TO_SUPPLIER', label: 'Sent to Vendor', count: metrics.sent, icon: Send, variant: 'blue' as const },
+          { id: 'REJECTED', label: 'Rejected', count: metrics.rejected, icon: Filter, variant: 'rose' as const },
+        ].map((tab) => (
+          <StatCard
+            key={tab.id}
+            title={tab.label}
+            value={tab.count}
+            icon={tab.icon}
+            variant={tab.variant}
+            selected={statusFilter === tab.id}
+            onClick={() => {
+              setStatusFilter(tab.id as any);
+              setPage(1);
+            }}
+          />
+        ))}
       </div>
 
       {/* Filter Toolbar */}
@@ -307,9 +249,9 @@ export function PurchaseOrderListPage() {
                       >
                         <Button
                           variant="ghost"
-                          size="sm"
+                          size="icon-sm"
                           onClick={() => navigate(`/purchasing/orders/${po.id}`)}
-                          className="h-7 text-xs px-2 text-slate-600 hover:text-slate-900"
+                          className="text-slate-600 hover:text-slate-900"
                           title="View PO Details"
                         >
                           <Eye className="h-3.5 w-3.5" />
@@ -317,9 +259,9 @@ export function PurchaseOrderListPage() {
 
                         <Button
                           variant="ghost"
-                          size="sm"
+                          size="icon-sm"
                           onClick={() => navigate(`/purchasing/orders/${po.id}/print`)}
-                          className="h-7 text-xs px-2 text-slate-600 hover:text-slate-900"
+                          className="text-slate-600 hover:text-slate-900"
                           title="Print / View A4 Purchase Order"
                         >
                           <Printer className="h-3.5 w-3.5" />
@@ -328,9 +270,9 @@ export function PurchaseOrderListPage() {
                         {(po.status === 'DRAFT' || po.status === 'REJECTED') && (
                           <Button
                             variant="ghost"
-                            size="sm"
+                            size="icon-sm"
                             onClick={() => navigate(`/purchasing/orders/${po.id}/edit`)}
-                            className="h-7 text-xs px-2 text-slate-600 hover:text-slate-900"
+                            className="text-slate-600 hover:text-slate-900"
                             title="Edit Purchase Order"
                           >
                             <Edit className="h-3.5 w-3.5" />
@@ -341,18 +283,18 @@ export function PurchaseOrderListPage() {
                           <>
                             <Button
                               variant="outline"
-                              size="sm"
+                              size="xs"
                               onClick={(e) => handleSubmitDraft(e, po.id)}
-                              className="h-7 text-[11px] px-2 bg-amber-50 hover:bg-amber-100 text-amber-800 border-amber-200"
+                              className="text-amber-800 border-amber-300 hover:bg-amber-50 font-medium"
                               title="Submit for Approval"
                             >
                               Submit
                             </Button>
                             <Button
                               variant="ghost"
-                              size="sm"
+                              size="icon-sm"
                               onClick={(e) => handleDeleteDraft(e, po.id)}
-                              className="h-7 text-xs px-1.5 text-rose-500 hover:text-rose-700 hover:bg-rose-50"
+                              className="text-rose-500 hover:text-rose-700 hover:bg-rose-50"
                               title="Delete Draft"
                             >
                               <Trash2 className="h-3.5 w-3.5" />

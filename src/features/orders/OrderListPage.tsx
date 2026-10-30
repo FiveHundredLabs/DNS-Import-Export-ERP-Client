@@ -11,6 +11,7 @@ import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Badge } from '../../components/ui/badge';
 import { PageHeader } from '../../components';
+import { StatCard } from '../../components/common/StatCard';
 import {
   Select,
   SelectContent,
@@ -167,53 +168,39 @@ export function OrderListPage() {
         }
       />
 
-      {/* Metrics Row */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 sm:gap-4">
-        <Card className="p-3 sm:p-4 bg-white border border-slate-200 overflow-hidden">
-          <div className="flex items-center justify-between gap-1">
-            <span className="text-xs sm:text-[13px] font-medium text-slate-600 truncate">Total Filtered</span>
-            <ShoppingCart className="h-4 w-4 text-primary shrink-0" />
-          </div>
-          <div className="mt-1 sm:mt-2 text-base sm:text-xl font-semibold tabular-nums text-slate-900 truncate">
-            {total} Orders
-          </div>
-          <div className="text-[11px] sm:text-xs text-slate-400 mt-0.5 truncate">Active order portfolio</div>
-        </Card>
+      {/* Metrics Row (Standardized Summary Cards) */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <StatCard
+          title="Total Filtered"
+          value={`${total} Orders`}
+          subtitle="Active order portfolio"
+          icon={ShoppingCart}
+          variant="indigo"
+        />
 
-        <Card className="p-3 sm:p-4 bg-white border border-slate-200 overflow-hidden">
-          <div className="flex items-center justify-between gap-1">
-            <span className="text-xs sm:text-[13px] font-medium text-amber-700 truncate">Pending Approval</span>
-            <Clock className="h-4 w-4 text-amber-600 shrink-0" />
-          </div>
-          <div className="mt-1 sm:mt-2 text-base sm:text-xl font-semibold tabular-nums text-amber-600 truncate">
-            {pendingApprovalsCount}
-          </div>
-          <div className="text-[11px] sm:text-xs text-slate-400 mt-0.5 truncate">
-            {specialOrdersCount} require special approval
-          </div>
-        </Card>
+        <StatCard
+          title="Pending Approval"
+          value={pendingApprovalsCount}
+          subtitle={`${specialOrdersCount} require special approval`}
+          icon={Clock}
+          variant="amber"
+        />
 
-        <Card className="p-3 sm:p-4 bg-white border border-slate-200 overflow-hidden">
-          <div className="flex items-center justify-between gap-1">
-            <span className="text-xs sm:text-[13px] font-medium text-sky-700 truncate">In Fulfillment</span>
-            <Truck className="h-4 w-4 text-primary shrink-0" />
-          </div>
-          <div className="mt-1 sm:mt-2 text-base sm:text-xl font-semibold tabular-nums text-primary truncate">
-            {inFulfillmentCount}
-          </div>
-          <div className="text-[11px] sm:text-xs text-slate-400 mt-0.5 truncate">Picking, Invoiced, or Dispatched</div>
-        </Card>
+        <StatCard
+          title="In Fulfillment"
+          value={inFulfillmentCount}
+          subtitle="Picking, Invoiced, or Dispatched"
+          icon={Truck}
+          variant="blue"
+        />
 
-        <Card className="p-3 sm:p-4 bg-white border border-slate-200 overflow-hidden">
-          <div className="flex items-center justify-between gap-1">
-            <span className="text-xs font-medium text-emerald-700 truncate">Active Order Value</span>
-            <DollarSign className="h-4 w-4 text-emerald-600 shrink-0" />
-          </div>
-          <div className="mt-1 sm:mt-2 text-sm sm:text-base md:text-xl font-bold text-emerald-600 tabular-nums truncate">
-            {formatCurrency(totalValue)}
-          </div>
-          <div className="text-[11px] text-slate-400 mt-0.5 truncate">Excludes cancelled</div>
-        </Card>
+        <StatCard
+          title="Active Order Value"
+          value={formatCurrency(totalValue)}
+          subtitle="Excludes cancelled"
+          icon={DollarSign}
+          variant="emerald"
+        />
       </div>
 
       {/* Filter and Search Bar */}
@@ -475,6 +462,7 @@ export function OrderListPage() {
                       <TableHead className="hidden md:table-cell text-center">Credit Terms</TableHead>
                       <TableHead className="text-right">Order Amount</TableHead>
                       <TableHead className="text-center">Status / Approval</TableHead>
+                      <TableHead className="text-right w-24">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -528,6 +516,17 @@ export function OrderListPage() {
                             status={order.status}
                             isSpecialApproval={order.isSpecialApproval}
                           />
+                        </TableCell>
+                        <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                          <Button
+                            variant="ghost"
+                            size="xs"
+                            onClick={() => navigate(`/orders/${order.id}`)}
+                            className="h-7 px-2 text-xs text-slate-600 hover:text-slate-900 font-medium gap-1"
+                          >
+                            <span>Details</span>
+                            <ChevronRight className="h-3 w-3" />
+                          </Button>
                         </TableCell>
                       </TableRow>
                     ))}
