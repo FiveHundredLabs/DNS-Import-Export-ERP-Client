@@ -38,6 +38,7 @@ import {
   Printer,
   Barcode,
   Scan,
+  ScanLine,
   Boxes,
   Truck,
   Hash,
