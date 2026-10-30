@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { DirectorDashboard } from './DirectorDashboard';
 import { SalesRepDashboard } from './SalesRepDashboard';
@@ -19,6 +20,10 @@ import {
   Receipt,
   Target,
   Users,
+  Store,
+  Boxes,
+  Truck,
+  ArrowRight,
 } from 'lucide-react';
 import { formatCurrency } from '../../utils/formatters';
 
@@ -66,37 +71,111 @@ export function DashboardPage() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {role === 'FINANCE_MANAGER' && (
           <>
-            <StatCard title="Collections Today" value={formatCurrency(3450000)} period="Verified" trend={{ value: '12.8%', isPositive: true }} variant="success" icon={DollarSign} />
-            <StatCard title="Total Receivables" value={formatCurrency(12450000)} period="Dealer credit" variant="warning" icon={AlertCircle} />
-            <StatCard title="Petty Cash Balance" value={formatCurrency(145000)} period="Imprest balance" variant="blue" icon={CreditCard} />
-            <StatCard title="Payments to Verify" value="5 Receipts" period="Pending queue" variant="warning" icon={FileCheck2} />
+            <StatCard title="Collections Today" value={formatCurrency(3450000)} trend={{ value: '12.8%', isPositive: true }} variant="success" icon={DollarSign} />
+            <StatCard title="Total Receivables" value={formatCurrency(12450000)} variant="warning" icon={AlertCircle} />
+            <StatCard title="Petty Cash Balance" value={formatCurrency(145000)} variant="blue" icon={CreditCard} />
+            <StatCard title="Payments to Verify" value="5 Receipts" variant="warning" icon={FileCheck2} />
           </>
         )}
         {role === 'STOCK_KEEPER' && (
           <>
-            <StatCard title="Stock Items" value="5 SKU Lines" period="Active catalogue" variant="indigo" icon={Package} />
-            <StatCard title="Pending GRNs" value="2 Shipments" period="Intake queue" trend={{ value: '1 urgent', isPositive: false }} variant="warning" icon={Clock} />
-            <StatCard title="Orders to Pick" value="4 Orders" period="Warehouse dispatch" variant="blue" icon={ShoppingCart} />
-            <StatCard title="Damaged Stock Items" value="11 Units" period="Quarantine bay" variant="danger" icon={AlertCircle} />
+            <StatCard title="Stock Items" value="5 SKU Lines" variant="indigo" icon={Package} />
+            <StatCard title="Pending GRNs" value="2 Shipments" trend={{ value: '1 urgent', isPositive: false }} variant="warning" icon={Clock} />
+            <StatCard title="Orders to Pick" value="4 Orders" variant="blue" icon={ShoppingCart} />
+            <StatCard title="Damaged Stock Items" value="11 Units" variant="danger" icon={AlertCircle} />
           </>
         )}
         {role === 'CASHIER' && (
           <>
-            <StatCard title="Showroom Register" value="ACTIVE" period="Session opened" variant="success" icon={CheckCircle2} />
-            <StatCard title="Shift Cash In Hand" value={formatCurrency(84500)} period="Opening 10,000" variant="blue" icon={DollarSign} />
-            <StatCard title="Transactions Today" value="18 Invoices" period="Average 4.7k" trend={{ value: '24%', isPositive: true }} variant="indigo" icon={Receipt} />
-            <StatCard title="Cash Variance" value="LKR 0.00" period="Reconciled" variant="success" icon={CheckCircle2} />
+            <StatCard title="Showroom Register" value="ACTIVE" variant="success" icon={CheckCircle2} />
+            <StatCard title="Shift Cash In Hand" value={formatCurrency(84500)} variant="blue" icon={DollarSign} />
+            <StatCard title="Transactions Today" value="18 Invoices" trend={{ value: '24%', isPositive: true }} variant="indigo" icon={Receipt} />
+            <StatCard title="Cash Variance" value="LKR 0.00" variant="success" icon={CheckCircle2} />
           </>
         )}
         {role === 'AREA_MANAGER' && (
           <>
-            <StatCard title="Area Target" value="94.2%" period="Western Province" trend={{ value: '4.2%', isPositive: true }} variant="success" icon={Target} />
-            <StatCard title="Active Sales Reps" value="6 Officers" period="Field deployments" variant="indigo" icon={Users} />
-            <StatCard title="Customer Registrations" value="3 Pending" period="Commercial review" variant="warning" icon={Users} />
-            <StatCard title="Route Collections" value={formatCurrency(8400000)} period="PDC + Cash" variant="blue" icon={CreditCard} />
+            <StatCard title="Area Target" value="94.2%" trend={{ value: '4.2%', isPositive: true }} variant="success" icon={Target} />
+            <StatCard title="Active Sales Reps" value="6 Officers" variant="indigo" icon={Users} />
+            <StatCard title="Customer Registrations" value="3 Pending" variant="warning" icon={Users} />
+            <StatCard title="Route Collections" value={formatCurrency(8400000)} variant="blue" icon={CreditCard} />
           </>
         )}
       </div>
+
+      {/* Role-Specific Operational Quick Actions */}
+      {role === 'STOCK_KEEPER' && (
+        <div className="space-y-3">
+          <h2 className="text-sm font-bold text-slate-800 uppercase tracking-wide">
+            Operational Workspaces
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <Link
+              to="/pos"
+              className="flex items-center justify-between p-3.5 rounded-xl border border-slate-200 bg-white hover:border-primary hover:shadow-xs transition-all group"
+            >
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-lg bg-primary-light text-primary group-hover:bg-primary group-hover:text-white transition-colors">
+                  <Store className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-xs text-slate-900">Showroom POS Terminal</h3>
+                  <p className="text-[11px] text-slate-500">Retail counter checkout</p>
+                </div>
+              </div>
+              <ArrowRight className="h-4 w-4 text-slate-400 group-hover:text-primary transition-colors" />
+            </Link>
+
+            <Link
+              to="/inventory"
+              className="flex items-center justify-between p-3.5 rounded-xl border border-slate-200 bg-white hover:border-primary hover:shadow-xs transition-all group"
+            >
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-lg bg-blue-50 text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                  <Boxes className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-xs text-slate-900">Inventory Hub</h3>
+                  <p className="text-[11px] text-slate-500">Stock balance & batches</p>
+                </div>
+              </div>
+              <ArrowRight className="h-4 w-4 text-slate-400 group-hover:text-blue-600 transition-colors" />
+            </Link>
+
+            <Link
+              to="/inventory/grn"
+              className="flex items-center justify-between p-3.5 rounded-xl border border-slate-200 bg-white hover:border-primary hover:shadow-xs transition-all group"
+            >
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-lg bg-emerald-50 text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white transition-colors">
+                  <Receipt className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-xs text-slate-900">Goods Received Notes</h3>
+                  <p className="text-[11px] text-slate-500">PO intake & barcodes</p>
+                </div>
+              </div>
+              <ArrowRight className="h-4 w-4 text-slate-400 group-hover:text-emerald-600 transition-colors" />
+            </Link>
+
+            <Link
+              to="/inventory/delivery-notes"
+              className="flex items-center justify-between p-3.5 rounded-xl border border-slate-200 bg-white hover:border-primary hover:shadow-xs transition-all group"
+            >
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-lg bg-amber-50 text-amber-600 group-hover:bg-amber-600 group-hover:text-white transition-colors">
+                  <Truck className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-xs text-slate-900">Delivery Notes</h3>
+                  <p className="text-[11px] text-slate-500">Dispatch & delivery orders</p>
+                </div>
+              </div>
+              <ArrowRight className="h-4 w-4 text-slate-400 group-hover:text-amber-600 transition-colors" />
+            </Link>
+          </div>
+        </div>
+      )}
 
       {/* Role Analytics & Operations Card */}
       <Card className="bg-white border border-slate-200/80 rounded-2xl shadow-sm p-6">

@@ -31,7 +31,6 @@ export function ProductCreateModal({
   const [categoryId, setCategoryId] = useState(categories[0]?.id || '');
   const [isAddCategoryOpen, setIsAddCategoryOpen] = useState(false);
   const [uomId, setUomId] = useState(uoms[0]?.id || '');
-  const [barcode, setBarcode] = useState('');
   const [costPrice, setCostPrice] = useState<number>(0);
   const [sellingPrice, setSellingPrice] = useState<number>(0);
   const [minSellingPrice, setMinSellingPrice] = useState<number>(0);
@@ -65,7 +64,6 @@ export function ProductCreateModal({
       categoryName: selectedCategory?.name || '',
       uomId: selectedUOM?.id || '',
       uomCode: selectedUOM?.code || '',
-      barcode,
       pricing: {
         costPrice: Number(costPrice),
         currentSellingPrice: Number(sellingPrice),
@@ -99,7 +97,6 @@ export function ProductCreateModal({
       setSku('');
       setName('');
       setDescription('');
-      setBarcode('');
       setCostPrice(0);
       setSellingPrice(0);
     } catch (err: unknown) {
@@ -123,29 +120,16 @@ export function ProductCreateModal({
           <div className="rounded-lg bg-rose-50 p-2 text-xs text-rose-700">{errors.form}</div>
         )}
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">
-              SKU / Product Code <span className="text-rose-500">*</span>
-            </label>
-            <Input
-              value={sku}
-              onChange={(e) => setSku(e.target.value.toUpperCase())}
-              placeholder="e.g. DNS-MCB-16A"
-              error={errors.sku}
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">
-              Barcode / EAN <span className="text-rose-500">*</span>
-            </label>
-            <Input
-              value={barcode}
-              onChange={(e) => setBarcode(e.target.value)}
-              placeholder="e.g. 8901020304099"
-              error={errors.barcode}
-            />
-          </div>
+        <div>
+          <label className="block text-xs font-semibold text-slate-700 mb-1">
+            SKU / Product Code <span className="text-rose-500">*</span>
+          </label>
+          <Input
+            value={sku}
+            onChange={(e) => setSku(e.target.value.toUpperCase())}
+            placeholder="e.g. DNS-MCB-16A"
+            error={errors.sku}
+          />
         </div>
 
         <div>

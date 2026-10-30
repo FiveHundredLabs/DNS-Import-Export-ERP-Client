@@ -20,6 +20,7 @@ import { GRNListPage } from './features/inventory/GRNListPage';
 import { GRNCreateEditPage } from './features/inventory/GRNCreateEditPage';
 import { GRNDetailPage } from './features/inventory/GRNDetailPage';
 import { StockBalancePage } from './features/inventory/StockBalancePage';
+import { DamagedStockPage } from './features/inventory/DamagedStockPage';
 import { StockMovementsPage } from './features/inventory/StockMovementsPage';
 import { OrderPickingPage } from './features/inventory/OrderPickingPage';
 import { DispatchPage } from './features/inventory/DispatchPage';
@@ -66,6 +67,7 @@ import { CustomerCreditNotesPage } from './features/finance/pages/ar/CustomerCre
 import { ManualJournalPage } from './features/finance/pages/journal/ManualJournalPage';
 import { BankReconciliationPage } from './features/finance/pages/reconciliation/BankReconciliationPage';
 import { FinancialPeriodLockPage } from './features/finance/pages/settings/FinancialPeriodLockPage';
+import { CashBookPage } from './features/finance/pages/CashBookPage';
 import { ReportsPage } from './features/reports/ReportsPage';
 import { ProtectedRoute } from './components/common/ProtectedRoute';
 import { LoginPage } from './features/auth/LoginPage';
@@ -81,7 +83,8 @@ import { PurchaseOrderPrintPage } from './features/purchasing/PurchaseOrderPrint
 import { PurchasingGRNListPage } from './features/purchasing/PurchasingGRNListPage';
 import { PurchasingGRNDetailPage } from './features/purchasing/PurchasingGRNDetailPage';
 import { PurchasingReportsPage } from './features/purchasing/PurchasingReportsPage';
-import { PurchaseReturnsPlaceholderPage } from './features/purchasing/PurchaseReturnsPlaceholderPage';
+import { ProfilePage } from './features/profile/ProfilePage';
+import { SupplierReturnsPage } from './features/purchasing/SupplierReturnsPage';
 
 export function App() {
   return (
@@ -282,6 +285,14 @@ export function App() {
           }
         />
         <Route
+          path="inventory/damaged-stock"
+          element={
+            <ProtectedRoute>
+              <DamagedStockPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="inventory/movements"
           element={
             <ProtectedRoute>
@@ -465,6 +476,15 @@ export function App() {
         />
 
         <Route
+          path="profile"
+          element={
+            <ProtectedRoute>
+              <ProfilePage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
           path="reports"
           element={
             <ProtectedRoute>
@@ -582,7 +602,7 @@ export function App() {
           path="purchasing/returns"
           element={
             <ProtectedRoute>
-              <PurchaseReturnsPlaceholderPage />
+              <SupplierReturnsPage />
             </ProtectedRoute>
           }
         />
@@ -607,6 +627,7 @@ export function App() {
 
           <Route path="journal/new" element={<ManualJournalPage />} />
           <Route path="accounts" element={<ChartOfAccountsPage />} />
+          <Route path="cash-book" element={<CashBookPage />} />
 
           {/* Accounts Payable (AP) Workflows */}
           <Route path="ap/bills/new" element={<VendorBillCostingPage />} />

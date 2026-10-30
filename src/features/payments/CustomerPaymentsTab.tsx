@@ -85,6 +85,7 @@ export function CustomerPaymentsTab({ onSelectCustomer, className }: CustomerPay
   const counts = useMemo(() => {
     let outstanding = 0;
     let overdue = 0;
+    let dueNext24h = 0;
     let nearby = 0;
     let pendingCollection = 0;
     let settled = 0;
@@ -93,6 +94,7 @@ export function CustomerPaymentsTab({ onSelectCustomer, className }: CustomerPay
       const meta = evaluateCustomerPaymentStatus(c, invoices);
       if (meta.totalOutstanding > 0 || meta.openInvoicesCount > 0) outstanding++;
       if (meta.overdueCount > 0 || meta.totalOverdue > 0) overdue++;
+      if (meta.isDueNext24h || meta.dueNext24hCount > 0) dueNext24h++;
       if (meta.isNearby) nearby++;
       if (meta.pendingCollectionAmount > 0 || meta.filterStatus === 'PENDING_COLLECTION') pendingCollection++;
       if (meta.totalOutstanding <= 0 && meta.openInvoicesCount === 0) settled++;
@@ -102,6 +104,7 @@ export function CustomerPaymentsTab({ onSelectCustomer, className }: CustomerPay
       all: customers.length,
       outstanding,
       overdue,
+      dueNext24h,
       nearby,
       pendingCollection,
       settled,
@@ -185,7 +188,6 @@ export function CustomerPaymentsTab({ onSelectCustomer, className }: CustomerPay
         <StatCard
           title="Total Receivables"
           value={formatCurrency(territoryTotals.totalOutstanding)}
-          subtitle="Portfolio outstanding"
           variant="warning"
           icon={DollarSign}
         />
@@ -193,7 +195,6 @@ export function CustomerPaymentsTab({ onSelectCustomer, className }: CustomerPay
         <StatCard
           title="Past Due Debt"
           value={formatCurrency(territoryTotals.totalOverdue)}
-          subtitle={`${counts.overdue} Dealers overdue`}
           variant="danger"
           icon={AlertCircle}
         />
@@ -201,7 +202,6 @@ export function CustomerPaymentsTab({ onSelectCustomer, className }: CustomerPay
         <StatCard
           title="Assigned Accounts"
           value={`${counts.all} Dealers`}
-          subtitle={`${counts.outstanding} With active balances`}
           variant="indigo"
           icon={Users}
         />
@@ -209,7 +209,6 @@ export function CustomerPaymentsTab({ onSelectCustomer, className }: CustomerPay
         <StatCard
           title="Settled Accounts"
           value={`${counts.settled} Dealers`}
-          subtitle="Zero balance on record"
           variant="success"
           icon={CheckCircle2}
         />

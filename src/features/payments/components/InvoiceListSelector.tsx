@@ -14,6 +14,7 @@ interface InvoiceListSelectorProps {
   onToggleInvoice: (invoiceId: string) => void;
   onSelectAll: () => void;
   onClearAll: () => void;
+  onCollectSingleFull?: (invoice: Invoice) => void;
   className?: string;
 }
 
@@ -23,6 +24,7 @@ export function InvoiceListSelector({
   onToggleInvoice,
   onSelectAll,
   onClearAll,
+  onCollectSingleFull,
   className,
 }: InvoiceListSelectorProps) {
   // Only show invoices with balance > 0 and not cancelled/draft
@@ -173,17 +175,31 @@ export function InvoiceListSelector({
                       </div>
                     ) : null}
 
-                    <div>
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block">
-                        Remaining Balance
-                      </span>
-                      <div className="font-extrabold text-slate-900 mt-0.5">
-                        <AmountDisplay
-                          amount={uncollectedBalance}
-                          size="sm"
-                          className={pastDue ? 'text-rose-600 font-extrabold' : 'text-slate-900 font-extrabold'}
-                        />
+                    <div className="flex flex-col justify-between">
+                      <div>
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block">
+                          Remaining Balance
+                        </span>
+                        <div className="font-extrabold text-slate-900 mt-0.5">
+                          <AmountDisplay
+                            amount={uncollectedBalance}
+                            size="sm"
+                            className={pastDue ? 'text-rose-600 font-extrabold' : 'text-slate-900 font-extrabold'}
+                          />
+                        </div>
                       </div>
+                      {onCollectSingleFull && uncollectedBalance > 0 && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onCollectSingleFull(inv);
+                          }}
+                          className="mt-1 text-[11px] font-bold text-primary hover:underline bg-primary-light px-2 py-0.5 rounded border border-primary-border self-start"
+                        >
+                          Collect Full
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>

@@ -74,6 +74,7 @@ interface SidebarItem {
   category: RailCategory;
   exact?: boolean;
   directorOnly?: boolean;
+  allowedRoles?: string[];
   excludedRoles?: string[];
   badge?: string;
 }
@@ -103,7 +104,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     { id: 'purchasing-orders', name: 'Purchase Orders', path: '/purchasing/orders', icon: ShoppingCart, category: 'purchasing' },
     { id: 'purchasing-grn', name: 'Goods Received (View Only)', path: '/purchasing/grn', icon: Boxes, category: 'purchasing' },
     { id: 'purchasing-reports', name: 'Purchase Reports', path: '/purchasing/reports', icon: BarChart3, category: 'purchasing' },
-    { id: 'purchasing-returns', name: 'Purchase Returns', path: '/purchasing/returns', icon: RotateCcw, category: 'purchasing', badge: 'Under Dev' },
+    { id: 'purchasing-returns', name: 'Supplier Returns & RMA', path: '/purchasing/returns', icon: RotateCcw, category: 'purchasing' },
   ];
 
   // 1. Procurement, Orders & Approvals
@@ -120,7 +121,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     { id: 'customer-collections', name: 'Customer Collections', path: '/payments/collect', icon: Banknote, category: 'sales' },
     { id: 'customers', name: 'Customer Master', path: '/customers', icon: Users2, category: 'customers' },
     { id: 'invoices', name: 'Invoices', path: '/invoices', icon: Receipt, category: 'sales' },
-    { id: 'pos', name: 'Showroom POS', path: '/pos', icon: Store, category: 'sales' },
+    { id: 'pos', name: 'Showroom POS', path: '/pos', icon: Store, category: 'sales', excludedRoles: ['STOCK_KEEPER'] },
   ];
 
   // 3. Products & Inventory
@@ -130,6 +131,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     { id: 'delivery-notes', name: 'Delivery Notes', path: '/inventory/delivery-notes', icon: Truck, category: 'inventory' },
     { id: 'products', name: 'Product Master', path: '/products', icon: Package, category: 'inventory', excludedRoles: ['STOCK_KEEPER'] },
     { id: 'damaged-stock', name: 'Damaged Stock & RMA', path: '/inventory/damaged-stock', icon: ShieldAlert, category: 'inventory' },
+    { id: 'inventory-pos', name: 'Showroom POS', path: '/pos', icon: Store, category: 'inventory', allowedRoles: ['STOCK_KEEPER'] },
   ];
 
   // 4. Finance, Banking & Ledger Core (arranged in logical lifecycle order)
@@ -153,7 +155,8 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     // 4. Core Universal Journal & Adjustments
     { id: 'journal', name: 'Journal Entry Voucher', path: '/finance/journal/new', icon: Zap, category: 'finance' },
 
-    // 5. Banking & Reconciliation
+    // 5. Banking & Cash Book (BR-09)
+    { id: 'cash-book', name: 'Cash Book & Vouchers', path: '/finance/cash-book', icon: Coins, category: 'finance' },
     { id: 'reconciliation', name: 'Bank Reconciliation', path: '/finance/reconciliation', icon: Landmark, category: 'finance' },
 
     // 6. Period Control & Year-End Close
@@ -189,6 +192,9 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const authorizedItems = useMemo(() => {
     return allRawItems.filter((item) => {
       if (item.directorOnly && currentUser.role !== 'DIRECTOR') {
+        return false;
+      }
+      if (item.allowedRoles && !item.allowedRoles.includes(currentUser.role)) {
         return false;
       }
       if (item.excludedRoles && item.excludedRoles.includes(currentUser.role)) {

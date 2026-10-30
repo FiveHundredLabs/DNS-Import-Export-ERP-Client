@@ -44,6 +44,9 @@ export interface POSTransactionItem {
   taxPercentage: number;
   lineTotal: number;
   quantity: number;
+  supervisorAuthKey?: string;
+  authorizedBySupervisor?: boolean;
+  supervisorName?: string;
 }
 
 export interface ChequeDetails {
@@ -76,6 +79,8 @@ export interface POSTransaction {
   createdAt: string;
   cashierId: string;
   cashierName: string;
+  supervisorAuthKey?: string;
+  authorizedBySupervisor?: boolean;
 }
 
 export interface CashReconciliation {

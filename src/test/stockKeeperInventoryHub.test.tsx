@@ -140,8 +140,8 @@ describe('Stock Keeper & Inventory Hub — GRN, Serial Numbers & Bar Codes', () 
     });
   });
 
-  describe('5. GRN Create Page (PO Intake & Manual One-by-One Product Intake)', () => {
-    it('renders GRN creation with PO intake and Manual one-by-one mode options', async () => {
+  describe('5. GRN Create Page (Mandatory PO Intake Enforcement — BR-01)', () => {
+    it('renders GRN creation with mandatory PO intake requirement', async () => {
       setupStockKeeper();
 
       render(
@@ -151,12 +151,12 @@ describe('Stock Keeper & Inventory Hub — GRN, Serial Numbers & Bar Codes', () 
       );
 
       expect(screen.getByRole('heading', { name: /create goods receipt note/i })).toBeInTheDocument();
-      expect(screen.getByText(/Create from Purchase Order \(PO\)/i)).toBeInTheDocument();
-      expect(screen.getByText(/Create Manually \(One by One\)/i)).toBeInTheDocument();
+      expect(screen.getByText(/Select Approved Purchase Order/i)).toBeInTheDocument();
+
       expect(screen.getByText(/Warehouse Isolation Mode Active/i)).toBeInTheDocument();
     });
 
-    it('allows switching to Manual Intake and adding products one-by-one with quantities', async () => {
+    it('loads purchase order items and barcodes upon selecting an approved PO', async () => {
       setupStockKeeper();
 
       render(
@@ -165,30 +165,16 @@ describe('Stock Keeper & Inventory Hub — GRN, Serial Numbers & Bar Codes', () 
         </MemoryRouter>
       );
 
-      // Switch to Manual intake mode
-      const manualModeBtn = screen.getByText(/Create Manually \(One by One\)/i);
-      fireEvent.click(manualModeBtn);
+      // Select approved PO from selector or quick pills
+      const poPill = screen.getByRole('button', { name: 'PO-2026-0891' });
+      fireEvent.click(poPill);
 
+      // Verify PO items populated
       await waitFor(() => {
-        expect(screen.getByText(/Add Product One by One/i)).toBeInTheDocument();
+        expect(screen.getByText(/Purchase Order items and unit barcodes populated into the line items list/i)).toBeInTheDocument();
       });
 
-      // Open catalogue picker via "+ Add Product"
-      const addProductBtn = screen.getByRole('button', { name: /\+ add product/i });
-      fireEvent.click(addProductBtn);
-
-      // Pick a product
-      const productItem = screen.getByText('Schneider Acti9 32A Double Pole MCB');
-      fireEvent.click(productItem);
-
-      // The product should now appear in the line items table
-      await waitFor(() => {
-        expect(screen.getByText('DNS-MCB-32A-2P')).toBeInTheDocument();
-        expect(screen.getByText(/Received Qty/i)).toBeInTheDocument();
-        expect(screen.getByText(/Expected Qty/i)).toBeInTheDocument();
-      });
-
-      // Financial columns must remain hidden for Stock Keeper
+      // Financial columns must remain hidden for Stock Keeper in physical warehouse mode
       expect(screen.queryByText(/Unit Cost \(LKR\)/i)).toBeNull();
       expect(screen.queryByText(/Line Value/i)).toBeNull();
     });
@@ -323,7 +309,7 @@ describe('Stock Keeper & Inventory Hub — GRN, Serial Numbers & Bar Codes', () 
       expect(confirmedArg[0].unitRecords[0].status).toBe('LABELED');
     });
 
-    it('GRN Intake: generates unit barcodes on product addition, gates manager submission if pending stickers', async () => {
+    it('GRN Intake: generates unit barcodes on PO selection, gates manager submission if pending stickers', async () => {
       setupStockKeeper();
 
       render(
@@ -332,25 +318,12 @@ describe('Stock Keeper & Inventory Hub — GRN, Serial Numbers & Bar Codes', () 
         </MemoryRouter>
       );
 
-      // Switch to Manual intake
-      fireEvent.click(screen.getByText(/Create Manually \(One by One\)/i));
+      // Select approved PO from selector or quick pills
+      const poPill = screen.getByRole('button', { name: 'PO-2026-0891' });
+      fireEvent.click(poPill);
 
-      // Fill required supplier name
-      const supplierInput = screen.getByPlaceholderText(/Type or select supplier/i);
-      fireEvent.change(supplierInput, { target: { value: 'Schneider Electric Lanka' } });
-
-      // Open catalogue picker and add a product
-      const addProductBtn = screen.getByRole('button', { name: /\+ add product/i });
-      fireEvent.click(addProductBtn);
-
-      const productItem = screen.getByText('Schneider Acti9 32A Double Pole MCB');
-      fireEvent.click(productItem);
-
-      // Verify line added with unit barcodes generated
       await waitFor(() => {
-        expect(screen.getByText('DNS-MCB-32A-2P')).toBeInTheDocument();
-        expect(screen.getByText('1 Barcodes')).toBeInTheDocument();
-        expect(screen.getByText('Pending Stickers')).toBeInTheDocument();
+        expect(screen.getByText(/Purchase Order items and unit barcodes populated into the line items list/i)).toBeInTheDocument();
       });
 
       // Attempt to submit for manager approval without confirming physical affixing
@@ -368,7 +341,7 @@ describe('Stock Keeper & Inventory Hub — GRN, Serial Numbers & Bar Codes', () 
       const confirmAndSubmitBtn = screen.getByRole('button', { name: /Confirm Affixed & Submit/i });
       fireEvent.click(confirmAndSubmitBtn);
 
-      // Verify prompt closes and submission proceeds
+      // Verify prompt closes
       await waitFor(() => {
         expect(screen.queryByText(/Unit Barcode Stickers Not Confirmed/i)).toBeNull();
       });

@@ -11,7 +11,13 @@ import { toast } from 'sonner';
 import { Customer } from '../../types/customer';
 import { Product } from '../../types/product';
 import { CustomerSelector } from '../../components/selectors/CustomerSelector';
+import { CustomerSummaryCard } from '../../components/selectors/CustomerSummaryCard';
 import { ProductSelector } from '../../components/selectors/ProductSelector';
+import { DocumentActionBar } from '../../components/common/DocumentActionBar';
+import { PageHeader } from '../../components/common/PageHeader';
+import { FormSection } from '../../components/common/FormSection';
+import { FormField } from '../../components/common/FormField';
+import { StatCard } from '../../components/common/StatCard';
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -233,7 +239,7 @@ export function OrderCreateEditPage() {
           id: `line-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
           product,
           quantity: 1,
-          discountPercentage: selectedCustomer?.commercialTerms?.defaultDiscountPercentage || 0,
+          discountPercentage: 0,
           selectedBatchId: defaultBatch?.id,
           selectedBatchNumber: defaultBatch?.batchNumber,
           selectedUnitPrice: defaultBatch ? defaultBatch.sellingPrice : product.pricing.currentSellingPrice,
@@ -444,56 +450,30 @@ export function OrderCreateEditPage() {
   }
 
   return (
-    <div className="space-y-6 w-full pb-12">
+    <div className="space-y-6 w-full pb-28">
       {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <button
-            onClick={() => navigate('/orders')}
-            className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-800 mb-1"
-          >
-            <ArrowLeft className="h-3.5 w-3.5" />
-            Back to Sales Orders
-          </button>
-          <h1 className="text-2xl font-semibold tracking-tight text-slate-900 flex items-center gap-2">
-            <ShoppingCart className="h-6 w-6 text-primary" />
-            {isEdit ? 'Edit Sales Order Draft' : 'Create Enterprise Sales Order'}
-          </h1>
-          {quotationNumber && (
-            <p className="text-xs text-primary font-medium mt-0.5">
-              Converting from Approved Quotation: <span className="font-mono font-semibold">{quotationNumber}</span>
-            </p>
-          )}
-          {searchParams.get('createInvoice') === 'true' && (
-            <p className="text-xs text-emerald-700 font-semibold mt-1 flex items-center gap-1.5 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200">
-              <CheckCircle className="h-3.5 w-3.5 text-emerald-600" />
-              Invoice Creation Mode: Saving will immediately convert this order into an editable draft invoice.
-            </p>
-          )}
-        </div>
+      <PageHeader
+        title={isEdit ? 'Edit Sales Order Draft' : 'Create Enterprise Sales Order'}
+        breadcrumbs={[
+          { label: 'Sales Orders', href: '/orders' },
+          { label: isEdit ? 'Edit Order' : 'New Order' },
+        ]}
+        onBack={() => navigate('/orders')}
+        badge={
+          quotationNumber ? (
+            <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 text-xs font-mono">
+              Quote #{quotationNumber}
+            </Badge>
+          ) : undefined
+        }
+      />
 
-        <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center w-full sm:w-auto">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => handleSubmit(true)}
-            disabled={isSubmitting}
-            className="text-xs gap-1.5 font-medium h-11 sm:h-9 cursor-pointer"
-          >
-            <Save className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
-            Save as Draft
-          </Button>
-          <Button
-            size="sm"
-            onClick={() => handleSubmit(false)}
-            disabled={isSubmitting}
-            className="bg-primary hover:bg-primary-hover text-primary-foreground text-xs gap-1.5 font-semibold shadow-xs h-11 sm:h-9 cursor-pointer"
-          >
-            <Send className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
-            Submit Order
-          </Button>
+      {searchParams.get('createInvoice') === 'true' && (
+        <div className="text-xs text-emerald-800 font-medium flex items-center gap-2 bg-emerald-50 px-3 py-2 rounded-lg border border-emerald-200">
+          <CheckCircle className="h-4 w-4 text-emerald-600 shrink-0" />
+          <span>Invoice Creation Mode: Saving will immediately convert this order into an editable draft invoice.</span>
         </div>
-      </div>
+      )}
 
       {formError && (
         <div className="rounded-lg bg-rose-50 border border-rose-200 p-4 text-xs text-rose-800 flex items-start gap-3">
@@ -509,97 +489,53 @@ export function OrderCreateEditPage() {
       {selectedCustomer && evaluation && (
         <div className="space-y-3">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <Card
-              className={`p-3 border ${
-                evaluation.creditLimitBreached
-                  ? 'bg-rose-50 border-rose-300'
-                  : 'bg-slate-50 border-slate-200'
-              }`}
-            >
-              <div className="flex items-center justify-between text-xs text-slate-500 font-medium">
-                <span>Credit Limit</span>
-                <CreditCard className="h-3.5 w-3.5 text-slate-400" />
-              </div>
-              <div className="mt-1 text-xl font-semibold font-mono text-slate-900 tabular-nums">
-                {formatCurrency(selectedCustomer.commercialTerms?.creditLimit || 0)}
-              </div>
-              <div className="text-xs text-slate-500 mt-0.5">
-                Current Due: {formatCurrency(selectedCustomer.financials?.totalOutstanding || 0)}
-              </div>
-            </Card>
+            <StatCard
+              title="Credit Limit"
+              value={formatCurrency(selectedCustomer.commercialTerms?.creditLimit || 0)}
+              icon={CreditCard}
+              variant="default"
+            />
 
-            <Card
-              className={`p-3 border ${
-                evaluation.creditLimitBreached
-                  ? 'bg-rose-50 border-rose-300 text-rose-900'
-                  : 'bg-emerald-50 border-emerald-200 text-emerald-900'
-              }`}
-            >
-              <div className="flex items-center justify-between text-xs font-medium">
-                <span>Available Credit</span>
-                <CheckCircle className="h-3.5 w-3.5" />
-              </div>
-              <div className="mt-1 text-xl font-semibold font-mono tabular-nums">
-                {formatCurrency(evaluation.availableCredit)}
-              </div>
-              <div className="text-xs opacity-80 mt-0.5">
-                {evaluation.availableCredit >= evaluation.totalAmount
-                  ? 'Sufficient credit available'
-                  : `Breached by ${formatCurrency(evaluation.projectedOutstanding - (selectedCustomer.commercialTerms?.creditLimit || 0))}`}
-              </div>
-            </Card>
+            <StatCard
+              title="Available Credit"
+              value={formatCurrency(evaluation.availableCredit)}
+              icon={evaluation.creditLimitBreached ? AlertTriangle : CheckCircle}
+              variant={evaluation.creditLimitBreached ? 'rose' : 'emerald'}
+            />
 
-            <Card
-              className={`p-3 border ${
-                evaluation.creditDaysBreached
-                  ? 'bg-amber-50 border-amber-300 text-amber-900'
-                  : 'bg-slate-50 border-slate-200 text-slate-800'
-              }`}
-            >
-              <div className="flex items-center justify-between text-xs text-slate-500 font-medium">
-                <span>Credit Days</span>
-                <Clock className="h-3.5 w-3.5 text-slate-400" />
-              </div>
-              <div className="mt-1 text-xl font-semibold tabular-nums">
-                {requestedCreditDays} <span className="text-xs font-normal text-slate-500">days req.</span>
-              </div>
-              <div className="text-xs text-slate-500 mt-0.5">
-                Customer limit: {selectedCustomer.commercialTerms?.creditDays || 30} days
-              </div>
-            </Card>
+            <StatCard
+              title="Credit Days"
+              value={`${requestedCreditDays} days req.`}
+              icon={Clock}
+              variant={evaluation.creditDaysBreached ? 'rose' : 'default'}
+            />
 
-            <Card className="p-3 bg-primary-light border border-primary-border text-indigo-900">
-              <div className="flex items-center justify-between text-xs font-medium">
-                <span>Projected Total</span>
-                <ShoppingCart className="h-3.5 w-3.5 text-primary" />
-              </div>
-              <div className="mt-1 text-xl font-semibold font-mono text-indigo-950 tabular-nums">
-                {formatCurrency(evaluation.totalAmount)}
-              </div>
-              <div className="text-xs text-primary mt-0.5">
-                New balance: {formatCurrency(evaluation.projectedOutstanding)}
-              </div>
-            </Card>
+            <StatCard
+              title="Projected Total"
+              value={formatCurrency(evaluation.totalAmount)}
+              icon={ShoppingCart}
+              variant={evaluation.creditLimitBreached ? 'amber' : 'default'}
+            />
           </div>
 
           {/* Visible Special Approval Warning Banner */}
           {evaluation.isSpecialApproval && (
-            <div className="rounded-lg bg-amber-500 text-white p-4 shadow-sm">
+            <div className="rounded-xl border border-amber-200 bg-amber-50/80 p-4 shadow-2xs">
               <div className="flex items-start gap-3">
-                <ShieldAlert className="h-6 w-6 text-white shrink-0 mt-0.5" />
-                <div className="space-y-1 flex-1">
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-semibold text-sm tracking-wide">
+                <ShieldAlert className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+                <div className="space-y-1.5 flex-1 min-w-0">
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <h3 className="font-semibold text-xs text-amber-900 uppercase tracking-wide">
                       Special Approval Required
                     </h3>
-                    <Badge variant="outline" className="bg-white text-amber-900 font-semibold text-xs border-amber-200">
+                    <Badge variant="outline" className="bg-amber-100 text-amber-800 font-semibold text-xs border-amber-300">
                       Routes to {evaluation.targetApproverRole.replace('_', ' ')}
                     </Badge>
                   </div>
-                  <p className="text-xs text-amber-50">
+                  <p className="text-xs text-amber-800">
                     This order breaches standard authority or credit limits. It cannot be approved at the Sales Representative level and requires senior commercial review:
                   </p>
-                  <ul className="list-disc pl-5 text-xs text-amber-100 space-y-0.5 pt-1">
+                  <ul className="list-disc pl-5 text-xs text-amber-900 space-y-0.5 font-medium">
                     {evaluation.specialApprovalReasons.map((reason, idx) => (
                       <li key={idx}>{reason}</li>
                     ))}
@@ -638,168 +574,131 @@ export function OrderCreateEditPage() {
         </div>
       )}
 
-      {/* Main Grid: Customer & Delivery Details */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Customer Selection Card */}
-        <Card className="lg:col-span-1">
-          <CardHeader className="py-3 px-4 border-b border-slate-200 flex flex-row items-center justify-between">
-            <CardTitle className="text-sm font-semibold text-slate-700 flex items-center gap-1.5">
-              <Building2 className="h-3.5 w-3.5 text-primary" />
-              Customer Information
-            </CardTitle>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setIsCustomerSelectorOpen(true)}
-              className="text-xs h-7 gap-1 font-medium"
-            >
-              {selectedCustomer ? 'Change Customer' : 'Select Customer'}
-            </Button>
-          </CardHeader>
-          <CardContent className="p-4 space-y-3">
-            {selectedCustomer ? (
-              <div className="space-y-2">
-                <div className="flex items-center justify-between gap-1">
-                  <div className="font-semibold text-sm text-slate-900">{selectedCustomer.name}</div>
-                  <Badge
-                    variant={
-                      normalizeCustomerLoyaltyLevel(selectedCustomer) === 'PLATINUM'
-                        ? 'purple'
-                        : normalizeCustomerLoyaltyLevel(selectedCustomer) === 'PREMIUM'
-                        ? 'info'
-                        : 'secondary'
-                    }
-                    className="font-medium text-[11px]"
+      {/* Customer & Delivery Terms */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        {/* Customer Information */}
+        <FormSection
+          title="Customer Information"
+          icon={Building2}
+          overflowVisible
+        >
+          {selectedCustomer && !isCustomerSelectorOpen ? (
+            <CustomerSummaryCard
+              customer={selectedCustomer}
+              onChangeCustomer={() => setIsCustomerSelectorOpen(true)}
+            />
+          ) : (
+            <div className="space-y-2">
+              {selectedCustomer && (
+                <div className="flex justify-end">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setIsCustomerSelectorOpen(false)}
+                    className="text-xs h-7 text-slate-500"
                   >
-                    Loyalty: {normalizeCustomerLoyaltyLevel(selectedCustomer)}
-                  </Badge>
+                    Cancel
+                  </Button>
                 </div>
-                <div className="text-xs text-slate-500 font-mono">Code: {selectedCustomer.code}</div>
-                <div className="text-xs text-slate-600">{selectedCustomer.phone}</div>
-                <div className="text-xs text-slate-600">{selectedCustomer.email}</div>
-                <div className="text-xs text-slate-500 border-t border-slate-100 pt-2">
-                  <span className="font-medium text-slate-700">Billing Address:</span>
-                  <p className="mt-0.5">{selectedCustomer.address}</p>
-                </div>
-              </div>
-            ) : (
-              <div className="text-center py-6 text-xs text-slate-400 italic">
-                No customer selected. Please select a customer to begin.
-              </div>
-            )}
-          </CardContent>
-        </Card>
+              )}
+              <CustomerSelector
+                onSelect={handleSelectCustomer}
+                selectedCustomerId={selectedCustomer?.id}
+                assignedRepId={currentUser.role === 'SALES_REP' ? currentUser.id : undefined}
+              />
+            </div>
+          )}
+        </FormSection>
 
         {/* Order Terms & Delivery Details */}
-        <Card className="lg:col-span-2">
-          <CardHeader className="py-3 px-4 border-b border-slate-200">
-            <CardTitle className="text-sm font-semibold text-slate-700 flex items-center gap-1.5">
-              <Truck className="h-3.5 w-3.5 text-primary" />
-              Delivery & Commercial Terms
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-[13px] font-medium text-slate-700 mb-1.5">
-                Delivery Address <span className="text-rose-500">*</span>
-              </label>
-              <textarea
-                value={deliveryAddress}
-                onChange={(e) => setDeliveryAddress(e.target.value)}
-                placeholder="Warehouse or store delivery location"
-                rows={2}
-                className="w-full rounded-md border border-slate-200 p-2 text-xs focus:ring-1 focus:ring-primary"
-              />
+        <FormSection
+          title="Delivery & Commercial Terms"
+          icon={Truck}
+        >
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="sm:col-span-2">
+              <FormField label="Delivery Address" required>
+                <textarea
+                  value={deliveryAddress}
+                  onChange={(e) => setDeliveryAddress(e.target.value)}
+                  placeholder="Warehouse or store delivery location..."
+                  rows={2}
+                  className="w-full rounded-md border border-slate-200 p-2 text-xs focus:ring-1 focus:ring-primary font-sans"
+                />
+              </FormField>
             </div>
 
-            <div className="space-y-3">
-              <div>
-                <label className="block text-[13px] font-medium text-slate-700 mb-1.5">
-                  Requested Delivery Date
-                </label>
-                <div className="relative">
-                  <Calendar className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-400" />
-                  <Input
-                    type="date"
-                    value={requestedDeliveryDate}
-                    onChange={(e) => setRequestedDeliveryDate(e.target.value)}
-                    className="pl-9 text-xs"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-[13px] font-medium text-slate-700 mb-1.5">
-                  Customer PO / Reference #
-                </label>
+            <FormField label="Requested Delivery Date">
+              <div className="relative">
+                <Calendar className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-400" />
                 <Input
-                  value={customerPoNumber}
-                  onChange={(e) => setCustomerPoNumber(e.target.value)}
-                  placeholder="e.g. PO-89210"
-                  className="text-xs"
+                  type="date"
+                  value={requestedDeliveryDate}
+                  onChange={(e) => setRequestedDeliveryDate(e.target.value)}
+                  className="pl-9 text-xs"
                 />
               </div>
-            </div>
+            </FormField>
 
-            <div>
-              <label className="block text-[13px] font-medium text-slate-700 mb-1.5">
-                Requested Credit Days
-              </label>
+            <FormField label="Customer PO / Reference #">
               <Input
-                type="number"
-                min={0}
-                max={90}
-                value={requestedCreditDays}
-                onChange={(e) => setRequestedCreditDays(Number(e.target.value))}
+                value={customerPoNumber}
+                onChange={(e) => setCustomerPoNumber(e.target.value)}
+                placeholder="e.g. PO-89210"
                 className="text-xs"
               />
-              <span className="text-xs text-slate-400">
-                Customer limit: {selectedCustomer?.commercialTerms?.creditDays || 30} days
-              </span>
-            </div>
+            </FormField>
 
-            <div>
-              <label className="block text-[13px] font-medium text-slate-700 mb-1.5">
-                Payment Terms Notes
-              </label>
+            <FormField label="Requested Credit Days">
+              <div>
+                <Input
+                  type="number"
+                  min={0}
+                  max={90}
+                  value={requestedCreditDays}
+                  onChange={(e) => setRequestedCreditDays(Number(e.target.value))}
+                  className="text-xs"
+                />
+                <span className="text-[11px] text-slate-400 block mt-1">
+                  Customer limit: {selectedCustomer?.commercialTerms?.creditDays || 30} days
+                </span>
+              </div>
+            </FormField>
+
+            <FormField label="Payment Terms Notes">
               <Input
                 value={paymentTerms}
                 onChange={(e) => setPaymentTerms(e.target.value)}
                 placeholder="e.g. 30 Days PDC upon invoice"
                 className="text-xs"
               />
-            </div>
+            </FormField>
 
-            <div className="md:col-span-2">
-              <label className="block text-[13px] font-medium text-slate-700 mb-1.5">
-                Order Notes / Special Instructions
-              </label>
-              <Input
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="Any special fulfillment or packaging instructions..."
-                className="text-xs"
-              />
+            <div className="sm:col-span-2">
+              <FormField label="Order Notes / Instructions">
+                <Input
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder="Delivery timing, gate instructions, packaging requirements..."
+                  className="text-xs"
+                />
+              </FormField>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </FormSection>
       </div>
 
       {/* Product Line Items */}
-      <Card>
+      <Card className="shadow-2xs">
         <CardHeader className="py-3 px-4 border-b border-slate-200 flex flex-row items-center justify-between">
-          <div>
-            <CardTitle className="text-base font-semibold text-slate-900">
-              Order Line Items
-            </CardTitle>
-            <p className="text-xs text-slate-500">
-              Product prices and discounts will snapshot immutably upon order saving.
-            </p>
-          </div>
+          <CardTitle className="text-base font-semibold text-slate-900">
+            Order Line Items ({items.length})
+          </CardTitle>
           <Button
             size="sm"
             onClick={() => setIsProductSelectorOpen(true)}
-            className="bg-primary hover:bg-primary-hover text-primary-foreground text-xs gap-1.5 font-medium"
+            className="bg-primary hover:bg-primary-hover text-primary-foreground text-xs gap-1.5 font-medium cursor-pointer"
           >
             <Plus className="h-3.5 w-3.5" />
             Add Product Item
@@ -812,19 +711,21 @@ export function OrderCreateEditPage() {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-[13px] tabular-nums">
-                <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 text-[12.5px]">
+              <table className="w-full text-xs tabular-nums">
+                <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold">
                   <tr>
-                    <th className="py-2.5 px-4 text-left font-semibold">Product</th>
+                    <th className="py-2.5 px-3 text-center w-10">#</th>
+                    <th className="py-2.5 px-4 text-left font-semibold">Product & SKU</th>
+                    <th className="py-2.5 px-3 text-left font-semibold min-w-[200px]">Stock / Batch</th>
                     <th className="py-2.5 px-3 text-right font-semibold w-[120px]">Unit Price</th>
-                    <th className="py-2.5 px-3 text-center font-semibold w-[100px]">Qty</th>
-                    <th className="py-2.5 px-3 text-center font-semibold w-[110px]">Disc %</th>
-                    <th className="py-2.5 px-3 text-right font-semibold w-[120px]">Disc Amount</th>
+                    <th className="py-2.5 px-3 text-center font-semibold w-[90px]">Qty</th>
+                    <th className="py-2.5 px-3 text-center font-semibold min-w-[140px]">Disc %</th>
+                    <th className="py-2.5 px-3 text-right font-semibold w-[110px]">Disc Amount</th>
                     <th className="py-2.5 px-3 text-right font-semibold w-[100px]">
                       {taxEnabled ? `${taxName || 'VAT'} (${taxRate}%)` : 'Tax (0%)'}
                     </th>
-                    <th className="py-2.5 px-4 text-right font-semibold w-[130px]">Line Total</th>
-                    <th className="py-2.5 px-2 text-center w-[50px]"></th>
+                    <th className="py-2.5 px-4 text-right font-semibold w-[120px]">Line Total</th>
+                    <th className="py-2.5 px-2 text-center w-[44px]"></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -856,27 +757,35 @@ export function OrderCreateEditPage() {
                       price * (1 - it.discountPercentage / 100) < (it.product.pricing.minimumSellingPrice || 0);
 
                     return (
-                      <tr key={it.id} className="hover:bg-slate-50/60">
+                      <tr key={it.id} className="hover:bg-slate-50/60 transition-colors">
+                        <td className="py-3 px-3 text-center text-slate-400 font-mono">
+                          {idx + 1}
+                        </td>
                         <td className="py-3 px-4">
                           <div className="font-semibold text-slate-900">{it.product.name}</div>
-                          <div className="text-xs text-slate-400 font-mono">
-                            {it.product.sku} • Stock: {it.product.stockOnHand} {it.product.uomCode}
+                          <div className="text-[11px] text-slate-400 font-mono mt-0.5">
+                            {it.product.sku} • {it.product.uomCode}
                           </div>
-                          {productBatches.length > 0 && (
-                            <div className="mt-1.5 flex items-center gap-1.5 flex-wrap">
-                              <span className="text-[10px] font-semibold text-slate-500 uppercase flex items-center gap-1">
-                                <Boxes className="h-3 w-3 text-primary" />
-                                Batch:
-                              </span>
+                        </td>
+                        <td className="py-3 px-3">
+                          <div className="flex items-center gap-1.5 text-slate-700">
+                            <span className="font-medium text-[11px]">Avail:</span>
+                            <span className="font-mono font-semibold text-[11px]">
+                              {availableStock} {it.product.uomCode}
+                            </span>
+                          </div>
+                          {productBatches.length > 0 ? (
+                            <div className="mt-1 flex items-center gap-1">
+                              <Boxes className="h-3 w-3 text-primary shrink-0" />
                               <select
                                 value={it.selectedBatchId || 'DEFAULT'}
                                 onChange={(e) => handleSelectBatch(idx, e.target.value)}
-                                className="text-[11px] h-6 px-1.5 py-0 bg-white border border-slate-200 rounded font-mono text-slate-800 focus:ring-1 focus:ring-primary max-w-[260px]"
+                                className="text-[11px] h-6 px-1.5 py-0 bg-white border border-slate-200 rounded font-mono text-slate-800 focus:ring-1 focus:ring-primary max-w-[220px]"
                                 title="Select stock batch lot (Strategy 1: batch-specific pricing)"
                               >
                                 {productBatches.map((b) => (
                                   <option key={b.id} value={b.id}>
-                                    {b.batchNumber} ({b.warehouseId} • Avail: {b.availableQuantity} • {formatCurrency(b.sellingPrice)})
+                                    {b.batchNumber} ({b.warehouseId} • {b.availableQuantity} avail • {formatCurrency(b.sellingPrice)})
                                   </option>
                                 ))}
                                 <option value="DEFAULT">
@@ -884,6 +793,10 @@ export function OrderCreateEditPage() {
                                 </option>
                               </select>
                             </div>
+                          ) : (
+                            <span className="text-[10px] text-slate-400 font-mono mt-0.5 block">
+                              General Inventory
+                            </span>
                           )}
                         </td>
                         <td className="py-3 px-3 text-right font-mono text-slate-700 tabular-nums">
@@ -1013,7 +926,7 @@ export function OrderCreateEditPage() {
                         <td className="py-3 px-2 text-center">
                           <button
                             onClick={() => handleRemoveItem(idx)}
-                            className="text-slate-400 hover:text-rose-600 p-1"
+                            className="text-slate-400 hover:text-rose-600 p-1 cursor-pointer"
                             title="Remove Line"
                           >
                             <Trash2 className="h-4 w-4" />
@@ -1051,36 +964,61 @@ export function OrderCreateEditPage() {
         </CardContent>
       </Card>
 
-      {/* Customer Selector Modal */}
-      <Dialog open={isCustomerSelectorOpen} onOpenChange={(open) => setIsCustomerSelectorOpen(open)}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Select Customer</DialogTitle>
-            <DialogDescription>
-              Choose a customer from the central Customer Master.
-              {currentUser.role === 'SALES_REP' && ' Only customers assigned to your territory are shown.'}
-            </DialogDescription>
-          </DialogHeader>
-          <CustomerSelector
-            onSelect={handleSelectCustomer}
-            selectedCustomerId={selectedCustomer?.id}
-            assignedRepId={currentUser.role === 'SALES_REP' ? currentUser.id : undefined}
-          />
-        </DialogContent>
-      </Dialog>
-
       {/* Product Selector Modal */}
       <Dialog open={isProductSelectorOpen} onOpenChange={(open) => setIsProductSelectorOpen(open)}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>Add Product Item</DialogTitle>
-            <DialogDescription>
-              Select an item from the Product Master catalog to add to the sales order.
-            </DialogDescription>
           </DialogHeader>
           <ProductSelector onSelect={handleAddProduct} />
         </DialogContent>
       </Dialog>
+
+      {/* Sticky Document Action Bar */}
+      <DocumentActionBar
+        status={
+          evaluation?.isSpecialApproval ? (
+            <Badge variant="warning" className="text-xs">Special Approval Required</Badge>
+          ) : (
+            <Badge variant="success" className="text-xs">Standard Approval</Badge>
+          )
+        }
+        summary={
+          evaluation ? (
+            <div className="text-right">
+              <span className="text-xs text-slate-500 mr-2">Grand Total:</span>
+              <span className="text-base font-bold font-mono text-primary tabular-nums">
+                {formatCurrency(evaluation.totalAmount)}
+              </span>
+            </div>
+          ) : null
+        }
+        rightActions={
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => handleSubmit(true)}
+              disabled={isSubmitting}
+              className="gap-1.5 font-medium cursor-pointer"
+            >
+              <Save className="h-3.5 w-3.5" />
+              <span>Save as Draft</span>
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => handleSubmit(false)}
+              disabled={isSubmitting}
+              className="bg-primary hover:bg-primary-hover text-primary-foreground gap-1.5 font-semibold cursor-pointer shadow-xs"
+            >
+              <Send className="h-3.5 w-3.5" />
+              <span>Submit Order</span>
+            </Button>
+          </>
+        }
+      />
     </div>
   );
 }

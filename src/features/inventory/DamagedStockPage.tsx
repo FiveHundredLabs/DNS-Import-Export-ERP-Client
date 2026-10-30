@@ -12,6 +12,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/ca
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Badge } from '../../components/ui/badge';
+import { PageHeader } from '../../components/common/PageHeader';
 import {
   Dialog,
   DialogHeader,
@@ -268,7 +269,9 @@ export function DamagedStockPage() {
         activeItem.product.id,
         activeItem.balance.locationId,
         actionQuantity,
-        currentUser
+        currentUser,
+        currentUser?.name,
+        actionReason
       );
 
       toast.success(
@@ -286,24 +289,13 @@ export function DamagedStockPage() {
   return (
     <div className="w-full space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <div className="p-2 rounded-lg bg-rose-100 text-rose-700">
-              <ShieldAlert className="h-6 w-6" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-                Damaged Product &amp; RMA Management
-              </h1>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Quarantine control, supplier debit notes, scrap write-offs, and warehouse restoration.
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2">
+      <PageHeader
+        title="Damaged Product & RMA Management"
+        breadcrumbs={[
+          { label: 'Inventory', href: '/inventory' },
+          { label: 'Damaged Stock' },
+        ]}
+        actions={
           <Button
             variant="outline"
             size="sm"
@@ -313,8 +305,8 @@ export function DamagedStockPage() {
             <RotateCcw className="h-3.5 w-3.5" />
             Refresh
           </Button>
-        </div>
-      </div>
+        }
+      />
 
       {/* Inventory Navigation Tabs */}
       <div className="flex items-center gap-1 border-b border-slate-200 pb-2 text-xs font-medium">

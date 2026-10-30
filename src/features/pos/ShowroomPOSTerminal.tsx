@@ -6,8 +6,9 @@ import { useProducts } from '../../hooks/useProducts';
 import { Product } from '../../types/product';
 import { Customer } from '../../types/customer';
 import { POSTransaction } from '../../types/pos';
-import { isPOSDiscountValid, validatePOSDiscount } from '../../rules/posRules';
+import { isPOSDiscountValid, validatePOSDiscount, verifySupervisorDiscountKey } from '../../rules/posRules';
 import { formatCurrency } from '../../utils/formatters';
+import { cn } from '../../utils/cn';
 import { mockInventoryRepositoryForPOS } from '../../services/POSService';
 
 import { OpenShiftModal } from './OpenShiftModal';
@@ -40,15 +41,28 @@ import {
   X,
   CreditCard,
   PackageSearch,
+  Key,
+  ShieldCheck,
 } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Badge } from '../../components/ui/badge';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+} from '../../components/ui/dialog';
 
 interface CartItem {
   product: Product;
   quantity: number;
   discountPercentage: number;
+  supervisorAuthKey?: string;
+  authorizedBySupervisor?: boolean;
+  supervisorName?: string;
 }
 
 export function ShowroomPOSTerminal() {
@@ -94,6 +108,16 @@ export function ShowroomPOSTerminal() {
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [completedTx, setCompletedTx] = useState<POSTransaction | null>(null);
   const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
+
+  // Supervisor Discount Override Modal (BR-03)
+  const [supervisorModal, setSupervisorModal] = useState<{
+    productId: string;
+    productName: string;
+    requestedDiscount: number;
+    maxDiscount: number;
+  } | null>(null);
+  const [supervisorKeyInput, setSupervisorKeyInput] = useState('');
+  const [supervisorKeyError, setSupervisorKeyError] = useState<string | null>(null);
 
   const barcodeInputRef = useRef<HTMLInputElement>(null);
 
@@ -245,22 +269,93 @@ export function ShowroomPOSTerminal() {
     );
   };
 
-  // Discount updates
+  // Discount updates (BR-03: standard limit 5%, supervisor authorization key required for > 5%)
   const handleUpdateDiscount = (productId: string, discount: number) => {
     const item = cart.find((i) => i.product.id === productId);
     if (!item) return;
 
-    if (discount < 0) return;
+    if (isNaN(discount) || discount < 0) return;
+    const maxDiscount = item.product.pricing.maxDiscountPercentage || 15;
+    const clampedDiscount = Math.min(discount, maxDiscount);
+
+    setCart((prev) =>
+      prev.map((i) => {
+        if (i.product.id !== productId) return i;
+        const isAuthorized =
+          clampedDiscount <= 5 ||
+          (i.authorizedBySupervisor && clampedDiscount <= (i.discountPercentage || 0));
+        return {
+          ...i,
+          discountPercentage: clampedDiscount,
+          authorizedBySupervisor: isAuthorized,
+        };
+      })
+    );
+  };
+
+  const handleInitiateCheckout = () => {
+    if (cart.length === 0 || !activeSession) return;
+
+    // Check if any cart item has discount > 5% without supervisor authorization
+    const pendingAuthItem = cart.find(
+      (i) => i.discountPercentage > 5 && !i.authorizedBySupervisor
+    );
+
+    if (pendingAuthItem) {
+      setSupervisorModal({
+        productId: pendingAuthItem.product.id,
+        productName: pendingAuthItem.product.name,
+        requestedDiscount: pendingAuthItem.discountPercentage,
+        maxDiscount: pendingAuthItem.product.pricing.maxDiscountPercentage || 15,
+      });
+      setSupervisorKeyInput('');
+      setSupervisorKeyError(null);
+      return;
+    }
+
+    setIsPaymentModalOpen(true);
+  };
+
+  const handleConfirmSupervisorKey = () => {
+    if (!supervisorModal) return;
 
     try {
-      validatePOSDiscount(discount, item.product.pricing.maxDiscountPercentage, 5);
+      const auth = verifySupervisorDiscountKey(supervisorKeyInput);
+      if (!auth.valid) {
+        setSupervisorKeyError(auth.error || 'Invalid supervisor authorization key.');
+        return;
+      }
+
+      validatePOSDiscount(
+        supervisorModal.requestedDiscount,
+        supervisorModal.maxDiscount,
+        5,
+        supervisorKeyInput.trim()
+      );
+
       setCart((prev) =>
         prev.map((i) =>
-          i.product.id === productId ? { ...i, discountPercentage: discount } : i
+          i.product.id === supervisorModal.productId
+            ? {
+                ...i,
+                discountPercentage: supervisorModal.requestedDiscount,
+                supervisorAuthKey: supervisorKeyInput.trim(),
+                authorizedBySupervisor: true,
+                supervisorName: auth.supervisorName,
+              }
+            : i
         )
       );
+
+      showFeedback(
+        'success',
+        `Supervisor discount approved by ${auth.supervisorName} (${supervisorModal.requestedDiscount}%)`
+      );
+      setSupervisorModal(null);
+      setSupervisorKeyInput('');
+      setSupervisorKeyError(null);
     } catch (err: any) {
-      showFeedback('error', err.message);
+      setSupervisorKeyError(err.message || 'Authorization failed.');
     }
   };
 
@@ -299,6 +394,8 @@ export function ShowroomPOSTerminal() {
         productId: i.product.id,
         quantity: i.quantity,
         discountPercentage: i.discountPercentage,
+        supervisorAuthKey: i.supervisorAuthKey,
+        authorizedBySupervisor: i.authorizedBySupervisor,
       })),
       paymentMethod: paymentDetails.paymentMethod,
       cashTendered: paymentDetails.cashTendered,
@@ -314,7 +411,7 @@ export function ShowroomPOSTerminal() {
   };
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] flex-col bg-slate-100 overflow-hidden">
+    <div className="flex-1 h-full min-h-0 w-full flex flex-col bg-slate-100 overflow-hidden">
       {/* POS Top Navigation & Active Session Status Bar */}
       <header className="flex flex-wrap items-center justify-between border-b border-slate-200 bg-white px-5 py-2.5 shadow-xs">
         <div className="flex items-center gap-4">
@@ -458,7 +555,7 @@ export function ShowroomPOSTerminal() {
       )}
 
       {/* Main Terminal Split Screen */}
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 min-h-0 overflow-hidden">
         {/* Left Side: Product Search, Barcode Input, Catalog Grid */}
         <div className="flex flex-1 flex-col overflow-hidden p-4 space-y-3">
           {/* Quick Scanner Bar & Customer Selector */}
@@ -619,9 +716,9 @@ export function ShowroomPOSTerminal() {
         </div>
 
         {/* Right Side: Cart Panel */}
-        <div className="w-96 flex flex-col border-l border-slate-200 bg-white shadow-xl">
+        <div className="w-96 flex flex-col border-l border-slate-200 bg-white shadow-xl min-h-0 h-full">
           {/* Cart Header */}
-          <div className="flex items-center justify-between border-b border-slate-200 px-5 py-3.5">
+          <div className="flex items-center justify-between border-b border-slate-200 px-5 py-3.5 shrink-0">
             <div className="flex items-center gap-2">
               <ShoppingCart className="h-5 w-5 text-primary" />
               <h2 className="text-sm font-semibold text-slate-900">Current Order Cart</h2>
@@ -632,7 +729,7 @@ export function ShowroomPOSTerminal() {
           </div>
 
           {/* Cart Items List */}
-          <div className="flex-1 overflow-y-auto divide-y divide-slate-100 p-3 space-y-2">
+          <div className="flex-1 min-h-0 overflow-y-auto divide-y divide-slate-100 p-3 space-y-2">
             {cart.length === 0 ? (
               <div className="flex h-full flex-col items-center justify-center p-6 text-center text-slate-400">
                 <ShoppingCart className="h-12 w-12 text-slate-200 mb-2" />
@@ -692,20 +789,57 @@ export function ShowroomPOSTerminal() {
                         </button>
                       </div>
 
-                      {/* Cashier Line Discount */}
+                      {/* Cashier Line Discount (BR-03) */}
                       <div className="flex items-center gap-1">
                         <span className="text-xs text-slate-500">Disc%:</span>
                         <input
                           type="number"
                           min="0"
-                          max="5"
+                          max={item.product.pricing.maxDiscountPercentage || 15}
                           step="1"
                           value={item.discountPercentage}
                           onChange={(e) =>
                             handleUpdateDiscount(item.product.id, parseFloat(e.target.value) || 0)
                           }
-                          className="h-6 w-12 text-center font-semibold text-slate-800 border border-slate-300 rounded-md bg-white text-xs tabular-nums"
+                          className={cn(
+                            'h-6 w-12 text-center font-semibold border rounded-md text-xs tabular-nums',
+                            item.authorizedBySupervisor
+                              ? 'bg-emerald-50 border-emerald-400 text-emerald-900 font-bold'
+                              : item.discountPercentage > 5
+                              ? 'bg-amber-50 border-amber-400 text-amber-900 font-bold'
+                              : 'border-slate-300 bg-white text-slate-800'
+                          )}
                         />
+                        {item.discountPercentage > 5 && (
+                          item.authorizedBySupervisor ? (
+                            <span
+                              className="flex items-center text-[10px] text-emerald-700 bg-emerald-100 px-1 py-0.5 rounded font-bold"
+                              title={`Authorized by supervisor: ${item.supervisorName || 'Approved'}`}
+                            >
+                              <ShieldCheck className="h-3 w-3 mr-0.5 text-emerald-600" />
+                              Supv
+                            </span>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSupervisorModal({
+                                  productId: item.product.id,
+                                  productName: item.product.name,
+                                  requestedDiscount: item.discountPercentage,
+                                  maxDiscount: item.product.pricing.maxDiscountPercentage || 15,
+                                });
+                                setSupervisorKeyInput('');
+                                setSupervisorKeyError(null);
+                              }}
+                              className="flex items-center text-[10px] text-amber-700 bg-amber-100 hover:bg-amber-200 px-1 py-0.5 rounded font-bold cursor-pointer"
+                              title="Exceeds 5% limit. Click to authorize with supervisor key"
+                            >
+                              <Key className="h-3 w-3 mr-0.5 text-amber-600" />
+                              Auth
+                            </button>
+                          )
+                        )}
                       </div>
 
                       {/* Line Total */}
@@ -722,7 +856,7 @@ export function ShowroomPOSTerminal() {
           </div>
 
           {/* Cart Financial Summary & Checkout Button */}
-          <div className="border-t border-slate-200 bg-slate-50 p-4 space-y-2">
+          <div className="border-t border-slate-200 bg-slate-50 p-4 space-y-2 shrink-0">
             <div className="space-y-1 text-xs">
               <div className="flex justify-between text-slate-600">
                 <span>Subtotal:</span>
@@ -759,8 +893,8 @@ export function ShowroomPOSTerminal() {
               <Button
                 size="sm"
                 disabled={cart.length === 0 || !activeSession}
-                onClick={() => setIsPaymentModalOpen(true)}
-                className="col-span-2 bg-primary hover:bg-primary-hover text-primary-foreground font-medium flex items-center justify-center gap-1.5 shadow-sm text-xs"
+                onClick={handleInitiateCheckout}
+                className="col-span-2 bg-primary hover:bg-primary-hover text-primary-foreground font-medium flex items-center justify-center gap-1.5 shadow-sm text-xs cursor-pointer"
               >
                 <CreditCard className="h-4 w-4" />
                 Checkout ({formatCurrency(grandTotal)})
@@ -771,46 +905,39 @@ export function ShowroomPOSTerminal() {
       </div>
 
       {/* Customer Selection Modal */}
-      {isCustomerModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
-          <div className="relative w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl transition-all border border-slate-200">
-            <div className="flex items-center justify-between pb-3 border-slate-100">
-              <h3 className="text-base font-semibold text-slate-900">Select Customer from Master</h3>
-              <button
-                onClick={() => setIsCustomerModalOpen(false)}
-                className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            <div className="my-4">
-              <CustomerSelector
-                onSelect={(c) => {
-                  setSelectedCustomer(c);
-                  setIsCustomerModalOpen(false);
-                  showFeedback('success', `Assigned customer: ${c.name}`);
-                }}
-                selectedCustomerId={selectedCustomer?.id}
-              />
-            </div>
-            <div className="flex justify-between items-center pt-2 border-t border-slate-100">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setSelectedCustomer(null);
-                  setIsCustomerModalOpen(false);
-                }}
-              >
-                Reset to Walk-in Customer
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => setIsCustomerModalOpen(false)}>
-                Cancel
-              </Button>
-            </div>
+      <Dialog open={isCustomerModalOpen} onOpenChange={setIsCustomerModalOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Select Customer</DialogTitle>
+          </DialogHeader>
+          <div className="py-2">
+            <CustomerSelector
+              onSelect={(c) => {
+                setSelectedCustomer(c);
+                setIsCustomerModalOpen(false);
+                showFeedback('success', `Assigned customer: ${c.name}`);
+              }}
+              selectedCustomerId={selectedCustomer?.id}
+              isModalMode
+            />
           </div>
-        </div>
-      )}
+          <DialogFooter className="flex justify-between items-center sm:justify-between">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setSelectedCustomer(null);
+                setIsCustomerModalOpen(false);
+              }}
+            >
+              Reset to Walk-in Customer
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setIsCustomerModalOpen(false)}>
+              Cancel
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Modals */}
       <OpenShiftModal
@@ -837,37 +964,29 @@ export function ShowroomPOSTerminal() {
       )}
 
       {/* Quick Product Search from Master Data Modal */}
-      {isProductSearchModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
-          <div className="relative w-full max-w-2xl rounded-2xl bg-white p-6 shadow-2xl transition-all border border-slate-200">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <div className="flex items-center gap-2">
-                <PackageSearch className="h-5 w-5 text-primary" />
-                <h3 className="text-base font-semibold text-slate-900">Search Canonical Product Master</h3>
-              </div>
-              <button
-                onClick={() => setIsProductSearchModalOpen(false)}
-                className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
-              >
-                <X className="h-5 w-5" />
-              </button>
+      <Dialog open={isProductSearchModalOpen} onOpenChange={setIsProductSearchModalOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <div className="flex items-center gap-2">
+              <PackageSearch className="h-5 w-5 text-primary" />
+              <DialogTitle>Search Canonical Product Master</DialogTitle>
             </div>
-            <div className="my-4">
-              <ProductSelector
-                onSelect={(prod) => {
-                  handleAddToCart(prod);
-                  setIsProductSearchModalOpen(false);
-                }}
-              />
-            </div>
-            <div className="flex justify-end pt-2 border-t border-slate-100">
-              <Button variant="outline" size="sm" onClick={() => setIsProductSearchModalOpen(false)}>
-                Close
-              </Button>
-            </div>
+          </DialogHeader>
+          <div className="py-2">
+            <ProductSelector
+              onSelect={(prod) => {
+                handleAddToCart(prod);
+                setIsProductSearchModalOpen(false);
+              }}
+            />
           </div>
-        </div>
-      )}
+          <DialogFooter>
+            <Button variant="outline" size="sm" onClick={() => setIsProductSearchModalOpen(false)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {activeSession && (
         <CashMovementModal
@@ -895,6 +1014,94 @@ export function ShowroomPOSTerminal() {
         isOpen={isReceiptModalOpen}
         onClose={() => setIsReceiptModalOpen(false)}
       />
+      {/* Supervisor Discount Authorization Modal (BR-03) */}
+      <Dialog open={!!supervisorModal} onOpenChange={(open) => !open && setSupervisorModal(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <div className="flex items-center gap-2 text-amber-800">
+              <Key className="h-5 w-5 text-amber-600" />
+              <DialogTitle>Supervisor Discount Authorization</DialogTitle>
+            </div>
+            <DialogDescription>
+              Discounts exceeding standard cashier authority (5%) require supervisor security key verification.
+            </DialogDescription>
+          </DialogHeader>
+
+          {supervisorModal && (
+            <div className="space-y-4 py-2">
+              <div className="rounded-lg bg-amber-50/80 border border-amber-200 p-3 space-y-1 text-xs">
+                <div className="font-semibold text-slate-900">{supervisorModal.productName}</div>
+                <div className="flex items-center justify-between text-slate-600 pt-1">
+                  <span>Standard Limit: <strong>5%</strong></span>
+                  <span className="text-amber-800 font-bold">
+                    Requested: <strong>{supervisorModal.requestedDiscount}%</strong>
+                  </span>
+                  <span>Product Ceiling: <strong>{supervisorModal.maxDiscount}%</strong></span>
+                </div>
+              </div>
+
+              {supervisorKeyError && (
+                <div className="rounded-lg bg-rose-50 border border-rose-200 p-2.5 text-xs text-rose-700 flex items-center gap-2">
+                  <AlertCircle className="h-4 w-4 shrink-0 text-rose-600" />
+                  <span>{supervisorKeyError}</span>
+                </div>
+              )}
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Supervisor Security Authorization Key
+                </label>
+                <div className="relative">
+                  <Key className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+                  <Input
+                    type="password"
+                    placeholder="Enter key (e.g. SUPER-2026, MGR-8899)"
+                    value={supervisorKeyInput}
+                    onChange={(e) => {
+                      setSupervisorKeyInput(e.target.value);
+                      setSupervisorKeyError(null);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleConfirmSupervisorKey();
+                      }
+                    }}
+                    className="pl-9 text-xs font-mono"
+                    autoFocus
+                  />
+                </div>
+                <p className="text-[11px] text-slate-400 mt-1">
+                  Key authorization will be immutably recorded in the central POS transaction audit log.
+                </p>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setSupervisorModal(null);
+                setSupervisorKeyInput('');
+                setSupervisorKeyError(null);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              onClick={handleConfirmSupervisorKey}
+              disabled={!supervisorKeyInput.trim()}
+              className="bg-amber-600 hover:bg-amber-700 text-white font-semibold gap-1.5"
+            >
+              <ShieldCheck className="h-4 w-4" />
+              Authorize &amp; Apply
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

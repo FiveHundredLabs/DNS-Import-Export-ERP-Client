@@ -5,6 +5,7 @@ import { formatCurrency, formatDate } from '../../../utils/formatters';
 import { AmountDisplay } from '../../../components/common/AmountDisplay';
 import {
   DollarSign,
+  Coins,
   TrendingUp,
   Scale,
   BookOpen,
@@ -89,6 +90,15 @@ export function FinanceDashboardPage() {
       badge: 'GL Engine',
       actionText: 'New Journal',
       color: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+    },
+    {
+      title: 'Cash Book & Vouchers',
+      description: 'Manage Petty Cash (1040) & Operating Float (1010) disbursements with manager approvals.',
+      path: '/finance/cash-book',
+      icon: Coins,
+      badge: 'Petty Cash',
+      actionText: 'Open Cash Book',
+      color: 'bg-emerald-50 text-emerald-700 border-emerald-200',
     },
     {
       title: 'Reconcile Bank',

@@ -11,6 +11,7 @@ import { Badge } from '../../../../components/ui/badge';
 import { Card } from '../../../../components/ui/card';
 import { Dialog, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../../../../components/ui/dialog';
 import { Textarea } from '../../../../components/ui/textarea';
+import { PageHeader } from '../../../../components/common/PageHeader';
 import { formatCurrency, formatDate } from '../../../../utils/formatters';
 import Decimal from 'decimal.js';
 import { DoubleEntryHoverBadge } from '../../components/DoubleEntryHoverBadge';
@@ -339,64 +340,63 @@ export function CustomerCreditNotesPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-slate-200 pb-4">
-        <div>
+      <PageHeader
+        title="Customer Credit Notes"
+        badge={
+          <Badge variant="outline" className="bg-primary-light text-primary-text border-primary-border text-xs">
+            AR Returns & Revenue Reversal
+          </Badge>
+        }
+        breadcrumbs={[
+          { label: 'Finance', href: '/finance' },
+          { label: 'Accounts Receivable', href: '/finance/ar' },
+          { label: 'Credit Notes' },
+        ]}
+        actions={
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-              Customer Credit Notes
-            </h1>
-            <Badge variant="outline" className="bg-primary-light text-primary-text border-primary-border text-xs">
-              AR Returns & Revenue Reversal
-            </Badge>
-          </div>
-          <p className="text-sm text-slate-500 mt-1">
-            Process customer sales returns: reversing revenue & output tax (Debit 4010, Debit 2020, Credit 1020 A/R), and restoring stock to physical inventory (Debit 1100, Credit 5010 COGS).
-          </p>
-        </div>
+            {activeTab === 'REGISTRY' ? (
+              <Button
+                size="sm"
+                onClick={() => setActiveTab('CREATE')}
+                className="text-xs gap-1.5 bg-primary hover:bg-primary-hover text-white shadow-xs font-semibold"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                <span>Issue Credit Note</span>
+              </Button>
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setActiveTab('REGISTRY')}
+                className="text-xs gap-1.5"
+              >
+                <ArrowLeft className="h-3.5 w-3.5" />
+                <span>Back to Registry</span>
+              </Button>
+            )}
 
-        <div className="flex items-center gap-2">
-          {activeTab === 'REGISTRY' ? (
-            <Button
-              size="sm"
-              onClick={() => setActiveTab('CREATE')}
-              className="text-xs gap-1.5 bg-primary hover:bg-primary-hover text-white shadow-xs font-semibold"
-            >
-              <Plus className="h-3.5 w-3.5" />
-              <span>Issue Credit Note</span>
-            </Button>
-          ) : (
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setActiveTab('REGISTRY')}
+              onClick={() => navigate('/finance/ar/approvals')}
               className="text-xs gap-1.5"
             >
-              <ArrowLeft className="h-3.5 w-3.5" />
-              <span>Back to Registry</span>
+              <Receipt className="h-3.5 w-3.5 text-primary" />
+              <span>Receipt Approvals</span>
             </Button>
-          )}
 
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => navigate('/finance/ar/approvals')}
-            className="text-xs gap-1.5"
-          >
-            <Receipt className="h-3.5 w-3.5 text-primary" />
-            <span>Receipt Approvals</span>
-          </Button>
-
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => navigate('/finance/ar/pdc-vault')}
-            className="text-xs gap-1.5 border-amber-300 bg-amber-50/50 text-amber-800"
-          >
-            <Landmark className="h-3.5 w-3.5 text-amber-700" />
-            <span>PDC Vault (1018)</span>
-          </Button>
-        </div>
-      </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate('/finance/ar/pdc-vault')}
+              className="text-xs gap-1.5"
+            >
+              <Landmark className="h-3.5 w-3.5 text-primary" />
+              <span>PDC Vault (1018)</span>
+            </Button>
+          </div>
+        }
+      />
 
       {/* Tabs Header */}
       <div className="flex items-center justify-between border-b border-slate-200">
@@ -434,12 +434,14 @@ export function CustomerCreditNotesPage() {
         <div className="space-y-6">
           {/* KPI Summary Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Card className="p-4 border-slate-200 bg-white shadow-2xs">
+            <Card className="p-4 border-slate-200 bg-white shadow-2xs hover:border-slate-300 transition-colors">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold uppercase text-slate-500">Total Credit Notes</span>
-                <RotateCcw className="h-4 w-4 text-primary" />
+                <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Total Credit Notes</span>
+                <div className="h-7 w-7 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+                  <RotateCcw className="h-4 w-4" />
+                </div>
               </div>
-              <div className="text-2xl font-bold font-mono text-slate-900 mt-1.5 tabular-nums">
+              <div className="text-2xl font-bold font-mono text-slate-900 mt-2 tabular-nums">
                 {formatCurrency(metrics.totalGross)}
               </div>
               <div className="text-[11px] text-slate-500 mt-1">
@@ -447,53 +449,69 @@ export function CustomerCreditNotesPage() {
               </div>
             </Card>
 
-            <Card className="p-4 border-rose-200 bg-rose-50/40 shadow-2xs">
+            <Card className="p-4 border-slate-200 bg-white shadow-2xs hover:border-slate-300 transition-colors">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold uppercase text-rose-800">Revenue Reversed (4010)</span>
-                <Receipt className="h-4 w-4 text-rose-600" />
+                <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Revenue Reversed (4010)</span>
+                <div className="h-7 w-7 rounded-lg bg-rose-50 flex items-center justify-center text-rose-600">
+                  <Receipt className="h-4 w-4" />
+                </div>
               </div>
-              <div className="text-2xl font-bold font-mono text-rose-950 mt-1.5 tabular-nums">
+              <div className="text-2xl font-bold font-mono text-slate-900 mt-2 tabular-nums">
                 {formatCurrency(metrics.totalRevenueReversed)}
               </div>
-              <div className="text-[11px] text-rose-700 mt-1">
+              <div className="text-[11px] text-slate-500 mt-1">
                 Net sales revenue deducted
               </div>
             </Card>
 
-            <Card className="p-4 border-emerald-200 bg-emerald-50/40 shadow-2xs">
+            <Card className="p-4 border-slate-200 bg-white shadow-2xs hover:border-slate-300 transition-colors">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold uppercase text-emerald-800">Stock Restored (1100/5010)</span>
-                <Package className="h-4 w-4 text-emerald-600" />
+                <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Stock Restored (1100/5010)</span>
+                <div className="h-7 w-7 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600">
+                  <Package className="h-4 w-4" />
+                </div>
               </div>
-              <div className="text-2xl font-bold font-mono text-emerald-950 mt-1.5 tabular-nums">
+              <div className="text-2xl font-bold font-mono text-slate-900 mt-2 tabular-nums">
                 {formatCurrency(metrics.totalInventoryRestored)}
               </div>
-              <div className="text-[11px] text-emerald-700 mt-1">
+              <div className="text-[11px] text-slate-500 mt-1">
                 Merchandise added back to physical stock
               </div>
             </Card>
 
-            <Card className="p-4 border-blue-200 bg-blue-50/40 shadow-2xs">
+            <Card className="p-4 border-slate-200 bg-white shadow-2xs hover:border-slate-300 transition-colors">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold uppercase text-blue-800">Output VAT Reversed (2020)</span>
-                <Layers className="h-4 w-4 text-blue-600" />
+                <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Output VAT Reversed (2020)</span>
+                <div className="h-7 w-7 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600">
+                  <Layers className="h-4 w-4" />
+                </div>
               </div>
-              <div className="text-2xl font-bold font-mono text-blue-950 mt-1.5 tabular-nums">
+              <div className="text-2xl font-bold font-mono text-slate-900 mt-2 tabular-nums">
                 {formatCurrency(metrics.totalVatReversed)}
               </div>
-              <div className="text-[11px] text-blue-700 mt-1">
+              <div className="text-[11px] text-slate-500 mt-1">
                 Output VAT tax liability relieved
               </div>
             </Card>
           </div>
 
           {/* Search & Filter Bar */}
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs">
+            <div className="relative flex-1 max-w-md w-full">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+              <Input
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search credit note #, customer, reason..."
+                className="pl-9 text-xs h-9"
+              />
+            </div>
+
             <div className="flex items-center gap-2 w-full sm:w-auto">
               <select
                 value={filterCustomer}
                 onChange={(e) => setFilterCustomer(e.target.value)}
-                className="h-9 text-xs rounded-md border border-slate-300 px-3 bg-white text-slate-800"
+                className="h-9 text-xs px-2.5 rounded-lg border border-slate-200 bg-white font-medium text-slate-700"
               >
                 <option value="ALL">All Customers</option>
                 {MOCK_CUSTOMERS.map((c) => (
@@ -502,16 +520,6 @@ export function CustomerCreditNotesPage() {
                   </option>
                 ))}
               </select>
-            </div>
-
-            <div className="relative w-full sm:w-72">
-              <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-400" />
-              <Input
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search credit note #, customer, reason..."
-                className="pl-8 text-xs h-9"
-              />
             </div>
           </div>
 

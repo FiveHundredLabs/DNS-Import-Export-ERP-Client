@@ -39,6 +39,10 @@ export class InvoiceService {
     return this.repo.getByCustomerId(customerId);
   }
 
+  async getInvoicesByOrder(orderId: string): Promise<Invoice[]> {
+    return this.repo.getByOrderId(orderId);
+  }
+
   async updateInvoice(id: string, updates: Partial<Invoice>): Promise<Invoice> {
     return this.repo.update(id, updates);
   }
@@ -51,34 +55,61 @@ export class InvoiceService {
   async createInvoiceFromOrder(
     orderId: string,
     currentUser: User,
-    options?: { asDraft?: boolean; allowUnapproved?: boolean }
+    options?: {
+      asDraft?: boolean;
+      allowUnapproved?: boolean;
+      partialItems?: Array<{ productId: string; quantity: number }>;
+    }
   ): Promise<Invoice> {
     const order = await this.orderSvc.getOrder(orderId);
     if (!order) {
       throw new Error(`Sales Order not found: ${orderId}`);
     }
 
-    if (order.status === 'INVOICED') {
-      throw new Error(`Order ${order.orderNumber} is already invoiced.`);
+    if (order.status === 'CLOSED' || order.status === 'CANCELLED') {
+      throw new Error(`Cannot generate invoice: Order ${order.orderNumber} is ${order.status.toLowerCase()}.`);
     }
 
-    // Check if an invoice already exists for this order in the repository (idempotency safeguard)
+    // Check existing invoices for this order to compute remaining line quantities (BR-04).
+    // Only finalized/issued invoices consume quantities from the order.
     const existingInvoices = await this.repo.getByOrderId(order.id);
-    const existingFinalized = existingInvoices.find(
-      (inv) => inv.status !== 'DRAFT' && inv.status !== 'CANCELLED'
+    const activeInvoices = existingInvoices.filter(
+      (inv) => inv.status !== 'CANCELLED' && inv.status !== 'DRAFT'
     );
-    if (existingFinalized) {
-      throw new Error(`Order ${order.orderNumber} is already invoiced.`);
+
+    const lineProgress = order.items.map((item) => {
+      const targetQty =
+        item.approvedQuantity > 0
+          ? item.approvedQuantity
+          : item.orderedQuantity;
+
+      const previouslyInvoicedQty = activeInvoices.reduce((sum, inv) => {
+        const invLine = inv.items.find((it) => it.productId === item.productId);
+        return sum + (invLine ? invLine.quantity : 0);
+      }, 0);
+
+      const remainingQty = Math.max(0, targetQty - previouslyInvoicedQty);
+      return {
+        item,
+        targetQty,
+        previouslyInvoicedQty,
+        remainingQty,
+      };
+    });
+
+    const isFullyInvoiced = lineProgress.every((lp) => lp.remainingQty === 0);
+    if (isFullyInvoiced || order.status === 'INVOICED') {
+      throw new Error(`Order ${order.orderNumber} is already fully invoiced.`);
     }
 
     const existingDraft = existingInvoices.find((inv) => inv.status === 'DRAFT');
-    if (existingDraft && options?.asDraft) {
+    if (existingDraft && options?.asDraft && !options?.partialItems) {
       return existingDraft;
     }
 
     const eligibleStatuses = options?.allowUnapproved
-      ? ['DRAFT', 'SUBMITTED', 'PENDING_APPROVAL', 'SPECIAL_APPROVAL', 'APPROVED', 'PICKING', 'PARTIALLY_ISSUED', 'ISSUED']
-      : ['APPROVED', 'PICKING', 'PARTIALLY_ISSUED', 'ISSUED'];
+      ? ['DRAFT', 'SUBMITTED', 'PENDING_APPROVAL', 'SPECIAL_APPROVAL', 'APPROVED', 'PICKING', 'PARTIALLY_ISSUED', 'ISSUED', 'PARTIALLY_INVOICED']
+      : ['APPROVED', 'PICKING', 'PARTIALLY_ISSUED', 'ISSUED', 'PARTIALLY_INVOICED'];
     if (!eligibleStatuses.includes(order.status)) {
       throw new Error(
         `Cannot generate invoice for order in status '${order.status}'. Order must be approved or issued first.`
@@ -89,22 +120,41 @@ export class InvoiceService {
     const taxConfig = this.taxSvc.getTaxConfig();
     const effectiveTaxRate = taxConfig.taxEnabled ? taxConfig.taxRate : 0;
 
+    // Filter lines that have remaining billable quantity
+    const billableLines = lineProgress.filter((lp) => {
+      if (options?.partialItems && options.partialItems.length > 0) {
+        const match = options.partialItems.find((p) => p.productId === lp.item.productId);
+        return match && match.quantity > 0;
+      }
+      return lp.remainingQty > 0;
+    });
+
+    if (billableLines.length === 0) {
+      throw new Error(`No remaining billable quantities available on Order ${order.orderNumber}.`);
+    }
+
     // Preserve immutable product snapshots on invoice line items
     let calculatedSubtotal = 0;
     let calculatedDiscountTotal = 0;
     let calculatedTaxTotal = 0;
     let calculatedGrandTotal = 0;
 
-    const invoiceItems: InvoiceItem[] = order.items.map((item, idx) => {
-      const qty =
-        item.issuedQuantity > 0
-          ? item.issuedQuantity
-          : item.approvedQuantity > 0
-          ? item.approvedQuantity
-          : item.orderedQuantity;
+    const invoiceItems: InvoiceItem[] = billableLines.map((lp, idx) => {
+      let qty = lp.remainingQty;
+      if (options?.partialItems) {
+        const match = options.partialItems.find((p) => p.productId === lp.item.productId);
+        if (match) {
+          if (match.quantity > lp.remainingQty) {
+            throw new Error(
+              `Cannot invoice ${match.quantity} units for "${lp.item.productNameSnapshot}". Maximum remaining billable quantity is ${lp.remainingQty}.`
+            );
+          }
+          qty = match.quantity;
+        }
+      }
 
-      const lineSubtotal = Math.round(item.unitPriceSnapshot * qty * 100) / 100;
-      const lineDiscount = Math.round(lineSubtotal * (item.discountPercentage / 100) * 100) / 100;
+      const lineSubtotal = Math.round(lp.item.unitPriceSnapshot * qty * 100) / 100;
+      const lineDiscount = Math.round(lineSubtotal * (lp.item.discountPercentage / 100) * 100) / 100;
       const afterDiscount = lineSubtotal - lineDiscount;
       const lineTax = taxConfig.taxEnabled ? Math.round(afterDiscount * (effectiveTaxRate / 100) * 100) / 100 : 0;
       const lineTotal = afterDiscount + lineTax;
@@ -116,25 +166,25 @@ export class InvoiceService {
 
       return {
         id: `inv-item-${Date.now().toString().slice(-4)}-${idx + 1}`,
-        productId: item.productId,
-        productNameSnapshot: item.productNameSnapshot,
-        skuSnapshot: item.skuSnapshot,
-        unitPriceSnapshot: item.unitPriceSnapshot,
-        discountPercentage: item.discountPercentage,
+        productId: lp.item.productId,
+        productNameSnapshot: lp.item.productNameSnapshot,
+        skuSnapshot: lp.item.skuSnapshot,
+        unitPriceSnapshot: lp.item.unitPriceSnapshot,
+        discountPercentage: lp.item.discountPercentage,
         discountAmount: lineDiscount,
         taxPercentage: effectiveTaxRate,
         taxAmount: lineTax,
         lineTotal,
         quantity: qty,
-        uomSnapshot: item.uomSnapshot,
-        batchId: item.batchId,
-        batchNumber: item.batchNumber,
-        discountApprovalStatus: item.discountApprovalStatus,
-        discountAllowedPercentage: item.discountAllowedPercentage,
-        discountApprovedById: item.discountApprovedById,
-        discountApprovedByName: item.discountApprovedByName,
-        discountApprovedAt: item.discountApprovedAt,
-        discountApprovalNote: item.discountApprovalNote,
+        uomSnapshot: lp.item.uomSnapshot,
+        batchId: lp.item.batchId,
+        batchNumber: lp.item.batchNumber,
+        discountApprovalStatus: lp.item.discountApprovalStatus,
+        discountAllowedPercentage: lp.item.discountAllowedPercentage,
+        discountApprovedById: lp.item.discountApprovedById,
+        discountApprovedByName: lp.item.discountApprovedByName,
+        discountApprovedAt: lp.item.discountApprovedAt,
+        discountApprovalNote: lp.item.discountApprovalNote,
       };
     });
 
@@ -200,10 +250,35 @@ export class InvoiceService {
       });
     }
 
-    // Advance order status to INVOICED if issued
+    // Advance order status to INVOICED or PARTIALLY_INVOICED if issued
     if (initialStatus === 'ISSUED') {
-      await this.orderSvc.updateFulfillmentStatus(order.id, 'INVOICED', currentUser, {
-        comment: `Tax Invoice ${newInvoice.invoiceNumber} generated for LKR ${calculatedGrandTotal.toLocaleString()}.`,
+      const allActiveInvoices = [
+        ...existingInvoices.filter((i) => i.id !== newInvoice.id && i.status !== 'CANCELLED'),
+        newInvoice,
+      ];
+      const fullyInvoiced = order.items.every((it) => {
+        const targetQty = it.approvedQuantity > 0 ? it.approvedQuantity : it.orderedQuantity;
+        const totalInvQty = allActiveInvoices.reduce((sum, inv) => {
+          const l = inv.items.find((item) => item.productId === it.productId);
+          return sum + (l ? l.quantity : 0);
+        }, 0);
+        return totalInvQty >= targetQty;
+      });
+
+      const nextOrderStatus: OrderStatus = fullyInvoiced ? 'INVOICED' : 'PARTIALLY_INVOICED';
+
+      const invoicedQuantitiesMap: Record<string, number> = {};
+      order.items.forEach((it) => {
+        const totalInvQty = allActiveInvoices.reduce((sum, inv) => {
+          const l = inv.items.find((item) => item.productId === it.productId);
+          return sum + (l ? l.quantity : 0);
+        }, 0);
+        invoicedQuantitiesMap[it.productId] = totalInvQty;
+      });
+
+      await this.orderSvc.updateFulfillmentStatus(order.id, nextOrderStatus, currentUser, {
+        comment: `Tax Invoice ${newInvoice.invoiceNumber} generated for LKR ${calculatedGrandTotal.toLocaleString()} (${nextOrderStatus.replace('_', ' ')}).`,
+        invoicedQuantities: invoicedQuantitiesMap,
       });
 
       // Update Customer Master financials (single source of truth)
@@ -342,11 +417,26 @@ export class InvoiceService {
       status: 'ISSUED',
     });
 
-    // Advance linked order to INVOICED
+    // Advance linked order to INVOICED or PARTIALLY_INVOICED
     try {
-      await this.orderSvc.updateFulfillmentStatus(inv.orderId, 'INVOICED', currentUser, {
-        comment: `Tax Invoice ${inv.invoiceNumber} finalized and issued.`,
-      });
+      const linkedOrder = await this.orderSvc.getOrder(inv.orderId);
+      if (linkedOrder) {
+        const orderInvoices = await this.repo.getByOrderId(linkedOrder.id);
+        const activeInvs = orderInvoices.filter((i) => i.status !== 'CANCELLED');
+        const isFullyInvoiced = linkedOrder.items.every((it) => {
+          const targetQty = it.approvedQuantity > 0 ? it.approvedQuantity : it.orderedQuantity;
+          const totalInvQty = activeInvs.reduce((sum, itemInv) => {
+            const l = itemInv.items.find((item) => item.productId === it.productId);
+            return sum + (l ? l.quantity : 0);
+          }, 0);
+          return totalInvQty >= targetQty;
+        });
+
+        const targetStatus: OrderStatus = isFullyInvoiced ? 'INVOICED' : 'PARTIALLY_INVOICED';
+        await this.orderSvc.updateFulfillmentStatus(linkedOrder.id, targetStatus, currentUser, {
+          comment: `Tax Invoice ${inv.invoiceNumber} finalized and issued (${targetStatus.replace('_', ' ')}).`,
+        });
+      }
     } catch (e) {
       console.warn('Order fulfillment advance warning:', e);
     }
@@ -373,6 +463,65 @@ export class InvoiceService {
     }
 
     return updated;
+  }
+
+  /**
+   * Retrieves order invoicing progress including line-item remaining quantities (BR-04).
+   */
+  async getOrderInvoicingProgress(orderId: string): Promise<{
+    orderId: string;
+    orderNumber: string;
+    isFullyInvoiced: boolean;
+    isPartiallyInvoiced: boolean;
+    existingInvoices: Invoice[];
+    lines: Array<{
+      productId: string;
+      productName: string;
+      sku: string;
+      orderedQuantity: number;
+      invoicedQuantity: number;
+      remainingQuantity: number;
+      unitPrice: number;
+      uom?: string;
+    }>;
+  }> {
+    const order = await this.orderSvc.getOrder(orderId);
+    if (!order) throw new Error(`Sales Order not found: ${orderId}`);
+
+    const existingInvoices = await this.repo.getByOrderId(order.id);
+    const activeInvoices = existingInvoices.filter((inv) => inv.status !== 'CANCELLED');
+
+    const lines = order.items.map((it) => {
+      const targetQty = it.approvedQuantity > 0 ? it.approvedQuantity : it.orderedQuantity;
+      const invoicedQty = activeInvoices.reduce((sum, inv) => {
+        const l = inv.items.find((item) => item.productId === it.productId);
+        return sum + (l ? l.quantity : 0);
+      }, 0);
+      const remainingQty = Math.max(0, targetQty - invoicedQty);
+
+      return {
+        productId: it.productId,
+        productName: it.productNameSnapshot,
+        sku: it.skuSnapshot,
+        orderedQuantity: targetQty,
+        invoicedQuantity: invoicedQty,
+        remainingQuantity: remainingQty,
+        unitPrice: it.unitPriceSnapshot,
+        uom: it.uomSnapshot,
+      };
+    });
+
+    const isFullyInvoiced = lines.every((l) => l.remainingQuantity === 0);
+    const isPartiallyInvoiced = lines.some((l) => l.invoicedQuantity > 0) && !isFullyInvoiced;
+
+    return {
+      orderId: order.id,
+      orderNumber: order.orderNumber,
+      isFullyInvoiced,
+      isPartiallyInvoiced,
+      existingInvoices: activeInvoices,
+      lines,
+    };
   }
 
 }

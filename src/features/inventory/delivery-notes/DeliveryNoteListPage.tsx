@@ -5,6 +5,8 @@ import { Button } from '../../../components/ui/button';
 import { Input } from '../../../components/ui/input';
 import { Badge } from '../../../components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../components/ui/table';
+import { PageHeader } from '../../../components/common/PageHeader';
+import { StatCard } from '../../../components/common/StatCard';
 import { deliveryNoteService } from '../../../services/DeliveryNoteService';
 import { DeliveryNote, DeliveryNoteStatus } from '../../../types/deliveryNote';
 import { PrintableDeliveryNote } from './PrintableDeliveryNote';
@@ -140,125 +142,76 @@ export const DeliveryNoteListPage: React.FC = () => {
   };
 
   return (
-    <div className="w-full space-y-6">
-      {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-primary/10 text-primary">
-              <Truck className="h-6 w-6" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
-                  Warehouse Delivery Notes
-                </h1>
-                <Badge
-                  variant="outline"
-                  className="bg-emerald-50 text-emerald-700 border-emerald-300 text-[10px] font-bold"
-                >
-                  Stock Keeper Dispatch Hub
-                </Badge>
-              </div>
-              <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-                Physical goods dispatch notes created from draft invoices with scanned unit barcodes and customer sign-off.
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2">
+    <div className="w-full space-y-5">
+      {/* Canonical Page Header */}
+      <PageHeader
+        title="Warehouse Delivery Notes"
+        subtitle="Physical goods dispatch notes created from draft invoices with scanned unit barcodes and customer sign-off."
+        badge={
+          <Badge
+            variant="outline"
+            className="bg-emerald-50 text-emerald-700 border-emerald-300 text-[10px] font-bold"
+          >
+            Stock Keeper Dispatch Hub
+          </Badge>
+        }
+        actions={
           <Button
             onClick={() => navigate('/inventory/delivery-notes/new')}
-            className="gap-2 text-xs font-bold bg-primary hover:bg-primary-hover text-white shadow-xs h-9"
+            className="gap-2 text-xs font-semibold bg-primary hover:bg-primary-hover text-white shadow-xs h-9"
           >
             <PlusCircle className="h-4 w-4" />
             + New Delivery Note
           </Button>
-        </div>
-      </div>
+        }
+      />
 
       {/* ── Operational KPI Cards ── */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
-        {/* KPI 1: Total Notes */}
-        <Card className="border-slate-200 shadow-2xs">
-          <CardContent className="p-3.5">
-            <div className="flex items-center justify-between text-slate-500 mb-1">
-              <span className="text-[10.5px] font-bold uppercase tracking-wider">
-                Total Notes
-              </span>
-              <Truck className="h-4 w-4 text-slate-400" />
-            </div>
-            <div className="text-2xl font-black text-slate-900">{totalCount}</div>
-            <p className="text-[10px] text-slate-500 mt-0.5">All created dispatch notes</p>
-          </CardContent>
-        </Card>
+        <StatCard
+          title="Total Notes"
+          value={totalCount}
+          icon={Truck}
+          variant="indigo"
+        />
 
-        {/* KPI 2: In Transit */}
-        <Card className="border-slate-200 shadow-2xs bg-gradient-to-br from-white to-sky-50/30">
-          <CardContent className="p-3.5">
-            <div className="flex items-center justify-between text-sky-700 mb-1">
-              <span className="text-[10.5px] font-bold uppercase tracking-wider">
-                In Transit / Dispatched
-              </span>
-              <Clock className="h-4 w-4 text-sky-600" />
-            </div>
-            <div className="text-2xl font-black text-sky-900">{inTransitCount}</div>
-            <p className="text-[10px] text-sky-600/80 mt-0.5">With delivery drivers</p>
-          </CardContent>
-        </Card>
+        <StatCard
+          title="In Transit / Dispatched"
+          value={inTransitCount}
+          icon={Clock}
+          variant="blue"
+        />
 
-        {/* KPI 3: Delivered */}
-        <Card className="border-slate-200 shadow-2xs bg-gradient-to-br from-white to-emerald-50/30">
-          <CardContent className="p-3.5">
-            <div className="flex items-center justify-between text-emerald-700 mb-1">
-              <span className="text-[10.5px] font-bold uppercase tracking-wider">
-                Delivered & Accepted
-              </span>
-              <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-            </div>
-            <div className="text-2xl font-black text-emerald-900">{deliveredCount}</div>
-            <p className="text-[10px] text-emerald-600/80 mt-0.5">100% Customer accepted</p>
-          </CardContent>
-        </Card>
+        <StatCard
+          title="Delivered & Accepted"
+          value={deliveredCount}
+          icon={CheckCircle2}
+          variant="emerald"
+        />
 
-        {/* KPI 4: Pending Rejection Approval */}
-        <Card className={`border-slate-200 shadow-2xs ${pendingApprovalCount > 0 ? 'bg-amber-50/70 border-amber-300 ring-1 ring-amber-200' : ''}`}>
-          <CardContent className="p-3.5">
-            <div className="flex items-center justify-between text-amber-700 mb-1">
-              <span className="text-[10.5px] font-bold uppercase tracking-wider">
-                Rejection Approvals
-              </span>
-              <ShieldAlert className="h-4 w-4 text-amber-600" />
-            </div>
-            <div className="text-2xl font-black text-amber-950">{pendingApprovalCount}</div>
-            <p className="text-[10px] text-amber-700/80 mt-0.5">Requires Manager Sign-Off</p>
-          </CardContent>
-        </Card>
+        <StatCard
+          title="Rejection Approvals"
+          value={pendingApprovalCount}
+          icon={ShieldAlert}
+          variant="amber"
+        />
 
-        {/* KPI 5: Total Units Rejected */}
-        <Card className="border-slate-200 shadow-2xs bg-gradient-to-br from-white to-rose-50/30">
-          <CardContent className="p-3.5">
-            <div className="flex items-center justify-between text-rose-700 mb-1">
-              <span className="text-[10.5px] font-bold uppercase tracking-wider">
-                Total Rejected Units
-              </span>
-              <AlertTriangle className="h-4 w-4 text-rose-600" />
-            </div>
-            <div className="text-2xl font-black text-rose-900">{totalRejectedUnitsCount}</div>
-            <p className="text-[10px] text-rose-600/80 mt-0.5">Quarantine / Return log</p>
-          </CardContent>
-        </Card>
+        <StatCard
+          title="Total Rejected Units"
+          value={totalRejectedUnitsCount}
+          icon={AlertTriangle}
+          variant="rose"
+        />
       </div>
 
       {/* ── Search & Filter Controls ── */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs">
         {/* Filter Tabs */}
-        <div className="flex flex-wrap items-center gap-1.5 p-1 bg-slate-100 rounded-xl">
+        <div className="flex flex-wrap items-center gap-1.5 p-1 bg-slate-100 rounded-lg">
           <button
             type="button"
             onClick={() => setStatusFilter('ALL')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+            className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
               statusFilter === 'ALL'
                 ? 'bg-white text-slate-900 shadow-xs'
                 : 'text-slate-600 hover:text-slate-900'
@@ -269,7 +222,7 @@ export const DeliveryNoteListPage: React.FC = () => {
           <button
             type="button"
             onClick={() => setStatusFilter('DISPATCHED')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+            className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
               statusFilter === 'DISPATCHED'
                 ? 'bg-white text-sky-800 shadow-xs'
                 : 'text-slate-600 hover:text-slate-900'
@@ -280,7 +233,7 @@ export const DeliveryNoteListPage: React.FC = () => {
           <button
             type="button"
             onClick={() => setStatusFilter('DELIVERED')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+            className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
               statusFilter === 'DELIVERED'
                 ? 'bg-white text-emerald-800 shadow-xs'
                 : 'text-slate-600 hover:text-slate-900'
@@ -291,7 +244,7 @@ export const DeliveryNoteListPage: React.FC = () => {
           <button
             type="button"
             onClick={() => setStatusFilter('REJECTION_PENDING_APPROVAL')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+            className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
               statusFilter === 'REJECTION_PENDING_APPROVAL'
                 ? 'bg-white text-amber-800 shadow-xs'
                 : 'text-slate-600 hover:text-slate-900'
@@ -302,22 +255,22 @@ export const DeliveryNoteListPage: React.FC = () => {
         </div>
 
         {/* Search Field */}
-        <div className="relative w-full sm:w-72">
+        <div className="relative flex-1 max-w-xs w-full">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search DN #, Invoice #, customer, driver..."
-            className="text-xs pl-8 h-9"
+            className="text-xs pl-9 h-9"
           />
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
         </div>
       </div>
 
       {/* ── Delivery Notes Table ── */}
-      <Card className="border-slate-200 shadow-2xs overflow-hidden">
+      <Card className="border-slate-200 shadow-2xs overflow-hidden rounded-xl">
         <CardContent className="p-0">
           <Table className="text-xs">
-            <TableHeader className="bg-slate-100/70 border-b border-slate-200">
+            <TableHeader className="bg-slate-50 border-b border-slate-200">
               <TableRow>
                 <TableHead className="w-32">Delivery Note #</TableHead>
                 <TableHead className="w-28">Invoice Ref</TableHead>

@@ -9,6 +9,9 @@ import { OrderStatusBadge } from './OrderStatusBadge';
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
+import { Badge } from '../../components/ui/badge';
+import { PageHeader } from '../../components';
+import { StatCard } from '../../components/common/StatCard';
 import {
   Select,
   SelectContent,
@@ -121,97 +124,79 @@ export function OrderListPage() {
 
   return (
     <div className="space-y-4 sm:space-y-6 w-full pb-24 md:pb-6">
-      {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-slate-900 flex items-center gap-2">
+      {/* Top Standardized Page Header */}
+      <PageHeader
+        title={
+          <span className="flex items-center gap-2">
             <ShoppingCart className="h-5 w-5 sm:h-6 sm:w-6 text-primary shrink-0" />
             <span>Sales Orders &amp; Approvals</span>
-          </h1>
-          <p className="text-xs text-slate-500 mt-1">
-            Standard vs Special Sales Orders, commercial credit limits, and fulfillment state machine.
-          </p>
-        </div>
+          </span>
+        }
+        subtitle="Standard vs Special Sales Orders, commercial credit limits, and fulfillment state machine."
+        badge={<Badge variant="outline" className="text-xs">Sales</Badge>}
+        actions={
+          <div className="grid grid-cols-2 sm:flex sm:items-center gap-2 w-full sm:w-auto">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate('/orders/activity-log')}
+              className="gap-1.5 border-teal-300 text-teal-800 hover:bg-teal-50 text-xs w-full sm:w-auto justify-center"
+            >
+              <Clock className="h-3.5 w-3.5 text-teal-600" />
+              <span>Activity Log</span>
+            </Button>
 
-        <div className="grid grid-cols-2 sm:flex sm:items-center gap-2 w-full sm:w-auto">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => navigate('/orders/activity-log')}
-            className="gap-1.5 border-teal-300 text-teal-800 hover:bg-teal-50 text-xs w-full sm:w-auto justify-center"
-          >
-            <Clock className="h-3.5 w-3.5 text-teal-600" />
-            Activity Log
-          </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate('/orders/tracking')}
+              className="gap-1.5 border-primary-border text-primary-text hover:bg-primary-light text-xs w-full sm:w-auto justify-center"
+            >
+              <Activity className="h-3.5 w-3.5 text-primary" />
+              <span>Pipeline Tracking</span>
+            </Button>
 
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => navigate('/orders/tracking')}
-            className="gap-1.5 border-primary-border text-primary-text hover:bg-primary-light text-xs w-full sm:w-auto justify-center"
-          >
-            <Activity className="h-3.5 w-3.5 text-primary" />
-            Pipeline Tracking
-          </Button>
+            <Button
+              size="sm"
+              onClick={() => navigate('/orders/new')}
+              className="col-span-2 sm:col-span-1 bg-primary hover:bg-primary-hover text-primary-foreground gap-1.5 shadow-xs text-xs w-full sm:w-auto justify-center font-semibold"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              <span>New Sales Order</span>
+            </Button>
+          </div>
+        }
+      />
 
-          <Button
-            size="sm"
-            onClick={() => navigate('/orders/new')}
-            className="col-span-2 sm:col-span-1 bg-primary hover:bg-primary-hover text-primary-foreground gap-1.5 shadow-xs text-xs w-full sm:w-auto justify-center font-semibold"
-          >
-            <Plus className="h-3.5 w-3.5" />
-            New Sales Order
-          </Button>
-        </div>
-      </div>
+      {/* Metrics Row (Standardized Summary Cards) */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <StatCard
+          title="Total Filtered"
+          value={`${total} Orders`}
+          icon={ShoppingCart}
+          variant="indigo"
+        />
 
-      {/* Metrics Row */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 sm:gap-4">
-        <Card className="p-3 sm:p-4 bg-white border border-slate-200 overflow-hidden">
-          <div className="flex items-center justify-between gap-1">
-            <span className="text-xs sm:text-[13px] font-medium text-slate-600 truncate">Total Filtered</span>
-            <ShoppingCart className="h-4 w-4 text-primary shrink-0" />
-          </div>
-          <div className="mt-1 sm:mt-2 text-base sm:text-xl font-semibold tabular-nums text-slate-900 truncate">
-            {total} Orders
-          </div>
-          <div className="text-[11px] sm:text-xs text-slate-400 mt-0.5 truncate">Active order portfolio</div>
-        </Card>
+        <StatCard
+          title="Pending Approval"
+          value={pendingApprovalsCount}
+          icon={Clock}
+          variant="amber"
+        />
 
-        <Card className="p-3 sm:p-4 bg-white border border-slate-200 overflow-hidden">
-          <div className="flex items-center justify-between gap-1">
-            <span className="text-xs sm:text-[13px] font-medium text-amber-700 truncate">Pending Approval</span>
-            <Clock className="h-4 w-4 text-amber-600 shrink-0" />
-          </div>
-          <div className="mt-1 sm:mt-2 text-base sm:text-xl font-semibold tabular-nums text-amber-600 truncate">
-            {pendingApprovalsCount}
-          </div>
-          <div className="text-[11px] sm:text-xs text-slate-400 mt-0.5 truncate">
-            {specialOrdersCount} require special approval
-          </div>
-        </Card>
+        <StatCard
+          title="In Fulfillment"
+          value={inFulfillmentCount}
+          icon={Truck}
+          variant="blue"
+        />
 
-        <Card className="p-3 sm:p-4 bg-white border border-slate-200 overflow-hidden">
-          <div className="flex items-center justify-between gap-1">
-            <span className="text-xs sm:text-[13px] font-medium text-sky-700 truncate">In Fulfillment</span>
-            <Truck className="h-4 w-4 text-primary shrink-0" />
-          </div>
-          <div className="mt-1 sm:mt-2 text-base sm:text-xl font-semibold tabular-nums text-primary truncate">
-            {inFulfillmentCount}
-          </div>
-          <div className="text-[11px] sm:text-xs text-slate-400 mt-0.5 truncate">Picking, Invoiced, or Dispatched</div>
-        </Card>
-
-        <Card className="p-3 sm:p-4 bg-white border border-slate-200 overflow-hidden">
-          <div className="flex items-center justify-between gap-1">
-            <span className="text-xs font-medium text-emerald-700 truncate">Active Order Value</span>
-            <DollarSign className="h-4 w-4 text-emerald-600 shrink-0" />
-          </div>
-          <div className="mt-1 sm:mt-2 text-sm sm:text-base md:text-xl font-bold text-emerald-600 tabular-nums truncate">
-            {formatCurrency(totalValue)}
-          </div>
-          <div className="text-[11px] text-slate-400 mt-0.5 truncate">Excludes cancelled</div>
-        </Card>
+        <StatCard
+          title="Active Order Value"
+          value={formatCurrency(totalValue)}
+          icon={DollarSign}
+          variant="emerald"
+        />
       </div>
 
       {/* Filter and Search Bar */}
@@ -473,6 +458,7 @@ export function OrderListPage() {
                       <TableHead className="hidden md:table-cell text-center">Credit Terms</TableHead>
                       <TableHead className="text-right">Order Amount</TableHead>
                       <TableHead className="text-center">Status / Approval</TableHead>
+                      <TableHead className="text-right w-24">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -526,6 +512,17 @@ export function OrderListPage() {
                             status={order.status}
                             isSpecialApproval={order.isSpecialApproval}
                           />
+                        </TableCell>
+                        <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                          <Button
+                            variant="ghost"
+                            size="xs"
+                            onClick={() => navigate(`/orders/${order.id}`)}
+                            className="h-7 px-2 text-xs text-slate-600 hover:text-slate-900 font-medium gap-1"
+                          >
+                            <span>Details</span>
+                            <ChevronRight className="h-3 w-3" />
+                          </Button>
                         </TableCell>
                       </TableRow>
                     ))}

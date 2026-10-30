@@ -2,26 +2,79 @@ import { POSSession, CashReconciliation } from '../types/pos';
 import { StockBalance } from '../types/inventory';
 
 /**
+ * Known valid supervisor authorization keys for POS overrides (BR-03).
+ */
+export const SUPERVISOR_AUTH_KEYS: Record<
+  string,
+  { supervisorName: string; supervisorRole: string }
+> = {
+  'SUPER-2026': { supervisorName: 'Showroom Supervisor Bandara', supervisorRole: 'SALES_MANAGER' },
+  'MGR-8899': { supervisorName: 'Branch Manager Silva', supervisorRole: 'MANAGER' },
+  'DIR-0011': { supervisorName: 'Executive Director Perera', supervisorRole: 'DIRECTOR' },
+  'STOCK-SUP-77': { supervisorName: 'Stock Manager Fernando', supervisorRole: 'STOCK_MANAGER' },
+};
+
+export function verifySupervisorDiscountKey(key?: string): {
+  valid: boolean;
+  supervisorName?: string;
+  supervisorRole?: string;
+  error?: string;
+} {
+  if (!key || !key.trim()) {
+    return { valid: false, error: 'Supervisor authorization key is required.' };
+  }
+  const match = SUPERVISOR_AUTH_KEYS[key.trim()];
+  if (!match) {
+    return { valid: false, error: 'Invalid supervisor authorization key.' };
+  }
+  return { valid: true, supervisorName: match.supervisorName, supervisorRole: match.supervisorRole };
+}
+
+/**
  * Validates cashier discount against product ceiling and cashier authority threshold (default 5%).
- * Cashier discount cannot exceed the lower of the product ceiling and the cashier limit.
+ * Cashier discount cannot exceed the lower of the product ceiling and the cashier limit unless authorized by supervisor (BR-03).
  */
 export function validatePOSDiscount(
   requestedDiscount: number,
   productMaxDiscount: number = 15,
-  cashierMaxDiscount: number = 5
-): boolean {
+  cashierMaxDiscount: number = 5,
+  supervisorAuthKey?: string
+): { valid: boolean; requiresSupervisorKey: boolean; supervisorName?: string } {
   if (isNaN(requestedDiscount) || requestedDiscount < 0) {
     throw new Error('Discount percentage cannot be negative.');
   }
   const safeProductMax = isNaN(productMaxDiscount) ? cashierMaxDiscount : productMaxDiscount;
   const safeCashierMax = isNaN(cashierMaxDiscount) ? 5 : cashierMaxDiscount;
-  const permittedLimit = Math.min(safeProductMax, safeCashierMax);
-  if (requestedDiscount > permittedLimit) {
+
+  // 1. Within cashier threshold: valid without supervisor key
+  if (requestedDiscount <= safeCashierMax) {
+    return { valid: true, requiresSupervisorKey: false };
+  }
+
+  // 2. Exceeds product ceiling entirely
+  if (requestedDiscount > safeProductMax) {
     throw new Error(
-      `Cashier discount (${requestedDiscount}%) exceeds permitted threshold (${permittedLimit}%). Maximum cashier discount is ${safeCashierMax}%, product max is ${safeProductMax}%.`
+      `Discount (${requestedDiscount}%) exceeds product maximum ceiling (${safeProductMax}%). Even supervisors cannot exceed the catalog ceiling.`
     );
   }
-  return true;
+
+  // 3. Exceeds cashier threshold (5%), requires valid supervisor key
+  if (!supervisorAuthKey) {
+    throw new Error(
+      `Cashier discount (${requestedDiscount}%) exceeds permitted threshold (${safeCashierMax}%). Supervisor authorization key required.`
+    );
+  }
+
+  const verified = verifySupervisorDiscountKey(supervisorAuthKey);
+  if (!verified.valid) {
+    throw new Error(verified.error || 'Invalid supervisor authorization key. Discount override rejected.');
+  }
+
+  return {
+    valid: true,
+    requiresSupervisorKey: true,
+    supervisorName: verified.supervisorName,
+  };
 }
 
 /**

@@ -32,6 +32,7 @@ const ROUTE_TITLES: Record<string, string> = {
   '/inventory': 'Inventory & Warehouse Hub',
   '/pos': 'Showroom POS Terminal',
   '/finance': 'Finance & Double-Entry Ledger',
+  '/finance/cash-book': 'Cash Book & Payment Vouchers',
   '/warranty': 'Warranty Claim Hub',
   '/commissions': 'Sales Commissions',
   '/reports': 'Enterprise Analytics',
@@ -42,7 +43,7 @@ const ROUTE_TITLES: Record<string, string> = {
   '/purchasing/orders/new': 'Create Purchase Order',
   '/purchasing/grn': 'Goods Received Notes (Read-Only)',
   '/purchasing/reports': 'Procurement & Purchasing Reports',
-  '/purchasing/returns': 'Purchase Returns (Under Development)',
+  '/purchasing/returns': 'Supplier Returns & Debit Notes',
 };
 
 export function Header({ onToggleSidebar }: HeaderProps) {
@@ -73,22 +74,34 @@ export function Header({ onToggleSidebar }: HeaderProps) {
   }, [overflowOpen]);
 
   // Determine current page title
-  const currentTitle =
-    ROUTE_TITLES[location.pathname] ||
-    (location.pathname.startsWith('/purchasing/orders') ? 'Purchase Order Details' :
-     location.pathname.startsWith('/purchasing/grn') ? 'GRN Inspection Details' :
-     location.pathname.startsWith('/purchasing') ? 'Purchasing Hub' :
-     location.pathname.startsWith('/products') ? 'Product Details' :
-     location.pathname.startsWith('/orders/activity') ? 'User Activity Log' :
-     location.pathname.startsWith('/orders') ? 'Sales Order Details' :
-     location.pathname.startsWith('/quotations') ? 'Quotation Details' :
-     location.pathname.startsWith('/invoices') ? 'Invoice Details' :
-     location.pathname.startsWith('/payments') ? 'Payment Details' :
-     location.pathname.startsWith('/finance') ? 'Finance & Ledger Desk' :
-     'DNS ERP Workspace');
+  const getHeaderTitle = () => {
+    const p = location.pathname;
+    if (ROUTE_TITLES[p]) return ROUTE_TITLES[p];
+    if (p === '/quotations/new') return 'New Quotation';
+    if (p.startsWith('/quotations/') && p.endsWith('/edit')) return 'Edit Quotation';
+    if (p.startsWith('/quotations/')) return 'Quotation Details';
+    if (p === '/orders/new') return 'New Sales Order';
+    if (p.startsWith('/orders/') && p.endsWith('/edit')) return 'Edit Sales Order';
+    if (p.startsWith('/orders/activity')) return 'User Activity Log';
+    if (p.startsWith('/orders/')) return 'Sales Order Details';
+    if (p === '/purchasing/orders/new') return 'New Purchase Order';
+    if (p.startsWith('/purchasing/orders/')) return 'Purchase Order Details';
+    if (p === '/purchasing/grn/new' || p === '/inventory/grn/new') return 'New Goods Received Note';
+    if (p.startsWith('/purchasing/grn/') || p.startsWith('/inventory/grn/')) return 'GRN Inspection Details';
+    if (p.startsWith('/purchasing')) return 'Purchasing Hub';
+    if (p === '/invoices/new') return 'New Invoice';
+    if (p.startsWith('/invoices/')) return 'Invoice Details';
+    if (p.startsWith('/payments/collect')) return 'Customer Collections';
+    if (p.startsWith('/payments/')) return 'Payment Details';
+    if (p.startsWith('/products/')) return 'Product Details';
+    if (p.startsWith('/finance')) return 'Finance & Ledger Desk';
+    if (p.startsWith('/pos')) return 'Showroom POS Terminal';
+    return 'DNS ERP Workspace';
+  };
+  const currentTitle = getHeaderTitle();
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 w-full items-center justify-between bg-primary text-primary-foreground px-3 sm:px-6 backdrop-blur-md transition-all shrink-0">
+    <header className="sticky top-0 z-30 flex h-16 w-full items-center justify-between bg-primary text-primary-foreground px-3 sm:px-6 transition-all shrink-0">
       {/* Left: Mobile Toggle & Enterprise Brand / Page Title */}
       <div className="flex items-center gap-2 sm:gap-4 min-w-0">
         {location.pathname !== '/' ? (
@@ -114,23 +127,23 @@ export function Header({ onToggleSidebar }: HeaderProps) {
 
         {location.pathname === '/' ? (
           <Link to="/" className="flex items-center gap-2.5 min-w-0 group">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-white p-0.5 shadow-sm ring-1 ring-white/20 transition-transform group-hover:scale-105 overflow-hidden">
+            <div className="flex h-8 w-8 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-xl bg-white p-1 shadow-xs ring-1 ring-white/20 transition-transform group-hover:scale-105 overflow-hidden">
               <img
                 src="/logo.png"
                 alt="DNS IMPORT & EXPORT"
-                className="h-full w-full object-contain"
+                className="h-full w-full max-h-full max-w-full object-contain pointer-events-none select-none"
               />
             </div>
-            <div className="min-w-0">
+            <div className="flex flex-col min-w-0">
               <div className="flex items-center gap-1.5">
-                <h1 className="text-sm sm:text-lg md:text-xl font-bold text-primary-foreground tracking-tight truncate leading-tight">
-                  LabsCore ERP
+                <h1 className="text-sm sm:text-lg md:text-xl font-extrabold text-primary-foreground tracking-tight truncate leading-tight">
+                  DNS ERP
                 </h1>
-                <span className="sm:hidden text-[9px] bg-white/20 text-white font-bold px-1.5 py-0.2 rounded-full uppercase tracking-wider">
+                <span className="text-[9px] bg-white/20 text-white font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wider">
                   Sales
                 </span>
               </div>
-              <span className="hidden sm:block text-[10.5px] sm:text-[11.5px] text-primary-foreground/80 font-semibold uppercase tracking-wider -mt-0.5 truncate">
+              <span className="hidden sm:block text-[10.5px] sm:text-[11.5px] text-primary-foreground/80 font-medium uppercase tracking-wider -mt-0.5 truncate">
                 DNS IMPORT & EXPORT (PVT) LTD.
               </span>
             </div>
@@ -173,8 +186,10 @@ export function Header({ onToggleSidebar }: HeaderProps) {
 
       {/* Right: Enterprise Utility Toolbar & Far-Right User Profile Avatar */}
       <div className="flex items-center gap-1 sm:gap-1.5 md:gap-2 shrink-0">
-        {/* Enterprise Notifications (Always visible) */}
-        <NotificationsPopover />
+        {/* Enterprise Notifications (Visible on both mobile & desktop) */}
+        <div className="flex items-center">
+          <NotificationsPopover />
+        </div>
 
         {/* Desktop-only secondary tools */}
         <div className="hidden md:flex items-center gap-1.5 md:gap-2">
@@ -188,12 +203,12 @@ export function Header({ onToggleSidebar }: HeaderProps) {
           <FullscreenButton />
         </div>
 
-        {/* Mobile Overflow Menu */}
+        {/* Mobile Menu Button (Only control kept on mobile right side) */}
         <div className="relative md:hidden" ref={overflowRef}>
           <button
             type="button"
             onClick={() => setOverflowOpen((prev) => !prev)}
-            className="flex h-9 w-9 items-center justify-center rounded-lg text-primary-foreground/80 hover:bg-primary-foreground/15 hover:text-primary-foreground transition-colors cursor-pointer"
+            className="flex h-9 w-9 items-center justify-center rounded-xl text-primary-foreground/90 hover:bg-white/15 active:scale-95 transition-all cursor-pointer"
             aria-label="More utilities"
             aria-expanded={overflowOpen}
           >
@@ -231,11 +246,13 @@ export function Header({ onToggleSidebar }: HeaderProps) {
           )}
         </div>
 
-        {/* Subtle Separator */}
-        <div className="h-4.5 w-px bg-white/20 mx-1 sm:mx-1.5" aria-hidden="true" />
+        {/* Subtle Separator (Desktop/Tablet only) */}
+        <div className="hidden sm:block h-4 w-px bg-white/20 mx-1 sm:mx-1.5" aria-hidden="true" />
 
-        {/* User Profile / Avatar (Far-right) */}
-        <UserProfileMenu />
+        {/* User Profile / Avatar (Hidden on mobile, visible sm+) */}
+        <div className="hidden sm:flex items-center">
+          <UserProfileMenu />
+        </div>
 
         {/* Mobile Dialog Modals for Tools */}
         <CurrencyConverterPopover

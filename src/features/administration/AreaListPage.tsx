@@ -8,6 +8,7 @@ import { Select } from '../../components/ui/select';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../../components/ui/table';
 import { Edit3, Trash2, Plus, Map, Briefcase, Hash, MapPin } from 'lucide-react';
 import { Dialog, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
+import { PageHeader } from '../../components/common/PageHeader';
 
 export function AreaListPage() {
   const { areas, loading: areasLoading, createArea, updateArea, deleteArea } = useAreas();
@@ -70,13 +71,18 @@ export function AreaListPage() {
 
   return (
     <div className="w-full space-y-5">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Area Management</h1>
-          <p className="text-sm text-slate-500 mt-1">Manage operational areas, regions, and assign Area Managers.</p>
-        </div>
-        <Button onClick={() => handleOpenModal()} className="gap-2 bg-indigo-600 hover:bg-indigo-700 shadow-sm"><Plus className="h-4 w-4" /> Create Area</Button>
-      </div>
+      <PageHeader
+        title="Area Management"
+        breadcrumbs={[
+          { label: 'Administration' },
+          { label: 'Areas' },
+        ]}
+        actions={
+          <Button onClick={() => handleOpenModal()} className="gap-2 bg-primary hover:bg-primary-hover shadow-xs">
+            <Plus className="h-4 w-4" /> Create Area
+          </Button>
+        }
+      />
 
       <div className="rounded-2xl border border-slate-200/80 bg-white shadow-sm overflow-hidden">
         <Table>

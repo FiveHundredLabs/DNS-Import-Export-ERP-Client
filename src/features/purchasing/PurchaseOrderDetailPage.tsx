@@ -25,6 +25,8 @@ import { Badge } from '../../components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Textarea } from '../../components/ui/textarea';
 import { TableLoadingSkeleton } from '../../components/common/LoadingSkeleton';
+import { PageHeader } from '../../components';
+import { ArrowRight } from 'lucide-react';
 import { toast } from 'sonner';
 
 export function PurchaseOrderDetailPage() {
@@ -145,85 +147,95 @@ export function PurchaseOrderDetailPage() {
 
   return (
     <div className="space-y-6 pb-12">
-      {/* Top Navigation & Action Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => navigate('/purchasing/orders')}
-            className="text-slate-600 hover:text-slate-900 -ml-2"
-          >
-            <ArrowLeft className="h-4 w-4 mr-1" />
-            <span>Orders</span>
-          </Button>
-          <div>
-            <div className="flex items-center gap-2.5">
-              <h1 className="text-2xl font-bold tracking-tight text-slate-900 font-mono">
-                {po.poNumber}
-              </h1>
-              <PurchaseOrderStatusBadge status={po.status} />
-            </div>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Issued on {formatDate(po.orderDate)} • Expected by {formatDate(po.expectedDeliveryDate)}
-            </p>
-          </div>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2">
-          {/* Print A4 Document */}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => navigate(`/purchasing/orders/${po.id}/print`)}
-            className="gap-1.5 text-xs bg-white hover:bg-slate-50 text-slate-700"
-          >
-            <Printer className="h-3.5 w-3.5" />
-            <span>View / Print A4</span>
-          </Button>
-
-          {/* Edit (Draft or Rejected) */}
-          {(po.status === 'DRAFT' || po.status === 'REJECTED') && (
+      {/* Top Standardized Page Header */}
+      <PageHeader
+        title={<span className="font-mono">{po.poNumber}</span>}
+        subtitle={`Issued on ${formatDate(po.orderDate)} • Expected by ${formatDate(po.expectedDeliveryDate)}`}
+        badge={<PurchaseOrderStatusBadge status={po.status} />}
+        backUrl="/purchasing/orders"
+        backLabel="Orders"
+        breadcrumbs={[
+          { label: 'Purchasing', href: '/purchasing/orders' },
+          { label: 'Orders', href: '/purchasing/orders' },
+          { label: po.poNumber },
+        ]}
+        actions={
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Print A4 Document */}
             <Button
               variant="outline"
               size="sm"
-              onClick={() => navigate(`/purchasing/orders/${po.id}/edit`)}
+              onClick={() => navigate(`/purchasing/orders/${po.id}/print`)}
               className="gap-1.5 text-xs bg-white hover:bg-slate-50 text-slate-700"
             >
-              <Edit className="h-3.5 w-3.5" />
-              <span>Edit Order</span>
+              <Printer className="h-3.5 w-3.5" />
+              <span>View / Print A4</span>
             </Button>
-          )}
 
-          {/* Submit for Approval */}
-          {(po.status === 'DRAFT' || po.status === 'REJECTED') && (
-            <Button
-              variant="default"
-              size="sm"
-              disabled={actionLoading}
-              onClick={handleSubmitForApproval}
-              className="gap-1.5 text-xs bg-amber-600 hover:bg-amber-700 text-white"
-            >
-              <Send className="h-3.5 w-3.5" />
-              <span>Submit for Approval</span>
-            </Button>
-          )}
+            {/* Edit (Draft or Rejected) */}
+            {(po.status === 'DRAFT' || po.status === 'REJECTED') && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigate(`/purchasing/orders/${po.id}/edit`)}
+                className="gap-1.5 text-xs bg-white hover:bg-slate-50 text-slate-700"
+              >
+                <Edit className="h-3.5 w-3.5" />
+                <span>Edit Order</span>
+              </Button>
+            )}
 
-          {/* Mark Sent to Supplier */}
-          {po.status === 'APPROVED' && (
-            <Button
-              variant="default"
-              size="sm"
-              disabled={actionLoading}
-              onClick={handleMarkSent}
-              className="gap-1.5 text-xs bg-blue-600 hover:bg-blue-700 text-white"
-            >
-              <Send className="h-3.5 w-3.5" />
-              <span>Dispatch to Supplier</span>
-            </Button>
-          )}
+            {/* Submit for Approval */}
+            {(po.status === 'DRAFT' || po.status === 'REJECTED') && (
+              <Button
+                variant="default"
+                size="sm"
+                disabled={actionLoading}
+                onClick={handleSubmitForApproval}
+                className="gap-1.5 text-xs bg-amber-600 hover:bg-amber-700 text-white font-medium shadow-xs"
+              >
+                <Send className="h-3.5 w-3.5" />
+                <span>Submit for Approval</span>
+              </Button>
+            )}
+
+            {/* Mark Sent to Supplier */}
+            {po.status === 'APPROVED' && (
+              <Button
+                variant="default"
+                size="sm"
+                disabled={actionLoading}
+                onClick={handleMarkSent}
+                className="gap-1.5 text-xs bg-blue-600 hover:bg-blue-700 text-white font-medium shadow-xs"
+              >
+                <Send className="h-3.5 w-3.5" />
+                <span>Dispatch to Supplier</span>
+              </Button>
+            )}
+          </div>
+        }
+      />
+
+      {/* Downstream Receiving / Warehouse Continuity Banner */}
+      {(po.status === 'SENT_TO_SUPPLIER' || po.status === 'PARTIALLY_RECEIVED' || po.status === 'COMPLETED') && (
+        <div className="p-3 bg-indigo-50/70 rounded-xl border border-indigo-200/80 text-xs text-indigo-900 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <PackageCheck className="h-4 w-4 text-indigo-600 shrink-0" />
+            <span>
+              <strong>Warehouse Inward Fulfillment:</strong> Track inbound receiving verification and damaged goods logs for this order in Goods Received Notes.
+            </span>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigate(`/purchasing/grn?search=${encodeURIComponent(po.poNumber)}`)}
+            className="h-7 text-xs bg-white hover:bg-indigo-50 border-indigo-300 text-indigo-700 shrink-0"
+          >
+            <span>View Related GRNs</span>
+            <ArrowRight className="h-3 w-3 ml-1" />
+          </Button>
         </div>
-      </div>
+      )}
 
       {/* Rejection Alert if rejected */}
       {po.status === 'REJECTED' && po.rejectionReason && (

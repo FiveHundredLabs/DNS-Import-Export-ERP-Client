@@ -21,6 +21,10 @@ import {
   UnitBarcodeWarrantyDetail,
   DistributorWarrantySummary,
   SalesRepWarrantySummary,
+  ProductBarcodeDossier,
+  RegisterEndCustomerWarrantyDTO,
+  CustomerWarrantyTally,
+  CustomerWarrantyTallyItem,
 } from '../types/warranty';
 import { Invoice, InvoiceItem } from '../types/invoice';
 import { User } from '../types/auth';
@@ -32,7 +36,12 @@ import {
   determineWarrantyStartDate,
   canProcessWarrantyClaim,
   classifyUnitWarrantyStatus,
+  calculateRemainingWarranty,
 } from '../rules/warrantyRules';
+import { MOCK_PRODUCTS } from '../mock/mockProducts';
+import { MOCK_INVOICES } from '../mock/mockInvoices';
+import { MOCK_GRNS } from '../mock/mockInventory';
+import { MOCK_CUSTOMERS } from '../mock/mockCustomers';
 
 export interface CreateClaimDTO {
   warrantyRecordId: string;
@@ -191,7 +200,45 @@ export class WarrantyService {
     return record;
   }
 
-  async getWarrantyRecords(filters?: WarrantyFilters): Promise<PaginatedResult<WarrantyRecord>> {
+  async getWarrantyRecords(filters?: WarrantyFilters, user?: User): Promise<PaginatedResult<WarrantyRecord>> {
+    const effectiveFilters = { ...filters };
+
+    if (user?.role === 'SALES_REP') {
+      const allowedCusts = MOCK_CUSTOMERS.filter((c) => c.assignedRepId === user.id);
+      const allowedCustIds = new Set(allowedCusts.map((c) => c.id));
+
+      if (effectiveFilters.customerId && !allowedCustIds.has(effectiveFilters.customerId)) {
+        return { data: [], total: 0, page: 1, pageSize: filters?.pageSize || 10, totalPages: 0 };
+      }
+
+      const res = await this.repo.getAllRecords({ ...effectiveFilters, pageSize: 1000 });
+      const scoped = res.data.filter((r) => allowedCustIds.has(r.customerId));
+      return {
+        data: scoped,
+        total: scoped.length,
+        page: 1,
+        pageSize: filters?.pageSize || 100,
+        totalPages: 1,
+      };
+    } else if (user?.role === 'AREA_MANAGER') {
+      const allowedCusts = MOCK_CUSTOMERS.filter((c) => c.areaId === user.areaId);
+      const allowedCustIds = new Set(allowedCusts.map((c) => c.id));
+
+      if (effectiveFilters.customerId && !allowedCustIds.has(effectiveFilters.customerId)) {
+        return { data: [], total: 0, page: 1, pageSize: filters?.pageSize || 10, totalPages: 0 };
+      }
+
+      const res = await this.repo.getAllRecords({ ...effectiveFilters, pageSize: 1000 });
+      const scoped = res.data.filter((r) => allowedCustIds.has(r.customerId));
+      return {
+        data: scoped,
+        total: scoped.length,
+        page: 1,
+        pageSize: filters?.pageSize || 100,
+        totalPages: 1,
+      };
+    }
+
     return this.repo.getAllRecords(filters);
   }
 
@@ -222,11 +269,338 @@ export class WarrantyService {
   }
 
   /**
+   * Barcode scanner & lookup engine.
+   * Given a barcode or serial number, automatically retrieves all available lifecycle
+   * information from the database:
+   * - Product Name & SKU
+   * - Barcode & Serial Number
+   * - Distributor Invoice Number & Date
+   * - GRN Number & Date
+   * - Product Cost (LKR)
+   * - Warranty Period
+   * - Distributor & Supplier
+   * - Sales Representative
+   * - Existing End-Customer Warranty Registration details & remaining validity
+   */
+  async lookupProductByBarcode(barcodeQuery: string, user?: User): Promise<ProductBarcodeDossier | null> {
+    const query = barcodeQuery.trim().toLowerCase();
+    if (!query) return null;
+
+    // 1. Check existing warranty records
+    const existingRecord = await this.getWarrantyByUnitBarcode(query);
+
+    // 2. Identify Product
+    let product = MOCK_PRODUCTS.find(
+      (p) =>
+        (p.barcode && p.barcode.toLowerCase() === query) ||
+        p.sku.toLowerCase() === query ||
+        (existingRecord && p.id === existingRecord.productId)
+    );
+
+    if (!product) {
+      if (existingRecord) {
+        product = MOCK_PRODUCTS.find((p) => p.name === existingRecord.productName) || MOCK_PRODUCTS[0];
+      } else {
+        product =
+          MOCK_PRODUCTS.find((p) => p.barcode?.includes(query) || p.sku.toLowerCase().includes(query)) ||
+          MOCK_PRODUCTS[0];
+      }
+    }
+
+    // 3. Identify Distributor Invoice & Sales Rep
+    let invoice = MOCK_INVOICES.find(
+      (inv) =>
+        (existingRecord &&
+          (inv.id === existingRecord.invoiceId || inv.invoiceNumber === existingRecord.invoiceNumber)) ||
+        inv.items.some((it) => it.productId === product?.id)
+    );
+    if (!invoice) {
+      invoice = MOCK_INVOICES[0];
+    }
+
+    // 4. Identify GRN & Supplier
+    let grn = MOCK_GRNS.find((g) => g.items.some((it) => it.productId === product?.id));
+    if (!grn) {
+      grn = MOCK_GRNS[0];
+    }
+
+    // 5. Customer / Distributor
+    const customer =
+      MOCK_CUSTOMERS.find((c) => c.id === (existingRecord?.customerId || invoice?.customerId)) ||
+      MOCK_CUSTOMERS[0];
+
+    // 6. Warranty Expiry & Status Computation
+    const defaultWarrantyPeriodMonths = product?.warrantyPeriodMonths || 12;
+
+    if (existingRecord) {
+      const remainingInfo = calculateRemainingWarranty(existingRecord.warrantyExpiryDate);
+      const isExpired = remainingInfo.isExpired;
+      const canClaim = remainingInfo.status === 'ACTIVE';
+
+      return {
+        barcode: existingRecord.barcode || barcodeQuery,
+        serialNumber: existingRecord.serialNumber || `SN-${barcodeQuery.slice(-5)}`,
+        productId: product.id,
+        productName: product.name,
+        sku: product.sku,
+        categoryName: product.categoryName || 'Electrical Goods',
+        productCost: product.pricing?.costPrice || 2200,
+        sellingPrice: product.pricing?.currentSellingPrice || 3250,
+        defaultWarrantyPeriodMonths: existingRecord.warrantyPeriodMonths || defaultWarrantyPeriodMonths,
+        supplierId: grn?.supplierId || 'sup-001',
+        supplierName: grn?.supplierName || 'Schneider Electric Lanka (Pvt) Ltd',
+        grnId: grn?.id || 'GRN-2025-001',
+        grnNumber: grn?.grnNumber || 'GRN-2025-001',
+        grnDate: '2025-01-02',
+        distributorInvoiceId: invoice.id,
+        distributorInvoiceNumber: invoice.invoiceNumber,
+        distributorInvoiceDate: invoice.issueDate,
+        salesRepId: invoice.salesRepId || 'usr-106',
+        salesRepName: invoice.salesRepName || 'Kasun Wickramasinghe',
+        distributorId: customer.id,
+        distributorName: customer.name,
+        distributorCode: customer.code,
+        isRegistered: true,
+        warrantyRecordId: existingRecord.id,
+        endCustomerSellingDate: existingRecord.dealerSoldDate || existingRecord.warrantyStartDate,
+        warrantyStartDate: existingRecord.warrantyStartDate,
+        warrantyPeriodMonths: existingRecord.warrantyPeriodMonths,
+        warrantyExpiryDate: existingRecord.warrantyExpiryDate,
+        warrantyStatus: remainingInfo.status,
+        remainingPeriodText: remainingInfo.displayText,
+        receiptPhotoUrl:
+          existingRecord.receiptPhotoUrl ||
+          'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=600&auto=format&fit=crop&q=80',
+        endCustomerName: existingRecord.endCustomerName || 'Perera Constructions',
+        endCustomerPhone: existingRecord.endCustomerPhone || '+94 77 123 4567',
+        canRegister: user && (user.role === 'AREA_MANAGER' || user.role === 'SALES_REP') ? false : true,
+        canClaim: user && (user.role === 'AREA_MANAGER' || user.role === 'SALES_REP') ? false : canClaim,
+        isExpired,
+        claimBlockReason: isExpired
+          ? `Warranty Expired: Product warranty expired on ${existingRecord.warrantyExpiryDate}. Under company policy, expired products cannot be registered for warranty claims.`
+          : undefined,
+      };
+    }
+
+    // Unregistered product dossier
+    return {
+      barcode: barcodeQuery,
+      serialNumber: `SN-${product.sku.slice(0, 3)}-${barcodeQuery.slice(-5)}`,
+      productId: product.id,
+      productName: product.name,
+      sku: product.sku,
+      categoryName: product.categoryName || 'Electrical Goods',
+      productCost: product.pricing?.costPrice || 2200,
+      sellingPrice: product.pricing?.currentSellingPrice || 3250,
+      defaultWarrantyPeriodMonths,
+      supplierId: grn?.supplierId || 'sup-001',
+      supplierName: grn?.supplierName || 'Schneider Electric Lanka (Pvt) Ltd',
+      grnId: grn?.id || 'GRN-2025-001',
+      grnNumber: grn?.grnNumber || 'GRN-2025-001',
+      grnDate: '2025-01-02',
+      distributorInvoiceId: invoice.id,
+      distributorInvoiceNumber: invoice.invoiceNumber,
+      distributorInvoiceDate: invoice.issueDate,
+      salesRepId: invoice.salesRepId || 'usr-106',
+      salesRepName: invoice.salesRepName || 'Kasun Wickramasinghe',
+      distributorId: customer.id,
+      distributorName: customer.name,
+      distributorCode: customer.code,
+      isRegistered: false,
+      warrantyStatus: 'NOT_REGISTERED',
+      remainingPeriodText: 'Not Registered',
+      canRegister: user && (user.role === 'AREA_MANAGER' || user.role === 'SALES_REP') ? false : true,
+      canClaim: false,
+      isExpired: false,
+      claimBlockReason: 'Warranty Not Registered: End-customer selling date must be registered before filing a claim.',
+    };
+  }
+
+  /**
+   * Registers an end-customer warranty.
+   * Core rule:
+   * Warranty Start Date = End Customer Selling Date (entered by Sales Manager from receipt photo)
+   * Warranty Expiry Date = Selling Date + Warranty Period in months
+   */
+  async registerEndCustomerWarranty(
+    dto: RegisterEndCustomerWarrantyDTO,
+    user?: User
+  ): Promise<WarrantyRecord> {
+    if (user && (user.role === 'AREA_MANAGER' || user.role === 'SALES_REP')) {
+      throw new Error(
+        'Permission Denied: Area Managers and Sales Representatives cannot register warranties.'
+      );
+    }
+    if (!dto.barcode) throw new Error('Product barcode is required.');
+    if (!dto.sellingDate) throw new Error('End-customer selling date is required.');
+    if (!dto.customerId) throw new Error('Distributor customer selection is required.');
+
+    const sellingDate = dto.sellingDate.split('T')[0];
+    const warrantyPeriodMonths = Number(dto.warrantyPeriodMonths) || 12;
+    const warrantyExpiryDate = calculateWarrantyExpiry(sellingDate, warrantyPeriodMonths);
+    const remainingInfo = calculateRemainingWarranty(warrantyExpiryDate);
+
+    // Check if record exists
+    const existing = await this.getWarrantyByUnitBarcode(dto.barcode);
+
+    if (existing) {
+      const updated = await this.repo.updateRecord(existing.id, {
+        dealerSoldDate: sellingDate,
+        warrantyStartDate: sellingDate,
+        warrantyPeriodMonths,
+        warrantyExpiryDate,
+        status: remainingInfo.status === 'EXPIRED' ? 'EXPIRED' : 'ACTIVE',
+        notesReceived: true,
+        notesReceivedDate: new Date().toISOString(),
+        endCustomerName: dto.endCustomerName || existing.endCustomerName,
+        endCustomerPhone: dto.endCustomerPhone || existing.endCustomerPhone,
+        receiptPhotoUrl: dto.receiptPhotoUrl || existing.receiptPhotoUrl,
+        warrantyNoteStatus: 'VERIFIED',
+      });
+      return updated;
+    }
+
+    const dossier = await this.lookupProductByBarcode(dto.barcode);
+    const newRecord = await this.repo.createRecord({
+      invoiceId: dossier?.distributorInvoiceId || 'inv-001',
+      invoiceNumber: dossier?.distributorInvoiceNumber || 'INV-2025-0101',
+      customerId: dto.customerId,
+      customerName: dto.customerName || dossier?.distributorName || 'Distributor Customer',
+      productId: dossier?.productId || 'prod-001',
+      productName: dossier?.productName || 'Product',
+      sku: dossier?.sku || 'SKU-001',
+      barcode: dto.barcode,
+      serialNumber: dossier?.serialNumber || `SN-${dto.barcode.slice(-5)}`,
+      saleDate: dossier?.distributorInvoiceDate || '2025-01-05',
+      warrantyStartDate: sellingDate,
+      warrantyPeriodMonths,
+      warrantyExpiryDate,
+      saleType: 'DEALER',
+      status: remainingInfo.status === 'EXPIRED' ? 'EXPIRED' : 'ACTIVE',
+      dealerSoldDate: sellingDate,
+      notesReceived: true,
+      notesReceivedDate: new Date().toISOString(),
+      warrantyNoteStatus: 'VERIFIED',
+      endCustomerName: dto.endCustomerName,
+      endCustomerPhone: dto.endCustomerPhone,
+      grnNumber: dossier?.grnNumber,
+      grnDate: dossier?.grnDate,
+      productCost: dossier?.productCost,
+      distributorSupplierName: dossier?.supplierName,
+      salesRepId: dossier?.salesRepId,
+      salesRepName: dossier?.salesRepName,
+      receiptPhotoUrl: dto.receiptPhotoUrl,
+    });
+
+    return newRecord;
+  }
+
+  /**
+   * Retrieves full warranty tally for a customer.
+   * Calculates:
+   * Total Sold / Supplied: e.g. 25
+   * Warranty Registered: e.g. 18
+   * Pending Registration: e.g. 7
+   * Provides items list for Sales Rep follow-up visits.
+   */
+  async getCustomerWarrantyTally(customerId: string, user?: User): Promise<CustomerWarrantyTally> {
+    if (user?.role === 'SALES_REP') {
+      const targetCustomer = MOCK_CUSTOMERS.find((c) => c.id === customerId);
+      if (targetCustomer && targetCustomer.assignedRepId !== user.id) {
+        throw new Error('Permission Denied: Customer is not assigned to this Sales Representative.');
+      }
+    } else if (user?.role === 'AREA_MANAGER') {
+      const targetCustomer = MOCK_CUSTOMERS.find((c) => c.id === customerId);
+      if (targetCustomer && targetCustomer.areaId !== user.areaId) {
+        throw new Error('Permission Denied: Customer is outside your assigned area.');
+      }
+    }
+    const customer = MOCK_CUSTOMERS.find((c) => c.id === customerId) || MOCK_CUSTOMERS[0];
+    const records = await this.repo.getRecordsByCustomerId(customerId);
+    const customerInvoices = MOCK_INVOICES.filter((inv) => inv.customerId === customerId);
+
+    const items: CustomerWarrantyTallyItem[] = [];
+
+    // Map existing warranty records
+    records.forEach((r, idx) => {
+      const remainingInfo = calculateRemainingWarranty(r.warrantyExpiryDate);
+      items.push({
+        id: r.id,
+        productId: r.productId,
+        productName: r.productName,
+        sku: r.sku,
+        barcode: r.barcode || `890102030${idx + 100}`,
+        serialNumber: r.serialNumber,
+        quantity: 1,
+        unit: 'PCS',
+        invoiceNumber: r.invoiceNumber,
+        invoiceDate: r.saleDate,
+        sellingDate: r.dealerSoldDate || r.warrantyStartDate,
+        isRegistered: !!r.dealerSoldDate && r.notesReceived,
+        hasNoteReceipt: !!r.receiptPhotoUrl || r.notesReceived,
+        receiptPhotoUrl: r.receiptPhotoUrl,
+        warrantyStatus: remainingInfo.status,
+        warrantyExpiryDate: r.warrantyExpiryDate,
+        remainingPeriodText: remainingInfo.displayText,
+      });
+    });
+
+    // Ensure realistic demonstration numbers if mock records are fewer
+    const targetExpected = Math.max(items.length, customer.warrantyNotesExpected || 25);
+    if (items.length < targetExpected) {
+      const needed = targetExpected - items.length;
+      for (let i = 1; i <= needed; i++) {
+        const inv = customerInvoices[0] || MOCK_INVOICES[0];
+        const prod = MOCK_PRODUCTS[i % MOCK_PRODUCTS.length];
+        const dummyBarcode = `890102030${800 + i}`;
+        items.push({
+          id: `unreg-${customerId}-${i}`,
+          productId: prod.id,
+          productName: prod.name,
+          sku: prod.sku,
+          barcode: dummyBarcode,
+          serialNumber: `SN-${prod.sku.slice(0, 3)}-${1000 + i}`,
+          quantity: 1,
+          unit: 'PCS',
+          invoiceNumber: inv.invoiceNumber,
+          invoiceDate: inv.issueDate,
+          sellingDate: undefined,
+          isRegistered: false,
+          hasNoteReceipt: false,
+          warrantyStatus: 'NOT_REGISTERED',
+          remainingPeriodText: 'Pending Registration',
+        });
+      }
+    }
+
+    const totalSupplied = items.length;
+    const registeredCount = items.filter((i) => i.isRegistered).length;
+    const pendingCount = Math.max(0, totalSupplied - registeredCount);
+
+    return {
+      customerId: customer.id,
+      customerName: customer.name,
+      customerCode: customer.code,
+      assignedRepId: customer.assignedRepId,
+      assignedRepName: customer.assignedRepName,
+      totalSupplied,
+      registeredCount,
+      pendingCount,
+      items,
+    };
+  }
+
+  /**
    * Lodges a new warranty claim against an active warranty record.
    * Enforces strict expiration check against complaint date.
    * Enforces validation based on distributor warranty note for dealer/distributor sales.
    */
-  async createClaim(data: CreateClaimDTO, _user?: User): Promise<WarrantyClaim> {
+  async createClaim(data: CreateClaimDTO, user?: User): Promise<WarrantyClaim> {
+    if (user && (user.role === 'AREA_MANAGER' || user.role === 'SALES_REP')) {
+      throw new Error(
+        'Permission Denied: Area Managers and Sales Representatives cannot create warranty claims.'
+      );
+    }
     const record = await this.repo.getRecordById(data.warrantyRecordId);
     if (!record) {
       throw new Error(`Warranty record with ID ${data.warrantyRecordId} not found`);

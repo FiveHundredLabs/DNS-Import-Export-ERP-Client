@@ -23,10 +23,10 @@ import {
   Layers,
   Receipt,
   Activity,
+  User,
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { cn } from '../../utils/cn';
-import { RoleSwitcher } from './RoleSwitcher';
 
 export function MobileNav() {
   const { role, currentUser, logout, canAccessRoute } = useAuth();
@@ -298,311 +298,155 @@ export function MobileNav() {
           </button>
         </div>
 
-        {/* User Badge / Territory Summary */}
-        <div className="my-4 flex items-center justify-between rounded-xl bg-slate-50 p-3 border border-slate-200/80">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-md bg-primary text-primary-foreground font-bold text-sm shadow-xs">
-              {currentUser.name
-                .split(' ')
-                .map((n) => n[0])
-                .join('')}
-            </div>
-            <div>
-              <div className="text-xs font-bold text-slate-900">{currentUser.name}</div>
-              <div className="text-[11px] text-slate-500 font-medium">
-                {role === 'AREA_MANAGER' ? (currentUser.areaName || 'Western Province Area') : 'Colombo Territory Rep'}
-              </div>
-            </div>
-          </div>
-          <span className="inline-flex items-center gap-1 rounded-md bg-primary-light px-2.5 py-1 text-[11px] font-semibold text-primary-text border border-primary-border">
-            <UserCheck className="h-3.5 w-3.5" />
-            {role.replace('_', ' ')}
-          </span>
-        </div>
-
-        {/* Group 1: Sales & Field Operations */}
-        <div className="space-y-2 mt-4">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 px-1">
-            Sales & Field Operations
-          </span>
-          <div className="grid grid-cols-2 gap-2.5">
-            {canAccessRoute('/orders') && (
-              <button
-                onClick={() => handleNavClick('/orders')}
-                className={cn(
-                  'flex items-center gap-3 p-3 rounded-2xl border text-left transition-all',
-                  location.pathname === '/orders'
-                    ? 'border-primary bg-primary-light/50 text-primary-text font-semibold'
-                    : 'border-slate-200/80 bg-white hover:bg-slate-50 text-slate-700'
-                )}
-              >
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary-light text-primary">
-                  <ShoppingCart className="h-4 w-4" />
-                </div>
-                <div className="min-w-0">
-                  <div className="text-xs font-semibold truncate">Sales Orders</div>
-                  <div className="text-[10.5px] text-slate-400 truncate">Registry &amp; Pipeline</div>
-                </div>
-              </button>
-            )}
-
-            {canAccessRoute('/payments') && (
-              <button
-                onClick={() => handleNavClick('/payments')}
-                className={cn(
-                  'flex items-center gap-3 p-3 rounded-2xl border text-left transition-all',
-                  location.pathname.startsWith('/payments') && !location.pathname.includes('/collect')
-                    ? 'border-primary bg-primary-light/50 text-primary-text font-semibold'
-                    : 'border-slate-200/80 bg-white hover:bg-slate-50 text-slate-700'
-                )}
-              >
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
-                  <CreditCard className="h-4 w-4" />
-                </div>
-                <div className="min-w-0">
-                  <div className="text-xs font-semibold truncate">Payments</div>
-                  <div className="text-[10.5px] text-slate-400 truncate">PDC & Receipts</div>
-                </div>
-              </button>
-            )}
-
-            {canAccessRoute('/payments') && (
-              <button
-                onClick={() => handleNavClick('/payments/collect')}
-                className={cn(
-                  'flex items-center gap-3 p-3 rounded-2xl border text-left transition-all',
-                  location.pathname.includes('/collect')
-                    ? 'border-emerald-500 bg-emerald-50 text-emerald-800 font-semibold'
-                    : 'border-slate-200/80 bg-white hover:bg-slate-50 text-slate-700'
-                )}
-              >
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
-                  <DollarSign className="h-4 w-4" />
-                </div>
-                <div className="min-w-0">
-                  <div className="text-xs font-semibold truncate">Collect Payment</div>
-                  <div className="text-[10.5px] text-emerald-600 font-medium truncate">Instant FIFO</div>
-                </div>
-              </button>
-            )}
-
-            {canAccessRoute('/quotations') && (
-              <button
-                onClick={() => handleNavClick('/quotations')}
-                className={cn(
-                  'flex items-center gap-3 p-3 rounded-2xl border text-left transition-all',
-                  location.pathname.startsWith('/quotations')
-                    ? 'border-primary bg-primary-light/50 text-primary-text font-semibold'
-                    : 'border-slate-200/80 bg-white hover:bg-slate-50 text-slate-700'
-                )}
-              >
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
-                  <FileSpreadsheet className="h-4 w-4" />
-                </div>
-                <div className="min-w-0">
-                  <div className="text-xs font-semibold truncate">Quotations</div>
-                  <div className="text-[10.5px] text-slate-400 truncate">Quotes & WhatsApp</div>
-                </div>
-              </button>
-            )}
-
-            {canAccessRoute('/warranty') && (
-              <button
-                onClick={() => handleNavClick('/warranty')}
-                className={cn(
-                  'flex items-center gap-3 p-3 rounded-2xl border text-left transition-all',
-                  location.pathname.startsWith('/warranty')
-                    ? 'border-primary bg-primary-light/50 text-primary-text font-semibold'
-                    : 'border-slate-200/80 bg-white hover:bg-slate-50 text-slate-700'
-                )}
-              >
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-purple-50 text-purple-600">
-                  <Store className="h-4 w-4" />
-                </div>
-                <div className="min-w-0">
-                  <div className="text-xs font-semibold truncate">Shop Follow-ups</div>
-                  <div className="text-[10.5px] text-slate-400 truncate">Pending Notes</div>
-                </div>
-              </button>
-            )}
-
-            {canAccessRoute('/invoices') && (
-              <button
-                onClick={() => handleNavClick('/invoices')}
-                className={cn(
-                  'flex items-center gap-3 p-3 rounded-2xl border text-left transition-all',
-                  location.pathname.startsWith('/invoices')
-                    ? 'border-primary bg-primary-light/50 text-primary-text font-semibold'
-                    : 'border-slate-200/80 bg-white hover:bg-slate-50 text-slate-700'
-                )}
-              >
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-violet-50 text-violet-600">
-                  <Receipt className="h-4 w-4" />
-                </div>
-                <div className="min-w-0">
-                  <div className="text-xs font-semibold truncate">Invoices</div>
-                  <div className="text-[10.5px] text-slate-400 truncate">Tax &amp; Billing</div>
-                </div>
-              </button>
-            )}
-
-            {canAccessRoute('/approvals') && (
-              <button
-                onClick={() => handleNavClick('/approvals')}
-                className={cn(
-                  'flex items-center gap-3 p-3 rounded-2xl border text-left transition-all',
-                  location.pathname.startsWith('/approvals')
-                    ? 'border-primary bg-primary-light/50 text-primary-text font-semibold'
-                    : 'border-slate-200/80 bg-white hover:bg-slate-50 text-slate-700'
-                )}
-              >
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-rose-50 text-rose-600">
-                  <CheckCircle className="h-4 w-4" />
-                </div>
-                <div className="min-w-0">
-                  <div className="text-xs font-semibold truncate">Approvals</div>
-                  <div className="text-[10.5px] text-slate-400 truncate">Engine Queue</div>
-                </div>
-              </button>
-            )}
-
+        {/* All Features Grid (All together without separate section headers) */}
+        <div className="grid grid-cols-2 gap-2.5 mt-4">
+          {canAccessRoute('/orders') && (
             <button
-              onClick={() => handleNavClick('/orders/activity-log')}
+              onClick={() => handleNavClick('/orders')}
               className={cn(
                 'flex items-center gap-3 p-3 rounded-2xl border text-left transition-all',
-                location.pathname.includes('/activity-log')
+                location.pathname === '/orders'
                   ? 'border-primary bg-primary-light/50 text-primary-text font-semibold'
                   : 'border-slate-200/80 bg-white hover:bg-slate-50 text-slate-700'
               )}
             >
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-teal-50 text-teal-600">
-                <Activity className="h-4 w-4" />
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary-light text-primary">
+                <ShoppingCart className="h-4 w-4" />
               </div>
               <div className="min-w-0">
-                <div className="text-xs font-semibold truncate">Activity Log</div>
-                <div className="text-[10.5px] text-slate-400 truncate">User Activity (Last Month)</div>
+                <div className="text-xs font-semibold truncate">Sales Orders</div>
+                <div className="text-[10.5px] text-slate-400 truncate">Registry &amp; Pipeline</div>
               </div>
             </button>
-          </div>
-        </div>
+          )}
 
-        {/* Group 2: Catalog & Stock */}
-        {(canAccessRoute('/products') || canAccessRoute('/inventory')) && (
-          <div className="space-y-2 mt-5">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 px-1">
-              Products & Inventory
-            </span>
-            <div className="grid grid-cols-2 gap-2.5">
-              {canAccessRoute('/products') && (
-                <button
-                  onClick={() => handleNavClick('/products')}
-                  className={cn(
-                    'flex items-center gap-3 p-3 rounded-2xl border text-left transition-all',
-                    location.pathname.startsWith('/products')
-                      ? 'border-primary bg-primary-light/50 text-primary-text font-semibold'
-                      : 'border-slate-200/80 bg-white hover:bg-slate-50 text-slate-700'
-                  )}
-                >
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-cyan-50 text-cyan-600">
-                    <Package className="h-4 w-4" />
-                  </div>
-                  <div className="min-w-0">
-                    <div className="text-xs font-semibold truncate">Products</div>
-                    <div className="text-[10.5px] text-slate-400 truncate">Prices & Discounts</div>
-                  </div>
-                </button>
+          {canAccessRoute('/payments') && (
+            <button
+              onClick={() => handleNavClick('/payments')}
+              className={cn(
+                'flex items-center gap-3 p-3 rounded-2xl border text-left transition-all',
+                location.pathname.startsWith('/payments') && !location.pathname.includes('/collect')
+                  ? 'border-primary bg-primary-light/50 text-primary-text font-semibold'
+                  : 'border-slate-200/80 bg-white hover:bg-slate-50 text-slate-700'
               )}
+            >
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+                <CreditCard className="h-4 w-4" />
+              </div>
+              <div className="min-w-0">
+                <div className="text-xs font-semibold truncate">Payments</div>
+                <div className="text-[10.5px] text-slate-400 truncate">PDC &amp; Receipts</div>
+              </div>
+            </button>
+          )}
 
-              {canAccessRoute('/inventory') && (
-                <button
-                  onClick={() => handleNavClick('/inventory/stock')}
-                  className={cn(
-                    'flex items-center gap-3 p-3 rounded-2xl border text-left transition-all',
-                    location.pathname.startsWith('/inventory')
-                      ? 'border-primary bg-primary-light/50 text-primary-text font-semibold'
-                      : 'border-slate-200/80 bg-white hover:bg-slate-50 text-slate-700'
-                  )}
-                >
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600">
-                    <Boxes className="h-4 w-4" />
-                  </div>
-                  <div className="min-w-0">
-                    <div className="text-xs font-semibold truncate">Warehouse Stock</div>
-                    <div className="text-[10.5px] text-slate-400 truncate">Live Quantities</div>
-                  </div>
-                </button>
+          {canAccessRoute('/payments') && (
+            <button
+              onClick={() => handleNavClick('/payments/collect')}
+              className={cn(
+                'flex items-center gap-3 p-3 rounded-2xl border text-left transition-all',
+                location.pathname.includes('/collect')
+                  ? 'border-emerald-500 bg-emerald-50 text-emerald-800 font-semibold'
+                  : 'border-slate-200/80 bg-white hover:bg-slate-50 text-slate-700'
               )}
-            </div>
-          </div>
-        )}
+            >
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+                <DollarSign className="h-4 w-4" />
+              </div>
+              <div className="min-w-0">
+                <div className="text-xs font-semibold truncate">Collect Payments</div>
+                <div className="text-[10.5px] text-emerald-600 font-medium truncate">Instant FIFO</div>
+              </div>
+            </button>
+          )}
 
-        {/* Group 3: Analytics & Approvals */}
-        {(canAccessRoute('/reports') || canAccessRoute('/commissions')) && (
-          <div className="space-y-2 mt-5">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 px-1">
-              Performance & Analytics
-            </span>
-            <div className="grid grid-cols-2 gap-2.5">
-              {canAccessRoute('/reports') && (
-                <button
-                  onClick={() => handleNavClick('/reports')}
-                  className={cn(
-                    'flex items-center gap-3 p-3 rounded-2xl border text-left transition-all',
-                    location.pathname.startsWith('/reports')
-                      ? 'border-primary bg-primary-light/50 text-primary-text font-semibold'
-                      : 'border-slate-200/80 bg-white hover:bg-slate-50 text-slate-700'
-                  )}
-                >
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-rose-50 text-rose-600">
-                    <BarChart3 className="h-4 w-4" />
-                  </div>
-                  <div className="min-w-0">
-                    <div className="text-xs font-semibold truncate">Reports</div>
-                    <div className="text-[10.5px] text-slate-400 truncate">Sales & Collections</div>
-                  </div>
-                </button>
+          {canAccessRoute('/quotations') && (
+            <button
+              onClick={() => handleNavClick('/quotations')}
+              className={cn(
+                'flex items-center gap-3 p-3 rounded-2xl border text-left transition-all',
+                location.pathname.startsWith('/quotations')
+                  ? 'border-primary bg-primary-light/50 text-primary-text font-semibold'
+                  : 'border-slate-200/80 bg-white hover:bg-slate-50 text-slate-700'
               )}
+            >
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
+                <FileSpreadsheet className="h-4 w-4" />
+              </div>
+              <div className="min-w-0">
+                <div className="text-xs font-semibold truncate">Quotations</div>
+                <div className="text-[10.5px] text-slate-400 truncate">Quotes &amp; WhatsApp</div>
+              </div>
+            </button>
+          )}
 
-              {canAccessRoute('/commissions') && (
-                <button
-                  onClick={() => handleNavClick('/commissions')}
-                  className={cn(
-                    'flex items-center gap-3 p-3 rounded-2xl border text-left transition-all',
-                    location.pathname.startsWith('/commissions')
-                      ? 'border-primary bg-primary-light/50 text-primary-text font-semibold'
-                      : 'border-slate-200/80 bg-white hover:bg-slate-50 text-slate-700'
-                  )}
-                >
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
-                    <Award className="h-4 w-4" />
-                  </div>
-                  <div className="min-w-0">
-                    <div className="text-xs font-semibold truncate">Targets & Incentive</div>
-                    <div className="text-[10.5px] text-slate-400 truncate">Commission Hub</div>
-                  </div>
-                </button>
+          {canAccessRoute('/invoices') && (
+            <button
+              onClick={() => handleNavClick('/invoices')}
+              className={cn(
+                'flex items-center gap-3 p-3 rounded-2xl border text-left transition-all',
+                location.pathname.startsWith('/invoices')
+                  ? 'border-primary bg-primary-light/50 text-primary-text font-semibold'
+                  : 'border-slate-200/80 bg-white hover:bg-slate-50 text-slate-700'
               )}
-            </div>
-          </div>
-        )}
+            >
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-violet-50 text-violet-600">
+                <Receipt className="h-4 w-4" />
+              </div>
+              <div className="min-w-0">
+                <div className="text-xs font-semibold truncate">Invoices</div>
+                <div className="text-[10.5px] text-slate-400 truncate">Tax &amp; Billing</div>
+              </div>
+            </button>
+          )}
 
-        {/* Group 4: Account Actions */}
-        <div className="pt-4 border-t border-slate-100 mt-4 space-y-2.5">
-          <div className="p-3 rounded-xl border border-slate-200/80 bg-slate-50">
-            <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5 px-0.5">
-              Switch Role View
-            </div>
-            <RoleSwitcher className="w-full" triggerClassName="w-full justify-between bg-white text-xs h-9 rounded-md" />
-          </div>
+          {canAccessRoute('/commissions') && (
+            <button
+              onClick={() => handleNavClick('/commissions')}
+              className={cn(
+                'flex items-center gap-3 p-3 rounded-2xl border text-left transition-all',
+                location.pathname.startsWith('/commissions')
+                  ? 'border-primary bg-primary-light/50 text-primary-text font-semibold'
+                  : 'border-slate-200/80 bg-white hover:bg-slate-50 text-slate-700'
+              )}
+            >
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
+                <Award className="h-4 w-4" />
+              </div>
+              <div className="min-w-0">
+                <div className="text-xs font-semibold truncate">Targets &amp; Incentives</div>
+                <div className="text-[10.5px] text-slate-400 truncate">Commission Hub</div>
+              </div>
+            </button>
+          )}
 
           <button
-            onClick={handleLogout}
-            className="w-full flex items-center justify-center gap-2 p-2.5 rounded-md border border-rose-200 bg-rose-50 hover:bg-rose-100 text-xs font-bold text-rose-700 transition-colors"
+            onClick={() => handleNavClick('/profile')}
+            className={cn(
+              'flex items-center gap-3 p-3 rounded-2xl border text-left transition-all',
+              location.pathname === '/profile'
+                ? 'border-primary bg-primary-light/50 text-primary-text font-semibold'
+                : 'border-slate-200/80 bg-white hover:bg-slate-50 text-slate-700'
+            )}
           >
-            <LogOut className="h-4 w-4 text-rose-600" />
-            <span>Sign Out Session</span>
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary-light text-primary">
+              <User className="h-4 w-4" />
+            </div>
+            <div className="min-w-0">
+              <div className="text-xs font-semibold truncate">Profile</div>
+              <div className="text-[10.5px] text-slate-400 truncate">Account Details</div>
+            </div>
           </button>
         </div>
+
+        {/* Logout Button */}
+        <button
+          onClick={handleLogout}
+          className="w-full mt-4 flex items-center justify-center gap-2 p-2.5 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 text-xs font-bold text-rose-700 transition-colors"
+        >
+          <LogOut className="h-4 w-4 text-rose-600" />
+          <span>Logout</span>
+        </button>
       </div>
     </>
   );

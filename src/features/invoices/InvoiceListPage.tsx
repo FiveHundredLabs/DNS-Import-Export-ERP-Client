@@ -24,6 +24,8 @@ import {
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../../components/ui/table';
 import { TableLoadingSkeleton } from '../../components/common/LoadingSkeleton';
 import { EmptyState } from '../../components/common/EmptyState';
+import { PageHeader } from '../../components/common/PageHeader';
+import { StatCard } from '../../components/common/StatCard';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 import { AmountDisplay } from '../../components/common/AmountDisplay';
 import {
@@ -179,110 +181,72 @@ export function InvoiceListPage() {
 
   return (
     <div className="space-y-4 sm:space-y-5 pb-24 md:pb-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">Commercial Tax Invoices</h1>
-          <p className="text-xs text-slate-500 mt-0.5">
-            IRD-compliant invoice management, credit receivables tracking, and settlement history.
-          </p>
-        </div>
-        <div className="flex items-center gap-2 w-full sm:w-auto">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={fetchInvoices}
-            className="h-9 px-3 gap-1.5 text-xs rounded-xl"
-            title="Refresh Invoices"
-          >
-            <RefreshCw className="h-3.5 w-3.5" />
-            <span>Refresh</span>
-          </Button>
-          <Button
-            size="sm"
-            onClick={() => setCreateModalOpen(true)}
-            className="h-9 px-3.5 bg-primary hover:bg-primary-hover text-white text-xs font-bold gap-1.5 shadow-xs rounded-xl flex-1 sm:flex-initial justify-center cursor-pointer"
-          >
-            <Plus className="h-4 w-4" />
-            <span>Create Invoice</span>
-          </Button>
-          <Button
-            size="sm"
-            onClick={() => navigate('/payments/new')}
-            className="h-9 px-3.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold gap-1.5 shadow-xs rounded-xl flex-1 sm:flex-initial justify-center"
-          >
-            <CreditCard className="h-3.5 w-3.5" />
-            <span>Record Payment</span>
-          </Button>
-        </div>
-      </div>
+      {/* Canonical Page Header */}
+      <PageHeader
+        title="Commercial Tax Invoices"
+        subtitle="IRD-compliant invoice management, credit receivables tracking, and settlement history."
+        actions={
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={fetchInvoices}
+              className="h-9 px-3 gap-1.5 text-xs"
+              title="Refresh Invoices"
+            >
+              <RefreshCw className="h-3.5 w-3.5" />
+              <span>Refresh</span>
+            </Button>
+            <Button
+              size="sm"
+              onClick={() => setCreateModalOpen(true)}
+              className="h-9 px-3.5 bg-primary hover:bg-primary-hover text-white text-xs font-semibold gap-1.5 shadow-xs flex-1 sm:flex-initial justify-center cursor-pointer"
+            >
+              <Plus className="h-4 w-4" />
+              <span>Create Invoice</span>
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate('/payments/new')}
+              className="h-9 px-3.5 text-xs font-semibold gap-1.5 shadow-xs flex-1 sm:flex-initial justify-center"
+            >
+              <CreditCard className="h-3.5 w-3.5" />
+              <span>Record Payment</span>
+            </Button>
+          </div>
+        }
+      />
 
-      {/* Metrics Row (Compact 2x2 Grid on Mobile, 4 Columns on Desktop) */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
-        <Card className="border-slate-200 min-w-0 overflow-hidden shadow-2xs">
-          <CardContent className="p-2.5 sm:p-3.5">
-            <div className="flex items-center justify-between gap-2">
-              <div className="min-w-0 flex-1">
-                <p className="text-[11px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider truncate">Total Receivables</p>
-                <div className="mt-0.5 min-w-0">
-                  <AmountDisplay amount={totalReceivables} className="text-sm sm:text-lg font-bold text-slate-900" />
-                </div>
-              </div>
-              <div className="h-8 w-8 sm:h-9 sm:w-9 rounded-lg bg-primary-light text-primary flex items-center justify-center shrink-0">
-                <Receipt className="h-4 w-4 sm:h-5 sm:w-5" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      {/* Metrics Row (Standardized Summary Cards) */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <StatCard
+          title="Total Receivables"
+          value={formatCurrency(totalReceivables)}
+          icon={Receipt}
+          variant="indigo"
+        />
 
-        <Card className="border-slate-200 min-w-0 overflow-hidden shadow-2xs">
-          <CardContent className="p-2.5 sm:p-3.5">
-            <div className="flex items-center justify-between gap-2">
-              <div className="min-w-0 flex-1">
-                <p className="text-[11px] sm:text-xs font-semibold text-rose-600 uppercase tracking-wider truncate">Overdue Invoices</p>
-                <div className="mt-0.5 min-w-0 flex items-baseline gap-1 truncate">
-                  <span className="text-sm sm:text-base font-bold tabular-nums text-rose-600 shrink-0">{overdueCount}</span>
-                  <span className="text-[11px] sm:text-xs text-rose-600 font-semibold truncate">
-                    ({formatCurrency(overdueAmount)})
-                  </span>
-                </div>
-              </div>
-              <div className="h-8 w-8 sm:h-9 sm:w-9 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center shrink-0">
-                <AlertTriangle className="h-4 w-4 sm:h-5 sm:w-5" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <StatCard
+          title="Overdue Invoices"
+          value={overdueCount}
+          icon={AlertTriangle}
+          variant="rose"
+        />
 
-        <Card className="border-slate-200 min-w-0 overflow-hidden shadow-2xs">
-          <CardContent className="p-2.5 sm:p-3.5">
-            <div className="flex items-center justify-between gap-2">
-              <div className="min-w-0 flex-1">
-                <p className="text-[11px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider truncate">Active</p>
-                <p className="text-sm sm:text-base font-bold tabular-nums text-primary mt-0.5 truncate">
-                  {invoices.filter((i) => i.status === 'ISSUED' || i.status === 'PARTIALLY_PAID').length} open
-                </p>
-              </div>
-              <div className="h-8 w-8 sm:h-9 sm:w-9 rounded-lg bg-primary-light text-primary flex items-center justify-center shrink-0">
-                <Clock className="h-4 w-4 sm:h-5 sm:w-5" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <StatCard
+          title="Active"
+          value={`${invoices.filter((i) => i.status === 'ISSUED' || i.status === 'PARTIALLY_PAID').length} open`}
+          icon={Clock}
+          variant="blue"
+        />
 
-        <Card className="border-slate-200 min-w-0 overflow-hidden shadow-2xs">
-          <CardContent className="p-2.5 sm:p-3.5">
-            <div className="flex items-center justify-between gap-2">
-              <div className="min-w-0 flex-1">
-                <p className="text-[11px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider truncate">Settled</p>
-                <p className="text-sm sm:text-base font-bold tabular-nums text-emerald-600 mt-0.5 truncate">{paidCount} Paid</p>
-              </div>
-              <div className="h-8 w-8 sm:h-9 sm:w-9 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
-                <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <StatCard
+          title="Settled"
+          value={`${paidCount} Paid`}
+          icon={CheckCircle}
+          variant="emerald"
+        />
       </div>
 
       {/* Filter and Search Bar */}
@@ -698,49 +662,49 @@ export function InvoiceListPage() {
                             )}
                             <Button
                               variant="ghost"
-                              size="sm"
+                              size="icon-sm"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 setPreviewInvoice(inv);
                                 setPreviewModalOpen(true);
                               }}
-                              className="h-7 w-7 p-0 text-primary hover:text-primary hover:bg-primary/10"
+                              className="text-primary hover:text-primary hover:bg-primary/10"
                               title="Preview A4 Document"
                             >
                               <Eye className="h-3.5 w-3.5" />
                             </Button>
                             <Button
                               variant="ghost"
-                              size="sm"
+                              size="icon-sm"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 printerService.printInvoice(inv);
                               }}
-                              className="h-7 w-7 p-0 text-slate-500 hover:text-slate-900"
+                              className="text-slate-500 hover:text-slate-900"
                               title="Print Invoice"
                             >
                               <Printer className="h-3.5 w-3.5" />
                             </Button>
                             <Button
                               variant="ghost"
-                              size="sm"
+                              size="icon-sm"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 pdfService.downloadInvoicePdf(inv);
                               }}
-                              className="h-7 w-7 p-0 text-slate-500 hover:text-slate-900"
+                              className="text-slate-500 hover:text-slate-900"
                               title="Download PDF"
                             >
                               <Download className="h-3.5 w-3.5" />
                             </Button>
                             <Button
                               variant="ghost"
-                              size="sm"
+                              size="icon-sm"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 whatsAppService.shareInvoice(inv);
                               }}
-                              className="h-7 w-7 p-0 text-emerald-600 hover:text-emerald-700"
+                              className="text-emerald-600 hover:text-emerald-700"
                               title="Share via WhatsApp"
                             >
                               <Send className="h-3.5 w-3.5" />
@@ -748,12 +712,12 @@ export function InvoiceListPage() {
                             {inv.balanceAmount > 0 && (
                               <Button
                                 variant="ghost"
-                                size="sm"
+                                size="xs"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   navigate(`/invoices/${inv.id}?collect=true`);
                                 }}
-                                className="h-7 px-2 text-xs font-semibold text-emerald-700 hover:bg-emerald-50 gap-1 rounded-lg"
+                                className="font-semibold text-emerald-700 hover:bg-emerald-50 gap-1 rounded-lg"
                                 title="Collect Payment on this Invoice"
                               >
                                 <CreditCard className="h-3.5 w-3.5" />

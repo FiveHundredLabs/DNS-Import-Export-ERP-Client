@@ -10,6 +10,7 @@ import { Invoice } from '../../../types/invoice';
 import { useAuth } from '../../../hooks/useAuth';
 import { BarcodeVisual } from '../../../components/common/BarcodeVisual';
 import { PaginationControls } from '../../../components/common/PaginationControls';
+import { PageHeader } from '../../../components/common/PageHeader';
 import { DeliveryNoteBarcodeModal } from './DeliveryNoteBarcodeModal';
 import {
   Truck,
@@ -394,68 +395,43 @@ export const DeliveryNoteCreatePage: React.FC = () => {
   return (
     <div className="w-full space-y-6">
       {/* ── Page Top Header ── */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => navigate('/inventory/delivery-notes')}
-            className="text-xs mb-1 -ml-2 text-slate-500 hover:text-slate-900 gap-1.5"
-          >
-            <ArrowLeft className="h-3.5 w-3.5" />
-            Back to Delivery Notes
-          </Button>
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-primary/10 text-primary">
-              <Truck className="h-6 w-6" />
-            </div>
-            <div>
-              <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
-                Create Warehouse Delivery Note
-              </h1>
-              <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-                Convert Draft Sales Invoices into physical dispatch notes with unit barcode allocation, sticker printing, and customer handover.
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {selectedInvoice && (
-          <div className="flex items-center gap-2 flex-wrap">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={handleQuickAllocateAll}
-              className="gap-1.5 text-xs text-indigo-700 border-indigo-200 bg-indigo-50/50 hover:bg-indigo-50"
-            >
-              <Sparkles className="h-3.5 w-3.5 text-indigo-600" />
-              Quick Allocate All from Stock
-            </Button>
-            {totalScannedUnits > 0 && (
+      <PageHeader
+        title="Create Warehouse Delivery Note"
+        breadcrumbs={[
+          { label: 'Inventory', href: '/inventory' },
+          { label: 'Delivery Notes', href: '/inventory/delivery-notes' },
+          { label: 'New' },
+        ]}
+        onBack={() => navigate('/inventory/delivery-notes')}
+        actions={
+          selectedInvoice && (
+            <div className="flex items-center gap-2 flex-wrap">
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={() => handleOpenPrintModal('ALL')}
-                className="gap-1.5 text-xs font-semibold text-primary border-primary/30 hover:bg-primary/5"
+                onClick={handleQuickAllocateAll}
+                className="gap-1.5 text-xs text-indigo-700 border-indigo-200 bg-indigo-50/50 hover:bg-indigo-50"
               >
-                <Printer className="h-3.5 w-3.5" />
-                Bulk Print Barcodes ({totalScannedUnits})
+                <Sparkles className="h-3.5 w-3.5 text-indigo-600" />
+                Quick Allocate All from Stock
               </Button>
-            )}
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => navigate('/inventory/delivery-notes')}
-              className="text-xs"
-            >
-              Cancel
-            </Button>
-          </div>
-        )}
-      </div>
+              {totalScannedUnits > 0 && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleOpenPrintModal('ALL')}
+                  className="gap-1.5 text-xs font-semibold text-primary border-primary/30 hover:bg-primary/5"
+                >
+                  <Printer className="h-3.5 w-3.5" />
+                  Bulk Print Barcodes ({totalScannedUnits})
+                </Button>
+              )}
+            </div>
+          )
+        }
+      />
 
       {/* ── Warehouse Stock Keeper Isolation Banner ── */}
       <div className="p-3.5 bg-blue-50 border border-blue-200 rounded-xl text-xs text-blue-800 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 shadow-2xs">
@@ -535,9 +511,7 @@ export const DeliveryNoteCreatePage: React.FC = () => {
                     <FileText className="h-4 w-4 text-primary" />
                     1. Select Draft Invoice
                   </CardTitle>
-                  <p className="text-[11px] text-slate-500 mt-0.5">
-                    Invoices converted from approved Sales Orders
-                  </p>
+
                 </div>
                 {selectedInvoice && (
                   <Button
@@ -1016,11 +990,7 @@ export const DeliveryNoteCreatePage: React.FC = () => {
                 <Barcode className="h-5 w-5 text-primary" />
                 Delivery Note Barcode Stickers Studio
               </CardTitle>
-              <CardDescription className="text-xs text-slate-500 mt-0.5">
-                Code-128 physical unit barcode stickers generated for goods delivery to{' '}
-                <strong className="text-slate-800">{selectedInvoice?.customerName || 'Customer'}</strong>.
-                Print in bulk, item-wise, or one-by-one.
-              </CardDescription>
+
             </div>
 
             <div className="flex items-center gap-2 flex-wrap">
@@ -1241,9 +1211,7 @@ export const DeliveryNoteCreatePage: React.FC = () => {
                   <Truck className="h-5 w-5 text-primary" />
                   Delivery Note Dispatch Sign-Off Summary
                 </CardTitle>
-                <CardDescription className="text-xs text-slate-500 mt-0.5">
-                  Verify customer details, driver logistics, and physical item barcode allocations before generating the official dispatch receipt.
-                </CardDescription>
+
               </div>
 
               <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200 font-mono text-xs px-2.5 py-1">

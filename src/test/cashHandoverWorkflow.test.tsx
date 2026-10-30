@@ -335,10 +335,10 @@ describe('Daily Cash Handover & Payments Dashboard Workflow', () => {
         expect(screen.getAllByText(/Approved by Finance/i).length).toBeGreaterThan(0);
       });
 
-      // Tabs
-      expect(screen.getByTestId('tab-customer-accounts')).toBeInTheDocument();
+      // Only Cash Handovers tab is present
       expect(screen.getByTestId('tab-cash-handovers')).toBeInTheDocument();
-      expect(screen.getByTestId('tab-receipts-ledger')).toBeInTheDocument();
+      expect(screen.queryByTestId('tab-customer-accounts')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('tab-receipts-ledger')).not.toBeInTheDocument();
 
       // Hand Over Cash button
       expect(screen.getByTestId('btn-hand-over-cash')).toBeInTheDocument();

@@ -630,19 +630,31 @@ export function PaymentCollectionPage() {
                                 {pendingCollection > 0 ? formatCurrency(pendingCollection) : '—'}
                               </TableCell>
                               <TableCell className="text-right">
-                                <Input
-                                  type="number"
-                                  min="0"
-                                  max={allocableBalance}
-                                  step="any"
-                                  placeholder={isFullyCollected ? '0.00' : '0.00'}
-                                  disabled={isFullyCollected}
-                                  value={currentAlloc}
-                                  onChange={(e) => handleManualAllocationChange(inv.id, e.target.value)}
-                                  className={`font-mono text-xs text-right h-8 w-28 sm:w-36 ml-auto ${
-                                    isFullyCollected ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : ''
-                                  }`}
-                                />
+                                <div className="flex items-center justify-end gap-1.5">
+                                  {!isFullyCollected && allocableBalance > 0 && (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleManualAllocationChange(inv.id, allocableBalance.toString())}
+                                      className="text-[10px] font-bold text-primary hover:underline bg-primary-light px-2 py-1 rounded border border-primary-border shrink-0 cursor-pointer"
+                                      title="Allocate entire balance for this invoice"
+                                    >
+                                      Collect Full
+                                    </button>
+                                  )}
+                                  <Input
+                                    type="number"
+                                    min="0"
+                                    max={allocableBalance}
+                                    step="any"
+                                    placeholder={isFullyCollected ? '0.00' : '0.00'}
+                                    disabled={isFullyCollected}
+                                    value={currentAlloc}
+                                    onChange={(e) => handleManualAllocationChange(inv.id, e.target.value)}
+                                    className={`font-mono text-xs text-right h-8 w-24 sm:w-28 ${
+                                      isFullyCollected ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : ''
+                                    }`}
+                                  />
+                                </div>
                               </TableCell>
                             </TableRow>
                           );

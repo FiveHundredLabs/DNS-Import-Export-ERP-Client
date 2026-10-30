@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts';
+import { Bar, BarChart, CartesianGrid, XAxis } from 'recharts';
 import {
   Card,
   CardContent,
@@ -14,7 +14,9 @@ import {
 } from '../../../components/ui/chart';
 import { cn } from '../../../utils/cn';
 import { formatCurrency } from '../../../utils/formatters';
-import { TrendingUp, DollarSign } from 'lucide-react';
+import { TrendingUp } from 'lucide-react';
+import { useTheme } from '../../../hooks/useTheme';
+import { themeService, PrimaryColorOption } from '../../../services/ThemeService';
 
 // 30 daily ERP business records matching:
 // Wholesale B2B Total: LKR 31,420,000 (LKR 31.4M)
@@ -57,18 +59,18 @@ export const ERP_SALES_TRENDS_DATA = [
 export const chartConfig = {
   total: {
     label: 'Total Revenue',
-    color: '#2563EB',
+    color: '#263183',
     formattedTotal: 'LKR 48.5M',
     sublabel: '2,641 Orders',
   },
   wholesale: {
-    label: 'Wholesale B2B',
+    label: 'Sales Reps',
     color: '#0284C7',
     formattedTotal: 'LKR 31.4M',
     sublabel: '64.8% Share',
   },
   retail: {
-    label: 'Showroom Retail',
+    label: 'Showroom',
     color: '#059669',
     formattedTotal: 'LKR 17.1M',
     sublabel: '35.2% Share',
@@ -77,8 +79,8 @@ export const chartConfig = {
 
 export type ChartKey = keyof typeof chartConfig;
 
-// Custom Tooltip tailored for ERP Director revenue inspection
-function CustomRevenueTooltip({ active, payload, label }: any) {
+// Modern executive tooltip tailored for ERP Director revenue inspection
+function CustomRevenueTooltip({ active, payload, primaryColor }: any) {
   if (!active || !payload?.length) return null;
   const data = payload[0]?.payload;
   if (!data) return null;
@@ -90,38 +92,58 @@ function CustomRevenueTooltip({ active, payload, label }: any) {
     year: 'numeric',
   });
 
+  const wholesalePct = ((data.wholesale / data.total) * 100).toFixed(1);
+  const retailPct = ((data.retail / data.total) * 100).toFixed(1);
+
   return (
-    <div className="rounded-xl border border-slate-200/90 bg-white p-3.5 shadow-xl text-xs space-y-2 min-w-[200px]">
-      <div className="flex items-center justify-between border-b border-slate-100 pb-1.5">
-        <span className="font-semibold text-slate-900">{formattedDate}</span>
-        <span className="text-[11px] font-mono text-slate-500">{data.orders} orders</span>
+    <div className="rounded-2xl border border-slate-200/90 bg-white/95 backdrop-blur-md p-3.5 sm:p-4 shadow-xl text-xs space-y-2.5 min-w-[220px]">
+      <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+        <span className="font-bold text-slate-900 tracking-tight">{formattedDate}</span>
+        <span className="text-[10px] sm:text-[10.5px] font-mono font-medium px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">
+          {data.orders} orders
+        </span>
       </div>
 
-      <div className="space-y-1.5">
+      <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <span className="flex items-center gap-1.5 text-slate-600">
-            <span className="h-2 w-2 rounded-full bg-blue-600" />
+          <span className="flex items-center gap-1.5 font-medium text-slate-700">
+            <span
+              className="h-2.5 w-2.5 rounded-full shadow-2xs"
+              style={{ backgroundColor: primaryColor }}
+            />
             Total Revenue
           </span>
-          <span className="font-mono font-bold text-slate-900">
+          <span className="font-mono font-extrabold text-slate-900 text-sm">
             {formatCurrency(data.total)}
           </span>
         </div>
 
-        <div className="flex items-center justify-between">
+        {/* Visual Share Progress Bar */}
+        <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden flex">
+          <div
+            className="h-full bg-sky-500 rounded-l-full transition-all"
+            style={{ width: `${wholesalePct}%` }}
+          />
+          <div
+            className="h-full bg-emerald-500 rounded-r-full transition-all"
+            style={{ width: `${retailPct}%` }}
+          />
+        </div>
+
+        <div className="flex items-center justify-between text-[11px] pt-0.5">
           <span className="flex items-center gap-1.5 text-slate-500">
-            <span className="h-2 w-2 rounded-full bg-sky-600" />
-            Wholesale B2B
+            <span className="h-2 w-2 rounded-full bg-sky-500" />
+            Sales Reps ({wholesalePct}%)
           </span>
           <span className="font-mono font-semibold text-slate-700">
             {formatCurrency(data.wholesale)}
           </span>
         </div>
 
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between text-[11px]">
           <span className="flex items-center gap-1.5 text-slate-500">
-            <span className="h-2 w-2 rounded-full bg-emerald-600" />
-            Showroom Retail
+            <span className="h-2 w-2 rounded-full bg-emerald-500" />
+            Showroom ({retailPct}%)
           </span>
           <span className="font-mono font-semibold text-slate-700">
             {formatCurrency(data.retail)}
@@ -133,50 +155,165 @@ function CustomRevenueTooltip({ active, payload, label }: any) {
 }
 
 export function DirectorInteractiveBarChart() {
+  const { currentColor } = useTheme();
   const [activeChart, setActiveChart] = React.useState<ChartKey>('total');
+  const [themeColor, setThemeColor] = React.useState<PrimaryColorOption>(() =>
+    themeService.getPrimaryColor()
+  );
+
+  // Synchronize directly with themeService events for dynamic theme switching
+  React.useEffect(() => {
+    setThemeColor(themeService.getPrimaryColor());
+    const unsub = themeService.subscribe((updated) => {
+      setThemeColor(updated);
+    });
+    return unsub;
+  }, []);
+
+  const effectiveTheme = currentColor || themeColor;
+  const primaryHex = effectiveTheme?.hex || '#263183';
+
+  // Dynamic modern palette reactively bound to active ERP theme
+  const dynamicPalette = React.useMemo(() => {
+    const hex = primaryHex.toLowerCase();
+
+    // Red theme
+    if (hex.includes('ec1b27') || hex.includes('d40f1b') || hex.includes('b60a14')) {
+      return {
+        total: '#EC1B27',
+        totalGradientStart: '#F43F5E',
+        totalGradientEnd: '#BE123C',
+        wholesale: '#F97316',
+        wholesaleGradientStart: '#FB923C',
+        wholesaleGradientEnd: '#C2410C',
+        retail: '#10B981',
+        retailGradientStart: '#34D399',
+        retailGradientEnd: '#047857',
+      };
+    }
+
+    // Black / Slate theme
+    if (hex.includes('161511') || hex.includes('282723') || hex.includes('0d0c0a')) {
+      return {
+        total: '#1E293B',
+        totalGradientStart: '#475569',
+        totalGradientEnd: '#0F172A',
+        wholesale: '#64748B',
+        wholesaleGradientStart: '#94A3B8',
+        wholesaleGradientEnd: '#334155',
+        retail: '#0D9488',
+        retailGradientStart: '#2DD4BF',
+        retailGradientEnd: '#115E59',
+      };
+    }
+
+    // Default Dark Blue theme (#263183)
+    return {
+      total: primaryHex,
+      totalGradientStart: '#3B82F6',
+      totalGradientEnd: effectiveTheme?.hover || '#1D2667',
+      wholesale: '#0284C7',
+      wholesaleGradientStart: '#38BDF8',
+      wholesaleGradientEnd: '#0369A1',
+      retail: '#059669',
+      retailGradientStart: '#34D399',
+      retailGradientEnd: '#047857',
+    };
+  }, [primaryHex, effectiveTheme]);
+
+  const activeGradientId =
+    activeChart === 'total'
+      ? 'barThemeTotalGradient'
+      : activeChart === 'wholesale'
+      ? 'barThemeWholesaleGradient'
+      : 'barThemeRetailGradient';
 
   return (
-    <Card className="lg:col-span-8 bg-white border border-slate-200/80 rounded-2xl shadow-sm overflow-hidden flex flex-col justify-between">
-      {/* ── Card Header with ERP Metric Tabs ── */}
-      <CardHeader className="flex flex-col items-stretch space-y-0 border-b border-slate-200 p-0 sm:flex-row">
-        <div className="flex flex-1 flex-col justify-center gap-1 px-4 sm:px-6 py-3 sm:py-3.5">
+    <Card className="lg:col-span-8 bg-white border border-slate-200/80 rounded-2xl sm:rounded-3xl shadow-xs hover:shadow-sm transition-all overflow-hidden flex flex-col justify-between">
+      {/* ── Global Theme Gradient Definitions for Recharts ── */}
+      <svg className="sr-only absolute pointer-events-none" aria-hidden="true" width="0" height="0">
+        <defs>
+          <linearGradient id="barThemeTotalGradient" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={dynamicPalette.totalGradientStart} stopOpacity={0.95} />
+            <stop offset="100%" stopColor={dynamicPalette.totalGradientEnd} stopOpacity={0.78} />
+          </linearGradient>
+          <linearGradient id="barThemeWholesaleGradient" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={dynamicPalette.wholesaleGradientStart} stopOpacity={0.95} />
+            <stop offset="100%" stopColor={dynamicPalette.wholesaleGradientEnd} stopOpacity={0.78} />
+          </linearGradient>
+          <linearGradient id="barThemeRetailGradient" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={dynamicPalette.retailGradientStart} stopOpacity={0.95} />
+            <stop offset="100%" stopColor={dynamicPalette.retailGradientEnd} stopOpacity={0.78} />
+          </linearGradient>
+        </defs>
+      </svg>
+
+      {/* ── Card Header with Interactive ERP Metric Tabs ── */}
+      <CardHeader className="flex flex-col items-stretch space-y-0 border-b border-slate-200/80 p-0 sm:flex-row">
+        <div className="flex flex-1 flex-col justify-center gap-1 px-4 sm:px-6 py-3.5 sm:py-4">
           <div className="flex items-center gap-2">
-            <CardTitle className="text-sm sm:text-base font-bold text-slate-900 tracking-tight">
+            <CardTitle className="text-sm sm:text-base font-extrabold text-slate-900 tracking-tight">
               Commercial Sales &amp; Revenue Trends
             </CardTitle>
-            <span className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 font-mono">
+            <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 font-mono shadow-2xs">
               <TrendingUp className="h-3 w-3 text-emerald-600" />
               +20.7%
             </span>
           </div>
-          <CardDescription className="text-[11px] text-slate-500">
-            Daily revenue streams across Wholesale B2B &amp; Showroom Retail · Month Total: LKR 48,500,000
-          </CardDescription>
+
         </div>
 
-        <div className="flex border-t sm:border-t-0 sm:border-l border-slate-200 divide-x divide-slate-200">
+        <div className="flex border-t sm:border-t-0 sm:border-l border-slate-200/80 divide-x divide-slate-200/80">
           {(['total', 'wholesale', 'retail'] as const).map((key) => {
             const config = chartConfig[key];
             const isActive = activeChart === key;
+            const activeColor =
+              key === 'total'
+                ? dynamicPalette.total
+                : key === 'wholesale'
+                ? dynamicPalette.wholesale
+                : dynamicPalette.retail;
+
             return (
               <button
                 key={key}
                 data-active={isActive}
                 type="button"
                 className={cn(
-                  'relative z-10 flex flex-1 flex-col justify-center gap-0.5 px-3 sm:px-4 py-2 sm:py-2.5 text-left transition-all min-w-[90px] sm:min-w-[115px]',
+                  'relative z-10 flex flex-1 flex-col justify-center gap-0.5 px-3 sm:px-4 py-2 sm:py-2.5 text-left transition-all min-w-[90px] sm:min-w-[115px] cursor-pointer group',
                   isActive
-                    ? 'bg-slate-50/90 text-slate-900 border-b-2 border-b-primary shadow-2xs font-semibold'
+                    ? 'bg-slate-50/90 text-slate-900 shadow-2xs font-semibold'
                     : 'text-slate-600 hover:bg-slate-50/60'
                 )}
                 onClick={() => setActiveChart(key)}
               >
-                <span className="text-[9.5px] font-semibold text-slate-400 uppercase tracking-wider">
-                  {config.label}
-                </span>
-                <span className="text-xs sm:text-sm font-bold text-slate-900 tracking-tight font-mono">
+                {/* Active Accent Top Indicator Pill */}
+                {isActive && (
+                  <span
+                    className="absolute top-0 left-0 right-0 h-0.5 transition-all"
+                    style={{ backgroundColor: activeColor }}
+                  />
+                )}
+
+                <div className="flex items-center justify-between">
+                  <span className="text-[9.5px] font-bold text-slate-400 uppercase tracking-wider group-hover:text-slate-600 transition-colors">
+                    {config.label}
+                  </span>
+                  <span
+                    className="h-1.5 w-1.5 rounded-full transition-all"
+                    style={{
+                      backgroundColor: isActive ? activeColor : 'transparent',
+                    }}
+                  />
+                </div>
+
+                <span
+                  className="text-xs sm:text-sm font-extrabold tracking-tight font-mono transition-colors"
+                  style={{ color: isActive ? activeColor : undefined }}
+                >
                   {config.formattedTotal}
                 </span>
+
                 <span className="text-[9px] text-slate-400 font-medium">
                   {config.sublabel}
                 </span>
@@ -186,11 +323,11 @@ export function DirectorInteractiveBarChart() {
         </div>
       </CardHeader>
 
-      {/* ── Card Content with BarChart in Light Mode ── */}
+      {/* ── Modern Dynamic BarChart with Gradient & Track Fill ── */}
       <CardContent className="px-2 sm:p-6 pt-4 sm:pt-6">
         <ChartContainer
           config={chartConfig as any}
-          className="aspect-auto h-[260px] sm:h-[280px] w-full"
+          className="aspect-auto h-[260px] sm:h-[285px] w-full"
         >
           <BarChart
             accessibilityLayer
@@ -198,18 +335,35 @@ export function DirectorInteractiveBarChart() {
             margin={{
               left: 12,
               right: 12,
-              top: 10,
+              top: 12,
               bottom: 4,
             }}
           >
-            <CartesianGrid vertical={false} stroke="#F1F5F9" strokeDasharray="3 3" />
+            {/* Dynamic Linear Gradients for Theme Reactivity */}
+            <defs>
+              <linearGradient id="barThemeTotalGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={dynamicPalette.totalGradientStart} stopOpacity={0.95} />
+                <stop offset="100%" stopColor={dynamicPalette.totalGradientEnd} stopOpacity={0.78} />
+              </linearGradient>
+              <linearGradient id="barThemeWholesaleGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={dynamicPalette.wholesaleGradientStart} stopOpacity={0.95} />
+                <stop offset="100%" stopColor={dynamicPalette.wholesaleGradientEnd} stopOpacity={0.78} />
+              </linearGradient>
+              <linearGradient id="barThemeRetailGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={dynamicPalette.retailGradientStart} stopOpacity={0.95} />
+                <stop offset="100%" stopColor={dynamicPalette.retailGradientEnd} stopOpacity={0.78} />
+              </linearGradient>
+            </defs>
+
+            <CartesianGrid vertical={false} stroke="#F1F5F9" strokeDasharray="4 4" strokeOpacity={0.8} />
+
             <XAxis
               dataKey="date"
               tickLine={false}
               axisLine={false}
-              tickMargin={10}
+              tickMargin={12}
               minTickGap={28}
-              tick={{ fill: '#94A3B8', fontSize: 11, fontWeight: 500 }}
+              tick={{ fill: '#64748B', fontSize: 11, fontWeight: 500 }}
               tickFormatter={(value) => {
                 const date = new Date(value);
                 return date.toLocaleDateString('en-US', {
@@ -218,12 +372,18 @@ export function DirectorInteractiveBarChart() {
                 });
               }}
             />
-            <ChartTooltip content={<CustomRevenueTooltip />} />
+
+            <ChartTooltip
+              content={<CustomRevenueTooltip primaryColor={dynamicPalette.total} />}
+              cursor={{ fill: 'rgba(148, 163, 184, 0.08)', radius: 6 }}
+            />
+
             <Bar
               dataKey={activeChart}
-              fill={chartConfig[activeChart].color}
-              radius={[4, 4, 0, 0]}
-              maxBarSize={32}
+              fill={`url(#${activeGradientId})`}
+              radius={[6, 6, 0, 0]}
+              maxBarSize={30}
+              background={{ fill: '#F8FAFC', radius: [6, 6, 0, 0] }}
             />
           </BarChart>
         </ChartContainer>

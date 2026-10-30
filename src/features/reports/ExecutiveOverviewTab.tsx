@@ -45,42 +45,36 @@ export function ExecutiveOverviewTab({ kpis, salesReport }: ExecutiveOverviewTab
         <StatCard
           title="Gross Revenue"
           value={formatCurrencyLKR(kpis.grossRevenue)}
-          subtitle="Tax Invoices + Showroom POS"
           icon={TrendingUp}
           variant="success"
         />
         <StatCard
           title="Total Collections"
           value={formatCurrencyLKR(kpis.totalCollected)}
-          subtitle={`${collectionRate}% realized rate`}
           icon={CreditCard}
           variant="blue"
         />
         <StatCard
           title="Receivables"
           value={formatCurrencyLKR(kpis.totalOutstanding)}
-          subtitle="Customer trade balance"
           icon={AlertCircle}
           variant="warning"
         />
         <StatCard
           title="Overdue Debt"
           value={formatCurrencyLKR(kpis.totalOverdue)}
-          subtitle="Requires credit recovery"
           icon={ShieldAlert}
           variant="danger"
         />
         <StatCard
           title="Inventory Valuation"
           value={formatCurrencyLKR(kpis.totalInventoryValue)}
-          subtitle="Cost basis in warehouse/showroom"
           icon={Package}
           variant="indigo"
         />
         <StatCard
           title="Active Orders"
           value={kpis.totalOrdersCount}
-          subtitle={`${kpis.activeCustomersCount} Active accounts`}
           icon={ShoppingCart}
           variant="default"
         />

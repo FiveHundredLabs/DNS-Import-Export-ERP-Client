@@ -161,7 +161,6 @@ export function DirectorDashboard() {
         <StatCard
           title="Sales"
           value={formatCurrency(48500000)}
-          period="This month"
           trend={{ value: '20.7%', isPositive: true }}
           variant="success"
           icon={DollarSign}
@@ -169,7 +168,6 @@ export function DirectorDashboard() {
         <StatCard
           title="New Orders"
           value="209"
-          period="This month"
           trend={{ value: '12%', isPositive: true }}
           variant="blue"
           icon={ShoppingBag}
@@ -177,7 +175,6 @@ export function DirectorDashboard() {
         <StatCard
           title="Conversion Rate"
           value="9.5%"
-          period="This month"
           trend={{ value: '2.12%', isPositive: true }}
           variant="indigo"
           icon={Target}
@@ -185,7 +182,6 @@ export function DirectorDashboard() {
         <StatCard
           title="Cancelled Orders"
           value="2.5%"
-          period="This month"
           trend={{ value: '3.8%', isPositive: false }}
           variant="danger"
           icon={AlertCircle}
@@ -279,10 +275,10 @@ export function DirectorDashboard() {
               </div>
 
               {[
-                { name: 'B2B Dealer Hub', pct: '39.4%', total: '1,080', icon: Building, color: 'text-primary bg-primary-light' },
-                { name: 'Showroom Direct', pct: '28.9%', total: '756', icon: Store, color: 'text-primary bg-primary-light' },
-                { name: 'Field Sales Reps', pct: '25.3%', total: '616', icon: Users, color: 'text-emerald-600 bg-emerald-50' },
-                { name: 'Corporate Tender', pct: '6.4%', total: '189', icon: CreditCard, color: 'text-amber-600 bg-amber-50' },
+                { name: 'Showroom Direct', pct: '35.2%', total: '930', icon: Store, color: 'text-emerald-600 bg-emerald-50' },
+                { name: 'Field Sales Reps', pct: '64.8%', total: '1,711', icon: Users, color: 'text-primary bg-primary-light' },
+
+
               ].map((ch) => {
                 const IconComponent = ch.icon;
                 return (
