@@ -64,13 +64,13 @@ export const chartConfig = {
     sublabel: '2,641 Orders',
   },
   wholesale: {
-    label: 'Wholesale B2B',
+    label: 'Sales Reps',
     color: '#0284C7',
     formattedTotal: 'LKR 31.4M',
     sublabel: '64.8% Share',
   },
   retail: {
-    label: 'Showroom Retail',
+    label: 'Showroom',
     color: '#059669',
     formattedTotal: 'LKR 17.1M',
     sublabel: '35.2% Share',
@@ -133,7 +133,7 @@ function CustomRevenueTooltip({ active, payload, primaryColor }: any) {
         <div className="flex items-center justify-between text-[11px] pt-0.5">
           <span className="flex items-center gap-1.5 text-slate-500">
             <span className="h-2 w-2 rounded-full bg-sky-500" />
-            Wholesale B2B ({wholesalePct}%)
+            Sales Reps ({wholesalePct}%)
           </span>
           <span className="font-mono font-semibold text-slate-700">
             {formatCurrency(data.wholesale)}
@@ -143,7 +143,7 @@ function CustomRevenueTooltip({ active, payload, primaryColor }: any) {
         <div className="flex items-center justify-between text-[11px]">
           <span className="flex items-center gap-1.5 text-slate-500">
             <span className="h-2 w-2 rounded-full bg-emerald-500" />
-            Showroom Retail ({retailPct}%)
+            Showroom ({retailPct}%)
           </span>
           <span className="font-mono font-semibold text-slate-700">
             {formatCurrency(data.retail)}
@@ -261,7 +261,7 @@ export function DirectorInteractiveBarChart() {
             </span>
           </div>
           <CardDescription className="text-xs text-slate-500">
-            Daily revenue streams across Wholesale B2B &amp; Showroom Retail · Month Total: LKR 48,500,000
+            Daily revenue streams across Sales Reps &amp; Showroom · Month Total: LKR 48,500,000
           </CardDescription>
         </div>
 

@@ -13,13 +13,13 @@ describe('Director Dashboard — Shadcn Interactive Bar Chart Component', () => 
 
     expect(screen.getByText(/Commercial Sales & Revenue Trends/i)).toBeInTheDocument();
     expect(
-      screen.getByText(/Daily revenue streams across Wholesale B2B & Showroom Retail/i)
+      screen.getByText(/Daily revenue streams across Sales Reps & Showroom/i)
     ).toBeInTheDocument();
 
     // Verify valuable ERP business metric tabs
     expect(screen.getByText('Total Revenue')).toBeInTheDocument();
-    expect(screen.getByText('Wholesale B2B')).toBeInTheDocument();
-    expect(screen.getByText('Showroom Retail')).toBeInTheDocument();
+    expect(screen.getByText('Sales Reps')).toBeInTheDocument();
+    expect(screen.getByText('Showroom')).toBeInTheDocument();
 
     // Verify calculated totals match exact expected values (LKR 48.5M, LKR 31.4M, LKR 17.1M)
     expect(screen.getByText('LKR 48.5M')).toBeInTheDocument();
@@ -40,28 +40,28 @@ describe('Director Dashboard — Shadcn Interactive Bar Chart Component', () => 
     expect(ERP_SALES_TRENDS_DATA.length).toBe(30);
   });
 
-  it('allows switching between Total Revenue, Wholesale B2B, and Showroom Retail views', () => {
+  it('allows switching between Total Revenue, Sales Reps, and Showroom views', () => {
     render(<DirectorInteractiveBarChart />);
 
     const totalButton = screen.getByText('Total Revenue').closest('button');
-    const wholesaleButton = screen.getByText('Wholesale B2B').closest('button');
-    const retailButton = screen.getByText('Showroom Retail').closest('button');
+    const salesRepButton = screen.getByText('Sales Reps').closest('button');
+    const showroomButton = screen.getByText('Showroom').closest('button');
 
     // Default active is Total Revenue
     expect(totalButton).toHaveAttribute('data-active', 'true');
-    expect(wholesaleButton).toHaveAttribute('data-active', 'false');
-    expect(retailButton).toHaveAttribute('data-active', 'false');
+    expect(salesRepButton).toHaveAttribute('data-active', 'false');
+    expect(showroomButton).toHaveAttribute('data-active', 'false');
 
-    // Switch to Wholesale B2B
-    fireEvent.click(wholesaleButton!);
-    expect(wholesaleButton).toHaveAttribute('data-active', 'true');
+    // Switch to Sales Reps
+    fireEvent.click(salesRepButton!);
+    expect(salesRepButton).toHaveAttribute('data-active', 'true');
     expect(totalButton).toHaveAttribute('data-active', 'false');
-    expect(retailButton).toHaveAttribute('data-active', 'false');
+    expect(showroomButton).toHaveAttribute('data-active', 'false');
 
-    // Switch to Showroom Retail
-    fireEvent.click(retailButton!);
-    expect(retailButton).toHaveAttribute('data-active', 'true');
-    expect(wholesaleButton).toHaveAttribute('data-active', 'false');
+    // Switch to Showroom
+    fireEvent.click(showroomButton!);
+    expect(showroomButton).toHaveAttribute('data-active', 'true');
+    expect(salesRepButton).toHaveAttribute('data-active', 'false');
     expect(totalButton).toHaveAttribute('data-active', 'false');
 
     // Switch back to Total Revenue
