@@ -38,7 +38,7 @@ export function Dialog({ open, onOpenChange, children, size = 'lg', maxWidth, cl
   if (!open) return null;
 
   const content = (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in-0">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/65 backdrop-blur-sm animate-in fade-in-0 duration-150">
       <div
         className="fixed inset-0"
         onClick={() => onOpenChange(false)}
@@ -46,7 +46,7 @@ export function Dialog({ open, onOpenChange, children, size = 'lg', maxWidth, cl
       />
       <div
         className={cn(
-          'relative z-50 w-full rounded-2xl border border-slate-200/90 bg-white p-6 shadow-2xl animate-in zoom-in-95 max-h-[90vh] overflow-y-auto',
+          'relative z-[101] w-full rounded-2xl border border-slate-200/90 bg-white p-6 shadow-2xl animate-in zoom-in-95 max-h-[90vh] overflow-y-auto',
           maxWidth || sizeClasses[size] || 'max-w-lg',
           className
         )}

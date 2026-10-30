@@ -181,73 +181,73 @@ export const DeliveryNoteListPage: React.FC = () => {
       {/* ── Operational KPI Cards ── */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
         {/* KPI 1: Total Notes */}
-        <Card className="border-slate-200 shadow-2xs">
-          <CardContent className="p-3.5">
-            <div className="flex items-center justify-between text-slate-500 mb-1">
-              <span className="text-[10.5px] font-bold uppercase tracking-wider">
-                Total Notes
-              </span>
-              <Truck className="h-4 w-4 text-slate-400" />
+        <Card className="border-slate-200 bg-white shadow-2xs hover:border-slate-300 transition-colors p-3.5">
+          <div className="flex items-center justify-between text-slate-500 mb-1">
+            <span className="text-[10.5px] font-bold uppercase tracking-wider text-slate-500">
+              Total Notes
+            </span>
+            <div className="h-6 w-6 rounded-md bg-primary/10 flex items-center justify-center text-primary">
+              <Truck className="h-3.5 w-3.5" />
             </div>
-            <div className="text-2xl font-black text-slate-900">{totalCount}</div>
-            <p className="text-[10px] text-slate-500 mt-0.5">All created dispatch notes</p>
-          </CardContent>
+          </div>
+          <div className="text-2xl font-bold font-mono text-slate-900 tabular-nums">{totalCount}</div>
+          <p className="text-[10px] text-slate-500 mt-0.5">All created dispatch notes</p>
         </Card>
 
         {/* KPI 2: In Transit */}
-        <Card className="border-slate-200 shadow-2xs bg-gradient-to-br from-white to-sky-50/30">
-          <CardContent className="p-3.5">
-            <div className="flex items-center justify-between text-sky-700 mb-1">
-              <span className="text-[10.5px] font-bold uppercase tracking-wider">
-                In Transit / Dispatched
-              </span>
-              <Clock className="h-4 w-4 text-sky-600" />
+        <Card className="border-slate-200 bg-white shadow-2xs hover:border-slate-300 transition-colors p-3.5">
+          <div className="flex items-center justify-between text-slate-500 mb-1">
+            <span className="text-[10.5px] font-bold uppercase tracking-wider text-slate-500">
+              In Transit / Dispatched
+            </span>
+            <div className="h-6 w-6 rounded-md bg-sky-50 flex items-center justify-center text-sky-600">
+              <Clock className="h-3.5 w-3.5" />
             </div>
-            <div className="text-2xl font-black text-sky-900">{inTransitCount}</div>
-            <p className="text-[10px] text-sky-600/80 mt-0.5">With delivery drivers</p>
-          </CardContent>
+          </div>
+          <div className="text-2xl font-bold font-mono text-slate-900 tabular-nums">{inTransitCount}</div>
+          <p className="text-[10px] text-slate-500 mt-0.5">With delivery drivers</p>
         </Card>
 
         {/* KPI 3: Delivered */}
-        <Card className="border-slate-200 shadow-2xs bg-gradient-to-br from-white to-emerald-50/30">
-          <CardContent className="p-3.5">
-            <div className="flex items-center justify-between text-emerald-700 mb-1">
-              <span className="text-[10.5px] font-bold uppercase tracking-wider">
-                Delivered & Accepted
-              </span>
-              <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+        <Card className="border-slate-200 bg-white shadow-2xs hover:border-slate-300 transition-colors p-3.5">
+          <div className="flex items-center justify-between text-slate-500 mb-1">
+            <span className="text-[10.5px] font-bold uppercase tracking-wider text-slate-500">
+              Delivered & Accepted
+            </span>
+            <div className="h-6 w-6 rounded-md bg-emerald-50 flex items-center justify-center text-emerald-600">
+              <CheckCircle2 className="h-3.5 w-3.5" />
             </div>
-            <div className="text-2xl font-black text-emerald-900">{deliveredCount}</div>
-            <p className="text-[10px] text-emerald-600/80 mt-0.5">100% Customer accepted</p>
-          </CardContent>
+          </div>
+          <div className="text-2xl font-bold font-mono text-slate-900 tabular-nums">{deliveredCount}</div>
+          <p className="text-[10px] text-slate-500 mt-0.5">100% Customer accepted</p>
         </Card>
 
         {/* KPI 4: Pending Rejection Approval */}
-        <Card className={`border-slate-200 shadow-2xs ${pendingApprovalCount > 0 ? 'bg-amber-50/70 border-amber-300 ring-1 ring-amber-200' : ''}`}>
-          <CardContent className="p-3.5">
-            <div className="flex items-center justify-between text-amber-700 mb-1">
-              <span className="text-[10.5px] font-bold uppercase tracking-wider">
-                Rejection Approvals
-              </span>
-              <ShieldAlert className="h-4 w-4 text-amber-600" />
+        <Card className="border-slate-200 bg-white shadow-2xs hover:border-slate-300 transition-colors p-3.5">
+          <div className="flex items-center justify-between text-slate-500 mb-1">
+            <span className="text-[10.5px] font-bold uppercase tracking-wider text-slate-500">
+              Rejection Approvals
+            </span>
+            <div className="h-6 w-6 rounded-md bg-amber-50 flex items-center justify-center text-amber-600">
+              <ShieldAlert className="h-3.5 w-3.5" />
             </div>
-            <div className="text-2xl font-black text-amber-950">{pendingApprovalCount}</div>
-            <p className="text-[10px] text-amber-700/80 mt-0.5">Requires Manager Sign-Off</p>
-          </CardContent>
+          </div>
+          <div className="text-2xl font-bold font-mono text-slate-900 tabular-nums">{pendingApprovalCount}</div>
+          <p className="text-[10px] text-slate-500 mt-0.5">Requires Manager Sign-Off</p>
         </Card>
 
         {/* KPI 5: Total Units Rejected */}
-        <Card className="border-slate-200 shadow-2xs bg-gradient-to-br from-white to-rose-50/30">
-          <CardContent className="p-3.5">
-            <div className="flex items-center justify-between text-rose-700 mb-1">
-              <span className="text-[10.5px] font-bold uppercase tracking-wider">
-                Total Rejected Units
-              </span>
-              <AlertTriangle className="h-4 w-4 text-rose-600" />
+        <Card className="border-slate-200 bg-white shadow-2xs hover:border-slate-300 transition-colors p-3.5">
+          <div className="flex items-center justify-between text-slate-500 mb-1">
+            <span className="text-[10.5px] font-bold uppercase tracking-wider text-slate-500">
+              Total Rejected Units
+            </span>
+            <div className="h-6 w-6 rounded-md bg-rose-50 flex items-center justify-center text-rose-600">
+              <AlertTriangle className="h-3.5 w-3.5" />
             </div>
-            <div className="text-2xl font-black text-rose-900">{totalRejectedUnitsCount}</div>
-            <p className="text-[10px] text-rose-600/80 mt-0.5">Quarantine / Return log</p>
-          </CardContent>
+          </div>
+          <div className="text-2xl font-bold font-mono text-slate-900 tabular-nums">{totalRejectedUnitsCount}</div>
+          <p className="text-[10px] text-slate-500 mt-0.5">Quarantine / Return log</p>
         </Card>
       </div>
 

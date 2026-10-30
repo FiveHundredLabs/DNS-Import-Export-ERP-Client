@@ -2,7 +2,8 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../../hooks/useAuth';
 import { cashBookService } from '../../../services/CashBookService';
-import { PaymentVoucher, CashBookSummary, CashVoucherType, CashVoucherCategory } from '../../../types/cashbook';
+import { PaymentVoucher, CashBookSummary, CashVoucherType, CashVoucherCategory, CashBookTransaction } from '../../../types/cashbook';
+import { PrintablePaymentVoucher } from '../components/PrintablePaymentVoucher';
 import { PageHeader } from '../../../components/common/PageHeader';
 import { StatusBadge } from '../../../components/common/StatusBadge';
 import { FormField } from '../../../components/common/FormField';
@@ -34,6 +35,9 @@ import {
   FileText,
   AlertTriangle,
   ExternalLink,
+  Printer,
+  History,
+  Layers,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -41,18 +45,29 @@ export function CashBookPage() {
   const navigate = useNavigate();
   const { currentUser } = useAuth();
 
+  const [activeTab, setActiveTab] = useState<'LEDGER' | 'VOUCHERS'>('LEDGER');
   const [vouchers, setVouchers] = useState<PaymentVoucher[]>([]);
+  const [ledgerEntries, setLedgerEntries] = useState<CashBookTransaction[]>([]);
   const [summary, setSummary] = useState<CashBookSummary | null>(null);
   const [loading, setLoading] = useState(true);
+  const [ledgerLoading, setLedgerLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [accountFilter, setAccountFilter] = useState<string>('ALL');
+  const [typeFilter, setTypeFilter] = useState<string>('ALL');
+
+  // Print voucher state
+  const [selectedVoucherForPrint, setSelectedVoucherForPrint] = useState<PaymentVoucher | null>(null);
+  const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
 
   // Modal State
   const [isNewVoucherOpen, setIsNewVoucherOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [voucherType, setVoucherType] = useState<CashVoucherType>('PAYMENT');
   const [category, setCategory] = useState<CashVoucherCategory>('OFFICE_EXPENSE');
+  const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'CHEQUE' | 'BANK_TRANSFER'>('CASH');
+  const [chequeNumber, setChequeNumber] = useState('');
+  const [bankName, setBankName] = useState('');
   const [payeeOrPayer, setPayeeOrPayer] = useState('');
   const [amount, setAmount] = useState<string>('');
   const [cashAccountCode, setCashAccountCode] = useState<'1010' | '1040'>('1040');
@@ -86,9 +101,25 @@ export function CashBookPage() {
     }
   };
 
+  const loadLedger = async () => {
+    try {
+      setLedgerLoading(true);
+      const ledger = await cashBookService.getCashBookLedger({
+        accountCode: accountFilter,
+        transactionType: typeFilter as any,
+      });
+      setLedgerEntries(ledger);
+    } catch {
+      toast.error('Failed to load live cash book ledger.');
+    } finally {
+      setLedgerLoading(false);
+    }
+  };
+
   useEffect(() => {
     loadData();
-  }, []);
+    loadLedger();
+  }, [accountFilter, typeFilter]);
 
   const handleCreateVoucher = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -117,6 +148,9 @@ export function CashBookPage() {
           cashAccountCode,
           offsetAccountCode,
           description,
+          paymentMethod,
+          chequeNumber: paymentMethod === 'CHEQUE' ? chequeNumber : undefined,
+          bankName: paymentMethod !== 'CASH' ? bankName : undefined,
           autoApprove,
         },
         currentUser
@@ -135,6 +169,7 @@ export function CashBookPage() {
       setIsNewVoucherOpen(false);
       resetForm();
       await loadData();
+      await loadLedger();
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : 'Failed to create payment voucher.');
     } finally {
@@ -149,6 +184,7 @@ export function CashBookPage() {
         `Voucher ${updated.voucherNumber} approved! Live Cash in Hand updated and GL impact posted.`
       );
       await loadData();
+      await loadLedger();
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : 'Approval failed.');
     }
@@ -176,6 +212,9 @@ export function CashBookPage() {
   const resetForm = () => {
     setVoucherType('PAYMENT');
     setCategory('OFFICE_EXPENSE');
+    setPaymentMethod('CASH');
+    setChequeNumber('');
+    setBankName('');
     setPayeeOrPayer('');
     setAmount('');
     setCashAccountCode('1040');
@@ -198,6 +237,20 @@ export function CashBookPage() {
       return matchSearch && matchStatus && matchAccount;
     });
   }, [vouchers, searchQuery, statusFilter, accountFilter]);
+
+  const filteredLedger = useMemo(() => {
+    return ledgerEntries.filter((e) => {
+      if (!searchQuery) return true;
+      const q = searchQuery.toLowerCase();
+      return (
+        e.entryNumber.toLowerCase().includes(q) ||
+        e.referenceNumber.toLowerCase().includes(q) ||
+        e.description.toLowerCase().includes(q) ||
+        e.accountCode.includes(q) ||
+        e.accountName.toLowerCase().includes(q)
+      );
+    });
+  }, [ledgerEntries, searchQuery]);
 
   return (
     <div className="space-y-6 w-full pb-16">
@@ -289,12 +342,55 @@ export function CashBookPage() {
         </Card>
       </div>
 
+      {/* Navigation Sub-Tabs */}
+      <div className="flex items-center gap-2 border-b border-slate-200 pb-2">
+        <button
+          type="button"
+          onClick={() => setActiveTab('LEDGER')}
+          className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+            activeTab === 'LEDGER'
+              ? 'bg-primary text-white shadow-2xs'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+          }`}
+        >
+          <History className="h-3.5 w-3.5" />
+          Cash Book Ledger (Live GL)
+          <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono ${
+            activeTab === 'LEDGER' ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700'
+          }`}>
+            {ledgerEntries.length}
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('VOUCHERS')}
+          className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+            activeTab === 'VOUCHERS'
+              ? 'bg-primary text-white shadow-2xs'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+          }`}
+        >
+          <Layers className="h-3.5 w-3.5" />
+          Payment & Receipt Vouchers
+          <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono ${
+            activeTab === 'VOUCHERS' ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700'
+          }`}>
+            {vouchers.length}
+          </span>
+        </button>
+      </div>
+
       {/* Filter and Search Bar */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs">
         <div className="relative flex-1 w-full sm:max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
           <Input
-            placeholder="Search by Voucher #, Payee, Description..."
+            placeholder={
+              activeTab === 'LEDGER'
+                ? "Search by Reference #, Description, Account..."
+                : "Search by Voucher #, Payee, Description..."
+            }
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-9 text-xs h-9"
@@ -302,17 +398,30 @@ export function CashBookPage() {
         </div>
 
         <div className="flex items-center gap-2 w-full sm:w-auto">
-          {/* Status Filter */}
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="text-xs h-9 px-2.5 rounded-lg border border-slate-200 bg-white font-medium text-slate-700"
-          >
-            <option value="ALL">All Statuses</option>
-            <option value="PENDING_APPROVAL">Pending Approval</option>
-            <option value="APPROVED">Approved</option>
-            <option value="REJECTED">Rejected</option>
-          </select>
+          {activeTab === 'VOUCHERS' ? (
+            /* Status Filter for Vouchers */
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="text-xs h-9 px-2.5 rounded-lg border border-slate-200 bg-white font-medium text-slate-700"
+            >
+              <option value="ALL">All Statuses</option>
+              <option value="PENDING_APPROVAL">Pending Approval</option>
+              <option value="APPROVED">Approved</option>
+              <option value="REJECTED">Rejected</option>
+            </select>
+          ) : (
+            /* Transaction Type Filter for Ledger */
+            <select
+              value={typeFilter}
+              onChange={(e) => setTypeFilter(e.target.value)}
+              className="text-xs h-9 px-2.5 rounded-lg border border-slate-200 bg-white font-medium text-slate-700"
+            >
+              <option value="ALL">All Transactions</option>
+              <option value="RECEIPT">Receipts (Dr Inflow)</option>
+              <option value="PAYMENT">Payments (Cr Outflow)</option>
+            </select>
+          )}
 
           {/* Account Filter */}
           <select
@@ -320,162 +429,285 @@ export function CashBookPage() {
             onChange={(e) => setAccountFilter(e.target.value)}
             className="text-xs h-9 px-2.5 rounded-lg border border-slate-200 bg-white font-medium text-slate-700"
           >
-            <option value="ALL">All Accounts</option>
-            <option value="1010">1010 - Bank / Operating</option>
-            <option value="1040">1040 - Petty Cash</option>
+            <option value="ALL">All Cash & Bank Accounts</option>
+            <option value="1010">1010 - Bank / Operating Float</option>
+            <option value="1040">1040 - Petty Cash Float</option>
           </select>
         </div>
       </div>
 
-      {/* Vouchers Table */}
-      <div className="rounded-xl border border-slate-200 bg-white overflow-hidden shadow-2xs">
-        <div className="overflow-x-auto">
-          <table className="w-full text-xs text-left tabular-nums">
-            <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold uppercase tracking-wider text-[11px]">
-              <tr>
-                <th className="py-3 px-4">Voucher #</th>
-                <th className="py-3 px-3">Date</th>
-                <th className="py-3 px-3">Type & Category</th>
-                <th className="py-3 px-4">Payee / Description</th>
-                <th className="py-3 px-3">Cash Account</th>
-                <th className="py-3 px-3">Offset Account</th>
-                <th className="py-3 px-4 text-right">Amount (LKR)</th>
-                <th className="py-3 px-3 text-center">Status</th>
-                <th className="py-3 px-4 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {loading ? (
+      {/* Main Content: Ledger or Vouchers */}
+      {activeTab === 'LEDGER' ? (
+        <div className="rounded-xl border border-slate-200 bg-white overflow-hidden shadow-2xs">
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs text-left tabular-nums">
+              <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold uppercase tracking-wider text-[11px]">
                 <tr>
-                  <td colSpan={9} className="py-8 text-center text-slate-400">
-                    Loading cash book records...
-                  </td>
+                  <th className="py-3 px-4">Date</th>
+                  <th className="py-3 px-3">Reference #</th>
+                  <th className="py-3 px-3">Account</th>
+                  <th className="py-3 px-4">Transaction Narrative</th>
+                  <th className="py-3 px-3 text-center">Type</th>
+                  <th className="py-3 px-4 text-right text-emerald-700">Receipts (Dr +)</th>
+                  <th className="py-3 px-4 text-right text-rose-700">Disbursements (Cr -)</th>
+                  <th className="py-3 px-4 text-right">Running Balance</th>
+                  <th className="py-3 px-3 text-right">Journal Link</th>
                 </tr>
-              ) : filteredVouchers.length === 0 ? (
-                <tr>
-                  <td colSpan={9} className="py-8 text-center text-slate-400">
-                    No payment vouchers found matching filters.
-                  </td>
-                </tr>
-              ) : (
-                filteredVouchers.map((v) => {
-                  const isPayment = v.voucherType === 'PAYMENT';
-
-                  return (
-                    <tr key={v.id} className="hover:bg-slate-50/70 transition-colors">
-                      <td className="py-3 px-4 font-mono font-bold text-slate-900">
-                        {v.voucherNumber}
-                      </td>
-                      <td className="py-3 px-3 text-slate-600 whitespace-nowrap">
-                        {v.date}
-                      </td>
-                      <td className="py-3 px-3">
-                        <div className="flex flex-col gap-1 items-start">
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {ledgerLoading ? (
+                  <tr>
+                    <td colSpan={9} className="py-8 text-center text-slate-400">
+                      Loading cash book ledger...
+                    </td>
+                  </tr>
+                ) : filteredLedger.length === 0 ? (
+                  <tr>
+                    <td colSpan={9} className="py-8 text-center text-slate-400">
+                      No cash transactions recorded for the selected account filter.
+                    </td>
+                  </tr>
+                ) : (
+                  filteredLedger.map((tx) => {
+                    const isReceipt = tx.transactionType === 'RECEIPT';
+                    return (
+                      <tr key={tx.id} className="hover:bg-slate-50/70 transition-colors">
+                        <td className="py-3 px-4 text-slate-600 whitespace-nowrap">
+                          {tx.date}
+                        </td>
+                        <td className="py-3 px-3 font-mono font-bold text-slate-900">
+                          {tx.referenceNumber}
+                        </td>
+                        <td className="py-3 px-3">
+                          <span className="font-mono font-semibold text-slate-800">
+                            {tx.accountCode}
+                          </span>
+                          <div className="text-[10px] text-slate-500 truncate max-w-[130px]">
+                            {tx.accountName}
+                          </div>
+                        </td>
+                        <td className="py-3 px-4 max-w-sm">
+                          <div className="text-slate-800 font-medium truncate">
+                            {tx.description}
+                          </div>
+                          {tx.entryNumber !== tx.referenceNumber && (
+                            <div className="text-[10px] text-slate-400 font-mono">
+                              Entry: {tx.entryNumber}
+                            </div>
+                          )}
+                        </td>
+                        <td className="py-3 px-3 text-center">
                           <Badge
                             variant="outline"
                             className={
-                              isPayment
-                                ? 'bg-rose-50 text-rose-700 border-rose-200 font-semibold'
-                                : 'bg-emerald-50 text-emerald-700 border-emerald-200 font-semibold'
+                              isReceipt
+                                ? 'bg-emerald-50 text-emerald-700 border-emerald-200 font-semibold'
+                                : 'bg-rose-50 text-rose-700 border-rose-200 font-semibold'
                             }
                           >
-                            {isPayment ? (
-                              <ArrowDownRight className="h-3 w-3 mr-0.5 inline" />
-                            ) : (
-                              <ArrowUpRight className="h-3 w-3 mr-0.5 inline" />
-                            )}
-                            {v.voucherType}
+                            {isReceipt ? '+ INFLOW' : '- OUTFLOW'}
                           </Badge>
-                          <span className="text-[10px] text-slate-500 font-medium">
-                            {v.category.replace('_', ' ')}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="py-3 px-4 max-w-xs">
-                        <div className="font-semibold text-slate-900 truncate">
-                          {v.payeeOrPayer}
-                        </div>
-                        <div className="text-[11px] text-slate-500 line-clamp-1 mt-0.5">
-                          {v.description}
-                        </div>
-                      </td>
-                      <td className="py-3 px-3">
-                        <span className="font-mono font-semibold text-slate-800">
-                          {v.cashAccountCode}
-                        </span>
-                        <div className="text-[10.5px] text-slate-400 truncate max-w-[120px]">
-                          {v.cashAccountName}
-                        </div>
-                      </td>
-                      <td className="py-3 px-3">
-                        <span className="font-mono font-semibold text-slate-800">
-                          {v.offsetAccountCode}
-                        </span>
-                        <div className="text-[10.5px] text-slate-400 truncate max-w-[140px]">
-                          {v.offsetAccountName}
-                        </div>
-                      </td>
-                      <td className="py-3 px-4 text-right">
-                        <span
-                          className={`font-mono font-bold text-sm ${
-                            isPayment ? 'text-slate-900' : 'text-emerald-600'
-                          }`}
-                        >
-                          {isPayment ? '-' : '+'} {formatCurrency(v.amount)}
-                        </span>
-                      </td>
-                      <td className="py-3 px-3 text-center">
-                        <StatusBadge
-                          status={v.status}
-                          label={
-                            v.status === 'PENDING_APPROVAL'
-                              ? 'Pending Approval'
-                              : v.status === 'APPROVED'
-                              ? 'Approved'
-                              : 'Rejected'
-                          }
-                        />
-                      </td>
-                      <td className="py-3 px-4 text-right whitespace-nowrap">
-                        {v.status === 'PENDING_APPROVAL' && canApprove ? (
-                          <div className="flex items-center justify-end gap-1.5">
-                            <Button
-                              size="sm"
-                              onClick={() => handleApprove(v.id)}
-                              className="h-7 px-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-semibold gap-1"
+                        </td>
+                        <td className="py-3 px-4 text-right font-mono font-bold text-emerald-700">
+                          {tx.debit > 0 ? formatCurrency(tx.debit) : '-'}
+                        </td>
+                        <td className="py-3 px-4 text-right font-mono font-bold text-rose-700">
+                          {tx.credit > 0 ? formatCurrency(tx.credit) : '-'}
+                        </td>
+                        <td className="py-3 px-4 text-right font-mono font-bold text-slate-900">
+                          {formatCurrency(tx.runningBalance)}
+                        </td>
+                        <td className="py-3 px-3 text-right">
+                          {tx.journalId ? (
+                            <Link to={`/finance/journal/new?journalId=${tx.journalId}`}>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 px-2 text-[11px] text-primary hover:bg-primary-light/50 gap-1"
+                              >
+                                View Entry <ExternalLink className="h-3 w-3" />
+                              </Button>
+                            </Link>
+                          ) : (
+                            <span className="text-slate-400">-</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ) : (
+        /* Vouchers Table */
+        <div className="rounded-xl border border-slate-200 bg-white overflow-hidden shadow-2xs">
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs text-left tabular-nums">
+              <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold uppercase tracking-wider text-[11px]">
+                <tr>
+                  <th className="py-3 px-4">Voucher #</th>
+                  <th className="py-3 px-3">Date</th>
+                  <th className="py-3 px-3">Type & Mode</th>
+                  <th className="py-3 px-4">Payee / Description</th>
+                  <th className="py-3 px-3">Cash Account</th>
+                  <th className="py-3 px-3">Offset Account</th>
+                  <th className="py-3 px-4 text-right">Amount (LKR)</th>
+                  <th className="py-3 px-3 text-center">Status</th>
+                  <th className="py-3 px-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {loading ? (
+                  <tr>
+                    <td colSpan={9} className="py-8 text-center text-slate-400">
+                      Loading cash book records...
+                    </td>
+                  </tr>
+                ) : filteredVouchers.length === 0 ? (
+                  <tr>
+                    <td colSpan={9} className="py-8 text-center text-slate-400">
+                      No payment vouchers found matching filters.
+                    </td>
+                  </tr>
+                ) : (
+                  filteredVouchers.map((v) => {
+                    const isPayment = v.voucherType === 'PAYMENT';
+
+                    return (
+                      <tr key={v.id} className="hover:bg-slate-50/70 transition-colors">
+                        <td className="py-3 px-4 font-mono font-bold text-slate-900">
+                          {v.voucherNumber}
+                        </td>
+                        <td className="py-3 px-3 text-slate-600 whitespace-nowrap">
+                          {v.date}
+                        </td>
+                        <td className="py-3 px-3">
+                          <div className="flex flex-col gap-1 items-start">
+                            <Badge
+                              variant="outline"
+                              className={
+                                isPayment
+                                  ? 'bg-rose-50 text-rose-700 border-rose-200 font-semibold'
+                                  : 'bg-emerald-50 text-emerald-700 border-emerald-200 font-semibold'
+                              }
                             >
-                              <CheckCircle2 className="h-3 w-3" />
-                              Approve
-                            </Button>
+                              {isPayment ? (
+                                <ArrowDownRight className="h-3 w-3 mr-0.5 inline" />
+                              ) : (
+                                <ArrowUpRight className="h-3 w-3 mr-0.5 inline" />
+                              )}
+                              {v.voucherType}
+                            </Badge>
+                            <span className="text-[10px] text-slate-500 font-medium">
+                              {v.paymentMethod || 'CASH'}{' '}
+                              {v.chequeNumber && `• #${v.chequeNumber}`}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="py-3 px-4 max-w-xs">
+                          <div className="font-semibold text-slate-900 truncate">
+                            {v.payeeOrPayer}
+                          </div>
+                          <div className="text-[11px] text-slate-500 line-clamp-1 mt-0.5">
+                            {v.description}
+                          </div>
+                        </td>
+                        <td className="py-3 px-3">
+                          <span className="font-mono font-semibold text-slate-800">
+                            {v.cashAccountCode}
+                          </span>
+                          <div className="text-[10.5px] text-slate-400 truncate max-w-[120px]">
+                            {v.cashAccountName}
+                          </div>
+                        </td>
+                        <td className="py-3 px-3">
+                          <span className="font-mono font-semibold text-slate-800">
+                            {v.offsetAccountCode}
+                          </span>
+                          <div className="text-[10.5px] text-slate-400 truncate max-w-[140px]">
+                            {v.offsetAccountName}
+                          </div>
+                        </td>
+                        <td className="py-3 px-4 text-right">
+                          <span
+                            className={`font-mono font-bold text-sm ${
+                              isPayment ? 'text-slate-900' : 'text-emerald-600'
+                            }`}
+                          >
+                            {isPayment ? '-' : '+'} {formatCurrency(v.amount)}
+                          </span>
+                        </td>
+                        <td className="py-3 px-3 text-center">
+                          <StatusBadge
+                            status={v.status}
+                            label={
+                              v.status === 'PENDING_APPROVAL'
+                                ? 'Pending Approval'
+                                : v.status === 'APPROVED'
+                                ? 'Approved'
+                                : 'Rejected'
+                            }
+                          />
+                        </td>
+                        <td className="py-3 px-4 text-right whitespace-nowrap">
+                          <div className="flex items-center justify-end gap-1.5">
                             <Button
                               variant="outline"
                               size="sm"
                               onClick={() => {
-                                setSelectedVoucherForReject(v);
-                                setRejectModalOpen(true);
+                                setSelectedVoucherForPrint(v);
+                                setIsPrintModalOpen(true);
                               }}
-                              className="h-7 px-2 border-rose-200 text-rose-600 hover:bg-rose-50 text-[11px]"
+                              className="h-7 px-2 border-slate-200 text-slate-700 hover:bg-slate-100 text-[11px] gap-1 font-medium"
+                              title="Print Official Payment Voucher"
                             >
-                              <XCircle className="h-3 w-3" />
-                              Reject
+                              <Printer className="h-3 w-3 text-slate-500" />
+                              Print
                             </Button>
+
+                            {v.status === 'PENDING_APPROVAL' && canApprove ? (
+                              <>
+                                <Button
+                                  size="sm"
+                                  onClick={() => handleApprove(v.id)}
+                                  className="h-7 px-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-semibold gap-1"
+                                >
+                                  <CheckCircle2 className="h-3 w-3" />
+                                  Approve
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    setSelectedVoucherForReject(v);
+                                    setRejectModalOpen(true);
+                                  }}
+                                  className="h-7 px-2 border-rose-200 text-rose-600 hover:bg-rose-50 text-[11px]"
+                                >
+                                  <XCircle className="h-3 w-3" />
+                                  Reject
+                                </Button>
+                              </>
+                            ) : v.status === 'APPROVED' ? (
+                              <div className="text-[10px] text-slate-400">
+                                Approved
+                              </div>
+                            ) : (
+                              <span className="text-[11px] text-rose-600 italic">Rejected</span>
+                            )}
                           </div>
-                        ) : v.status === 'APPROVED' ? (
-                          <div className="text-[11px] text-slate-500">
-                            Approved by <span className="font-medium text-slate-700">{v.approvedByName?.split(' ')[0]}</span>
-                          </div>
-                        ) : (
-                          <span className="text-[11px] text-rose-600 italic">Rejected</span>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* New Payment Voucher Dialog */}
       <Dialog open={isNewVoucherOpen} onOpenChange={setIsNewVoucherOpen}>
@@ -539,6 +771,41 @@ export function CashBookPage() {
                   required
                 />
               </FormField>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <FormField label="Payment Method" required>
+                <select
+                  value={paymentMethod}
+                  onChange={(e) => setPaymentMethod(e.target.value as any)}
+                  className="w-full h-8 text-xs px-2 rounded-md border border-slate-200 bg-white font-medium"
+                >
+                  <option value="CASH">Cash Float</option>
+                  <option value="CHEQUE">Cheque</option>
+                  <option value="BANK_TRANSFER">Bank Transfer / SLIPS</option>
+                </select>
+              </FormField>
+
+              {paymentMethod === 'CHEQUE' ? (
+                <FormField label="Cheque Number" required>
+                  <Input
+                    value={chequeNumber}
+                    onChange={(e) => setChequeNumber(e.target.value)}
+                    placeholder="e.g. CHQ-889412"
+                    className="h-8 text-xs font-mono"
+                    required
+                  />
+                </FormField>
+              ) : (
+                <FormField label="Bank / Drawee Branch (Optional)">
+                  <Input
+                    value={bankName}
+                    onChange={(e) => setBankName(e.target.value)}
+                    placeholder="e.g. Commercial Bank Colombo"
+                    className="h-8 text-xs"
+                  />
+                </FormField>
+              )}
             </div>
 
             <div className="grid grid-cols-2 gap-3">
@@ -656,6 +923,12 @@ export function CashBookPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      {/* Printable Payment Voucher Modal */}
+      <PrintablePaymentVoucher
+        voucher={selectedVoucherForPrint}
+        open={isPrintModalOpen}
+        onOpenChange={setIsPrintModalOpen}
+      />
     </div>
   );
 }

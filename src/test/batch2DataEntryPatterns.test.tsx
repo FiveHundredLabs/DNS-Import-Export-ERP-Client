@@ -129,11 +129,13 @@ describe('SupplierSelector and SupplierSummaryCard (Batch 2)', () => {
       />
     );
 
+    const searchInput = screen.getByPlaceholderText(/Search supplier/i);
+    fireEvent.focus(searchInput);
+
     expect(screen.getByText('Schneider Electric Lanka (Pvt) Ltd')).toBeInTheDocument();
     expect(screen.getByText('ABB Power Products Lanka')).toBeInTheDocument();
 
     // Filter by search query
-    const searchInput = screen.getByPlaceholderText(/Search Supplier Master/i);
     fireEvent.change(searchInput, { target: { value: 'ABB' } });
 
     expect(screen.queryByText('Schneider Electric Lanka (Pvt) Ltd')).toBeNull();

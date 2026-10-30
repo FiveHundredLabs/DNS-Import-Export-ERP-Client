@@ -8,7 +8,7 @@ import { Button } from '../../../../components/ui/button';
 import { Input } from '../../../../components/ui/input';
 import { Badge } from '../../../../components/ui/badge';
 import { Card, CardContent } from '../../../../components/ui/card';
-import { Dialog, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../../../../components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../../../../components/ui/dialog';
 import { Textarea } from '../../../../components/ui/textarea';
 import { formatCurrency, formatDate, formatDateTime } from '../../../../utils/formatters';
 import { printerService } from '../../../../services/PrinterService';

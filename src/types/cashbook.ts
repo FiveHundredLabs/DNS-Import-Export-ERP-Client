@@ -29,6 +29,9 @@ export interface PaymentVoucher {
   status: CashVoucherStatus;
   createdBy: string;
   createdByName: string;
+  paymentMethod?: 'CASH' | 'CHEQUE' | 'BANK_TRANSFER';
+  chequeNumber?: string;
+  bankName?: string;
   approvedBy?: string;
   approvedByName?: string;
   approvedAt?: string;
@@ -47,8 +50,28 @@ export interface CreatePaymentVoucherDTO {
   offsetAccountCode: string;
   offsetAccountName?: string;
   description: string;
+  paymentMethod?: 'CASH' | 'CHEQUE' | 'BANK_TRANSFER';
+  chequeNumber?: string;
+  bankName?: string;
   date?: string;
   autoApprove?: boolean;
+}
+
+export interface CashBookTransaction {
+  id: string;
+  journalId?: string;
+  entryNumber: string;
+  date: string;
+  referenceNumber: string;
+  accountCode: string;
+  accountName: string;
+  description: string;
+  debit: number;
+  credit: number;
+  runningBalance: number;
+  transactionType: 'RECEIPT' | 'PAYMENT';
+  status: string;
+  source?: string;
 }
 
 export interface CashBookSummary {

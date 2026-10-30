@@ -101,7 +101,7 @@ export function Header({ onToggleSidebar }: HeaderProps) {
   const currentTitle = getHeaderTitle();
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 w-full items-center justify-between bg-primary text-primary-foreground px-3 sm:px-6 backdrop-blur-md transition-all shrink-0">
+    <header className="sticky top-0 z-30 flex h-16 w-full items-center justify-between bg-primary text-primary-foreground px-3 sm:px-6 transition-all shrink-0">
       {/* Left: Mobile Toggle & Enterprise Brand / Page Title */}
       <div className="flex items-center gap-2 sm:gap-4 min-w-0">
         {location.pathname !== '/' ? (

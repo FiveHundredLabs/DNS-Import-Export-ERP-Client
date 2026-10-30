@@ -43,23 +43,30 @@ export const CurrencyInput = forwardRef<HTMLInputElement, CurrencyInputProps>(
     };
 
     const [displayVal, setDisplayVal] = useState<string>(() => formatInitial(value));
+    const [isFocused, setIsFocused] = useState(false);
 
     useEffect(() => {
-      // Sync from outside if parsed Decimal value differs
-      if (value === undefined || value === null || value === '') {
-        if (displayVal !== '') setDisplayVal('');
+      // If user is focused and typing, do not overwrite unless external value differs significantly
+      if (isFocused) {
+        return;
+      }
+
+      if (value === undefined || value === null || value === '' || value === 0) {
+        if (displayVal !== '' && displayVal !== '0' && displayVal !== '0.00') {
+          setDisplayVal('');
+        }
         return;
       }
       try {
         const currentD = displayVal ? new Decimal(displayVal) : new Decimal(0);
         const propD = new Decimal(value);
-        if (!currentD.equals(propD) && !displayVal.endsWith('.')) {
+        if (!currentD.equals(propD)) {
           setDisplayVal(propD.toString());
         }
       } catch {
         setDisplayVal(String(value));
       }
-    }, [value]);
+    }, [value, isFocused]);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       let input = e.target.value;
@@ -83,7 +90,7 @@ export const CurrencyInput = forwardRef<HTMLInputElement, CurrencyInputProps>(
 
       // Convert to Decimal string / number
       try {
-        if (input === '-' || input === '.') {
+        if (input === '-' || input === '.' || input === '-.') {
           onChange?.(0, '0');
           return;
         }
@@ -95,7 +102,13 @@ export const CurrencyInput = forwardRef<HTMLInputElement, CurrencyInputProps>(
       }
     };
 
+    const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+      setIsFocused(true);
+      rest.onFocus?.(e);
+    };
+
     const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+      setIsFocused(false);
       if (displayVal && !displayVal.endsWith('.')) {
         try {
           const d = new Decimal(displayVal);
@@ -121,6 +134,7 @@ export const CurrencyInput = forwardRef<HTMLInputElement, CurrencyInputProps>(
           inputMode="decimal"
           value={displayVal}
           onChange={handleInputChange}
+          onFocus={handleFocus}
           onBlur={handleBlur}
           placeholder={placeholder}
           disabled={disabled}

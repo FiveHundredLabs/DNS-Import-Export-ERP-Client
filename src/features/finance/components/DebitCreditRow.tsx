@@ -170,13 +170,11 @@ export function DebitCreditRow({
             value={line.debit > 0 ? line.debit : ''}
             onChange={handleDebitChange}
             placeholder="0.00"
-            disabled={isCreditActive}
             className={cn(
               'h-9 pl-8 pr-2 text-xs font-mono text-right font-semibold transition-colors',
               isDebitActive
                 ? 'border-primary-border bg-primary-light/40 text-indigo-900 focus:border-primary focus:ring-1 focus:ring-primary'
-                : 'text-slate-700 focus:border-primary',
-              isCreditActive && 'bg-slate-50 opacity-40 cursor-not-allowed'
+                : 'text-slate-700 focus:border-primary hover:border-slate-300'
             )}
           />
         </div>
@@ -195,13 +193,11 @@ export function DebitCreditRow({
             value={line.credit > 0 ? line.credit : ''}
             onChange={handleCreditChange}
             placeholder="0.00"
-            disabled={isDebitActive}
             className={cn(
               'h-9 pl-8 pr-2 text-xs font-mono text-right font-semibold transition-colors',
               isCreditActive
                 ? 'border-emerald-400 bg-emerald-50/40 text-emerald-900 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-500'
-                : 'text-slate-700 focus:border-primary',
-              isDebitActive && 'bg-slate-50 opacity-40 cursor-not-allowed'
+                : 'text-slate-700 focus:border-primary hover:border-slate-300'
             )}
           />
         </div>

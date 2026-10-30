@@ -1,4 +1,4 @@
-import { PaymentVoucher, CreatePaymentVoucherDTO, CashBookSummary } from '../types/cashbook';
+import { PaymentVoucher, CreatePaymentVoucherDTO, CashBookSummary, CashBookTransaction } from '../types/cashbook';
 import { User } from '../types/auth';
 import { financeRepository } from '../features/finance/api';
 import { hasPermission } from '../rules/permissions';
@@ -123,6 +123,75 @@ class CashBookService {
     return [...this.vouchers];
   }
 
+  async getCashBookLedger(filter?: {
+    accountCode?: string;
+    startDate?: string;
+    endDate?: string;
+    transactionType?: 'ALL' | 'PAYMENT' | 'RECEIPT';
+  }): Promise<CashBookTransaction[]> {
+    try {
+      const journalEntries = await financeRepository.getJournalEntries();
+      const ledger: CashBookTransaction[] = [];
+
+      // Include active posted or cleared entries
+      const relevantJournals = journalEntries.filter(
+        (j) => j.status === 'POSTED' || j.status === 'CLEARED'
+      );
+
+      // Sort chronologically ascending to compute running balance
+      relevantJournals.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+      let runningBal = 0;
+
+      for (const jnl of relevantJournals) {
+        if (filter?.startDate && jnl.date < filter.startDate) continue;
+        if (filter?.endDate && jnl.date > filter.endDate) continue;
+
+        for (let idx = 0; idx < jnl.lines.length; idx++) {
+          const line = jnl.lines[idx];
+          const isCashOrBank = line.accountCode === '1010' || line.accountCode === '1040';
+          if (!isCashOrBank) continue;
+
+          if (filter?.accountCode && filter.accountCode !== 'ALL' && line.accountCode !== filter.accountCode) {
+            continue;
+          }
+
+          const debit = line.debit || 0;
+          const credit = line.credit || 0;
+          const type: 'RECEIPT' | 'PAYMENT' = debit > 0 ? 'RECEIPT' : 'PAYMENT';
+
+          if (filter?.transactionType && filter.transactionType !== 'ALL' && type !== filter.transactionType) {
+            continue;
+          }
+
+          runningBal += debit - credit;
+
+          ledger.push({
+            id: `${jnl.id}-${idx}`,
+            journalId: jnl.id,
+            entryNumber: jnl.entryNumber,
+            date: jnl.date,
+            referenceNumber: jnl.reference || jnl.entryNumber,
+            accountCode: line.accountCode,
+            accountName: line.accountName,
+            description: line.description || jnl.description,
+            debit,
+            credit,
+            runningBalance: runningBal,
+            transactionType: type,
+            status: jnl.status,
+            source: jnl.source,
+          });
+        }
+      }
+
+      // Return newest first
+      return ledger.reverse();
+    } catch {
+      return [];
+    }
+  }
+
   async getSummary(): Promise<CashBookSummary> {
     const accounts = await financeRepository.getAccounts();
     const acc1010 = accounts.find((a) => a.code === '1010');
@@ -204,6 +273,9 @@ class CashBookService {
       status: 'PENDING_APPROVAL',
       createdBy: currentUser.id,
       createdByName: currentUser.name,
+      paymentMethod: dto.paymentMethod || 'CASH',
+      chequeNumber: dto.chequeNumber,
+      bankName: dto.bankName,
       createdAt: now,
       updatedAt: now,
     };

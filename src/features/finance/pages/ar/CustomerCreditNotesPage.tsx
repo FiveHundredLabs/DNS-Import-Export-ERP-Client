@@ -434,12 +434,14 @@ export function CustomerCreditNotesPage() {
         <div className="space-y-6">
           {/* KPI Summary Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Card className="p-4 border-slate-200 bg-white shadow-2xs">
+            <Card className="p-4 border-slate-200 bg-white shadow-2xs hover:border-slate-300 transition-colors">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold uppercase text-slate-500">Total Credit Notes</span>
-                <RotateCcw className="h-4 w-4 text-primary" />
+                <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Total Credit Notes</span>
+                <div className="h-7 w-7 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+                  <RotateCcw className="h-4 w-4" />
+                </div>
               </div>
-              <div className="text-2xl font-bold font-mono text-slate-900 mt-1.5 tabular-nums">
+              <div className="text-2xl font-bold font-mono text-slate-900 mt-2 tabular-nums">
                 {formatCurrency(metrics.totalGross)}
               </div>
               <div className="text-[11px] text-slate-500 mt-1">
@@ -447,41 +449,47 @@ export function CustomerCreditNotesPage() {
               </div>
             </Card>
 
-            <Card className="p-4 border-rose-200 bg-rose-50/40 shadow-2xs">
+            <Card className="p-4 border-slate-200 bg-white shadow-2xs hover:border-slate-300 transition-colors">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold uppercase text-rose-800">Revenue Reversed (4010)</span>
-                <Receipt className="h-4 w-4 text-rose-600" />
+                <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Revenue Reversed (4010)</span>
+                <div className="h-7 w-7 rounded-lg bg-rose-50 flex items-center justify-center text-rose-600">
+                  <Receipt className="h-4 w-4" />
+                </div>
               </div>
-              <div className="text-2xl font-bold font-mono text-rose-950 mt-1.5 tabular-nums">
+              <div className="text-2xl font-bold font-mono text-slate-900 mt-2 tabular-nums">
                 {formatCurrency(metrics.totalRevenueReversed)}
               </div>
-              <div className="text-[11px] text-rose-700 mt-1">
+              <div className="text-[11px] text-slate-500 mt-1">
                 Net sales revenue deducted
               </div>
             </Card>
 
-            <Card className="p-4 border-emerald-200 bg-emerald-50/40 shadow-2xs">
+            <Card className="p-4 border-slate-200 bg-white shadow-2xs hover:border-slate-300 transition-colors">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold uppercase text-emerald-800">Stock Restored (1100/5010)</span>
-                <Package className="h-4 w-4 text-emerald-600" />
+                <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Stock Restored (1100/5010)</span>
+                <div className="h-7 w-7 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600">
+                  <Package className="h-4 w-4" />
+                </div>
               </div>
-              <div className="text-2xl font-bold font-mono text-emerald-950 mt-1.5 tabular-nums">
+              <div className="text-2xl font-bold font-mono text-slate-900 mt-2 tabular-nums">
                 {formatCurrency(metrics.totalInventoryRestored)}
               </div>
-              <div className="text-[11px] text-emerald-700 mt-1">
+              <div className="text-[11px] text-slate-500 mt-1">
                 Merchandise added back to physical stock
               </div>
             </Card>
 
-            <Card className="p-4 border-blue-200 bg-blue-50/40 shadow-2xs">
+            <Card className="p-4 border-slate-200 bg-white shadow-2xs hover:border-slate-300 transition-colors">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold uppercase text-blue-800">Output VAT Reversed (2020)</span>
-                <Layers className="h-4 w-4 text-blue-600" />
+                <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Output VAT Reversed (2020)</span>
+                <div className="h-7 w-7 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600">
+                  <Layers className="h-4 w-4" />
+                </div>
               </div>
-              <div className="text-2xl font-bold font-mono text-blue-950 mt-1.5 tabular-nums">
+              <div className="text-2xl font-bold font-mono text-slate-900 mt-2 tabular-nums">
                 {formatCurrency(metrics.totalVatReversed)}
               </div>
-              <div className="text-[11px] text-blue-700 mt-1">
+              <div className="text-[11px] text-slate-500 mt-1">
                 Output VAT tax liability relieved
               </div>
             </Card>

@@ -57,6 +57,7 @@ import {
   FileText,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { MOCK_WARRANTY_RECORDS } from '../../../../mock/mockWarranty';
 
 const LANDED_EXPENSE_CATEGORIES = [
   'Shipping / Freight Charges',
