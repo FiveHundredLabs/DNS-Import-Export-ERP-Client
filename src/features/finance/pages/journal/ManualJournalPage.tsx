@@ -1264,6 +1264,7 @@ export function ManualJournalPage() {
                             <CurrencyInput
                               value={line.debit || ''}
                               onChange={(val) => handleUpdateLine(line.id, 'debit', val)}
+                              prefix=""
                               placeholder="0.00"
                               disabled={submitting || isAuditLocked}
                               className="h-8 text-xs text-right font-mono"
@@ -1277,6 +1278,7 @@ export function ManualJournalPage() {
                             <CurrencyInput
                               value={line.credit || ''}
                               onChange={(val) => handleUpdateLine(line.id, 'credit', val)}
+                              prefix=""
                               placeholder="0.00"
                               disabled={submitting || isAuditLocked}
                               className="h-8 text-xs text-right font-mono"

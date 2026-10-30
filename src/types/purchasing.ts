@@ -98,6 +98,81 @@ export interface PurchaseOrderFilter {
   endDate?: string;
 }
 
+export type SupplierReturnStatus =
+  | 'DRAFT'
+  | 'PENDING_APPROVAL'
+  | 'APPROVED'
+  | 'REJECTED'
+  | 'COMPLETED';
+
+export type SupplierReturnReason =
+  | 'DEFECTIVE_DAMAGED'
+  | 'SPECIFICATION_MISMATCH'
+  | 'EXCESS_DELIVERY'
+  | 'QUALITY_REJECTION'
+  | 'INCORRECT_ITEM';
+
+export interface SupplierReturnItem {
+  id: string;
+  productId: string;
+  productCode: string;
+  productName: string;
+  returnedQuantity: number;
+  unitCost: number;
+  lineTotal: number;
+  reason: string;
+}
+
+export interface SupplierReturn extends BaseEntity {
+  returnNumber: string;
+  supplierId: string;
+  supplierName: string;
+  supplierCode?: string;
+  originalPoId?: string;
+  originalPoNumber?: string;
+  grnId?: string;
+  grnNumber?: string;
+  returnDate: string;
+  reasonCategory: SupplierReturnReason;
+  reasonDescription: string;
+  items: SupplierReturnItem[];
+  totalAmount: number;
+  status: SupplierReturnStatus;
+  warehouseId: string;
+  createdBy: string;
+  createdByName: string;
+  approvedBy?: string;
+  approvedByName?: string;
+  approvedAt?: string;
+  rejectionReason?: string;
+  // Link to Finance AP Debit Note (BR-08)
+  linkedDebitNoteId?: string;
+  linkedDebitNoteNumber?: string;
+}
+
+export interface CreateSupplierReturnDTO {
+  supplierId: string;
+  supplierName: string;
+  supplierCode?: string;
+  originalPoId?: string;
+  originalPoNumber?: string;
+  grnId?: string;
+  grnNumber?: string;
+  returnDate?: string;
+  reasonCategory: SupplierReturnReason;
+  reasonDescription: string;
+  warehouseId?: string;
+  items: Array<{
+    productId: string;
+    productCode: string;
+    productName: string;
+    returnedQuantity: number;
+    unitCost: number;
+    reason?: string;
+  }>;
+  autoApprove?: boolean;
+}
+
 export interface CurrencyOption {
   code: string;
   name: string;

@@ -7,6 +7,7 @@ interface FilterCounts {
   all: number;
   outstanding: number;
   overdue: number;
+  dueNext24h?: number;
   nearby: number;
   pendingCollection: number;
   settled: number;
@@ -56,6 +57,13 @@ export function CustomerPaymentFilters({
       count: counts.overdue,
       icon: AlertCircle,
       activeClass: 'bg-white text-rose-900 border-rose-300 shadow-xs',
+    },
+    {
+      id: 'DUE_NEXT_24H',
+      label: 'Due in 24h',
+      count: counts.dueNext24h ?? 0,
+      icon: Clock,
+      activeClass: 'bg-white text-amber-900 border-amber-300 shadow-xs',
     },
     {
       id: 'NEARBY',

@@ -45,6 +45,7 @@ export interface StatCardProps {
   badge?: string;
   className?: string;
   onClick?: () => void;
+  selected?: boolean;
 }
 
 // Fallback icon picker based on context
@@ -122,63 +123,63 @@ interface VariantTheme {
 
 const VARIANT_THEMES: Record<string, VariantTheme> = {
   emerald: {
-    container: 'border-emerald-200/90 bg-gradient-to-br from-emerald-500/[0.08] via-emerald-50/40 to-white hover:border-emerald-300',
-    iconBg: 'bg-emerald-100 text-emerald-700',
-    titleText: 'text-emerald-950',
-    trendPositive: 'text-emerald-800 bg-emerald-100/90 border-emerald-200/80',
-    trendNegative: 'text-rose-800 bg-rose-100/90 border-rose-200/80',
-    badge: 'text-emerald-800 bg-emerald-100/80 border-emerald-200/70',
-    progressBar: 'bg-gradient-to-r from-emerald-500 to-teal-500',
-    progressText: 'text-emerald-700',
-    borderDivider: 'border-emerald-100/80',
+    container: 'border-slate-200/90 bg-white hover:border-slate-300',
+    iconBg: 'bg-emerald-50 text-emerald-600',
+    titleText: 'text-slate-500',
+    trendPositive: 'text-emerald-800 bg-emerald-50 border-emerald-200',
+    trendNegative: 'text-rose-800 bg-rose-50 border-rose-200',
+    badge: 'text-emerald-800 bg-emerald-50 border-emerald-200',
+    progressBar: 'bg-emerald-500',
+    progressText: 'text-emerald-600',
+    borderDivider: 'border-slate-100',
     valueColor: 'text-slate-900',
   },
   blue: {
-    container: 'border-blue-200/90 bg-gradient-to-br from-blue-500/[0.08] via-sky-50/40 to-white hover:border-blue-300',
-    iconBg: 'bg-blue-100 text-blue-700',
-    titleText: 'text-blue-950',
-    trendPositive: 'text-blue-800 bg-blue-100/90 border-blue-200/80',
-    trendNegative: 'text-rose-800 bg-rose-100/90 border-rose-200/80',
-    badge: 'text-blue-800 bg-blue-100/80 border-blue-200/70',
-    progressBar: 'bg-gradient-to-r from-blue-500 to-sky-500',
-    progressText: 'text-blue-700',
-    borderDivider: 'border-blue-100/80',
+    container: 'border-slate-200/90 bg-white hover:border-slate-300',
+    iconBg: 'bg-sky-50 text-sky-600',
+    titleText: 'text-slate-500',
+    trendPositive: 'text-sky-800 bg-sky-50 border-sky-200',
+    trendNegative: 'text-rose-800 bg-rose-50 border-rose-200',
+    badge: 'text-sky-800 bg-sky-50 border-sky-200',
+    progressBar: 'bg-sky-500',
+    progressText: 'text-sky-600',
+    borderDivider: 'border-slate-100',
     valueColor: 'text-slate-900',
   },
   indigo: {
-    container: 'border-indigo-200/90 bg-gradient-to-br from-indigo-500/[0.08] via-purple-50/40 to-white hover:border-indigo-300',
-    iconBg: 'bg-indigo-100 text-indigo-700',
-    titleText: 'text-indigo-950',
-    trendPositive: 'text-indigo-800 bg-indigo-100/90 border-indigo-200/80',
-    trendNegative: 'text-rose-800 bg-rose-100/90 border-rose-200/80',
-    badge: 'text-indigo-800 bg-indigo-100/80 border-indigo-200/70',
-    progressBar: 'bg-gradient-to-r from-indigo-500 to-purple-500',
-    progressText: 'text-indigo-700',
-    borderDivider: 'border-indigo-100/80',
+    container: 'border-slate-200/90 bg-white hover:border-slate-300',
+    iconBg: 'bg-primary/10 text-primary',
+    titleText: 'text-slate-500',
+    trendPositive: 'text-primary bg-primary/10 border-primary/20',
+    trendNegative: 'text-rose-800 bg-rose-50 border-rose-200',
+    badge: 'text-primary bg-primary/10 border-primary/20',
+    progressBar: 'bg-primary',
+    progressText: 'text-primary',
+    borderDivider: 'border-slate-100',
     valueColor: 'text-slate-900',
   },
   amber: {
-    container: 'border-amber-200/90 bg-gradient-to-br from-amber-500/[0.08] via-amber-50/40 to-white hover:border-amber-300',
-    iconBg: 'bg-amber-100 text-amber-700',
-    titleText: 'text-amber-950',
-    trendPositive: 'text-amber-800 bg-amber-100/90 border-amber-200/80',
-    trendNegative: 'text-rose-800 bg-rose-100/90 border-rose-200/80',
-    badge: 'text-amber-800 bg-amber-100/80 border-amber-200/70',
-    progressBar: 'bg-gradient-to-r from-amber-500 to-orange-500',
-    progressText: 'text-amber-700',
-    borderDivider: 'border-amber-100/80',
+    container: 'border-slate-200/90 bg-white hover:border-slate-300',
+    iconBg: 'bg-amber-50 text-amber-600',
+    titleText: 'text-slate-500',
+    trendPositive: 'text-amber-800 bg-amber-50 border-amber-200',
+    trendNegative: 'text-rose-800 bg-rose-50 border-rose-200',
+    badge: 'text-amber-800 bg-amber-50 border-amber-200',
+    progressBar: 'bg-amber-500',
+    progressText: 'text-amber-600',
+    borderDivider: 'border-slate-100',
     valueColor: 'text-slate-900',
   },
   rose: {
-    container: 'border-rose-200/90 bg-gradient-to-br from-rose-500/[0.08] via-red-50/40 to-white hover:border-rose-300',
-    iconBg: 'bg-rose-100 text-rose-700',
-    titleText: 'text-rose-950',
-    trendPositive: 'text-emerald-800 bg-emerald-100/90 border-emerald-200/80',
-    trendNegative: 'text-rose-800 bg-rose-100/90 border-rose-200/80',
-    badge: 'text-rose-800 bg-rose-100/80 border-rose-200/70',
-    progressBar: 'bg-gradient-to-r from-rose-500 to-red-500',
-    progressText: 'text-rose-700',
-    borderDivider: 'border-rose-100/80',
+    container: 'border-slate-200/90 bg-white hover:border-slate-300',
+    iconBg: 'bg-rose-50 text-rose-600',
+    titleText: 'text-slate-500',
+    trendPositive: 'text-emerald-800 bg-emerald-50 border-emerald-200',
+    trendNegative: 'text-rose-800 bg-rose-50 border-rose-200',
+    badge: 'text-rose-800 bg-rose-50 border-rose-200',
+    progressBar: 'bg-rose-500',
+    progressText: 'text-rose-600',
+    borderDivider: 'border-slate-100',
     valueColor: 'text-rose-600',
   },
 };
@@ -204,6 +205,7 @@ export function StatCard({
   badge,
   className,
   onClick,
+  selected = false,
 }: StatCardProps) {
   const theme = VARIANT_THEMES[variant] || VARIANT_THEMES.default;
   const EffectiveIcon = Icon || getDefaultIcon(title, variant);
@@ -217,63 +219,65 @@ export function StatCard({
     <div
       onClick={onClick}
       className={cn(
-        'rounded-2xl sm:rounded-3xl border p-3.5 sm:p-5 shadow-xs hover:shadow-sm transition-all relative overflow-hidden group min-w-0',
+        'rounded-xl border p-4 shadow-2xs hover:border-slate-300 transition-all flex flex-col justify-between min-w-0',
         theme.container,
         onClick && 'cursor-pointer active:scale-[0.99]',
+        selected && 'ring-2 ring-primary/40 border-primary bg-primary/[0.02]',
         className
       )}
     >
-      {/* Top Header: Squircle Icon Badge + Uppercase Bold Title + Trend / Status Pill */}
-      <div className="flex items-center justify-between gap-1.5 sm:gap-2">
-        <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
+      {/* Top Header: Uppercase Bold Title + Squircle Icon Container */}
+      <div className="flex items-center justify-between gap-2">
+        <span
+          className={cn(
+            'text-xs font-semibold uppercase tracking-wider truncate',
+            theme.titleText
+          )}
+        >
+          {title}
+        </span>
+
+        <div className="flex items-center gap-1.5 shrink-0">
+          {trend ? (
+            <span
+              className={cn(
+                'inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border shrink-0',
+                trend.isPositive ? theme.trendPositive : theme.trendNegative
+              )}
+            >
+              {trend.isPositive ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+              {trend.value}
+            </span>
+          ) : badge ? (
+            <span
+              className={cn(
+                'inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full border shrink-0',
+                theme.badge
+              )}
+            >
+              {badge}
+            </span>
+          ) : null}
+
           <div
             className={cn(
-              'h-8 w-8 sm:h-9 sm:w-9 rounded-xl flex items-center justify-center shrink-0 shadow-2xs',
+              'h-8 w-8 rounded-lg flex items-center justify-center shrink-0 shadow-2xs',
               theme.iconBg
             )}
           >
             <EffectiveIcon className="h-4 w-4" />
           </div>
-          <span
-            className={cn(
-              'text-[11px] sm:text-xs font-bold uppercase tracking-wider truncate',
-              theme.titleText
-            )}
-          >
-            {title}
-          </span>
         </div>
-
-        {trend ? (
-          <span
-            className={cn(
-              'inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full border shrink-0',
-              trend.isPositive ? theme.trendPositive : theme.trendNegative
-            )}
-          >
-            {trend.isPositive ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
-            {trend.value}
-          </span>
-        ) : badge ? (
-          <span
-            className={cn(
-              'inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full border shrink-0',
-              theme.badge
-            )}
-          >
-            {badge}
-          </span>
-        ) : null}
       </div>
 
       {/* Main KPI Value */}
-      <div className="mt-2.5 sm:mt-3 min-w-0">
+      <div className="mt-2 min-w-0">
         {isCurrency ? (
-          <AmountDisplay amount={value} className="text-slate-900 font-extrabold" />
+          <AmountDisplay amount={value} className="text-slate-900 font-bold font-mono text-2xl tabular-nums" />
         ) : (
           <div
             className={cn(
-              'text-base sm:text-[22px] font-extrabold tracking-tight tabular-nums leading-tight truncate',
+              'text-2xl font-bold font-mono tracking-tight tabular-nums leading-tight truncate',
               theme.valueColor
             )}
           >
@@ -299,7 +303,7 @@ export function StatCard({
       ) : subtitle || period ? (
         <div
           className={cn(
-            'mt-1.5 sm:mt-2 text-[10.5px] sm:text-xs text-slate-500 truncate flex items-center justify-between pt-1 border-t',
+            'mt-1 text-[11px] text-slate-500 truncate flex items-center justify-between',
             theme.borderDivider
           )}
         >
@@ -309,3 +313,5 @@ export function StatCard({
     </div>
   );
 }
+
+export const SummaryCard = StatCard;

@@ -22,6 +22,20 @@ import { Input } from '../../components/ui/input';
 import { Textarea } from '../../components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
+import {
+  PageHeader,
+  FormSection,
+  FormField,
+  DocumentActionBar,
+  StatusBadge,
+  ProductSelector,
+} from '../../components';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '../../components/ui/dialog';
 import { toast } from 'sonner';
 import { SUPPORTED_CURRENCIES } from '../../types/purchasing';
 
@@ -71,6 +85,41 @@ export function PurchaseOrderCreateEditPage() {
   ]);
 
   const [submitting, setSubmitting] = useState(false);
+  const [isProductSelectorOpen, setIsProductSelectorOpen] = useState(false);
+
+  const handleSelectProductFromMaster = (product: any) => {
+    setLines((prev) => {
+      // If the first line is empty, replace it; otherwise append
+      if (prev.length === 1 && !prev[0].productId) {
+        return [
+          {
+            id: prev[0].id,
+            productId: product.id,
+            productCode: product.sku,
+            productName: product.name,
+            quantity: 1,
+            unitPrice: product.pricing?.costPrice || product.pricing?.wholesalePrice || 100,
+            discountPercent: 0,
+            taxRate: 18,
+          },
+        ];
+      }
+      return [
+        ...prev,
+        {
+          id: `line-${Date.now()}-${prev.length}`,
+          productId: product.id,
+          productCode: product.sku,
+          productName: product.name,
+          quantity: 1,
+          unitPrice: product.pricing?.costPrice || product.pricing?.wholesalePrice || 100,
+          discountPercent: 0,
+          taxRate: 18,
+        },
+      ];
+    });
+    setIsProductSelectorOpen(false);
+  };
 
   // Load existing PO if in edit mode
   useEffect(() => {
@@ -253,66 +302,48 @@ export function PurchaseOrderCreateEditPage() {
 
   return (
     <div className="space-y-6 pb-12">
-      {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => navigate('/purchasing/orders')}
-            className="text-slate-600 hover:text-slate-900 -ml-2"
-          >
-            <ArrowLeft className="h-4 w-4 mr-1" />
-            <span>Back</span>
-          </Button>
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-              {isEdit ? 'Edit Purchase Order' : 'Create Purchase Order'}
-            </h1>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Draft procurement order with line-item discounts, taxes, and internal managerial approval.
-            </p>
+      {/* Top Standardized Page Header */}
+      <PageHeader
+        title={isEdit ? 'Edit Purchase Order' : 'Create Purchase Order'}
+        subtitle="Draft procurement order with line-item discounts, taxes, and internal managerial approval."
+        backUrl="/purchasing/orders"
+        backLabel="Orders"
+        badge={<StatusBadge status={isEdit ? 'DRAFT' : 'NEW'} />}
+        actions={
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              disabled={submitting}
+              onClick={() => handleSaveOrder(false)}
+              className="gap-1.5 text-xs bg-white hover:bg-slate-50"
+            >
+              <Save className="h-3.5 w-3.5 text-slate-600" />
+              <span>Save as Draft</span>
+            </Button>
+
+            <Button
+              variant="default"
+              disabled={submitting}
+              onClick={() => handleSaveOrder(true)}
+              className="gap-1.5 text-xs bg-primary hover:bg-primary-hover text-primary-foreground font-semibold shadow-xs"
+            >
+              <Send className="h-3.5 w-3.5" />
+              <span>Submit for Approval</span>
+            </Button>
           </div>
-        </div>
+        }
+      />
 
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            disabled={submitting}
-            onClick={() => handleSaveOrder(false)}
-            className="gap-1.5 text-xs bg-white hover:bg-slate-50"
-          >
-            <Save className="h-3.5 w-3.5 text-slate-600" />
-            <span>Save as Draft</span>
-          </Button>
-
-          <Button
-            variant="default"
-            disabled={submitting}
-            onClick={() => handleSaveOrder(true)}
-            className="gap-1.5 text-xs bg-primary hover:bg-primary-hover text-primary-foreground font-semibold shadow-xs"
-          >
-            <Send className="h-3.5 w-3.5" />
-            <span>Submit for Approval</span>
-          </Button>
-        </div>
-      </div>
-
-      {/* Supplier & Header Parameters Grid */}
-      <Card className="border-slate-200 shadow-2xs">
-        <CardHeader className="p-4 border-b border-slate-100">
-          <CardTitle className="text-sm font-semibold text-slate-900 flex items-center gap-2">
-            <Building2 className="h-4 w-4 text-blue-600" />
-            <span>Vendor & Purchase Order Details</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-5 space-y-4">
+      {/* Supplier & Header Parameters Section */}
+      <FormSection
+        icon={Building2}
+        title="Vendor & Purchase Order Details"
+        description="Specify supplier particulars, procurement currency, and expected delivery timetable."
+      >
+        <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Supplier Selector */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-700">
-                Supplier / Vendor <span className="text-rose-500">*</span>
-              </label>
+            <FormField label="Supplier / Vendor" required>
               <select
                 value={selectedSupplierId}
                 onChange={(e) => setSelectedSupplierId(e.target.value)}
@@ -325,29 +356,27 @@ export function PurchaseOrderCreateEditPage() {
                   </option>
                 ))}
               </select>
-            </div>
+            </FormField>
 
             {/* Order Date */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-700">PO Issue Date</label>
+            <FormField label="PO Issue Date">
               <Input
                 type="date"
                 value={orderDate}
                 onChange={(e) => setOrderDate(e.target.value)}
                 className="h-9 text-xs"
               />
-            </div>
+            </FormField>
 
             {/* Expected Delivery Date */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-700">Expected Delivery Date</label>
+            <FormField label="Expected Delivery Date">
               <Input
                 type="date"
                 value={expectedDeliveryDate}
                 onChange={(e) => setExpectedDeliveryDate(e.target.value)}
                 className="h-9 text-xs"
               />
-            </div>
+            </FormField>
           </div>
 
           {/* Supplier Auto-Filled Context */}
@@ -373,18 +402,18 @@ export function PurchaseOrderCreateEditPage() {
           )}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-700">Payment Terms</label>
+            <FormField label="Payment Terms">
               <Input
                 placeholder="e.g. Net 30, Net 15, Advance Prepayment..."
                 value={paymentTerms}
                 onChange={(e) => setPaymentTerms(e.target.value)}
                 className="h-9 text-xs"
               />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-700">Currency</label>
+            </FormField>
+
+            <FormField label="Currency" htmlFor="currency-select">
               <select
+                id="currency-select"
                 aria-label="Currency"
                 value={currency}
                 onChange={(e) => setCurrency(e.target.value)}
@@ -396,30 +425,42 @@ export function PurchaseOrderCreateEditPage() {
                   </option>
                 ))}
               </select>
-            </div>
+            </FormField>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </FormSection>
 
       {/* Product Lines Section */}
-      <Card className="border-slate-200 shadow-2xs">
-        <CardHeader className="p-4 border-b border-slate-100 flex flex-row items-center justify-between">
-          <CardTitle className="text-sm font-semibold text-slate-900 flex items-center gap-2">
-            <Package className="h-4 w-4 text-emerald-600" />
-            <span>Product Line Items</span>
-          </CardTitle>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={handleAddLine}
-            className="h-7 text-xs gap-1 bg-white hover:bg-slate-50 text-slate-700"
-          >
-            <Plus className="h-3.5 w-3.5" />
-            <span>Add Product</span>
-          </Button>
-        </CardHeader>
-        <CardContent className="p-0">
+      <FormSection
+        icon={Package}
+        title="Product Line Items"
+        description="Line-item order quantities, contracted unit prices, discounts, and tax rates."
+        noPadding={true}
+        actions={
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setIsProductSelectorOpen(true)}
+              className="h-7 text-xs gap-1 bg-white hover:bg-slate-50 text-slate-700"
+            >
+              <Package className="h-3.5 w-3.5 text-primary" />
+              <span>Browse Catalog</span>
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleAddLine}
+              className="h-7 text-xs gap-1 bg-white hover:bg-slate-50 text-slate-700"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              <span>Add Line</span>
+            </Button>
+          </div>
+        }
+      >
           <div className="overflow-x-auto">
             <table className="w-full text-xs text-left">
               <thead className="bg-slate-50/80 text-[11px] uppercase tracking-wider text-slate-500 border-b border-slate-200">
@@ -535,8 +576,7 @@ export function PurchaseOrderCreateEditPage() {
               </tbody>
             </table>
           </div>
-        </CardContent>
-      </Card>
+      </FormSection>
 
       {/* Instructions & Financial Summary Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -612,6 +652,65 @@ export function PurchaseOrderCreateEditPage() {
           </Card>
         </div>
       </div>
+
+      {/* Product Catalog Modal */}
+      <Dialog open={isProductSelectorOpen} onOpenChange={setIsProductSelectorOpen}>
+        <DialogContent className="max-w-xl">
+          <DialogHeader>
+            <DialogTitle>Select Product from Master Catalog</DialogTitle>
+          </DialogHeader>
+          <ProductSelector onSelect={handleSelectProductFromMaster} />
+        </DialogContent>
+      </Dialog>
+
+      {/* Sticky Bottom Action Bar */}
+      <DocumentActionBar
+        status={<StatusBadge status={isEdit ? 'DRAFT' : 'NEW'} />}
+        summary={
+          <span>
+            Total ({lines.length} lines):{' '}
+            <strong className="text-slate-900 font-mono text-sm ml-1">
+              {formatCurrency(calculation.grandTotal, currency)}
+            </strong>
+          </span>
+        }
+        leftActions={
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => navigate('/purchasing/orders')}
+            className="text-xs text-slate-600 hover:text-slate-900"
+          >
+            Discard & Return
+          </Button>
+        }
+        rightActions={
+          <>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={submitting}
+              onClick={() => handleSaveOrder(false)}
+              className="gap-1.5 text-xs bg-white hover:bg-slate-50"
+            >
+              <Save className="h-3.5 w-3.5 text-slate-600" />
+              <span>Save as Draft</span>
+            </Button>
+
+            <Button
+              variant="default"
+              size="sm"
+              disabled={submitting}
+              onClick={() => handleSaveOrder(true)}
+              className="gap-1.5 text-xs bg-primary hover:bg-primary-hover text-primary-foreground font-semibold shadow-xs"
+            >
+              <Send className="h-3.5 w-3.5" />
+              <span>Submit for Approval</span>
+            </Button>
+          </>
+        }
+      />
     </div>
   );
 }

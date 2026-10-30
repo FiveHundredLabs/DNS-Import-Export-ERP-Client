@@ -16,6 +16,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table';
 import { Skeleton } from '../../components/ui/skeleton';
 import { StatCard } from '../../components/common/StatCard';
+import { PageHeader } from '../../components/common/PageHeader';
 import { useInventory } from '../../hooks/useInventory';
 import { useAuth } from '../../hooks/useAuth';
 import { MOCK_PRODUCTS } from '../../mock/mockProducts';
@@ -180,17 +181,23 @@ export function StockBalancePage() {
 
   return (
     <div className="w-full space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <h1 className="text-2xl font-bold">Stock Balance</h1>
-        <div className="flex items-center gap-3">
-          <div className="text-sm text-muted-foreground">
-            Showing <span className="font-semibold text-foreground">{filteredBalances.length}</span> of {enrichedBalances.length} stock lines
+      <PageHeader
+        title="Stock Balance"
+        breadcrumbs={[
+          { label: 'Inventory', href: '/inventory' },
+          { label: 'Stock Balance' },
+        ]}
+        actions={
+          <div className="flex items-center gap-3">
+            <div className="text-xs text-muted-foreground">
+              Showing <span className="font-semibold text-foreground">{filteredBalances.length}</span> of {enrichedBalances.length} stock lines
+            </div>
+            <Button variant="outline" size="sm" onClick={handleExportCSV}>
+              Export CSV
+            </Button>
           </div>
-          <Button variant="outline" size="sm" onClick={handleExportCSV}>
-            Export CSV
-          </Button>
-        </div>
-      </div>
+        }
+      />
 
       {/* Inventory Navigation Tabs */}
       <div className="flex items-center gap-1 border-b border-border pb-2 text-xs font-medium">
@@ -469,8 +476,8 @@ export function StockBalancePage() {
                 />
               </div>
 
-              <p className="text-xs text-amber-600 font-medium">
-                ⚠ Manual adjustments create an immutable audit record.
+              <p className="text-xs text-muted-foreground">
+                All stock adjustments are recorded in the inventory movement log.
               </p>
             </div>
           )}

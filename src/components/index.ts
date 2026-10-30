@@ -27,6 +27,10 @@ export * from './ui';
 
 // 2. Common Navigation & Application Shell Components
 export { Header } from './common/Header';
+export { PageHeader } from './common/PageHeader';
+export { FormSection } from './common/FormSection';
+export { FormField } from './common/FormField';
+export { DocumentActionBar } from './common/DocumentActionBar';
 export { Sidebar } from './common/Sidebar';
 export { MobileNav } from './common/MobileNav';
 export { InnerSidebar } from './common/InnerSidebar';
@@ -49,6 +53,8 @@ export { CustomerSelector } from './selectors/CustomerSelector';
 export { CustomerSummaryCard } from './selectors/CustomerSummaryCard';
 export { ProductSelector } from './selectors/ProductSelector';
 export { ProductSummaryCard } from './selectors/ProductSummaryCard';
+export { SupplierSelector } from './selectors/SupplierSelector';
+export { SupplierSummaryCard } from './selectors/SupplierSummaryCard';
 
 // 4. Central Approval Engine Components
 export { ApprovalBadge } from './approval/ApprovalBadge';
@@ -59,6 +65,8 @@ export { ApprovalActionDialog } from './approval/ApprovalActionDialog';
 export { InnerSidebarLayout } from './layout/InnerSidebarLayout';
 
 // 6. Common ERP Status Badges & Reusable Modals
+export { StatusBadge, createStatusBadgeAdapter } from './common/StatusBadge';
+export type { StatusBadgeProps, StatusVariant } from './common/StatusBadge';
 export { InvoiceStatusBadge } from '../features/invoices/InvoiceStatusBadge';
 export { PaymentStatusBadge } from '../features/payments/PaymentStatusBadge';
 export { WarrantyStatusBadge } from '../features/warranty/WarrantyStatusBadge';

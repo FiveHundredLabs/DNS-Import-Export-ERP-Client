@@ -9,6 +9,7 @@ import { Input } from '../../components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table';
 import { Skeleton } from '../../components/ui/skeleton';
 import { StatCard } from '../../components/common/StatCard';
+import { PageHeader } from '../../components/common/PageHeader';
 import { MOCK_PRODUCTS } from '../../mock/mockProducts';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 import { unitBarcodeService } from '../../services/UnitBarcodeService';
@@ -379,148 +380,81 @@ function isPowerToolItem(item: { productId?: string; sku?: string; categoryName?
 
   return (
     <div className="w-full space-y-6">
-      {/* ── Page Header ── */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-200">
-        <div>
-          <div className="flex items-center gap-2.5 flex-wrap">
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2.5">
-              <Boxes className="h-7 w-7 text-primary" />
-              Warehouse Inbound Inventory Hub
-            </h1>
+      {/* ── Standardized Page Header ── */}
+      <PageHeader
+        title="Warehouse Inbound Inventory Hub"
+        subtitle="Real-time physical stock registry for professional power tools generated directly from inward Goods Receipt Notes (GRN). Track received quantities, damaged quarantine units, landed costs, Code-128 unit barcodes, and manufacturer serial numbers."
+        badge={
+          <div className="flex items-center gap-1.5 flex-wrap">
             <Badge className="bg-emerald-600 text-white font-mono text-[11px] gap-1 shadow-2xs">
-              <Warehouse className="h-3.5 w-3.5" />
-              Main Facility: WH-MAIN
+              <Warehouse className="h-3 w-3" />
+              WH-MAIN
             </Badge>
             <Badge variant="outline" className="text-slate-600 text-[11px] bg-slate-50 font-mono">
               Stock Keeper Operations
             </Badge>
-            <Badge className="bg-blue-600 text-white font-mono text-[11px] gap-1 shadow-2xs">
-              Industrial Power Tools Division
-            </Badge>
           </div>
-          <p className="text-xs sm:text-sm text-slate-500 mt-1 max-w-3xl">
-            Real-time physical stock registry for professional power tools (Bosch, Makita, DeWalt, Milwaukee, Stanley FatMax) generated directly from inward Goods Receipt Notes (GRN).
-            Track received quantities, damaged quarantine units, landed costs, Code-128 unit barcodes, and manufacturer serial numbers.
-          </p>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2 shrink-0">
-          <Link to="/inventory/grn/new">
-            <Button className="bg-primary hover:bg-primary-hover text-primary-foreground text-xs font-bold gap-1.5 shadow-xs h-9">
-              <PlusCircle className="h-4 w-4" />
-              + New GRN Intake
-            </Button>
-          </Link>
-        </div>
-      </div>
+        }
+        actions={
+          <Button
+            onClick={() => navigate('/inventory/grn/new')}
+            className="bg-primary hover:bg-primary-hover text-primary-foreground text-xs font-semibold gap-1.5 shadow-xs h-9"
+          >
+            <PlusCircle className="h-4 w-4" />
+            <span>+ New GRN Intake</span>
+          </Button>
+        }
+      />
 
       {/* ── Top Operational KPI Metrics ── */}
       <div className="grid grid-cols-2 lg:grid-cols-6 gap-3">
-        {/* KPI 1: Good Accepted Units */}
-        <Card className="border-slate-200 shadow-2xs bg-gradient-to-br from-white to-emerald-50/30">
-          <CardContent className="p-3.5">
-            <div className="flex items-center justify-between text-slate-500 mb-1">
-              <span className="text-[10.5px] font-bold uppercase tracking-wider">Accepted Stock</span>
-              <Package className="h-4 w-4 text-emerald-600" />
-            </div>
-            <div className="text-xl sm:text-2xl font-black font-mono text-slate-900 tabular-nums">
-              {kpis.totalAcceptedUnits.toLocaleString()}
-            </div>
-            <p className="text-[10px] text-slate-500 mt-0.5 truncate">
-              Saleable units in warehouse
-            </p>
-          </CardContent>
-        </Card>
+        <StatCard
+          title="Accepted Stock"
+          value={kpis.totalAcceptedUnits.toLocaleString()}
+          subtitle="Saleable units in warehouse"
+          icon={Package}
+          variant="emerald"
+        />
 
-        {/* KPI 2: Total Intake Stock Value */}
-        <Card className="border-slate-200 shadow-2xs bg-gradient-to-br from-white to-blue-50/30">
-          <CardContent className="p-3.5">
-            <div className="flex items-center justify-between text-slate-500 mb-1">
-              <span className="text-[10.5px] font-bold uppercase tracking-wider">Intake Valuation</span>
-              <DollarSign className="h-4 w-4 text-blue-600" />
-            </div>
-            <div className="text-lg sm:text-xl font-black font-mono text-blue-900 truncate tabular-nums">
-              {formatCurrency(kpis.totalStockValue)}
-            </div>
-            <p className="text-[10px] text-slate-500 mt-0.5 truncate">
-              Based on GRN landed unit costs
-            </p>
-          </CardContent>
-        </Card>
+        <StatCard
+          title="Intake Valuation"
+          value={formatCurrency(kpis.totalStockValue)}
+          subtitle="Based on GRN landed costs"
+          icon={DollarSign}
+          variant="blue"
+        />
 
-        {/* KPI 3: Unit Barcodes */}
-        <Card className="border-slate-200 shadow-2xs bg-gradient-to-br from-white to-indigo-50/30">
-          <CardContent className="p-3.5">
-            <div className="flex items-center justify-between text-slate-500 mb-1">
-              <span className="text-[10.5px] font-bold uppercase tracking-wider">Unit Barcodes</span>
-              <Barcode className="h-4 w-4 text-indigo-600" />
-            </div>
-            <div className="text-xl sm:text-2xl font-black font-mono text-indigo-900 tabular-nums">
-              {kpis.totalBarcodes.toLocaleString()}
-            </div>
-            <p className="text-[10px] text-emerald-700 font-semibold mt-0.5 truncate">
-              ✓ {kpis.confirmedBarcodes.toLocaleString()} Affixed in Bay
-            </p>
-          </CardContent>
-        </Card>
+        <StatCard
+          title="Unit Barcodes"
+          value={kpis.totalBarcodes.toLocaleString()}
+          subtitle={`✓ ${kpis.confirmedBarcodes.toLocaleString()} Affixed in Bay`}
+          icon={Barcode}
+          variant="indigo"
+        />
 
-        {/* KPI 4: Serial Numbers */}
-        <Card className="border-slate-200 shadow-2xs bg-gradient-to-br from-white to-violet-50/30">
-          <CardContent className="p-3.5">
-            <div className="flex items-center justify-between text-slate-500 mb-1">
-              <span className="text-[10.5px] font-bold uppercase tracking-wider">Serialized Units</span>
-              <Hash className="h-4 w-4 text-violet-600" />
-            </div>
-            <div className="text-xl sm:text-2xl font-black font-mono text-violet-900 tabular-nums">
-              {kpis.serializedUnitsCount} Units
-            </div>
-            <p className="text-[10px] text-slate-500 mt-0.5 truncate">
-              Tracked with OEM serials
-            </p>
-          </CardContent>
-        </Card>
+        <StatCard
+          title="Serialized Units"
+          value={`${kpis.serializedUnitsCount} Units`}
+          subtitle="Tracked with OEM serials"
+          icon={Hash}
+          variant="purple"
+        />
 
-        {/* KPI 5: Damaged Stock in Quarantine */}
-        <Card
-          className={cn(
-            'border-slate-200 shadow-2xs bg-gradient-to-br from-white',
-            kpis.totalDamagedUnits > 0 ? 'to-rose-50/40 border-rose-300' : 'to-slate-50'
-          )}
-        >
-          <CardContent className="p-3.5">
-            <div className="flex items-center justify-between text-slate-500 mb-1">
-              <span className="text-[10.5px] font-bold uppercase tracking-wider">Damaged Stock</span>
-              <AlertTriangle className={cn('h-4 w-4', kpis.totalDamagedUnits > 0 ? 'text-rose-600' : 'text-slate-400')} />
-            </div>
-            <div
-              className={cn(
-                'text-xl sm:text-2xl font-black font-mono tabular-nums',
-                kpis.totalDamagedUnits > 0 ? 'text-rose-600' : 'text-slate-800'
-              )}
-            >
-              {kpis.totalDamagedUnits} Units
-            </div>
-            <p className="text-[10px] text-rose-700 font-medium mt-0.5 truncate">
-              Quarantine Bay Q-01
-            </p>
-          </CardContent>
-        </Card>
+        <StatCard
+          title="Damaged Stock"
+          value={`${kpis.totalDamagedUnits} Units`}
+          subtitle="Quarantine holding area"
+          icon={AlertTriangle}
+          variant="rose"
+        />
 
-        {/* KPI 6: GRN Intake Sessions */}
-        <Card className="border-slate-200 shadow-2xs bg-gradient-to-br from-white to-amber-50/30">
-          <CardContent className="p-3.5">
-            <div className="flex items-center justify-between text-slate-500 mb-1">
-              <span className="text-[10.5px] font-bold uppercase tracking-wider">GRN Shipments</span>
-              <Clock className="h-4 w-4 text-amber-600" />
-            </div>
-            <div className="text-xl sm:text-2xl font-black font-mono text-slate-900 tabular-nums">
-              {powerToolGrns.length} Total
-            </div>
-            <p className="text-[10px] text-slate-500 mt-0.5 truncate">
-              {kpis.approvedGRNs} approved · {kpis.pendingGRNs} pending
-            </p>
-          </CardContent>
-        </Card>
+        <StatCard
+          title="GRN Shipments"
+          value={`${powerToolGrns.length} Total`}
+          subtitle={`${kpis.approvedGRNs} approved · ${kpis.pendingGRNs} pending`}
+          icon={Clock}
+          variant="amber"
+        />
       </div>
 
       {/* ── Navigation Tabs ── */}

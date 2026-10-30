@@ -25,12 +25,16 @@ export function OrderStatusBadge({ status, isSpecialApproval }: OrderStatusBadge
         return <Badge variant="warning" className="bg-amber-500 text-white">Partially Issued</Badge>;
       case 'ISSUED':
         return <Badge variant="info" className="bg-primary text-primary-foreground">Issued</Badge>;
+      case 'PARTIALLY_INVOICED':
+        return <Badge className="bg-indigo-600 text-white hover:bg-indigo-700">Partially Invoiced</Badge>;
       case 'INVOICED':
         return <Badge variant="default" className="bg-purple-600 text-white hover:bg-purple-700">Invoiced</Badge>;
       case 'DISPATCHED':
         return <Badge variant="default" className="bg-teal-600 text-white hover:bg-teal-700">Dispatched</Badge>;
       case 'DELIVERED':
         return <Badge variant="success" className="bg-emerald-700 text-white">Delivered</Badge>;
+      case 'CLOSED':
+        return <Badge variant="outline" className="text-slate-700 border-slate-400 bg-slate-100 font-semibold">Closed</Badge>;
       case 'REJECTED':
         return <Badge variant="destructive">Rejected</Badge>;
       case 'CANCELLED':

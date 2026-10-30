@@ -8,7 +8,8 @@ import { GRNDetailPage } from '../features/inventory/GRNDetailPage';
 
 vi.mock('react-router-dom', () => ({
   useNavigate: () => vi.fn(),
-  useParams: () => ({ id: '123' })
+  useParams: () => ({ id: '123' }),
+  Link: ({ children, to }: any) => <a href={to}>{children}</a>,
 }));
 
 vi.mock('../hooks/useInventory', () => ({
@@ -48,7 +49,7 @@ describe('Inventory Components', () => {
 
   it('Stock balance table renders product rows', () => {
     render(<StockBalancePage />);
-    expect(screen.getByText('Stock Balance')).toBeTruthy();
+    expect(screen.getAllByText('Stock Balance').length).toBeGreaterThan(0);
     expect(screen.getByText('Product 1')).toBeTruthy();
   });
 

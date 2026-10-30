@@ -208,19 +208,22 @@ export class OrderService {
       if (!availableStock) {
         availableStock = Math.max(0, (product.stockOnHand ?? 0) - (product.damagedStock ?? 0));
       }
-      if (availableStock > 0 && inputItem.orderedQuantity > availableStock) {
+      const orderedQty = inputItem.orderedQuantity ?? (inputItem as any).quantity ?? 1;
+      const discountPercentage =
+        inputItem.requestedDiscountPercentage ?? (inputItem as any).discountPercentage ?? 0;
+
+      if (availableStock > 0 && orderedQty > availableStock) {
         throw new Error(
-          `Ordered quantity for "${product.name}" (${inputItem.orderedQuantity}) exceeds available stock (${availableStock} ${product.uomCode || 'units'}).`
+          `Ordered quantity for "${product.name}" (${orderedQty}) exceeds available stock (${availableStock} ${product.uomCode || 'units'}).`
         );
       }
 
-      const discountPercentage = inputItem.requestedDiscountPercentage ?? 0;
       if (discountPercentage < 0 || discountPercentage > 100) {
         throw new Error(`Discount percentage must be between 0% and 100%`);
       }
 
       const unitPriceSnapshot = inputItem.unitPrice ?? product.pricing.currentSellingPrice;
-      const subtotal = Number((unitPriceSnapshot * inputItem.orderedQuantity).toFixed(2));
+      const subtotal = Number((unitPriceSnapshot * orderedQty).toFixed(2));
       const discountAmount = Number(((subtotal * discountPercentage) / 100).toFixed(2));
       const netLine = Number((subtotal - discountAmount).toFixed(2));
       const taxConfig = this.taxSvc.getTaxConfig();
@@ -245,8 +248,10 @@ export class OrderService {
         taxPercentage,
         taxAmount,
         lineTotal,
-        orderedQuantity: inputItem.orderedQuantity,
-        approvedQuantity: inputItem.orderedQuantity,
+        orderedQuantity: orderedQty,
+        approvedQuantity: orderedQty,
+        invoicedQuantity: 0,
+        remainingQuantity: orderedQty,
         issuedQuantity: 0,
         batchId: inputItem.batchId,
         batchNumber: inputItem.batchNumber,
@@ -271,7 +276,7 @@ export class OrderService {
     return { items: result, rawForEvaluation };
   }
 
-  async createOrder(input: CreateOrderInput, currentUser: User): Promise<SalesOrder> {
+  async createOrder(input: CreateOrderInput, currentUser?: User): Promise<SalesOrder> {
     if (!input.items || input.items.length === 0) {
       throw new Error('An order must contain at least one line item.');
     }
@@ -282,7 +287,7 @@ export class OrderService {
     }
 
     // Role territory scoping check: Rep can only create order for their assigned customer
-    if (currentUser.role === 'SALES_REP') {
+    if (currentUser && currentUser.role === 'SALES_REP') {
       if (customer.assignedRepId && customer.assignedRepId !== currentUser.id) {
         throw new Error(
           `Permission Denied: Customer ${customer.name} is assigned to another sales representative.`
@@ -865,7 +870,11 @@ export class OrderService {
     id: string,
     nextStatus: OrderStatus,
     currentUser: User,
-    details?: { issuedQuantities?: Record<string, number>; comment?: string }
+    details?: {
+      issuedQuantities?: Record<string, number>;
+      invoicedQuantities?: Record<string, number>;
+      comment?: string;
+    }
   ): Promise<SalesOrder> {
     const order = await this.repo.getById(id);
     if (!order) {
@@ -878,7 +887,7 @@ export class OrderService {
 
     let updatedItems = order.items;
     if (details?.issuedQuantities) {
-      updatedItems = order.items.map((item) => {
+      updatedItems = updatedItems.map((item) => {
         if (details.issuedQuantities![item.id] !== undefined) {
           return {
             ...item,
@@ -889,10 +898,26 @@ export class OrderService {
       });
     }
 
+    if (details?.invoicedQuantities) {
+      updatedItems = updatedItems.map((item) => {
+        const invQty = details.invoicedQuantities![item.productId] ?? details.invoicedQuantities![item.id];
+        if (invQty !== undefined) {
+          const targetQty = item.approvedQuantity > 0 ? item.approvedQuantity : item.orderedQuantity;
+          return {
+            ...item,
+            invoicedQuantity: invQty,
+            remainingQuantity: Math.max(0, targetQty - invQty),
+          };
+        }
+        return item;
+      });
+    }
+
     const actionMap: Record<OrderStatus, any> = {
       PICKING: 'PICK',
       PARTIALLY_ISSUED: 'ISSUE',
       ISSUED: 'ISSUE',
+      PARTIALLY_INVOICED: 'INVOICE',
       INVOICED: 'INVOICE',
       DISPATCHED: 'DISPATCH',
       DELIVERED: 'DELIVERED',
@@ -903,6 +928,7 @@ export class OrderService {
       APPROVED: 'APPROVE',
       REJECTED: 'REJECT',
       CANCELLED: 'CANCEL',
+      CLOSED: 'CLOSE',
     };
 
     const historyEntry: OrderApprovalAction = {
@@ -1099,6 +1125,73 @@ export class OrderService {
   /** Alias used by DispatchPage: advance order to the specified status string */
   async advanceOrderStatus(orderId: string, nextStatus: string, user: User): Promise<SalesOrder> {
     return this.updateFulfillmentStatus(orderId, nextStatus as OrderStatus, user);
+  }
+
+  /**
+   * Explicitly closes a Sales Order (Full or Partial Closure) with mandatory documented reason code (BR-05).
+   * Authorized roles: SALES_MANAGER, MANAGER, DIRECTOR (SM-03, MG-01, DR-01).
+   */
+  async closeOrder(
+    orderId: string,
+    currentUser: User,
+    params: {
+      closureType: 'FULL' | 'PARTIAL';
+      reasonCode:
+        | 'CUSTOMER_CANCELLED'
+        | 'OUT_OF_STOCK'
+        | 'DISCONTINUED'
+        | 'CREDIT_LIMIT_REDUCTION'
+        | 'FORCE_MAJEURE'
+        | 'FULFILLED_EARLY'
+        | 'OTHER';
+      reasonNotes: string;
+    }
+  ): Promise<SalesOrder> {
+    const isAuthorized = ['SALES_MANAGER', 'MANAGER', 'DIRECTOR'].includes(currentUser.role);
+    if (!isAuthorized) {
+      throw new Error(
+        `Permission Denied: Role ${currentUser.role} is not authorized to close Sales Orders (requires SALES_MANAGER, MANAGER, or DIRECTOR).`
+      );
+    }
+
+    const order = await this.repo.getById(orderId);
+    if (!order) throw new Error(`Sales Order not found: ${orderId}`);
+
+    if (order.status === 'CLOSED' || order.status === 'CANCELLED') {
+      throw new Error(`Order ${order.orderNumber} is already ${order.status.toLowerCase()}.`);
+    }
+
+    if (!params.reasonNotes || params.reasonNotes.trim().length < 5) {
+      throw new Error('A documented reason note of at least 5 characters is required for order closure.');
+    }
+
+    const now = new Date().toISOString();
+    const updated = await this.repo.update(orderId, {
+      status: 'CLOSED',
+      closureType: params.closureType,
+      closureReasonCode: params.reasonCode,
+      closureReason: params.reasonNotes.trim(),
+      closedById: currentUser.id,
+      closedByName: currentUser.name || (currentUser as any).fullName || 'System',
+      closedAt: now,
+      approvalHistory: [
+        ...order.approvalHistory,
+        {
+          id: `appr-act-${Date.now()}-${Math.random().toString(36).substring(2, 5)}`,
+          stepNumber: order.approvalHistory.length + 1,
+          actorId: currentUser.id,
+          actorName: currentUser.name || (currentUser as any).fullName || 'System',
+          actorRole: currentUser.role,
+          action: 'CLOSE',
+          fromStatus: order.status,
+          toStatus: 'CLOSED',
+          comment: `[${params.closureType} CLOSURE - ${params.reasonCode}] ${params.reasonNotes.trim()}`,
+          timestamp: now,
+        },
+      ],
+    });
+
+    return updated;
   }
 }
 

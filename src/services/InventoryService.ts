@@ -1,6 +1,7 @@
 import { IInventoryRepository } from '../repositories/IInventoryRepository';
 import { StockMovement, StockBalance } from '../types/inventory';
 import { canIssueFromStock, validateStockAdjustment } from '../rules/inventoryRules';
+import { hasPermission } from '../rules/permissions';
 
 export class InventoryService {
   constructor(private repo: IInventoryRepository) {}
@@ -41,32 +42,60 @@ export class InventoryService {
     return this.repo.getMovements();
   }
 
-  async executeDamageReversal(productId: string, locationId: string, quantity: number, userOrActorId: any, maybeActorName?: string): Promise<void> {
+  async executeDamageReversal(
+    productId: string,
+    locationId: string,
+    quantity: number,
+    userOrActorId: any,
+    maybeActorName?: string,
+    inspectionNotes?: string
+  ): Promise<StockMovement> {
+    const userRole = typeof userOrActorId === 'object' ? userOrActorId?.role : undefined;
+    if (
+      userRole &&
+      !['STOCK_KEEPER', 'MANAGER', 'DIRECTOR'].includes(userRole) &&
+      !hasPermission(userRole, 'inventory:damaged_recover')
+    ) {
+      throw new Error(
+        'Only Stock Keepers or Warehouse Managers are authorized to restore recovered damaged stock (ST-02).'
+      );
+    }
+
+    if (quantity <= 0) {
+      throw new Error('Recovery quantity must be greater than zero.');
+    }
+
     let balance = await this.repo.getBalance(productId, locationId);
     if (!balance || balance.damagedQuantity < quantity) {
-      throw new Error('Not enough damaged quantity to reverse');
+      throw new Error('Not enough damaged quantity in quarantine to reverse.');
     }
-    
+
     balance.damagedQuantity -= quantity;
     balance.availableQuantity += quantity;
     balance.lastUpdated = new Date().toISOString();
     await this.repo.saveBalance(balance);
 
     const actorId = typeof userOrActorId === 'object' ? userOrActorId?.id : userOrActorId;
-    const actorName = typeof userOrActorId === 'object' ? userOrActorId?.name : (maybeActorName || 'System');
+    const actorName =
+      typeof userOrActorId === 'object' ? userOrActorId?.name : maybeActorName || 'System';
 
-    await this.repo.addMovement({
-      id: Math.random().toString(),
+    const movement: StockMovement = {
+      id: `mov-rec-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
       productId,
+      sourceLocation: 'DAMAGED_QUARANTINE',
       targetLocation: locationId,
       quantity,
       movementType: 'DAMAGE_REVERSAL',
-      referenceDocumentType: 'MANUAL',
-      referenceDocumentId: '',
+      referenceDocumentType: 'INTERNAL_RETURN',
+      referenceDocumentId: `REC-${Date.now().toString().slice(-6)}`,
       performedById: actorId,
       performedByName: actorName,
-      timestamp: new Date().toISOString()
-    });
+      reason: inspectionNotes || 'Inspected, QA tested, and restored to available inventory',
+      timestamp: new Date().toISOString(),
+    };
+
+    await this.repo.addMovement(movement);
+    return movement;
   }
 
   async executeDamageScrap(

@@ -20,7 +20,8 @@ import {
 import { formatCurrency, formatDate } from '../../../../utils/formatters';
 import { cn } from '../../../../utils/cn';
 import { MOCK_PRODUCTS } from '../../../../mock/mockProducts';
-import { MOCK_WARRANTY_RECORDS } from '../../../../mock/mockWarranty';
+import { PrintableGRN, CostedPriceItemInfo } from '../../../inventory/PrintableGRN';
+import { Printer } from 'lucide-react';
 import { GRNItem } from '../../../../types/inventory';
 import Decimal from 'decimal.js';
 import {
@@ -56,6 +57,7 @@ import {
   FileText,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { MOCK_WARRANTY_RECORDS } from '../../../../mock/mockWarranty';
 
 const LANDED_EXPENSE_CATEGORIES = [
   'Shipping / Freight Charges',
@@ -245,6 +247,7 @@ export function VendorBillCostingPage() {
   const [isListExpanded, setIsListExpanded] = useState(false);
   const [expandedProductIds, setExpandedProductIds] = useState<Record<string, boolean>>({});
   const [productSearch, setProductSearch] = useState('');
+  const [isCostedPrintModalOpen, setIsCostedPrintModalOpen] = useState(false);
   const [activeSerialItem, setActiveSerialItem] = useState<{
     item: GRNItem;
     product?: any;
@@ -1817,6 +1820,16 @@ export function VendorBillCostingPage() {
                   </Button>
                   <Button
                     type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsCostedPrintModalOpen(true)}
+                    className="text-xs border-emerald-400 bg-white text-emerald-800 hover:bg-emerald-50 font-semibold gap-1.5"
+                  >
+                    <Printer className="h-3.5 w-3.5 text-emerald-700" />
+                    <span>Print Costed & Priced GRN</span>
+                  </Button>
+                  <Button
+                    type="button"
                     size="sm"
                     onClick={() => navigate('/finance/dashboard')}
                     className="bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-semibold"
@@ -3007,6 +3020,23 @@ export function VendorBillCostingPage() {
           </DialogFooter>
         </div>
       </Dialog>
+
+      {/* Official Costed & Priced A4 Printable GRN Modal */}
+      {selectedGRN && (
+        <PrintableGRN
+          grn={selectedGRN as any}
+          open={isCostedPrintModalOpen}
+          onOpenChange={setIsCostedPrintModalOpen}
+          pricingData={computedLineItems.map((ci) => {
+            const product = MOCK_PRODUCTS.find((p) => p.id === ci.productId || p.sku === ci.sku);
+            return {
+              productId: ci.productId,
+              unitCost: ci.landedUnitCost || ci.unitCost,
+              sellingPrice: product?.pricing?.currentSellingPrice || (ci.landedUnitCost * 1.3),
+            };
+          })}
+        />
+      )}
     </div>
   );
 }

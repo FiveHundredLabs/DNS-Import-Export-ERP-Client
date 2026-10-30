@@ -32,6 +32,7 @@ const ROUTE_TITLES: Record<string, string> = {
   '/inventory': 'Inventory & Warehouse Hub',
   '/pos': 'Showroom POS Terminal',
   '/finance': 'Finance & Double-Entry Ledger',
+  '/finance/cash-book': 'Cash Book & Payment Vouchers',
   '/warranty': 'Warranty Claim Hub',
   '/commissions': 'Sales Commissions',
   '/reports': 'Enterprise Analytics',
@@ -42,7 +43,7 @@ const ROUTE_TITLES: Record<string, string> = {
   '/purchasing/orders/new': 'Create Purchase Order',
   '/purchasing/grn': 'Goods Received Notes (Read-Only)',
   '/purchasing/reports': 'Procurement & Purchasing Reports',
-  '/purchasing/returns': 'Purchase Returns (Under Development)',
+  '/purchasing/returns': 'Supplier Returns & Debit Notes',
 };
 
 export function Header({ onToggleSidebar }: HeaderProps) {
@@ -73,22 +74,34 @@ export function Header({ onToggleSidebar }: HeaderProps) {
   }, [overflowOpen]);
 
   // Determine current page title
-  const currentTitle =
-    ROUTE_TITLES[location.pathname] ||
-    (location.pathname.startsWith('/purchasing/orders') ? 'Purchase Order Details' :
-     location.pathname.startsWith('/purchasing/grn') ? 'GRN Inspection Details' :
-     location.pathname.startsWith('/purchasing') ? 'Purchasing Hub' :
-     location.pathname.startsWith('/products') ? 'Product Details' :
-     location.pathname.startsWith('/orders/activity') ? 'User Activity Log' :
-     location.pathname.startsWith('/orders') ? 'Sales Order Details' :
-     location.pathname.startsWith('/quotations') ? 'Quotation Details' :
-     location.pathname.startsWith('/invoices') ? 'Invoice Details' :
-     location.pathname.startsWith('/payments') ? 'Payment Details' :
-     location.pathname.startsWith('/finance') ? 'Finance & Ledger Desk' :
-     'DNS ERP Workspace');
+  const getHeaderTitle = () => {
+    const p = location.pathname;
+    if (ROUTE_TITLES[p]) return ROUTE_TITLES[p];
+    if (p === '/quotations/new') return 'New Quotation';
+    if (p.startsWith('/quotations/') && p.endsWith('/edit')) return 'Edit Quotation';
+    if (p.startsWith('/quotations/')) return 'Quotation Details';
+    if (p === '/orders/new') return 'New Sales Order';
+    if (p.startsWith('/orders/') && p.endsWith('/edit')) return 'Edit Sales Order';
+    if (p.startsWith('/orders/activity')) return 'User Activity Log';
+    if (p.startsWith('/orders/')) return 'Sales Order Details';
+    if (p === '/purchasing/orders/new') return 'New Purchase Order';
+    if (p.startsWith('/purchasing/orders/')) return 'Purchase Order Details';
+    if (p === '/purchasing/grn/new' || p === '/inventory/grn/new') return 'New Goods Received Note';
+    if (p.startsWith('/purchasing/grn/') || p.startsWith('/inventory/grn/')) return 'GRN Inspection Details';
+    if (p.startsWith('/purchasing')) return 'Purchasing Hub';
+    if (p === '/invoices/new') return 'New Invoice';
+    if (p.startsWith('/invoices/')) return 'Invoice Details';
+    if (p.startsWith('/payments/collect')) return 'Customer Collections';
+    if (p.startsWith('/payments/')) return 'Payment Details';
+    if (p.startsWith('/products/')) return 'Product Details';
+    if (p.startsWith('/finance')) return 'Finance & Ledger Desk';
+    if (p.startsWith('/pos')) return 'Showroom POS Terminal';
+    return 'DNS ERP Workspace';
+  };
+  const currentTitle = getHeaderTitle();
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 w-full items-center justify-between bg-primary text-primary-foreground px-3 sm:px-6 backdrop-blur-md transition-all shrink-0">
+    <header className="sticky top-0 z-30 flex h-16 w-full items-center justify-between bg-primary text-primary-foreground px-3 sm:px-6 transition-all shrink-0">
       {/* Left: Mobile Toggle & Enterprise Brand / Page Title */}
       <div className="flex items-center gap-2 sm:gap-4 min-w-0">
         {location.pathname !== '/' ? (
