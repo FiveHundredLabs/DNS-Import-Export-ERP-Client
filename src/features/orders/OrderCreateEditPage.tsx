@@ -239,7 +239,7 @@ export function OrderCreateEditPage() {
           id: `line-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
           product,
           quantity: 1,
-          discountPercentage: selectedCustomer?.commercialTerms?.defaultDiscountPercentage || 0,
+          discountPercentage: 0,
           selectedBatchId: defaultBatch?.id,
           selectedBatchNumber: defaultBatch?.batchNumber,
           selectedUnitPrice: defaultBatch ? defaultBatch.sellingPrice : product.pricing.currentSellingPrice,

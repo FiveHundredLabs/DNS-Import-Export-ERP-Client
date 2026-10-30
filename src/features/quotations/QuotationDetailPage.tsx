@@ -8,7 +8,7 @@ import { printerService } from '../../services/PrinterService';
 import { pdfService } from '../../services/PdfService';
 import { Quotation } from '../../types/quotation';
 import { QuotationStatusBadge } from './QuotationStatusBadge';
-import { QuotationConvertModal } from './QuotationConvertModal';
+import { toast } from 'sonner';
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../../components/ui/table';
@@ -47,7 +47,32 @@ export function QuotationDetailPage() {
   const [quotation, setQuotation] = useState<Quotation | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isConvertModalOpen, setIsConvertModalOpen] = useState(false);
+  const [isConverting, setIsConverting] = useState(false);
+
+  const handleConvertToOrder = async () => {
+    if (!quotation) return;
+    try {
+      setIsConverting(true);
+      const res = await convertToSalesOrder(quotation.id, {
+        deliveryAddress: quotation.customerAddressSnapshot,
+        deliveryDate: new Date(Date.now() + 3 * 86400000).toISOString().split('T')[0],
+      });
+      toast.success(
+        `Quotation ${quotation.quotationNumber} successfully converted to Sales Order ${res.orderNumber}!`,
+        {
+          action: {
+            label: 'View Order',
+            onClick: () => navigate(`/orders/${res.convertedToOrderId || res.orderNumber}`),
+          },
+        }
+      );
+      await fetchQuotation();
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Failed to convert quotation to order.');
+    } finally {
+      setIsConverting(false);
+    }
+  };
 
   // Approval / Rejection dialog state
   const [actionType, setActionType] = useState<'APPROVE' | 'REJECT' | null>(null);
@@ -252,11 +277,12 @@ export function QuotationDetailPage() {
           {quotation.status === 'APPROVED' && (
             <Button
               size="sm"
-              onClick={() => setIsConvertModalOpen(true)}
+              disabled={isConverting}
+              onClick={handleConvertToOrder}
               className="bg-primary hover:bg-primary-hover text-primary-foreground text-xs gap-1.5 shadow-xs"
             >
               <ShoppingCart className="h-3.5 w-3.5" />
-              Convert to Sales Order
+              {isConverting ? 'Converting...' : 'Convert to Sales Order'}
             </Button>
           )}
         </div>
@@ -493,16 +519,7 @@ export function QuotationDetailPage() {
         </CardContent>
       </Card>
 
-      {/* Convert to Sales Order Modal */}
-      {isConvertModalOpen && (
-        <QuotationConvertModal
-          isOpen={isConvertModalOpen}
-          onClose={() => setIsConvertModalOpen(false)}
-          quotation={quotation}
-          onConfirmConvert={(details) => convertToSalesOrder(quotation.id, details)}
-          onSuccess={() => fetchQuotation()}
-        />
-      )}
+
 
       {/* Approval / Rejection Comment Modal */}
       {actionType && (
