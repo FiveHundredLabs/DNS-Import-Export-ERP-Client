@@ -343,100 +343,7 @@ export function GRNCreateEditPage() {
     setItems((prev) => prev.filter((i) => i._tempId !== tempId));
   };
 
-  // Step 4 Print Scope State: 'ALL' (bulk), 'PRODUCT' (product-wise), or 'UNIT' (individual unit)
-  const [step4PrintScope, setStep4PrintScope] = useState<{
-    mode: 'ALL' | 'PRODUCT' | 'UNIT';
-    productId?: string;
-    productName?: string;
-    unitBarcode?: string;
-  } | null>(null);
 
-  const stickersToPrintInStep4 = useMemo(() => {
-    if (!step4PrintScope || step4PrintScope.mode === 'ALL') {
-      return allStickers;
-    }
-    if (step4PrintScope.mode === 'UNIT') {
-      return allStickers.filter((s) => s.record.unitBarcode === step4PrintScope.unitBarcode);
-    }
-    if (step4PrintScope.mode === 'PRODUCT') {
-      return allStickers.filter((s) => s.productId === step4PrintScope.productId);
-    }
-    return allStickers;
-  }, [allStickers, step4PrintScope]);
-
-  // Bulk print all stickers
-  const handlePrintBulk = () => {
-    if (allStickers.length === 0) {
-      toast.error('No barcode stickers available to print');
-      return;
-    }
-    setStep4PrintScope({ mode: 'ALL' });
-    setIsPrintingStep3(true);
-    toast.info(`Preparing bulk print for all ${allStickers.length} barcode stickers...`);
-    setTimeout(() => {
-      window.print();
-      setIsPrintingStep3(false);
-      setStep4PrintScope(null);
-    }, 250);
-  };
-
-  // Product-wise print
-  const handlePrintProduct = (productId: string, productName: string) => {
-    const pStickers = allStickers.filter((s) => s.productId === productId);
-    if (pStickers.length === 0) {
-      toast.error(`No stickers found for ${productName}`);
-      return;
-    }
-    setStep4PrintScope({ mode: 'PRODUCT', productId, productName });
-    setIsPrintingStep3(true);
-    toast.info(`Preparing product-wise print for ${productName} (${pStickers.length} units)...`);
-    setTimeout(() => {
-      window.print();
-      setIsPrintingStep3(false);
-      setStep4PrintScope(null);
-    }, 250);
-  };
-
-  // Individual unit sticker print
-  const handlePrintSingleUnit = (unitBarcode: string, unitIndex: number, productName: string) => {
-    setStep4PrintScope({ mode: 'UNIT', unitBarcode });
-    setIsPrintingStep3(true);
-    toast.info(`Preparing single unit sticker print: Unit #${unitIndex} (${productName})...`);
-    setTimeout(() => {
-      window.print();
-      setIsPrintingStep3(false);
-      setStep4PrintScope(null);
-    }, 250);
-  };
-
-  const handlePrintAllStickers = handlePrintBulk;
-
-  // Step 3 Barcode Scanner Verification Test
-  const handleTestScan = (codeToTest?: string) => {
-    const val = (codeToTest || scannerTestInput).trim();
-    if (!val) return;
-    setScannerTestInput(val);
-
-    const foundIdx = allStickers.findIndex(
-      (s) =>
-        s.record.unitBarcode.toLowerCase() === val.toLowerCase() ||
-        (s.record.serialNumber && s.record.serialNumber.toLowerCase() === val.toLowerCase())
-    );
-
-    if (foundIdx !== -1) {
-      const found = allStickers[foundIdx];
-      const targetPage = Math.floor(foundIdx / barcodePageSize) + 1;
-      setBarcodePage(targetPage);
-      setVerifiedBarcode(found.record.unitBarcode);
-      toast.success(
-        `✓ Scanner Match (Page ${targetPage}): Unit ${found.unitIndex} of ${found.productName} (${found.record.unitBarcode})`
-      );
-      setScannerTestInput('');
-    } else {
-      setVerifiedBarcode(null);
-      toast.error(`Barcode "${val}" not found in this GRN receiving session.`);
-    }
-  };
 
   // Step 3 Confirm All Affixed in Bay
   const handleConfirmAllAffixedInStudio = () => {
@@ -749,6 +656,101 @@ export function GRNCreateEditPage() {
   const pagedBarcodeStickers = useMemo(() => {
     return allStickers.slice(barcodeStartIndex, barcodeEndIndex);
   }, [allStickers, barcodeStartIndex, barcodeEndIndex]);
+
+  // Step 4 Print Scope State: 'ALL' (bulk), 'PRODUCT' (product-wise), or 'UNIT' (individual unit)
+  const [step4PrintScope, setStep4PrintScope] = useState<{
+    mode: 'ALL' | 'PRODUCT' | 'UNIT';
+    productId?: string;
+    productName?: string;
+    unitBarcode?: string;
+  } | null>(null);
+
+  const stickersToPrintInStep4 = useMemo(() => {
+    if (!step4PrintScope || step4PrintScope.mode === 'ALL') {
+      return allStickers;
+    }
+    if (step4PrintScope.mode === 'UNIT') {
+      return allStickers.filter((s) => s.record.unitBarcode === step4PrintScope.unitBarcode);
+    }
+    if (step4PrintScope.mode === 'PRODUCT') {
+      return allStickers.filter((s) => s.productId === step4PrintScope.productId);
+    }
+    return allStickers;
+  }, [allStickers, step4PrintScope]);
+
+  // Bulk print all stickers
+  const handlePrintBulk = () => {
+    if (allStickers.length === 0) {
+      toast.error('No barcode stickers available to print');
+      return;
+    }
+    setStep4PrintScope({ mode: 'ALL' });
+    setIsPrintingStep3(true);
+    toast.info(`Preparing bulk print for all ${allStickers.length} barcode stickers...`);
+    setTimeout(() => {
+      window.print();
+      setIsPrintingStep3(false);
+      setStep4PrintScope(null);
+    }, 250);
+  };
+
+  // Product-wise print
+  const handlePrintProduct = (productId: string, productName: string) => {
+    const pStickers = allStickers.filter((s) => s.productId === productId);
+    if (pStickers.length === 0) {
+      toast.error(`No stickers found for ${productName}`);
+      return;
+    }
+    setStep4PrintScope({ mode: 'PRODUCT', productId, productName });
+    setIsPrintingStep3(true);
+    toast.info(`Preparing product-wise print for ${productName} (${pStickers.length} units)...`);
+    setTimeout(() => {
+      window.print();
+      setIsPrintingStep3(false);
+      setStep4PrintScope(null);
+    }, 250);
+  };
+
+  // Individual unit sticker print
+  const handlePrintSingleUnit = (unitBarcode: string, unitIndex: number, productName: string) => {
+    setStep4PrintScope({ mode: 'UNIT', unitBarcode });
+    setIsPrintingStep3(true);
+    toast.info(`Preparing single unit sticker print: Unit #${unitIndex} (${productName})...`);
+    setTimeout(() => {
+      window.print();
+      setIsPrintingStep3(false);
+      setStep4PrintScope(null);
+    }, 250);
+  };
+
+  const handlePrintAllStickers = handlePrintBulk;
+
+  // Step 3 Barcode Scanner Verification Test
+  const handleTestScan = (codeToTest?: string) => {
+    const val = (codeToTest || scannerTestInput).trim();
+    if (!val) return;
+    setScannerTestInput(val);
+
+    const foundIdx = allStickers.findIndex(
+      (s) =>
+        s.record.unitBarcode.toLowerCase() === val.toLowerCase() ||
+        (s.record.serialNumber && s.record.serialNumber.toLowerCase() === val.toLowerCase())
+    );
+
+    if (foundIdx !== -1) {
+      const found = allStickers[foundIdx];
+      const targetPage = Math.floor(foundIdx / barcodePageSize) + 1;
+      setBarcodePage(targetPage);
+      setVerifiedBarcode(found.record.unitBarcode);
+      toast.success(
+        `✓ Scanner Match (Page ${targetPage}): Unit ${found.unitIndex} of ${found.productName} (${found.record.unitBarcode})`
+      );
+      setScannerTestInput('');
+    } else {
+      setVerifiedBarcode(null);
+      toast.error(`Barcode "${val}" not found in this GRN receiving session.`);
+    }
+  };
 
   const renderStickerCard = (sticker: (typeof allStickers)[0], idx: number) => {
     const isVerified = verifiedBarcode === sticker.record.unitBarcode;
