@@ -274,52 +274,46 @@ export function ShowroomPOSTerminal() {
     const item = cart.find((i) => i.product.id === productId);
     if (!item) return;
 
-    if (discount < 0) return;
-
+    if (isNaN(discount) || discount < 0) return;
     const maxDiscount = item.product.pricing.maxDiscountPercentage || 15;
+    const clampedDiscount = Math.min(discount, maxDiscount);
 
-    // 1. Standard cashier discount (<= 5%)
-    if (discount <= 5) {
-      setCart((prev) =>
-        prev.map((i) =>
-          i.product.id === productId
-            ? {
-                ...i,
-                discountPercentage: discount,
-                supervisorAuthKey: undefined,
-                authorizedBySupervisor: false,
-                supervisorName: undefined,
-              }
-            : i
-        )
-      );
+    setCart((prev) =>
+      prev.map((i) => {
+        if (i.product.id !== productId) return i;
+        const isAuthorized =
+          clampedDiscount <= 5 ||
+          (i.authorizedBySupervisor && clampedDiscount <= (i.discountPercentage || 0));
+        return {
+          ...i,
+          discountPercentage: clampedDiscount,
+          authorizedBySupervisor: isAuthorized,
+        };
+      })
+    );
+  };
+
+  const handleInitiateCheckout = () => {
+    if (cart.length === 0 || !activeSession) return;
+
+    // Check if any cart item has discount > 5% without supervisor authorization
+    const pendingAuthItem = cart.find(
+      (i) => i.discountPercentage > 5 && !i.authorizedBySupervisor
+    );
+
+    if (pendingAuthItem) {
+      setSupervisorModal({
+        productId: pendingAuthItem.product.id,
+        productName: pendingAuthItem.product.name,
+        requestedDiscount: pendingAuthItem.discountPercentage,
+        maxDiscount: pendingAuthItem.product.pricing.maxDiscountPercentage || 15,
+      });
+      setSupervisorKeyInput('');
+      setSupervisorKeyError(null);
       return;
     }
 
-    // 2. If discount > 5% but already authorized by supervisor for this item
-    if (item.authorizedBySupervisor && item.supervisorAuthKey) {
-      try {
-        validatePOSDiscount(discount, maxDiscount, 5, item.supervisorAuthKey);
-        setCart((prev) =>
-          prev.map((i) =>
-            i.product.id === productId ? { ...i, discountPercentage: discount } : i
-          )
-        );
-        return;
-      } catch {
-        // If discount exceeds what was authorized or invalid, prompt modal
-      }
-    }
-
-    // 3. Discount > 5% requires supervisor authorization key
-    setSupervisorModal({
-      productId,
-      productName: item.product.name,
-      requestedDiscount: discount,
-      maxDiscount,
-    });
-    setSupervisorKeyInput('');
-    setSupervisorKeyError(null);
+    setIsPaymentModalOpen(true);
   };
 
   const handleConfirmSupervisorKey = () => {
@@ -811,17 +805,40 @@ export function ShowroomPOSTerminal() {
                             'h-6 w-12 text-center font-semibold border rounded-md text-xs tabular-nums',
                             item.authorizedBySupervisor
                               ? 'bg-emerald-50 border-emerald-400 text-emerald-900 font-bold'
+                              : item.discountPercentage > 5
+                              ? 'bg-amber-50 border-amber-400 text-amber-900 font-bold'
                               : 'border-slate-300 bg-white text-slate-800'
                           )}
                         />
-                        {item.authorizedBySupervisor && (
-                          <span
-                            className="flex items-center text-[10px] text-emerald-700 bg-emerald-100 px-1 py-0.5 rounded font-bold"
-                            title={`Authorized by supervisor: ${item.supervisorName || 'Approved'}`}
-                          >
-                            <ShieldCheck className="h-3 w-3 mr-0.5 text-emerald-600" />
-                            Supv
-                          </span>
+                        {item.discountPercentage > 5 && (
+                          item.authorizedBySupervisor ? (
+                            <span
+                              className="flex items-center text-[10px] text-emerald-700 bg-emerald-100 px-1 py-0.5 rounded font-bold"
+                              title={`Authorized by supervisor: ${item.supervisorName || 'Approved'}`}
+                            >
+                              <ShieldCheck className="h-3 w-3 mr-0.5 text-emerald-600" />
+                              Supv
+                            </span>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSupervisorModal({
+                                  productId: item.product.id,
+                                  productName: item.product.name,
+                                  requestedDiscount: item.discountPercentage,
+                                  maxDiscount: item.product.pricing.maxDiscountPercentage || 15,
+                                });
+                                setSupervisorKeyInput('');
+                                setSupervisorKeyError(null);
+                              }}
+                              className="flex items-center text-[10px] text-amber-700 bg-amber-100 hover:bg-amber-200 px-1 py-0.5 rounded font-bold cursor-pointer"
+                              title="Exceeds 5% limit. Click to authorize with supervisor key"
+                            >
+                              <Key className="h-3 w-3 mr-0.5 text-amber-600" />
+                              Auth
+                            </button>
+                          )
                         )}
                       </div>
 
@@ -876,8 +893,8 @@ export function ShowroomPOSTerminal() {
               <Button
                 size="sm"
                 disabled={cart.length === 0 || !activeSession}
-                onClick={() => setIsPaymentModalOpen(true)}
-                className="col-span-2 bg-primary hover:bg-primary-hover text-primary-foreground font-medium flex items-center justify-center gap-1.5 shadow-sm text-xs"
+                onClick={handleInitiateCheckout}
+                className="col-span-2 bg-primary hover:bg-primary-hover text-primary-foreground font-medium flex items-center justify-center gap-1.5 shadow-sm text-xs cursor-pointer"
               >
                 <CreditCard className="h-4 w-4" />
                 Checkout ({formatCurrency(grandTotal)})

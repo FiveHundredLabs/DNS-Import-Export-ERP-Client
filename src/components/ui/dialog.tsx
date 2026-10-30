@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { cn } from '../../utils/cn';
 
@@ -36,8 +37,8 @@ export function Dialog({ open, onOpenChange, children, size = 'lg', maxWidth, cl
 
   if (!open) return null;
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in-0">
+  const content = (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in-0">
       <div
         className="fixed inset-0"
         onClick={() => onOpenChange(false)}
@@ -61,6 +62,8 @@ export function Dialog({ open, onOpenChange, children, size = 'lg', maxWidth, cl
       </div>
     </div>
   );
+
+  return typeof document !== 'undefined' ? createPortal(content, document.body) : content;
 }
 
 export function DialogHeader({

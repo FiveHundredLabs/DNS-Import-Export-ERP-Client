@@ -30,6 +30,7 @@ import {
   Check,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { PurchaseOrderSelector } from '../../../../components/selectors/PurchaseOrderSelector';
 
 export function SupplierAdvancePaymentsPage() {
   const navigate = useNavigate();
@@ -429,20 +430,12 @@ export function SupplierAdvancePaymentsPage() {
                 </label>
                 <span className="text-[11px] text-slate-400">Enables auto-settlement upon GRN billing</span>
               </div>
-              <Input
-                placeholder="e.g. PO-2026-001, PO-2025-001"
-                value={purchaseOrderNumber}
-                onChange={(e) => setPurchaseOrderNumber(e.target.value)}
-                className="h-9 text-xs font-mono uppercase"
-                list="po-suggestions"
+              <PurchaseOrderSelector
+                supplierId={supplierId}
+                selectedPoNumber={purchaseOrderNumber}
+                onSelect={(po) => setPurchaseOrderNumber(po.poNumber)}
+                placeholder="Choose or search Purchase Order..."
               />
-              <datalist id="po-suggestions">
-                <option value="PO-2026-001" />
-                <option value="PO-2026-002" />
-                <option value="PO-2026-003" />
-                <option value="PO-2025-001" />
-                <option value="PO-2025-002" />
-              </datalist>
             </div>
 
             <div className="space-y-1.5">

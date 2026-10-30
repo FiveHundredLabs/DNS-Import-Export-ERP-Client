@@ -11,13 +11,20 @@ import { GRN } from '../../types/inventory';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 import { Printer, Download, X, Building2, CheckCircle2, ShieldCheck, FileText } from 'lucide-react';
 
+export interface CostedPriceItemInfo {
+  productId: string;
+  unitCost: number;
+  sellingPrice: number;
+}
+
 interface PrintableGRNProps {
   grn: GRN;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  pricingData?: CostedPriceItemInfo[];
 }
 
-export function PrintableGRN({ grn, open, onOpenChange }: PrintableGRNProps) {
+export function PrintableGRN({ grn, open, onOpenChange, pricingData }: PrintableGRNProps) {
   const printContentRef = useRef<HTMLDivElement>(null);
 
   const handlePrint = () => {
@@ -150,27 +157,61 @@ export function PrintableGRN({ grn, open, onOpenChange }: PrintableGRNProps) {
             {/* ── Line Items Table ── */}
             <div className="mb-6">
               <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">
-                Received Line Items &amp; Physical Verification
+                {pricingData ? 'Costed & Priced Inventory Line Items' : 'Received Line Items & Physical Verification'}
               </h3>
               <table className="w-full border-collapse border border-slate-300 text-xs">
                 <thead>
-                  <tr className="bg-slate-100 border-b border-slate-300 text-slate-700 font-bold">
-                    <th className="py-2 px-2 border-r border-slate-300 text-center w-8">#</th>
-                    <th className="py-2 px-3 border-r border-slate-300 text-left">Product / SKU</th>
-                    <th className="py-2 px-2 border-r border-slate-300 text-right w-16">Expected</th>
-                    <th className="py-2 px-2 border-r border-slate-300 text-right w-16">Received</th>
-                    <th className="py-2 px-2 border-r border-slate-300 text-right w-16 text-rose-600">Damaged</th>
-                    <th className="py-2 px-2 border-r border-slate-300 text-right w-16 text-emerald-700 font-bold">Net Accepted</th>
-                    <th className="py-2 px-2 border-r border-slate-300 text-center w-12">UOM</th>
-                    <th className="py-2 px-3 border-r border-slate-300 text-right w-24">Unit Cost</th>
-                    <th className="py-2 px-3 text-right w-28">Total (LKR)</th>
-                  </tr>
+                  {pricingData ? (
+                    <tr className="bg-slate-100 border-b border-slate-300 text-slate-700 font-bold">
+                      <th className="py-2 px-2 border-r border-slate-300 text-center w-8">#</th>
+                      <th className="py-2 px-3 border-r border-slate-300 text-left">Product Name</th>
+                      <th className="py-2 px-3 border-r border-slate-300 text-right w-24">Quantity</th>
+                      <th className="py-2 px-3 border-r border-slate-300 text-right w-32">Unit Cost</th>
+                      <th className="py-2 px-3 text-right w-32 text-emerald-800">Selling Price</th>
+                    </tr>
+                  ) : (
+                    <tr className="bg-slate-100 border-b border-slate-300 text-slate-700 font-bold">
+                      <th className="py-2 px-2 border-r border-slate-300 text-center w-8">#</th>
+                      <th className="py-2 px-3 border-r border-slate-300 text-left">Product / SKU</th>
+                      <th className="py-2 px-2 border-r border-slate-300 text-right w-16">Expected</th>
+                      <th className="py-2 px-2 border-r border-slate-300 text-right w-16">Received</th>
+                      <th className="py-2 px-2 border-r border-slate-300 text-right w-16 text-rose-600">Damaged</th>
+                      <th className="py-2 px-2 border-r border-slate-300 text-right w-16 text-emerald-700 font-bold">Net Accepted</th>
+                      <th className="py-2 px-2 border-r border-slate-300 text-center w-12">UOM</th>
+                      <th className="py-2 px-3 border-r border-slate-300 text-right w-24">Unit Cost</th>
+                      <th className="py-2 px-3 text-right w-28">Total (LKR)</th>
+                    </tr>
+                  )}
                 </thead>
                 <tbody>
                   {grn.items?.map((item, idx) => {
                     const netQty = Math.max(0, item.receivedQuantity - (item.damagedQuantity || 0));
-                    const unitCost = item.unitCostSnapshot || 0;
+                    const pricing = pricingData?.find((p) => p.productId === item.productId);
+                    const unitCost = pricing ? pricing.unitCost : (item.unitCostSnapshot || 0);
+                    const sellingPrice = pricing ? pricing.sellingPrice : 0;
                     const lineTotal = netQty * unitCost;
+
+                    if (pricingData) {
+                      return (
+                        <tr key={idx} className="border-b border-slate-200">
+                          <td className="py-2.5 px-2 border-r border-slate-200 text-center text-slate-400 font-mono">
+                            {idx + 1}
+                          </td>
+                          <td className="py-2.5 px-3 border-r border-slate-200 font-semibold text-slate-900">
+                            {item.productNameSnapshot || item.productId}
+                          </td>
+                          <td className="py-2.5 px-3 border-r border-slate-200 text-right font-mono font-bold text-primary tabular-nums">
+                            {item.receivedQuantity} {item.uom || 'units'}
+                          </td>
+                          <td className="py-2.5 px-3 border-r border-slate-200 text-right font-mono tabular-nums text-slate-700">
+                            {formatCurrency(unitCost)}
+                          </td>
+                          <td className="py-2.5 px-3 text-right font-mono font-bold text-emerald-700 tabular-nums bg-emerald-50/40">
+                            {formatCurrency(sellingPrice)}
+                          </td>
+                        </tr>
+                      );
+                    }
 
                     return (
                       <tr key={idx} className="border-b border-slate-200">

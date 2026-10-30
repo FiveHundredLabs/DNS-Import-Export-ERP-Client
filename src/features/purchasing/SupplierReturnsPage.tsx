@@ -5,6 +5,7 @@ import { supplierReturnService } from '../../services/SupplierReturnService';
 import { SupplierReturn, SupplierReturnStatus, SupplierReturnReason } from '../../types/purchasing';
 import { SupplierSelector } from '../../components/selectors/SupplierSelector';
 import { SupplierSummaryCard } from '../../components/selectors/SupplierSummaryCard';
+import { PurchaseOrderSelector } from '../../components/selectors/PurchaseOrderSelector';
 import { Supplier } from '../finance/api/types';
 import { PageHeader } from '../../components/common/PageHeader';
 import { FormSection } from '../../components/common/FormSection';
@@ -378,11 +379,11 @@ export function SupplierReturnsPage() {
                 </FormField>
 
                 <FormField label="Original Purchase Order #">
-                  <Input
-                    placeholder="e.g. PO-2026-101"
-                    value={selectedPoNumber}
-                    onChange={(e) => setSelectedPoNumber(e.target.value)}
-                    className="text-xs h-9 font-mono"
+                  <PurchaseOrderSelector
+                    supplierId={selectedSupplier?.id}
+                    selectedPoNumber={selectedPoNumber}
+                    onSelect={(po) => setSelectedPoNumber(po.poNumber)}
+                    placeholder="Search & select Purchase Order..."
                   />
                 </FormField>
 
