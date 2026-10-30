@@ -9,6 +9,7 @@ import { Input } from '../../components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table';
 import { Skeleton } from '../../components/ui/skeleton';
 import { StatCard } from '../../components/common/StatCard';
+import { PageHeader } from '../../components/common/PageHeader';
 import { MOCK_PRODUCTS } from '../../mock/mockProducts';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 import { unitBarcodeService } from '../../services/UnitBarcodeService';
@@ -137,6 +138,27 @@ function isPowerToolItem(item: { productId?: string; sku?: string; categoryName?
   );
 }
 
+  // Compute product-level sales order commitments (Reserved, Dispatched, Delivered)
+  const productOrderStats = useMemo(() => {
+    const map: Record<string, { reserved: number; dispatched: number; delivered: number }> = {};
+    orders.forEach((ord) => {
+      ord.items?.forEach((it) => {
+        if (!map[it.productId]) {
+          map[it.productId] = { reserved: 0, dispatched: 0, delivered: 0 };
+        }
+        const qty = it.approvedQuantity || it.orderedQuantity || 0;
+        if (['APPROVED', 'PICKING', 'PARTIALLY_ISSUED', 'ISSUED', 'INVOICED'].includes(ord.status)) {
+          map[it.productId].reserved += qty;
+        } else if (ord.status === 'DISPATCHED') {
+          map[it.productId].dispatched += qty;
+        } else if (ord.status === 'DELIVERED') {
+          map[it.productId].delivered += qty;
+        }
+      });
+    });
+    return map;
+  }, [orders]);
+
   // Compute flattened stock items directly generated and received from all GRNs
   const flatStockItems: FlatGRNStockItem[] = useMemo(() => {
     if (!grns || grns.length === 0) return [];
@@ -178,7 +200,7 @@ function isPowerToolItem(item: { productId?: string; sku?: string; categoryName?
         const barcodesCount = item.unitRecords?.length || item.unitBarcodes?.length || goodQty;
         const pName = product?.name || item.productNameSnapshot || item.productId;
         const pSku = product?.sku || item.skuSnapshot || 'N/A';
-        const pCategory = product?.categoryName || 'Industrial Power Tools';
+        const pCategory = product?.categoryName || 'Electrical Components';
 
         // Filter: Storekeeper inventory hub strictly keeps ONLY realistic power tools!
         if (!isPowerToolItem({ productId: item.productId, sku: pSku, categoryName: pCategory, productName: pName })) {
@@ -279,6 +301,7 @@ function isPowerToolItem(item: { productId?: string; sku?: string; categoryName?
     const approvedGRNs = (grns || []).filter((g) => g.status === 'APPROVED').length;
 
     return {
+      totalAcceptedUnits: totalAvailableUnits,
       totalAvailableUnits,
       totalReservedUnits,
       totalDispatchedUnits,
@@ -445,16 +468,14 @@ function isPowerToolItem(item: { productId?: string; sku?: string; categoryName?
 
   return (
     <div className="w-full space-y-6">
-      {/* ── Page Header ── */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-200">
-        <div>
-          <div className="flex items-center gap-2.5 flex-wrap">
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2.5">
-              <Boxes className="h-7 w-7 text-primary" />
-              Warehouse Inbound Inventory Hub
-            </h1>
+      {/* ── Standardized Page Header ── */}
+      <PageHeader
+        title="Warehouse Inbound Inventory Hub"
+        subtitle="Real-time physical stock registry for professional power tools generated directly from inward Goods Receipt Notes (GRN). Track received quantities, damaged quarantine units, landed costs, Code-128 unit barcodes, and manufacturer serial numbers."
+        badge={
+          <div className="flex items-center gap-1.5 flex-wrap">
             <Badge className="bg-emerald-600 text-white font-mono text-[11px] gap-1 shadow-2xs">
-              <Warehouse className="h-3.5 w-3.5" />
+              <Warehouse className="h-3 w-3" />
               Main Facility: WH-MAIN
             </Badge>
             <Badge variant="outline" className="text-slate-600 text-[11px] bg-slate-50 font-mono">
@@ -464,182 +485,96 @@ function isPowerToolItem(item: { productId?: string; sku?: string; categoryName?
               Industrial Power Tools Division
             </Badge>
           </div>
-          <p className="text-xs sm:text-sm text-slate-500 mt-1 max-w-3xl">
-            Real-time physical stock registry for professional power tools (Bosch, Makita, DeWalt, Milwaukee, Stanley FatMax) generated directly from inward Goods Receipt Notes (GRN).
-            Track received quantities, damaged quarantine units, landed costs, Code-128 unit barcodes, and manufacturer serial numbers.
-          </p>
-        </div>
+        }
+        actions={
+          <Button
+            onClick={() => navigate('/inventory/grn/new')}
+            className="bg-primary hover:bg-primary-hover text-primary-foreground text-xs font-semibold gap-1.5 shadow-xs h-9"
+          >
+            <PlusCircle className="h-4 w-4" />
+            <span>+ New GRN Intake</span>
+          </Button>
+        }
+      />
 
-        <div className="flex flex-wrap items-center gap-2 shrink-0">
-          <Link to="/inventory/grn/new">
-            <Button className="bg-primary hover:bg-primary-hover text-primary-foreground text-xs font-bold gap-1.5 shadow-xs h-9">
-              <PlusCircle className="h-4 w-4" />
-              + New GRN Intake
-            </Button>
-          </Link>
-        </div>
-      </div>
+{/* ── Top Operational KPI Metrics ── */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+        <StatCard
+          title="Available Stock"
+          value={kpis.totalAvailableUnits.toLocaleString()}
+          subtitle="Ready for sale"
+          icon={Package}
+          variant="emerald"
+          progress={{
+            value: kpis.totalAvailableUnits,
+            max: totalTrackedUnits,
+            label: 'Available',
+          }}
+        />
 
-      {/* ── Top Operational KPI Metrics matching Global Card Style ── */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2.5 sm:gap-3">
-        {/* KPI 1: Available Units */}
-        <Card className="border-slate-200 min-w-0 overflow-hidden shadow-2xs bg-white">
-          <CardContent className="p-2.5 sm:p-3.5">
-            <div className="flex items-center justify-between gap-2">
-              <div className="min-w-0 flex-1">
-                <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider truncate">Available Stock</p>
-                <div className="text-base sm:text-xl font-bold font-mono text-slate-900 tabular-nums mt-0.5">
-                  {kpis.totalAvailableUnits.toLocaleString()}
-                </div>
-                <p className="text-[10.5px] text-emerald-600 font-semibold truncate mt-0.5">
-                  Ready for sale
-                </p>
-                <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden mt-2">
-                  <div
-                    className="h-full bg-emerald-500 rounded-full transition-all duration-500"
-                    style={{ width: `${Math.round((kpis.totalAvailableUnits / totalTrackedUnits) * 100)}%` }}
-                  />
-                </div>
-              </div>
-              <div className="h-8 w-8 sm:h-9 sm:w-9 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 self-start">
-                <Package className="h-4 w-4 sm:h-5 sm:w-5" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <StatCard
+          title="Reserved Orders"
+          value={kpis.totalReservedUnits.toLocaleString()}
+          subtitle="Allocated to SOs"
+          icon={Layers}
+          variant="blue"
+          progress={{
+            value: kpis.totalReservedUnits,
+            max: totalTrackedUnits,
+            label: 'Allocated',
+          }}
+        />
 
-        {/* KPI 2: Reserved Orders */}
-        <Card className="border-slate-200 min-w-0 overflow-hidden shadow-2xs bg-white">
-          <CardContent className="p-2.5 sm:p-3.5">
-            <div className="flex items-center justify-between gap-2">
-              <div className="min-w-0 flex-1">
-                <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider truncate">Reserved Orders</p>
-                <div className="text-base sm:text-xl font-bold font-mono text-slate-900 tabular-nums mt-0.5">
-                  {kpis.totalReservedUnits.toLocaleString()}
-                </div>
-                <p className="text-[10.5px] text-blue-600 font-semibold truncate mt-0.5">
-                  Allocated to SOs
-                </p>
-                <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden mt-2">
-                  <div
-                    className="h-full bg-blue-500 rounded-full transition-all duration-500"
-                    style={{ width: `${Math.round((kpis.totalReservedUnits / totalTrackedUnits) * 100)}%` }}
-                  />
-                </div>
-              </div>
-              <div className="h-8 w-8 sm:h-9 sm:w-9 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 self-start">
-                <Layers className="h-4 w-4 sm:h-5 sm:w-5" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <StatCard
+          title="Dispatched"
+          value={kpis.totalDispatchedUnits.toLocaleString()}
+          subtitle="In delivery transit"
+          icon={Truck}
+          variant="indigo"
+          progress={{
+            value: kpis.totalDispatchedUnits,
+            max: totalTrackedUnits,
+            label: 'Transit',
+          }}
+        />
 
-        {/* KPI 3: Dispatched Transit */}
-        <Card className="border-slate-200 min-w-0 overflow-hidden shadow-2xs bg-white">
-          <CardContent className="p-2.5 sm:p-3.5">
-            <div className="flex items-center justify-between gap-2">
-              <div className="min-w-0 flex-1">
-                <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider truncate">Dispatched</p>
-                <div className="text-base sm:text-xl font-bold font-mono text-slate-900 tabular-nums mt-0.5">
-                  {kpis.totalDispatchedUnits.toLocaleString()}
-                </div>
-                <p className="text-[10.5px] text-indigo-600 font-semibold truncate mt-0.5">
-                  In delivery transit
-                </p>
-                <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden mt-2">
-                  <div
-                    className="h-full bg-indigo-500 rounded-full transition-all duration-500"
-                    style={{ width: `${Math.round((kpis.totalDispatchedUnits / totalTrackedUnits) * 100)}%` }}
-                  />
-                </div>
-              </div>
-              <div className="h-8 w-8 sm:h-9 sm:w-9 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0 self-start">
-                <Truck className="h-4 w-4 sm:h-5 sm:w-5" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <StatCard
+          title="Delivered"
+          value={kpis.totalDeliveredUnits.toLocaleString()}
+          subtitle="Fulfilled to clients"
+          icon={CheckCircle2}
+          variant="teal"
+          progress={{
+            value: kpis.totalDeliveredUnits,
+            max: totalTrackedUnits,
+            label: 'Fulfilled',
+          }}
+        />
 
-        {/* KPI 4: Delivered Units */}
-        <Card className="border-slate-200 min-w-0 overflow-hidden shadow-2xs bg-white">
-          <CardContent className="p-2.5 sm:p-3.5">
-            <div className="flex items-center justify-between gap-2">
-              <div className="min-w-0 flex-1">
-                <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider truncate">Delivered</p>
-                <div className="text-base sm:text-xl font-bold font-mono text-slate-900 tabular-nums mt-0.5">
-                  {kpis.totalDeliveredUnits.toLocaleString()}
-                </div>
-                <p className="text-[10.5px] text-teal-600 font-semibold truncate mt-0.5">
-                  Fulfilled to clients
-                </p>
-                <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden mt-2">
-                  <div
-                    className="h-full bg-teal-500 rounded-full transition-all duration-500"
-                    style={{ width: `${Math.round((kpis.totalDeliveredUnits / totalTrackedUnits) * 100)}%` }}
-                  />
-                </div>
-              </div>
-              <div className="h-8 w-8 sm:h-9 sm:w-9 rounded-lg bg-teal-50 text-teal-600 flex items-center justify-center shrink-0 self-start">
-                <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <StatCard
+          title="Damaged Stock"
+          value={`${kpis.totalDamagedUnits.toLocaleString()} Units`}
+          subtitle="Quarantine holding area"
+          icon={AlertTriangle}
+          variant="rose"
+          progress={
+            kpis.totalDamagedUnits > 0
+              ? {
+                  value: kpis.totalDamagedUnits,
+                  max: totalTrackedUnits,
+                  label: 'Quarantined',
+                }
+              : undefined
+          }
+        />
 
-        {/* KPI 5: Damaged Stock in Quarantine */}
-        <Card className="border-slate-200 min-w-0 overflow-hidden shadow-2xs bg-white">
-          <CardContent className="p-2.5 sm:p-3.5">
-            <div className="flex items-center justify-between gap-2">
-              <div className="min-w-0 flex-1">
-                <p className="text-[11px] font-semibold text-rose-600 uppercase tracking-wider truncate">Quarantined</p>
-                <div className="text-base sm:text-xl font-bold font-mono text-rose-600 tabular-nums mt-0.5">
-                  {kpis.totalDamagedUnits.toLocaleString()}
-                </div>
-                <p className="text-[10.5px] text-rose-600 font-semibold truncate mt-0.5">
-                  Bay Q-01 defects
-                </p>
-                <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden mt-2">
-                  <div
-                    className="h-full bg-rose-500 rounded-full transition-all duration-500"
-                    style={{ width: `${Math.round((kpis.totalDamagedUnits / totalTrackedUnits) * 100)}%` }}
-                  />
-                </div>
-              </div>
-              <div className="h-8 w-8 sm:h-9 sm:w-9 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center shrink-0 self-start">
-                <AlertTriangle className="h-4 w-4 sm:h-5 sm:w-5" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* KPI 6: Available Stock Valuation */}
-        <Card className="border-slate-200 min-w-0 overflow-hidden shadow-2xs bg-white">
-          <CardContent className="p-2.5 sm:p-3.5">
-            <div className="flex items-center justify-between gap-2">
-              <div className="min-w-0 flex-1">
-                <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider truncate">Valuation</p>
-                <div className="text-sm sm:text-base font-bold font-mono text-slate-900 tabular-nums mt-0.5 truncate">
-                  {formatCurrency(kpis.totalStockValue)}
-                </div>
-                <p className="text-[10.5px] text-slate-500 font-medium truncate mt-0.5">
-                  Landed cost basis
-                </p>
-                <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden mt-2">
-                  <div className="h-full bg-slate-900 rounded-full" style={{ width: '100%' }} />
-                </div>
-              </div>
-              <div className="h-8 w-8 sm:h-9 sm:w-9 rounded-lg bg-primary-light text-primary flex items-center justify-center shrink-0 self-start">
-                <DollarSign className="h-4 w-4 sm:h-5 sm:w-5" />
-              </div>
-            </div>
-            <div className="text-xl sm:text-2xl font-black font-mono text-slate-900 tabular-nums">
-              {powerToolGrns.length} Total
-            </div>
-            <p className="text-[10px] text-slate-500 mt-0.5 truncate">
-              {kpis.approvedGRNs} approved · {kpis.pendingGRNs} pending
-            </p>
-          </CardContent>
-        </Card>
+        <StatCard
+          title="Valuation"
+          value={formatCurrency(kpis.totalStockValue)}
+          subtitle={`${powerToolGrns.length} GRNs · ${kpis.totalBarcodes} barcodes`}
+          icon={DollarSign}
+          variant="amber"
+        />
       </div>
 
       {/* ── Navigation Tabs ── */}

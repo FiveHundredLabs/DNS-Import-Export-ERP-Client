@@ -7,6 +7,7 @@ import { Input } from '../../components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table';
 import { Skeleton } from '../../components/ui/skeleton';
 import { StatCard } from '../../components/common/StatCard';
+import { PageHeader } from '../../components/common/PageHeader';
 import { useGRN } from '../../hooks/useGRN';
 import { useAuth } from '../../hooks/useAuth';
 import { formatCurrency, formatDate } from '../../utils/formatters';
@@ -31,6 +32,7 @@ import {
   BarChart3,
   Activity,
   Search,
+  ChevronRight,
 } from 'lucide-react';
 
 export function GRNListPage() {
@@ -127,39 +129,38 @@ export function GRNListPage() {
 
   return (
     <div className="w-full space-y-6">
-      {/* ── Page Header & Quick Actions ── */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">
-              Goods Received Notes (GRN)
-            </h1>
+      {/* ── Standardized Page Header ── */}
+      <PageHeader
+        title="Goods Received Notes (GRN)"
+        subtitle="Inbound warehouse intake receipts, physical quantity counting, and unit serialization logs."
+        badge={
+          <div className="flex items-center gap-1.5 flex-wrap">
             {isStockKeeper && (
-              <span className="inline-flex items-center gap-1 rounded-md px-2.5 py-0.5 text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+              <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 text-xs font-semibold gap-1">
                 <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
                 Stock Keeper Intake
-              </span>
+              </Badge>
             )}
-            <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 text-xs font-mono">
-              GRN List
+            <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 text-xs font-mono">
+              GRN Registry
             </Badge>
           </div>
-          <p className="text-xs sm:text-sm text-slate-500 mt-1">
-            Inbound warehouse intake receipts, physical quantity counting, and unit serialization logs.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2">
+        }
+        breadcrumbs={[
+          { label: 'Inventory', href: '/inventory' },
+          { label: 'GRN Registry' },
+        ]}
+        actions={
           <Button
             size="sm"
             onClick={() => navigate('/inventory/grn/new')}
-            className="gap-1.5 text-xs font-semibold shadow-xs"
+            className="gap-1.5 text-xs font-semibold shadow-xs h-9 px-4"
           >
             <PlusCircle className="h-4 w-4" />
-            New GRN
+            <span>New GRN Intake</span>
           </Button>
-        </div>
-      </div>
+        }
+      />
 
       {/* ── Warehouse Isolation Mode Banner for Stock Keeper ── */}
       {isStockKeeper && (
@@ -443,6 +444,7 @@ export function GRNListPage() {
                     <TableHead className="text-right text-xs font-semibold">Total Value</TableHead>
                   )}
                   <TableHead className="text-center text-xs font-semibold">Status</TableHead>
+                  <TableHead className="text-right text-xs font-semibold w-24">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -511,6 +513,17 @@ export function GRNListPage() {
                       )}
                       <TableCell className="text-center">
                         {getStatusBadge(g.status)}
+                      </TableCell>
+                      <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                        <Button
+                          variant="ghost"
+                          size="xs"
+                          onClick={() => navigate(`/inventory/grn/${g.id}`)}
+                          className="text-slate-600 hover:text-slate-900 font-medium gap-1"
+                        >
+                          <span>Details</span>
+                          <ChevronRight className="h-3 w-3" />
+                        </Button>
                       </TableCell>
                     </TableRow>
                   );

@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { DirectorDashboard } from './DirectorDashboard';
 import { SalesRepDashboard } from './SalesRepDashboard';
@@ -19,6 +20,10 @@ import {
   Receipt,
   Target,
   Users,
+  Store,
+  Boxes,
+  Truck,
+  ArrowRight,
 } from 'lucide-react';
 import { formatCurrency } from '../../utils/formatters';
 
@@ -97,6 +102,80 @@ export function DashboardPage() {
           </>
         )}
       </div>
+
+      {/* Role-Specific Operational Quick Actions */}
+      {role === 'STOCK_KEEPER' && (
+        <div className="space-y-3">
+          <h2 className="text-sm font-bold text-slate-800 uppercase tracking-wide">
+            Operational Workspaces
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <Link
+              to="/pos"
+              className="flex items-center justify-between p-3.5 rounded-xl border border-slate-200 bg-white hover:border-primary hover:shadow-xs transition-all group"
+            >
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-lg bg-primary-light text-primary group-hover:bg-primary group-hover:text-white transition-colors">
+                  <Store className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-xs text-slate-900">Showroom POS Terminal</h3>
+                  <p className="text-[11px] text-slate-500">Retail counter checkout</p>
+                </div>
+              </div>
+              <ArrowRight className="h-4 w-4 text-slate-400 group-hover:text-primary transition-colors" />
+            </Link>
+
+            <Link
+              to="/inventory"
+              className="flex items-center justify-between p-3.5 rounded-xl border border-slate-200 bg-white hover:border-primary hover:shadow-xs transition-all group"
+            >
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-lg bg-blue-50 text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                  <Boxes className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-xs text-slate-900">Inventory Hub</h3>
+                  <p className="text-[11px] text-slate-500">Stock balance & batches</p>
+                </div>
+              </div>
+              <ArrowRight className="h-4 w-4 text-slate-400 group-hover:text-blue-600 transition-colors" />
+            </Link>
+
+            <Link
+              to="/inventory/grn"
+              className="flex items-center justify-between p-3.5 rounded-xl border border-slate-200 bg-white hover:border-primary hover:shadow-xs transition-all group"
+            >
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-lg bg-emerald-50 text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white transition-colors">
+                  <Receipt className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-xs text-slate-900">Goods Received Notes</h3>
+                  <p className="text-[11px] text-slate-500">PO intake & barcodes</p>
+                </div>
+              </div>
+              <ArrowRight className="h-4 w-4 text-slate-400 group-hover:text-emerald-600 transition-colors" />
+            </Link>
+
+            <Link
+              to="/inventory/delivery-notes"
+              className="flex items-center justify-between p-3.5 rounded-xl border border-slate-200 bg-white hover:border-primary hover:shadow-xs transition-all group"
+            >
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-lg bg-amber-50 text-amber-600 group-hover:bg-amber-600 group-hover:text-white transition-colors">
+                  <Truck className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-xs text-slate-900">Delivery Notes</h3>
+                  <p className="text-[11px] text-slate-500">Dispatch & delivery orders</p>
+                </div>
+              </div>
+              <ArrowRight className="h-4 w-4 text-slate-400 group-hover:text-amber-600 transition-colors" />
+            </Link>
+          </div>
+        </div>
+      )}
 
       {/* Role Analytics & Operations Card */}
       <Card className="bg-white border border-slate-200/80 rounded-2xl shadow-sm p-6">

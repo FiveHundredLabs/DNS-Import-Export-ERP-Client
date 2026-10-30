@@ -4,6 +4,8 @@ import { useCustomers } from '../../hooks/useCustomers';
 import { CustomerTable } from './CustomerTable';
 import { CustomerCreateModal } from './CustomerCreateModal';
 import { CustomerCommercialApprovalModal } from './CustomerCommercialApprovalModal';
+import { PageHeader } from '../../components/common/PageHeader';
+import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import {
@@ -77,44 +79,58 @@ export function CustomerListPage() {
   const canCreate = hasPermission('customers:create');
 
   return (
-    <div className="space-y-5">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
+    <div className="space-y-6">
+      {/* Standardized Page Header */}
+      <PageHeader
+        title="Customer Master"
+        subtitle={
+          role === 'SALES_REP'
+            ? `Displaying accounts assigned directly to you (${currentUser.name}).`
+            : role === 'AREA_MANAGER'
+            ? `Displaying accounts in your managed area (${currentUser.areaName || 'Western Province'}).`
+            : 'Single central repository of dealers, credit lines, payment terms, and route assignments.'
+        }
+        badge={
+          role === 'SALES_REP' ? (
+            <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 text-xs font-semibold gap-1">
+              <ShieldCheck className="h-3 w-3" /> Assigned Territory
+            </Badge>
+          ) : role === 'AREA_MANAGER' ? (
+            <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 text-xs font-semibold gap-1">
+              <ShieldCheck className="h-3 w-3" /> Area Scoped
+            </Badge>
+          ) : (
+            <Badge variant="outline" className="text-xs font-mono">
+              Directory
+            </Badge>
+          )
+        }
+        breadcrumbs={[
+          { label: 'Sales & Orders', href: '/orders' },
+          { label: 'Customer Master' },
+        ]}
+        actions={
           <div className="flex items-center gap-2">
-            <h1 className="text-xl font-bold tracking-tight text-slate-900">Customer Master</h1>
-            {role === 'SALES_REP' && (
-              <span className="flex items-center gap-1 text-[11px] font-semibold text-primary-text bg-primary-light border border-primary-border px-2 py-0.5 rounded">
-                <ShieldCheck className="h-3 w-3" /> Assigned Territory
-              </span>
-            )}
-            {role === 'AREA_MANAGER' && (
-              <span className="flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded">
-                <ShieldCheck className="h-3 w-3" /> Area Scoped
-              </span>
+            <Button variant="outline" size="sm" onClick={() => refetch()} className="gap-1.5 h-9">
+              <RefreshCw className="h-3.5 w-3.5" />
+              <span>Refresh</span>
+            </Button>
+            {canCreate && (
+              <Button
+                size="sm"
+                onClick={() => {
+                  setEditingCustomer(null);
+                  setCreateModalOpen(true);
+                }}
+                className="gap-1.5 h-9 bg-primary hover:bg-primary-hover text-primary-foreground font-semibold shadow-xs"
+              >
+                <Plus className="h-4 w-4" />
+                <span>Register Customer</span>
+              </Button>
             )}
           </div>
-          <p className="text-xs text-slate-500">
-            {role === 'SALES_REP'
-              ? `Displaying accounts assigned directly to you (${currentUser.name}).`
-              : role === 'AREA_MANAGER'
-              ? `Displaying accounts in your managed area (${currentUser.areaName || 'Western Province'}).`
-              : 'Single central repository of dealers, credit lines, payment terms, and route assignments.'}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => refetch()} className="gap-1.5">
-            <RefreshCw className="h-3.5 w-3.5" /> Refresh
-          </Button>
-          {canCreate && (
-            <Button size="sm" onClick={() => {
-              setEditingCustomer(null);
-              setCreateModalOpen(true);
-            }} className="gap-1.5">
-              <Plus className="h-4 w-4" /> Register Customer
-            </Button>
-          )}
-        </div>
-      </div>
+        }
+      />
 
       {/* Filter toolbar */}
       <div className="flex flex-col sm:flex-row gap-3 bg-white p-3.5 rounded-xl border border-slate-200/80 shadow-sm">

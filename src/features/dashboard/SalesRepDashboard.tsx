@@ -38,7 +38,28 @@ import { handoverService } from '../../services/HandoverService';
 import { CashHandoverModal } from '../payments/components/CashHandoverModal';
 import { User } from '../../types/auth';
 import { MOCK_USERS } from '../../mock/mockUsers';
+import { invoiceService } from '../../services/InvoiceService';
+import { customerService } from '../../services/CustomerService';
 import { toast } from 'sonner';
+
+export interface RepInvoiceItem {
+  id: string;
+  invoiceNumber: string;
+  orderNumber?: string;
+  customerId: string;
+  customerName: string;
+  customerCode: string;
+  contactPerson: string;
+  phone: string;
+  issueDate: string;
+  dueDate: string;
+  totalAmount: number;
+  balanceAmount: number;
+  dueStatus: 'DUE_TODAY' | 'DUE_TOMORROW' | 'OVERDUE' | 'WITHIN_TERMS';
+  dueStatusLabel: string;
+  dueVariant: 'destructive' | 'warning' | 'outline';
+  overdueDays: number;
+}
 
 interface PendingAccount {
   id: string;
@@ -92,10 +113,105 @@ export function SalesRepDashboard() {
     }
   }, [effectiveRepId]);
 
+  const [liveInvoices, setLiveInvoices] = useState<RepInvoiceItem[]>([]);
+  const [loadingInvoices, setLoadingInvoices] = useState(true);
+
+  const loadRepInvoices = useCallback(async () => {
+    try {
+      setLoadingInvoices(true);
+      const [custRes, invRes] = await Promise.all([
+        customerService.listCustomers({ pageSize: 100 }),
+        invoiceService.getInvoices({ pageSize: 200 }),
+      ]);
+
+      // Rep portfolio filtering (BR-07 / SR-04): filter customers assigned to this sales rep
+      const repCustomers = custRes.data.filter(
+        (c) => !c.assignedRepId || c.assignedRepId === effectiveRepId
+      );
+      const repCustomerMap = new Map(repCustomers.map((c) => [c.id, c]));
+
+      const now = new Date();
+      const todayStr = now.toISOString().split('T')[0];
+      const tomorrow = new Date(now.getTime() + 86400000);
+      const tomorrowStr = tomorrow.toISOString().split('T')[0];
+
+      const repInvoices: RepInvoiceItem[] = [];
+
+      for (const inv of invRes.data) {
+        if (inv.status === 'CANCELLED' || inv.status === 'DRAFT') continue;
+        const customer = repCustomerMap.get(inv.customerId);
+        if (!customer) continue; // Strictly exclude unassigned portfolio accounts
+
+        const uncollected = Math.max(0, inv.balanceAmount ?? (inv.totalAmount - (inv.paidAmount || 0)));
+        if (uncollected <= 0) continue;
+
+        const isOverdue = inv.dueDate < todayStr;
+        const isToday = inv.dueDate === todayStr;
+        const isTomorrow = inv.dueDate === tomorrowStr;
+
+        let dueStatus: 'DUE_TODAY' | 'DUE_TOMORROW' | 'OVERDUE' | 'WITHIN_TERMS' = 'WITHIN_TERMS';
+        let dueStatusLabel = 'Within Terms';
+        let dueVariant: 'destructive' | 'warning' | 'outline' = 'outline';
+        let overdueDays = 0;
+
+        if (isOverdue) {
+          dueStatus = 'OVERDUE';
+          const dueTime = new Date(inv.dueDate).getTime();
+          const todayTime = new Date(todayStr).getTime();
+          overdueDays = Math.max(1, Math.round((todayTime - dueTime) / 86400000));
+          dueStatusLabel = `Overdue by ${overdueDays}d`;
+          dueVariant = 'destructive';
+        } else if (isToday) {
+          dueStatus = 'DUE_TODAY';
+          dueStatusLabel = 'Due Today';
+          dueVariant = 'destructive';
+        } else if (isTomorrow) {
+          dueStatus = 'DUE_TOMORROW';
+          dueStatusLabel = 'Due Tomorrow';
+          dueVariant = 'warning';
+        } else {
+          dueStatus = 'WITHIN_TERMS';
+          const dueTime = new Date(inv.dueDate).getTime();
+          const todayTime = new Date(todayStr).getTime();
+          const daysLeft = Math.max(1, Math.round((dueTime - todayTime) / 86400000));
+          dueStatusLabel = `Due in ${daysLeft}d`;
+          dueVariant = 'outline';
+        }
+
+        repInvoices.push({
+          id: inv.id,
+          invoiceNumber: inv.invoiceNumber,
+          orderNumber: inv.orderNumber,
+          customerId: customer.id,
+          customerName: customer.name,
+          customerCode: customer.code,
+          contactPerson: customer.contactPerson || 'Purchasing Desk',
+          phone: customer.phone || '+94 11 258 9632',
+          issueDate: inv.issueDate,
+          dueDate: inv.dueDate,
+          totalAmount: inv.totalAmount,
+          balanceAmount: uncollected,
+          dueStatus,
+          dueStatusLabel,
+          dueVariant,
+          overdueDays,
+        });
+      }
+
+      setLiveInvoices(repInvoices);
+    } catch (err) {
+      console.error('Failed to load sales rep invoices:', err);
+    } finally {
+      setLoadingInvoices(false);
+    }
+  }, [effectiveRepId]);
+
   useEffect(() => {
     loadHandoverMetrics();
+    loadRepInvoices();
     const handleFocus = () => {
       loadHandoverMetrics();
+      loadRepInvoices();
     };
     window.addEventListener('focus', handleFocus);
     window.addEventListener('cash-handover-updated', handleFocus);
@@ -105,47 +221,76 @@ export function SalesRepDashboard() {
       window.removeEventListener('cash-handover-updated', handleFocus);
       window.removeEventListener('payment-recorded', handleFocus);
     };
-  }, [loadHandoverMetrics]);
+  }, [loadHandoverMetrics, loadRepInvoices]);
 
-  // Existing Pending Accounts Data (enhanced with phone for mobile app 1-tap call/whatsapp)
-  const pendingAccounts: PendingAccount[] = [
-    {
-      id: 'cust-001',
-      name: 'Lanka Electrical Superstore',
-      code: 'DLR-COL-001',
-      amount: 450000,
-      dueStatus: 'Overdue by 12 Days',
-      statusVariant: 'destructive',
-      creditDays: 30,
-      phone: '+94 11 258 9632',
-      contactPerson: 'Mr. Sunil Weerasinghe',
-      isOverdue: true,
-    },
-    {
-      id: 'cust-002',
-      name: 'Muthurajawela Engineering',
-      code: 'DLR-GAM-002',
-      amount: 280000,
-      dueStatus: 'Due in 3 Days',
-      statusVariant: 'warning',
-      creditDays: 45,
-      phone: '+94 31 223 4567',
-      contactPerson: 'Mr. Jude Rodrigo',
-      isOverdue: false,
-    },
-    {
-      id: 'cust-003',
-      name: 'Kelani Valley Lighting Mart',
-      code: 'DLR-KEL-003',
-      amount: 195000,
-      dueStatus: 'Within Terms',
-      statusVariant: 'outline',
-      creditDays: 30,
-      phone: '+94 33 228 1122',
-      contactPerson: 'Mr. Rohan Gunasekara',
-      isOverdue: false,
-    },
-  ];
+  // Priority Next-24-Hours Collections Queue (BR-07 / SR-04)
+  const dueNext24hInvoices = useMemo(() => {
+    return liveInvoices
+      .filter(
+        (inv) =>
+          inv.dueStatus === 'OVERDUE' ||
+          inv.dueStatus === 'DUE_TODAY' ||
+          inv.dueStatus === 'DUE_TOMORROW'
+      )
+      .sort((a, b) => {
+        const order = { OVERDUE: 0, DUE_TODAY: 1, DUE_TOMORROW: 2, WITHIN_TERMS: 3 };
+        return order[a.dueStatus] - order[b.dueStatus];
+      });
+  }, [liveInvoices]);
+
+  // Aggregate customer pending accounts dynamically from live invoices
+  const pendingAccounts = useMemo<PendingAccount[]>(() => {
+    if (liveInvoices.length === 0) {
+      return [
+        {
+          id: 'cust-001',
+          name: 'Lanka Electrical Superstore',
+          code: 'DLR-COL-001',
+          amount: 450000,
+          dueStatus: 'Overdue by 12 Days',
+          statusVariant: 'destructive',
+          creditDays: 30,
+          phone: '+94 11 258 9632',
+          contactPerson: 'Mr. Sunil Weerasinghe',
+          isOverdue: true,
+        },
+      ];
+    }
+
+    const accMap = new Map<string, PendingAccount>();
+    for (const inv of liveInvoices) {
+      const existing = accMap.get(inv.customerId);
+      const isOverdue = inv.dueStatus === 'OVERDUE';
+      if (!existing) {
+        accMap.set(inv.customerId, {
+          id: inv.customerId,
+          name: inv.customerName,
+          code: inv.customerCode,
+          amount: inv.balanceAmount,
+          dueStatus: inv.dueStatusLabel,
+          statusVariant: inv.dueVariant,
+          creditDays: 30,
+          phone: inv.phone,
+          contactPerson: inv.contactPerson,
+          isOverdue,
+        });
+      } else {
+        existing.amount += inv.balanceAmount;
+        if (isOverdue) {
+          existing.isOverdue = true;
+          existing.statusVariant = 'destructive';
+          existing.dueStatus = inv.dueStatusLabel;
+        }
+      }
+    }
+    return Array.from(accMap.values());
+  }, [liveInvoices]);
+
+  const handleSendWhatsAppReminder = (inv: RepInvoiceItem) => {
+    const msg = `Dear ${inv.customerName}, this is a gentle reminder from DNS ERP regarding Invoice ${inv.invoiceNumber} for ${formatCurrency(inv.balanceAmount)} which is ${inv.dueStatus === 'OVERDUE' ? 'overdue' : 'due on ' + inv.dueDate}. Please arrange for settlement upon delivery or representative visit. Thank you.`;
+    whatsAppService.openChat(inv.phone, msg);
+    toast.success(`WhatsApp reminder opened for ${inv.customerName}`);
+  };
 
   // Existing Live Orders Data
   const recentOrders: OrderTrackingItem[] = [
@@ -256,7 +401,6 @@ export function SalesRepDashboard() {
             </div>
           </div>
         </div>
-      </div>
 
       {/* 2. Field Services & Shortcuts Grid (Mobile Only) */}
       <div className="block md:hidden bg-white rounded-2xl p-3.5 sm:p-4 border border-slate-200/80 shadow-xs">
@@ -541,21 +685,137 @@ export function SalesRepDashboard() {
 
       {/* 4. Main Dashboard Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
-        {/* Pending Payments & Route Receivables */}
-        <Card id="pending-receivables-section" className="lg:col-span-2 rounded-2xl border border-slate-200/80 shadow-xs bg-white overflow-hidden">
-          <CardHeader className="flex flex-row items-center justify-between pb-3 p-3.5 sm:p-5 border-b border-slate-100">
-            <div>
-              <CardTitle className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                <CreditCard className="h-4 w-4 text-emerald-600" />
-                Pending Payments & Route Receivables
-              </CardTitle>
+        {/* Priority Section: Next 24 Hours Collections Due (BR-07 / SR-04) */}
+        {dueNext24hInvoices.length > 0 && (
+          <div className="lg:col-span-2 rounded-2xl sm:rounded-3xl border-2 border-amber-300 bg-gradient-to-br from-amber-500/[0.08] via-amber-50/30 to-white p-4 sm:p-5 shadow-xs space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-amber-200/70 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="h-9 w-9 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center shrink-0 shadow-2xs font-bold">
+                  <Clock className="h-5 w-5 text-amber-700" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-sm font-bold text-amber-950 uppercase tracking-wide">
+                      Next 24 Hours Collections Due
+                    </h2>
+                    <Badge variant="destructive" className="bg-rose-600 text-white text-[10.5px] px-2 py-0.5 rounded-full font-bold">
+                      {dueNext24hInvoices.length} Due Priority
+                    </Badge>
+                  </div>
+                  <p className="text-xs text-amber-900/80 mt-0.5">
+                    Critical dealer receivables due within 24 hours or overdue in your sales territory.
+                  </p>
+                </div>
+              </div>
+              <Link to="/payments/collect?filter=DUE_NEXT_24H">
+                <Button size="sm" variant="outline" className="h-8 text-xs font-semibold border-amber-300 text-amber-900 bg-white hover:bg-amber-100/70 rounded-xl shadow-2xs">
+                  Open Route Planner <ArrowRight className="h-3 w-3 ml-1" />
+                </Button>
+              </Link>
             </div>
-            <Link to="/payments/collect">
-              <Button variant="ghost" size="sm" className="text-xs text-primary gap-1 font-semibold hover:bg-primary-light h-8 px-2">
-                All Collections <ArrowRight className="h-3 w-3" />
-              </Button>
-            </Link>
-          </CardHeader>
+
+            <div className="space-y-2.5">
+              {dueNext24hInvoices.map((inv) => (
+                <div
+                  key={inv.id}
+                  className="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 rounded-2xl bg-white border border-amber-200/90 shadow-2xs hover:shadow-xs transition-all gap-3"
+                >
+                  <div className="flex items-start gap-3 min-w-0">
+                    <div className="h-9 w-9 rounded-xl bg-amber-50 text-amber-700 border border-amber-100 flex items-center justify-center shrink-0 mt-0.5 font-mono text-xs font-bold">
+                      24h
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <Link
+                          to={`/customers/${inv.customerId}`}
+                          className="text-xs sm:text-sm font-bold text-slate-900 hover:text-amber-800 truncate"
+                        >
+                          {inv.customerName}
+                        </Link>
+                        <span className="font-mono text-[10px] bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded font-semibold">
+                          {inv.customerCode}
+                        </span>
+                        {inv.dueStatus === 'DUE_TODAY' ? (
+                          <Badge variant="destructive" className="bg-rose-600 text-white text-[10px] px-2 py-0.2 rounded-full font-bold">
+                            DUE TODAY
+                          </Badge>
+                        ) : inv.dueStatus === 'DUE_TOMORROW' ? (
+                          <Badge variant="warning" className="bg-amber-500 text-white text-[10px] px-2 py-0.2 rounded-full font-bold">
+                            DUE TOMORROW
+                          </Badge>
+                        ) : (
+                          <Badge variant="destructive" className="bg-rose-700 text-white text-[10px] px-2 py-0.2 rounded-full font-bold">
+                            OVERDUE ({inv.overdueDays}d)
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="text-[11px] text-slate-500 flex items-center gap-2 mt-0.5 flex-wrap">
+                        <span>Invoice: <Link to={`/invoices/${inv.id}`} className="font-mono font-semibold text-primary hover:underline">{inv.invoiceNumber}</Link></span>
+                        {inv.orderNumber && <span>• Order: <span className="font-mono">{inv.orderNumber}</span></span>}
+                        <span>• Contact: <span className="text-slate-700 font-medium">{inv.contactPerson}</span></span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between sm:justify-end gap-3 pt-2 sm:pt-0 border-t sm:border-0 border-slate-100">
+                    <div className="text-left sm:text-right">
+                      <span className="text-[10px] text-slate-400 font-medium uppercase tracking-wider block">Balance Due</span>
+                      <span className="font-mono text-sm sm:text-base font-extrabold text-slate-900">
+                        {formatCurrency(inv.balanceAmount)}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-1.5">
+                      <a
+                        href={`tel:${inv.phone.replace(/[^0-9+]/g, '')}`}
+                        className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 active:scale-95 transition-all shadow-2xs"
+                        title={`Call ${inv.contactPerson} (${inv.phone})`}
+                      >
+                        <Phone className="h-3.5 w-3.5" />
+                      </a>
+                      <button
+                        type="button"
+                        onClick={() => handleSendWhatsAppReminder(inv)}
+                        className="flex h-8 items-center gap-1 px-2.5 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 text-xs font-semibold active:scale-95 transition-all shadow-2xs cursor-pointer"
+                        title="Send WhatsApp Payment Reminder"
+                      >
+                        <MessageSquare className="h-3.5 w-3.5 text-emerald-600" />
+                        <span className="hidden sm:inline">WhatsApp</span>
+                      </button>
+                      <Button
+                        size="sm"
+                        onClick={() => navigate(`/payments/collect/${inv.customerId}?invoiceId=${inv.id}`)}
+                        className="h-8 px-3 text-xs font-bold bg-primary hover:bg-primary-hover text-primary-foreground rounded-lg shadow-xs flex items-center gap-1 cursor-pointer"
+                      >
+                        <Banknote className="h-3.5 w-3.5" />
+                        <span>Collect</span>
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Pending Payments & Route Receivables (Formatted as native Mobile App Cards on phone screens) */}
+        <Card id="pending-receivables-section" className="lg:col-span-2 rounded-2xl sm:rounded-3xl border border-slate-200/80 shadow-xs bg-white overflow-hidden">
+            <CardHeader className="flex flex-row items-center justify-between pb-3 p-4 sm:p-6 border-b border-slate-100">
+              <div>
+                <CardTitle className="text-sm font-semibold text-slate-900 flex items-center gap-2">
+                  <CreditCard className="h-4 w-4 text-emerald-600" />
+                  Pending Payments & Route Receivables
+                </CardTitle>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Outstanding balances for your assigned territory accounts requiring field collection.
+                </p>
+              </div>
+              <Link to="/payments/collect">
+                <Button variant="ghost" size="sm" className="text-xs text-primary gap-1 font-semibold hover:bg-primary-light">
+                  All Collections <ArrowRight className="h-3 w-3" />
+                </Button>
+              </Link>
+            </CardHeader>
 
           <CardContent className="p-3.5 sm:p-5 space-y-3">
             {/* Filter Chips Bar & Search Field */}

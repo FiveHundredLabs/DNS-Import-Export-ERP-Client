@@ -6,6 +6,8 @@ export type CustomerPaymentFilterType =
   | 'ALL'
   | 'OUTSTANDING'
   | 'OVERDUE'
+  | 'DUE_NEXT_24H'
+  | 'DUE_TODAY'
   | 'NEARBY' // Near Due (approaching credit days due date)
   | 'NEAR_DUE'
   | 'PENDING_COLLECTION'
@@ -25,6 +27,8 @@ export interface CustomerPaymentStatusMeta {
   nearDueLabel?: string;
   isNearDue: boolean;
   isNearby: boolean; // Alias for isNearDue (approaching credit days due date)
+  dueNext24hCount: number;
+  isDueNext24h: boolean;
   pendingCollectionAmount: number;
   distanceKm?: number;
   distanceLabel?: string;
@@ -111,7 +115,9 @@ export function evaluateCustomerPaymentStatus(
 
   const now = new Date();
   const nowTime = now.getTime();
+  const tomorrowEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 23, 59, 59, 999).getTime();
   const sevenDaysAheadTime = nowTime + 7 * 24 * 60 * 60 * 1000;
+  let dueNext24hCount = 0;
 
   if (customerInvoices.length > 0) {
     for (const inv of customerInvoices) {
@@ -129,13 +135,18 @@ export function evaluateCustomerPaymentStatus(
       if (uncollected > 0) {
         openInvoicesCount++;
         const pastDue = isPastDueDate(inv.dueDate, now);
+        const [y, m, d] = inv.dueDate.split('-').map(Number);
+        const dueTime = new Date(y, m - 1, d, 23, 59, 59, 999).getTime();
+
         if (pastDue || inv.status === 'OVERDUE') {
           overdueCount++;
+          dueNext24hCount++;
           totalOverdue += uncollected;
         } else {
+          if (dueTime <= tomorrowEnd) {
+            dueNext24hCount++;
+          }
           // Check if invoice due date is approaching (within 7 days based on credit terms)
-          const [y, m, d] = inv.dueDate.split('-').map(Number);
-          const dueTime = new Date(y, m - 1, d, 23, 59, 59, 999).getTime();
           if (dueTime <= sevenDaysAheadTime) {
             nearDueCount++;
             totalNearDue += uncollected;
@@ -154,6 +165,7 @@ export function evaluateCustomerPaymentStatus(
     openInvoicesCount = totalOutstanding > 0 ? 1 : 0;
     overdueCount = totalOverdue > 0 ? 1 : 0;
     nearDueCount = totalNearDue > 0 ? 1 : 0;
+    dueNext24hCount = overdueCount > 0 ? 1 : 0;
   }
 
   // Also factor in customer financial ledger nearDue if available
@@ -164,6 +176,7 @@ export function evaluateCustomerPaymentStatus(
 
   const isNearDue = nearDueCount > 0 || totalNearDue > 0;
   const isNearby = isNearDue; // "Nearby" = Near Due Date according to credit terms
+  const isDueNext24h = dueNext24hCount > 0 || overdueCount > 0;
 
   const nearDueLabel = shortestNearDueDays !== null
     ? `Due in ${shortestNearDueDays}d`
@@ -206,6 +219,8 @@ export function evaluateCustomerPaymentStatus(
     nearDueLabel,
     isNearDue,
     isNearby,
+    dueNext24hCount,
+    isDueNext24h,
     pendingCollectionAmount,
     distanceKm: proximity.distanceKm,
     distanceLabel: proximity.label,
@@ -248,6 +263,9 @@ export function filterCustomersByPaymentStatus(
         return meta.totalOutstanding > 0 || meta.openInvoicesCount > 0;
       case 'OVERDUE':
         return meta.overdueCount > 0 || meta.totalOverdue > 0;
+      case 'DUE_NEXT_24H':
+      case 'DUE_TODAY':
+        return meta.isDueNext24h || meta.dueNext24hCount > 0;
       case 'NEARBY':
       case 'NEAR_DUE':
         return meta.isNearDue || meta.isNearby || meta.totalNearDue > 0;

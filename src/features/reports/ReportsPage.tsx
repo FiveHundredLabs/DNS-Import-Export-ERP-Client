@@ -11,6 +11,7 @@ import { CommissionAnalyticsTab } from './CommissionAnalyticsTab';
 import { PosAnalyticsTab } from './PosAnalyticsTab';
 import { TableLoadingSkeleton, CardGridSkeleton } from '../../components/common/LoadingSkeleton';
 import { ErrorState } from '../../components/common/ErrorState';
+import { PageHeader } from '../../components/common/PageHeader';
 import { triggerPrintReport } from '../../utils/exportUtils';
 import {
   BarChart3,
@@ -60,21 +61,13 @@ export function ReportsPage() {
   return (
     <div className="w-full space-y-5">
       {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <div className="p-2 rounded-lg bg-primary text-primary-foreground shadow-sm">
-              <BarChart3 className="w-5 h-5" />
-            </div>
-            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
-              Enterprise Analytics & Reporting
-            </h1>
-          </div>
-          <p className="text-xs sm:text-sm text-slate-500 mt-1">
-            Single Source of Truth cross-functional business intelligence across sales, stock, and collections.
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        title="Enterprise Analytics & Reporting"
+        subtitle="Single Source of Truth cross-functional business intelligence across sales, stock, and collections."
+        breadcrumbs={[
+          { label: 'Analytics & Reports' },
+        ]}
+      />
 
       {/* Global Filter Toolbar */}
       <ReportsFilterToolbar

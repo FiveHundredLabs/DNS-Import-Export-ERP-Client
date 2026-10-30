@@ -23,6 +23,7 @@ import {
   DialogFooter,
 } from '../../components/ui/dialog';
 import { formatCurrency, formatDate, formatDateTime } from '../../utils/formatters';
+import { cn } from '../../utils/cn';
 import {
   canApproveOrder,
   canEscalateOrder,
@@ -49,6 +50,7 @@ import {
   FileText,
   Boxes,
   ShieldAlert,
+  Lock,
 } from 'lucide-react';
 
 export function OrderDetailPage() {
@@ -61,7 +63,18 @@ export function OrderDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [orderInvoice, setOrderInvoice] = useState<Invoice | null>(null);
+  const [orderInvoices, setOrderInvoices] = useState<Invoice[]>([]);
+  const [invoicingProgress, setInvoicingProgress] = useState<any>(null);
   const [customer, setCustomer] = useState<Customer | null>(null);
+
+  // Close Order Dialog state (BR-05)
+  const [isCloseOrderOpen, setIsCloseOrderOpen] = useState(false);
+  const [closureType, setClosureType] = useState<'FULL' | 'PARTIAL'>('FULL');
+  const [closureReasonCode, setClosureReasonCode] = useState<
+    'CUSTOMER_CANCELLED' | 'OUT_OF_STOCK' | 'DISCONTINUED' | 'CREDIT_LIMIT_REDUCTION' | 'FORCE_MAJEURE' | 'FULFILLED_EARLY' | 'OTHER'
+  >('CUSTOMER_CANCELLED');
+  const [closureReasonNotes, setClosureReasonNotes] = useState('');
+  const [isSubmittingClosure, setIsSubmittingClosure] = useState(false);
 
   // Dialog state
   const [actionType, setActionType] = useState<
@@ -91,23 +104,39 @@ export function OrderDetailPage() {
         } catch {
           // ignore
         }
-        // Check if an invoice exists for this order, or auto-create draft invoice if approved
+        // Check invoicing progress & linked invoices (BR-04) with auto-draft invoice fallback
         try {
-          let matching: Invoice | undefined;
-          const invs = await invoiceService.getInvoicesByOrder(data.id);
-          matching = invs[0];
-          if (!matching) {
+          let progress = await invoiceService.getOrderInvoicingProgress(data.id);
+          let existing = progress.existingInvoices;
+
+          // If no linked invoices found via progress, check fallback by search or auto-create draft if approved
+          if (existing.length === 0) {
+            let matching: Invoice | undefined;
             const fallback = await invoiceService.getInvoices({ search: data.orderNumber });
             matching = fallback.data.find((i) => i.orderId === data.id);
-          }
-          if (!matching && ['APPROVED', 'PICKING', 'PARTIALLY_ISSUED', 'ISSUED'].includes(data.status)) {
-            try {
-              matching = await invoiceService.createInvoiceFromOrder(data.id, currentUser, { asDraft: true });
-            } catch (e) {
-              console.warn('Auto draft invoice fallback on order load:', e);
+
+            if (!matching && ['APPROVED', 'PICKING', 'PARTIALLY_ISSUED', 'ISSUED'].includes(data.status)) {
+              try {
+                matching = await invoiceService.createInvoiceFromOrder(data.id, currentUser, { asDraft: true });
+              } catch (e) {
+                console.warn('Auto draft invoice fallback on order load:', e);
+              }
+            }
+
+            if (matching) {
+              try {
+                progress = await invoiceService.getOrderInvoicingProgress(data.id);
+              } catch {
+                // ignore
+              }
             }
           }
-          if (matching) setOrderInvoice(matching);
+
+          setInvoicingProgress(progress);
+          setOrderInvoices(progress.existingInvoices);
+          if (progress.existingInvoices.length > 0) {
+            setOrderInvoice(progress.existingInvoices[0]);
+          }
         } catch {
           // ignore
         }
@@ -142,6 +171,29 @@ export function OrderDetailPage() {
 
   const handlePrint = () => {
     window.print();
+  };
+
+  const handleConfirmClose = async () => {
+    if (!order) return;
+    if (!closureReasonNotes.trim() || closureReasonNotes.trim().length < 5) {
+      alert('A documented reason note of at least 5 characters is required for order closure.');
+      return;
+    }
+    try {
+      setIsSubmittingClosure(true);
+      await orderService.closeOrder(order.id, currentUser, {
+        closureType,
+        reasonCode: closureReasonCode,
+        reasonNotes: closureReasonNotes.trim(),
+      });
+      setIsCloseOrderOpen(false);
+      setClosureReasonNotes('');
+      await fetchOrder();
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'Order closure failed.');
+    } finally {
+      setIsSubmittingClosure(false);
+    }
   };
 
   const handleSubmitForApproval = async () => {
@@ -460,6 +512,27 @@ export function OrderDetailPage() {
                 </Button>
               )}
 
+              {order.status === 'PARTIALLY_INVOICED' && (
+                <>
+                  <Button
+                    size="sm"
+                    onClick={() => handleGenerateInvoice(true)}
+                    className="bg-purple-600 hover:bg-purple-700 text-white text-xs gap-1.5 shadow-sm"
+                  >
+                    <FileText className="h-3.5 w-3.5" />
+                    Invoice Remaining Lines
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={() => handleFulfillmentAdvance('DISPATCHED')}
+                    className="bg-teal-600 hover:bg-teal-700 text-white text-xs gap-1.5"
+                  >
+                    <Truck className="h-3.5 w-3.5" />
+                    Dispatch Partial Delivery
+                  </Button>
+                </>
+              )}
+
               {order.status === 'INVOICED' && (
                 <Button
                   size="sm"
@@ -484,14 +557,29 @@ export function OrderDetailPage() {
             </>
           )}
 
-          {/* View Tax Invoice link is visible to everyone (including Sales Rep) once invoiced */}
-          {order.status === 'INVOICED' && (
+          {/* Explicit Order Closure (BR-05) */}
+          {['SALES_MANAGER', 'MANAGER', 'DIRECTOR'].includes(currentUser.role) &&
+            order.status !== 'CLOSED' &&
+            order.status !== 'CANCELLED' && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setIsCloseOrderOpen(true)}
+                className="text-xs text-rose-700 hover:bg-rose-50 border-rose-200 gap-1.5 font-semibold"
+              >
+                <Lock className="h-3.5 w-3.5 text-rose-600" />
+                Close Order
+              </Button>
+            )}
+
+          {/* View Tax Invoices link (Single or Multi-invoicing) */}
+          {orderInvoices.length > 0 && (
             <Button
               size="sm"
               variant="outline"
               onClick={() => {
-                if (orderInvoice) {
-                  navigate(`/invoices/${orderInvoice.id}`);
+                if (orderInvoices.length === 1) {
+                  navigate(`/invoices/${orderInvoices[0].id}`);
                 } else {
                   navigate(`/invoices?search=${encodeURIComponent(order.orderNumber)}`);
                 }
@@ -499,7 +587,7 @@ export function OrderDetailPage() {
               className="border-primary-border text-primary-text hover:bg-primary-light text-xs gap-1.5 font-semibold"
             >
               <FileText className="h-3.5 w-3.5" />
-              View Tax Invoice
+              {orderInvoices.length === 1 ? 'View Tax Invoice' : `View Invoices (${orderInvoices.length})`}
             </Button>
           )}
         </div>
@@ -556,6 +644,33 @@ export function OrderDetailPage() {
             <h4 className="font-semibold">Sales Order Cancelled</h4>
             <p className="mt-0.5">
               Cancelled on {formatDate(order.cancelledAt || '')}. Reason: "{order.cancellationReason}"
+            </p>
+          </div>
+        </div>
+      )}
+
+      {order.status === 'CLOSED' && (
+        <div className="rounded-lg bg-slate-100 border border-slate-300 p-4 text-xs text-slate-800 flex items-start gap-3 shadow-2xs">
+          <Lock className="h-5 w-5 text-slate-600 shrink-0 mt-0.5" />
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <h4 className="font-bold text-slate-900">
+                Sales Order Closed ({order.closureType || 'FULL'} CLOSURE)
+              </h4>
+              <Badge variant="outline" className="text-[10px] bg-white font-mono">
+                {order.closureReasonCode || 'CLOSED'}
+              </Badge>
+            </div>
+            <p className="text-slate-600">
+              Closed by <strong>{order.closedByName || 'Management'}</strong> on {formatDate(order.closedAt || '')}.
+            </p>
+            {order.closureReason && (
+              <p className="text-slate-700 italic mt-1 bg-white p-2 rounded border border-slate-200">
+                "{order.closureReason}"
+              </p>
+            )}
+            <p className="text-slate-500 text-[11px] mt-1">
+              This order is closed. Further invoicing and fulfillment are locked. Existing invoices and delivery notes are permanently archived.
             </p>
           </div>
         </div>
@@ -759,7 +874,7 @@ export function OrderDetailPage() {
                   <th className="py-2.5 px-4 text-left font-semibold">Product Snapshot</th>
                   <th className="py-2.5 px-3 text-right font-semibold">Unit Price</th>
                   <th className="py-2.5 px-3 text-center font-semibold">Ordered</th>
-                  <th className="py-2.5 px-3 text-center font-semibold">Approved</th>
+                  <th className="py-2.5 px-3 text-center font-semibold text-purple-700 bg-purple-50/50">Invoiced / Rem</th>
                   <th className="py-2.5 px-3 text-center font-semibold">Issued</th>
                   <th className="py-2.5 px-3 text-center font-semibold">Requested vs Permitted Disc</th>
                   <th className="py-2.5 px-3 text-right font-semibold">Margin Impact</th>
@@ -794,8 +909,14 @@ export function OrderDetailPage() {
                       <td className="py-3 px-3 text-center font-semibold text-slate-900 tabular-nums">
                         {it.orderedQuantity}
                       </td>
-                      <td className="py-3 px-3 text-center text-slate-700 tabular-nums">
-                        {it.approvedQuantity}
+                      <td className="py-3 px-3 text-center tabular-nums bg-purple-50/30">
+                        <span className="font-semibold text-purple-900">
+                          {it.invoicedQuantity ?? (order.status === 'INVOICED' ? it.orderedQuantity : 0)}
+                        </span>
+                        <span className="text-slate-400 mx-1">/</span>
+                        <span className="text-slate-600 font-mono">
+                          {it.remainingQuantity ?? (order.status === 'INVOICED' ? 0 : it.orderedQuantity)}
+                        </span>
                       </td>
                       <td className="py-3 px-3 text-center text-slate-700 tabular-nums">
                         {it.issuedQuantity}
@@ -985,6 +1106,115 @@ export function OrderDetailPage() {
           </DialogContent>
         </Dialog>
       )}
+      {/* Close Order Dialog Modal (BR-05) */}
+      <Dialog open={isCloseOrderOpen} onOpenChange={setIsCloseOrderOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-rose-800">
+              <Lock className="h-5 w-5 text-rose-600" />
+              Close Sales Order ({order.orderNumber})
+            </DialogTitle>
+            <DialogDescription>
+              Explicitly close this order. Closing prevents further billing and delivery while preserving all historical audit records.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3.5 py-2">
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Closure Type
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setClosureType('FULL')}
+                  className={cn(
+                    'p-2.5 rounded-lg border text-left text-xs transition-colors',
+                    closureType === 'FULL'
+                      ? 'border-primary bg-primary/5 text-primary-text font-semibold'
+                      : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+                  )}
+                >
+                  <div className="font-semibold">Full Closure</div>
+                  <div className="text-[11px] text-slate-500 font-normal mt-0.5">
+                    Cancel remaining items and finalize order completely.
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setClosureType('PARTIAL')}
+                  className={cn(
+                    'p-2.5 rounded-lg border text-left text-xs transition-colors',
+                    closureType === 'PARTIAL'
+                      ? 'border-primary bg-primary/5 text-primary-text font-semibold'
+                      : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+                  )}
+                >
+                  <div className="font-semibold">Partial Closure</div>
+                  <div className="text-[11px] text-slate-500 font-normal mt-0.5">
+                    Keep fulfilled lines, close unfulfilled remaining lines.
+                  </div>
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Closure Reason Code <span className="text-rose-500">*</span>
+              </label>
+              <select
+                value={closureReasonCode}
+                onChange={(e) => setClosureReasonCode(e.target.value as any)}
+                className="w-full rounded-md border border-slate-200 bg-white p-2 text-xs font-medium text-slate-800 focus:ring-1 focus:ring-primary"
+              >
+                <option value="CUSTOMER_CANCELLED">Customer Cancelled Request</option>
+                <option value="OUT_OF_STOCK">Stock Depleted / Out of Stock</option>
+                <option value="DISCONTINUED">Item Discontinued by Manufacturer</option>
+                <option value="CREDIT_LIMIT_REDUCTION">Credit Limit Restricted / Risk</option>
+                <option value="FULFILLED_EARLY">Fulfilled Early / Balance Waived</option>
+                <option value="FORCE_MAJEURE">Force Majeure / Import Interruption</option>
+                <option value="OTHER">Other Commercial Reason</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Documented Reason Notes <span className="text-rose-500">* (Min 5 chars)</span>
+              </label>
+              <textarea
+                value={closureReasonNotes}
+                onChange={(e) => setClosureReasonNotes(e.target.value)}
+                placeholder="Enter audit-compliant explanation for closing this order..."
+                rows={3}
+                className="w-full rounded-md border border-slate-200 p-2 text-xs focus:ring-1 focus:ring-primary"
+              />
+              <span className="text-[11px] text-slate-400 block mt-0.5">
+                {closureReasonNotes.length}/5 minimum characters required for audit trail.
+              </span>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsCloseOrderOpen(false)}
+              disabled={isSubmittingClosure}
+            >
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              onClick={handleConfirmClose}
+              disabled={isSubmittingClosure || closureReasonNotes.trim().length < 5}
+              className="bg-rose-600 hover:bg-rose-700 text-white font-semibold gap-1.5"
+            >
+              <Lock className="h-3.5 w-3.5" />
+              {isSubmittingClosure ? 'Closing Order...' : 'Confirm Order Closure'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

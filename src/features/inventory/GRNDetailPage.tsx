@@ -15,6 +15,8 @@ import { unitBarcodeService } from '../../services/UnitBarcodeService';
 import { PaginationControls } from '../../components/common/PaginationControls';
 import { UnitBarcodeRecord } from '../../types/inventory';
 import { toast } from 'sonner';
+import { StatusBadge } from '../../components/common/StatusBadge';
+import { PrintableGRN } from './PrintableGRN';
 import {
   Barcode,
   Printer,
@@ -26,6 +28,7 @@ import {
   Copy,
   ArrowLeft,
   AlertTriangle,
+  Building2,
 } from 'lucide-react';
 
 function ItemInlineBarcodes({
@@ -180,6 +183,7 @@ export function GRNDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [comment, setComment] = useState('');
   const [isBarcodeModalOpen, setIsBarcodeModalOpen] = useState(false);
+  const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
   const [selectedProductForModal, setSelectedProductForModal] = useState<string>('ALL');
   const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
 
@@ -220,16 +224,7 @@ export function GRNDetailPage() {
   }, [preparedItems]);
 
   const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'APPROVED':
-        return <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200">Approved</Badge>;
-      case 'SUBMITTED':
-        return <Badge className="bg-amber-100 text-amber-800 border-amber-200">Submitted</Badge>;
-      case 'REJECTED':
-        return <Badge className="bg-rose-100 text-rose-800 border-rose-200">Rejected</Badge>;
-      default:
-        return <Badge variant="outline">{status}</Badge>;
-    }
+    return <StatusBadge status={status} />;
   };
 
   const handleApprove = async () => {
@@ -325,20 +320,17 @@ export function GRNDetailPage() {
 
   return (
     <div className="w-full space-y-6">
-      {/* ── Finance & Warehouse Read-Only Inspection Mode Banner ── */}
-      <div className="p-4 bg-slate-900 text-white rounded-2xl shadow-xs flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs">
-        <div className="flex items-center gap-2.5">
-          <ShieldCheck className="h-4 w-4 text-emerald-400 shrink-0" />
+      {/* Warehouse Inspection Summary Banner */}
+      <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs text-slate-600">
+        <div className="flex items-center gap-2">
+          <ShieldCheck className="h-4 w-4 text-emerald-600 shrink-0" />
           <span>
-            <strong>Warehouse Inward Verification &amp; Read-Only Audit View:</strong> Stock Keepers inspect physical counts, verify packaging, and apply unit barcode stickers. Unit costing, supplier ledger entries, and vendor bills are securely managed in Finance.
+            <strong>Warehouse Inward Inspection:</strong> Physical counts verified and serialized. Financial costing and vendor bills are managed in Finance AP.
           </span>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          <Badge variant="outline" className="bg-slate-800 text-emerald-300 border-emerald-500/30 text-[10px] font-mono">
-            PHYSICAL AUDIT SECURE
-          </Badge>
-          <Badge variant="outline" className="bg-slate-800 text-slate-300 border-slate-700 text-[10px] font-mono">
-            READ-ONLY VIEW
+          <Badge variant="outline" className="bg-white text-slate-600 border-slate-300 text-[10px] font-mono">
+            PHYSICAL AUDIT
           </Badge>
         </div>
       </div>
@@ -374,6 +366,17 @@ export function GRNDetailPage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          {/* Official Print A4 Button */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsPrintModalOpen(true)}
+            className="gap-1.5 text-xs font-semibold text-slate-800 bg-white hover:bg-slate-50 border-slate-300"
+          >
+            <Printer className="h-3.5 w-3.5 text-slate-600" />
+            <span>Print GRN (A4)</span>
+          </Button>
+
           {/* Unit Barcodes Button */}
           <Button
             variant="outline"
@@ -410,7 +413,17 @@ export function GRNDetailPage() {
             </Button>
           )}
 
-          <Button variant="outline" onClick={() => navigate('/inventory/grn')}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigate(`/purchasing/grn/${grn.id}`)}
+            className="gap-1.5 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-50"
+          >
+            <Building2 className="h-3.5 w-3.5 text-blue-600" />
+            <span>Purchasing View</span>
+          </Button>
+
+          <Button variant="outline" size="sm" onClick={() => navigate('/inventory/grn')}>
             Back to List
           </Button>
         </div>
@@ -647,6 +660,15 @@ export function GRNDetailPage() {
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {/* ── Official A4 Printable GRN Modal ── */}
+      {grn && (
+        <PrintableGRN
+          grn={grn}
+          open={isPrintModalOpen}
+          onOpenChange={setIsPrintModalOpen}
+        />
       )}
 
       {/* ── Unit Barcode Stickers Modal ── */}

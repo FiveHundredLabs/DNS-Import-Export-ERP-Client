@@ -8,6 +8,7 @@ import { Select } from '../../components/ui/select';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../../components/ui/table';
 import { Edit3, Trash2, Plus, User as UserIcon, Mail, Phone, Shield, Map } from 'lucide-react';
 import { Dialog, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
+import { PageHeader } from '../../components/common/PageHeader';
 
 export function TeamListPage() {
   const { users, loading: usersLoading, createUser, updateUser, deleteUser } = useUsers();
@@ -53,13 +54,18 @@ export function TeamListPage() {
 
   return (
     <div className="w-full space-y-5">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Team Management</h1>
-          <p className="text-sm text-slate-500 mt-1">Manage Area Managers and Sales Representatives.</p>
-        </div>
-        <Button onClick={() => handleOpenModal()} className="gap-2 bg-indigo-600 hover:bg-indigo-700 shadow-sm"><Plus className="h-4 w-4" /> Add Team Member</Button>
-      </div>
+      <PageHeader
+        title="Team Management"
+        breadcrumbs={[
+          { label: 'Administration' },
+          { label: 'Team' },
+        ]}
+        actions={
+          <Button onClick={() => handleOpenModal()} className="gap-2 bg-primary hover:bg-primary-hover shadow-xs">
+            <Plus className="h-4 w-4" /> Add Team Member
+          </Button>
+        }
+      />
 
       <div className="rounded-2xl border border-slate-200/80 bg-white shadow-sm overflow-hidden">
         <Table>

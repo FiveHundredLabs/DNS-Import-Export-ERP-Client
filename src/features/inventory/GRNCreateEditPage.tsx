@@ -698,8 +698,8 @@ export function GRNCreateEditPage() {
   };
 
   const validate = (): string | null => {
-    if (sourceType === 'PO' && !selectedPoId && !poNumber) {
-      return 'Please select a Purchase Order (PO)';
+    if (!selectedPoId && !poNumber) {
+      return 'An approved Purchase Order is required to generate a Goods Received Note (BR-01).';
     }
     if (!supplierName.trim()) return 'Supplier name is required';
     if (!warehouseId) return 'Warehouse is required';
@@ -765,9 +765,11 @@ export function GRNCreateEditPage() {
       const grn: GRN = {
         id: grnId,
         grnNumber: generatedGrnNumber,
-        sourceType,
-        poId: sourceType === 'PO' ? selectedPoId : undefined,
-        poNumber: sourceType === 'PO' ? poNumber : deliveryNoteRef.trim() || undefined,
+        sourceType: 'PO',
+        poId: selectedPoId,
+        poNumber: poNumber,
+        purchaseOrderId: selectedPoId,
+        purchaseOrderNumber: poNumber,
         supplierId: 'sup-manual',
         supplierName: supplierName.trim(),
         supplierInvoiceNumber: supplierInvoiceNumber.trim() || undefined,
@@ -852,9 +854,9 @@ export function GRNCreateEditPage() {
     {
       step: 1 as const,
       title: 'Inbound Details',
-      subtitle: sourceType === 'PO' ? (poNumber || 'Select PO') : (supplierName || 'Manual Supplier'),
+      subtitle: poNumber || 'Select Approved PO',
       icon: Truck,
-      isComplete: Boolean(supplierName.trim() && warehouseId && (sourceType === 'MANUAL' || selectedPoId || poNumber)),
+      isComplete: Boolean(supplierName.trim() && warehouseId && (selectedPoId || poNumber)),
     },
     {
       step: 2 as const,
@@ -1017,72 +1019,24 @@ export function GRNCreateEditPage() {
 
           <CardContent className="pt-4 space-y-5">
             {/* Source Mode Toggle Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-              <button
-                type="button"
-                onClick={() => setSourceType('PO')}
-                className={cn(
-                  'p-4 rounded-xl border text-left transition-all flex items-start gap-3.5 cursor-pointer',
-                  sourceType === 'PO'
-                    ? 'border-primary bg-primary/5 ring-2 ring-primary/25 shadow-xs'
-                    : 'border-slate-200 hover:border-slate-300 bg-white hover:bg-slate-50/50'
-                )}
-              >
-                <div
-                  className={cn(
-                    'p-2.5 rounded-lg shrink-0 mt-0.5',
-                    sourceType === 'PO' ? 'bg-primary text-primary-foreground' : 'bg-slate-100 text-slate-600'
-                  )}
-                >
-                  <FileText className="h-5 w-5" />
+            {/* Mandatory PO Intake Banner (BR-01 Enforcement) */}
+            <div className="p-4 rounded-xl border border-primary/30 bg-primary/5 flex items-start gap-3.5 shadow-2xs">
+              <div className="p-2.5 rounded-lg bg-primary text-primary-foreground shrink-0 mt-0.5">
+                <FileText className="h-5 w-5" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <span className="font-bold text-sm text-slate-900">
+                    Purchase Order Receiving (Mandatory Linkage)
+                  </span>
+                  <Badge className="bg-primary text-primary-foreground text-[10px] px-2 py-0.5 font-semibold">
+                    BR-01 Enforced
+                  </Badge>
                 </div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-sm text-slate-900">Create from Purchase Order (PO)</span>
-                    {sourceType === 'PO' && (
-                      <Badge className="bg-primary text-primary-foreground text-[10px] px-1.5 py-0">
-                        Active
-                      </Badge>
-                    )}
-                  </div>
-                  <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-                    Receive shipments against an approved supplier PO. Line items and expected quantities load automatically.
-                  </p>
-                </div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setSourceType('MANUAL')}
-                className={cn(
-                  'p-4 rounded-xl border text-left transition-all flex items-start gap-3.5 cursor-pointer',
-                  sourceType === 'MANUAL'
-                    ? 'border-primary bg-primary/5 ring-2 ring-primary/25 shadow-xs'
-                    : 'border-slate-200 hover:border-slate-300 bg-white hover:bg-slate-50/50'
-                )}
-              >
-                <div
-                  className={cn(
-                    'p-2.5 rounded-lg shrink-0 mt-0.5',
-                    sourceType === 'MANUAL' ? 'bg-primary text-primary-foreground' : 'bg-slate-100 text-slate-600'
-                  )}
-                >
-                  <PlusCircle className="h-5 w-5" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-sm text-slate-900">Create Manually (One by One)</span>
-                    {sourceType === 'MANUAL' && (
-                      <Badge className="bg-primary text-primary-foreground text-[10px] px-1.5 py-0">
-                        Active
-                      </Badge>
-                    )}
-                  </div>
-                  <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-                    Direct warehouse intake without a PO. Add received products and physical quantities one-by-one with automatic barcodes.
-                  </p>
-                </div>
-              </button>
+                <p className="text-xs text-slate-600 mt-1 leading-relaxed">
+                  In compliance with inventory governance rules, all Goods Received Notes must originate from an approved Purchase Order. Unlinked or manual intake is disabled to guarantee procurement auditability.
+                </p>
+              </div>
             </div>
 
             {/* Inbound Fields */}
@@ -1109,6 +1063,21 @@ export function GRNCreateEditPage() {
                       ))}
                     </SelectContent>
                   </Select>
+                  {selectedPoId === '' && (
+                    <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                      <span className="text-[10px] text-slate-400 font-medium">Quick select:</span>
+                      {MOCK_PURCHASE_ORDERS.slice(0, 4).map((po) => (
+                        <button
+                          key={po.id}
+                          type="button"
+                          onClick={() => handleSelectPO(po.id)}
+                          className="text-[11px] px-2 py-0.5 border border-slate-200 rounded-md hover:bg-slate-100 text-slate-700 transition-colors font-mono bg-white"
+                        >
+                          {po.poNumber}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                   {selectedPoId && (
                     <div className="flex items-center gap-2 pt-1 text-xs text-emerald-700 font-medium">
                       <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />

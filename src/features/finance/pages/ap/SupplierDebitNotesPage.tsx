@@ -8,6 +8,7 @@ import { Button } from '../../../../components/ui/button';
 import { Input } from '../../../../components/ui/input';
 import { Badge } from '../../../../components/ui/badge';
 import { Card } from '../../../../components/ui/card';
+import { PageHeader } from '../../../../components/common/PageHeader';
 import { formatCurrency, formatDate } from '../../../../utils/formatters';
 import {
   SupplierDebitNote,
@@ -273,49 +274,48 @@ export function SupplierDebitNotesPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-slate-200 pb-4">
-        <div>
+      <PageHeader
+        title="Supplier Debit Notes (Purchase Returns)"
+        badge={
+          <Badge variant="outline" className="bg-rose-50 text-rose-800 border-rose-300 text-xs">
+            Accounts Payable
+          </Badge>
+        }
+        breadcrumbs={[
+          { label: 'Finance', href: '/finance' },
+          { label: 'Accounts Payable', href: '/finance/ap' },
+          { label: 'Debit Notes' },
+        ]}
+        actions={
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-              Supplier Debit Notes (Purchase Returns)
-            </h1>
-            <Badge variant="outline" className="bg-rose-50 text-rose-800 border-rose-300 text-xs">
-              Accounts Payable
-            </Badge>
+            <Button
+              variant={activeTab === 'REGISTRY' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setActiveTab('REGISTRY')}
+              className="text-xs"
+            >
+              Debit Notes History
+            </Button>
+            <Button
+              variant={activeTab === 'CREATE' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setActiveTab('CREATE')}
+              className="text-xs gap-1.5"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              <span>Issue Debit Note</span>
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate('/finance/ap/bills/new')}
+              className="text-xs text-primary border-primary/30"
+            >
+              Vendor Bill Costing
+            </Button>
           </div>
-          <p className="text-sm text-slate-500 mt-1">
-            Issue formal debit notes for damaged inbound stock returned to suppliers (Dr 2010 Accounts Payable, Cr 1030 Inventory).
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <Button
-            variant={activeTab === 'REGISTRY' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setActiveTab('REGISTRY')}
-            className="text-xs"
-          >
-            Debit Notes History
-          </Button>
-          <Button
-            variant={activeTab === 'CREATE' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setActiveTab('CREATE')}
-            className="text-xs gap-1.5"
-          >
-            <Plus className="h-3.5 w-3.5" />
-            <span>Issue Debit Note</span>
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => navigate('/finance/ap/bills/new')}
-            className="text-xs text-primary border-primary/30"
-          >
-            Vendor Bill Costing
-          </Button>
-        </div>
-      </div>
+        }
+      />
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

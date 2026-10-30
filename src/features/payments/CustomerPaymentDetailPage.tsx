@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { Customer } from '../../types/customer';
 import { Invoice } from '../../types/invoice';
 import { Payment, PaymentMethod } from '../../types/payment';
@@ -50,6 +50,7 @@ export function CustomerPaymentDetailPage() {
   const { customerId, id } = useParams<{ customerId?: string; id?: string }>();
   const effectiveCustomerId = customerId || id;
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { currentUser, role } = useAuth();
 
   const [customer, setCustomer] = useState<Customer | null>(null);
@@ -86,6 +87,18 @@ export function CustomerPaymentDetailPage() {
       setCustomer(cust);
       setInvoices(invs);
       setPaymentHistory(pmts.data);
+
+      // Pre-select single invoice if invoiceId passed in URL (BR-06, BR-07)
+      const targetInvoiceId = searchParams.get('invoiceId');
+      if (targetInvoiceId) {
+        const target = invs.find((i) => i.id === targetInvoiceId || i.invoiceNumber === targetInvoiceId);
+        if (target) {
+          const uncoll = Math.max(0, target.balanceAmount - (target.collectedAmount || 0));
+          setSelectedInvoiceIds([target.id]);
+          setAmount(uncoll);
+          toast.info(`Pre-selected invoice ${target.invoiceNumber} for collection.`);
+        }
+      }
     } catch (err) {
       console.error('Failed to load customer payment details:', err);
       toast.error('Could not load customer payment data.');
@@ -96,7 +109,15 @@ export function CustomerPaymentDetailPage() {
 
   useEffect(() => {
     loadCustomerData();
-  }, [effectiveCustomerId]);
+  }, [effectiveCustomerId, searchParams.toString()]);
+
+  // Quick action: Collect single invoice in full (BR-07)
+  const handleCollectSingleFull = (inv: Invoice) => {
+    const uncoll = Math.max(0, inv.balanceAmount - (inv.collectedAmount || 0));
+    setSelectedInvoiceIds([inv.id]);
+    setAmount(uncoll);
+    toast.info(`Selected ${inv.invoiceNumber} for full collection (${formatCurrency(uncoll)}).`);
+  };
 
   // Handle invoice multi-selection
   const handleToggleInvoice = (invId: string) => {
@@ -455,7 +476,19 @@ export function CustomerPaymentDetailPage() {
           onNotesChange={setNotes}
         />
 
-        {/* Section B: Live Automatic FIFO Allocation Breakdown */}
+        {/* Section B: Outstanding Invoices Selector (Invoice-Wise & Complete Collection - BR-06, BR-07) */}
+        <div className="bg-white rounded-2xl border border-slate-200/90 p-4 shadow-xs">
+          <InvoiceListSelector
+            invoices={invoices}
+            selectedInvoiceIds={selectedInvoiceIds}
+            onToggleInvoice={handleToggleInvoice}
+            onSelectAll={handleSelectAllInvoices}
+            onClearAll={handleClearAllInvoices}
+            onCollectSingleFull={handleCollectSingleFull}
+          />
+        </div>
+
+        {/* Section C: Live Automatic FIFO Allocation Breakdown */}
         <FifoAllocationPreview
           paymentAmount={numAmount}
           invoices={invoices}

@@ -11,9 +11,11 @@ export type OrderStatus =
   | 'PICKING'
   | 'PARTIALLY_ISSUED'
   | 'ISSUED'
+  | 'PARTIALLY_INVOICED'
   | 'INVOICED'
   | 'DISPATCHED'
   | 'DELIVERED'
+  | 'CLOSED'
   | 'CANCELLED';
 
 /**
@@ -35,6 +37,8 @@ export interface SalesOrderItem {
   orderedQuantity: number;
   approvedQuantity: number;
   issuedQuantity: number;
+  invoicedQuantity?: number;
+  remainingQuantity?: number;
   batchId?: string;
   batchNumber?: string;
   requiresSpecialApproval?: boolean;
@@ -58,7 +62,8 @@ export type OrderActionType =
   | 'ISSUE'
   | 'INVOICE'
   | 'DISPATCH'
-  | 'DELIVER';
+  | 'DELIVER'
+  | 'CLOSE';
 
 export interface OrderApprovalAction {
   id: string;
@@ -291,6 +296,21 @@ export interface SalesOrder extends BaseEntity {
   cancelledByName?: string;
   cancelledAt?: string;
   cancellationReason?: string;
+
+  // Closure attributes (BR-05)
+  closureType?: 'FULL' | 'PARTIAL';
+  closureReason?: string;
+  closureReasonCode?:
+    | 'CUSTOMER_CANCELLED'
+    | 'OUT_OF_STOCK'
+    | 'DISCONTINUED'
+    | 'CREDIT_LIMIT_REDUCTION'
+    | 'FORCE_MAJEURE'
+    | 'FULFILLED_EARLY'
+    | 'OTHER';
+  closedById?: string;
+  closedByName?: string;
+  closedAt?: string;
 }
 
 export interface CreateOrderItemInput {
