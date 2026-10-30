@@ -405,7 +405,7 @@ describe('Phase 12 — Full Cross-Module End-to-End Workflow Testing (Section 82
         complaintReason: 'Terminal screw stripped upon installation.',
         serialNumber: 'SN-MCB-2026-9901',
       },
-      salesRepUser
+      salesManagerUser
     );
     expect(claim.status).toBe('SUBMITTED');
 

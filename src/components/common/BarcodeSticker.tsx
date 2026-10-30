@@ -21,15 +21,16 @@ export interface BarcodeStickerProps {
  * Engineered for commercial thermal label printers (203 & 300 DPI) and ERP screen previews.
  *
  * Visual hierarchy:
- * 1. Company Name (DNS DISTRIBUTION)
- * 2. Product Name (Truncated cleanly, high legibility)
- * 3. SKU & Unit Number
+ * 1. Company Name (DNS Import and Export (Pvt) Ltd)
+ * 2. Product Name (Centered, high legibility)
+ * 3. SKU (Center-aligned below Product Name)
  * 4. Code 128 Barcode with quiet zones
  * 5. Barcode Alphanumeric Value
- * 6. Serial Number (Dynamically shown ONLY if unit is serialized)
+ * 6. Serial Number (Directly below barcode if serialized)
+ * 7. Unit Counter (Visible in application preview only; excluded from print)
  */
 export const BarcodeSticker: React.FC<BarcodeStickerProps> = ({
-  companyName = 'DNS DISTRIBUTION',
+  companyName = 'DNS Import and Export (Pvt) Ltd',
   productName,
   sku,
   unitBarcode,
@@ -44,8 +45,7 @@ export const BarcodeSticker: React.FC<BarcodeStickerProps> = ({
   const hasSerial = Boolean(serialNumber && serialNumber.trim().length > 0);
 
   // Barcode height dynamically expands when no serial number is present
-  // 50mm x 30mm total label: 30mm = ~113px at 96 DPI, ~240px at 203 DPI, ~354px at 300 DPI.
-  const barcodeHeight = hasSerial ? 28 : 34;
+  const barcodeHeight = hasSerial ? 26 : 32;
 
   const codeData = useMemo(() => {
     return encodeCode128(unitBarcode, 10);
@@ -78,37 +78,37 @@ export const BarcodeSticker: React.FC<BarcodeStickerProps> = ({
         breakInside: 'avoid',
       }}
     >
-      {/* 1. Header: Company Name & SKU/Unit Tag */}
-      <div className="w-full flex items-center justify-between border-b border-black/80 pb-[1px] px-[0.5mm]">
-        <span className="font-extrabold uppercase tracking-wider text-[8px] sm:text-[8.5px] leading-tight truncate text-black">
+      {/* 1. Header: Company Name & Unit Tag (Unit tag visible in application, hidden on print) */}
+      <div className="w-full flex items-center justify-between border-b border-black/80 pb-[1px] px-[0.5mm] print:justify-center">
+        <span className="font-extrabold uppercase tracking-wider text-[8px] sm:text-[8.5px] leading-tight truncate text-black print:text-center">
           {companyName}
         </span>
         {unitCaption && (
-          <span className="font-mono font-bold text-[7px] sm:text-[7.5px] text-black shrink-0 ml-1">
+          <span className="font-mono font-bold text-[7px] sm:text-[7.5px] text-black shrink-0 ml-1 print:hidden">
             {unitCaption}
           </span>
         )}
       </div>
 
-      {/* 2. Product Name & SKU */}
-      <div className="w-full px-[0.5mm] my-[0.5mm]">
+      {/* 2. Product Name & SKU (Center-aligned) */}
+      <div className="w-full px-[0.5mm] my-[0.5mm] text-center">
         <div
-          className="font-bold text-[8.5px] sm:text-[9px] text-black leading-tight line-clamp-1 truncate"
+          className="font-bold text-[8.5px] sm:text-[9px] text-black leading-tight line-clamp-1 truncate text-center"
           title={productName}
         >
           {productName}
         </div>
-        <div className="flex items-center justify-between text-[7px] sm:text-[7.5px] font-mono text-black/90 font-semibold mt-[1px]">
+        <div className="flex items-center justify-center text-[7px] sm:text-[7.5px] font-mono text-black/90 font-semibold mt-[1px] text-center">
           <span className="truncate">SKU: {sku}</span>
-          {batchNumber && <span className="shrink-0 ml-1">BATCH: {batchNumber}</span>}
+          {batchNumber && <span className="shrink-0 ml-1.5">&bull; BATCH: {batchNumber}</span>}
         </div>
       </div>
 
-      {/* 3. Barcode (Code 128 SVG) */}
+      {/* 3. Barcode (Code 128 SVG) + Barcode Number + Serial Number directly below */}
       <div className="w-full flex-1 flex flex-col items-center justify-center overflow-hidden my-[0.5mm]">
         <svg
           viewBox={`0 0 ${codeData.totalModules} ${barcodeHeight}`}
-          className="w-[94%] h-[26px] sm:h-[30px] block overflow-hidden"
+          className="w-[94%] h-[24px] sm:h-[28px] block overflow-hidden"
           preserveAspectRatio="none"
           shapeRendering="crispEdges"
           aria-label={`Barcode: ${unitBarcode}`}
@@ -117,26 +117,26 @@ export const BarcodeSticker: React.FC<BarcodeStickerProps> = ({
           <path d={pathD} fill="#000000" />
         </svg>
 
-        {/* 4. Barcode Numeric/Alphanumeric caption directly underneath */}
-        <span className="font-mono font-bold text-[8px] sm:text-[8.5px] text-black tracking-widest mt-[1px] truncate max-w-full">
+        {/* Barcode Numeric/Alphanumeric caption directly underneath */}
+        <span className="font-mono font-bold text-[7.5px] sm:text-[8px] text-black tracking-widest mt-[0.5mm] truncate max-w-full">
           {unitBarcode}
         </span>
-      </div>
 
-      {/* 5. Serial Number (Rendered ONLY if unit is serialized) */}
-      {hasSerial ? (
-        <div className="w-full border-t border-black/80 pt-[1px] flex items-center justify-center px-[0.5mm]">
-          <span className="font-mono font-extrabold text-[7.5px] sm:text-[8px] text-black tracking-wider truncate">
+        {/* Serial Number directly below barcode */}
+        {hasSerial && (
+          <span className="font-mono font-extrabold text-[7.5px] sm:text-[8px] text-black tracking-wider mt-[0.5mm] truncate max-w-full">
             SN: {serialNumber}
           </span>
-        </div>
-      ) : poNumber ? (
+        )}
+      </div>
+
+      {/* Optional fallback footer if PO present and non-serialized */}
+      {!hasSerial && poNumber && (
         <div className="w-full border-t border-dashed border-black/40 pt-[1px] flex items-center justify-between text-[6.5px] sm:text-[7px] font-mono text-black/75 px-[0.5mm]">
           <span className="truncate">PO: {poNumber}</span>
           <span>INTAKE OK</span>
         </div>
-      ) : null}
+      )}
     </div>
   );
 };
-

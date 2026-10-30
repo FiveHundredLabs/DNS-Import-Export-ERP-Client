@@ -151,7 +151,7 @@ export function UnitBarcodeModal({
     toast.info(`Printing 50mm × 30mm barcode stickers for all ${allStickers.length} units...`);
     printerService.printBarcodeStickers(
       allStickers.map((s) => ({
-        companyName: 'DNS DISTRIBUTION',
+        companyName: 'DNS Import and Export (Pvt) Ltd',
         productName: s.productName,
         sku: s.sku,
         unitBarcode: s.record.unitBarcode,
@@ -182,7 +182,7 @@ export function UnitBarcodeModal({
     toast.info(`Printing 50mm × 30mm stickers for ${productName} (${productStickers.length} units)...`);
     printerService.printBarcodeStickers(
       productStickers.map((s) => ({
-        companyName: 'DNS DISTRIBUTION',
+        companyName: 'DNS Import and Export (Pvt) Ltd',
         productName: s.productName,
         sku: s.sku,
         unitBarcode: s.record.unitBarcode,
@@ -210,7 +210,7 @@ export function UnitBarcodeModal({
     toast.info(`Printing 50mm × 30mm single sticker: Unit #${unitIndex} (${productName})...`);
     printerService.printBarcodeStickers([
       {
-        companyName: 'DNS DISTRIBUTION',
+        companyName: 'DNS Import and Export (Pvt) Ltd',
         productName: target.productName,
         sku: target.sku,
         unitBarcode: target.record.unitBarcode,
@@ -297,7 +297,7 @@ export function UnitBarcodeModal({
         {/* Unit-Wise 50mm x 30mm Barcode Sticker Simulation */}
         <div className="flex justify-center p-1.5 bg-slate-50/80 rounded-lg border border-slate-200/80">
           <BarcodeSticker
-            companyName="DNS DISTRIBUTION"
+            companyName="DNS Import and Export (Pvt) Ltd"
             productName={sticker.productName}
             sku={sticker.sku}
             unitBarcode={sticker.record.unitBarcode}

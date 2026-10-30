@@ -120,15 +120,14 @@ export class ThermalPrinterService implements IPrinterService {
         return `
           <div class="sticker-label">
             <div class="header">
-              <span class="company">${escapeHtml(s.companyName || 'DNS DISTRIBUTION')}</span>
-              ${unitCaption ? `<span class="unit-tag">${escapeHtml(unitCaption)}</span>` : ''}
+              <span class="company">${escapeHtml(s.companyName || 'DNS Import and Export (Pvt) Ltd')}</span>
             </div>
 
             <div class="product-info">
               <div class="product-name" title="${escapeHtml(s.productName)}">${escapeHtml(s.productName)}</div>
               <div class="sku-row">
                 <span>SKU: ${escapeHtml(s.sku)}</span>
-                ${s.batchNumber ? `<span>BATCH: ${escapeHtml(s.batchNumber)}</span>` : ''}
+                ${s.batchNumber ? `<span>&bull; BATCH: ${escapeHtml(s.batchNumber)}</span>` : ''}
               </div>
             </div>
 
@@ -137,12 +136,11 @@ export class ThermalPrinterService implements IPrinterService {
                 <path d="${pathD}" fill="#000000" shape-rendering="crispEdges" />
               </svg>
               <div class="barcode-number">${escapeHtml(s.unitBarcode)}</div>
+              ${hasSerial ? `<div class="barcode-serial">SN: ${escapeHtml(s.serialNumber)}</div>` : ''}
             </div>
 
             ${
-              hasSerial
-                ? `<div class="serial-box">SN: ${escapeHtml(s.serialNumber)}</div>`
-                : s.poNumber
+              !hasSerial && s.poNumber
                 ? `<div class="footer-row"><span>PO: ${escapeHtml(s.poNumber)}</span><span>INTAKE OK</span></div>`
                 : ''
             }
@@ -204,7 +202,7 @@ export class ThermalPrinterService implements IPrinterService {
             .header {
               width: 100%;
               display: flex;
-              justify-content: space-between;
+              justify-content: center;
               align-items: center;
               border-bottom: 0.6pt solid #000000;
               padding-bottom: 0.3mm;
@@ -218,17 +216,13 @@ export class ThermalPrinterService implements IPrinterService {
               white-space: nowrap;
               overflow: hidden;
               text-overflow: ellipsis;
-            }
-            .unit-tag {
-              font-family: monospace;
-              font-size: 5.5pt;
-              font-weight: 700;
-              white-space: nowrap;
+              text-align: center;
             }
             .product-info {
               width: 100%;
               margin-top: 0.3mm;
               line-height: 1.1;
+              text-align: center;
             }
             .product-name {
               font-size: 7pt;
@@ -236,15 +230,19 @@ export class ThermalPrinterService implements IPrinterService {
               white-space: nowrap;
               overflow: hidden;
               text-overflow: ellipsis;
+              text-align: center;
             }
             .sku-row {
               font-family: monospace;
               font-size: 5.5pt;
               font-weight: 600;
               display: flex;
-              justify-content: space-between;
+              align-items: center;
+              justify-content: center;
+              gap: 1.5mm;
               margin-top: 0.2mm;
               line-height: 1;
+              text-align: center;
             }
             .barcode-box {
               width: 100%;
@@ -256,7 +254,7 @@ export class ThermalPrinterService implements IPrinterService {
             }
             .barcode-svg {
               width: 95%;
-              height: 9mm;
+              height: 8.5mm;
               display: block;
             }
             .barcode-number {
@@ -266,19 +264,16 @@ export class ThermalPrinterService implements IPrinterService {
               letter-spacing: 0.8px;
               margin-top: 0.3mm;
               line-height: 1;
+              text-align: center;
             }
-            .serial-box {
-              width: 100%;
-              border-top: 0.6pt solid #000000;
-              padding-top: 0.3mm;
+            .barcode-serial {
               font-family: 'Courier New', Courier, monospace;
               font-size: 6.5pt;
               font-weight: 900;
-              letter-spacing: 0.4px;
-              white-space: nowrap;
-              overflow: hidden;
-              text-overflow: ellipsis;
+              letter-spacing: 0.5px;
+              margin-top: 0.3mm;
               line-height: 1;
+              text-align: center;
             }
             .footer-row {
               width: 100%;
