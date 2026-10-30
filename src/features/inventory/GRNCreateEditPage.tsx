@@ -1189,9 +1189,7 @@ export function GRNCreateEditPage() {
                   <Truck className="h-5 w-5 text-primary" />
                   Step 1: Receiving Details &amp; Inbound Source
                 </CardTitle>
-                <CardDescription className="text-xs text-slate-500 mt-0.5">
-                  Choose how inbound goods arrived at the warehouse receiving bay.
-                </CardDescription>
+                
               </div>
               <Badge variant="outline" className="text-xs bg-slate-50 font-mono">
                 Step 1 of 4
@@ -2123,12 +2121,7 @@ export function GRNCreateEditPage() {
                     Physical Intake Studio
                   </Badge>
                 </div>
-                <CardDescription className="text-xs text-slate-500 mt-0.5">
-                  System-generated unit barcodes for physical labeling of each received unit in GRN{' '}
-                  <span className="font-mono font-semibold text-slate-700">
-                    {poNumber || deliveryNoteRef || 'GRN-INBOUND'}
-                  </span>.
-                </CardDescription>
+                
               </div>
 
               <div className="flex items-center gap-2 shrink-0 flex-wrap">

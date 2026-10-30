@@ -161,7 +161,6 @@ export function DirectorDashboard() {
         <StatCard
           title="Sales"
           value={formatCurrency(48500000)}
-          period="This month"
           trend={{ value: '20.7%', isPositive: true }}
           variant="success"
           icon={DollarSign}
@@ -169,7 +168,6 @@ export function DirectorDashboard() {
         <StatCard
           title="New Orders"
           value="209"
-          period="This month"
           trend={{ value: '12%', isPositive: true }}
           variant="blue"
           icon={ShoppingBag}
@@ -177,7 +175,6 @@ export function DirectorDashboard() {
         <StatCard
           title="Conversion Rate"
           value="9.5%"
-          period="This month"
           trend={{ value: '2.12%', isPositive: true }}
           variant="indigo"
           icon={Target}
@@ -185,7 +182,6 @@ export function DirectorDashboard() {
         <StatCard
           title="Cancelled Orders"
           value="2.5%"
-          period="This month"
           trend={{ value: '3.8%', isPositive: false }}
           variant="danger"
           icon={AlertCircle}

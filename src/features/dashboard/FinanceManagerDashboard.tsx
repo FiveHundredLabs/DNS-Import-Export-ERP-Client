@@ -255,7 +255,6 @@ export function FinanceManagerDashboard() {
         <StatCard
           title="Bank Operating Liquidity"
           value={formatCurrency(bankAccount?.currentBalance || 0)}
-          subtitle={`Petty Cash: ${formatCurrency(pettyCashAccount?.currentBalance || 0)}`}
           icon={DollarSign}
           trend={{ value: '1010 Bank Account', isPositive: true }}
           variant="success"
@@ -263,21 +262,18 @@ export function FinanceManagerDashboard() {
         <StatCard
           title="Accounts Receivable (1020)"
           value={formatCurrency(arAccount?.currentBalance || 0)}
-          subtitle={`${pendingReceipts.length} Unapproved Deposits: ${formatCurrency(pendingReceiptsTotal)}`}
           icon={TrendingUp}
           variant="warning"
         />
         <StatCard
           title="Accounts Payable (2010)"
           value={formatCurrency(apAccount?.currentBalance || 0)}
-          subtitle={`${openBills.length} Open Supplier Bills: ${formatCurrency(openBillsTotal)}`}
           icon={Receipt}
           variant="danger"
         />
         <StatCard
           title="Net Operating Profit"
           value={formatCurrency(netProfit || 0)}
-          subtitle={`Gross Margin: ${(grossMargin || 0).toFixed(1)}% | Revenue: ${formatCurrency(totalRevenue || 0)}`}
           icon={PieChart}
           trend={{ value: 'Balanced Ledger', isPositive: true }}
           variant="success"
@@ -465,7 +461,7 @@ export function FinanceManagerDashboard() {
         <Card className="p-5 border-slate-200/90 shadow-sm bg-white flex flex-col justify-between">
           <CardHeader className="p-0 pb-3">
             <CardTitle className="text-sm font-bold text-slate-900">Working Capital Distribution</CardTitle>
-            <p className="text-xs text-slate-500 mt-0.5">Real-time asset & liability composition in GL</p>
+            
           </CardHeader>
           <CardContent className="p-0">
             <div className="h-44 w-full flex items-center justify-center">
@@ -510,7 +506,7 @@ export function FinanceManagerDashboard() {
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-base font-bold text-slate-900">Recent General Ledger Activity</h2>
-            <p className="text-xs text-slate-500">Live journal vouchers posted across operational sub-ledgers</p>
+            
           </div>
           <Link to="/finance/reports/general-ledger" className="text-xs font-semibold text-primary hover:underline">
             View All Ledger Statements →

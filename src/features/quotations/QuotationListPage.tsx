@@ -189,7 +189,6 @@ export function QuotationListPage() {
         <StatCard
           title="Total Quotes"
           value={total}
-          subtitle="Pipeline opportunities"
           icon={FileSpreadsheet}
           variant="indigo"
         />
@@ -197,7 +196,6 @@ export function QuotationListPage() {
         <StatCard
           title="Pending Approval"
           value={pendingCount}
-          subtitle="Awaiting discount approval"
           icon={Clock}
           variant="amber"
         />
@@ -205,7 +203,6 @@ export function QuotationListPage() {
         <StatCard
           title="Converted Orders"
           value={convertedCount}
-          subtitle="Successfully converted"
           icon={ShoppingCart}
           variant="emerald"
         />
@@ -213,7 +210,6 @@ export function QuotationListPage() {
         <StatCard
           title="Pipeline Value"
           value={totalPipelineValue}
-          subtitle="Gross quotation pipeline"
           icon={DollarSign}
           variant="blue"
         />

@@ -182,7 +182,6 @@ export function GRNListPage() {
         <StatCard
           title="Total Inward Receipts"
           value={stats.totalGRNs}
-          subtitle={`Across ${stats.totalReceivedUnits.toLocaleString()} received units`}
           icon={Boxes}
           variant="indigo"
           badge="Intake Registry"
@@ -191,7 +190,6 @@ export function GRNListPage() {
         <StatCard
           title="Verified & Approved"
           value={stats.approvedGRNs}
-          subtitle="Released into Active Inventory"
           icon={CheckCircle2}
           variant="emerald"
           trend={{ value: `${stats.goodUnits.toLocaleString()} units`, isPositive: true }}
@@ -201,7 +199,6 @@ export function GRNListPage() {
         <StatCard
           title="Pending Finance Review"
           value={stats.submittedGRNs}
-          subtitle="Awaiting Dock Approval"
           icon={Clock}
           variant="amber"
           badge={stats.submittedGRNs > 0 ? `${stats.submittedGRNs} In Queue` : 'Up to date'}
@@ -210,7 +207,6 @@ export function GRNListPage() {
         <StatCard
           title="Damaged / Quarantine"
           value={`${stats.totalDamagedUnits} Units`}
-          subtitle={stats.totalDamagedUnits > 0 ? 'Isolated for return/debit note' : 'Zero transit damage'}
           icon={AlertTriangle}
           variant={stats.totalDamagedUnits > 0 ? 'rose' : 'blue'}
           badge={stats.totalDamagedUnits > 0 ? 'Quarantine Active' : 'Zero Defect'}
@@ -228,9 +224,7 @@ export function GRNListPage() {
                   <BarChart3 className="h-4 w-4 text-primary" />
                   <span>GRN Intake Status Distribution</span>
                 </CardTitle>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  Breakdown of inbound warehouse receipts by operational stage
-                </p>
+
               </div>
               <Badge variant="outline" className="font-mono text-[11px] bg-slate-50">
                 {stats.totalGRNs} Total GRNs
@@ -304,9 +298,7 @@ export function GRNListPage() {
               <Activity className="h-4 w-4 text-emerald-600" />
               <span>Inward Pipeline &amp; Compliance</span>
             </CardTitle>
-            <p className="text-xs text-slate-500">
-              Warehouse fulfillment health and dock intake status
-            </p>
+
           </CardHeader>
           <CardContent className="space-y-3 pt-2">
             {/* Status Card 1: Active In Inventory */}

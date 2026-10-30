@@ -139,3 +139,4 @@ export const BarcodeSticker: React.FC<BarcodeStickerProps> = ({
     </div>
   );
 };
+

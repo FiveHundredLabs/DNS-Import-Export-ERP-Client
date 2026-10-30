@@ -260,9 +260,7 @@ export function DirectorInteractiveBarChart() {
               +20.7%
             </span>
           </div>
-          <CardDescription className="text-xs text-slate-500">
-            Daily revenue streams across Sales Reps &amp; Showroom · Month Total: LKR 48,500,000
-          </CardDescription>
+
         </div>
 
         <div className="flex border-t sm:border-t-0 sm:border-l border-slate-200/80 divide-x divide-slate-200/80">

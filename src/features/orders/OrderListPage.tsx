@@ -173,7 +173,6 @@ export function OrderListPage() {
         <StatCard
           title="Total Filtered"
           value={`${total} Orders`}
-          subtitle="Active order portfolio"
           icon={ShoppingCart}
           variant="indigo"
         />
@@ -181,7 +180,6 @@ export function OrderListPage() {
         <StatCard
           title="Pending Approval"
           value={pendingApprovalsCount}
-          subtitle={`${specialOrdersCount} require special approval`}
           icon={Clock}
           variant="amber"
         />
@@ -189,7 +187,6 @@ export function OrderListPage() {
         <StatCard
           title="In Fulfillment"
           value={inFulfillmentCount}
-          subtitle="Picking, Invoiced, or Dispatched"
           icon={Truck}
           variant="blue"
         />
@@ -197,7 +194,6 @@ export function OrderListPage() {
         <StatCard
           title="Active Order Value"
           value={formatCurrency(totalValue)}
-          subtitle="Excludes cancelled"
           icon={DollarSign}
           variant="emerald"
         />

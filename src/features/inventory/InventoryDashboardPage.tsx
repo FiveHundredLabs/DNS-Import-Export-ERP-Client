@@ -502,7 +502,6 @@ function isPowerToolItem(item: { productId?: string; sku?: string; categoryName?
         <StatCard
           title="Available Stock"
           value={kpis.totalAvailableUnits.toLocaleString()}
-          subtitle="Ready for sale"
           icon={Package}
           variant="emerald"
           progress={{
@@ -515,7 +514,6 @@ function isPowerToolItem(item: { productId?: string; sku?: string; categoryName?
         <StatCard
           title="Reserved Orders"
           value={kpis.totalReservedUnits.toLocaleString()}
-          subtitle="Allocated to SOs"
           icon={Layers}
           variant="blue"
           progress={{
@@ -528,7 +526,6 @@ function isPowerToolItem(item: { productId?: string; sku?: string; categoryName?
         <StatCard
           title="Dispatched"
           value={kpis.totalDispatchedUnits.toLocaleString()}
-          subtitle="In delivery transit"
           icon={Truck}
           variant="indigo"
           progress={{
@@ -541,7 +538,6 @@ function isPowerToolItem(item: { productId?: string; sku?: string; categoryName?
         <StatCard
           title="Delivered"
           value={kpis.totalDeliveredUnits.toLocaleString()}
-          subtitle="Fulfilled to clients"
           icon={CheckCircle2}
           variant="teal"
           progress={{
@@ -554,7 +550,6 @@ function isPowerToolItem(item: { productId?: string; sku?: string; categoryName?
         <StatCard
           title="Damaged Stock"
           value={`${kpis.totalDamagedUnits.toLocaleString()} Units`}
-          subtitle="Quarantine holding area"
           icon={AlertTriangle}
           variant="rose"
           progress={
@@ -571,7 +566,6 @@ function isPowerToolItem(item: { productId?: string; sku?: string; categoryName?
         <StatCard
           title="Valuation"
           value={formatCurrency(kpis.totalStockValue)}
-          subtitle={`${powerToolGrns.length} GRNs · ${kpis.totalBarcodes} barcodes`}
           icon={DollarSign}
           variant="amber"
         />
@@ -753,9 +747,7 @@ function isPowerToolItem(item: { productId?: string; sku?: string; categoryName?
                 <Boxes className="h-4 w-4 text-primary" />
                 Inward Stock Registry (All GRN Intake Lines)
               </CardTitle>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Showing physical receiving batches with supplier lineage, good vs damaged breakdown, landed costs, barcodes, and serials.
-              </p>
+
             </div>
             <Badge variant="outline" className="font-mono text-xs bg-white text-slate-700">
               {filteredStockItems.length} Products Tracked
@@ -1172,9 +1164,7 @@ function isPowerToolItem(item: { productId?: string; sku?: string; categoryName?
                 <Hash className="h-4 w-4 text-indigo-600" />
                 Physical Unit Serial Numbers Registry
               </CardTitle>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Every serialized industrial power tool tracked from inward GRN receiving through warehouse bays.
-              </p>
+
             </div>
           </CardHeader>
 

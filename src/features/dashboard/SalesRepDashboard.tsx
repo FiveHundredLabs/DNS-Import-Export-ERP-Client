@@ -615,9 +615,7 @@ export function SalesRepDashboard() {
                       {dueNext24hInvoices.length} Due Priority
                     </Badge>
                   </div>
-                  <p className="text-xs text-amber-900/80 mt-0.5">
-                    Critical dealer receivables due within 24 hours or overdue in your sales territory.
-                  </p>
+                  
                 </div>
               </div>
               <Link to="/payments/collect?filter=DUE_NEXT_24H">
@@ -718,9 +716,7 @@ export function SalesRepDashboard() {
               <CardTitle className="text-sm font-bold text-slate-900">
                 Recent Order Status Tracking
               </CardTitle>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Live fulfillment status for active territory dispatches.
-              </p>
+              
             </div>
             <Link to="/orders">
               <Button variant="ghost" size="sm" className="text-xs text-primary font-semibold gap-0.5 p-1 h-7 hover:bg-primary-light">

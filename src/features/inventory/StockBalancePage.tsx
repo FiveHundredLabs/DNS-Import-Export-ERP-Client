@@ -282,7 +282,6 @@ export function StockBalancePage() {
           <StatCard
             title="Est. Stock Value"
             value={formatCurrency(totalValue)}
-            subtitle="Current available inventory basis"
             icon={DollarSign}
             variant="blue"
             badge="Valuation"
@@ -290,7 +289,6 @@ export function StockBalancePage() {
           <StatCard
             title="Out of Stock"
             value={outCount}
-            subtitle={outCount > 0 ? 'Urgent procurement required' : 'Zero depleted SKUs'}
             icon={AlertTriangle}
             variant={outCount > 0 ? 'rose' : 'emerald'}
             badge={outCount > 0 ? 'Stockout Alert' : 'Healthy'}
@@ -298,7 +296,6 @@ export function StockBalancePage() {
           <StatCard
             title="Low Stock Lines"
             value={lowCount}
-            subtitle={lowCount > 0 ? 'Below reorder threshold (< 10 units)' : 'Adequate safety stock'}
             icon={AlertTriangle}
             variant={lowCount > 0 ? 'amber' : 'emerald'}
             badge={lowCount > 0 ? 'Low Buffer' : 'Balanced'}
@@ -306,7 +303,6 @@ export function StockBalancePage() {
           <StatCard
             title="Damaged Units"
             value={totalDmg}
-            subtitle={totalDmg > 0 ? 'Quarantined for disposal or debit' : 'Zero warehouse defect'}
             icon={Boxes}
             variant={totalDmg > 0 ? 'rose' : 'emerald'}
             badge={totalDmg > 0 ? 'Quarantined' : 'Zero Defect'}

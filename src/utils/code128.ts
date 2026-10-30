@@ -100,3 +100,4 @@ export function generateCode128SvgPath(data: Code128Data, height: number): strin
     .map((bar) => `M${bar.x},0 h${bar.width} v${height} h-${bar.width} Z`)
     .join(' ');
 }
+

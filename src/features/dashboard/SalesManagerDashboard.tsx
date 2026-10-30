@@ -113,7 +113,6 @@ export function SalesManagerDashboard() {
         <StatCard
           title="Team Sales"
           value={formatCurrency(kpis.teamSales)}
-          period="Total Gross Revenue"
           trend={{ value: '15.2%', isPositive: true }}
           variant="success"
           icon={DollarSign}
@@ -121,7 +120,6 @@ export function SalesManagerDashboard() {
         <StatCard
           title="Unpaid Invoices"
           value={formatCurrency(kpis.unpaidInvoices)}
-          period="Total Receivables"
           trend={{ value: '4.1%', isPositive: false }}
           variant="danger"
           icon={AlertCircle}
@@ -129,7 +127,6 @@ export function SalesManagerDashboard() {
         <StatCard
           title="Active Area Managers"
           value={kpis.activeAreaManagers.toString()}
-          period="Field Commanders"
           trend={{ value: '100%', isPositive: true }}
           variant="blue"
           icon={MapPin}
@@ -137,7 +134,6 @@ export function SalesManagerDashboard() {
         <StatCard
           title="Total Sales Reps"
           value={kpis.totalSalesReps.toString()}
-          period="Active Fleet"
           trend={{ value: '12%', isPositive: true }}
           variant="indigo"
           icon={Users}
