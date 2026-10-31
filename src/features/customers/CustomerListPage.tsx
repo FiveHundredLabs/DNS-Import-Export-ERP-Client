@@ -87,7 +87,7 @@ export function CustomerListPage() {
           role === 'SALES_REP'
             ? `Displaying accounts assigned directly to you (${currentUser.name}).`
             : role === 'AREA_MANAGER'
-            ? `Displaying accounts in your managed area (${currentUser.areaName || 'Western Province'}).`
+            ? `Displaying accounts in your managed area (${currentUser.areaName || 'Kelaniya'}).`
             : 'Single central repository of dealers, credit lines, payment terms, and route assignments.'
         }
         badge={

@@ -95,7 +95,8 @@ export type OrderActivityType =
   | 'REPLACEMENT_DISPATCHED'
   | 'DELIVERED'
   | 'INVOICE_ISSUED'
-  | 'ORDER_CANCELLED';
+  | 'ORDER_CANCELLED'
+  | 'ORDER_CLOSED';
 
 export interface OrderProductModificationDetail {
   added?: Array<{
@@ -307,6 +308,7 @@ export interface SalesOrder extends BaseEntity {
     | 'CREDIT_LIMIT_REDUCTION'
     | 'FORCE_MAJEURE'
     | 'FULFILLED_EARLY'
+    | 'REMAINING_ITEMS_RETURNED'
     | 'OTHER';
   closedById?: string;
   closedByName?: string;

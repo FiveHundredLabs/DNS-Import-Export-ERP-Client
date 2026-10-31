@@ -82,7 +82,7 @@ export function PurchaseOrderStatusBadge({
     <Badge
       variant="outline"
       className={cn(
-        'gap-1.5 font-mono text-[11px] uppercase tracking-wider py-0.5 px-2.5 rounded-full inline-flex items-center shadow-2xs',
+        'gap-1.5 text-[11px] font-semibold uppercase tracking-wider py-0.5 px-2.5 rounded-md inline-flex items-center shadow-2xs',
         current.className,
         className
       )}

@@ -53,7 +53,7 @@ export function AreaManagerDashboard() {
     {
       id: 'rep-01',
       name: 'Kasun Perera',
-      territory: 'Colombo Central & Pettah',
+      territory: 'Kelaniya & Peliyagoda',
       todaySales: 68500,
       target: 75000,
       achievement: 91,
@@ -63,7 +63,7 @@ export function AreaManagerDashboard() {
     {
       id: 'rep-02',
       name: 'Nuwan Jayasinghe',
-      territory: 'Gampaha & Negombo Road',
+      territory: 'Maharagama & High Level',
       todaySales: 54000,
       target: 65000,
       achievement: 83,
@@ -73,7 +73,7 @@ export function AreaManagerDashboard() {
     {
       id: 'rep-03',
       name: 'Ruwan Silva',
-      territory: 'Kalutara & Panadura Coast',
+      territory: 'Malabe & Kaduwela',
       todaySales: 38500,
       target: 55000,
       achievement: 70,
@@ -83,7 +83,7 @@ export function AreaManagerDashboard() {
     {
       id: 'rep-04',
       name: 'Sahan Wickramasinghe',
-      territory: 'Kaduwela & Malabe Suburbs',
+      territory: 'Kottawa & Homagama',
       todaySales: 24000,
       target: 55000,
       achievement: 44,
@@ -132,7 +132,7 @@ export function AreaManagerDashboard() {
             <div className="flex items-center gap-2">
               <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold tracking-wide uppercase bg-primary-light text-primary-text border border-primary-border">
                 <MapPin className="h-3 w-3 text-primary" />
-                {currentUser.areaName || 'Western Province Area'}
+                {currentUser.areaName || 'Kelaniya Area'}
               </span>
               <span className="text-[11px] text-slate-500 font-medium">Area Manager Hub</span>
             </div>
@@ -177,7 +177,7 @@ export function AreaManagerDashboard() {
               <span className="text-xs font-bold uppercase tracking-wider text-emerald-950">
                 Today's Area Sales
               </span>
-              <div className="text-[10px] text-slate-400 font-medium sm:hidden">Western Province Target</div>
+              <div className="text-[10px] text-slate-400 font-medium sm:hidden">Kelaniya Area Target</div>
             </div>
           </div>
           <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-800 bg-emerald-100/90 px-2.5 py-0.5 rounded-full border border-emerald-200/80 shrink-0">

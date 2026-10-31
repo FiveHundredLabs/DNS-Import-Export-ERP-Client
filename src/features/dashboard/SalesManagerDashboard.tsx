@@ -1,6 +1,15 @@
 import React, { useState } from 'react';
 import { useSalesManagerDashboard } from '../../hooks/useSalesManagerDashboard';
 import { StatCard } from '../../components/common/StatCard';
+import { posService } from '../../services/POSService';
+import { ShowroomOffer } from '../../types/pos';
+import { useAuth } from '../../hooks/useAuth';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '../../components/ui/dialog';
+import { Button } from '../../components/ui/button';
+import { Input } from '../../components/ui/input';
+import { Badge } from '../../components/ui/badge';
+import { Tag, Check, X, ShieldCheck } from 'lucide-react';
+import { toast } from 'sonner';
 import { Card, CardHeader, CardTitle } from '../../components/ui/card';
 import { formatCurrency } from '../../utils/formatters';
 import {
@@ -64,6 +73,63 @@ const RECOVERIES_TREND_DATA = [
 export function SalesManagerDashboard() {
   const { data, loading, error } = useSalesManagerDashboard();
   const [expandedManagers, setExpandedManagers] = useState<Set<string>>(new Set());
+  const { currentUser } = useAuth();
+  const [offers, setOffers] = useState<ShowroomOffer[]>([]);
+  const [rejectModalOffer, setRejectModalOffer] = useState<ShowroomOffer | null>(null);
+  const [rejectionReasonText, setRejectionReasonText] = useState('');
+  const [offerFilterTab, setOfferFilterTab] = useState<'PENDING' | 'APPROVED' | 'REJECTED' | 'ALL'>('PENDING');
+
+  const loadOffers = async () => {
+    try {
+      const all = await posService.getAllOffers();
+      setOffers(all);
+    } catch (e) {
+      console.error('Error loading offers', e);
+    }
+  };
+
+  React.useEffect(() => {
+    loadOffers();
+  }, []);
+
+  const handleApproveOffer = async (offerId: string) => {
+    try {
+      await posService.approveShowroomOffer(offerId, {
+        id: currentUser?.id || 'usr-103',
+        name: currentUser?.name || 'Kamal Perera',
+      });
+      toast.success('Showroom offer approved and activated for POS!');
+      loadOffers();
+    } catch (err: any) {
+      toast.error(err.message || 'Approval failed');
+    }
+  };
+
+  const handleRejectOffer = async () => {
+    if (!rejectModalOffer) return;
+    if (!rejectionReasonText.trim()) {
+      toast.error('A rejection reason is mandatory.');
+      return;
+    }
+    try {
+      await posService.rejectShowroomOffer(rejectModalOffer.id, rejectionReasonText.trim(), {
+        id: currentUser?.id || 'usr-103',
+        name: currentUser?.name || 'Kamal Perera',
+      });
+      toast.success('Offer rejected and returned to Showroom Manager.');
+      setRejectModalOffer(null);
+      setRejectionReasonText('');
+      loadOffers();
+    } catch (err: any) {
+      toast.error(err.message || 'Rejection failed');
+    }
+  };
+
+  const filteredOffers = offers.filter((o) => {
+    if (offerFilterTab === 'ALL') return true;
+    if (offerFilterTab === 'PENDING') return o.status === 'PENDING_APPROVAL';
+    return o.status === offerFilterTab;
+  });
 
   if (loading) {
     return <div className="p-8 flex justify-center text-slate-500">Loading dashboard data...</div>;
@@ -502,6 +568,200 @@ export function SalesManagerDashboard() {
           </table>
         </div>
       </Card>
+
+      {/* Showroom Clearance Offer Approvals Section */}
+      <Card className="bg-white border border-slate-200/80 rounded-2xl shadow-sm overflow-hidden">
+        <CardHeader className="bg-slate-50 border-b border-slate-200 px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <div className="h-8 w-8 rounded-lg bg-indigo-600 text-white flex items-center justify-center font-bold">
+              <Tag className="h-4 w-4" />
+            </div>
+            <div>
+              <CardTitle className="text-base font-bold text-slate-800">
+                Showroom Clearance & Promotional Offer Approvals
+              </CardTitle>
+              <p className="text-xs text-slate-500">
+                Review, approve, or reject stock clearance pricing requests submitted by Showroom Managers.
+              </p>
+            </div>
+          </div>
+
+          {/* Filter Pills */}
+          <div className="flex items-center gap-1.5 bg-slate-200/60 p-1 rounded-lg text-xs font-semibold">
+            {[
+              { id: 'PENDING', label: 'Pending Approval', count: offers.filter(o => o.status === 'PENDING_APPROVAL').length },
+              { id: 'APPROVED', label: 'Approved', count: offers.filter(o => o.status === 'APPROVED').length },
+              { id: 'REJECTED', label: 'Rejected', count: offers.filter(o => o.status === 'REJECTED').length },
+              { id: 'ALL', label: 'All Offers', count: offers.length },
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setOfferFilterTab(tab.id as any)}
+                className={`px-2.5 py-1 rounded-md transition-colors flex items-center gap-1.5 ${
+                  offerFilterTab === tab.id
+                    ? 'bg-white text-slate-900 shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <span>{tab.label}</span>
+                <span className="text-[10px] bg-slate-100 px-1.5 py-0.2 rounded-full font-bold">
+                  {tab.count}
+                </span>
+              </button>
+            ))}
+          </div>
+        </CardHeader>
+
+        <div className="overflow-x-auto">
+          {filteredOffers.length === 0 ? (
+            <div className="p-8 text-center text-xs text-slate-400">
+              No showroom offers found in this view.
+            </div>
+          ) : (
+            <table className="w-full text-left text-xs whitespace-nowrap">
+              <thead className="bg-slate-50 text-slate-500 font-semibold text-[11px] uppercase tracking-wider border-b border-slate-200">
+                <tr>
+                  <th className="px-6 py-3">Offer Code / Product</th>
+                  <th className="px-6 py-3">Showroom & Requester</th>
+                  <th className="px-6 py-3 text-right">Catalog Price</th>
+                  <th className="px-6 py-3 text-right">Proposed Offer Price</th>
+                  <th className="px-6 py-3 text-center">Discount %</th>
+                  <th className="px-6 py-3">Duration & Reason</th>
+                  <th className="px-6 py-3 text-center">Status</th>
+                  <th className="px-6 py-3 text-right">Decision Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {filteredOffers.map((o) => (
+                  <tr key={o.id} className="hover:bg-slate-50/60">
+                    <td className="px-6 py-3.5">
+                      <div className="font-mono font-bold text-slate-900">{o.offerCode}</div>
+                      <div className="font-semibold text-slate-800 text-[11px]">{o.productName}</div>
+                      <div className="font-mono text-[10px] text-slate-400">SKU: {o.productSku}</div>
+                    </td>
+                    <td className="px-6 py-3.5">
+                      <div className="font-semibold text-slate-800">Colombo Showroom</div>
+                      <div className="text-[11px] text-slate-500">By {o.createdByName}</div>
+                    </td>
+                    <td className="px-6 py-3.5 text-right font-medium text-slate-500 line-through">
+                      {formatCurrency(o.originalPrice)}
+                    </td>
+                    <td className="px-6 py-3.5 text-right font-bold text-emerald-700 text-sm">
+                      {formatCurrency(o.offerPrice)}
+                    </td>
+                    <td className="px-6 py-3.5 text-center">
+                      <Badge variant="outline" className="bg-emerald-50 text-emerald-800 border-emerald-300 font-bold">
+                        {o.discountPercentage}% OFF
+                      </Badge>
+                    </td>
+                    <td className="px-6 py-3.5">
+                      <div className="font-semibold text-slate-700">{o.startDate} to {o.endDate}</div>
+                      <div className="text-[10px] text-indigo-600 font-semibold">{o.reason.replace('_', ' ')}</div>
+                      {o.internalNotes && (
+                        <div className="text-[10px] text-slate-400 italic">"{o.internalNotes}"</div>
+                      )}
+                    </td>
+                    <td className="px-6 py-3.5 text-center">
+                      <Badge
+                        variant={o.status === 'APPROVED' ? 'default' : o.status === 'PENDING_APPROVAL' ? 'outline' : 'destructive'}
+                        className="text-[10px] font-bold"
+                      >
+                        {o.status.replace('_', ' ')}
+                      </Badge>
+                    </td>
+                    <td className="px-6 py-3.5 text-right">
+                      {o.status === 'PENDING_APPROVAL' ? (
+                        <div className="flex items-center justify-end gap-1.5">
+                          <Button
+                            size="sm"
+                            onClick={() => handleApproveOffer(o.id)}
+                            className="h-7 px-2.5 text-[11px] bg-emerald-600 hover:bg-emerald-700 text-white font-semibold gap-1 shadow-xs"
+                          >
+                            <Check className="h-3 w-3" />
+                            <span>Approve</span>
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              setRejectModalOffer(o);
+                              setRejectionReasonText('');
+                            }}
+                            className="h-7 px-2.5 text-[11px] text-rose-700 border-rose-300 hover:bg-rose-50 font-semibold gap-1"
+                          >
+                            <X className="h-3 w-3" />
+                            <span>Reject</span>
+                          </Button>
+                        </div>
+                      ) : o.status === 'REJECTED' ? (
+                        <span className="text-[10px] text-rose-600 italic" title={o.rejectionReason}>
+                          Reason: {o.rejectionReason}
+                        </span>
+                      ) : (
+                        <span className="text-[10px] text-emerald-700 font-medium">
+                          Approved by {o.approvedByName}
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </Card>
+
+      {/* Reject Offer Modal */}
+      <Dialog open={!!rejectModalOffer} onOpenChange={(open) => !open && setRejectModalOffer(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-sm font-bold text-rose-600 flex items-center gap-2">
+              <X className="h-4 w-4" />
+              <span>Reject Showroom Offer</span>
+            </DialogTitle>
+            <DialogDescription className="text-xs text-slate-500">
+              A rejection reason is mandatory so the Showroom Manager understands why this pricing cannot be permitted.
+            </DialogDescription>
+          </DialogHeader>
+
+          {rejectModalOffer && (
+            <div className="space-y-3 py-2 text-xs">
+              <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
+                <div className="font-bold text-slate-800">{rejectModalOffer.offerName}</div>
+                <div className="text-[11px] text-slate-500">
+                  {rejectModalOffer.productName} &bull; Proposed: {formatCurrency(rejectModalOffer.offerPrice)} ({rejectModalOffer.discountPercentage}% off)
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  Rejection Reason <span className="text-rose-500">*</span>
+                </label>
+                <Input
+                  value={rejectionReasonText}
+                  onChange={(e) => setRejectionReasonText(e.target.value)}
+                  placeholder="e.g. Clearance discount violates floor margin limit. Minimum price is Rs. 38,000."
+                  className="text-xs h-9"
+                  autoFocus
+                />
+              </div>
+
+              <DialogFooter className="pt-2">
+                <Button variant="outline" size="sm" onClick={() => setRejectModalOffer(null)}>
+                  Cancel
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={handleRejectOffer}
+                  className="bg-rose-600 hover:bg-rose-700 text-white font-semibold"
+                >
+                  Confirm Rejection
+                </Button>
+              </DialogFooter>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

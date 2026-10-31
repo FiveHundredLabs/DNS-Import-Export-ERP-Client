@@ -22,6 +22,7 @@ export interface ProductPricing {
   currentSellingPrice: number;
   minimumSellingPrice: number; // Lowest price rep can ever discount to
   maxDiscountPercentage: number;
+  showroomDiscountPercentage?: number;
   promotionalDiscountPercentage?: number;
   taxRatePercentage: number; // e.g., 18% VAT
   discountLevels?: number[]; // Up to 3 product-level discount levels ordered lowest to highest (e.g. [5, 10, 15])

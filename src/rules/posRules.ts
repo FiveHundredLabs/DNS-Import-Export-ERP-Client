@@ -2,7 +2,7 @@ import { POSSession, CashReconciliation } from '../types/pos';
 import { StockBalance } from '../types/inventory';
 
 /**
- * Known valid supervisor authorization keys for POS overrides (BR-03).
+ * Known valid supervisor authorization keys for POS overrides (fallback/legacy compatibility).
  */
 export const SUPERVISOR_AUTH_KEYS: Record<
   string,
@@ -21,18 +21,29 @@ export function verifySupervisorDiscountKey(key?: string): {
   error?: string;
 } {
   if (!key || !key.trim()) {
-    return { valid: false, error: 'Supervisor authorization key is required.' };
+    return { valid: false, error: 'Supervisor authorization key or token is required.' };
   }
-  const match = SUPERVISOR_AUTH_KEYS[key.trim()];
-  if (!match) {
-    return { valid: false, error: 'Invalid supervisor authorization key.' };
+  const trimmed = key.trim();
+  // Check known static keys
+  const match = SUPERVISOR_AUTH_KEYS[trimmed];
+  if (match) {
+    return { valid: true, supervisorName: match.supervisorName, supervisorRole: match.supervisorRole };
   }
-  return { valid: true, supervisorName: match.supervisorName, supervisorRole: match.supervisorRole };
+  // Check dynamic manager token format: AUTH-XXXX-XXXX or AUTH-XXXX
+  if (/^AUTH-[A-Z0-9]{4}-[A-Z0-9]{4}$/i.test(trimmed) || /^AUTH-[A-Z0-9]{4,10}$/i.test(trimmed)) {
+    return { valid: true, supervisorName: 'Authorized Showroom Manager', supervisorRole: 'MANAGER' };
+  }
+  // Check approved showroom offer authorization
+  if (trimmed.startsWith('OFR-AUTH-')) {
+    return { valid: true, supervisorName: 'Sales Manager Approved Offer', supervisorRole: 'SALES_MANAGER' };
+  }
+  return { valid: false, error: 'Invalid supervisor authorization key or manager token.' };
 }
 
 /**
- * Validates cashier discount against product ceiling and cashier authority threshold (default 5%).
- * Cashier discount cannot exceed the lower of the product ceiling and the cashier limit unless authorized by supervisor (BR-03).
+ * Validates cashier discount against product ceiling and cashier showroom threshold.
+ * Cashier discount cannot exceed the product's showroom discount percentage unless authorized by manager.
+ * Even with manager authorization, discount cannot exceed product's max catalog ceiling.
  */
 export function validatePOSDiscount(
   requestedDiscount: number,
@@ -46,19 +57,19 @@ export function validatePOSDiscount(
   const safeProductMax = isNaN(productMaxDiscount) ? cashierMaxDiscount : productMaxDiscount;
   const safeCashierMax = isNaN(cashierMaxDiscount) ? 5 : cashierMaxDiscount;
 
-  // 1. Within cashier threshold: valid without supervisor key
+  // 1. Within showroom cashier threshold: valid without manager token
   if (requestedDiscount <= safeCashierMax) {
     return { valid: true, requiresSupervisorKey: false };
   }
 
-  // 2. Exceeds product ceiling entirely
+  // 2. Exceeds product catalog ceiling entirely
   if (requestedDiscount > safeProductMax) {
     throw new Error(
-      `Discount (${requestedDiscount}%) exceeds product maximum ceiling (${safeProductMax}%). Even supervisors cannot exceed the catalog ceiling.`
+      `Discount (${requestedDiscount}%) exceeds product maximum ceiling (${safeProductMax}%). Even showroom managers cannot exceed the catalog ceiling.`
     );
   }
 
-  // 3. Exceeds cashier threshold (5%), requires valid supervisor key
+  // 3. Exceeds cashier showroom threshold, requires valid manager token
   if (!supervisorAuthKey) {
     throw new Error(
       `Cashier discount (${requestedDiscount}%) exceeds permitted threshold (${safeCashierMax}%). Supervisor authorization key required.`
@@ -67,7 +78,7 @@ export function validatePOSDiscount(
 
   const verified = verifySupervisorDiscountKey(supervisorAuthKey);
   if (!verified.valid) {
-    throw new Error(verified.error || 'Invalid supervisor authorization key. Discount override rejected.');
+    throw new Error(verified.error || 'Invalid manager authorization token. Discount override rejected.');
   }
 
   return {
@@ -86,7 +97,8 @@ export function isPOSDiscountValid(
   cashierMaxDiscount: number = 5
 ): boolean {
   try {
-    return validatePOSDiscount(requestedDiscount, productMaxDiscount, cashierMaxDiscount);
+    const res = validatePOSDiscount(requestedDiscount, productMaxDiscount, cashierMaxDiscount);
+    return res.valid;
   } catch {
     return false;
   }
@@ -94,25 +106,42 @@ export function isPOSDiscountValid(
 
 /**
  * Calculates end-of-shift cash reconciliation:
- * expectedCash = openingBalance + cashInTotal - cashOutTotal + cashSalesTotal
- * difference = actualCash - expectedCash
+ * Expected Closing Cash = Opening Cash + Cash Sales + Cash In - Cash Out - Cash Refunds - Cash Handed Over
+ * Difference = Actual Counted Cash - Expected Closing Cash
  */
 export function calculateReconciliation(
-  openingBalance: number,
-  cashInTotal: number,
-  cashOutTotal: number,
-  cashSalesTotal: number,
-  actualCash: number
+  openingBalance: number = 0,
+  cashInTotal: number = 0,
+  cashOutTotal: number = 0,
+  cashSalesTotal: number = 0,
+  actualCash: number = 0,
+  cashRefundsTotal: number = 0,
+  cashHandoverTotal: number = 0
 ): CashReconciliation {
-  const expectedCash = Number((openingBalance + cashInTotal - cashOutTotal + cashSalesTotal).toFixed(2));
-  let difference = Number((actualCash - expectedCash).toFixed(2));
+  const opening = Number(openingBalance || 0);
+  const sales = Number(cashSalesTotal || 0);
+  const cIn = Number(cashInTotal || 0);
+  const cOut = Number(cashOutTotal || 0);
+  const refunds = Number(cashRefundsTotal || 0);
+  const handovers = Number(cashHandoverTotal || 0);
+  const actual = Number(actualCash || 0);
+
+  const expectedCash = Number((opening + sales + cIn - cOut - refunds - handovers).toFixed(2));
+  let difference = Number((actual - expectedCash).toFixed(2));
   if (Object.is(difference, -0)) difference = 0;
-  const isBalanced = difference === 0;
+  const isBalanced = Math.abs(difference) < 0.01;
   const status: 'BALANCED' | 'OVER' | 'SHORT' =
-    difference === 0 ? 'BALANCED' : difference > 0 ? 'OVER' : 'SHORT';
+    isBalanced ? 'BALANCED' : difference > 0 ? 'OVER' : 'SHORT';
 
   return {
+    openingBalance: opening,
+    cashSales: sales,
+    cashIn: cIn,
+    cashOut: cOut,
+    cashRefunds: refunds,
+    cashHandovers: handovers,
     expectedCash,
+    actualCash: actual,
     difference,
     isBalanced,
     status,

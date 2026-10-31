@@ -300,7 +300,7 @@ export function PaymentCollectionPage() {
 
       <div>
         <h1 className="text-xl font-bold tracking-tight text-slate-900">Record Payment Collection</h1>
-        <p className="text-xs text-slate-500">
+        <p className="text-xs text-slate-500 hidden sm:block">
           Issue collection receipt, validate cheque details, and allocate against open customer invoices.
         </p>
       </div>

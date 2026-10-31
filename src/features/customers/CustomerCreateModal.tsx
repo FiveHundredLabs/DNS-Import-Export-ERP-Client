@@ -136,7 +136,7 @@ export function CustomerCreateModal({
               ? 'GOLD'
               : 'BRONZE',
           areaId: selectedArea?.id || 'area-01',
-          areaName: selectedArea?.name || 'Western Province Central',
+          areaName: selectedArea?.name || 'Kelaniya',
           assignedRepId: rep?.id || 'usr-106',
           assignedRepName: rep?.name || 'Kasun Wickramasinghe',
           contactPerson,

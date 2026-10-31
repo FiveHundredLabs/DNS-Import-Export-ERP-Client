@@ -207,7 +207,7 @@ describe('Batch 5: Sales Rep Next-24-Hours Collections Due View (BR-07 / Feature
     );
 
     // Section title
-    expect(await screen.findByText('Next 24 Hours Collections Due')).toBeInTheDocument();
+    expect(await screen.findByText('Next 7 Days Collections Due')).toBeInTheDocument();
 
     // Invoices in queue: overdue, due today, due tomorrow
     expect(await screen.findByText('INV-2026-TODAY')).toBeInTheDocument();
@@ -233,7 +233,7 @@ describe('Batch 5: Sales Rep Next-24-Hours Collections Due View (BR-07 / Feature
       </MemoryRouter>
     );
 
-    await screen.findByText('Next 24 Hours Collections Due');
+    await screen.findByText('Next 7 Days Collections Due');
 
     // Unassigned customer invoice must be excluded
     expect(screen.queryByText('INV-2026-UNASSIGNED')).not.toBeInTheDocument();
@@ -247,7 +247,7 @@ describe('Batch 5: Sales Rep Next-24-Hours Collections Due View (BR-07 / Feature
       </MemoryRouter>
     );
 
-    const titleEl = await screen.findByText('Next 24 Hours Collections Due');
+    const titleEl = await screen.findByText('Next 7 Days Collections Due');
     const priorityContainer = titleEl.closest('.lg\\:col-span-2');
     expect(priorityContainer).toBeTruthy();
 

@@ -134,7 +134,7 @@ export function PageHeader({
             </div>
 
             {subtitle && (
-              <p className="text-sm text-slate-500 mt-1">
+              <p className="text-sm text-slate-500 mt-1 hidden sm:block">
                 {subtitle}
               </p>
             )}

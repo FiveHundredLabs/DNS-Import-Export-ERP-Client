@@ -34,8 +34,8 @@ export interface DeliveryNoteItem {
 export interface DeliveryNote {
   id: string;
   deliveryNoteNumber: string; // e.g. DN-2026-0001
-  invoiceId: string;
-  invoiceNumber: string;
+  invoiceId?: string;
+  invoiceNumber?: string;
   orderId?: string;
   orderNumber?: string;
   customerId: string;
@@ -74,7 +74,15 @@ export interface DeliveryNote {
 }
 
 export interface CreateDeliveryNotePayload {
-  invoiceId: string;
+  invoiceId?: string;
+  orderId?: string;
+  orderNumber?: string;
+  customerId?: string;
+  customerName?: string;
+  customerCode?: string;
+  customerAddress?: string;
+  customerPhone?: string;
+  customerVatNumber?: string;
   driverName: string;
   driverPhone?: string;
   vehicleNumber: string;
@@ -86,7 +94,7 @@ export interface CreateDeliveryNotePayload {
     productName: string;
     sku: string;
     uom: string;
-    invoicedQuantity: number;
+    invoicedQuantity?: number;
     unitBarcodes: string[];
   }[];
   createdBy: string;

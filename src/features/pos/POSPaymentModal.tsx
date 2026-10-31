@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { POSPaymentMethod, ChequeDetails } from '../../types/pos';
 import { formatCurrency } from '../../utils/formatters';
-import { X, Banknote, CreditCard, Building2, CheckCircle2 } from 'lucide-react';
+import { X, Banknote, CreditCard, Building2, CheckCircle2, Split, Landmark } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 
@@ -28,9 +28,11 @@ export function POSPaymentModal({
 }: POSPaymentModalProps) {
   const [method, setMethod] = useState<POSPaymentMethod>('CASH');
   const [cashTenderedStr, setCashTenderedStr] = useState<string>(totalAmount.toString());
+  const [splitCashStr, setSplitCashStr] = useState<string>(Math.round(totalAmount / 2).toString());
   const [chequeNumber, setChequeNumber] = useState<string>('');
   const [bankName, setBankName] = useState<string>('Commercial Bank');
   const [chequeDate, setChequeDate] = useState<string>(new Date().toISOString().slice(0, 10));
+  const [bankReference, setBankReference] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
 
@@ -39,6 +41,9 @@ export function POSPaymentModal({
   const cashTendered = parseFloat(cashTenderedStr) || 0;
   const changeGiven = Number(Math.max(0, cashTendered - totalAmount).toFixed(2));
   const isCashInsufficient = method === 'CASH' && cashTendered < totalAmount;
+
+  const splitCash = parseFloat(splitCashStr) || 0;
+  const splitCard = Number(Math.max(0, totalAmount - splitCash).toFixed(2));
 
   const handleQuickCash = (amount: number) => {
     setCashTenderedStr(amount.toString());
@@ -58,6 +63,11 @@ export function POSPaymentModal({
         setError(`Tendered cash (LKR ${cashTendered}) cannot be less than total payable (LKR ${totalAmount}).`);
         return;
       }
+    } else if (method === 'SPLIT') {
+      if (splitCash <= 0 || splitCash >= totalAmount) {
+        setError('Split cash must be greater than 0 and less than total payable amount.');
+        return;
+      }
     } else if (method === 'CHEQUE') {
       if (!chequeNumber.trim()) {
         setError('Cheque number is required.');
@@ -67,13 +77,18 @@ export function POSPaymentModal({
         setError('Bank name is required.');
         return;
       }
+    } else if (method === 'BANK_TRANSFER') {
+      if (!bankReference.trim()) {
+        setError('Bank transfer reference number is required.');
+        return;
+      }
     }
 
     try {
       setIsProcessing(true);
       await onConfirmPayment({
         paymentMethod: method,
-        cashTendered: method === 'CASH' ? cashTendered : undefined,
+        cashTendered: method === 'CASH' ? cashTendered : method === 'SPLIT' ? splitCash : undefined,
         chequeDetails:
           method === 'CHEQUE'
             ? {
@@ -110,7 +125,7 @@ export function POSPaymentModal({
           </button>
         </div>
 
-        {/* Big Total Payable Banner */}
+        {/* Total Payable Banner */}
         <div className="mt-4 rounded-xl bg-slate-900 p-4 text-center text-white shadow-sm">
           <div className="text-xs font-semibold uppercase tracking-wider text-slate-400">
             Total Payable Amount
@@ -129,46 +144,35 @@ export function POSPaymentModal({
 
           {/* Payment Method Selector */}
           <div>
-            <label className="text-xs font-medium text-slate-700 block mb-1.5">
+            <label className="text-xs font-semibold text-slate-700 block mb-1.5">
               Select Payment Method
             </label>
-            <div className="grid grid-cols-3 gap-2">
-              <button
-                type="button"
-                onClick={() => setMethod('CASH')}
-                className={`flex flex-col items-center justify-center rounded-xl p-3 text-xs font-medium border transition-all ${
-                  method === 'CASH'
-                    ? 'border-primary bg-primary-light text-primary-text ring-2 ring-primary/20 shadow-xs'
-                    : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
-                }`}
-              >
-                <Banknote className="h-5 w-5 mb-1 text-primary" />
-                Cash
-              </button>
-              <button
-                type="button"
-                onClick={() => setMethod('CARD')}
-                className={`flex flex-col items-center justify-center rounded-xl p-3 text-xs font-bold border transition-all ${
-                  method === 'CARD'
-                    ? 'border-primary bg-primary-light text-primary-text ring-2 ring-primary/20 shadow-xs'
-                    : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
-                }`}
-              >
-                <CreditCard className="h-5 w-5 mb-1 text-primary" />
-                Card (POS)
-              </button>
-              <button
-                type="button"
-                onClick={() => setMethod('CHEQUE')}
-                className={`flex flex-col items-center justify-center rounded-xl p-3 text-xs font-bold border transition-all ${
-                  method === 'CHEQUE'
-                    ? 'border-primary bg-primary-light text-primary-text ring-2 ring-primary/20 shadow-xs'
-                    : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
-                }`}
-              >
-                <Building2 className="h-5 w-5 mb-1 text-emerald-600" />
-                Cheque
-              </button>
+            <div className="grid grid-cols-5 gap-1.5">
+              {[
+                { id: 'CASH', label: 'Cash', icon: Banknote },
+                { id: 'CARD', label: 'Card', icon: CreditCard },
+                { id: 'BANK_TRANSFER', label: 'Bank Transfer', icon: Landmark },
+                { id: 'SPLIT', label: 'Split (Cash+Card)', icon: Split },
+                { id: 'CHEQUE', label: 'Cheque', icon: Building2 },
+              ].map((m) => {
+                const Icon = m.icon;
+                const isSelected = method === m.id;
+                return (
+                  <button
+                    key={m.id}
+                    type="button"
+                    onClick={() => setMethod(m.id as POSPaymentMethod)}
+                    className={`flex flex-col items-center justify-center rounded-xl p-2.5 text-[11px] font-bold border transition-all ${
+                      isSelected
+                        ? 'border-indigo-600 bg-indigo-50 text-indigo-700 ring-2 ring-indigo-500/20 shadow-xs'
+                        : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+                    }`}
+                  >
+                    <Icon className="h-4 w-4 mb-1" />
+                    <span>{m.label}</span>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
@@ -177,7 +181,7 @@ export function POSPaymentModal({
             <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
               <div>
                 <label className="text-xs font-semibold text-slate-700 block mb-1">
-                  Cash Tendered (LKR)
+                  Cash Received / Tendered (LKR)
                 </label>
                 <Input
                   type="number"
@@ -248,11 +252,65 @@ export function POSPaymentModal({
             </div>
           )}
 
+          {/* Method: SPLIT (Cash + Card) */}
+          {method === 'SPLIT' && (
+            <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-4 text-xs">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-semibold text-slate-700 block mb-1">
+                    Cash Portion (LKR)
+                  </label>
+                  <Input
+                    type="number"
+                    min="1"
+                    max={totalAmount - 1}
+                    value={splitCashStr}
+                    onChange={(e) => setSplitCashStr(e.target.value)}
+                    className="font-bold text-slate-900"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="font-semibold text-slate-700 block mb-1">
+                    Card Portion (Auto-Balanced)
+                  </label>
+                  <div className="h-9 px-3 bg-white border border-slate-200 rounded-md flex items-center font-bold text-blue-700">
+                    {formatCurrency(splitCard)}
+                  </div>
+                </div>
+              </div>
+              <div className="text-[11px] text-slate-500">
+                Collect {formatCurrency(splitCash)} into cash drawer, swipe {formatCurrency(splitCard)} on card terminal.
+              </div>
+            </div>
+          )}
+
+          {/* Method: BANK_TRANSFER */}
+          {method === 'BANK_TRANSFER' && (
+            <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-4 text-xs">
+              <div>
+                <label className="font-semibold text-slate-700 block mb-1">
+                  Bank Transfer Reference / Slip # <span className="text-rose-500">*</span>
+                </label>
+                <Input
+                  placeholder="e.g. CEFT-9948271"
+                  value={bankReference}
+                  onChange={(e) => setBankReference(e.target.value)}
+                  className="font-mono font-semibold"
+                  required
+                />
+              </div>
+              <div className="text-[11px] text-slate-500">
+                Showroom Account: Commercial Bank DNS Trading (A/C: 10008892110)
+              </div>
+            </div>
+          )}
+
           {/* Method: CHEQUE Details */}
           {method === 'CHEQUE' && (
             <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-4 text-xs">
               <div>
-                <label className="font-medium text-slate-700 block mb-1">
+                <label className="font-semibold text-slate-700 block mb-1">
                   Cheque Number <span className="text-rose-500">*</span>
                 </label>
                 <Input
@@ -265,7 +323,7 @@ export function POSPaymentModal({
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="font-medium text-slate-700 block mb-1">
+                  <label className="font-semibold text-slate-700 block mb-1">
                     Bank Name <span className="text-rose-500">*</span>
                   </label>
                   <Input
@@ -276,7 +334,7 @@ export function POSPaymentModal({
                   />
                 </div>
                 <div>
-                  <label className="font-medium text-slate-700 block mb-1">Cheque Date</label>
+                  <label className="font-semibold text-slate-700 block mb-1">Cheque Date</label>
                   <Input
                     type="date"
                     value={chequeDate}
@@ -290,12 +348,12 @@ export function POSPaymentModal({
 
           {/* Method: CARD Details */}
           {method === 'CARD' && (
-            <div className="rounded-xl border border-sky-200 bg-primary-light p-4 text-xs text-sky-800 flex items-center gap-3">
-              <CreditCard className="h-6 w-6 text-primary shrink-0" />
+            <div className="rounded-xl border border-sky-200 bg-blue-50/50 p-4 text-xs text-sky-800 flex items-center gap-3">
+              <CreditCard className="h-6 w-6 text-blue-600 shrink-0" />
               <div>
-                <div className="font-semibold">Swipe / Tap on Showroom Terminal</div>
+                <div className="font-semibold">Tap or Swipe on POS Card Terminal</div>
                 <div>
-                  Charge amount <span className="font-semibold tabular-nums">{formatCurrency(totalAmount)}</span> to merchant terminal. Once transaction approves, proceed.
+                  Charge amount <span className="font-semibold tabular-nums">{formatCurrency(totalAmount)}</span> to merchant terminal. Once approved, proceed.
                 </div>
               </div>
             </div>
@@ -308,7 +366,7 @@ export function POSPaymentModal({
             <Button
               type="submit"
               disabled={isProcessing || isCashInsufficient}
-              className="bg-primary hover:bg-primary-hover text-primary-foreground font-semibold flex items-center gap-2"
+              className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold flex items-center gap-2"
             >
               <CheckCircle2 className="h-4 w-4" />
               {isProcessing ? 'Processing Sale...' : 'Complete Sale & Print Receipt'}

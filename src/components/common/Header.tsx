@@ -14,6 +14,7 @@ import { CurrencyConverterPopover } from '../header/CurrencyConverterPopover';
 import { CalculatorPopover } from '../header/CalculatorPopover';
 import { NotificationsPopover } from '../header/NotificationsPopover';
 import { useAuth } from '../../hooks/useAuth';
+import { cn } from '../../utils/cn';
 
 interface HeaderProps {
   onToggleSidebar: () => void;
@@ -59,6 +60,9 @@ export function Header({ onToggleSidebar }: HeaderProps) {
   // Sales Rep & Area Manager use the bottom nav on mobile — no hamburger/sidebar needed
   const isMobileNavRole = role === 'SALES_REP' || role === 'AREA_MANAGER';
 
+  // Sales Rep on mobile gets the dark gradient header to seamlessly merge with greeting card
+  const isSalesRepMobile = role === 'SALES_REP';
+
   useEffect(() => {
     function handlePointerDown(e: MouseEvent) {
       if (overflowRef.current && !overflowRef.current.contains(e.target as Node)) {
@@ -76,6 +80,7 @@ export function Header({ onToggleSidebar }: HeaderProps) {
   // Determine current page title
   const getHeaderTitle = () => {
     const p = location.pathname;
+    if (p === '/payments' && role === 'SALES_REP') return 'Wallet';
     if (ROUTE_TITLES[p]) return ROUTE_TITLES[p];
     if (p === '/quotations/new') return 'New Quotation';
     if (p.startsWith('/quotations/') && p.endsWith('/edit')) return 'Edit Quotation';
@@ -101,7 +106,13 @@ export function Header({ onToggleSidebar }: HeaderProps) {
   const currentTitle = getHeaderTitle();
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 w-full items-center justify-between bg-primary text-primary-foreground px-3 sm:px-6 transition-all shrink-0">
+    <header className={cn(
+      "sticky top-0 z-30 flex h-16 w-full items-center justify-between px-3 sm:px-6 transition-all shrink-0 text-primary-foreground",
+      // Sales Rep mobile: dynamic theme gradient + radial glow + soft vignette seamlessly connecting with greeting card below
+      role === 'SALES_REP'
+        ? "sales-rep-mobile-header md:bg-primary"
+        : "bg-primary"
+    )}>
       {/* Left: Mobile Toggle & Enterprise Brand / Page Title */}
       <div className="flex items-center gap-2 sm:gap-4 min-w-0">
         {location.pathname !== '/' ? (
@@ -186,10 +197,12 @@ export function Header({ onToggleSidebar }: HeaderProps) {
 
       {/* Right: Enterprise Utility Toolbar & Far-Right User Profile Avatar */}
       <div className="flex items-center gap-1 sm:gap-1.5 md:gap-2 shrink-0">
-        {/* Enterprise Notifications (Visible on both mobile & desktop) */}
-        <div className="flex items-center">
-          <NotificationsPopover />
-        </div>
+        {/* Enterprise Notifications (Removed for Sales Representative interface) */}
+        {role !== 'SALES_REP' && (
+          <div className="flex items-center">
+            <NotificationsPopover />
+          </div>
+        )}
 
         {/* Desktop-only secondary tools */}
         <div className="hidden md:flex items-center gap-1.5 md:gap-2">

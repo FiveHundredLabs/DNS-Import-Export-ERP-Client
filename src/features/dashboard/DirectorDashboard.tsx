@@ -62,7 +62,7 @@ const AOV_TREND_DATA = [
 ];
 
 export function DirectorDashboard() {
-  const [selectedRegion, setSelectedRegion] = useState('All Provinces');
+  const [selectedRegion, setSelectedRegion] = useState('All Cities');
   const [searchParams, setSearchParams] = useSearchParams();
   const { role } = useAuth();
   const isDirector = role === 'DIRECTOR';
@@ -202,19 +202,33 @@ export function DirectorDashboard() {
                 <h2 className="text-base font-bold text-slate-800 tracking-tight">Regional Growth</h2>
                 <Info className="h-3.5 w-3.5 text-slate-300 hover:text-slate-400 cursor-pointer" />
               </div>
-              <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 px-2.5 py-1 rounded-full cursor-pointer transition-colors">
-                Provinces <ChevronDown className="h-3 w-3" />
-              </span>
+              <div className="relative">
+                <select
+                  value={selectedRegion}
+                  onChange={(e) => setSelectedRegion(e.target.value)}
+                  className="appearance-none inline-flex items-center gap-1 text-[11px] font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 pl-2.5 pr-6 py-1 rounded-full cursor-pointer transition-colors border-0 focus:ring-1 focus:ring-primary focus:outline-hidden"
+                >
+                  <option value="All Cities">Cities (All)</option>
+                  <option value="Kelaniya">Kelaniya</option>
+                  <option value="Maharagama">Maharagama</option>
+                  <option value="Malabe">Malabe</option>
+                  <option value="Kottawa">Kottawa</option>
+                </select>
+                <ChevronDown className="h-3 w-3 text-slate-500 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
+              </div>
             </div>
             <p className="text-xs text-slate-400 mb-5">Of the month based on territories</p>
 
             {/* Regional Territory Breakdown with Progress Bars */}
-            <div className="space-y-4">
+            <div className="space-y-3.5">
               {[
-                { name: 'Western Province (Colombo)', share: 76, color: 'bg-rose-500', barBg: '#F43F5E', target: 'LKR 24.8M' },
-                { name: 'Central Province (Kandy)', share: 18, color: 'bg-amber-500', barBg: '#F59E0B', target: 'LKR 14.2M' },
-                { name: 'Southern Province (Galle)', share: 6, color: 'bg-primary', barBg: 'var(--primary-color)', target: 'LKR 9.5M' },
-              ].map((prov) => (
+                { name: 'Kelaniya', share: 36, color: 'bg-rose-500', barBg: '#F43F5E', target: 'LKR 17.5M' },
+                { name: 'Maharagama', share: 28, color: 'bg-amber-500', barBg: '#F59E0B', target: 'LKR 13.6M' },
+                { name: 'Malabe', share: 21, color: 'bg-emerald-500', barBg: '#10B981', target: 'LKR 10.2M' },
+                { name: 'Kottawa', share: 15, color: 'bg-slate-900', barBg: '#0F172A', target: 'LKR 7.2M' },
+              ]
+                .filter((city) => selectedRegion === 'All Cities' || city.name === selectedRegion)
+                .map((prov) => (
                 <div key={prov.name} className="space-y-1.5">
                   <div className="flex items-center justify-between text-xs">
                     <span className="font-semibold text-slate-700">{prov.name}</span>

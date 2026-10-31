@@ -382,7 +382,7 @@ export function SalesRepWarrantyPage({ preselectedCustomerId }: SalesRepWarranty
                     <Layers className="h-4 w-4 text-primary" />
                     Supplied Products & Units ({tally.items.length})
                   </CardTitle>
-                  <p className="text-xs text-slate-500 mt-0.5">
+                  <p className="text-xs text-slate-500 mt-0.5 hidden sm:block">
                     All units supplied to {tally.customerName}. Identify which products are pending end-customer warranty registration.
                   </p>
                 </div>
@@ -452,122 +452,203 @@ export function SalesRepWarrantyPage({ preselectedCustomerId }: SalesRepWarranty
                   <p className="text-slate-400 mt-1">Try resetting the search or filter</p>
                 </div>
               ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs text-slate-600">
-                    <thead className="bg-slate-50 text-[11px] font-semibold text-slate-500 uppercase tracking-wider border-b border-slate-200">
-                      <tr>
-                        <th className="py-3 px-4">Product Name & SKU</th>
-                        <th className="py-3 px-3">Barcode / Serial</th>
-                        <th className="py-3 px-3 text-center">Qty / Unit</th>
-                        <th className="py-3 px-3">Distributor Invoice</th>
-                        <th className="py-3 px-3">End-Customer Selling Date</th>
-                        <th className="py-3 px-3 text-center">Registration Status</th>
-                        <th className="py-3 px-3 text-center">Warranty Note</th>
-                        <th className="py-3 px-3 text-center">Warranty Status</th>
-                        <th className="py-3 px-4 text-right">View</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 bg-white">
-                      {filteredItems.map((item) => (
-                        <tr
-                          key={item.id}
-                          className={`hover:bg-slate-50/80 transition-colors ${
-                            !item.isRegistered ? 'bg-rose-50/20' : ''
-                          }`}
-                        >
-                          <td className="py-3 px-4">
-                            <div className="font-bold text-slate-900">{item.productName}</div>
-                            <div className="text-[11px] text-slate-400 font-mono">{item.sku}</div>
-                          </td>
-
-                          <td className="py-3 px-3">
-                            <div className="flex items-center gap-1.5 font-mono text-slate-800 font-semibold">
-                              <Barcode className="h-3.5 w-3.5 text-slate-400" />
-                              {item.barcode}
-                              <button
-                                type="button"
-                                onClick={() => handleCopyBarcode(item.barcode)}
-                                title="Copy barcode"
-                                className="text-slate-400 hover:text-slate-700 p-0.5 rounded"
-                              >
-                                <Copy className="h-3 w-3" />
-                              </button>
+                <>
+                  {/* Mobile Stacked Cards (Visible on mobile, hidden on md+) */}
+                  <div className="block md:hidden p-3 space-y-3">
+                    {filteredItems.map((item) => (
+                      <div
+                        key={item.id}
+                        className={`rounded-2xl border p-3.5 shadow-xs space-y-2.5 transition-all ${
+                          !item.isRegistered ? 'bg-rose-50/20 border-rose-200/80' : 'bg-white border-slate-200/90'
+                        }`}
+                      >
+                        {/* Header: Product & Status */}
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0 flex-1">
+                            <div className="font-bold text-xs text-slate-900 leading-tight">
+                              {item.productName}
                             </div>
-                            {item.serialNumber && (
-                              <div className="text-[10px] text-slate-400 font-mono">
-                                SN: {item.serialNumber}
-                              </div>
-                            )}
-                          </td>
+                            <div className="text-[10.5px] text-slate-400 font-mono mt-0.5">{item.sku}</div>
+                          </div>
+                          <WarrantyStatusBadge status={item.warrantyStatus} />
+                        </div>
 
-                          <td className="py-3 px-3 text-center font-medium">
-                            {item.quantity} {item.unit || 'PCS'}
-                          </td>
+                        {/* Barcode & Serial */}
+                        <div className="flex items-center justify-between gap-2 p-2 bg-slate-50 rounded-xl text-xs font-mono">
+                          <div className="flex items-center gap-1.5 font-semibold text-slate-800 truncate">
+                            <Barcode className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                            <span className="truncate">{item.barcode}</span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleCopyBarcode(item.barcode)}
+                            title="Copy barcode"
+                            className="text-slate-400 hover:text-slate-700 p-1 rounded active:scale-95 shrink-0"
+                          >
+                            <Copy className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
 
-                          <td className="py-3 px-3">
-                            <div className="font-medium text-slate-800">{item.invoiceNumber}</div>
-                            <div className="text-[10px] text-slate-400">
-                              {item.invoiceDate ? formatDate(item.invoiceDate) : '—'}
-                            </div>
-                          </td>
-
-                          <td className="py-3 px-3">
+                        {/* Invoice & Registration details */}
+                        <div className="grid grid-cols-2 gap-2 text-[11px] pt-1 border-t border-slate-100">
+                          <div>
+                            <span className="text-slate-400 block text-[10px]">Invoice</span>
+                            <span className="font-medium text-slate-700">{item.invoiceNumber}</span>
+                          </div>
+                          <div>
+                            <span className="text-slate-400 block text-[10px]">Selling Date</span>
                             {item.sellingDate ? (
-                              <div className="font-semibold text-emerald-700 flex items-center gap-1">
-                                <Calendar className="h-3 w-3 text-emerald-500" />
-                                {formatDate(item.sellingDate)}
-                              </div>
+                              <span className="font-semibold text-emerald-700">{formatDate(item.sellingDate)}</span>
                             ) : (
-                              <span className="text-[11px] text-amber-700 font-medium bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
-                                Pending End-Customer Sale
-                              </span>
+                              <span className="text-amber-700 font-medium">Pending Sale</span>
                             )}
-                          </td>
+                          </div>
+                        </div>
 
-                          <td className="py-3 px-3 text-center">
+                        {/* Footer Badges & Action */}
+                        <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-100">
+                          <div className="flex items-center gap-1.5 flex-wrap">
                             {item.isRegistered ? (
                               <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[10px] font-semibold gap-1">
-                                <CheckCircle2 className="h-3 w-3" />
-                                Registered
+                                <CheckCircle2 className="h-3 w-3" /> Registered
                               </Badge>
                             ) : (
                               <Badge className="bg-rose-50 text-rose-700 border-rose-200 text-[10px] font-semibold gap-1">
-                                <Clock className="h-3 w-3" />
-                                Pending
+                                <Clock className="h-3 w-3" /> Pending Note
                               </Badge>
                             )}
-                          </td>
+                          </div>
+                          <Button
+                            onClick={() => setViewingUnit(item)}
+                            variant="outline"
+                            size="sm"
+                            className="h-7 px-2.5 text-xs text-primary border-primary/20 hover:bg-primary-light gap-1 font-semibold rounded-lg"
+                          >
+                            <Eye className="h-3.5 w-3.5" /> Details
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
 
-                          <td className="py-3 px-3 text-center">
-                            {item.hasNoteReceipt ? (
-                              <Badge className="bg-sky-50 text-sky-700 border-sky-200 text-[10px] font-semibold">
-                                Receipt Attached
-                              </Badge>
-                            ) : (
-                              <span className="text-[11px] text-slate-400 italic">No receipt note</span>
-                            )}
-                          </td>
-
-                          <td className="py-3 px-3 text-center">
-                            <WarrantyStatusBadge status={item.warrantyStatus} />
-                          </td>
-
-                          <td className="py-3 px-4 text-right">
-                            <Button
-                              onClick={() => setViewingUnit(item)}
-                              variant="ghost"
-                              size="sm"
-                              className="h-7 px-2 text-xs text-primary hover:text-primary-hover hover:bg-primary/10 gap-1 font-medium"
-                            >
-                              <Eye className="h-3.5 w-3.5" />
-                              Details
-                            </Button>
-                          </td>
+                  {/* Desktop Comprehensive Table (Hidden on mobile, visible on md+) */}
+                  <div className="hidden md:block overflow-x-auto">
+                    <table className="w-full text-left text-xs text-slate-600">
+                      <thead className="bg-slate-50 text-[11px] font-semibold text-slate-500 uppercase tracking-wider border-b border-slate-200">
+                        <tr>
+                          <th className="py-3 px-4">Product Name & SKU</th>
+                          <th className="py-3 px-3">Barcode / Serial</th>
+                          <th className="py-3 px-3 text-center">Qty / Unit</th>
+                          <th className="py-3 px-3">Distributor Invoice</th>
+                          <th className="py-3 px-3">End-Customer Selling Date</th>
+                          <th className="py-3 px-3 text-center">Registration Status</th>
+                          <th className="py-3 px-3 text-center">Warranty Note</th>
+                          <th className="py-3 px-3 text-center">Warranty Status</th>
+                          <th className="py-3 px-4 text-right">View</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 bg-white">
+                        {filteredItems.map((item) => (
+                          <tr
+                            key={item.id}
+                            className={`hover:bg-slate-50/80 transition-colors ${
+                              !item.isRegistered ? 'bg-rose-50/20' : ''
+                            }`}
+                          >
+                            <td className="py-3 px-4">
+                              <div className="font-bold text-slate-900">{item.productName}</div>
+                              <div className="text-[11px] text-slate-400 font-mono">{item.sku}</div>
+                            </td>
+
+                            <td className="py-3 px-3">
+                              <div className="flex items-center gap-1.5 font-mono text-slate-800 font-semibold">
+                                <Barcode className="h-3.5 w-3.5 text-slate-400" />
+                                {item.barcode}
+                                <button
+                                  type="button"
+                                  onClick={() => handleCopyBarcode(item.barcode)}
+                                  title="Copy barcode"
+                                  className="text-slate-400 hover:text-slate-700 p-0.5 rounded"
+                                >
+                                  <Copy className="h-3 w-3" />
+                                </button>
+                              </div>
+                              {item.serialNumber && (
+                                <div className="text-[10px] text-slate-400 font-mono">
+                                  SN: {item.serialNumber}
+                                </div>
+                              )}
+                            </td>
+
+                            <td className="py-3 px-3 text-center font-medium">
+                              {item.quantity} {item.unit || 'PCS'}
+                            </td>
+
+                            <td className="py-3 px-3">
+                              <div className="font-medium text-slate-800">{item.invoiceNumber}</div>
+                              <div className="text-[10px] text-slate-400">
+                                {item.invoiceDate ? formatDate(item.invoiceDate) : '—'}
+                              </div>
+                            </td>
+
+                            <td className="py-3 px-3">
+                              {item.sellingDate ? (
+                                <div className="font-semibold text-emerald-700 flex items-center gap-1">
+                                  <Calendar className="h-3 w-3 text-emerald-500" />
+                                  {formatDate(item.sellingDate)}
+                                </div>
+                              ) : (
+                                <span className="text-[11px] text-amber-700 font-medium bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
+                                  Pending End-Customer Sale
+                                </span>
+                              )}
+                            </td>
+
+                            <td className="py-3 px-3 text-center">
+                              {item.isRegistered ? (
+                                <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[10px] font-semibold gap-1">
+                                  <CheckCircle2 className="h-3 w-3" />
+                                  Registered
+                                </Badge>
+                              ) : (
+                                <Badge className="bg-rose-50 text-rose-700 border-rose-200 text-[10px] font-semibold gap-1">
+                                  <Clock className="h-3 w-3" />
+                                  Pending
+                                </Badge>
+                              )}
+                            </td>
+
+                            <td className="py-3 px-3 text-center">
+                              {item.hasNoteReceipt ? (
+                                <Badge className="bg-sky-50 text-sky-700 border-sky-200 text-[10px] font-semibold">
+                                  Receipt Attached
+                                </Badge>
+                              ) : (
+                                <span className="text-[11px] text-slate-400 italic">No receipt note</span>
+                              )}
+                            </td>
+
+                            <td className="py-3 px-3 text-center">
+                              <WarrantyStatusBadge status={item.warrantyStatus} />
+                            </td>
+
+                            <td className="py-3 px-4 text-right">
+                              <Button
+                                onClick={() => setViewingUnit(item)}
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 px-2 text-xs text-primary hover:text-primary-hover hover:bg-primary/10 gap-1 font-medium"
+                              >
+                                <Eye className="h-3.5 w-3.5" />
+                                Details
+                              </Button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
               )}
             </CardContent>
           </Card>
