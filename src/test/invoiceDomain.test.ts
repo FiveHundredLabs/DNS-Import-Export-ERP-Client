@@ -209,6 +209,46 @@ describe('Phase 7 — Invoice Domain & Billing Integration', () => {
       expect(updatedOrder!.status).toBe('INVOICED');
     });
 
+    it('allows generating invoice directly from DISPATCHED status fulfillment', async () => {
+      const order = await orderSvc.createOrder(
+        {
+          customerId: 'cust-001',
+          deliveryAddress: 'Main Store',
+          items: [{ productId: 'prod-001', orderedQuantity: 2 }],
+        },
+        mockSalesRep
+      );
+      await orderSvc.approveOrder(order.id, mockSalesManager, 'Approved');
+      await orderSvc.updateFulfillmentStatus(order.id, 'DISPATCHED', mockSalesRep);
+
+      const invoice = await invoiceSvc.createInvoiceFromOrder(order.id, mockSalesRep);
+      expect(invoice).toBeDefined();
+      expect(invoice.status).toBe('ISSUED');
+
+      const updatedOrder = await orderSvc.getOrder(order.id);
+      expect(updatedOrder!.status).toBe('INVOICED');
+    });
+
+    it('allows generating invoice directly from DELIVERED status fulfillment', async () => {
+      const order = await orderSvc.createOrder(
+        {
+          customerId: 'cust-001',
+          deliveryAddress: 'Main Store',
+          items: [{ productId: 'prod-001', orderedQuantity: 3 }],
+        },
+        mockSalesRep
+      );
+      await orderSvc.approveOrder(order.id, mockSalesManager, 'Approved');
+      await orderSvc.updateFulfillmentStatus(order.id, 'DELIVERED', mockSalesRep);
+
+      const invoice = await invoiceSvc.createInvoiceFromOrder(order.id, mockSalesRep);
+      expect(invoice).toBeDefined();
+      expect(invoice.status).toBe('ISSUED');
+
+      const updatedOrder = await orderSvc.getOrder(order.id);
+      expect(updatedOrder!.status).toBe('INVOICED');
+    });
+
     it('fetches all invoices for a customer via getInvoicesByCustomer', async () => {
       const custInvoices = await invoiceSvc.getInvoicesByCustomer('cust-001');
       expect(Array.isArray(custInvoices)).toBe(true);

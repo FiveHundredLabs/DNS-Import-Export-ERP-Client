@@ -36,7 +36,7 @@ describe('Invoice Improvements Workflow (Create Modal, Draft Discount Editing, &
     currentTestUser = mockSalesManager;
   });
 
-  it('1. Create Invoice Modal displays options for existing unapproved/approved orders and new order creation', async () => {
+  it('1. Create Invoice Modal displays options to select a sales order to invoice', async () => {
     render(
       <MemoryRouter>
         <InvoiceListPage />
@@ -48,23 +48,11 @@ describe('Invoice Improvements Workflow (Create Modal, Draft Discount Editing, &
     expect(createBtn).toBeInTheDocument();
     fireEvent.click(createBtn);
 
-    // Modal opens
+    // Modal opens with streamlined order selector
     await waitFor(() => {
-      expect(screen.getByText(/Create Commercial Sales Invoice/i)).toBeInTheDocument();
+      expect(screen.getByText(/Generate Commercial Invoice/i)).toBeInTheDocument();
+      expect(screen.getByText(/Choose a sales order to invoice/i)).toBeInTheDocument();
     });
-
-    // Check tabs
-    expect(screen.getByText(/Select Existing Sales Order/i)).toBeInTheDocument();
-    expect(screen.getByText(/Create Entirely New Sales Order/i)).toBeInTheDocument();
-
-    // Switch to new order tab
-    const newOrderTab = screen.getByText(/Create Entirely New Sales Order/i);
-    fireEvent.click(newOrderTab);
-
-    expect(screen.getByText(/Launch Sales Order Builder/i)).toBeInTheDocument();
-    expect(
-      screen.getByText(/Create New Sales Order & Auto-Convert to Draft Invoice/i)
-    ).toBeInTheDocument();
   });
 
   it('2. InvoiceService creates draft invoice from unapproved or pending order with allowUnapproved flag', async () => {
