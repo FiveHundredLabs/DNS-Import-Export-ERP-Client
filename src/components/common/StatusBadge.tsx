@@ -164,7 +164,7 @@ const CANONICAL_STATUS_MAP: Record<string, StatusMeta> = {
     label: 'Issued',
     variant: 'default',
     icon: FileText,
-    extraClass: 'bg-primary hover:bg-primary-hover text-primary-foreground',
+    extraClass: 'bg-primary-light text-primary-text border-primary-border',
   },
   SENT_TO_SUPPLIER: {
     label: 'Sent to Vendor',
@@ -214,9 +214,9 @@ const CANONICAL_STATUS_MAP: Record<string, StatusMeta> = {
   // --- Financial Settlements & Invoicing States (Domain Specific) ---
   INVOICED: {
     label: 'Invoiced',
-    variant: 'default',
+    variant: 'purple',
     icon: FileText,
-    extraClass: 'bg-purple-600 hover:bg-purple-700 text-white',
+    extraClass: 'bg-purple-50 text-purple-800 border-purple-300',
   },
   PARTIALLY_INVOICED: {
     label: 'Partially Invoiced',

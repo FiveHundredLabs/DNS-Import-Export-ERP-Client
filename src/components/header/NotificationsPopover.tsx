@@ -47,7 +47,7 @@ const INITIAL_NOTIFICATIONS: NotificationItem[] = [
   {
     id: 'n-4',
     title: 'Dispatch Scheduled: Order #SO-1092',
-    description: 'Assigned to Fleet Vehicle 04 for Western Province route.',
+    description: 'Assigned to Fleet Vehicle 04 for Kelaniya route.',
     time: '5h ago',
     type: 'order',
     unread: false,

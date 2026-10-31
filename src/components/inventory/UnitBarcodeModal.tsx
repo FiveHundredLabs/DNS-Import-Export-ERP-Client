@@ -151,7 +151,7 @@ export function UnitBarcodeModal({
     toast.info(`Printing 50mm × 30mm barcode stickers for all ${allStickers.length} units...`);
     printerService.printBarcodeStickers(
       allStickers.map((s) => ({
-        companyName: 'DNS DISTRIBUTION',
+        companyName: 'DNS Import and Export (Pvt) Ltd',
         productName: s.productName,
         sku: s.sku,
         unitBarcode: s.record.unitBarcode,
@@ -182,7 +182,7 @@ export function UnitBarcodeModal({
     toast.info(`Printing 50mm × 30mm stickers for ${productName} (${productStickers.length} units)...`);
     printerService.printBarcodeStickers(
       productStickers.map((s) => ({
-        companyName: 'DNS DISTRIBUTION',
+        companyName: 'DNS Import and Export (Pvt) Ltd',
         productName: s.productName,
         sku: s.sku,
         unitBarcode: s.record.unitBarcode,
@@ -210,7 +210,7 @@ export function UnitBarcodeModal({
     toast.info(`Printing 50mm × 30mm single sticker: Unit #${unitIndex} (${productName})...`);
     printerService.printBarcodeStickers([
       {
-        companyName: 'DNS DISTRIBUTION',
+        companyName: 'DNS Import and Export (Pvt) Ltd',
         productName: target.productName,
         sku: target.sku,
         unitBarcode: target.record.unitBarcode,
@@ -294,10 +294,22 @@ export function UnitBarcodeModal({
             : 'border-amber-200/90 shadow-2xs'
         )}
       >
+        {/* Unit counter badge outside sticker card */}
+        <div className="flex items-center justify-between mb-2 px-0.5">
+          <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-mono font-bold bg-slate-100 text-slate-700 border border-slate-200">
+            {`Unit ${sticker.unitIndex}/${sticker.totalUnitsForProduct}`}
+          </span>
+          {isVerified && (
+            <Badge className="bg-emerald-600 text-white text-[9px] px-1.5 py-0">
+              Verified
+            </Badge>
+          )}
+        </div>
+
         {/* Unit-Wise 50mm x 30mm Barcode Sticker Simulation */}
         <div className="flex justify-center p-1.5 bg-slate-50/80 rounded-lg border border-slate-200/80">
           <BarcodeSticker
-            companyName="DNS DISTRIBUTION"
+            companyName="DNS Import and Export (Pvt) Ltd"
             productName={sticker.productName}
             sku={sticker.sku}
             unitBarcode={sticker.record.unitBarcode}

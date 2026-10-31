@@ -248,27 +248,15 @@ export function PaymentListPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
         <div>
           <h1 className="text-xl font-bold tracking-tight text-slate-900">
-            Customer Payments & Collections
+            {role === 'SALES_REP' ? 'Cash in Hand' : 'Customer Payments & Collections'}
           </h1>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Real-time customer receivables, overdue balances, and mobile-friendly payment collection.
+          <p className="text-xs text-slate-500 mt-0.5 hidden sm:block">
+            {role === 'SALES_REP'
+              ? 'View collected cash balance in hand and submit physical handovers to Finance.'
+              : 'Real-time customer receivables, overdue balances, and mobile-friendly payment collection.'}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          {/* Cash Handovers Active Tab */}
-          <div
-            data-testid="tab-cash-handovers"
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 border border-slate-200 text-xs font-semibold text-slate-800 shadow-2xs"
-          >
-            <Banknote className="h-3.5 w-3.5 text-amber-600" />
-            <span>Cash Handovers</span>
-            {handovers.filter((h) => h.status === 'PENDING_APPROVAL').length > 0 && (
-              <span className="h-4 min-w-4 px-1 rounded-full bg-amber-500 text-white text-[10px] font-bold flex items-center justify-center">
-                {handovers.filter((h) => h.status === 'PENDING_APPROVAL').length}
-              </span>
-            )}
-          </div>
-
           {/* Quick "Hand Over Cash" button for Sales Rep */}
           <Button
             size="sm"
@@ -292,120 +280,65 @@ export function PaymentListPage() {
         </div>
       </div>
 
-      {/* 4 Payments Dashboard KPI Cards (Styled after Sales Rep Dashboard KPI Cards) */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
+      {/* 4 Payments Dashboard KPI Cards (Simplified: Title, Icon, Value) */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
         {/* 1. Today's Total Collections */}
-        <div className="rounded-xl sm:rounded-3xl border border-blue-200/90 bg-gradient-to-br from-blue-500/[0.08] via-blue-50/40 to-white p-2.5 sm:p-5 shadow-xs hover:shadow-sm transition-all relative overflow-hidden group">
-          <div className="flex items-center justify-between gap-1.5 sm:gap-2">
-            <div className="flex items-center gap-1.5 sm:gap-2.5 min-w-0">
-              <div className="h-7 w-7 sm:h-9 sm:w-9 rounded-lg sm:rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center shrink-0 shadow-2xs">
-                <CreditCard className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              </div>
-              <div className="min-w-0">
-                <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-blue-950 block truncate">
-                  Today's Collections
-                </span>
-                <div className="hidden sm:block text-[10px] text-slate-400 font-medium truncate">Customer Collections</div>
-              </div>
-            </div>
-            <span className="hidden sm:inline-flex items-center text-[10.5px] font-bold text-blue-700 bg-blue-100/80 px-2 py-0.5 rounded-full border border-blue-200 shrink-0">
-              Today
+        <div className="rounded-2xl border border-slate-200/90 bg-white p-3.5 sm:p-4 shadow-xs hover:shadow-sm transition-all flex flex-col justify-between">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-xs font-bold text-slate-700 truncate">
+              Today's Collections
             </span>
-          </div>
-          <div className="mt-1.5 sm:mt-3">
-            <div className="text-sm sm:text-xl md:text-2xl font-extrabold text-slate-900 tabular-nums truncate">
-              {formatCurrency(dailyMetrics.todayTotalCollected)}
+            <div className="h-8 w-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+              <CreditCard className="h-4 w-4" />
             </div>
-            <p className="hidden sm:block text-[10.5px] text-slate-500 mt-1 truncate">Total collected from customers today</p>
+          </div>
+          <div className="mt-3 text-base sm:text-xl font-extrabold text-slate-900 tracking-tight font-mono truncate">
+            {formatCurrency(dailyMetrics.todayTotalCollected)}
           </div>
         </div>
 
         {/* 2. Pending Handover */}
-        <div className="rounded-xl sm:rounded-3xl border border-amber-200/90 bg-gradient-to-br from-amber-500/[0.08] via-amber-50/40 to-white p-2.5 sm:p-5 shadow-xs hover:shadow-sm transition-all relative overflow-hidden group">
-          <div className="flex items-center justify-between gap-1.5 sm:gap-2">
-            <div className="flex items-center gap-1.5 sm:gap-2.5 min-w-0">
-              <div className="h-7 w-7 sm:h-9 sm:w-9 rounded-lg sm:rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0 shadow-2xs">
-                <Clock className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              </div>
-              <div className="min-w-0">
-                <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-amber-950 block truncate">
-                  Pending Handover
-                </span>
-                <div className="hidden sm:block text-[10px] text-slate-400 font-medium truncate">In Rep Possession</div>
-              </div>
-            </div>
-            <span className="hidden sm:inline-flex items-center gap-1 text-[10.5px] font-bold text-amber-800 bg-amber-100/90 px-2 py-0.5 rounded-full border border-amber-200 shrink-0">
-              <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
-              To Hand Over
+        <div className="rounded-2xl border border-slate-200/90 bg-white p-3.5 sm:p-4 shadow-xs hover:shadow-sm transition-all flex flex-col justify-between">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-xs font-bold text-slate-700 truncate">
+              {role === 'SALES_REP' ? 'Wallet' : 'Cash in Hand'}
             </span>
-          </div>
-          <div className="mt-1.5 sm:mt-3">
-            <div className="text-sm sm:text-xl md:text-2xl font-extrabold text-amber-900 tabular-nums truncate">
-              {formatCurrency(dailyMetrics.pendingHandover)}
+            <div className="h-8 w-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+              <Clock className="h-4 w-4" />
             </div>
-            <p className="hidden sm:block text-[10.5px] text-slate-500 mt-1 truncate">Collected cash awaiting handover</p>
-            {dailyMetrics.pendingHandover > 0 && (
-              <button
-                type="button"
-                onClick={() => setCashHandoverModalOpen(true)}
-                className="hidden sm:inline-flex mt-2 w-full sm:w-auto items-center justify-center gap-1 text-[10px] sm:text-[11px] font-bold text-amber-900 bg-amber-200/80 hover:bg-amber-200 px-2 sm:px-2.5 py-1 rounded-lg transition-colors shadow-2xs cursor-pointer active:scale-95"
-              >
-                <Send className="h-3 w-3" />
-                <span>Hand Over</span>
-              </button>
-            )}
+          </div>
+          <div className="mt-3 text-base sm:text-xl font-extrabold text-amber-900 tracking-tight font-mono truncate">
+            {formatCurrency(dailyMetrics.pendingHandover)}
           </div>
         </div>
 
         {/* 3. Handed Over */}
-        <div className="rounded-xl sm:rounded-3xl border border-purple-200/90 bg-gradient-to-br from-purple-500/[0.08] via-purple-50/40 to-white p-2.5 sm:p-5 shadow-xs hover:shadow-sm transition-all relative overflow-hidden group">
-          <div className="flex items-center justify-between gap-1.5 sm:gap-2">
-            <div className="flex items-center gap-1.5 sm:gap-2.5 min-w-0">
-              <div className="h-7 w-7 sm:h-9 sm:w-9 rounded-lg sm:rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center shrink-0 shadow-2xs">
-                <Send className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              </div>
-              <div className="min-w-0">
-                <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-purple-950 block truncate">
-                  Handed Over
-                </span>
-                <div className="hidden sm:block text-[10px] text-slate-400 font-medium truncate">Awaiting Finance</div>
-              </div>
-            </div>
-            <span className="hidden sm:inline-flex items-center text-[10.5px] font-bold text-purple-700 bg-purple-100/90 px-2 py-0.5 rounded-full border border-purple-200 shrink-0">
-              Submitted
+        <div className="rounded-2xl border border-slate-200/90 bg-white p-3.5 sm:p-4 shadow-xs hover:shadow-sm transition-all flex flex-col justify-between">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-xs font-bold text-slate-700 truncate">
+              Handed Over
             </span>
-          </div>
-          <div className="mt-1.5 sm:mt-3">
-            <div className="text-sm sm:text-xl md:text-2xl font-extrabold text-purple-950 tabular-nums truncate">
-              {formatCurrency(dailyMetrics.handedOver)}
+            <div className="h-8 w-8 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center shrink-0">
+              <Send className="h-4 w-4" />
             </div>
-            <p className="hidden sm:block text-[10.5px] text-slate-500 mt-1 truncate">Awaiting Finance verification</p>
+          </div>
+          <div className="mt-3 text-base sm:text-xl font-extrabold text-slate-900 tracking-tight font-mono truncate">
+            {formatCurrency(dailyMetrics.handedOver)}
           </div>
         </div>
 
         {/* 4. Approved by Finance */}
-        <div className="rounded-xl sm:rounded-3xl border border-emerald-200/90 bg-gradient-to-br from-emerald-500/[0.08] via-emerald-50/40 to-white p-2.5 sm:p-5 shadow-xs hover:shadow-sm transition-all relative overflow-hidden group">
-          <div className="flex items-center justify-between gap-1.5 sm:gap-2">
-            <div className="flex items-center gap-1.5 sm:gap-2.5 min-w-0">
-              <div className="h-7 w-7 sm:h-9 sm:w-9 rounded-lg sm:rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0 shadow-2xs">
-                <ShieldCheck className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              </div>
-              <div className="min-w-0">
-                <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-emerald-950 block truncate">
-                  Approved by Finance
-                </span>
-                <div className="hidden sm:block text-[10px] text-slate-400 font-medium truncate">Physically Verified</div>
-              </div>
-            </div>
-            <span className="hidden sm:inline-flex items-center text-[10.5px] font-bold text-emerald-800 bg-emerald-100/90 px-2 py-0.5 rounded-full border border-emerald-200 shrink-0">
-              Approved
+        <div className="rounded-2xl border border-slate-200/90 bg-white p-3.5 sm:p-4 shadow-xs hover:shadow-sm transition-all flex flex-col justify-between">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-xs font-bold text-slate-700 truncate">
+              Approved by Finance
             </span>
-          </div>
-          <div className="mt-1.5 sm:mt-3">
-            <div className="text-sm sm:text-xl md:text-2xl font-extrabold text-emerald-900 tabular-nums truncate">
-              {formatCurrency(dailyMetrics.approvedByFinance)}
+            <div className="h-8 w-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+              <ShieldCheck className="h-4 w-4" />
             </div>
-            <p className="hidden sm:block text-[10.5px] text-slate-500 mt-1 truncate">Verified & credited in ledger</p>
+          </div>
+          <div className="mt-3 text-base sm:text-xl font-extrabold text-emerald-900 tracking-tight font-mono truncate">
+            {formatCurrency(dailyMetrics.approvedByFinance)}
           </div>
         </div>
       </div>
@@ -419,9 +352,6 @@ export function PaymentListPage() {
                 <Banknote className="h-5 w-5 text-amber-600" />
                 <span>Handover Cash History</span>
               </h2>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Physical cash handovers, recipient sign-off, and Finance physical verification audit trail.
-              </p>
             </div>
             <Button
               variant="outline"

@@ -24,6 +24,7 @@ import {
   Receipt,
   Activity,
   User,
+  Banknote,
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { cn } from '../../utils/cn';
@@ -56,15 +57,15 @@ export function MobileNav() {
 
   if (!isMobileRole) return null;
 
-  // Active check for main items
   const isDashboardActive = location.pathname === '/';
   const isCustomersActive = location.pathname.startsWith('/customers');
   const isOrdersActive = location.pathname.startsWith('/orders');
-  const isWarrantyActive = location.pathname.startsWith('/warranty');
+  const isCollectActive = location.pathname.includes('/collect');
 
   // Check if current page is one of the "More" sub-features
   const isMoreRouteActive =
-    location.pathname.startsWith('/payments') ||
+    location.pathname.startsWith('/warranty') ||
+    (location.pathname.startsWith('/payments') && !location.pathname.includes('/collect')) ||
     location.pathname.startsWith('/quotations') ||
     location.pathname.startsWith('/products') ||
     location.pathname.startsWith('/inventory') ||
@@ -190,18 +191,18 @@ export function MobileNav() {
             </span>
           </NavLink>
 
-          {/* 4. Warranty */}
+          {/* 4. Customer Collection */}
           <NavLink
-            to="/warranty"
+            to="/payments/collect"
             className={({ isActive }) =>
               cn(
                 'group flex flex-col items-center justify-center h-full py-1 transition-all select-none active:scale-95',
-                isActive || isWarrantyActive ? 'text-primary' : 'text-slate-400 hover:text-slate-700'
+                isActive || location.pathname.includes('/collect') ? 'text-primary' : 'text-slate-400 hover:text-slate-700'
               )
             }
           >
             {() => {
-              const active = isWarrantyActive;
+              const active = location.pathname.includes('/collect');
               return (
                 <>
                   <div
@@ -212,15 +213,15 @@ export function MobileNav() {
                         : 'text-slate-400 group-hover:bg-slate-100 group-hover:text-slate-600'
                     )}
                   >
-                    <ShieldCheck className={cn('h-5 w-5 transition-transform', active && 'scale-105 stroke-[2.2]')} />
+                    <CreditCard className={cn('h-5 w-5 transition-transform', active && 'scale-105 stroke-[2.2]')} />
                   </div>
                   <span
                     className={cn(
-                      'text-[10.5px] tracking-tight mt-0.5 transition-colors',
+                      'text-[10.5px] tracking-tight mt-0.5 transition-colors leading-tight text-center',
                       active ? 'font-bold text-primary' : 'font-medium text-slate-500'
                     )}
                   >
-                    Warranty
+                    Collection
                   </span>
                 </>
               );
@@ -298,28 +299,29 @@ export function MobileNav() {
           </button>
         </div>
 
-        {/* All Features Grid (All together without separate section headers) */}
+        {/* All Features Grid */}
         <div className="grid grid-cols-2 gap-2.5 mt-4">
-          {canAccessRoute('/orders') && (
+          {/* Warranty */}
+          {canAccessRoute('/warranty') && (
             <button
-              onClick={() => handleNavClick('/orders')}
+              onClick={() => handleNavClick('/warranty')}
               className={cn(
                 'flex items-center gap-3 p-3 rounded-2xl border text-left transition-all',
-                location.pathname === '/orders'
+                location.pathname.startsWith('/warranty')
                   ? 'border-primary bg-primary-light/50 text-primary-text font-semibold'
                   : 'border-slate-200/80 bg-white hover:bg-slate-50 text-slate-700'
               )}
             >
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary-light text-primary">
-                <ShoppingCart className="h-4 w-4" />
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
+                <ShieldCheck className="h-4 w-4" />
               </div>
               <div className="min-w-0">
-                <div className="text-xs font-semibold truncate">Sales Orders</div>
-                <div className="text-[10.5px] text-slate-400 truncate">Registry &amp; Pipeline</div>
+                <div className="text-xs font-semibold truncate">Warranty</div>
               </div>
             </button>
           )}
 
+          {/* Wallet (Cash in Hand) */}
           {canAccessRoute('/payments') && (
             <button
               onClick={() => handleNavClick('/payments')}
@@ -330,36 +332,16 @@ export function MobileNav() {
                   : 'border-slate-200/80 bg-white hover:bg-slate-50 text-slate-700'
               )}
             >
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
-                <CreditCard className="h-4 w-4" />
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
+                <Banknote className="h-4 w-4" />
               </div>
               <div className="min-w-0">
-                <div className="text-xs font-semibold truncate">Payments</div>
-                <div className="text-[10.5px] text-slate-400 truncate">PDC &amp; Receipts</div>
+                <div className="text-xs font-semibold truncate">Wallet</div>
               </div>
             </button>
           )}
 
-          {canAccessRoute('/payments') && (
-            <button
-              onClick={() => handleNavClick('/payments/collect')}
-              className={cn(
-                'flex items-center gap-3 p-3 rounded-2xl border text-left transition-all',
-                location.pathname.includes('/collect')
-                  ? 'border-emerald-500 bg-emerald-50 text-emerald-800 font-semibold'
-                  : 'border-slate-200/80 bg-white hover:bg-slate-50 text-slate-700'
-              )}
-            >
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
-                <DollarSign className="h-4 w-4" />
-              </div>
-              <div className="min-w-0">
-                <div className="text-xs font-semibold truncate">Collect Payments</div>
-                <div className="text-[10.5px] text-emerald-600 font-medium truncate">Instant FIFO</div>
-              </div>
-            </button>
-          )}
-
+          {/* Quotation */}
           {canAccessRoute('/quotations') && (
             <button
               onClick={() => handleNavClick('/quotations')}
@@ -370,16 +352,16 @@ export function MobileNav() {
                   : 'border-slate-200/80 bg-white hover:bg-slate-50 text-slate-700'
               )}
             >
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-purple-50 text-purple-600">
                 <FileSpreadsheet className="h-4 w-4" />
               </div>
               <div className="min-w-0">
                 <div className="text-xs font-semibold truncate">Quotations</div>
-                <div className="text-[10.5px] text-slate-400 truncate">Quotes &amp; WhatsApp</div>
               </div>
             </button>
           )}
 
+          {/* Invoice */}
           {canAccessRoute('/invoices') && (
             <button
               onClick={() => handleNavClick('/invoices')}
@@ -395,11 +377,11 @@ export function MobileNav() {
               </div>
               <div className="min-w-0">
                 <div className="text-xs font-semibold truncate">Invoices</div>
-                <div className="text-[10.5px] text-slate-400 truncate">Tax &amp; Billing</div>
               </div>
             </button>
           )}
 
+          {/* Targets */}
           {canAccessRoute('/commissions') && (
             <button
               onClick={() => handleNavClick('/commissions')}
@@ -410,16 +392,16 @@ export function MobileNav() {
                   : 'border-slate-200/80 bg-white hover:bg-slate-50 text-slate-700'
               )}
             >
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
                 <Award className="h-4 w-4" />
               </div>
               <div className="min-w-0">
-                <div className="text-xs font-semibold truncate">Targets &amp; Incentives</div>
-                <div className="text-[10.5px] text-slate-400 truncate">Commission Hub</div>
+                <div className="text-xs font-semibold truncate">Targets</div>
               </div>
             </button>
           )}
 
+          {/* Profile */}
           <button
             onClick={() => handleNavClick('/profile')}
             className={cn(
@@ -434,7 +416,6 @@ export function MobileNav() {
             </div>
             <div className="min-w-0">
               <div className="text-xs font-semibold truncate">Profile</div>
-              <div className="text-[10.5px] text-slate-400 truncate">Account Details</div>
             </div>
           </button>
         </div>

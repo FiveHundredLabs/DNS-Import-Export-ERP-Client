@@ -83,3 +83,50 @@ export interface InvoiceFilters {
   page?: number;
   pageSize?: number;
 }
+
+export interface OrderDeliveryInvoicingItem {
+  productId: string;
+  sku: string;
+  productName: string;
+  uom: string;
+  orderedQuantity: number;
+  deliveredQuantity: number;
+  returnedQuantity: number;
+  damagedQuantity: number;
+  previouslyInvoicedQuantity: number;
+  uninvoicedDeliveredQuantity: number;
+  unitPrice: number;
+  discountPercentage: number;
+  discountAmount: number;
+  taxPercentage: number;
+  taxAmount: number;
+  lineTotal: number;
+}
+
+export interface OrderDeliveryInvoicingStatus {
+  orderId: string;
+  orderNumber: string;
+  customerId: string;
+  customerName: string;
+  customerCode: string;
+  orderStatus: string;
+  items: OrderDeliveryInvoicingItem[];
+  summary: {
+    totalOrderedUnits: number;
+    totalDeliveredUnits: number;
+    totalReturnedUnits: number;
+    totalDamagedUnits: number;
+    totalPreviouslyInvoicedUnits: number;
+    totalUninvoicedDeliveredUnits: number;
+    isFullyDelivered: boolean;
+    isPartiallyDelivered: boolean;
+    hasReturns: boolean;
+    hasDamages: boolean;
+    isAlreadyInvoiced: boolean;
+    isReadyToInvoice: boolean;
+    subtotal: number;
+    discountTotal: number;
+    taxTotal: number;
+    totalAmount: number;
+  };
+}

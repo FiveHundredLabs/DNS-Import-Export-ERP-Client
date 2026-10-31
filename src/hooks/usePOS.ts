@@ -6,7 +6,12 @@ import {
   POSTransaction,
   CashTransaction,
   SessionSummary,
-  POSTransactionStatus,
+  POSTerminal,
+  POSManagerToken,
+  POSManagerTokenType,
+  ShowroomOffer,
+  POSRefundCondition,
+  DayEndClosingSummary,
 } from '../types/pos';
 import { POSTransactionFilters } from '../repositories/IPOSRepository';
 
@@ -15,6 +20,9 @@ export function usePOS() {
   const [activeSession, setActiveSession] = useState<POSSession | null>(null);
   const [sessions, setSessions] = useState<POSSession[]>([]);
   const [transactions, setTransactions] = useState<POSTransaction[]>([]);
+  const [terminals, setTerminals] = useState<POSTerminal[]>([]);
+  const [tokens, setTokens] = useState<POSManagerToken[]>([]);
+  const [offers, setOffers] = useState<ShowroomOffer[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -31,14 +39,20 @@ export function usePOS() {
     setLoading(true);
     setError(null);
     try {
-      const [active, allSessions, allTx] = await Promise.all([
+      const [active, allSessions, allTx, allTerminals, allTokens, allOffers] = await Promise.all([
         posService.getActiveSession(currentUser.id),
         posService.getAllSessions(),
         posService.getAllTransactions(),
+        posService.getAllTerminals(),
+        posService.getAllTokens(),
+        posService.getAllOffers(),
       ]);
       setActiveSession(active);
       setSessions(allSessions);
       setTransactions(allTx);
+      setTerminals(allTerminals);
+      setTokens(allTokens);
+      setOffers(allOffers);
     } catch (err: any) {
       setError(err.message || 'Failed to load POS data');
     } finally {
@@ -50,11 +64,18 @@ export function usePOS() {
     fetchAllData();
   }, [fetchAllData]);
 
-  const openShift = async (openingBalance: number, notes?: string): Promise<POSSession> => {
+  const openShift = async (
+    openingBalance: number,
+    notes?: string,
+    terminalId?: string,
+    terminalCode?: string
+  ): Promise<POSSession> => {
     const session = await posService.openSession(
       { id: currentUser.id, name: currentUser.name },
       openingBalance,
-      notes
+      notes,
+      terminalId,
+      terminalCode
     );
     setActiveSession(session);
     setSessions((prev) => [session, ...prev]);
@@ -114,6 +135,76 @@ export function usePOS() {
     return refundedTx;
   };
 
+  const refundWithCondition = async (
+    transactionId: string,
+    items: Array<{ productId: string; quantity: number; condition: POSRefundCondition }>,
+    reason: string,
+    managerToken?: string
+  ): Promise<POSTransaction> => {
+    const refundedTx = await posService.refundTransactionWithCondition({
+      transactionId,
+      items,
+      reason,
+      user: { id: currentUser.id, name: currentUser.name },
+      managerToken,
+    });
+    setTransactions((prev) =>
+      prev.map((t) => (t.id === transactionId ? refundedTx : t))
+    );
+    await fetchActiveSession();
+    return refundedTx;
+  };
+
+  const voidTransaction = async (
+    transactionId: string,
+    reason: string,
+    managerToken?: string
+  ): Promise<POSTransaction> => {
+    const voidedTx = await posService.voidTransaction(
+      transactionId,
+      reason,
+      { id: currentUser.id, name: currentUser.name },
+      managerToken
+    );
+    setTransactions((prev) =>
+      prev.map((t) => (t.id === transactionId ? voidedTx : t))
+    );
+    await fetchActiveSession();
+    return voidedTx;
+  };
+
+  const generateManagerToken = async (params: {
+    operationType: POSManagerTokenType;
+    targetReference?: string;
+    approvedDiscountPercentage?: number;
+    reason: string;
+    terminalId?: string;
+    terminalCode?: string;
+    validityMinutes?: number;
+  }): Promise<POSManagerToken> => {
+    const token = await posService.generateManagerToken({
+      ...params,
+      manager: { id: currentUser.id, name: currentUser.name },
+    });
+    setTokens((prev) => [token, ...prev]);
+    return token;
+  };
+
+  const approveReconciliation = async (
+    sessionId: string,
+    approved: boolean,
+    notes?: string
+  ): Promise<POSSession> => {
+    const updated = await posService.approveSessionReconciliation(
+      sessionId,
+      { id: currentUser.id, name: currentUser.name },
+      approved,
+      notes
+    );
+    setSessions((prev) => prev.map((s) => (s.id === sessionId ? updated : s)));
+    return updated;
+  };
+
   const getSummary = async (sessionId: string): Promise<SessionSummary> => {
     return posService.getSessionSummary(sessionId);
   };
@@ -122,10 +213,21 @@ export function usePOS() {
     return posService.getAllTransactions(filters);
   };
 
+  const getDayEndReport = async (
+    date?: string,
+    terminalId?: string,
+    cashierId?: string
+  ): Promise<DayEndClosingSummary> => {
+    return posService.getDayEndClosingReport(date, terminalId, cashierId);
+  };
+
   return {
     activeSession,
     sessions,
     transactions,
+    terminals,
+    tokens,
+    offers,
     loading,
     error,
     refresh: fetchAllData,
@@ -135,7 +237,12 @@ export function usePOS() {
     recordCashMovement,
     checkout,
     refund,
+    refundWithCondition,
+    voidTransaction,
+    generateManagerToken,
+    approveReconciliation,
     getSummary,
     filterTransactions,
+    getDayEndReport,
   };
 }

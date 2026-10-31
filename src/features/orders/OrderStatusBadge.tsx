@@ -12,33 +12,33 @@ export function OrderStatusBadge({ status, isSpecialApproval }: OrderStatusBadge
       case 'DRAFT':
         return <Badge variant="secondary">Draft</Badge>;
       case 'SUBMITTED':
-        return <Badge variant="outline" className="border-primary-border text-primary-text bg-primary-light">Submitted</Badge>;
+        return <Badge variant="info">Submitted</Badge>;
       case 'PENDING_APPROVAL':
         return <Badge variant="warning">Pending Approval</Badge>;
       case 'SPECIAL_APPROVAL':
-        return <Badge variant="destructive" className="bg-amber-600 text-white hover:bg-amber-700">Special Approval</Badge>;
+        return <Badge variant="warning">Special Approval</Badge>;
       case 'APPROVED':
         return <Badge variant="success">Approved</Badge>;
       case 'PICKING':
-        return <Badge variant="info" className="bg-primary text-primary-foreground">Picking</Badge>;
+        return <Badge variant="info">Picking</Badge>;
       case 'PARTIALLY_ISSUED':
-        return <Badge variant="warning" className="bg-amber-500 text-white">Partially Issued</Badge>;
+        return <Badge variant="warning">Partially Issued</Badge>;
       case 'ISSUED':
-        return <Badge variant="info" className="bg-primary text-primary-foreground">Issued</Badge>;
+        return <Badge variant="primary">Issued</Badge>;
       case 'PARTIALLY_INVOICED':
-        return <Badge className="bg-indigo-600 text-white hover:bg-indigo-700">Partially Invoiced</Badge>;
+        return <Badge variant="purple">Partially Invoiced</Badge>;
       case 'INVOICED':
-        return <Badge variant="default" className="bg-purple-600 text-white hover:bg-purple-700">Invoiced</Badge>;
+        return <Badge variant="purple">Invoiced</Badge>;
       case 'DISPATCHED':
-        return <Badge variant="default" className="bg-teal-600 text-white hover:bg-teal-700">Dispatched</Badge>;
+        return <Badge variant="info">Dispatched</Badge>;
       case 'DELIVERED':
-        return <Badge variant="success" className="bg-emerald-700 text-white">Delivered</Badge>;
+        return <Badge variant="success">Delivered</Badge>;
       case 'CLOSED':
-        return <Badge variant="outline" className="text-slate-700 border-slate-400 bg-slate-100 font-semibold">Closed</Badge>;
+        return <Badge variant="secondary">Closed</Badge>;
       case 'REJECTED':
         return <Badge variant="destructive">Rejected</Badge>;
       case 'CANCELLED':
-        return <Badge variant="outline" className="text-slate-500 border-slate-300">Cancelled</Badge>;
+        return <Badge variant="outline" className="line-through text-slate-500">Cancelled</Badge>;
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
@@ -48,12 +48,12 @@ export function OrderStatusBadge({ status, isSpecialApproval }: OrderStatusBadge
     <div className="inline-flex items-center gap-1.5 flex-wrap">
       {getBadge()}
       {status === 'APPROVED' && (
-        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-semibold bg-blue-50 text-blue-800 border border-blue-200">
+        <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10.5px] font-semibold uppercase tracking-wider bg-sky-50 text-sky-800 border border-sky-300">
           Reserved / Stock Hold
         </span>
       )}
       {isSpecialApproval && status !== 'SPECIAL_APPROVAL' && status !== 'CANCELLED' && status !== 'REJECTED' && (
-        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-semibold bg-amber-100 text-amber-900 border border-amber-300">
+        <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10.5px] font-semibold uppercase tracking-wider bg-amber-50 text-amber-800 border border-amber-300">
           Special Approval
         </span>
       )}

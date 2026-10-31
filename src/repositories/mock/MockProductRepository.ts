@@ -9,6 +9,12 @@ export class MockProductRepository implements IProductRepository {
   private uoms: UnitOfMeasure[] = [...MOCK_UOMS];
   private proposals: PriceChangeProposal[] = [];
 
+  constructor(initialProducts?: Product[]) {
+    if (initialProducts && initialProducts.length > 0) {
+      this.products = [...initialProducts];
+    }
+  }
+
   async getAll(filters?: ProductFilters): Promise<PaginatedResult<Product>> {
     // Simulate real network delay
     await new Promise((resolve) => setTimeout(resolve, 150));

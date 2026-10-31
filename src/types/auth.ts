@@ -7,6 +7,7 @@ export type UserRole =
   | 'SALES_REP'
   | 'STOCK_KEEPER'
   | 'CASHIER'
+  | 'SHOWROOM_MANAGER'
   | 'PURCHASING_OFFICER';
 
 export interface User {
@@ -36,6 +37,7 @@ export type Permission =
   | 'view:sales_rep_dashboard'
   | 'view:stock_keeper_dashboard'
   | 'view:cashier_dashboard'
+  | 'view:showroom_manager_dashboard'
   | 'products:view'
   | 'products:create'
   | 'products:edit'

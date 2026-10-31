@@ -80,13 +80,10 @@ export function InventoryStatusBadge({ status, className, label }: InventoryStat
     case 'DELIVERED':
       return (
         <Badge
-          variant="default"
-          className={cn(
-            'gap-1 font-semibold bg-slate-900 text-white text-xs py-0.5 px-2.5 shadow-2xs hover:bg-slate-800',
-            className
-          )}
+          variant="success"
+          className={cn('gap-1 font-semibold text-xs py-0.5 px-2.5 shadow-2xs', className)}
         >
-          <CheckCircle2 className="h-3 w-3 text-emerald-400 shrink-0" />
+          <CheckCircle2 className="h-3 w-3 text-emerald-600 shrink-0" />
           <span>{label || 'Delivered'}</span>
         </Badge>
       );

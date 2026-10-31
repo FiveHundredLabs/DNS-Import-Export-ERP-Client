@@ -191,11 +191,14 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
   CASHIER: [
     'view:cashier_dashboard',
     'products:view',
-    'customers:view',
     'pos:operate',
-    'invoices:view',
-    'payments:view',
-    'payments:create',
+  ],
+  SHOWROOM_MANAGER: [
+    'view:showroom_manager_dashboard',
+    'products:view',
+    'pos:operate',
+    'pos:override_discount',
+    'reports:all',
   ],
   PURCHASING_OFFICER: [
     'view:purchasing_dashboard',
@@ -239,7 +242,8 @@ export function canAccessRoute(role: UserRole, path: string): boolean {
       role === 'DIRECTOR' ||
       role === 'MANAGER' ||
       role === 'SALES_MANAGER' ||
-      role === 'FINANCE_MANAGER'
+      role === 'FINANCE_MANAGER' ||
+      role === 'SHOWROOM_MANAGER'
     );
   }
   if (path.startsWith('/quotations')) {

@@ -931,9 +931,10 @@ export class OrderService {
       CLOSED: 'CLOSE',
     };
 
+    const existingHistory = order.approvalHistory || [];
     const historyEntry: OrderApprovalAction = {
       id: `hist-${Date.now().toString().slice(-4)}`,
-      stepNumber: order.approvalHistory.length + 1,
+      stepNumber: existingHistory.length + 1,
       actorId: currentUser.id,
       actorName: currentUser.name,
       actorRole: currentUser.role,
@@ -947,7 +948,7 @@ export class OrderService {
     return this.repo.update(id, {
       status: nextStatus,
       items: updatedItems,
-      approvalHistory: [...order.approvalHistory, historyEntry],
+      approvalHistory: [...existingHistory, historyEntry],
     });
   }
 
@@ -1143,6 +1144,7 @@ export class OrderService {
         | 'CREDIT_LIMIT_REDUCTION'
         | 'FORCE_MAJEURE'
         | 'FULFILLED_EARLY'
+        | 'REMAINING_ITEMS_RETURNED'
         | 'OTHER';
       reasonNotes: string;
     }
@@ -1166,14 +1168,32 @@ export class OrderService {
     }
 
     const now = new Date().toISOString();
+    const closeActorName = currentUser.name || (currentUser as any).fullName || 'Sales Manager';
+    const closeEvent: OrderActivityEvent = {
+      id: `act-${Date.now()}-closed`,
+      orderId: order.id,
+      orderNumber: order.orderNumber,
+      type: 'ORDER_CLOSED',
+      title: `Order Manually Closed (${params.closureType || 'PARTIAL'} CLOSURE)`,
+      description: `Order manually closed by ${closeActorName}. Remaining items will not be delivered or invoiced.`,
+      actorId: currentUser.id,
+      actorName: closeActorName,
+      actorRole: currentUser.role,
+      timestamp: now,
+      statusBadge: { label: 'Closed', variant: 'destructive' },
+      comment: `[${params.reasonCode}] ${params.reasonNotes.trim()}`,
+    };
+
+    const existingLog = order.activityLog || [];
     const updated = await this.repo.update(orderId, {
       status: 'CLOSED',
       closureType: params.closureType,
       closureReasonCode: params.reasonCode,
       closureReason: params.reasonNotes.trim(),
       closedById: currentUser.id,
-      closedByName: currentUser.name || (currentUser as any).fullName || 'System',
+      closedByName: closeActorName,
       closedAt: now,
+      activityLog: [...existingLog, closeEvent],
       approvalHistory: [
         ...order.approvalHistory,
         {

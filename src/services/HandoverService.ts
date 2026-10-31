@@ -28,7 +28,7 @@ class HandoverService {
       invoiceCount: 8,
       status: 'PENDING_APPROVAL',
       submittedAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-      notes: 'Daily field route collection handover for Western Province Central route.',
+      notes: 'Daily field route collection handover for Kelaniya route.',
       items: [
         {
           paymentId: 'pay-hnd-001',

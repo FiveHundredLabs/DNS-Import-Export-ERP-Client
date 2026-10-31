@@ -1352,7 +1352,7 @@ export function WarrantyHubPage() {
                   <ShieldCheck className="h-4 w-4 text-primary" />
                   Registered Warranties Master Ledger
                 </CardTitle>
-                <p className="text-xs text-slate-500 mt-0.5">
+                <p className="text-xs text-slate-500 mt-0.5 hidden sm:block">
                   Single source of truth for all products distributed and registered with active or historical warranty coverage.
                 </p>
               </div>
@@ -1415,87 +1415,161 @@ export function WarrantyHubPage() {
                   No warranty records matching criteria.
                 </div>
               ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs text-slate-600">
-                    <thead className="bg-slate-50 text-[11px] font-semibold text-slate-500 uppercase tracking-wider border-b border-slate-200">
-                      <tr>
-                        <th className="py-3 px-4">Product Name & SKU</th>
-                        <th className="py-3 px-3">Barcode / Serial</th>
-                        <th className="py-3 px-3">Distributor Customer</th>
-                        <th className="py-3 px-3">End-Customer Selling Date</th>
-                        <th className="py-3 px-3">Warranty Expiry</th>
-                        <th className="py-3 px-3 text-center">Remaining</th>
-                        <th className="py-3 px-3 text-center">Status</th>
-                        <th className="py-3 px-4 text-right">{!isFieldUser ? 'Action' : 'Status'}</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 bg-white">
-                      {records.map((r) => {
-                        const remaining = calculateRemainingWarranty(r.warrantyExpiryDate);
-                        return (
-                          <tr key={r.id} className="hover:bg-slate-50/80 transition-colors">
-                            <td className="py-3 px-4">
-                              <div className="font-bold text-slate-900">{r.productName}</div>
-                              <div className="text-[11px] text-slate-400 font-mono">{r.sku}</div>
-                            </td>
+                <>
+                  {/* Mobile Stacked Cards (Visible on mobile, hidden on md+) */}
+                  <div className="block md:hidden p-3 space-y-3">
+                    {records.map((r) => {
+                      const remaining = calculateRemainingWarranty(r.warrantyExpiryDate);
+                      return (
+                        <div
+                          key={r.id}
+                          className="rounded-2xl border border-slate-200/90 bg-white p-3.5 shadow-xs space-y-2.5 transition-all"
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0 flex-1">
+                              <div className="font-bold text-xs text-slate-900 leading-tight">{r.productName}</div>
+                              <div className="text-[10.5px] text-slate-400 font-mono mt-0.5">{r.sku}</div>
+                            </div>
+                            <WarrantyStatusBadge status={remaining.status} />
+                          </div>
 
-                            <td className="py-3 px-3">
-                              <div className="font-mono font-semibold text-slate-800">{r.barcode || '—'}</div>
-                              {r.serialNumber && (
-                                <div className="text-[10px] text-slate-400 font-mono">SN: {r.serialNumber}</div>
-                              )}
-                            </td>
+                          <div className="flex items-center justify-between gap-2 p-2 bg-slate-50 rounded-xl text-xs font-mono">
+                            <div className="flex items-center gap-1.5 font-semibold text-slate-800 truncate">
+                              <Barcode className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                              <span className="truncate">{r.barcode || '—'}</span>
+                            </div>
+                            {r.serialNumber && (
+                              <span className="text-[10px] text-slate-400">SN: {r.serialNumber}</span>
+                            )}
+                          </div>
 
-                            <td className="py-3 px-3">
-                              <div className="font-semibold text-slate-800">{r.customerName}</div>
-                              <div className="text-[10px] text-slate-400">INV: {r.invoiceNumber}</div>
-                            </td>
+                          <div className="grid grid-cols-2 gap-2 text-[11px] pt-1 border-t border-slate-100">
+                            <div>
+                              <span className="text-slate-400 block text-[10px]">Distributor / Dealer</span>
+                              <span className="font-semibold text-slate-800 truncate block">{r.customerName}</span>
+                              <span className="text-[10px] text-slate-400">INV: {r.invoiceNumber}</span>
+                            </div>
+                            <div>
+                              <span className="text-slate-400 block text-[10px]">Warranty Coverage</span>
+                              <span className="font-medium text-slate-700 block">Exp: {formatDate(r.warrantyExpiryDate)}</span>
+                              <span className="text-[10.5px] font-semibold text-primary">{remaining.displayText}</span>
+                            </div>
+                          </div>
 
-                            <td className="py-3 px-3 font-semibold text-emerald-700">
-                              {r.dealerSoldDate ? formatDate(r.dealerSoldDate) : formatDate(r.warrantyStartDate)}
-                            </td>
+                          <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-100 text-xs">
+                            <span className="text-[10.5px] text-emerald-700 font-medium">
+                              Sold: {r.dealerSoldDate ? formatDate(r.dealerSoldDate) : formatDate(r.warrantyStartDate)}
+                            </span>
+                            {!isFieldUser ? (
+                              <Button
+                                onClick={() => {
+                                  if (r.barcode) {
+                                    setClaimBarcode(r.barcode);
+                                    handleLookupClaimBarcode(r.barcode);
+                                    setActiveTab('claims');
+                                  }
+                                }}
+                                variant="outline"
+                                size="sm"
+                                className="h-7 px-2.5 text-xs text-primary border-primary/20 hover:bg-primary-light gap-1 font-semibold rounded-lg"
+                              >
+                                Claim
+                                <ArrowRight className="h-3 w-3" />
+                              </Button>
+                            ) : (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                Registered
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
 
-                            <td className="py-3 px-3 font-medium text-slate-800">
-                              {formatDate(r.warrantyExpiryDate)}
-                            </td>
+                  {/* Desktop Comprehensive Table (Hidden on mobile, visible on md+) */}
+                  <div className="hidden md:block overflow-x-auto">
+                    <table className="w-full text-left text-xs text-slate-600">
+                      <thead className="bg-slate-50 text-[11px] font-semibold text-slate-500 uppercase tracking-wider border-b border-slate-200">
+                        <tr>
+                          <th className="py-3 px-4">Product Name & SKU</th>
+                          <th className="py-3 px-3">Barcode / Serial</th>
+                          <th className="py-3 px-3">Distributor Customer</th>
+                          <th className="py-3 px-3">End-Customer Selling Date</th>
+                          <th className="py-3 px-3">Warranty Expiry</th>
+                          <th className="py-3 px-3 text-center">Remaining</th>
+                          <th className="py-3 px-3 text-center">Status</th>
+                          <th className="py-3 px-4 text-right">{!isFieldUser ? 'Action' : 'Status'}</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 bg-white">
+                        {records.map((r) => {
+                          const remaining = calculateRemainingWarranty(r.warrantyExpiryDate);
+                          return (
+                            <tr key={r.id} className="hover:bg-slate-50/80 transition-colors">
+                              <td className="py-3 px-4">
+                                <div className="font-bold text-slate-900">{r.productName}</div>
+                                <div className="text-[11px] text-slate-400 font-mono">{r.sku}</div>
+                              </td>
 
-                            <td className="py-3 px-3 text-center font-medium text-slate-700">
-                              {remaining.displayText}
-                            </td>
+                              <td className="py-3 px-3">
+                                <div className="font-mono font-semibold text-slate-800">{r.barcode || '—'}</div>
+                                {r.serialNumber && (
+                                  <div className="text-[10px] text-slate-400 font-mono">SN: {r.serialNumber}</div>
+                                )}
+                              </td>
 
-                            <td className="py-3 px-3 text-center">
-                              <WarrantyStatusBadge status={remaining.status} />
-                            </td>
+                              <td className="py-3 px-3">
+                                <div className="font-semibold text-slate-800">{r.customerName}</div>
+                                <div className="text-[10px] text-slate-400">INV: {r.invoiceNumber}</div>
+                              </td>
 
-                            <td className="py-3 px-4 text-right whitespace-nowrap">
-                              {!isFieldUser ? (
-                                <Button
-                                  onClick={() => {
-                                    if (r.barcode) {
-                                      setClaimBarcode(r.barcode);
-                                      handleLookupClaimBarcode(r.barcode);
-                                      setActiveTab('claims');
-                                    }
-                                  }}
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-7 px-2 text-xs text-primary hover:text-primary-hover hover:bg-primary/10 gap-1 font-medium"
-                                >
-                                  Claim
-                                  <ArrowRight className="h-3 w-3" />
-                                </Button>
-                              ) : (
-                                <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                  Registered
-                                </span>
-                              )}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
+                              <td className="py-3 px-3 font-semibold text-emerald-700">
+                                {r.dealerSoldDate ? formatDate(r.dealerSoldDate) : formatDate(r.warrantyStartDate)}
+                              </td>
+
+                              <td className="py-3 px-3 font-medium text-slate-800">
+                                {formatDate(r.warrantyExpiryDate)}
+                              </td>
+
+                              <td className="py-3 px-3 text-center font-medium text-slate-700">
+                                {remaining.displayText}
+                              </td>
+
+                              <td className="py-3 px-3 text-center">
+                                <WarrantyStatusBadge status={remaining.status} />
+                              </td>
+
+                              <td className="py-3 px-4 text-right whitespace-nowrap">
+                                {!isFieldUser ? (
+                                  <Button
+                                    onClick={() => {
+                                      if (r.barcode) {
+                                        setClaimBarcode(r.barcode);
+                                        handleLookupClaimBarcode(r.barcode);
+                                        setActiveTab('claims');
+                                      }
+                                    }}
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-7 px-2 text-xs text-primary hover:text-primary-hover hover:bg-primary/10 gap-1 font-medium"
+                                  >
+                                    Claim
+                                    <ArrowRight className="h-3 w-3" />
+                                  </Button>
+                                ) : (
+                                  <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                    Registered
+                                  </span>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
               )}
             </CardContent>
           </Card>

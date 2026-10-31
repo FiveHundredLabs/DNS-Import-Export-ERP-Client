@@ -98,9 +98,9 @@ export function OrderActivityTimeline({
   const [replacementDN, setReplacementDN] = useState(`DN-2025-${Math.floor(1000 + Math.random() * 9000)}-R`);
   const [deliveryRecipient, setDeliveryRecipient] = useState(order.customerNameSnapshot.split(' ')[0] + ' Store Manager');
 
-  // Compute full chronological timeline
+  // Compute full chronological timeline (newest / latest at top, oldest at bottom)
   const fullTimeline = useMemo(() => {
-    return orderActivityService.getOrderActivityTimeline(order);
+    return orderActivityService.getOrderActivityTimeline(order, 'desc');
   }, [order]);
 
   // Toggle card expansion
@@ -489,6 +489,14 @@ export function OrderActivityTimeline({
           text: 'text-violet-600',
           border: 'border-violet-200',
           pillBg: 'bg-violet-50 text-violet-700 border-violet-200',
+        };
+      case 'ORDER_CLOSED':
+        return {
+          icon: Lock,
+          bg: 'bg-slate-700',
+          text: 'text-slate-800',
+          border: 'border-slate-300',
+          pillBg: 'bg-slate-100 text-slate-800 border-slate-300',
         };
       case 'ORDER_REJECTED':
       case 'ORDER_CANCELLED':

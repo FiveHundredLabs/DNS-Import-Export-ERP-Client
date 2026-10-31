@@ -1167,6 +1167,7 @@ export function OrderDetailPage() {
                 onChange={(e) => setClosureReasonCode(e.target.value as any)}
                 className="w-full rounded-md border border-slate-200 bg-white p-2 text-xs font-medium text-slate-800 focus:ring-1 focus:ring-primary"
               >
+                <option value="REMAINING_ITEMS_RETURNED">Remaining Items Returned & Will Not Be Delivered</option>
                 <option value="CUSTOMER_CANCELLED">Customer Cancelled Request</option>
                 <option value="OUT_OF_STOCK">Stock Depleted / Out of Stock</option>
                 <option value="DISCONTINUED">Item Discontinued by Manufacturer</option>
