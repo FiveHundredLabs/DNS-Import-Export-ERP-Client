@@ -301,7 +301,7 @@ export function PaymentListPage() {
         <div className="rounded-2xl border border-slate-200/90 bg-white p-3.5 sm:p-4 shadow-xs hover:shadow-sm transition-all flex flex-col justify-between">
           <div className="flex items-center justify-between gap-2">
             <span className="text-xs font-bold text-slate-700 truncate">
-              Cash in Hand
+              {role === 'SALES_REP' ? 'Wallet' : 'Cash in Hand'}
             </span>
             <div className="h-8 w-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
               <Clock className="h-4 w-4" />

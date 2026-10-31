@@ -40,6 +40,7 @@ import { User } from '../../types/auth';
 import { MOCK_USERS } from '../../mock/mockUsers';
 import { invoiceService } from '../../services/InvoiceService';
 import { customerService } from '../../services/CustomerService';
+import { SalesRepGreetingCard } from './SalesRepGreetingCard';
 import { toast } from 'sonner';
 
 export interface RepInvoiceItem {
@@ -208,14 +209,17 @@ export function SalesRepDashboard() {
     };
   }, [loadHandoverMetrics, loadRepInvoices]);
 
-  // Priority Next-24-Hours Collections Queue (BR-07 / SR-04)
-  const dueNext24hInvoices = useMemo(() => {
+  // Priority Next-7-Days Collections Queue
+  const dueNext7DaysInvoices = useMemo(() => {
+    const now = new Date();
+    const in7Days = new Date(now.getTime() + 7 * 86400000).toISOString().split('T')[0];
     return liveInvoices
       .filter(
         (inv) =>
           inv.dueStatus === 'OVERDUE' ||
           inv.dueStatus === 'DUE_TODAY' ||
-          inv.dueStatus === 'DUE_TOMORROW'
+          inv.dueStatus === 'DUE_TOMORROW' ||
+          inv.dueDate <= in7Days
       )
       .sort((a, b) => {
         const order = { OVERDUE: 0, DUE_TODAY: 1, DUE_TOMORROW: 2, WITHIN_TERMS: 3 };
@@ -283,7 +287,12 @@ export function SalesRepDashboard() {
 
   return (
     <div className="w-full space-y-4 sm:space-y-6 pb-24 md:pb-6">
-      {/* 1. Header Banner (Desktop Only — on mobile screens, greeting card is rendered above header in AppLayout) */}
+      {/* Mobile Greeting Card (flush with header, rounded bottom curve) */}
+      <div className="block md:hidden -mx-3.5 -mt-3.5 sm:-mx-5 sm:-mt-5 mb-4">
+        <SalesRepGreetingCard />
+      </div>
+
+      {/* 1. Header Banner (Desktop Only) */}
       <div className="hidden md:block p-6 rounded-2xl bg-white text-slate-900 shadow-xs border border-slate-200/90 transition-all">
         <div className="min-w-0 flex-1">
           {/* 1. Greeting & Name */}
@@ -381,7 +390,7 @@ export function SalesRepDashboard() {
             </span>
           </Link>
 
-          {/* 7. Cash in Hand */}
+          {/* 7. Wallet */}
           <button
             type="button"
             onClick={() => navigate('/payments')}
@@ -391,7 +400,7 @@ export function SalesRepDashboard() {
               <Banknote className="h-5 w-5" />
             </div>
             <span className="text-[11px] font-medium text-slate-700 mt-1.5 truncate max-w-full group-hover:text-amber-700 transition-colors">
-              Cash in Hand
+              Wallet
             </span>
           </button>
 
@@ -452,14 +461,14 @@ export function SalesRepDashboard() {
             </div>
           </div>
 
-          {/* Card 3: Cash in Hand */}
+          {/* Card 3: Wallet */}
           <div
             onClick={() => navigate('/payments')}
             className="col-span-1 rounded-2xl border border-slate-200/90 bg-white p-3.5 sm:p-4 shadow-xs hover:shadow-sm transition-all flex flex-col justify-between cursor-pointer group active:scale-[0.99]"
           >
             <div className="flex items-center justify-between gap-2">
               <span className="text-xs font-bold text-slate-700 truncate group-hover:text-amber-700 transition-colors">
-                Cash in Hand
+                Wallet
               </span>
               <div className="h-8 w-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0 group-hover:bg-amber-100 transition-colors">
                 <Banknote className="h-4 w-4" />
@@ -507,8 +516,8 @@ export function SalesRepDashboard() {
 
       {/* 4. Main Dashboard Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
-        {/* Priority Section: Next 24 Hours Collections Due (BR-07 / SR-04) */}
-        {dueNext24hInvoices.length > 0 && (
+        {/* Priority Section: Next 7 Days Collections Due */}
+        {dueNext7DaysInvoices.length > 0 && (
           <div className="lg:col-span-2 rounded-2xl sm:rounded-3xl border-2 border-amber-300 bg-gradient-to-br from-amber-500/[0.08] via-amber-50/30 to-white p-4 sm:p-5 shadow-xs space-y-3">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-amber-200/70 pb-3">
               <div className="flex items-center gap-2.5">
@@ -518,10 +527,10 @@ export function SalesRepDashboard() {
                 <div>
                   <div className="flex items-center gap-2">
                     <h2 className="text-sm font-bold text-amber-950 uppercase tracking-wide">
-                      Next 24 Hours Collections Due
+                      Next 7 Days Collections Due
                     </h2>
                     <Badge variant="destructive" className="bg-rose-600 text-white text-[10.5px] px-2 py-0.5 rounded-full font-bold">
-                      {dueNext24hInvoices.length} Due Priority
+                      {dueNext7DaysInvoices.length} Due Priority
                     </Badge>
                   </div>
                   
@@ -535,14 +544,14 @@ export function SalesRepDashboard() {
             </div>
 
             <div className="space-y-2.5">
-              {dueNext24hInvoices.map((inv) => (
+              {dueNext7DaysInvoices.map((inv) => (
                 <div
                   key={inv.id}
                   className="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 rounded-2xl bg-white border border-amber-200/90 shadow-2xs hover:shadow-xs transition-all gap-3"
                 >
                   <div className="flex items-start gap-3 min-w-0">
                     <div className="h-9 w-9 rounded-xl bg-amber-50 text-amber-700 border border-amber-100 flex items-center justify-center shrink-0 mt-0.5 font-mono text-xs font-bold">
-                      24h
+                      7d
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-1.5 flex-wrap">
@@ -619,7 +628,7 @@ export function SalesRepDashboard() {
         )}
 
         {/* Recent Order Status Tracking */}
-        <Card className={cn("rounded-2xl border border-slate-200/80 shadow-xs bg-white overflow-hidden", dueNext24hInvoices.length > 0 ? "lg:col-span-1" : "lg:col-span-3")}>
+        <Card className={cn("rounded-2xl border border-slate-200/80 shadow-xs bg-white overflow-hidden", dueNext7DaysInvoices.length > 0 ? "lg:col-span-1" : "lg:col-span-3")}>
           <CardHeader className="p-3.5 sm:p-5 pb-3 border-b border-slate-100 flex flex-row items-center justify-between">
             <div>
               <CardTitle className="text-sm font-bold text-slate-900">

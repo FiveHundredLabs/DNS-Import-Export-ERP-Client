@@ -22,9 +22,9 @@ describe('Sales Representative Mobile Dashboard App View', () => {
       </MemoryRouter>
     );
 
-    expect(screen.getByText(/Kasun/i)).toBeInTheDocument();
-    expect(screen.getByText(/(Kelaniya|Kottawa Central) Territory/i)).toBeInTheDocument();
-    expect(screen.getByText(/14 Assigned Dealers/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/Kasun/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/(Kelaniya|Kottawa Central) Territory/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/14 Assigned Dealers/i).length).toBeGreaterThan(0);
     expect(screen.getByText('Order Desk')).toBeInTheDocument();
     expect(screen.getByText('Dealer Hub')).toBeInTheDocument();
   });
@@ -59,7 +59,7 @@ describe('Sales Representative Mobile Dashboard App View', () => {
     expect(screen.getByText('Warranty')).toBeInTheDocument();
     expect(screen.getByText('Quotations')).toBeInTheDocument();
     expect(screen.getByText('Invoices')).toBeInTheDocument();
-    expect(screen.getAllByText('Cash in Hand').length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/(Wallet|Cash in Hand)/i).length).toBeGreaterThan(0);
     expect(screen.getByText('Overdue')).toBeInTheDocument();
   });
 
@@ -123,12 +123,12 @@ describe('Sales Representative Mobile Dashboard App View', () => {
       // Verify all 5 KPI card titles exist
       expect(screen.getByText('Monthly Sales')).toBeInTheDocument();
       expect(screen.getByText('Route Collections')).toBeInTheDocument();
-      expect(screen.getAllByText(/(Cash in Hand|Cash to Hand Over)/i).length).toBeGreaterThan(0);
+      expect(screen.getAllByText(/(Wallet|Cash in Hand|Cash to Hand Over)/i).length).toBeGreaterThan(0);
       expect(screen.getByText('Earned Incentive')).toBeInTheDocument();
       expect(screen.getByText('Overdue Accounts')).toBeInTheDocument();
 
       // Verify responsive 5-column desktop grid container
-      const cashCards = screen.getAllByText(/(Cash in Hand|Cash to Hand Over)/i);
+      const cashCards = screen.getAllByText(/(Wallet|Cash in Hand|Cash to Hand Over)/i);
       const cardTitle = cashCards[cashCards.length - 1];
       const gridContainer = cardTitle.closest('.grid');
       expect(gridContainer).toHaveClass('lg:grid-cols-5');

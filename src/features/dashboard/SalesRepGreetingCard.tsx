@@ -21,7 +21,7 @@ export function SalesRepGreetingCard() {
   const assignedDealersCount = currentUser?.assignedCustomersCount || 14;
 
   return (
-    <div className="relative p-5 pb-7 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white overflow-hidden transition-all">
+    <div className="relative p-5 pb-7 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white rounded-b-[2.5rem] overflow-hidden transition-all shadow-xs">
       {/* Fluid Decorative Ambient Waves */}
       <div className="absolute -top-12 -right-12 w-48 h-48 rounded-full bg-white/10 blur-2xl pointer-events-none" />
       <div className="absolute -bottom-10 -left-10 w-40 h-40 rounded-full bg-white/5 blur-xl pointer-events-none" />
