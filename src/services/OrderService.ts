@@ -881,7 +881,21 @@ export class OrderService {
       throw new Error(`Sales Order not found: ${id}`);
     }
 
-    if (!isValidOrderTransition(order.status, nextStatus)) {
+    // Invoicing can be performed on any approved, picking, issued, dispatched, or delivered order
+    const isInvoicingTransition = nextStatus === 'INVOICED' || nextStatus === 'PARTIALLY_INVOICED';
+    const isFulfillmentInvoicingEligible = [
+      'APPROVED',
+      'PICKING',
+      'PARTIALLY_ISSUED',
+      'ISSUED',
+      'DISPATCHED',
+      'DELIVERED',
+      'PARTIALLY_INVOICED',
+    ].includes(order.status);
+
+    if (isInvoicingTransition && isFulfillmentInvoicingEligible) {
+      // Invoicing is always allowed on any approved, dispatched, or delivered order
+    } else if (!isValidOrderTransition(order.status, nextStatus)) {
       throw new Error(`Invalid state transition from '${order.status}' to '${nextStatus}'.`);
     }
 
