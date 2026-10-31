@@ -571,3 +571,30 @@ body,
     break-after: auto !important;
   }
 }
+
+/* ------------------------------------------------------------------------------
+ * SALES REPRESENTATIVE MOBILE HERO (DYNAMIC GLOBAL THEME + VISUAL EFFECTS)
+ * Applies subtle linear gradient, radial gradient highlights, and soft vignette
+ * derived dynamically from the active global theme colors (--primary, etc.).
+ * Designed to look like one seamless, continuous section across header & greeting card.
+ * ------------------------------------------------------------------------------ */
+@media (max-width: 767px) {
+  .sales-rep-mobile-header {
+    background:
+      radial-gradient(ellipse at 50% -20%, rgba(255, 255, 255, 0.22) 0%, transparent 70%),
+      radial-gradient(circle at 85% 30%, rgba(255, 255, 255, 0.12) 0%, transparent 45%),
+      linear-gradient(90deg, rgba(0, 0, 0, 0.16) 0%, transparent 15%, transparent 85%, rgba(0, 0, 0, 0.16) 100%),
+      linear-gradient(180deg, var(--primary) 0%, var(--primary-hover) 100%) !important;
+    border-bottom: none !important;
+    box-shadow: none !important;
+  }
+}
+
+.sales-rep-mobile-greeting {
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(255, 255, 255, 0.18) 0%, transparent 65%),
+    radial-gradient(ellipse at 50% 100%, rgba(0, 0, 0, 0.28) 0%, transparent 75%),
+    linear-gradient(90deg, rgba(0, 0, 0, 0.16) 0%, transparent 15%, transparent 85%, rgba(0, 0, 0, 0.16) 100%),
+    linear-gradient(180deg, var(--primary-hover) 0%, var(--primary-active) 100%) !important;
+  border-top: none !important;
+}

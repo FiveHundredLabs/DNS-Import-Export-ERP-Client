@@ -108,9 +108,9 @@ export function Header({ onToggleSidebar }: HeaderProps) {
   return (
     <header className={cn(
       "sticky top-0 z-30 flex h-16 w-full items-center justify-between px-3 sm:px-6 transition-all shrink-0 text-primary-foreground",
-      // Sales Rep mobile: dark gradient to seamlessly connect with the greeting card below
+      // Sales Rep mobile: dynamic theme gradient + radial glow + soft vignette seamlessly connecting with greeting card below
       role === 'SALES_REP'
-        ? "bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 md:bg-none md:bg-primary"
+        ? "sales-rep-mobile-header md:bg-primary"
         : "bg-primary"
     )}>
       {/* Left: Mobile Toggle & Enterprise Brand / Page Title */}
