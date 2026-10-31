@@ -238,7 +238,7 @@ export class InvoiceService {
     }
 
     if (order.status === 'INVOICED') {
-      throw new Error(`Cannot generate invoice: Order ${order.orderNumber} has already been invoiced.`);
+      throw new Error(`Cannot generate invoice: Order ${order.orderNumber} is already invoiced.`);
     }
 
     const eligibleStatuses = options?.allowUnapproved
