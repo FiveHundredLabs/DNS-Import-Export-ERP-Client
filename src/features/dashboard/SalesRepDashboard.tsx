@@ -42,6 +42,7 @@ import { invoiceService } from '../../services/InvoiceService';
 import { customerService } from '../../services/CustomerService';
 import { SalesRepGreetingCard } from './SalesRepGreetingCard';
 import { toast } from 'sonner';
+import { evaluate24hHandoverStatus } from '../../rules/paymentRules';
 
 export interface RepInvoiceItem {
   id: string;
@@ -81,6 +82,7 @@ export function SalesRepDashboard() {
 
   const [cashToHandOver, setCashToHandOver] = useState<number>(0);
   const [pendingHandoverCount, setPendingHandoverCount] = useState<number>(0);
+  const [overdueHandoverCount, setOverdueHandoverCount] = useState<number>(0);
   const [loadingHandover, setLoadingHandover] = useState<boolean>(true);
   const [cashHandoverModalOpen, setCashHandoverModalOpen] = useState<boolean>(false);
 
@@ -92,6 +94,8 @@ export function SalesRepDashboard() {
       const total = cashOnly.reduce((sum, p) => sum + p.amount, 0);
       setCashToHandOver(total);
       setPendingHandoverCount(cashOnly.length);
+      const overdue = cashOnly.filter((p) => evaluate24hHandoverStatus(p).isOverdue);
+      setOverdueHandoverCount(overdue.length);
     } catch (err) {
       console.error('Failed to load cash handover metrics:', err);
     } finally {
@@ -293,7 +297,7 @@ export function SalesRepDashboard() {
       </div>
 
       {/* 1. Header Banner (Desktop Only) */}
-      <div className="hidden md:block p-6 rounded-2xl bg-white text-slate-900 shadow-xs border border-slate-200/90 transition-all">
+      <div className="hidden md:flex items-center justify-between p-6 rounded-2xl bg-white text-slate-900 shadow-xs border border-slate-200/90 transition-all">
         <div className="min-w-0 flex-1">
           {/* 1. Greeting & Name */}
           <h1 className="text-xl font-extrabold tracking-tight text-slate-900 leading-tight truncate">
@@ -318,6 +322,29 @@ export function SalesRepDashboard() {
               Active Route
             </span>
           </div>
+        </div>
+
+        {/* Quick Actions for Sales Rep */}
+        <div className="flex items-center gap-2 shrink-0">
+          <Button
+            size="sm"
+            onClick={() => navigate('/payments')}
+            className="h-10 px-4 text-xs font-bold bg-amber-600 hover:bg-amber-700 text-white rounded-xl shadow-xs gap-1.5"
+            title="View Cash in Hand and Hand Over to Finance"
+          >
+            <Banknote className="h-4 w-4" />
+            <span>Cash in Hand & Handover</span>
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => navigate('/payments/collect')}
+            className="h-10 px-4 text-xs font-bold text-slate-700 hover:text-slate-900 rounded-xl border-slate-300 shadow-2xs gap-1.5"
+            title="Collect Payments from Dealers"
+          >
+            <CreditCard className="h-4 w-4 text-primary" />
+            <span>Collect Payments</span>
+          </Button>
         </div>
       </div>
 
@@ -474,8 +501,19 @@ export function SalesRepDashboard() {
                 <Banknote className="h-4 w-4" />
               </div>
             </div>
-            <div className="mt-3 text-base sm:text-lg lg:text-xl font-extrabold text-slate-900 tracking-tight font-mono">
-              {formatCurrency(cashToHandOver)}
+            <div className="mt-3 flex items-baseline justify-between gap-1 flex-wrap">
+              <span className="text-base sm:text-lg lg:text-xl font-extrabold text-slate-900 tracking-tight font-mono">
+                {formatCurrency(cashToHandOver)}
+              </span>
+              {overdueHandoverCount > 0 ? (
+                <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-200">
+                  <Clock className="w-2.5 h-2.5" /> {overdueHandoverCount} Overdue (&gt;24h)
+                </span>
+              ) : pendingHandoverCount > 0 ? (
+                <span className="text-[10px] font-medium text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded">
+                  {pendingHandoverCount} unhanded
+                </span>
+              ) : null}
             </div>
           </div>
 

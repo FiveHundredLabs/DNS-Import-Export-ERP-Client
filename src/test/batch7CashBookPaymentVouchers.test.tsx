@@ -139,4 +139,39 @@ describe('Batch 7: Cash Book & Payment Vouchers (BR-09, MG-02)', () => {
     expect(screen.getByText(/Petty Cash Float \(1040\)/i)).toBeInTheDocument();
     expect(screen.getByText(/Pending Approvals \(MG-02\)/i)).toBeInTheDocument();
   });
+
+  it('provides downloadable action and opens System View inner modal with Print button', async () => {
+    render(
+      <BrowserRouter>
+        <CashBookPage />
+      </BrowserRouter>
+    );
+
+    // Switch to Vouchers tab
+    const vouchersTabBtn = screen.getByRole('button', { name: /Payment & Receipt Vouchers/i });
+    fireEvent.click(vouchersTabBtn);
+
+    // Verify voucher items render with View, Download, and Print actions
+    await waitFor(() => {
+      expect(screen.getByText('PV-2026-0001')).toBeInTheDocument();
+    });
+
+    const viewButtons = screen.getAllByRole('button', { name: /^view$/i });
+    expect(viewButtons.length).toBeGreaterThan(0);
+
+    // Click "View" to open the System View inner modal
+    fireEvent.click(viewButtons[0]);
+
+    // Verify System View contains official accounting voucher details
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: /Official Payment Voucher/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /print voucher/i })).toBeInTheDocument();
+      expect(screen.getAllByRole('button', { name: /download/i }).length).toBeGreaterThan(0);
+      expect(screen.getByText(/DNS IMPORT & EXPORT \(PVT\) LTD/i)).toBeInTheDocument();
+      expect(screen.getByText(/Statutory Double-Entry GL Impact:/i)).toBeInTheDocument();
+      expect(screen.getByText(/Total Amount Authorized:/i)).toBeInTheDocument();
+      expect(screen.getByText(/1\. Prepared By/i)).toBeInTheDocument();
+      expect(screen.getByText(/3\. Approved By/i)).toBeInTheDocument();
+    });
+  });
 });

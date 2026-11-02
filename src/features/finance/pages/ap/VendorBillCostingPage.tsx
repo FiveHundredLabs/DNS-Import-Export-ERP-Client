@@ -949,8 +949,8 @@ export function VendorBillCostingPage() {
 
         {/* Inbound GRNs Table */}
         <Card className="border-slate-200 overflow-hidden shadow-2xs">
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs text-left border-collapse">
+          <div className="overflow-x-auto w-full">
+            <table className="w-full min-w-[950px] text-xs text-left border-collapse">
               <thead>
                 <tr className="border-b border-slate-200 bg-slate-50/70 text-slate-600 font-semibold uppercase tracking-wider text-[11px]">
                   <th className="py-3 px-4">GRN Reference</th>
@@ -2820,8 +2820,8 @@ export function VendorBillCostingPage() {
             </div>
 
             {/* Live Distribution Preview Table */}
-            <div className="border border-slate-200 rounded-lg overflow-hidden">
-              <table className="w-full text-xs">
+            <div className="border border-slate-200 rounded-lg overflow-x-auto w-full">
+              <table className="w-full min-w-[600px] text-xs">
                 <thead className="bg-slate-100 text-slate-600 font-semibold border-b border-slate-200">
                   <tr>
                     <th className="py-2 px-3 text-left">Item</th>

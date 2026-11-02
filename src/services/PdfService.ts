@@ -2,6 +2,7 @@ import { Quotation } from '../types/quotation';
 import { Invoice } from '../types/invoice';
 import { Payment } from '../types/payment';
 import { PurchaseOrder } from '../types/purchasing';
+import { PaymentVoucher } from '../types/cashbook';
 import { paginatePurchaseOrder } from '../features/purchasing/utils/purchaseOrderPaginator';
 import { numberToWordsLKR, formatDate, formatCurrency } from '../utils/formatters';
 
@@ -15,6 +16,8 @@ export interface IPdfService {
   generateReceiptHtml(payment: Payment): string;
   downloadPurchaseOrderPdf(purchaseOrder: PurchaseOrder): Promise<void>;
   generatePurchaseOrderHtml(purchaseOrder: PurchaseOrder): string;
+  downloadPaymentVoucherPdf(voucher: PaymentVoucher, forceDownload?: boolean): Promise<void>;
+  generatePaymentVoucherHtml(voucher: PaymentVoucher): string;
 }
 
 export class PdfService implements IPdfService {
@@ -610,6 +613,259 @@ export class PdfService implements IPdfService {
   async downloadPurchaseOrderPdf(purchaseOrder: PurchaseOrder): Promise<void> {
     const htmlContent = this.generatePurchaseOrderHtml(purchaseOrder);
     this.triggerDownloadOrPrint(htmlContent, `PurchaseOrder_${purchaseOrder.poNumber}.html`);
+  }
+
+  async downloadPaymentVoucherPdf(voucher: PaymentVoucher, forceDownload: boolean = false): Promise<void> {
+    const htmlContent = this.generatePaymentVoucherHtml(voucher);
+    const filename = `${voucher.voucherType === 'PAYMENT' ? 'Payment_Voucher' : 'Receipt_Voucher'}_${voucher.voucherNumber}.html`;
+
+    if (forceDownload) {
+      const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } else {
+      this.triggerDownloadOrPrint(htmlContent, filename);
+    }
+  }
+
+  generatePaymentVoucherHtml(voucher: PaymentVoucher): string {
+    const isPayment = voucher.voucherType === 'PAYMENT';
+    const amountInWords = numberToWordsLKR(voucher.amount);
+    const displayDate = formatDate(voucher.date);
+
+    return `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <title>${isPayment ? 'Payment_Voucher' : 'Receipt_Voucher'}_${voucher.voucherNumber}</title>
+          <style>
+            @page {
+              size: A4 portrait;
+              margin: 15mm;
+            }
+            * { box-sizing: border-box; }
+            body {
+              font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+              color: #0f172a;
+              margin: 0;
+              padding: 24px;
+              background-color: #ffffff;
+              font-size: 12px;
+              line-height: 1.5;
+            }
+            .voucher-card {
+              max-width: 800px;
+              margin: 0 auto;
+              border: 1px solid #cbd5e1;
+              border-radius: 8px;
+              padding: 32px;
+              background: #ffffff;
+            }
+            .header-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; border-bottom: 2px solid #0f172a; padding-bottom: 16px; }
+            .brand-name { font-size: 20px; font-weight: 800; color: #1e3a8a; letter-spacing: -0.5px; }
+            .brand-sub { font-size: 11px; color: #64748b; margin-top: 2px; }
+            .doc-badge {
+              display: inline-block;
+              padding: 4px 12px;
+              font-size: 12px;
+              font-weight: 800;
+              text-transform: uppercase;
+              letter-spacing: 0.5px;
+              border-radius: 4px;
+              background: ${isPayment ? '#fee2e2' : '#dcfce7'};
+              color: ${isPayment ? '#991b1b' : '#166534'};
+              border: 1px solid ${isPayment ? '#f87171' : '#86efac'};
+            }
+            .voucher-no { font-family: monospace; font-size: 16px; font-weight: 700; color: #0f172a; margin-top: 4px; }
+            .grid-table { width: 100%; border-collapse: collapse; margin: 16px 0; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; }
+            .grid-table td { padding: 10px 14px; vertical-align: top; }
+            .field-label { font-size: 10px; font-weight: 700; text-transform: uppercase; color: #64748b; letter-spacing: 0.5px; margin-bottom: 2px; }
+            .field-value { font-size: 13px; font-weight: 700; color: #0f172a; }
+            .field-sub { font-size: 11px; color: #475569; }
+            .narrative-box {
+              background: #ffffff;
+              border: 1px solid #e2e8f0;
+              border-left: 4px solid #1e3a8a;
+              border-radius: 4px;
+              padding: 12px 14px;
+              margin: 16px 0;
+            }
+            .table-ledger { width: 100%; border-collapse: collapse; margin: 18px 0; font-size: 12px; }
+            .table-ledger th {
+              background: #f1f5f9;
+              padding: 8px 10px;
+              border-bottom: 2px solid #cbd5e1;
+              text-align: left;
+              font-size: 10px;
+              font-weight: 700;
+              text-transform: uppercase;
+              color: #475569;
+            }
+            .table-ledger td { padding: 8px 10px; border-bottom: 1px solid #e2e8f0; }
+            .table-ledger .num { text-align: right; font-family: monospace; font-weight: 600; }
+            .total-banner {
+              background: #f8fafc;
+              border: 1px solid #cbd5e1;
+              border-radius: 6px;
+              padding: 14px 18px;
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              margin: 20px 0;
+            }
+            .amount-val { font-size: 22px; font-weight: 800; font-family: monospace; color: #0f172a; }
+            .amount-words { font-size: 12px; font-weight: 600; color: #1e3a8a; margin-top: 4px; font-style: italic; }
+            .sig-grid { width: 100%; border-collapse: collapse; margin-top: 36px; border-top: 1px solid #cbd5e1; padding-top: 14px; }
+            .sig-cell { width: 25%; padding: 12px 8px; vertical-align: top; text-align: center; }
+            .sig-line { height: 44px; border-bottom: 1px dashed #94a3b8; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 4px; }
+            .sig-title { font-size: 11px; font-weight: 700; color: #1e293b; margin-top: 6px; }
+            .sig-subtitle { font-size: 10px; color: #64748b; }
+            .audit-footer { margin-top: 24px; padding-top: 12px; border-top: 1px solid #f1f5f9; font-size: 10px; color: #94a3b8; text-align: center; }
+            @media print {
+              body { padding: 0; background: #ffffff; }
+              .voucher-card { border: none; padding: 0; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="voucher-card">
+            <!-- Header -->
+            <table class="header-table">
+              <tr>
+                <td>
+                  <div class="brand-name">DNS IMPORT & EXPORT (PVT) LTD</div>
+                  <div class="brand-sub">Wholesale Electrical, Power Distribution & Industrial Hardware</div>
+                  <div class="brand-sub">104 Nawam Mawatha, Colombo 02, Sri Lanka • Tel: +94 11 234 5678</div>
+                  <div class="brand-sub">VAT Reg: VAT-102938475 • SVAT: SVAT-009988 • Reg No: PV 0029384</div>
+                </td>
+                <td style="text-align: right; vertical-align: top;">
+                  <span class="doc-badge">${isPayment ? 'OFFICIAL PAYMENT VOUCHER' : 'OFFICIAL RECEIPT VOUCHER'}</span>
+                  <div class="voucher-no">${voucher.voucherNumber}</div>
+                  <div style="font-size: 11px; color: #64748b; margin-top: 4px;">Date: <strong>${displayDate}</strong></div>
+                  <div style="font-size: 11px; color: #64748b;">Status: <strong>${voucher.status}</strong></div>
+                </td>
+              </tr>
+            </table>
+
+            <!-- Meta Grid -->
+            <table class="grid-table">
+              <tr>
+                <td style="width: 50%;">
+                  <div class="field-label">${isPayment ? 'Paid To (Payee / Recipient):' : 'Received From (Payer):'}</div>
+                  <div class="field-value">${voucher.payeeOrPayer}</div>
+                  <div class="field-sub">Category: <strong>${voucher.category.replace(/_/g, ' ')}</strong></div>
+                </td>
+                <td style="width: 50%; text-align: right;">
+                  <div class="field-label">Disbursement Mode & Float:</div>
+                  <div class="field-value">${voucher.paymentMethod || 'CASH'}${voucher.chequeNumber ? ` (Cheque #${voucher.chequeNumber})` : ''}</div>
+                  <div class="field-sub font-mono">Account: ${voucher.cashAccountCode} - ${voucher.cashAccountName}</div>
+                  ${voucher.bankName ? `<div class="field-sub">Bank: ${voucher.bankName}</div>` : ''}
+                </td>
+              </tr>
+            </table>
+
+            <!-- Description / Particulars -->
+            <div class="field-label" style="margin-top: 14px;">Particulars / Narrative of Disbursement:</div>
+            <div class="narrative-box">
+              <div style="font-size: 12px; color: #1e293b; font-weight: 500; line-height: 1.6;">
+                ${voucher.description}
+              </div>
+            </div>
+
+            <!-- Double Entry Table -->
+            <div class="field-label" style="margin-top: 14px;">Statutory Double-Entry General Ledger Impact:</div>
+            <table class="table-ledger">
+              <thead>
+                <tr>
+                  <th style="width: 45%;">Account Title & Code</th>
+                  <th style="width: 25%;">Classification</th>
+                  <th class="num" style="width: 15%;">Debit (LKR)</th>
+                  <th class="num" style="width: 15%;">Credit (LKR)</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>${voucher.offsetAccountCode}</strong> - ${voucher.offsetAccountName}</td>
+                  <td style="color: #64748b;">Expense / Offset Account</td>
+                  <td class="num">${isPayment ? formatCurrency(voucher.amount) : '-'}</td>
+                  <td class="num">${!isPayment ? formatCurrency(voucher.amount) : '-'}</td>
+                </tr>
+                <tr>
+                  <td><strong>${voucher.cashAccountCode}</strong> - ${voucher.cashAccountName}</td>
+                  <td style="color: #64748b;">Cash & Bank Float</td>
+                  <td class="num">${!isPayment ? formatCurrency(voucher.amount) : '-'}</td>
+                  <td class="num">${isPayment ? formatCurrency(voucher.amount) : '-'}</td>
+                </tr>
+                <tr style="font-weight: 700; background: #f8fafc; border-top: 2px solid #cbd5e1;">
+                  <td colspan="2">TOTAL POSTED IMPACT</td>
+                  <td class="num">${formatCurrency(voucher.amount)}</td>
+                  <td class="num">${formatCurrency(voucher.amount)}</td>
+                </tr>
+              </tbody>
+            </table>
+
+            <!-- Total Box -->
+            <div class="total-banner">
+              <div>
+                <div class="field-label">Total Authorized Sum:</div>
+                <div class="amount-words">Sri Lankan Rupees: ${amountInWords}</div>
+              </div>
+              <div class="amount-val">
+                ${formatCurrency(voucher.amount)}
+              </div>
+            </div>
+
+            <!-- 4 Signatures -->
+            <table class="sig-grid">
+              <tr>
+                <td class="sig-cell">
+                  <div class="sig-line">
+                    <span style="font-size: 11px; color: #334155;">${voucher.createdByName || 'Accounts Clerk'}</span>
+                  </div>
+                  <div class="sig-title">Prepared By</div>
+                  <div class="sig-subtitle">Accounts Clerk</div>
+                </td>
+                <td class="sig-cell">
+                  <div class="sig-line">
+                    <span style="font-size: 11px; color: #166534; font-weight: 600;">✓ Verified Internal Audit</span>
+                  </div>
+                  <div class="sig-title">Checked By</div>
+                  <div class="sig-subtitle">Chief Accountant</div>
+                </td>
+                <td class="sig-cell">
+                  <div class="sig-line">
+                    ${voucher.approvedByName ? `
+                      <span style="font-size: 11px; color: #166534; font-weight: 700;">★ ${voucher.approvedByName}</span>
+                    ` : `
+                      <span style="font-size: 10px; color: #d97706; font-style: italic;">Pending MG-02 Approval</span>
+                    `}
+                  </div>
+                  <div class="sig-title">Approved By</div>
+                  <div class="sig-subtitle">Finance Manager / Director</div>
+                </td>
+                <td class="sig-cell">
+                  <div class="sig-line"></div>
+                  <div class="sig-title">Received By</div>
+                  <div class="sig-subtitle">Payee Signature & NIC</div>
+                </td>
+              </tr>
+            </table>
+
+            <!-- Footer -->
+            <div class="audit-footer">
+              DNS ERP Finance Engine • Reference: ${voucher.glJournalId || voucher.voucherNumber} • Timestamp: ${voucher.createdAt} • System Authenticated
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
   }
 
   generatePurchaseOrderHtml(purchaseOrder: PurchaseOrder): string {

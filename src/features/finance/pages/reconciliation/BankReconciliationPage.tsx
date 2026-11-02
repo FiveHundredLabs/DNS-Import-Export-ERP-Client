@@ -1163,8 +1163,8 @@ export function BankReconciliationPage() {
                 </div>
 
                 {/* Transactions Table */}
-                <div className="overflow-x-auto max-h-[520px] overflow-y-auto">
-                  <table className="w-full text-left text-xs">
+                <div className="overflow-x-auto max-h-[520px] overflow-y-auto w-full">
+                  <table className="w-full min-w-[650px] text-left text-xs">
                     <thead className="sticky top-0 bg-slate-50 border-b border-slate-200 text-[10.5px] font-bold uppercase tracking-wider text-slate-600 z-10">
                       <tr>
                         <th className="px-3 py-2 w-10 text-center">Cleared</th>
@@ -1344,8 +1344,8 @@ export function BankReconciliationPage() {
                 </div>
 
                 {/* Statement Table */}
-                <div className="overflow-x-auto max-h-[520px] overflow-y-auto">
-                  <table className="w-full text-left text-xs">
+                <div className="overflow-x-auto max-h-[520px] overflow-y-auto w-full">
+                  <table className="w-full min-w-[650px] text-left text-xs">
                     <thead className="sticky top-0 bg-slate-50 border-b border-slate-200 text-[10.5px] font-bold uppercase tracking-wider text-slate-600 z-10">
                       <tr>
                         <th className="px-3 py-2 w-10 text-center">Cleared</th>
@@ -1733,8 +1733,8 @@ export function BankReconciliationPage() {
           {reconciliationHistory.length === 0 ? (
             <p className="text-slate-500 py-6 text-center">No prior reconciliations found for this account.</p>
           ) : (
-            <div className="overflow-x-auto rounded-md border border-slate-200">
-              <table className="w-full text-left text-xs">
+            <div className="overflow-x-auto rounded-md border border-slate-200 w-full">
+              <table className="w-full min-w-[600px] text-left text-xs">
                 <thead className="bg-slate-50 border-b border-slate-200 text-[10.5px] uppercase font-bold text-slate-600">
                   <tr>
                     <th className="px-3 py-2">Period Cut-off</th>

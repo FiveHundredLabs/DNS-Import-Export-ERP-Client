@@ -336,7 +336,8 @@ export function MobileNav() {
                 <Banknote className="h-4 w-4" />
               </div>
               <div className="min-w-0">
-                <div className="text-xs font-semibold truncate">Wallet</div>
+                <div className="text-xs font-semibold truncate">Cash in Hand (Wallet)</div>
+                <div className="text-[10px] text-slate-500 truncate">Handover to Finance</div>
               </div>
             </button>
           )}

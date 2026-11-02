@@ -18,9 +18,30 @@ import { calculateInvoiceStatus, isPastDueDate } from '../rules/invoiceRules';
 
 export class PaymentService {
   private repo: IPaymentRepository;
-  private customerSvc: CustomerService;
-  private invoiceSvc: InvoiceService;
-  private approvalSvc: ApprovalService;
+  private _customerSvc?: CustomerService;
+  private _invoiceSvc?: InvoiceService;
+  private _approvalSvc?: ApprovalService;
+
+  private get customerSvc(): CustomerService {
+    if (!this._customerSvc) {
+      this._customerSvc = customerService;
+    }
+    return this._customerSvc;
+  }
+
+  private get invoiceSvc(): InvoiceService {
+    if (!this._invoiceSvc) {
+      this._invoiceSvc = invoiceService;
+    }
+    return this._invoiceSvc;
+  }
+
+  private get approvalSvc(): ApprovalService {
+    if (!this._approvalSvc) {
+      this._approvalSvc = approvalService;
+    }
+    return this._approvalSvc;
+  }
 
   constructor(
     repo?: IPaymentRepository,
@@ -29,12 +50,14 @@ export class PaymentService {
     approvalSvc?: ApprovalService
   ) {
     this.repo = repo || new MockPaymentRepository();
-    this.customerSvc = customerSvc || customerService;
-    this.invoiceSvc = invoiceSvc || invoiceService;
-    this.approvalSvc = approvalSvc || approvalService;
+    if (customerSvc) this._customerSvc = customerSvc;
+    if (invoiceSvc) this._invoiceSvc = invoiceSvc;
+    if (approvalSvc) this._approvalSvc = approvalSvc;
 
     // Bidirectional synchronization from central Approvals Engine
-    this.approvalSvc.onAction(async (request, action, actorRole, comment) => {
+    const appSvc = approvalSvc || approvalService;
+    if (appSvc && typeof appSvc.onAction === 'function') {
+      appSvc.onAction(async (request, action, actorRole, comment) => {
       if (request.documentType === 'PAYMENT_RECEIPT' && request.documentId) {
         try {
           const payment = await this.repo.getById(request.documentId);
@@ -61,6 +84,7 @@ export class PaymentService {
       }
     });
   }
+}
 
   async getPayments(filters?: PaymentFilters): Promise<PaginatedResult<Payment>> {
     return this.repo.getAll(filters);
@@ -180,6 +204,7 @@ export class PaymentService {
       amount: data.amount,
       paymentMethod: data.paymentMethod,
       status: 'PENDING_APPROVAL',
+      handoverStatus: data.paymentMethod === 'CASH' ? 'PENDING_HANDOVER' : undefined,
       chequeNumber: data.chequeNumber,
       chequeDate: data.chequeDate,
       bankName: data.bankName,

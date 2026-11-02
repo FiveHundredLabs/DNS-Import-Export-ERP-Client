@@ -67,6 +67,7 @@ export function CustomerPaymentDetailPage() {
   const [bankName, setBankName] = useState('');
   const [notes, setNotes] = useState('');
   const [selectedInvoiceIds, setSelectedInvoiceIds] = useState<string[]>([]);
+  const [partialAmounts, setPartialAmounts] = useState<Record<string, number>>({});
 
   // Dialog & Modal States
   const [confirmModalOpen, setConfirmModalOpen] = useState(false);
@@ -115,8 +116,24 @@ export function CustomerPaymentDetailPage() {
   const handleCollectSingleFull = (inv: Invoice) => {
     const uncoll = Math.max(0, inv.balanceAmount - (inv.collectedAmount || 0));
     setSelectedInvoiceIds([inv.id]);
+    setPartialAmounts((prev) => ({ ...prev, [inv.id]: uncoll }));
     setAmount(uncoll);
     toast.info(`Selected ${inv.invoiceNumber} for full collection (${formatCurrency(uncoll)}).`);
+  };
+
+  // Quick action: Partial payment for single invoice
+  const handleCollectSinglePartial = (inv: Invoice, partialAmount: number) => {
+    const uncoll = Math.max(0, inv.balanceAmount - (inv.collectedAmount || 0));
+    const safePartial = Math.min(uncoll, Math.max(0, partialAmount));
+    setSelectedInvoiceIds([inv.id]);
+    setPartialAmounts((prev) => ({ ...prev, [inv.id]: safePartial }));
+    setAmount(safePartial);
+    toast.info(`Selected ${inv.invoiceNumber} for partial payment (${formatCurrency(safePartial)} of ${formatCurrency(uncoll)}).`);
+  };
+
+  const handlePartialAmountChange = (invId: string, val: number) => {
+    setPartialAmounts((prev) => ({ ...prev, [invId]: val }));
+    setAmount(val);
   };
 
   // Handle invoice multi-selection
@@ -127,8 +144,13 @@ export function CustomerPaymentDetailPage() {
       if (next.length > 0) {
         const selectedSum = invoices
           .filter((i) => next.includes(i.id))
-          .reduce((sum, i) => sum + Math.max(0, i.balanceAmount - (i.collectedAmount || 0)), 0);
+          .reduce((sum, i) => {
+            const uncoll = Math.max(0, i.balanceAmount - (i.collectedAmount || 0));
+            return sum + (partialAmounts[i.id] !== undefined ? partialAmounts[i.id] : uncoll);
+          }, 0);
         setAmount(selectedSum);
+      } else {
+        setAmount(0);
       }
       return next;
     });
@@ -147,6 +169,8 @@ export function CustomerPaymentDetailPage() {
 
   const handleClearAllInvoices = () => {
     setSelectedInvoiceIds([]);
+    setPartialAmounts({});
+    setAmount(0);
   };
 
   // Customer status meta
@@ -154,6 +178,22 @@ export function CustomerPaymentDetailPage() {
     if (!customer) return null;
     return evaluateCustomerPaymentStatus(customer, invoices);
   }, [customer, invoices]);
+
+  // Target invoice meta for partial or single collection
+  const targetedSingleInvoice = useMemo(() => {
+    if (selectedInvoiceIds.length === 1) {
+      const target = invoices.find((i) => i.id === selectedInvoiceIds[0]);
+      if (target) {
+        const uncoll = Math.max(0, target.balanceAmount - (target.collectedAmount || 0));
+        return {
+          invoice: target,
+          invoiceNumber: target.invoiceNumber,
+          balance: uncoll,
+        };
+      }
+    }
+    return null;
+  }, [selectedInvoiceIds, invoices]);
 
   // FIFO Allocation breakdown
   const fifoBreakdown: FifoAllocationBreakdown = useMemo(() => {
@@ -164,14 +204,23 @@ export function CustomerPaymentDetailPage() {
   const handleAmountChange = (newAmount: number | '') => {
     if (newAmount === '') {
       setAmount('');
+      if (targetedSingleInvoice) {
+        setPartialAmounts((prev) => ({ ...prev, [targetedSingleInvoice.invoice.id]: 0 }));
+      }
       return;
     }
-    const maxAllowed = statusMeta?.totalOutstanding || 0;
+    const maxAllowed = targetedSingleInvoice ? targetedSingleInvoice.balance : (statusMeta?.totalOutstanding || 0);
     if (maxAllowed > 0 && newAmount > maxAllowed) {
       setAmount(maxAllowed);
+      if (targetedSingleInvoice) {
+        setPartialAmounts((prev) => ({ ...prev, [targetedSingleInvoice.invoice.id]: maxAllowed }));
+      }
       return;
     }
     setAmount(newAmount);
+    if (targetedSingleInvoice) {
+      setPartialAmounts((prev) => ({ ...prev, [targetedSingleInvoice.invoice.id]: newAmount }));
+    }
   };
 
   // Validation before opening confirmation
@@ -295,16 +344,28 @@ export function CustomerPaymentDetailPage() {
 
   return (
     <div className="w-full pb-28 md:pb-12 space-y-4 sm:space-y-6">
-      {/* 1. Header & Back Navigation */}
-      <div className="flex items-center justify-end sm:justify-between gap-3">
-        <button
-          type="button"
-          onClick={() => navigate(-1)}
-          className="hidden sm:inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 bg-white border border-slate-200 px-3 py-1.5 rounded-xl shadow-2xs active:scale-95 transition-all"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          <span>Back to Customers</span>
-        </button>
+      {/* 1. Header & Navigation Bar */}
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => navigate('/payments/collect')}
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-700 hover:text-slate-900 bg-white border border-slate-200 px-3 py-1.5 rounded-xl shadow-2xs active:scale-95 transition-all"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            <span>Collections</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => navigate('/payments')}
+            className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-200 px-3 py-1.5 rounded-xl shadow-2xs active:scale-95 transition-all"
+            title="View Cash in Hand and Handover to Finance"
+          >
+            <Banknote className="h-4 w-4 text-amber-600" />
+            <span>Cash in Hand (Wallet)</span>
+          </button>
+        </div>
 
         <div className="flex items-center gap-2">
           <a
@@ -462,7 +523,7 @@ export function CustomerPaymentDetailPage() {
         <PaymentCollectionForm
           amount={amount}
           onAmountChange={handleAmountChange}
-          totalOutstanding={statusMeta?.totalOutstanding || 0}
+          totalOutstanding={targetedSingleInvoice ? targetedSingleInvoice.balance : (statusMeta?.totalOutstanding || 0)}
           totalOverdue={statusMeta?.totalOverdue || 0}
           paymentMethod={paymentMethod}
           onPaymentMethodChange={setPaymentMethod}
@@ -474,6 +535,10 @@ export function CustomerPaymentDetailPage() {
           onBankNameChange={setBankName}
           notes={notes}
           onNotesChange={setNotes}
+          targetInvoice={targetedSingleInvoice ? {
+            invoiceNumber: targetedSingleInvoice.invoiceNumber,
+            balance: targetedSingleInvoice.balance,
+          } : null}
         />
 
         {/* Section B: Outstanding Invoices Selector (Invoice-Wise & Complete Collection - BR-06, BR-07) */}
@@ -485,6 +550,9 @@ export function CustomerPaymentDetailPage() {
             onSelectAll={handleSelectAllInvoices}
             onClearAll={handleClearAllInvoices}
             onCollectSingleFull={handleCollectSingleFull}
+            onCollectSinglePartial={handleCollectSinglePartial}
+            partialAmounts={partialAmounts}
+            onPartialAmountChange={handlePartialAmountChange}
           />
         </div>
 
