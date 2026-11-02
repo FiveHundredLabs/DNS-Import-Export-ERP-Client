@@ -25,6 +25,7 @@ import {
   CreditCard,
   Building,
   Store,
+  Banknote,
 } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { cn } from '../../utils/cn';
@@ -150,6 +151,16 @@ export function CustomerPaymentsTab({ onSelectCustomer, className }: CustomerPay
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigate('/payments')}
+            className="h-9 px-3 gap-1.5 text-xs font-bold text-amber-800 bg-amber-50 hover:bg-amber-100 border-amber-200 rounded-xl shadow-2xs"
+            title="View Cash in Hand and Handover to Finance"
+          >
+            <Banknote className="h-3.5 w-3.5 text-amber-600" /> Cash in Hand & Handover
+          </Button>
+
           <Button
             variant="outline"
             size="sm"

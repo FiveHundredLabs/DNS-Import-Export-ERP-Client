@@ -9,6 +9,7 @@ import { Button } from '../../../components/ui/button';
 import { Input } from '../../../components/ui/input';
 import { AmountDisplay } from '../../../components/common/AmountDisplay';
 import { formatCurrency, formatDate, formatDateTime } from '../../../utils/formatters';
+import { evaluate24hHandoverStatus } from '../../../rules/paymentRules';
 import {
   Banknote,
   ShieldCheck,
@@ -29,6 +30,7 @@ interface CashHandoverModalProps {
   onClose: () => void;
   currentUser: User;
   onHandoverSuccess: (handover: CashHandover) => void;
+  initialPaymentId?: string;
 }
 
 export function CashHandoverModal({
@@ -36,6 +38,7 @@ export function CashHandoverModal({
   onClose,
   currentUser,
   onHandoverSuccess,
+  initialPaymentId,
 }: CashHandoverModalProps) {
   const [selectedRecipient, setSelectedRecipient] = useState<User | null>(null);
   const [eligiblePayments, setEligiblePayments] = useState<Payment[]>([]);
@@ -56,8 +59,12 @@ export function CashHandoverModal({
           currentUser.role === 'SALES_REP' ? currentUser.id : undefined
         );
         setEligiblePayments(payments);
-        // Pre-select all unhanded collections by default
-        setSelectedPaymentIds(new Set(payments.map((p) => p.id)));
+        // Pre-select target payment if provided, otherwise select all unhanded collections
+        if (initialPaymentId && payments.some((p) => p.id === initialPaymentId)) {
+          setSelectedPaymentIds(new Set([initialPaymentId]));
+        } else {
+          setSelectedPaymentIds(new Set(payments.map((p) => p.id)));
+        }
       } catch (err: any) {
         console.error('Failed to load eligible collections for handover:', err);
         setError('Failed to load collections. Please try again.');
@@ -281,12 +288,29 @@ export function CashHandoverModal({
                           </span>
                         </div>
 
-                        <div className="flex items-center gap-2 text-[11px] text-slate-500 font-mono">
+                        <div className="flex items-center gap-2 text-[11px] text-slate-500 font-mono flex-wrap">
                           <span>{p.receiptNumber}</span>
                           <span>•</span>
                           <span className="uppercase font-semibold">{p.paymentMethod}</span>
                           <span>•</span>
                           <span>{formatDate(p.collectedAt)}</span>
+                          {(() => {
+                            const h24 = evaluate24hHandoverStatus(p);
+                            if (!h24.isCash) return null;
+                            return (
+                              <span
+                                className={cn(
+                                  'text-[10px] font-bold px-2 py-0.5 rounded-full inline-flex items-center gap-1',
+                                  h24.isOverdue
+                                    ? 'bg-rose-100 text-rose-800 border border-rose-200'
+                                    : 'bg-amber-100 text-amber-800 border border-amber-200'
+                                )}
+                              >
+                                {h24.isOverdue ? <AlertCircle className="h-3 w-3 text-rose-600" /> : <Clock className="h-3 w-3 text-amber-600" />}
+                                <span>{h24.badgeLabel}</span>
+                              </span>
+                            );
+                          })()}
                         </div>
 
                         {/* Invoice breakdown lines */}

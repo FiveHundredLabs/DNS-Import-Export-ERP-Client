@@ -481,8 +481,8 @@ export function SupplierDebitNotesPage() {
                   No damaged items added. Select a GRN with damaged goods or click &ldquo;Add Line Item&rdquo;.
                 </div>
               ) : (
-                <div className="border border-slate-200 rounded-lg overflow-x-auto">
-                  <table className="w-full text-xs">
+                <div className="border border-slate-200 rounded-lg overflow-x-auto w-full">
+                  <table className="w-full min-w-[650px] text-xs">
                     <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200">
                       <tr>
                         <th className="py-2.5 px-3 text-left">Product</th>
@@ -660,8 +660,8 @@ export function SupplierDebitNotesPage() {
             </span>
           </div>
 
-          <div className="border border-slate-200 rounded-lg overflow-x-auto">
-            <table className="w-full text-xs">
+          <div className="border border-slate-200 rounded-lg overflow-x-auto w-full">
+            <table className="w-full min-w-[900px] text-xs">
               <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200">
                 <tr>
                   <th className="py-2.5 px-3 text-left">Debit Note #</th>

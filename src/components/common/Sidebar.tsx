@@ -42,6 +42,7 @@ import {
   CheckSquare,
   Truck,
   Banknote,
+  Wallet,
 } from 'lucide-react';
 import { useEffect } from 'react';
 import { useAuth } from '../../hooks/useAuth';
@@ -116,9 +117,10 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     { id: 'warranty-verification', name: 'Warranty Verification', path: '/warranty/verification', icon: Barcode, category: 'sales' },
   ];
 
-  // 2. Customers, Invoices & POS (hiding legacy /payments from navigation bar)
+  // 2. Customers, Invoices, Cash in Hand & POS
   const customerItems: SidebarItem[] = [
     { id: 'customer-collections', name: 'Customer Collections', path: '/payments/collect', icon: Banknote, category: 'sales', excludedRoles: ['CASHIER', 'SHOWROOM_MANAGER'] },
+    { id: 'cash-in-hand', name: 'Cash in Hand (Wallet)', path: '/payments', icon: Wallet, category: 'sales', excludedRoles: ['CASHIER', 'SHOWROOM_MANAGER', 'STOCK_KEEPER'] },
     { id: 'customers', name: 'Customer Master', path: '/customers', icon: Users2, category: 'customers', excludedRoles: ['CASHIER', 'SHOWROOM_MANAGER'] },
     { id: 'invoices', name: 'Invoices', path: '/invoices', icon: Receipt, category: 'sales', excludedRoles: ['CASHIER', 'SHOWROOM_MANAGER'] },
     { id: 'pos', name: 'Showroom POS', path: '/pos', icon: Store, category: 'sales', excludedRoles: ['STOCK_KEEPER'] },
@@ -147,6 +149,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     { id: 'ap-debit-notes', name: 'Supplier Debit Notes', path: '/finance/ap/debit-notes', icon: Undo2, category: 'finance' },
 
     // 3. Sales & Accounts Receivable (AR)
+    { id: 'ar-handovers', name: 'Sales Rep Cash Handovers', path: '/payments', icon: Banknote, category: 'finance' },
     { id: 'ar-approvals', name: 'Receipt Approval Queue (AR)', path: '/finance/ar/approvals', icon: CheckCircle2, category: 'finance' },
     { id: 'ar-pdc', name: 'PDC Vault (Cheques in Hand)', path: '/finance/ar/pdc-vault', icon: Clock, category: 'finance' },
     { id: 'ar-allocate', name: 'AR Collection Allocation', path: '/finance/ar/allocate', icon: SlidersHorizontal, category: 'finance' },

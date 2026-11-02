@@ -1,9 +1,13 @@
 import * as React from 'react';
 import { cn } from '../../utils/cn';
 
-export const Table = React.forwardRef<HTMLTableElement, React.HTMLAttributes<HTMLTableElement>>(
-  ({ className, ...props }, ref) => (
-    <div className="relative w-full overflow-auto">
+export interface TableProps extends React.HTMLAttributes<HTMLTableElement> {
+  containerClassName?: string;
+}
+
+export const Table = React.forwardRef<HTMLTableElement, TableProps>(
+  ({ className, containerClassName, ...props }, ref) => (
+    <div className={cn('relative w-full min-w-0 overflow-x-auto', containerClassName)}>
       <table ref={ref} className={cn('w-full caption-bottom text-[13.5px] tabular-nums leading-relaxed', className)} {...props} />
     </div>
   )
@@ -42,7 +46,7 @@ export const TableHead = React.forwardRef<HTMLTableCellElement, React.ThHTMLAttr
   ({ className, ...props }, ref) => (
     <th
       ref={ref}
-      className={cn('h-10 px-3.5 text-left align-middle text-[12.5px] font-semibold text-slate-600 tracking-normal normal-case', className)}
+      className={cn('h-10 px-3.5 text-left align-middle text-[12.5px] font-semibold text-slate-600 tracking-normal normal-case whitespace-nowrap', className)}
       {...props}
     />
   )

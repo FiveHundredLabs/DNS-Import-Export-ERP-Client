@@ -517,8 +517,8 @@ export function PurchasingSuppliersPage() {
                     No purchase orders recorded for this supplier yet.
                   </div>
                 ) : (
-                  <div className="border border-slate-200 rounded-lg overflow-hidden">
-                    <table className="w-full text-xs text-left">
+                  <div className="border border-slate-200 rounded-lg overflow-x-auto w-full">
+                    <table className="w-full min-w-[500px] text-xs text-left">
                       <thead className="bg-slate-50 text-[10px] uppercase text-slate-500 border-b border-slate-200">
                         <tr>
                           <th className="py-2 px-3">PO Number</th>

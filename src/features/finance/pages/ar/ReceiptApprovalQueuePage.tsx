@@ -304,8 +304,8 @@ export function ReceiptApprovalQueuePage() {
 
       {/* Standardized Industrial Receipts Table */}
       <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xs">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs tabular-nums">
+        <div className="overflow-x-auto w-full">
+          <table className="w-full min-w-[1000px] text-left text-xs tabular-nums">
             <thead className="bg-slate-50 border-b border-slate-200 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
               <tr>
                 <th className="py-3 px-4">Receipt Number</th>
@@ -768,8 +768,8 @@ export function ReceiptApprovalQueuePage() {
                 </div>
               </div>
 
-              <div className="rounded-xl border border-slate-200 overflow-hidden">
-                <table className="w-full text-left text-xs tabular-nums">
+              <div className="rounded-xl border border-slate-200 overflow-x-auto w-full">
+                <table className="w-full min-w-[550px] text-left text-xs tabular-nums">
                   <thead className="bg-slate-50 border-b border-slate-200 text-[10px] uppercase font-bold text-slate-500">
                     <tr>
                       <th className="py-2.5 px-3">Invoice #</th>
