@@ -199,8 +199,8 @@ export function OpeningBalanceWizard({ accounts, onSave, onClose }: OpeningBalan
 
       {/* Grid of Eligible Accounts */}
       <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-2xs">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
+        <div className="overflow-x-auto w-full">
+          <table className="w-full min-w-[700px] text-left text-xs">
             <thead className="border-b border-slate-200 bg-slate-50 text-[11px] font-bold uppercase tracking-wider text-slate-600">
               <tr>
                 <th className="px-4 py-3">Account Code</th>

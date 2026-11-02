@@ -416,8 +416,8 @@ export function ChartOfAccountsPage() {
               {/* Table Body with Required Columns:
                   Account Code, Name, Account Type, Sub-Type, Current Balance (Read-Only), Status Badge (Active/Inactive), Action Menu */}
               {!isCollapsed && (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs">
+                <div className="overflow-x-auto w-full">
+                  <table className="w-full min-w-[800px] text-left text-xs">
                     <thead className="border-b border-slate-100 bg-slate-50/50 text-[11px] font-bold uppercase tracking-wider text-slate-500">
                       <tr>
                         <th className="px-4 py-2.5 w-28">Account Code</th>

@@ -143,17 +143,17 @@ export function GeneralLedgerPage() {
           </span>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-[13px] tabular-nums">
+        <div className="overflow-x-auto w-full">
+          <table className="w-full min-w-[900px] text-left text-[13px] tabular-nums">
             <thead className="border-b border-slate-200 bg-slate-50 text-[12.5px] font-semibold text-slate-600">
               <tr>
-                <th className="px-4 py-3">Date</th>
-                <th className="px-4 py-3">Voucher #</th>
-                <th className="px-4 py-3">Source</th>
-                <th className="px-4 py-3">Description & Reference</th>
-                <th className="px-4 py-3 text-right">Debit (LKR)</th>
-                <th className="px-4 py-3 text-right">Credit (LKR)</th>
-                <th className="px-4 py-3 text-right">Running Balance</th>
+                <th className="px-4 py-3 whitespace-nowrap">Date</th>
+                <th className="px-4 py-3 whitespace-nowrap">Voucher #</th>
+                <th className="px-4 py-3 whitespace-nowrap">Source</th>
+                <th className="px-4 py-3 whitespace-nowrap">Description & Reference</th>
+                <th className="px-4 py-3 text-right whitespace-nowrap">Debit (LKR)</th>
+                <th className="px-4 py-3 text-right whitespace-nowrap">Credit (LKR)</th>
+                <th className="px-4 py-3 text-right whitespace-nowrap">Running Balance</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-slate-700">

@@ -2502,8 +2502,8 @@ export function GRNCreateEditPage() {
             </div>
 
             {/* Items Summary Table */}
-            <div className="border rounded-xl overflow-hidden text-xs">
-              <table className="w-full">
+            <div className="border rounded-xl overflow-x-auto w-full text-xs">
+              <table className="w-full min-w-[650px]">
                 <thead className="bg-slate-50 border-b text-[10.5px] uppercase font-semibold text-slate-600">
                   <tr>
                     <th className="py-2.5 px-3 text-left">Product</th>

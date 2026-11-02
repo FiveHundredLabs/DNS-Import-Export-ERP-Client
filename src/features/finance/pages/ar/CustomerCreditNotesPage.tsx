@@ -525,8 +525,8 @@ export function CustomerCreditNotesPage() {
 
           {/* Registry Table */}
           <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-2xs">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
+            <div className="overflow-x-auto w-full">
+              <table className="w-full min-w-[950px] text-left text-xs">
                 <thead className="border-b border-slate-200 bg-slate-50 text-[11px] font-bold uppercase tracking-wider text-slate-600">
                   <tr>
                     <th className="px-4 py-3">Credit Note #</th>
@@ -672,8 +672,8 @@ export function CustomerCreditNotesPage() {
             {/* Line Items List */}
             <div className="space-y-2">
               <span className="font-bold text-slate-800 block">Returned Line Items:</span>
-              <div className="border border-slate-200 rounded-md overflow-hidden bg-white">
-                <table className="w-full text-[11px]">
+              <div className="border border-slate-200 rounded-md overflow-x-auto w-full bg-white">
+                <table className="w-full min-w-[500px] text-[11px]">
                   <thead className="bg-slate-50 text-slate-600 border-b border-slate-200">
                     <tr>
                       <th className="p-2 text-left">Product</th>
@@ -941,8 +941,8 @@ export function CustomerCreditNotesPage() {
                 </div>
               </div>
 
-              <div className="border border-slate-200 rounded-lg overflow-hidden bg-white">
-                <table className="w-full text-xs">
+              <div className="border border-slate-200 rounded-lg overflow-x-auto w-full bg-white">
+                <table className="w-full min-w-[650px] text-xs">
                   <thead className="bg-slate-50 border-b border-slate-200 text-[11px] text-slate-600">
                     <tr>
                       <th className="p-2.5 text-left">Product Selection / Description</th>

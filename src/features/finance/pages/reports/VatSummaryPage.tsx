@@ -323,8 +323,8 @@ export function VatSummaryPage() {
             </span>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
+          <div className="overflow-x-auto w-full">
+            <table className="w-full min-w-[850px] text-left text-xs">
               <thead className="border-b border-slate-200 bg-slate-100/70 text-slate-600 font-bold uppercase tracking-wider">
                 <tr>
                   <th className="px-3 py-3">Date</th>
@@ -415,8 +415,8 @@ export function VatSummaryPage() {
             </span>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
+          <div className="overflow-x-auto w-full">
+            <table className="w-full min-w-[850px] text-left text-xs">
               <thead className="border-b border-slate-200 bg-slate-100/70 text-slate-600 font-bold uppercase tracking-wider">
                 <tr>
                   <th className="px-3 py-3">Date</th>
