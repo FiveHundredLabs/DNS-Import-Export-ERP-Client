@@ -4,7 +4,10 @@ import { Invoice } from '../types/invoice';
 import { Payment } from '../types/payment';
 import { POSTransaction } from '../types/pos';
 import { PurchaseOrder } from '../types/purchasing';
-import { pdfService } from './PdfService';
+import { SalesOrder } from '../types/order';
+import { GRN } from '../types/inventory';
+import { DeliveryNote } from '../types/deliveryNote';
+import { pdfService, CostedPriceItemInfo } from './PdfService';
 
 export interface ThermalReceiptData {
   title: string;
@@ -40,6 +43,9 @@ export interface IPrinterService {
   printInvoice(invoice: Invoice, format?: 'STANDARD' | 'IRD_TAX'): Promise<boolean>;
   printPaymentReceipt(payment: Payment, remainingBalance?: number, paperWidth?: '80mm' | '58mm'): Promise<boolean>;
   printPurchaseOrder(purchaseOrder: PurchaseOrder): Promise<boolean>;
+  printSalesOrder(order: SalesOrder): Promise<boolean>;
+  printGRN(grn: GRN, pricingData?: CostedPriceItemInfo[]): Promise<boolean>;
+  printDeliveryNote(note: DeliveryNote): Promise<boolean>;
   printBarcodeStickers(stickers: BarcodeStickerData[]): Promise<boolean>;
   isPrinterConnected(): Promise<boolean>;
 }
@@ -987,6 +993,36 @@ export class ThermalPrinterService implements IPrinterService {
       if (!printWindow || !printWindow.document) return false;
       printWindow.document.write(html);
       printWindow.document.close();
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  async printSalesOrder(order: SalesOrder): Promise<boolean> {
+    if (typeof window === 'undefined') return false;
+    try {
+      await pdfService.printSalesOrder(order);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  async printGRN(grn: GRN, pricingData?: CostedPriceItemInfo[]): Promise<boolean> {
+    if (typeof window === 'undefined') return false;
+    try {
+      await pdfService.printGrn(grn, pricingData);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  async printDeliveryNote(note: DeliveryNote): Promise<boolean> {
+    if (typeof window === 'undefined') return false;
+    try {
+      await pdfService.printDeliveryNote(note);
       return true;
     } catch {
       return false;

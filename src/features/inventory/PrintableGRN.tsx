@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -9,9 +9,11 @@ import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
 import { GRN } from '../../types/inventory';
 import { formatCurrency, formatDate } from '../../utils/formatters';
+import { pdfService, CostedPriceItemInfo } from '../../services/PdfService';
 import { BarcodeVisual } from '../../components/common/BarcodeVisual';
 import {
   Printer,
+  Download,
   X,
   FileText,
   Building2,
@@ -22,11 +24,7 @@ import {
   PackageCheck,
 } from 'lucide-react';
 
-export interface CostedPriceItemInfo {
-  productId: string;
-  unitCost: number;
-  sellingPrice: number;
-}
+export type { CostedPriceItemInfo };
 
 interface PrintableGRNProps {
   grn: GRN;
@@ -37,9 +35,30 @@ interface PrintableGRNProps {
 
 export function PrintableGRN({ grn, open, onOpenChange, pricingData }: PrintableGRNProps) {
   const printContentRef = useRef<HTMLDivElement>(null);
+  const [isPrinting, setIsPrinting] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
 
-  const handlePrint = () => {
-    window.print();
+  const handlePrint = async () => {
+    try {
+      setIsPrinting(true);
+      await pdfService.printGrn(grn, pricingData);
+    } catch (e) {
+      console.error('Failed to print GRN:', e);
+      window.print();
+    } finally {
+      setIsPrinting(false);
+    }
+  };
+
+  const handleDownload = async () => {
+    try {
+      setIsDownloading(true);
+      await pdfService.downloadGrnPdf(grn, pricingData);
+    } catch (e) {
+      console.error('Failed to download GRN:', e);
+    } finally {
+      setIsDownloading(false);
+    }
   };
 
   const totalExpected = grn.items?.reduce((sum, i) => sum + (i.expectedQuantity || 0), 0) || 0;
@@ -51,7 +70,8 @@ export function PrintableGRN({ grn, open, onOpenChange, pricingData }: Printable
     grn.totalValue ||
     grn.items?.reduce((sum, i) => {
       const net = Math.max(0, i.receivedQuantity - (i.damagedQuantity || 0));
-      const cost = i.unitCostSnapshot || 0;
+      const pricing = pricingData?.find((p) => p.productId === i.productId);
+      const cost = pricing ? pricing.unitCost : (i.unitCostSnapshot || 0);
       return sum + net * cost;
     }, 0) ||
     0;
@@ -68,9 +88,8 @@ export function PrintableGRN({ grn, open, onOpenChange, pricingData }: Printable
       size="5xl"
       maxWidth="max-w-5xl"
       className="p-0 overflow-hidden max-w-5xl w-full"
-      hideCloseButton
     >
-      <div className="flex flex-col max-h-[92vh] bg-slate-100">
+      <div className="flex flex-col max-h-[94vh] bg-slate-100">
         {/* Printable CSS Injection */}
         <style>{`
           @media print {
@@ -108,7 +127,7 @@ export function PrintableGRN({ grn, open, onOpenChange, pricingData }: Printable
         `}</style>
 
         {/* ── Modal Header (Screen Only) ── */}
-        <div className="p-3 sm:p-4 border-b border-slate-200 bg-white flex flex-row items-center justify-between shrink-0 shadow-xs z-10 gap-2">
+        <div className="p-3 sm:p-4 border-b border-slate-200 bg-white flex flex-row items-center justify-between shrink-0 shadow-xs z-10 gap-2 print:hidden">
           <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
             <div className="h-8 w-8 sm:h-9 sm:w-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
               <FileText className="h-4 w-4 sm:h-5 sm:w-5" />
@@ -117,9 +136,14 @@ export function PrintableGRN({ grn, open, onOpenChange, pricingData }: Printable
               <h2 className="text-xs sm:text-sm md:text-base font-bold text-slate-900 leading-tight truncate">
                 Official Goods Received Note — Print Preview
               </h2>
-              <p className="text-[10px] sm:text-[11px] text-slate-500 mt-0.5 hidden sm:block truncate">
-                Standard corporate A4 intake voucher. Verify physical verification counts before submitting.
-              </p>
+              <div className="flex items-center gap-2 mt-0.5">
+                <span className="font-mono text-xs font-semibold text-slate-500">
+                  Ref: {grn.grnNumber || grn.id}
+                </span>
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 font-semibold border border-slate-200">
+                  {grn.status}
+                </span>
+              </div>
             </div>
           </div>
 
@@ -128,29 +152,41 @@ export function PrintableGRN({ grn, open, onOpenChange, pricingData }: Printable
               type="button"
               variant="outline"
               size="sm"
-              onClick={() => onOpenChange(false)}
-              className="text-xs h-8 text-slate-600 px-2.5 sm:px-3"
+              onClick={handleDownload}
+              disabled={isDownloading}
+              className="gap-1.5 text-xs h-8 text-slate-700 border-slate-300 hover:bg-slate-50 font-medium px-2.5 sm:px-3"
             >
-              Close
+              <Download className="h-3.5 w-3.5 text-slate-500" />
+              <span className="hidden sm:inline">{isDownloading ? 'Generating...' : 'Download PDF'}</span>
             </Button>
             <Button
               type="button"
               size="sm"
               onClick={handlePrint}
+              disabled={isPrinting}
               className="gap-1.5 text-xs h-8 bg-primary hover:bg-primary-hover text-white font-bold shadow-xs px-3 sm:px-3.5"
             >
               <Printer className="h-3.5 w-3.5" />
-              <span>Print (A4)</span>
+              <span>{isPrinting ? 'Printing...' : 'Print (A4)'}</span>
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => onOpenChange(false)}
+              className="text-xs h-8 w-8 p-0 text-slate-500 hover:text-slate-900"
+            >
+              <X className="h-4 w-4" />
             </Button>
           </div>
         </div>
 
         {/* ── Scrollable Document Canvas ── */}
-        <div className="flex-1 overflow-y-auto p-2 sm:p-4 md:p-6 flex justify-center [scrollbar-width:thin]">
+        <div className="flex-1 overflow-y-auto p-2 sm:p-4 md:p-6 flex justify-center [scrollbar-width:thin] print:p-0 print:bg-white">
           <div
             id="printable-grn-document"
             ref={printContentRef}
-            className="w-full max-w-[210mm] bg-white border border-slate-200 shadow-xl rounded-xl p-4 sm:p-6 md:p-8 print:p-8 text-slate-800 font-sans min-h-[297mm] flex flex-col justify-between"
+            className="w-full max-w-[210mm] bg-white border border-slate-200 shadow-xl rounded-xl p-4 sm:p-6 md:p-8 print:p-8 text-slate-800 font-sans min-h-[297mm] flex flex-col justify-between print:shadow-none print:border-none print:m-0"
           >
             <div>
               {/* ── 1. CORPORATE HEADER ── */}
@@ -291,38 +327,71 @@ export function PrintableGRN({ grn, open, onOpenChange, pricingData }: Printable
                 <div className="border border-slate-300 rounded overflow-x-auto print:overflow-visible [scrollbar-width:thin]">
                   <table className="w-full min-w-[680px] print:min-w-0 border-collapse text-xs">
                     <thead>
-                      <tr className="bg-slate-100 border-b border-slate-300 text-slate-700 font-bold">
-                        <th className="py-2.5 px-2 border-r border-slate-300 text-center w-8">#</th>
-                        <th className="py-2.5 px-3 border-r border-slate-300 text-left">
-                          Item SKU &amp; Description
-                        </th>
-                        <th className="py-2.5 px-2 border-r border-slate-300 text-center w-14">UOM</th>
-                        <th className="py-2.5 px-2 border-r border-slate-300 text-right w-20">
-                          PO Expected
-                        </th>
-                        <th className="py-2.5 px-2 border-r border-slate-300 text-right w-20">
-                          Received
-                        </th>
-                        <th className="py-2.5 px-2 border-r border-slate-300 text-right w-20 text-rose-700">
-                          Damaged
-                        </th>
-                        <th className="py-2.5 px-2.5 border-r border-slate-300 text-right w-24 text-emerald-800 bg-emerald-50/70 font-black">
-                          Net Accepted
-                        </th>
-                        <th className="py-2.5 px-3 border-r border-slate-300 text-right w-24">
-                          Unit Cost
-                        </th>
-                        <th className="py-2.5 px-3 text-right w-28">
-                          Total (LKR)
-                        </th>
-                      </tr>
+                      {pricingData ? (
+                        <tr className="bg-slate-100 border-b border-slate-300 text-slate-700 font-bold">
+                          <th className="py-2.5 px-2 border-r border-slate-300 text-center w-8">#</th>
+                          <th className="py-2.5 px-3 border-r border-slate-300 text-left">Product Name</th>
+                          <th className="py-2.5 px-3 border-r border-slate-300 text-right w-24">Quantity</th>
+                          <th className="py-2.5 px-3 border-r border-slate-300 text-right w-32">Unit Cost</th>
+                          <th className="py-2.5 px-3 text-right w-32 text-emerald-800">Selling Price</th>
+                        </tr>
+                      ) : (
+                        <tr className="bg-slate-100 border-b border-slate-300 text-slate-700 font-bold">
+                          <th className="py-2.5 px-2 border-r border-slate-300 text-center w-8">#</th>
+                          <th className="py-2.5 px-3 border-r border-slate-300 text-left">
+                            Item SKU &amp; Description
+                          </th>
+                          <th className="py-2.5 px-2 border-r border-slate-300 text-center w-14">UOM</th>
+                          <th className="py-2.5 px-2 border-r border-slate-300 text-right w-20">
+                            PO Expected
+                          </th>
+                          <th className="py-2.5 px-2 border-r border-slate-300 text-right w-20">
+                            Received
+                          </th>
+                          <th className="py-2.5 px-2 border-r border-slate-300 text-right w-20 text-rose-700">
+                            Damaged
+                          </th>
+                          <th className="py-2.5 px-2.5 border-r border-slate-300 text-right w-24 text-emerald-800 bg-emerald-50/70 font-black">
+                            Net Accepted
+                          </th>
+                          <th className="py-2.5 px-3 border-r border-slate-300 text-right w-24">
+                            Unit Cost
+                          </th>
+                          <th className="py-2.5 px-3 text-right w-28">
+                            Total (LKR)
+                          </th>
+                        </tr>
+                      )}
                     </thead>
                     <tbody className="divide-y divide-slate-200">
                       {grn.items?.map((item, idx) => {
                         const netQty = Math.max(0, item.receivedQuantity - (item.damagedQuantity || 0));
                         const pricing = pricingData?.find((p) => p.productId === item.productId);
                         const unitCost = pricing ? pricing.unitCost : (item.unitCostSnapshot || 0);
+                        const sellingPrice = pricing ? pricing.sellingPrice : 0;
                         const lineTotal = netQty * unitCost;
+
+                        if (pricingData) {
+                          return (
+                            <tr key={idx} className="hover:bg-slate-50/50">
+                              <td className="py-2 px-2 border-r border-slate-200 text-center font-mono text-slate-400">
+                                {idx + 1}
+                              </td>
+                              <td className="py-2 px-3 border-r border-slate-200 font-semibold text-slate-900">
+                                {item.productNameSnapshot || item.productId}
+                              </td>
+                              <td className="py-2 px-3 border-r border-slate-200 text-right font-mono font-bold text-primary tabular-nums">
+                                {item.receivedQuantity} {item.uom || 'units'}
+                              </td>
+                              <td className="py-2 px-3 border-r border-slate-200 text-right font-mono tabular-nums text-slate-700">
+                                {formatCurrency(unitCost)}
+                              </td>
+                              <td className="py-2 px-3 text-right font-mono font-bold text-emerald-700 tabular-nums bg-emerald-50/40">
+                                {formatCurrency(sellingPrice)}
+                              </td>
+                            </tr>
+                          );
+                        }
 
                         return (
                           <tr key={idx} className="hover:bg-slate-50/50">
@@ -364,21 +433,25 @@ export function PrintableGRN({ grn, open, onOpenChange, pricingData }: Printable
                     </tbody>
                     <tfoot>
                       <tr className="bg-slate-100/90 border-t-2 border-slate-400 font-bold">
-                        <td colSpan={3} className="py-2.5 px-3 border-r border-slate-300 uppercase text-slate-700 text-[11px]">
+                        <td colSpan={pricingData ? 2 : 3} className="py-2.5 px-3 border-r border-slate-300 uppercase text-slate-700 text-[11px]">
                           Intake Summary Totals:
                         </td>
-                        <td className="py-2.5 px-2 border-r border-slate-300 text-right tabular-nums text-slate-700">
-                          {totalExpected}
-                        </td>
-                        <td className="py-2.5 px-2 border-r border-slate-300 text-right tabular-nums text-slate-900 font-bold">
-                          {totalReceived}
-                        </td>
-                        <td className="py-2.5 px-2 border-r border-slate-300 text-right tabular-nums text-rose-700 font-bold">
-                          {totalDamaged}
-                        </td>
-                        <td className="py-2.5 px-2.5 border-r border-slate-300 text-right tabular-nums text-emerald-800 font-black bg-emerald-100/60">
-                          {totalAccepted}
-                        </td>
+                        {!pricingData && (
+                          <>
+                            <td className="py-2.5 px-2 border-r border-slate-300 text-right tabular-nums text-slate-700">
+                              {totalExpected}
+                            </td>
+                            <td className="py-2.5 px-2 border-r border-slate-300 text-right tabular-nums text-slate-900 font-bold">
+                              {totalReceived}
+                            </td>
+                            <td className="py-2.5 px-2 border-r border-slate-300 text-right tabular-nums text-rose-700 font-bold">
+                              {totalDamaged}
+                            </td>
+                            <td className="py-2.5 px-2.5 border-r border-slate-300 text-right tabular-nums text-emerald-800 font-black bg-emerald-100/60">
+                              {totalAccepted}
+                            </td>
+                          </>
+                        )}
                         <td className="py-2.5 px-3 border-r border-slate-300 text-right text-[10px] text-slate-500 uppercase">
                           Grand Total:
                         </td>
@@ -480,7 +553,7 @@ export function PrintableGRN({ grn, open, onOpenChange, pricingData }: Printable
                   </div>
                   <div>
                     <div className="text-[11px] font-bold text-slate-900 truncate">
-                      Manager: {grn.approvedById || (grn.status === 'APPROVED' ? 'Operations Manager' : 'Pending Sign-Off')}
+                      Stock Manager: {grn.approvedById || (grn.status === 'APPROVED' ? 'Operations Manager' : 'Pending Sign-off')}
                     </div>
                     <div className="text-[10px] text-slate-500">Date: ____/____/2026</div>
                   </div>

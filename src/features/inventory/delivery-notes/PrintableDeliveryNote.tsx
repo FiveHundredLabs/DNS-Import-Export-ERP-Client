@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { DeliveryNote } from '../../../types/deliveryNote';
 import { Button } from '../../../components/ui/button';
-import { Printer, X, CheckCircle, AlertTriangle, Truck, ShieldCheck } from 'lucide-react';
+import { pdfService } from '../../../services/PdfService';
+import { Printer, Download, X, CheckCircle, AlertTriangle, Truck, ShieldCheck, Check } from 'lucide-react';
 
 interface PrintableDeliveryNoteProps {
   note: DeliveryNote;
@@ -9,85 +10,128 @@ interface PrintableDeliveryNoteProps {
 }
 
 export const PrintableDeliveryNote: React.FC<PrintableDeliveryNoteProps> = ({ note, onClose }) => {
-  const handlePrint = () => {
-    window.print();
+  const [isPrinting, setIsPrinting] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+
+  const handlePrint = async () => {
+    try {
+      setIsPrinting(true);
+      await pdfService.printDeliveryNote(note);
+    } catch (e) {
+      console.error('Failed to print delivery note:', e);
+      window.print();
+    } finally {
+      setIsPrinting(false);
+    }
+  };
+
+  const handleDownload = async () => {
+    try {
+      setIsDownloading(true);
+      await pdfService.downloadDeliveryNotePdf(note);
+    } catch (e) {
+      console.error('Failed to download delivery note:', e);
+    } finally {
+      setIsDownloading(false);
+    }
   };
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 print:p-0 print:bg-white print:static print:inset-auto">
-      <div className="bg-white rounded-xl shadow-2xl border border-slate-200 w-full max-w-4xl max-h-[92vh] overflow-y-auto flex flex-col print:shadow-none print:border-none print:max-h-none print:w-full print:rounded-none">
+      <div className="bg-white rounded-xl shadow-2xl border border-slate-200 w-full max-w-5xl max-h-[94vh] flex flex-col overflow-hidden print:shadow-none print:border-none print:max-h-none print:w-full print:rounded-none">
         {/* Modal Action Bar (Hidden in Print) */}
-        <div className="flex items-center justify-between px-6 py-3.5 border-b border-slate-200 bg-slate-50 print:hidden sticky top-0 z-10">
-          <div className="flex items-center gap-2">
-            <Truck className="h-5 w-5 text-primary" />
-            <span className="font-bold text-sm text-slate-800">
-              Official Warehouse Delivery Note & Customer Acceptance Slip
-            </span>
-            <span className="text-xs px-2 py-0.5 rounded-full bg-slate-200 text-slate-700 font-mono">
-              {note.deliveryNoteNumber}
-            </span>
+        <div className="flex items-center justify-between px-6 py-3.5 border-b border-slate-200 bg-white print:hidden shrink-0">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 rounded-lg bg-primary/10 text-primary">
+              <Truck className="h-5 w-5" />
+            </div>
+            <div>
+              <div className="font-bold text-sm text-slate-900 leading-tight">
+                Official Warehouse Delivery Note & Customer Acceptance Slip
+              </div>
+              <div className="flex items-center gap-2 mt-0.5">
+                <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 font-mono font-semibold border border-slate-200">
+                  {note.deliveryNoteNumber}
+                </span>
+                <span className="text-[10px] text-slate-500">
+                  Dispatch Date: {note.dispatchDate}
+                </span>
+              </div>
+            </div>
           </div>
 
           <div className="flex items-center gap-2">
             <Button
+              variant="outline"
+              size="sm"
+              onClick={handleDownload}
+              disabled={isDownloading}
+              className="gap-1.5 text-xs text-slate-700 border-slate-300 hover:bg-slate-50 font-medium"
+            >
+              <Download className="h-3.5 w-3.5 text-slate-500" />
+              {isDownloading ? 'Generating...' : 'Download PDF'}
+            </Button>
+            <Button
               size="sm"
               onClick={handlePrint}
+              disabled={isPrinting}
               className="gap-1.5 text-xs font-semibold bg-primary hover:bg-primary-hover text-white shadow-xs"
             >
               <Printer className="h-4 w-4" />
-              Print Delivery Note (A4)
+              {isPrinting ? 'Printing...' : 'Print Delivery Note (A4)'}
             </Button>
             {onClose && (
-              <Button size="sm" variant="ghost" onClick={onClose} className="h-8 w-8 p-0 text-slate-500 hover:text-slate-900">
+              <Button size="sm" variant="ghost" onClick={onClose} className="h-8 w-8 p-0 text-slate-500 hover:text-slate-900 ml-1">
                 <X className="h-4 w-4" />
               </Button>
             )}
           </div>
         </div>
 
-        {/* ── Printable A4 Sheet Body ── */}
-        <div className="p-8 text-slate-900 font-sans print:p-6" id="delivery-note-print-area">
-          {/* Header & Logo */}
-          <div className="flex justify-between items-start border-b-2 border-slate-900 pb-5 mb-6">
-            <div>
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-slate-950 flex items-center justify-center text-white font-black text-sm">
-                  DNS
+        {/* ── Scrollable Document Preview Container ── */}
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-slate-100/90 print:p-0 print:bg-white">
+          <div className="bg-white border border-slate-200 shadow-xl rounded-md p-8 sm:p-10 mx-auto max-w-[210mm] text-slate-900 font-sans print:shadow-none print:border-none print:p-0 print:m-0" id="delivery-note-print-area">
+            {/* Header & Logo */}
+            <div className="flex justify-between items-start border-b-2 border-slate-900 pb-5 mb-6">
+              <div>
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-slate-950 flex items-center justify-center text-white font-black text-sm">
+                    DNS
+                  </div>
+                  <div>
+                    <h1 className="text-xl font-black tracking-tight text-slate-950 leading-tight">
+                      DNS ENGINEERING & ELECTRICALS (PVT) LTD
+                    </h1>
+                    <p className="text-[11px] text-slate-500 font-medium">
+                      Industrial Switchgear, Distribution Boards & Automation Importers
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h1 className="text-xl font-black tracking-tight text-slate-950 leading-tight">
-                    DNS ENGINEERING & ELECTRICALS (PVT) LTD
-                  </h1>
-                  <p className="text-[11px] text-slate-500 font-medium">
-                    Industrial Switchgear, Distribution Boards & Automation Importers
-                  </p>
-                </div>
+                <p className="text-[10px] text-slate-600 mt-2 max-w-sm leading-relaxed">
+                  Central Logistics Warehouse • Bay 4, Industrial Zone, Orugodawatta, Sri Lanka
+                  <br />
+                  Hotline: +94 11 234 5600 | Dispatch Desk: +94 11 234 5609 | Email: dispatch@dns.lk
+                </p>
               </div>
-              <p className="text-[10px] text-slate-600 mt-2 max-w-sm leading-relaxed">
-                Central Logistics Warehouse • Bay 4, Industrial Zone, Orugodawatta, Sri Lanka
-                <br />
-                Hotline: +94 11 234 5600 | Dispatch Desk: +94 11 234 5609 | Email: dispatch@dns.lk
-              </p>
-            </div>
 
-            <div className="text-right">
-              <div className="inline-block bg-slate-900 text-white font-extrabold text-sm px-3.5 py-1 uppercase tracking-wider rounded-xs mb-2">
-                DELIVERY NOTE / DISPATCH RECEIPT
-              </div>
-              <div className="text-lg font-mono font-bold text-slate-900">{note.deliveryNoteNumber}</div>
-              <div className="text-xs text-slate-500 mt-0.5">
-                Dispatch Date: <span className="font-semibold text-slate-800">{note.dispatchDate}</span>
-              </div>
-              <div className="text-xs text-slate-500">
-                Invoice Ref: <span className="font-mono font-semibold text-slate-800">{note.invoiceNumber}</span>
-              </div>
-              {note.orderNumber && (
-                <div className="text-xs text-slate-500">
-                  Sales Order: <span className="font-mono font-semibold text-slate-800">{note.orderNumber}</span>
+              <div className="text-right">
+                <div className="inline-block bg-slate-900 text-white font-extrabold text-sm px-3.5 py-1 uppercase tracking-wider rounded-xs mb-2">
+                  DELIVERY NOTE / DISPATCH RECEIPT
                 </div>
-              )}
+                <div className="text-lg font-mono font-bold text-slate-900">{note.deliveryNoteNumber}</div>
+                <div className="text-xs text-slate-500 mt-0.5">
+                  Dispatch Date: <span className="font-semibold text-slate-800">{note.dispatchDate}</span>
+                </div>
+                <div className="text-xs text-slate-500">
+                  Invoice Ref: <span className="font-mono font-semibold text-slate-800">{note.invoiceNumber || '—'}</span>
+                </div>
+                {note.orderNumber && (
+                  <div className="text-xs text-slate-500">
+                    Sales Order: <span className="font-mono font-semibold text-slate-800">{note.orderNumber}</span>
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
 
           {/* Customer & Transport Info Grid */}
           <div className="grid grid-cols-2 gap-6 mb-6">
@@ -316,5 +360,6 @@ export const PrintableDeliveryNote: React.FC<PrintableDeliveryNoteProps> = ({ no
         </div>
       </div>
     </div>
+  </div>
   );
 };
