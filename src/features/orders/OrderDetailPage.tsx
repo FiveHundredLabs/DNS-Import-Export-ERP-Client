@@ -11,6 +11,7 @@ import { normalizeCustomerLoyaltyLevel } from '../../rules/discountRules';
 import { OrderStatusBadge } from './OrderStatusBadge';
 import { ApprovalTimeline } from '../../components/approval/ApprovalTimeline';
 import { OrderActivityTimeline } from './OrderActivityTimeline';
+import { PrintableSalesOrder } from './PrintableSalesOrder';
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
@@ -66,6 +67,9 @@ export function OrderDetailPage() {
   const [orderInvoices, setOrderInvoices] = useState<Invoice[]>([]);
   const [invoicingProgress, setInvoicingProgress] = useState<any>(null);
   const [customer, setCustomer] = useState<Customer | null>(null);
+
+  // Print Preview Dialog state
+  const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
 
   // Close Order Dialog state (BR-05)
   const [isCloseOrderOpen, setIsCloseOrderOpen] = useState(false);
@@ -170,7 +174,7 @@ export function OrderDetailPage() {
   };
 
   const handlePrint = () => {
-    window.print();
+    setIsPrintModalOpen(true);
   };
 
   const handleConfirmClose = async () => {
@@ -305,7 +309,7 @@ export function OrderDetailPage() {
   return (
     <div className="space-y-6 w-full pb-12">
       {/* Top Navigation & Toolbar */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 print:hidden">
         <button
           onClick={() => navigate('/orders')}
           className="hidden sm:flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-800"
@@ -994,7 +998,7 @@ export function OrderDetailPage() {
         </div>
 
         {/* Approval Box & Order Activity Timeline */}
-        <div className="border-t border-slate-200 bg-slate-50/50 p-4 sm:p-6">
+        <div className="border-t border-slate-200 bg-slate-50/50 p-4 sm:p-6 print:hidden">
           <div className="flex items-center justify-between mb-4">
             <div>
               <h4 className="text-sm font-bold text-slate-800 flex items-center gap-1.5">
@@ -1216,6 +1220,15 @@ export function OrderDetailPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Official Sales Order Print Preview Modal */}
+      {order && (
+        <PrintableSalesOrder
+          order={order}
+          open={isPrintModalOpen}
+          onOpenChange={setIsPrintModalOpen}
+        />
+      )}
     </div>
   );
 }

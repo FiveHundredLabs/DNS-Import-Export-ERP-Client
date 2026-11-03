@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -9,13 +9,10 @@ import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
 import { GRN } from '../../types/inventory';
 import { formatCurrency, formatDate } from '../../utils/formatters';
-import { Printer, Download, X, Building2, CheckCircle2, ShieldCheck, FileText } from 'lucide-react';
+import { pdfService, CostedPriceItemInfo } from '../../services/PdfService';
+import { Printer, Download, X, Building2, CheckCircle2, ShieldCheck, FileText, Check } from 'lucide-react';
 
-export interface CostedPriceItemInfo {
-  productId: string;
-  unitCost: number;
-  sellingPrice: number;
-}
+export type { CostedPriceItemInfo };
 
 interface PrintableGRNProps {
   grn: GRN;
@@ -26,9 +23,30 @@ interface PrintableGRNProps {
 
 export function PrintableGRN({ grn, open, onOpenChange, pricingData }: PrintableGRNProps) {
   const printContentRef = useRef<HTMLDivElement>(null);
+  const [isPrinting, setIsPrinting] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
 
-  const handlePrint = () => {
-    window.print();
+  const handlePrint = async () => {
+    try {
+      setIsPrinting(true);
+      await pdfService.printGrn(grn, pricingData);
+    } catch (e) {
+      console.error('Failed to print GRN:', e);
+      window.print();
+    } finally {
+      setIsPrinting(false);
+    }
+  };
+
+  const handleDownload = async () => {
+    try {
+      setIsDownloading(true);
+      await pdfService.downloadGrnPdf(grn, pricingData);
+    } catch (e) {
+      console.error('Failed to download GRN:', e);
+    } finally {
+      setIsDownloading(false);
+    }
   };
 
   const totalExpected = grn.items?.reduce((sum, i) => sum + (i.expectedQuantity || 0), 0) || 0;
@@ -45,33 +63,55 @@ export function PrintableGRN({ grn, open, onOpenChange, pricingData }: Printable
     0;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[92vh] flex flex-col p-0 overflow-hidden bg-slate-50">
-        <DialogHeader className="p-4 border-b border-slate-200 bg-white flex flex-row items-center justify-between shrink-0">
-          <div className="flex items-center gap-2">
-            <FileText className="h-5 w-5 text-primary" />
-            <DialogTitle className="text-base font-bold text-slate-900">
-              Official Goods Received Note — Print Preview
-            </DialogTitle>
+    <Dialog open={open} onOpenChange={onOpenChange} size="full" maxWidth="max-w-5xl" className="p-0 overflow-hidden bg-slate-100 max-h-[94vh] flex flex-col">
+      <DialogContent className="max-w-5xl w-full max-h-[94vh] flex flex-col p-0 overflow-hidden bg-slate-100 space-y-0">
+        <DialogHeader className="px-6 py-3.5 border-b border-slate-200 bg-white flex flex-row items-center justify-between shrink-0 mb-0 print:hidden">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 rounded-lg bg-primary/10 text-primary">
+              <FileText className="h-5 w-5" />
+            </div>
+            <div>
+              <DialogTitle className="text-base font-bold text-slate-900 leading-tight">
+                Official Goods Received Note — Print Preview
+              </DialogTitle>
+              <div className="flex items-center gap-2 mt-0.5">
+                <span className="font-mono text-xs font-semibold text-slate-500">
+                  Ref: {grn.grnNumber || grn.id}
+                </span>
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 font-semibold border border-slate-200">
+                  {grn.status}
+                </span>
+              </div>
+            </div>
           </div>
           <div className="flex items-center gap-2">
             <Button
+              variant="outline"
+              size="sm"
+              onClick={handleDownload}
+              disabled={isDownloading}
+              className="gap-1.5 text-xs text-slate-700 border-slate-300 hover:bg-slate-50 font-medium"
+            >
+              <Download className="h-3.5 w-3.5 text-slate-500" />
+              {isDownloading ? 'Generating...' : 'Download PDF'}
+            </Button>
+            <Button
               size="sm"
               onClick={handlePrint}
-              className="gap-1.5 text-xs bg-primary hover:bg-primary-hover text-white font-medium"
+              disabled={isPrinting}
+              className="gap-1.5 text-xs bg-primary hover:bg-primary-hover text-white font-medium shadow-xs"
             >
               <Printer className="h-3.5 w-3.5" />
-              Print (A4)
+              {isPrinting ? 'Printing...' : 'Print (A4)'}
             </Button>
           </div>
         </DialogHeader>
 
         {/* Scrollable Printable Document Container */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-slate-100/90 print:p-0 print:bg-white">
           <div
             ref={printContentRef}
-            className="print-container bg-white border border-slate-200 shadow-sm rounded-lg p-8 mx-auto max-w-[210mm] text-slate-800 font-sans"
-            style={{ minHeight: '297mm' }}
+            className="print-container bg-white border border-slate-200 shadow-xl rounded-md p-8 sm:p-10 mx-auto max-w-[210mm] text-slate-800 font-sans print:shadow-none print:border-none print:p-0 print:m-0"
           >
             {/* ── Document Header ── */}
             <div className="border-b-2 border-slate-800 pb-5 mb-6">
@@ -104,23 +144,23 @@ export function PrintableGRN({ grn, open, onOpenChange, pricingData }: Printable
             </div>
 
             {/* ── Meta Information Matrix ── */}
-            <div className="grid grid-cols-2 gap-4 border border-slate-200 rounded p-4 mb-6 bg-slate-50/50 text-xs">
+            <div className="grid grid-cols-2 gap-6 border border-slate-200 rounded-md p-4 mb-6 bg-slate-50/70 text-xs">
               <div>
                 <table className="w-full">
                   <tbody>
                     <tr className="border-b border-slate-100">
-                      <td className="py-1 text-slate-500 font-semibold w-32">Supplier Name:</td>
-                      <td className="py-1 font-bold text-slate-900">{grn.supplierName || '—'}</td>
+                      <td className="py-1.5 text-slate-500 font-semibold w-36">Supplier Name:</td>
+                      <td className="py-1.5 font-bold text-slate-900">{grn.supplierName || '—'}</td>
                     </tr>
                     <tr className="border-b border-slate-100">
-                      <td className="py-1 text-slate-500 font-semibold">Linked PO #:</td>
-                      <td className="py-1 font-mono font-bold text-primary">
+                      <td className="py-1.5 text-slate-500 font-semibold">Linked PO #:</td>
+                      <td className="py-1.5 font-mono font-bold text-primary">
                         {grn.purchaseOrderNumber || grn.poNumber || grn.poId || '—'}
                       </td>
                     </tr>
                     <tr>
-                      <td className="py-1 text-slate-500 font-semibold">Vendor Inv / DN:</td>
-                      <td className="py-1 font-mono text-slate-700">
+                      <td className="py-1.5 text-slate-500 font-semibold">Vendor Inv / DN:</td>
+                      <td className="py-1.5 font-mono text-slate-700">
                         {grn.supplierInvoiceNumber || '—'}
                       </td>
                     </tr>
@@ -132,19 +172,19 @@ export function PrintableGRN({ grn, open, onOpenChange, pricingData }: Printable
                 <table className="w-full">
                   <tbody>
                     <tr className="border-b border-slate-100">
-                      <td className="py-1 text-slate-500 font-semibold w-32">Received Date:</td>
-                      <td className="py-1 font-medium text-slate-900">
+                      <td className="py-1.5 text-slate-500 font-semibold w-36">Received Date:</td>
+                      <td className="py-1.5 font-medium text-slate-900">
                         {formatDate(grn.receivedDate || grn.submittedAt || new Date().toISOString())}
                       </td>
                     </tr>
                     <tr className="border-b border-slate-100">
-                      <td className="py-1 text-slate-500 font-semibold">Destination Bay:</td>
-                      <td className="py-1 font-medium text-slate-900">{grn.warehouseId || 'WH-MAIN'}</td>
+                      <td className="py-1.5 text-slate-500 font-semibold">Destination Bay:</td>
+                      <td className="py-1.5 font-bold text-slate-900">{grn.warehouseId || 'WH-MAIN'}</td>
                     </tr>
                     <tr>
-                      <td className="py-1 text-slate-500 font-semibold">Lifecycle Status:</td>
-                      <td className="py-1">
-                        <span className="inline-block px-2 py-0.5 text-[10px] font-bold rounded bg-slate-200 text-slate-800">
+                      <td className="py-1.5 text-slate-500 font-semibold">Lifecycle Status:</td>
+                      <td className="py-1.5">
+                        <span className="inline-block px-2 py-0.5 text-[10px] font-bold rounded bg-slate-200 text-slate-800 uppercase">
                           {grn.status}
                         </span>
                       </td>
@@ -163,23 +203,23 @@ export function PrintableGRN({ grn, open, onOpenChange, pricingData }: Printable
                 <thead>
                   {pricingData ? (
                     <tr className="bg-slate-100 border-b border-slate-300 text-slate-700 font-bold">
-                      <th className="py-2 px-2 border-r border-slate-300 text-center w-8">#</th>
-                      <th className="py-2 px-3 border-r border-slate-300 text-left">Product Name</th>
-                      <th className="py-2 px-3 border-r border-slate-300 text-right w-24">Quantity</th>
-                      <th className="py-2 px-3 border-r border-slate-300 text-right w-32">Unit Cost</th>
-                      <th className="py-2 px-3 text-right w-32 text-emerald-800">Selling Price</th>
+                      <th className="py-2.5 px-2 border-r border-slate-300 text-center w-8">#</th>
+                      <th className="py-2.5 px-3 border-r border-slate-300 text-left">Product Name</th>
+                      <th className="py-2.5 px-3 border-r border-slate-300 text-right w-28">Quantity</th>
+                      <th className="py-2.5 px-3 border-r border-slate-300 text-right w-36">Unit Cost</th>
+                      <th className="py-2.5 px-3 text-right w-36 text-emerald-800">Selling Price</th>
                     </tr>
                   ) : (
                     <tr className="bg-slate-100 border-b border-slate-300 text-slate-700 font-bold">
-                      <th className="py-2 px-2 border-r border-slate-300 text-center w-8">#</th>
-                      <th className="py-2 px-3 border-r border-slate-300 text-left">Product / SKU</th>
-                      <th className="py-2 px-2 border-r border-slate-300 text-right w-16">Expected</th>
-                      <th className="py-2 px-2 border-r border-slate-300 text-right w-16">Received</th>
-                      <th className="py-2 px-2 border-r border-slate-300 text-right w-16 text-rose-600">Damaged</th>
-                      <th className="py-2 px-2 border-r border-slate-300 text-right w-16 text-emerald-700 font-bold">Net Accepted</th>
-                      <th className="py-2 px-2 border-r border-slate-300 text-center w-12">UOM</th>
-                      <th className="py-2 px-3 border-r border-slate-300 text-right w-24">Unit Cost</th>
-                      <th className="py-2 px-3 text-right w-28">Total (LKR)</th>
+                      <th className="py-2.5 px-2 border-r border-slate-300 text-center w-8">#</th>
+                      <th className="py-2.5 px-3 border-r border-slate-300 text-left">Product / SKU</th>
+                      <th className="py-2.5 px-2.5 border-r border-slate-300 text-right w-20">Expected</th>
+                      <th className="py-2.5 px-2.5 border-r border-slate-300 text-right w-20">Received</th>
+                      <th className="py-2.5 px-2.5 border-r border-slate-300 text-right w-20 text-rose-600">Damaged</th>
+                      <th className="py-2.5 px-2.5 border-r border-slate-300 text-right w-24 text-emerald-700 font-bold">Net Accepted</th>
+                      <th className="py-2.5 px-2 border-r border-slate-300 text-center w-14">UOM</th>
+                      <th className="py-2.5 px-3 border-r border-slate-300 text-right w-28">Unit Cost</th>
+                      <th className="py-2.5 px-3 text-right w-32">Total (LKR)</th>
                     </tr>
                   )}
                 </thead>
@@ -215,36 +255,36 @@ export function PrintableGRN({ grn, open, onOpenChange, pricingData }: Printable
 
                     return (
                       <tr key={idx} className="border-b border-slate-200">
-                        <td className="py-2 px-2 border-r border-slate-200 text-center text-slate-400 font-mono">
+                        <td className="py-2.5 px-2 border-r border-slate-200 text-center text-slate-400 font-mono">
                           {idx + 1}
                         </td>
-                        <td className="py-2 px-3 border-r border-slate-200">
+                        <td className="py-2.5 px-3 border-r border-slate-200">
                           <div className="font-bold text-slate-900 leading-tight">
                             {item.productNameSnapshot || item.productId}
                           </div>
-                          <div className="font-mono text-[10px] text-slate-500">
+                          <div className="font-mono text-[10px] text-slate-500 mt-0.5">
                             {item.skuSnapshot}
                           </div>
                         </td>
-                        <td className="py-2 px-2 border-r border-slate-200 text-right tabular-nums">
+                        <td className="py-2.5 px-2.5 border-r border-slate-200 text-right tabular-nums">
                           {item.expectedQuantity}
                         </td>
-                        <td className="py-2 px-2 border-r border-slate-200 text-right tabular-nums font-semibold">
+                        <td className="py-2.5 px-2.5 border-r border-slate-200 text-right tabular-nums font-semibold">
                           {item.receivedQuantity}
                         </td>
-                        <td className="py-2 px-2 border-r border-slate-200 text-right tabular-nums text-rose-600 font-medium">
+                        <td className="py-2.5 px-2.5 border-r border-slate-200 text-right tabular-nums text-rose-600 font-medium">
                           {item.damagedQuantity || 0}
                         </td>
-                        <td className="py-2 px-2 border-r border-slate-200 text-right tabular-nums text-emerald-800 font-bold bg-emerald-50/50">
+                        <td className="py-2.5 px-2.5 border-r border-slate-200 text-right tabular-nums text-emerald-800 font-bold bg-emerald-50/50">
                           {netQty}
                         </td>
-                        <td className="py-2 px-2 border-r border-slate-200 text-center text-[10px] text-slate-500">
+                        <td className="py-2.5 px-2 border-r border-slate-200 text-center text-[10px] text-slate-500">
                           {item.uom || 'PCS'}
                         </td>
-                        <td className="py-2 px-3 border-r border-slate-200 text-right tabular-nums">
+                        <td className="py-2.5 px-3 border-r border-slate-200 text-right tabular-nums">
                           {formatCurrency(unitCost).replace('LKR ', '')}
                         </td>
-                        <td className="py-2 px-3 text-right tabular-nums font-bold">
+                        <td className="py-2.5 px-3 text-right tabular-nums font-bold">
                           {formatCurrency(lineTotal).replace('LKR ', '')}
                         </td>
                       </tr>
@@ -256,16 +296,16 @@ export function PrintableGRN({ grn, open, onOpenChange, pricingData }: Printable
                     <td colSpan={2} className="py-2.5 px-3 border-r border-slate-300 uppercase text-slate-600">
                       Summary Totals:
                     </td>
-                    <td className="py-2.5 px-2 border-r border-slate-300 text-right tabular-nums">
+                    <td className="py-2.5 px-2.5 border-r border-slate-300 text-right tabular-nums">
                       {totalExpected}
                     </td>
-                    <td className="py-2.5 px-2 border-r border-slate-300 text-right tabular-nums">
+                    <td className="py-2.5 px-2.5 border-r border-slate-300 text-right tabular-nums">
                       {totalReceived}
                     </td>
-                    <td className="py-2.5 px-2 border-r border-slate-300 text-right tabular-nums text-rose-600">
+                    <td className="py-2.5 px-2.5 border-r border-slate-300 text-right tabular-nums text-rose-600">
                       {totalDamaged}
                     </td>
-                    <td className="py-2.5 px-2 border-r border-slate-300 text-right tabular-nums text-emerald-800 font-black">
+                    <td className="py-2.5 px-2.5 border-r border-slate-300 text-right tabular-nums text-emerald-800 font-black">
                       {totalAccepted}
                     </td>
                     <td className="py-2.5 px-2 border-r border-slate-300"></td>
