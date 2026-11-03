@@ -508,6 +508,21 @@ export function GRNDetailPage({ backUrl, backTitle }: GRNDetailPageProps = {}) {
           </div>
         </div>
 
+        {/* Director Executive Oversight Read-Only Notice */}
+        {user?.role === 'DIRECTOR' && (
+          <div className="rounded-2xl border border-indigo-200 bg-indigo-50/70 p-3.5 px-4 flex items-center justify-between text-xs text-indigo-900 shadow-2xs">
+            <div className="flex items-center gap-2">
+              <ShieldCheck className="h-4 w-4 text-indigo-600 shrink-0" />
+              <span>
+                <strong>Director Executive Oversight (Read-Only View):</strong> Inward warehouse manifests, barcode serialization logs, and receiving documentation are displayed in read-only inspection mode.
+              </span>
+            </div>
+            <span className="font-mono text-[11px] font-semibold text-indigo-700 hidden sm:inline">
+              Read-Only View
+            </span>
+          </div>
+        )}
+
         {/* Title, Status & Primary Actions */}
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs">
           <div className="space-y-1">
@@ -521,6 +536,11 @@ export function GRNDetailPage({ backUrl, backTitle }: GRNDetailPageProps = {}) {
                     GRN Number: {grn.grnNumber || grn.id}
                   </h1>
                   <StatusBadge status={grn.status} />
+                  {user?.role === 'DIRECTOR' && (
+                    <Badge variant="outline" className="text-xs bg-indigo-50 text-indigo-700 border-indigo-300 font-mono">
+                      READ-ONLY VIEW
+                    </Badge>
+                  )}
                   <Badge variant="outline" className="text-xs bg-slate-50 text-slate-700 border-slate-300 font-medium">
                     PO: {grn.purchaseOrderNumber || grn.poNumber || 'PO-2025-001'}
                   </Badge>

@@ -64,6 +64,25 @@ describe('ConfirmButton Component', () => {
     expect(onConfirmMock).not.toHaveBeenCalled();
   });
 
+  it('closes confirmation dialog when the top-right cross button is clicked', () => {
+    const onConfirmMock = vi.fn();
+    render(
+      <ConfirmButton onConfirm={onConfirmMock}>
+        Perform Action
+      </ConfirmButton>
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /perform action/i }));
+    expect(screen.getByRole('heading', { name: /Are you sure/i })).toBeDefined();
+
+    const crossBtn = screen.getByRole('button', { name: /close dialog/i });
+    fireEvent.click(crossBtn);
+
+    // Dialog is dismissed
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(onConfirmMock).not.toHaveBeenCalled();
+  });
+
   it('executes onConfirm when confirmed in dialog and closes dialog', async () => {
     const onConfirmMock = vi.fn();
     render(

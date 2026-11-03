@@ -91,9 +91,20 @@ export class MockCustomerRepository implements ICustomerRepository {
     const idx = this.customers.findIndex((c) => c.id === id);
     if (idx === -1) throw new Error(`Customer with id ${id} not found.`);
 
+    const current = this.customers[idx];
+    const newCommercialTerms = updates.commercialTerms || current.commercialTerms;
+    const baseFinancials = updates.financials || current.financials;
+
     const updated: Customer = {
-      ...this.customers[idx],
+      ...current,
       ...updates,
+      commercialTerms: newCommercialTerms,
+      financials: {
+        ...baseFinancials,
+        availableCredit:
+          updates.financials?.availableCredit ??
+          Math.max(0, newCommercialTerms.creditLimit - baseFinancials.totalOutstanding),
+      },
       updatedAt: new Date().toISOString(),
     };
 

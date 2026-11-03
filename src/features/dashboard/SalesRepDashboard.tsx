@@ -328,6 +328,16 @@ export function SalesRepDashboard() {
         <div className="flex items-center gap-2 shrink-0">
           <Button
             size="sm"
+            variant="outline"
+            onClick={() => navigate('/customers')}
+            className="h-10 px-4 text-xs font-bold text-slate-700 hover:text-slate-900 rounded-xl border-slate-300 shadow-2xs gap-1.5 cursor-pointer"
+            title="Manage Assigned Customer Master & Register Accounts"
+          >
+            <Users className="h-4 w-4 text-emerald-600" />
+            <span>Manage Customers</span>
+          </Button>
+          <Button
+            size="sm"
             onClick={() => navigate('/payments')}
             className="h-10 px-4 text-xs font-bold bg-amber-600 hover:bg-amber-700 text-white rounded-xl shadow-xs gap-1.5"
             title="View Cash in Hand and Hand Over to Finance"

@@ -4,7 +4,7 @@ import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import { ConfirmButton } from '../../components/ui/confirm-button';
 import { formatCurrency } from '../../utils/formatters';
-import { Phone, MessageSquare, ChevronRight, MapPin, User, AlertCircle, ArrowUpRight, Trash2 } from 'lucide-react';
+import { Phone, MessageSquare, ChevronRight, MapPin, User, AlertCircle, ArrowUpRight, Trash2, Edit, CreditCard, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 
 function cleanPhoneForWhatsApp(phone?: string): string {
@@ -15,6 +15,7 @@ interface CustomerTableProps {
   customers: Customer[];
   onView: (customer: Customer) => void;
   onEdit?: (customer: Customer) => void;
+  onApprove?: (customer: Customer) => void;
   onReviewCommercials?: (customer: Customer) => void;
   onDelete?: (customer: Customer) => void;
 }
@@ -23,11 +24,14 @@ export function CustomerTable({
   customers,
   onView,
   onEdit,
+  onApprove,
   onReviewCommercials,
   onDelete,
 }: CustomerTableProps) {
   const { role } = useAuth();
   const canCommercialReview =
+    role === 'SALES_MANAGER' || role === 'MANAGER' || role === 'DIRECTOR';
+  const canApprove =
     role === 'SALES_MANAGER' || role === 'MANAGER' || role === 'DIRECTOR';
 
   return (
@@ -133,7 +137,7 @@ export function CustomerTable({
                   <a
                     href={`tel:${c.phone}`}
                     onClick={(e) => e.stopPropagation()}
-                    className="inline-flex items-center justify-center gap-1.5 min-h-[42px] px-3.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-colors cursor-pointer"
+                    className="inline-flex items-center justify-center gap-1.5 min-h-[42px] px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-colors cursor-pointer"
                     title={`Call ${c.contactPerson}`}
                   >
                     <Phone className="h-4 w-4 text-slate-600" />
@@ -146,12 +150,44 @@ export function CustomerTable({
                     target="_blank"
                     rel="noopener noreferrer"
                     onClick={(e) => e.stopPropagation()}
-                    className="inline-flex items-center justify-center gap-1.5 min-h-[42px] px-3.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-semibold transition-colors border border-emerald-200 cursor-pointer"
+                    className="inline-flex items-center justify-center gap-1.5 min-h-[42px] px-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-semibold transition-colors border border-emerald-200 cursor-pointer"
                     title="Send WhatsApp Message"
                   >
                     <MessageSquare className="h-4 w-4 text-emerald-600" />
                     <span>WhatsApp</span>
                   </a>
+
+                  {/* Edit Customer Button */}
+                  {onEdit && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onEdit(c);
+                      }}
+                      className="inline-flex items-center justify-center gap-1.5 min-h-[42px] px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-colors border border-slate-200 cursor-pointer"
+                      title="Edit Customer Details & Assigned Rep"
+                    >
+                      <Edit className="h-4 w-4 text-slate-600" />
+                      <span>Edit</span>
+                    </button>
+                  )}
+
+                  {/* Approve Customer Button (Mobile) */}
+                  {onApprove && canApprove && c.approvalStage !== 'APPROVED' && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onApprove(c);
+                      }}
+                      className="inline-flex items-center justify-center gap-1.5 min-h-[42px] px-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-bold transition-colors border border-emerald-200 cursor-pointer"
+                      title="Review & Approve Customer"
+                    >
+                      <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                      <span>Approve</span>
+                    </button>
+                  )}
                 </div>
 
                 <span className="inline-flex items-center text-xs font-semibold text-primary gap-1">
@@ -175,6 +211,7 @@ export function CustomerTable({
               <TableHead className="text-right">Total Outstanding</TableHead>
               <TableHead className="text-right">Overdue</TableHead>
               <TableHead className="text-center">Approval Stage</TableHead>
+              <TableHead className="text-right w-24">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -246,6 +283,56 @@ export function CustomerTable({
                     >
                       {c.approvalStage}
                     </Badge>
+                    {onApprove && canApprove && c.approvalStage !== 'APPROVED' && (
+                      <div className="mt-1.5 flex justify-center">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onApprove(c);
+                          }}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-[11px] font-bold border border-emerald-200 transition-colors cursor-pointer shadow-2xs"
+                          title="Review & Approve Customer"
+                        >
+                          <CheckCircle2 className="h-3 w-3 text-emerald-600" />
+                          Approve
+                        </button>
+                      </div>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
+                      {onApprove && canApprove && c.approvalStage !== 'APPROVED' && (
+                        <button
+                          type="button"
+                          onClick={() => onApprove(c)}
+                          className="h-8 w-8 rounded-lg flex items-center justify-center text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 transition-colors cursor-pointer"
+                          title="Review & Approve Customer"
+                        >
+                          <CheckCircle2 className="h-4 w-4" />
+                        </button>
+                      )}
+                      {onEdit && (
+                        <button
+                          type="button"
+                          onClick={() => onEdit(c)}
+                          className="h-8 w-8 rounded-lg flex items-center justify-center text-slate-500 hover:text-primary hover:bg-slate-100 transition-colors cursor-pointer"
+                          title="Edit Customer Details & Assigned Rep"
+                        >
+                          <Edit className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                      {onReviewCommercials && canCommercialReview && (
+                        <button
+                          type="button"
+                          onClick={() => onReviewCommercials(c)}
+                          className="h-8 w-8 rounded-lg flex items-center justify-center text-slate-500 hover:text-amber-600 hover:bg-amber-50 transition-colors cursor-pointer"
+                          title="Setup Commercial Terms"
+                        >
+                          <CreditCard className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                    </div>
                   </TableCell>
                 </TableRow>
               );

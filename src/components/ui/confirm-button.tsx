@@ -151,58 +151,59 @@ export function ConfirmDialog({
       onOpenChange={(val) => !loading && onOpenChange(val)}
       size={dialogSize}
       hideCloseButton={loading}
-      className="rounded-3xl border border-slate-200/90 shadow-2xl p-0 overflow-hidden bg-white"
+      className="rounded-3xl border border-slate-200/80 shadow-[0_25px_60px_-15px_rgba(15,23,42,0.18)] p-0 overflow-hidden bg-white ring-1 ring-black/[0.04]"
     >
       <div className="relative flex flex-col" role="alertdialog" aria-modal="true">
         {/* Subtle decorative top ambient tint */}
-        <div className={cn("absolute top-0 inset-x-0 h-28 bg-gradient-to-b pointer-events-none", getTopGlowClass())} />
+        <div className={cn("absolute top-0 inset-x-0 h-32 bg-gradient-to-b pointer-events-none", getTopGlowClass())} />
 
-        <div className="relative p-5 sm:p-6 space-y-4">
+        <div className="relative p-6 sm:p-7 space-y-4">
           <div className="flex items-start gap-4">
             {renderIcon()}
-            <div className="flex-1 space-y-1 pt-0.5">
+            <div className="flex-1 space-y-1.5 pt-0.5">
               <DialogTitle className="text-base sm:text-lg font-bold text-slate-900 tracking-tight leading-snug">
                 {defaultTitle}
               </DialogTitle>
-              <DialogDescription className="text-xs sm:text-sm text-slate-600 leading-relaxed font-normal">
+              <DialogDescription className="text-xs sm:text-sm text-slate-500 leading-relaxed font-normal">
                 {defaultMessage}
               </DialogDescription>
             </div>
           </div>
 
           {confirmContent && (
-            <div className="mt-3 text-xs sm:text-sm text-slate-700 bg-slate-50/90 border border-slate-200/80 rounded-2xl p-3.5 shadow-2xs">
+            <div className="mt-3 text-xs sm:text-sm text-slate-700 bg-slate-50/90 border border-slate-200/80 rounded-2xl p-4 shadow-2xs">
               {confirmContent}
             </div>
           )}
+        </div>
 
-          <div className="pt-4 border-t border-slate-100 flex flex-row items-center justify-end gap-2.5">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled={loading}
-              onClick={() => onOpenChange(false)}
-              data-testid="confirm-dialog-cancel-btn"
-              className="h-9 px-4 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-100 hover:text-slate-900 border-slate-200 active:scale-[0.98] transition-all"
-            >
-              {cancelText}
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              disabled={loading}
-              onClick={handleConfirm}
-              data-testid={confirmTestId}
-              className={cn(
-                "h-9 px-5 rounded-xl text-xs font-bold gap-2 active:scale-[0.98] transition-all cursor-pointer",
-                confirmVariant ? undefined : getConfirmButtonClass()
-              )}
-            >
-              {loading && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-              {defaultConfirmText}
-            </Button>
-          </div>
+        {/* Modal Action Footer */}
+        <div className="px-6 py-4 bg-slate-50/80 border-t border-slate-100/90 flex flex-row items-center justify-end gap-3">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={loading}
+            onClick={() => onOpenChange(false)}
+            data-testid="confirm-dialog-cancel-btn"
+            className="h-9 sm:h-10 px-4 rounded-xl text-xs font-semibold text-slate-600 hover:text-slate-900 bg-white hover:bg-slate-100 border-slate-200 shadow-2xs active:scale-[0.98] transition-all cursor-pointer"
+          >
+            {cancelText}
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            disabled={loading}
+            onClick={handleConfirm}
+            data-testid={confirmTestId}
+            className={cn(
+              "h-9 sm:h-10 px-5 rounded-xl text-xs font-bold gap-2 active:scale-[0.98] transition-all cursor-pointer",
+              confirmVariant ? undefined : getConfirmButtonClass()
+            )}
+          >
+            {loading && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+            {defaultConfirmText}
+          </Button>
         </div>
       </div>
     </Dialog>

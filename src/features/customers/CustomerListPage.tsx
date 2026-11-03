@@ -28,6 +28,7 @@ export function CustomerListPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedType, setSelectedType] = useState('');
   const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [modalMode, setModalMode] = useState<'create' | 'edit' | 'approve'>('create');
   const [reviewModalOpen, setReviewModalOpen] = useState(false);
   const [selectedCustomerForReview, setSelectedCustomerForReview] = useState<Customer | null>(null);
 
@@ -51,8 +52,34 @@ export function CustomerListPage() {
     updateCustomer,
     deleteCustomer,
     setCommercialTerms,
+    finalizeApproval,
     setFilters,
   } = useCustomers(initialFilters);
+
+  const handleApproveCustomer = async (id: string, updates: Partial<Customer>) => {
+    try {
+      await updateCustomer(id, {
+        ...updates,
+        approvalStage: 'APPROVED',
+        status: 'ACTIVE',
+      });
+      await finalizeApproval(id, true);
+    } catch (err) {
+      console.error('Failed to approve customer:', err);
+    }
+  };
+
+  const handleRejectCustomer = async (id: string, reason?: string) => {
+    try {
+      await updateCustomer(id, {
+        approvalStage: 'REJECTED',
+        status: 'INACTIVE',
+      });
+      await finalizeApproval(id, false);
+    } catch (err) {
+      console.error('Failed to reject customer:', err);
+    }
+  };
 
   const handleSearch = (q: string) => {
     setSearchTerm(q);
@@ -120,6 +147,7 @@ export function CustomerListPage() {
                 size="sm"
                 onClick={() => {
                   setEditingCustomer(null);
+                  setModalMode('create');
                   setCreateModalOpen(true);
                 }}
                 className="gap-1.5 h-9 bg-primary hover:bg-primary-hover text-primary-foreground font-semibold shadow-xs"
@@ -174,6 +202,7 @@ export function CustomerListPage() {
           actionLabel={canCreate ? 'Register Customer' : undefined}
           onAction={() => {
             setEditingCustomer(null);
+            setModalMode('create');
             setCreateModalOpen(true);
           }}
         />
@@ -183,6 +212,12 @@ export function CustomerListPage() {
           onView={(c) => navigate(`/customers/${c.id}`)}
           onEdit={(c) => {
             setEditingCustomer(c);
+            setModalMode('edit');
+            setCreateModalOpen(true);
+          }}
+          onApprove={(c) => {
+            setEditingCustomer(c);
+            setModalMode('approve');
             setCreateModalOpen(true);
           }}
           onDelete={(c) => deleteCustomer(c.id)}
@@ -193,12 +228,15 @@ export function CustomerListPage() {
         />
       )}
 
-      {/* Area Manager Customer Creation Modal */}
+      {/* Area Manager / Manager Customer Creation & Approval Drawer */}
       <CustomerCreateModal
         open={createModalOpen}
         onOpenChange={(open) => {
           setCreateModalOpen(open);
-          if (!open) setEditingCustomer(null);
+          if (!open) {
+            setEditingCustomer(null);
+            setModalMode('create');
+          }
         }}
         onCreate={async (data) => {
           await createCustomer(data);
@@ -206,7 +244,10 @@ export function CustomerListPage() {
         onUpdate={async (id, data) => {
           await updateCustomer(id, data);
         }}
+        onApprove={handleApproveCustomer}
+        onReject={handleRejectCustomer}
         editingCustomer={editingCustomer}
+        mode={modalMode}
       />
 
       {/* Sales Manager Commercial Terms Setup Modal */}

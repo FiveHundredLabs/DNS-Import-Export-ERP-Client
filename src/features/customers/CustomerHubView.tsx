@@ -43,11 +43,65 @@ import {
   PlusCircle,
   Eye,
   CreditCard,
+  Edit,
+  CheckCircle2,
 } from 'lucide-react';
 import { whatsAppService } from '../../services/WhatsAppService';
+import { customerService } from '../../services/CustomerService';
+import { CustomerCreateModal } from './CustomerCreateModal';
+import { useAuth } from '../../hooks/useAuth';
 
-export function CustomerHubView({ customer }: { customer: Customer }) {
+export function CustomerHubView({ customer: initialCustomer }: { customer: Customer }) {
   const navigate = useNavigate();
+  const { role } = useAuth();
+  const canApprove = role === 'SALES_MANAGER' || role === 'MANAGER' || role === 'DIRECTOR';
+
+  const [customer, setCustomer] = useState<Customer>(initialCustomer);
+  const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
+  const [drawerMode, setDrawerMode] = useState<'edit' | 'approve'>('edit');
+
+  useEffect(() => {
+    setCustomer(initialCustomer);
+  }, [initialCustomer]);
+
+  const handleUpdateCustomer = async (id: string, updates: Partial<Customer>) => {
+    try {
+      const updated = await customerService.updateCustomer(id, updates);
+      setCustomer(updated);
+      setIsEditDrawerOpen(false);
+    } catch (err) {
+      console.error('Failed to update customer:', err);
+    }
+  };
+
+  const handleApproveCustomer = async (id: string, updates: Partial<Customer>) => {
+    try {
+      const updated = await customerService.updateCustomer(id, {
+        ...updates,
+        approvalStage: 'APPROVED',
+        status: 'ACTIVE',
+      });
+      await customerService.finalizeApproval(id, true);
+      setCustomer(updated);
+      setIsEditDrawerOpen(false);
+    } catch (err) {
+      console.error('Failed to approve customer:', err);
+    }
+  };
+
+  const handleRejectCustomer = async (id: string, reason?: string) => {
+    try {
+      const updated = await customerService.updateCustomer(id, {
+        approvalStage: 'REJECTED',
+        status: 'INACTIVE',
+      });
+      await customerService.finalizeApproval(id, false);
+      setCustomer(updated);
+      setIsEditDrawerOpen(false);
+    } catch (err) {
+      console.error('Failed to reject customer:', err);
+    }
+  };
   const [customerQuotations, setCustomerQuotations] = useState<Quotation[]>([]);
   const [quotationsLoading, setQuotationsLoading] = useState(true);
   const [customerOrders, setCustomerOrders] = useState<SalesOrder[]>([]);
@@ -203,6 +257,38 @@ export function CustomerHubView({ customer }: { customer: Customer }) {
 
   return (
     <div className="space-y-6">
+      {/* Pending Commercial Terms Approval Banner */}
+      {customer.approvalStage !== 'APPROVED' && (
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 shadow-2xs">
+          <div className="flex items-start sm:items-center gap-3">
+            <div className="h-9 w-9 rounded-xl bg-amber-500/15 text-amber-800 flex items-center justify-center shrink-0">
+              <AlertTriangle className="h-5 w-5 text-amber-600" />
+            </div>
+            <div>
+              <h4 className="text-sm font-bold text-amber-950">
+                Customer Account Pending Approval ({customer.approvalStage})
+              </h4>
+              <p className="text-xs text-amber-800 mt-0.5">
+                Review and authorize commercial credit days, limits, assigned sales rep, and discounts before processing live orders.
+              </p>
+            </div>
+          </div>
+          {canApprove && (
+            <Button
+              size="sm"
+              onClick={() => {
+                setDrawerMode('approve');
+                setIsEditDrawerOpen(true);
+              }}
+              className="gap-1.5 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shrink-0 shadow-xs cursor-pointer"
+            >
+              <CheckCircle2 className="h-3.5 w-3.5" />
+              <span>Review &amp; Approve Customer</span>
+            </Button>
+          )}
+        </div>
+      )}
+
       {/* Customer Header Banner */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 rounded-xl border border-slate-200 bg-white shadow-xs">
         <div>
@@ -245,6 +331,35 @@ export function CustomerHubView({ customer }: { customer: Customer }) {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          {canApprove && customer.approvalStage !== 'APPROVED' && (
+            <Button
+              size="sm"
+              onClick={() => {
+                setDrawerMode('approve');
+                setIsEditDrawerOpen(true);
+              }}
+              className="gap-1.5 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs cursor-pointer"
+              title="Review Commercial Terms & Approve Customer"
+            >
+              <CheckCircle2 className="h-3.5 w-3.5" />
+              <span>Review &amp; Approve</span>
+            </Button>
+          )}
+
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              setDrawerMode('edit');
+              setIsEditDrawerOpen(true);
+            }}
+            className="gap-1.5 text-xs text-slate-700 border-slate-300 hover:bg-slate-50 cursor-pointer"
+            title="Edit Customer Details, Commercial Terms & Assigned Sales Rep"
+          >
+            <Edit className="h-3.5 w-3.5 text-slate-600" />
+            <span>Edit Customer</span>
+          </Button>
+
           <Button
             size="sm"
             variant="default"
@@ -1161,6 +1276,20 @@ export function CustomerHubView({ customer }: { customer: Customer }) {
         onSuccess={() => {
           warrantyService.getWarrantiesByCustomerId(customer.id).then(setCustomerWarranties);
         }}
+      />
+
+      <CustomerCreateModal
+        open={isEditDrawerOpen}
+        onOpenChange={(open) => {
+          setIsEditDrawerOpen(open);
+          if (!open) setDrawerMode('edit');
+        }}
+        editingCustomer={customer}
+        mode={drawerMode}
+        onUpdate={handleUpdateCustomer}
+        onApprove={handleApproveCustomer}
+        onReject={handleRejectCustomer}
+        onCreate={async () => {}}
       />
     </div>
   );
