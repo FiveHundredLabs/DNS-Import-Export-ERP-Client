@@ -190,6 +190,7 @@ th {
   line-height: 1.35;
   text-transform: none;  /* Clean sentence casing for fast enterprise scanning */
   letter-spacing: normal;
+  white-space: nowrap;   /* Keep table column headers readable without awkward line breaks */
 }
 
 td {
@@ -415,20 +416,67 @@ input[type="radio"]:checked,
 }
 
 /* ------------------------------------------------------------------------------
- * 10. SCROLLBAR HIDING & ACCESSIBILITY UTILITIES
+ * 10. SCROLLBAR & HORIZONTAL OVERFLOW TABLE UTILITIES
  * ------------------------------------------------------------------------------ */
-/* Cross-browser scrollbar hiding while preserving scroll functionality */
-html,
-body,
-* {
-  scrollbar-width: none;          /* Firefox */
-  -ms-overflow-style: none;       /* Legacy Edge */
+/* Modern, subtle scrollbars across browsers */
+.overflow-x-auto,
+.overflow-auto,
+.overflow-y-auto,
+[data-radix-scroll-area-viewport] {
+  scrollbar-width: thin !important;
+  scrollbar-color: #cbd5e1 transparent !important;
+  -webkit-overflow-scrolling: touch;
 }
 
-::-webkit-scrollbar {
-  display: none;                  /* Chrome, Safari, Opera */
-  width: 0px;
-  height: 0px;
+.overflow-x-auto::-webkit-scrollbar,
+.overflow-auto::-webkit-scrollbar,
+.overflow-y-auto::-webkit-scrollbar,
+[data-radix-scroll-area-viewport]::-webkit-scrollbar {
+  display: block !important;
+  width: 7px !important;
+  height: 7px !important;
+}
+
+.overflow-x-auto::-webkit-scrollbar-track,
+.overflow-auto::-webkit-scrollbar-track,
+.overflow-y-auto::-webkit-scrollbar-track,
+[data-radix-scroll-area-viewport]::-webkit-scrollbar-track {
+  background: transparent !important;
+}
+
+.overflow-x-auto::-webkit-scrollbar-thumb,
+.overflow-auto::-webkit-scrollbar-thumb,
+.overflow-y-auto::-webkit-scrollbar-thumb,
+[data-radix-scroll-area-viewport]::-webkit-scrollbar-thumb {
+  background-color: #cbd5e1 !important;
+  border-radius: 9999px !important;
+}
+
+.overflow-x-auto::-webkit-scrollbar-thumb:hover,
+.overflow-auto::-webkit-scrollbar-thumb:hover,
+.overflow-y-auto::-webkit-scrollbar-thumb:hover,
+[data-radix-scroll-area-viewport]::-webkit-scrollbar-thumb:hover {
+  background-color: #94a3b8 !important;
+}
+
+/* Explicit class to hide scrollbars where specifically desired (e.g. pill tabs) */
+.no-scrollbar {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none !important;
+  width: 0px !important;
+  height: 0px !important;
+}
+
+/* Screen rule: Automatically enable horizontal scrolling for any direct container of a table */
+@media screen {
+  div:has(> table) {
+    overflow-x: auto;
+    max-width: 100%;
+    -webkit-overflow-scrolling: touch;
+  }
 }
 
 /* ------------------------------------------------------------------------------

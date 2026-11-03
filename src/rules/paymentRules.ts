@@ -232,3 +232,142 @@ export function canUserCollectPayment(
 
   return { allowed: true };
 }
+
+export interface Handover24hStatus {
+  isCash: boolean;
+  handoverStatus: 'PENDING_HANDOVER' | 'HANDED_OVER' | 'APPROVED' | 'REJECTED';
+  isDue: boolean;
+  isOverdue: boolean;
+  hoursElapsed: number;
+  hoursRemaining: number;
+  deadline: string; // ISO date string of collectedAt + 24h
+  badgeLabel: string;
+  badgeVariant: 'destructive' | 'warning' | 'default' | 'success' | 'outline';
+  handedOverToUserName?: string;
+  handedOverAt?: string;
+}
+
+/**
+ * Evaluates the 24-hour cash handover deadline compliance for a collected payment.
+ * Rule: All cash collected by sales representatives must be handed over to Finance within 24 hours.
+ */
+export function evaluate24hHandoverStatus(
+  payment: {
+    collectedAt?: string;
+    createdAt?: string;
+    paymentMethod: string;
+    status: string;
+    handoverStatus?: string;
+    handedOverToUserName?: string;
+    handedOverAt?: string;
+  },
+  referenceDate: Date = new Date()
+): Handover24hStatus {
+  const isCash = payment.paymentMethod === 'CASH';
+  const handoverStatus = (payment.handoverStatus ||
+    (payment.status === 'APPROVED'
+      ? 'APPROVED'
+      : payment.status === 'REJECTED'
+      ? 'REJECTED'
+      : 'PENDING_HANDOVER')) as 'PENDING_HANDOVER' | 'HANDED_OVER' | 'APPROVED' | 'REJECTED';
+
+  const collectedTimeStr = payment.collectedAt || payment.createdAt || new Date().toISOString();
+  const collectedTime = new Date(collectedTimeStr).getTime();
+  const deadlineTime = collectedTime + 24 * 60 * 60 * 1000;
+  const deadline = new Date(deadlineTime).toISOString();
+
+  const refTime = referenceDate.getTime();
+  const diffMs = deadlineTime - refTime;
+  const hoursRemaining = Math.max(0, Math.round(diffMs / (1000 * 60 * 60)));
+  const hoursElapsed = Math.max(0, Math.round((refTime - collectedTime) / (1000 * 60 * 60)));
+
+  if (!isCash) {
+    return {
+      isCash: false,
+      handoverStatus,
+      isDue: false,
+      isOverdue: false,
+      hoursElapsed,
+      hoursRemaining: 0,
+      deadline,
+      badgeLabel: payment.paymentMethod === 'CHEQUE' ? 'Cheque Collection' : 'Bank Transfer',
+      badgeVariant: 'outline',
+      handedOverToUserName: payment.handedOverToUserName,
+      handedOverAt: payment.handedOverAt,
+    };
+  }
+
+  // If approved by finance
+  if (handoverStatus === 'APPROVED' || payment.status === 'APPROVED') {
+    return {
+      isCash: true,
+      handoverStatus: 'APPROVED',
+      isDue: false,
+      isOverdue: false,
+      hoursElapsed,
+      hoursRemaining: 0,
+      deadline,
+      badgeLabel: 'Approved by Finance',
+      badgeVariant: 'success',
+      handedOverToUserName: payment.handedOverToUserName,
+      handedOverAt: payment.handedOverAt,
+    };
+  }
+
+  // If rejected
+  if (handoverStatus === 'REJECTED' || payment.status === 'REJECTED') {
+    return {
+      isCash: true,
+      handoverStatus: 'REJECTED',
+      isDue: false,
+      isOverdue: false,
+      hoursElapsed,
+      hoursRemaining: 0,
+      deadline,
+      badgeLabel: 'Rejected by Finance',
+      badgeVariant: 'destructive',
+      handedOverToUserName: payment.handedOverToUserName,
+      handedOverAt: payment.handedOverAt,
+    };
+  }
+
+  // If handed over to a finance officer
+  if (handoverStatus === 'HANDED_OVER') {
+    const recipient = payment.handedOverToUserName ? `to ${payment.handedOverToUserName}` : 'to Finance';
+    return {
+      isCash: true,
+      handoverStatus: 'HANDED_OVER',
+      isDue: false,
+      isOverdue: false,
+      hoursElapsed,
+      hoursRemaining: 0,
+      deadline,
+      badgeLabel: `Handed Over (${recipient})`,
+      badgeVariant: 'default',
+      handedOverToUserName: payment.handedOverToUserName,
+      handedOverAt: payment.handedOverAt,
+    };
+  }
+
+  // Pending Handover: evaluate against the 24-hour limit
+  const isOverdue = diffMs < 0;
+  const overdueHours = isOverdue ? Math.max(1, Math.round(Math.abs(diffMs) / (1000 * 60 * 60))) : 0;
+
+  return {
+    isCash: true,
+    handoverStatus: 'PENDING_HANDOVER',
+    isDue: true,
+    isOverdue,
+    hoursElapsed,
+    hoursRemaining,
+    deadline,
+    badgeLabel: isOverdue
+      ? `OVERDUE (>24h Handover - ${overdueHours}h late)`
+      : hoursRemaining <= 1
+      ? 'Handover Due (<1h left)'
+      : `Handover Due (${hoursRemaining}h left)`,
+    badgeVariant: isOverdue || hoursRemaining <= 2 ? 'destructive' : 'warning',
+    handedOverToUserName: payment.handedOverToUserName,
+    handedOverAt: payment.handedOverAt,
+  };
+}

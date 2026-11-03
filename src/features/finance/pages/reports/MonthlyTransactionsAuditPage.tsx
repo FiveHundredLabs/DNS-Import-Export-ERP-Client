@@ -426,8 +426,8 @@ export function MonthlyTransactionsAuditPage() {
           </span>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
+        <div className="overflow-x-auto w-full">
+          <table className="w-full min-w-[950px] text-left text-xs">
             <thead className="border-b border-slate-200 bg-slate-50/90 text-[11px] font-semibold uppercase tracking-wider text-slate-600">
               <tr>
                 <th className="py-2.5 pl-3 pr-1 w-6"></th>
@@ -549,8 +549,8 @@ export function MonthlyTransactionsAuditPage() {
                                   </span>
                                 </div>
 
-                                <div className="overflow-x-auto">
-                                  <table className="w-full text-left text-xs">
+                                <div className="overflow-x-auto w-full">
+                                  <table className="w-full min-w-[600px] text-left text-xs">
                                     <thead className="text-[10.5px] font-semibold text-slate-500 border-b border-slate-100">
                                       <tr>
                                         <th className="py-1 px-2">Account</th>

@@ -410,36 +410,22 @@ export function GRNListPage() {
             </div>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0 sm:p-6 sm:pt-0">
           {loading ? (
-            <div className="space-y-2">
+            <div className="space-y-2 p-4">
               {[1, 2, 3].map((i) => (
                 <Skeleton key={i} className="h-12 w-full rounded-lg" />
               ))}
             </div>
           ) : filteredGRNs.length === 0 ? (
-            <div className="text-center py-12 text-slate-400 text-sm">
+            <div className="text-center py-12 text-slate-400 text-sm p-4">
               <Boxes className="h-8 w-8 mx-auto text-slate-300 mb-2" />
               No GRN records found
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-slate-50/70 hover:bg-slate-50/70">
-                  <TableHead className="text-xs font-semibold">GRN Number</TableHead>
-                  <TableHead className="text-xs font-semibold">Supplier Name</TableHead>
-                  <TableHead className="text-xs font-semibold">Date</TableHead>
-                  <TableHead className="text-right text-xs font-semibold">Product Lines</TableHead>
-                  {isStockKeeper ? (
-                    <TableHead className="text-right text-xs font-semibold">Received Units (Damaged)</TableHead>
-                  ) : (
-                    <TableHead className="text-right text-xs font-semibold">Total Value</TableHead>
-                  )}
-                  <TableHead className="text-center text-xs font-semibold">Status</TableHead>
-                  <TableHead className="text-right text-xs font-semibold w-24">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+            <>
+              {/* 1. Mobile Cards View (Hidden on md+) */}
+              <div className="block md:hidden divide-y divide-slate-100 p-3 space-y-3">
                 {filteredGRNs.map((g: any) => {
                   const totalReceived =
                     g.items?.reduce(
@@ -461,70 +447,156 @@ export function GRNListPage() {
                     ) || 0;
 
                   return (
-                    <TableRow
+                    <div
                       key={g.id}
-                      className="cursor-pointer hover:bg-slate-50/80 transition-colors focus:outline-hidden focus:bg-slate-50"
-                      tabIndex={0}
                       onClick={() => navigate(`/inventory/grn/${g.id}`)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.preventDefault();
-                          navigate(`/inventory/grn/${g.id}`);
-                        }
-                      }}
+                      className="p-3 rounded-xl border border-slate-200/90 bg-white shadow-2xs space-y-2.5 active:bg-slate-50 transition-colors cursor-pointer"
                     >
-                      <TableCell className="font-mono font-semibold text-xs text-primary hover:underline">
-                        {g.id}
-                      </TableCell>
-                      <TableCell className="text-xs font-medium text-slate-800">
-                        {g.supplierName || 'Unknown Supplier'}
-                      </TableCell>
-                      <TableCell className="text-xs text-slate-500">
-                        {g.submittedAt
-                          ? formatDate(g.submittedAt)
-                          : g.createdAt
-                          ? formatDate(g.createdAt)
-                          : 'N/A'}
-                      </TableCell>
-                      <TableCell className="text-right text-xs font-medium text-slate-700">
-                        {g.items?.length || 0}
-                      </TableCell>
-                      {isStockKeeper ? (
-                        <TableCell className="text-right text-xs font-mono">
-                          <span className="font-bold text-slate-900">{totalReceived}</span>
-                          {totalDamaged > 0 && (
-                            <span className="text-rose-600 font-semibold ml-1.5">
-                              ({totalDamaged} damaged)
-                            </span>
-                          )}
-                        </TableCell>
-                      ) : (
-                        <TableCell className="text-right text-xs font-mono font-medium">
-                          {formatCurrency(totalValue)}
-                        </TableCell>
-                      )}
-                      <TableCell className="text-center">
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <span className="font-mono font-bold text-xs text-primary">{g.grnNumber || g.id}</span>
+                          <p className="text-xs font-semibold text-slate-800 line-clamp-1">{g.supplierName || 'Unknown Supplier'}</p>
+                        </div>
                         {getStatusBadge(g.status)}
-                      </TableCell>
-                      <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
-                        <Button
-                          variant="ghost"
-                          size="xs"
-                          onClick={() => navigate(`/inventory/grn/${g.id}`)}
-                          className="text-slate-600 hover:text-slate-900 font-medium gap-1"
-                        >
-                          <span>Details</span>
-                          <ChevronRight className="h-3 w-3" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-2 py-1.5 px-2.5 bg-slate-50 rounded-lg text-xs">
+                        <div>
+                          <span className="text-[10px] text-slate-400 block">Lines</span>
+                          <span className="font-bold text-slate-700">{g.items?.length || 0}</span>
+                        </div>
+                        <div>
+                          <span className="text-[10px] text-slate-400 block">Units</span>
+                          <span className="font-bold text-slate-800 font-mono">
+                            {totalReceived}
+                            {totalDamaged > 0 && <span className="text-rose-600 text-[10px]"> ({totalDamaged}d)</span>}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-[10px] text-slate-400 block">Date</span>
+                          <span className="font-medium text-slate-700 text-[11px]">
+                            {g.submittedAt ? formatDate(g.submittedAt) : g.createdAt ? formatDate(g.createdAt) : 'N/A'}
+                          </span>
+                        </div>
+                      </div>
+
+                      {!isStockKeeper && (
+                        <div className="flex items-center justify-between pt-1 border-t border-slate-100 text-xs">
+                          <span className="text-slate-500 text-[11px]">Landed Value</span>
+                          <span className="font-bold font-mono text-slate-900">{formatCurrency(totalValue)}</span>
+                        </div>
+                      )}
+                    </div>
                   );
                 })}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
-    </div>
-  );
+              </div>
+
+              {/* 2. Desktop Table View (Hidden on mobile) */}
+              <div className="hidden md:block overflow-x-auto [scrollbar-width:thin]">
+                <Table className="min-w-[760px] w-full">
+                  <TableHeader>
+                    <TableRow className="bg-slate-50/70 hover:bg-slate-50/70">
+                      <TableHead className="text-xs font-semibold w-36">GRN Number</TableHead>
+                      <TableHead className="text-xs font-semibold min-w-[200px]">Supplier Name</TableHead>
+                      <TableHead className="text-xs font-semibold w-28">Date</TableHead>
+                      <TableHead className="text-right text-xs font-semibold w-24">Product Lines</TableHead>
+                      {isStockKeeper ? (
+                        <TableHead className="text-right text-xs font-semibold w-40">Received Units (Damaged)</TableHead>
+                      ) : (
+                        <TableHead className="text-right text-xs font-semibold w-36">Total Value</TableHead>
+                      )}
+                      <TableHead className="text-center text-xs font-semibold w-28">Status</TableHead>
+                      <TableHead className="text-right text-xs font-semibold w-24">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredGRNs.map((g: any) => {
+                      const totalReceived =
+                        g.items?.reduce(
+                          (acc: number, item: any) => acc + (item.receivedQuantity ?? 0),
+                          0
+                        ) || 0;
+                      const totalDamaged =
+                        g.items?.reduce(
+                          (acc: number, item: any) => acc + (item.damagedQuantity ?? 0),
+                          0
+                        ) || 0;
+                      const totalValue =
+                        g.items?.reduce(
+                          (acc: number, item: any) =>
+                            acc +
+                            (item.unitCostSnapshot ?? item.unitCost ?? 0) *
+                              ((item.receivedQuantity ?? 0) - (item.damagedQuantity ?? 0)),
+                          0
+                        ) || 0;
+
+                      return (
+                        <TableRow
+                          key={g.id}
+                          className="cursor-pointer hover:bg-slate-50/80 transition-colors focus:outline-hidden focus:bg-slate-50"
+                          tabIndex={0}
+                          onClick={() => navigate(`/inventory/grn/${g.id}`)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              navigate(`/inventory/grn/${g.id}`);
+                            }
+                          }}
+                        >
+                          <TableCell className="font-mono font-semibold text-xs text-primary hover:underline">
+                            {g.grnNumber || g.id}
+                          </TableCell>
+                          <TableCell className="text-xs font-medium text-slate-800">
+                            {g.supplierName || 'Unknown Supplier'}
+                          </TableCell>
+                          <TableCell className="text-xs text-slate-500">
+                            {g.submittedAt
+                              ? formatDate(g.submittedAt)
+                              : g.createdAt
+                              ? formatDate(g.createdAt)
+                              : 'N/A'}
+                          </TableCell>
+                          <TableCell className="text-right text-xs font-medium text-slate-700">
+                            {g.items?.length || 0}
+                          </TableCell>
+                          {isStockKeeper ? (
+                            <TableCell className="text-right text-xs font-mono">
+                              <span className="font-bold text-slate-900">{totalReceived}</span>
+                              {totalDamaged > 0 && (
+                                <span className="text-rose-600 font-semibold ml-1.5">
+                                  ({totalDamaged} damaged)
+                                </span>
+                              )}
+                            </TableCell>
+                          ) : (
+                            <TableCell className="text-right text-xs font-mono font-medium">
+                              {formatCurrency(totalValue)}
+                            </TableCell>
+                          )}
+                          <TableCell className="text-center">
+                            {getStatusBadge(g.status)}
+                          </TableCell>
+                          <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                            <Button
+                              variant="ghost"
+                              size="xs"
+                              onClick={() => navigate(`/inventory/grn/${g.id}`)}
+                              className="text-slate-600 hover:text-slate-900 font-medium gap-1"
+                            >
+                            <span>Details</span>
+                            <ChevronRight className="h-3 w-3" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          </>
+        )}
+      </CardContent>
+    </Card>
+  </div>
+);
 }

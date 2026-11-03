@@ -203,8 +203,8 @@ export const DeliveryNoteBarcodeModal: React.FC<DeliveryNoteBarcodeModalProps> =
   const totalAllocatedCount = items.reduce((s, i) => s + i.unitBarcodes.length, 0);
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-0 border-slate-200 shadow-xl">
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()} size="4xl" className="p-0 overflow-hidden">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-0 border-0 shadow-none space-y-0">
         {/* Printable Styles for standard label thermal rolls & A4 sheets */}
         <style>{`
           @media print {

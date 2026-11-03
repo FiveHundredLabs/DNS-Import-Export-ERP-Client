@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
@@ -25,10 +26,12 @@ import {
   PlusCircle,
   BarChart2,
   Users,
+  Sliders,
 } from 'lucide-react';
 
 export function CommissionHubPage() {
   const { role, currentUser } = useAuth();
+  const navigate = useNavigate();
   const [selectedRepId, setSelectedRepId] = useState<string>(
     role === 'SALES_REP' ? currentUser.id : 'usr-106'
   );
@@ -97,6 +100,14 @@ export function CommissionHubPage() {
                   ))}
                 </SelectContent>
               </Select>
+              <Button
+                variant="outline"
+                onClick={() => navigate('/commissions/config')}
+                className="text-xs font-semibold h-9 gap-1.5 border-slate-200 text-slate-700 hover:bg-slate-50"
+              >
+                <Sliders className="h-4 w-4 text-primary" />
+                Commission Configuration
+              </Button>
               <Button
                 onClick={() => setIsConfigOpen(true)}
                 className="bg-primary hover:bg-primary-hover text-primary-foreground text-xs font-medium h-9 gap-1.5 shadow-sm"

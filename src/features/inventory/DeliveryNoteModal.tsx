@@ -215,36 +215,38 @@ export function DeliveryNoteModal({
               </div>
 
               {/* Line Items Table */}
-              <table className="w-full text-left text-xs border border-slate-200 rounded">
-                <thead className="bg-slate-100 text-[10px] uppercase font-bold text-slate-600 border-b border-slate-200">
-                  <tr>
-                    <th className="p-2">Item Code / Description</th>
-                    <th className="p-2 text-center">UOM</th>
-                    <th className="p-2 text-right">Dispatched Qty</th>
-                    <th className="p-2 text-right">Customer Received Qty</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {(order.items || []).map((it: any, idx: number) => (
-                    <tr key={idx} className="text-slate-700">
-                      <td className="p-2">
-                        <span className="font-semibold text-slate-900">{it.productName || it.productNameSnapshot || 'Product Item'}</span>
-                        <span className="text-slate-400 font-mono text-[10px] ml-1.5">({it.sku || it.skuSnapshot || 'SKU'})</span>
-                      </td>
-                      <td className="p-2 text-center font-mono text-slate-600">{it.uom || 'PCS'}</td>
-                      <td className="p-2 text-right font-bold text-slate-900 font-mono">{it.quantity || it.receivedQuantity || 1}</td>
-                      <td className="p-2 text-right border-l border-slate-200 text-slate-400 font-mono">[ &nbsp; &nbsp; &nbsp; &nbsp; ]</td>
-                    </tr>
-                  ))}
-                  {(!order.items || order.items.length === 0) && (
+              <div className="overflow-x-auto w-full">
+                <table className="w-full min-w-[500px] text-left text-xs border border-slate-200 rounded">
+                  <thead className="bg-slate-100 text-[10px] uppercase font-bold text-slate-600 border-b border-slate-200">
                     <tr>
-                      <td colSpan={4} className="p-3 text-center text-slate-400 italic">
-                        Standard dispatch goods as verified by stores supervisor.
-                      </td>
+                      <th className="p-2">Item Code / Description</th>
+                      <th className="p-2 text-center">UOM</th>
+                      <th className="p-2 text-right">Dispatched Qty</th>
+                      <th className="p-2 text-right">Customer Received Qty</th>
                     </tr>
-                  )}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {(order.items || []).map((it: any, idx: number) => (
+                      <tr key={idx} className="text-slate-700">
+                        <td className="p-2">
+                          <span className="font-semibold text-slate-900">{it.productName || it.productNameSnapshot || 'Product Item'}</span>
+                          <span className="text-slate-400 font-mono text-[10px] ml-1.5">({it.sku || it.skuSnapshot || 'SKU'})</span>
+                        </td>
+                        <td className="p-2 text-center font-mono text-slate-600">{it.uom || 'PCS'}</td>
+                        <td className="p-2 text-right font-bold text-slate-900 font-mono">{it.quantity || it.receivedQuantity || 1}</td>
+                        <td className="p-2 text-right border-l border-slate-200 text-slate-400 font-mono">[ &nbsp; &nbsp; &nbsp; &nbsp; ]</td>
+                      </tr>
+                    ))}
+                    {(!order.items || order.items.length === 0) && (
+                      <tr>
+                        <td colSpan={4} className="p-3 text-center text-slate-400 italic">
+                          Standard dispatch goods as verified by stores supervisor.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
 
               {/* Notes */}
               {notes && (

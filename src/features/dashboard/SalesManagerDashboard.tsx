@@ -505,7 +505,7 @@ export function SalesManagerDashboard() {
           <CardTitle className="text-base font-bold text-slate-800">Team Performance Breakdown</CardTitle>
         </CardHeader>
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm whitespace-nowrap">
+          <table className="w-full text-left text-sm whitespace-nowrap min-w-[700px]">
             <thead className="bg-slate-50 text-slate-500 font-semibold text-xs uppercase tracking-wider">
               <tr>
                 <th className="px-6 py-3 border-b border-slate-200">Area Manager</th>
@@ -618,7 +618,7 @@ export function SalesManagerDashboard() {
               No showroom offers found in this view.
             </div>
           ) : (
-            <table className="w-full text-left text-xs whitespace-nowrap">
+            <table className="w-full text-left text-xs whitespace-nowrap min-w-[750px]">
               <thead className="bg-slate-50 text-slate-500 font-semibold text-[11px] uppercase tracking-wider border-b border-slate-200">
                 <tr>
                   <th className="px-6 py-3">Offer Code / Product</th>

@@ -15,6 +15,9 @@ interface InvoiceListSelectorProps {
   onSelectAll: () => void;
   onClearAll: () => void;
   onCollectSingleFull?: (invoice: Invoice) => void;
+  onCollectSinglePartial?: (invoice: Invoice, partialAmount: number) => void;
+  partialAmounts?: Record<string, number>;
+  onPartialAmountChange?: (invoiceId: string, amount: number) => void;
   className?: string;
 }
 
@@ -25,8 +28,12 @@ export function InvoiceListSelector({
   onSelectAll,
   onClearAll,
   onCollectSingleFull,
+  onCollectSinglePartial,
+  partialAmounts = {},
+  onPartialAmountChange,
   className,
 }: InvoiceListSelectorProps) {
+  const [activePartialInvoiceId, setActivePartialInvoiceId] = React.useState<string | null>(null);
   // Only show invoices with balance > 0 and not cancelled/draft
   const activeInvoices = invoices.filter((i) => {
     if (i.status === 'CANCELLED' || i.status === 'DRAFT' || i.status === 'PAID') {
@@ -188,20 +195,126 @@ export function InvoiceListSelector({
                           />
                         </div>
                       </div>
-                      {onCollectSingleFull && uncollectedBalance > 0 && (
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onCollectSingleFull(inv);
-                          }}
-                          className="mt-1 text-[11px] font-bold text-primary hover:underline bg-primary-light px-2 py-0.5 rounded border border-primary-border self-start"
-                        >
-                          Collect Full
-                        </button>
+                      {uncollectedBalance > 0 && (
+                        <div className="flex items-center gap-1.5 mt-1.5">
+                          {onCollectSingleFull && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setActivePartialInvoiceId(null);
+                                onCollectSingleFull(inv);
+                              }}
+                              className="text-[10.5px] font-bold text-primary hover:bg-primary-light/80 bg-primary-light px-2 py-0.5 rounded border border-primary-border transition-all active:scale-95"
+                              title={`Collect full remaining balance of ${inv.invoiceNumber}`}
+                            >
+                              Collect Full
+                            </button>
+                          )}
+                          {onCollectSinglePartial && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setActivePartialInvoiceId(inv.id);
+                                const defaultHalf = Math.round(uncollectedBalance / 2);
+                                onCollectSinglePartial(inv, partialAmounts[inv.id] || defaultHalf);
+                              }}
+                              className={cn(
+                                "text-[10.5px] font-bold px-2 py-0.5 rounded border transition-all active:scale-95",
+                                isSelected && activePartialInvoiceId === inv.id
+                                  ? "bg-amber-600 text-white border-amber-600 shadow-2xs"
+                                  : "bg-amber-50 hover:bg-amber-100 text-amber-800 border-amber-200"
+                              )}
+                              title={`Collect a partial amount against ${inv.invoiceNumber}`}
+                            >
+                              Pay Partial
+                            </button>
+                          )}
+                        </div>
                       )}
                     </div>
                   </div>
+
+                  {/* Interactive Inline Partial Payment Control */}
+                  {isSelected && (activePartialInvoiceId === inv.id || (partialAmounts[inv.id] && partialAmounts[inv.id] < uncollectedBalance)) && (
+                    <div
+                      onClick={(e) => e.stopPropagation()}
+                      className="mt-3 p-2.5 rounded-xl bg-amber-50/70 border border-amber-200 text-xs space-y-2 animate-in fade-in slide-in-from-top-1"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-bold text-amber-900 text-[11px] flex items-center gap-1">
+                          <span>Partial Amount to Collect (Max: LKR {uncollectedBalance.toLocaleString()})</span>
+                        </span>
+                        <span className="text-[10px] font-mono font-bold text-amber-700 bg-white px-1.5 py-0.5 rounded border border-amber-200">
+                          Invoice: {inv.invoiceNumber}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <div className="relative flex-1">
+                          <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[11px] font-bold text-slate-400 select-none">
+                            LKR
+                          </span>
+                          <input
+                            type="number"
+                            min="1"
+                            max={uncollectedBalance}
+                            step="any"
+                            value={partialAmounts[inv.id] !== undefined ? partialAmounts[inv.id] : ''}
+                            onChange={(e) => {
+                              const val = parseFloat(e.target.value);
+                              if (isNaN(val)) {
+                                onPartialAmountChange?.(inv.id, 0);
+                                return;
+                              }
+                              const clamped = Math.min(uncollectedBalance, Math.max(0, val));
+                              onPartialAmountChange?.(inv.id, clamped);
+                              onCollectSinglePartial?.(inv, clamped);
+                            }}
+                            placeholder="0.00"
+                            className="w-full h-8 pl-10 pr-2 rounded-lg bg-white border border-amber-300 font-mono font-bold text-slate-900 text-xs focus:outline-none focus:ring-1 focus:ring-amber-500"
+                          />
+                        </div>
+
+                        {/* Quick Percentage Presets */}
+                        <div className="flex items-center gap-1">
+                          {[
+                            { label: '25%', factor: 0.25 },
+                            { label: '50%', factor: 0.5 },
+                            { label: '75%', factor: 0.75 },
+                          ].map((preset) => (
+                            <button
+                              key={preset.label}
+                              type="button"
+                              onClick={() => {
+                                const presetVal = Math.round(uncollectedBalance * preset.factor);
+                                onPartialAmountChange?.(inv.id, presetVal);
+                                onCollectSinglePartial?.(inv, presetVal);
+                              }}
+                              className="h-8 px-2 rounded-lg text-[10.5px] font-bold bg-white border border-amber-200 text-amber-800 hover:bg-amber-100 transition-colors"
+                            >
+                              {preset.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {partialAmounts[inv.id] !== undefined && partialAmounts[inv.id] > 0 && (
+                        <div className="flex items-center justify-between text-[10.5px] text-amber-800 pt-1 border-t border-amber-200/60">
+                          <span>
+                            Remaining after payment:{' '}
+                            <strong className="font-mono font-bold">
+                              LKR {Math.max(0, uncollectedBalance - (partialAmounts[inv.id] || 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </strong>
+                          </span>
+                          <span className="font-bold text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded">
+                            PARTIALLY_COLLECTED
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

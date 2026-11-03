@@ -4,10 +4,7 @@ import { useAuth } from '../../../hooks/useAuth';
 import { useOrders } from '../../../hooks/useOrders';
 import { invoiceService } from '../../../services/InvoiceService';
 import { SalesOrder, OrderStatus } from '../../../types/order';
-import {
-  Dialog,
-  DialogContent,
-} from '../../../components/ui/dialog';
+import { Dialog } from '../../../components/ui/dialog';
 import { Button } from '../../../components/ui/button';
 import { formatCurrency, formatDate } from '../../../utils/formatters';
 import { toast } from 'sonner';
@@ -132,8 +129,13 @@ export function CreateInvoiceModal({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="p-0 gap-0 overflow-hidden max-w-lg w-full rounded-2xl border-0 shadow-2xl flex flex-col max-h-[85vh]">
+    <Dialog
+      open={isOpen}
+      onOpenChange={(open) => !open && onClose()}
+      hideCloseButton
+      className="p-0 gap-0 overflow-hidden max-w-lg w-full rounded-2xl border border-slate-200/90 shadow-2xl"
+    >
+      <div className="flex flex-col max-h-[85vh]">
 
         {/* ── HEADER ─────────────────────────────────────────────────── */}
         <div className="flex items-start justify-between px-5 pt-5 pb-4 border-b border-slate-100">
@@ -320,7 +322,7 @@ export function CreateInvoiceModal({
           </div>
         </div>
 
-      </DialogContent>
+      </div>
     </Dialog>
   );
 }

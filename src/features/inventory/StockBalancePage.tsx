@@ -381,95 +381,162 @@ export function StockBalancePage() {
               <p className="text-sm mt-1">Try adjusting the filters or search term.</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>SKU</TableHead>
-                    <TableHead>Product Name</TableHead>
-                    <TableHead>Category</TableHead>
-                    <TableHead className="text-center">Location</TableHead>
-                    <TableHead className="text-right font-bold text-emerald-700">Available</TableHead>
-                    <TableHead className="text-right font-semibold text-blue-700">Reserved (Order)</TableHead>
-                    <TableHead className="text-right font-semibold text-indigo-700">Dispatched</TableHead>
-                    <TableHead className="text-right font-semibold text-teal-700">Delivered</TableHead>
-                    <TableHead className="text-right font-semibold text-rose-600">Rejected (Damage)</TableHead>
-                    <TableHead className="text-right">Est. Value</TableHead>
-                    <TableHead className="text-center">Status</TableHead>
-                    <TableHead className="text-center">Action</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredBalances.map(b => {
-                    const { label, cls } = getStatusInfo(b.availableForSale);
-                    const estValue = b.availableForSale * b.costPrice;
-                    return (
-                      <TableRow key={b.id} className="hover:bg-muted/30">
-                        <TableCell className="font-mono text-xs">{b.sku}</TableCell>
-                        <TableCell className="font-medium max-w-[200px]">
-                          <p className="truncate">{b.productName}</p>
-                        </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">{b.category}</TableCell>
-                        <TableCell className="text-center">
-                          <Badge variant="outline" className="text-xs">{b.locationType}</Badge>
-                        </TableCell>
-                        <TableCell className="text-right font-bold text-emerald-700 font-mono">{b.availableForSale}</TableCell>
-                        <TableCell className="text-right font-mono">
-                          {b.reservedQuantity > 0 ? (
-                            <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 text-[10.5px] py-0 px-1.5 font-mono">
-                              {b.reservedQuantity}
-                            </Badge>
-                          ) : (
-                            <span className="text-muted-foreground text-xs">0</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right font-mono">
-                          {b.dispatchedQuantity > 0 ? (
-                            <Badge variant="outline" className="bg-indigo-50 text-indigo-700 border-indigo-200 text-[10.5px] py-0 px-1.5 font-mono">
-                              {b.dispatchedQuantity}
-                            </Badge>
-                          ) : (
-                            <span className="text-muted-foreground text-xs">0</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right font-mono">
-                          {b.deliveredQuantity > 0 ? (
-                            <Badge variant="outline" className="bg-teal-50 text-teal-700 border-teal-200 text-[10.5px] py-0 px-1.5 font-mono">
-                              {b.deliveredQuantity}
-                            </Badge>
-                          ) : (
-                            <span className="text-muted-foreground text-xs">0</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right font-mono">
-                          {b.damagedQuantity > 0 ? (
-                            <Badge className="bg-rose-100 text-rose-800 border-rose-200 text-[10px] py-0 px-1 font-mono">
-                              {b.damagedQuantity}
-                            </Badge>
-                          ) : (
-                            <span className="text-muted-foreground text-xs">0</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right text-sm font-mono">{formatCurrency(estValue)}</TableCell>
-                        <TableCell className="text-center">
-                          <InventoryStatusBadge status={label} />
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="text-xs h-7"
-                            onClick={() => handleOpenAdjust(b)}
-                          >
-                            Adjust
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </div>
+            <>
+              {/* Mobile Card View (< md) */}
+              <div className="block md:hidden divide-y divide-border/60">
+                {filteredBalances.map((b) => {
+                  const { label } = getStatusInfo(b.availableForSale);
+                  const estValue = b.availableForSale * b.costPrice;
+                  return (
+                    <div key={b.id} className="p-4 space-y-3 bg-card hover:bg-muted/10 transition-colors">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="font-semibold text-sm text-foreground truncate">{b.productName}</p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="font-mono text-xs text-muted-foreground">{b.sku}</span>
+                            <span className="text-xs text-muted-foreground">·</span>
+                            <span className="text-xs text-muted-foreground">{b.category}</span>
+                          </div>
+                        </div>
+                        <InventoryStatusBadge status={label} />
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-2 bg-muted/40 p-2.5 rounded-lg text-xs">
+                        <div>
+                          <span className="text-[10px] text-muted-foreground block font-medium uppercase">Available</span>
+                          <span className="text-sm font-bold text-emerald-700 font-mono">{b.availableForSale}</span>
+                        </div>
+                        <div>
+                          <span className="text-[10px] text-muted-foreground block font-medium uppercase">Reserved</span>
+                          <span className="text-xs font-semibold text-blue-700 font-mono">{b.reservedQuantity}</span>
+                        </div>
+                        <div>
+                          <span className="text-[10px] text-muted-foreground block font-medium uppercase">Dispatched</span>
+                          <span className="text-xs font-semibold text-indigo-700 font-mono">{b.dispatchedQuantity}</span>
+                        </div>
+                        <div className="mt-1">
+                          <span className="text-[10px] text-muted-foreground block font-medium uppercase">Delivered</span>
+                          <span className="text-xs font-semibold text-teal-700 font-mono">{b.deliveredQuantity}</span>
+                        </div>
+                        <div className="mt-1">
+                          <span className="text-[10px] text-muted-foreground block font-medium uppercase">Damaged</span>
+                          <span className="text-xs font-semibold text-rose-600 font-mono">{b.damagedQuantity}</span>
+                        </div>
+                        <div className="mt-1">
+                          <span className="text-[10px] text-muted-foreground block font-medium uppercase">Est. Value</span>
+                          <span className="text-xs font-bold text-foreground font-mono">{formatCurrency(estValue)}</span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between pt-1">
+                        <Badge variant="outline" className="text-[11px] font-normal">
+                          Loc: {b.locationType}
+                        </Badge>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="text-xs h-7 px-3"
+                          onClick={() => handleOpenAdjust(b)}
+                        >
+                          Adjust Stock
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Desktop Table View (>= md) */}
+              <div className="hidden md:block overflow-x-auto [scrollbar-width:thin]">
+                <Table className="min-w-[980px] w-full text-xs">
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-24">SKU</TableHead>
+                      <TableHead className="min-w-[180px]">Product Name</TableHead>
+                      <TableHead className="w-28">Category</TableHead>
+                      <TableHead className="w-24 text-center">Location</TableHead>
+                      <TableHead className="w-20 text-right font-bold text-emerald-700">Available</TableHead>
+                      <TableHead className="w-24 text-right font-semibold text-blue-700">Reserved</TableHead>
+                      <TableHead className="w-24 text-right font-semibold text-indigo-700">Dispatched</TableHead>
+                      <TableHead className="w-24 text-right font-semibold text-teal-700">Delivered</TableHead>
+                      <TableHead className="w-24 text-right font-semibold text-rose-600">Damaged</TableHead>
+                      <TableHead className="w-28 text-right font-semibold">Est. Value</TableHead>
+                      <TableHead className="w-24 text-center">Status</TableHead>
+                      <TableHead className="w-20 text-center">Action</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredBalances.map(b => {
+                      const { label, cls } = getStatusInfo(b.availableForSale);
+                      const estValue = b.availableForSale * b.costPrice;
+                      return (
+                        <TableRow key={b.id} className="hover:bg-muted/30">
+                          <TableCell className="font-mono text-xs font-semibold">{b.sku}</TableCell>
+                          <TableCell className="font-medium">
+                            <p className="truncate max-w-[220px] font-semibold text-foreground">{b.productName}</p>
+                          </TableCell>
+                          <TableCell className="text-xs text-muted-foreground truncate max-w-[120px]">{b.category}</TableCell>
+                          <TableCell className="text-center">
+                            <Badge variant="outline" className="text-[11px] px-1.5 py-0">{b.locationType}</Badge>
+                          </TableCell>
+                          <TableCell className="text-right font-bold text-emerald-700 font-mono text-sm">{b.availableForSale}</TableCell>
+                          <TableCell className="text-right font-mono">
+                            {b.reservedQuantity > 0 ? (
+                              <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 text-[10.5px] py-0 px-1.5 font-mono">
+                                {b.reservedQuantity}
+                              </Badge>
+                            ) : (
+                              <span className="text-muted-foreground text-xs">0</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right font-mono">
+                            {b.dispatchedQuantity > 0 ? (
+                              <Badge variant="outline" className="bg-indigo-50 text-indigo-700 border-indigo-200 text-[10.5px] py-0 px-1.5 font-mono">
+                                {b.dispatchedQuantity}
+                              </Badge>
+                            ) : (
+                              <span className="text-muted-foreground text-xs">0</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right font-mono">
+                            {b.deliveredQuantity > 0 ? (
+                              <Badge variant="outline" className="bg-teal-50 text-teal-700 border-teal-200 text-[10.5px] py-0 px-1.5 font-mono">
+                                {b.deliveredQuantity}
+                              </Badge>
+                            ) : (
+                              <span className="text-muted-foreground text-xs">0</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right font-mono">
+                            {b.damagedQuantity > 0 ? (
+                              <Badge className="bg-rose-100 text-rose-800 border-rose-200 text-[10px] py-0 px-1 font-mono">
+                                {b.damagedQuantity}
+                              </Badge>
+                            ) : (
+                              <span className="text-muted-foreground text-xs">0</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right text-xs font-mono font-medium">{formatCurrency(estValue)}</TableCell>
+                          <TableCell className="text-center">
+                            <InventoryStatusBadge status={label} />
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-xs h-7 px-2"
+                              onClick={() => handleOpenAdjust(b)}
+                            >
+                              Adjust
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>

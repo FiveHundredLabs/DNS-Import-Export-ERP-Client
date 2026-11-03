@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -11,6 +11,7 @@ import { BarcodeVisual } from '../../components/common/BarcodeVisual';
 import { BarcodeSticker } from '../../components/common/BarcodeSticker';
 import { printerService } from '../../services/PrinterService';
 import { UnitBarcodeModal } from '../../components/inventory/UnitBarcodeModal';
+import { PrintableGRN } from './PrintableGRN';
 import { PaginationControls } from '../../components/common/PaginationControls';
 import { useGRN } from '../../hooks/useGRN';
 import { useAuth } from '../../hooks/useAuth';
@@ -86,6 +87,7 @@ export const checkProductRequiresSerial = (item: {
 
 export function GRNCreateEditPage() {
   const navigate = useNavigate();
+  const { id } = useParams<{ id?: string }>();
   const { grnService } = useGRN();
   const { user, currentUser } = useAuth();
 
@@ -136,9 +138,41 @@ export function GRNCreateEditPage() {
   // Fallback modal for viewing/reprinting
   const [isBarcodeModalOpen, setIsBarcodeModalOpen] = useState<boolean>(false);
   const [unlabeledPromptOpen, setUnlabeledPromptOpen] = useState<boolean>(false);
+  const [isPrintPreviewOpen, setIsPrintPreviewOpen] = useState<boolean>(false);
 
   const activeUser = user || currentUser;
   const isStockKeeper = activeUser?.role === 'STOCK_KEEPER';
+
+  // Reconstructed preview GRN for physical print before submission
+  const previewGRN: GRN = useMemo(() => ({
+    id: id || `grn-preview-${Date.now()}`,
+    grnNumber: id ? `GRN-${id.slice(0, 8)}` : (poNumber ? `GRN-${poNumber}` : 'GRN-DRAFT-PREVIEW'),
+    purchaseOrderNumber: poNumber,
+    poNumber: poNumber,
+    poId: selectedPoId,
+    supplierName: supplierName || 'Unspecified Supplier',
+    supplierInvoiceNumber: deliveryNoteRef,
+    warehouseId: warehouseId || 'WH-MAIN',
+    status: 'DRAFT',
+    receivedDate: receivedDate || new Date().toISOString(),
+    submittedAt: new Date().toISOString(),
+    receivedById: activeUser?.name || 'Stock Keeper',
+    notes: notes,
+    items: items.map((it) => ({
+      productId: it.productId,
+      productNameSnapshot: it.productName,
+      skuSnapshot: it.sku,
+      expectedQuantity: it.expectedQuantity,
+      receivedQuantity: it.receivedQuantity,
+      damagedQuantity: it.damagedQuantity || 0,
+      uom: it.uom || 'PCS',
+      unitCostSnapshot: it.unitCostSnapshot || 0,
+      unitRecords: it.unitRecords || [],
+      serialNumbers: it.serialNumbers || [],
+    })),
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  }), [id, poNumber, selectedPoId, supplierName, deliveryNoteRef, warehouseId, receivedDate, activeUser, notes, items]);
 
   const filteredProducts = MOCK_PRODUCTS.filter((p) => {
     if (!productSearch) return true;
@@ -2502,8 +2536,8 @@ export function GRNCreateEditPage() {
             </div>
 
             {/* Items Summary Table */}
-            <div className="border rounded-xl overflow-hidden text-xs">
-              <table className="w-full">
+            <div className="border rounded-xl overflow-x-auto w-full text-xs">
+              <table className="w-full min-w-[650px]">
                 <thead className="bg-slate-50 border-b text-[10.5px] uppercase font-semibold text-slate-600">
                   <tr>
                     <th className="py-2.5 px-3 text-left">Product</th>
@@ -2581,6 +2615,16 @@ export function GRNCreateEditPage() {
               </Button>
 
               <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsPrintPreviewOpen(true)}
+                  className="h-9 text-xs font-bold gap-1.5 border-slate-300 text-slate-800 hover:bg-slate-100 shadow-xs"
+                >
+                  <Printer className="h-4 w-4 text-primary" />
+                  Preview &amp; Print GRN (A4)
+                </Button>
                 <Button
                   type="button"
                   variant="outline"
@@ -2670,6 +2714,20 @@ export function GRNCreateEditPage() {
             </Button>
           ) : null}
 
+          {items.length > 0 && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setIsPrintPreviewOpen(true)}
+              className="h-8 text-xs font-bold gap-1.5 border-slate-300 text-slate-800 hover:bg-slate-100 shadow-2xs"
+              title="Preview & Print Official GRN before submission"
+            >
+              <Printer className="h-3.5 w-3.5 text-primary" />
+              Print GRN
+            </Button>
+          )}
+
           <Button
             type="button"
             variant="outline"
@@ -2752,6 +2810,15 @@ export function GRNCreateEditPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* ── Official A4 Printable GRN Preview Modal (Before Submission) ── */}
+      {isPrintPreviewOpen && (
+        <PrintableGRN
+          grn={previewGRN}
+          open={isPrintPreviewOpen}
+          onOpenChange={setIsPrintPreviewOpen}
+        />
+      )}
     </div>
   );
 }

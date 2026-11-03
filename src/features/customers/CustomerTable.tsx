@@ -164,7 +164,7 @@ export function CustomerTable({
 
       {/* 2. Desktop Full Table View (Hidden on mobile, block on md+) */}
       <div className="hidden md:block rounded-2xl border border-slate-200/80 bg-white shadow-sm overflow-hidden">
-        <Table>
+        <Table className="min-w-[900px]">
           <TableHeader>
             <TableRow>
               <TableHead>Customer / Code</TableHead>

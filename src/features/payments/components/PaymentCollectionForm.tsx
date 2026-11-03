@@ -21,6 +21,10 @@ interface PaymentCollectionFormProps {
   onBankNameChange: (val: string) => void;
   notes: string;
   onNotesChange: (val: string) => void;
+  targetInvoice?: {
+    invoiceNumber: string;
+    balance: number;
+  } | null;
   className?: string;
 }
 
@@ -39,6 +43,7 @@ export function PaymentCollectionForm({
   onBankNameChange,
   notes,
   onNotesChange,
+  targetInvoice,
   className,
 }: PaymentCollectionFormProps) {
   const paymentMethods: { id: PaymentMethod; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
@@ -91,6 +96,26 @@ export function PaymentCollectionForm({
         </h3>
         <span className="text-[10.5px] text-slate-400 font-medium">Field Collection</span>
       </div>
+
+      {/* Target Invoice Context Banner */}
+      {targetInvoice && (
+        <div className="p-2.5 rounded-xl bg-amber-50/80 border border-amber-200 flex items-center justify-between gap-2 text-xs">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="h-2 w-2 rounded-full bg-amber-500 shrink-0" />
+            <span className="text-[11px] text-amber-950 font-medium truncate">
+              Targeting Invoice: <strong className="font-mono font-bold text-amber-900">{targetInvoice.invoiceNumber}</strong>
+            </span>
+          </div>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <span className="text-[10px] text-amber-700 font-bold bg-white px-2 py-0.5 rounded border border-amber-200 font-mono">
+              Balance: LKR {targetInvoice.balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </span>
+            <span className="text-[10px] font-bold text-amber-800 bg-amber-100 px-1.5 py-0.5 rounded">
+              Partial / Full
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* Prominent Payment Amount Input */}
       <div>
