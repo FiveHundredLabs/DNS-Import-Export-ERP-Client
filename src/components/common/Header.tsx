@@ -39,6 +39,7 @@ const ROUTE_TITLES: Record<string, string> = {
   '/commissions': 'Commission Configuration & Reports',
   '/commissions/config': 'Commission Configuration & Reports',
   '/commissions/configuration': 'Commission Configuration & Reports',
+  '/settings/credit-terms': 'Customer Credit Terms Configuration',
   '/reports': 'Enterprise Analytics & Sales Reports',
   '/reports/sales': 'Sales Reports & Territory Analytics',
   '/reports/purchasing': 'Procurement & Purchasing Reports',
