@@ -569,7 +569,7 @@ export function PrintableGRN({ grn, open, onOpenChange, pricingData }: Printable
                   </div>
                   <div>
                     <div className="text-[11px] font-bold text-slate-900">
-                      Accounts Payable Entry
+                      AP Bill Voucher Entry
                     </div>
                     <div className="text-[10px] text-slate-500">Ref: AP-GRN-______</div>
                   </div>
