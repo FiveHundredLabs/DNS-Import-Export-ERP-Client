@@ -518,26 +518,26 @@ export function InvoiceListPage() {
 
                         {inv.status === 'DRAFT' && isSalesManager ? (
                           <Button
-                            variant="default"
+                            variant="ghost"
                             size="sm"
                             onClick={(e) => {
                               e.stopPropagation();
                               navigate(`/invoices/${inv.id}`);
                             }}
-                            className="h-8 px-3 text-xs bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl cursor-pointer gap-1 shadow-xs shrink-0"
+                            className="h-8 px-2.5 text-xs font-semibold text-amber-700 hover:text-amber-800 hover:bg-amber-50 rounded-xl cursor-pointer gap-1 shrink-0"
                           >
                             <Edit3 className="h-3.5 w-3.5" />
                             <span>Edit Draft</span>
                           </Button>
                         ) : inv.balanceAmount > 0 ? (
                           <Button
-                            variant="default"
+                            variant="ghost"
                             size="sm"
                             onClick={(e) => {
                               e.stopPropagation();
                               navigate(`/invoices/${inv.id}?collect=true`);
                             }}
-                            className="h-8 px-3 text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl cursor-pointer gap-1 shadow-xs shrink-0"
+                            className="h-8 px-2.5 text-xs font-semibold text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50 rounded-xl cursor-pointer gap-1 shrink-0"
                           >
                             <CreditCard className="h-3.5 w-3.5" />
                             <span>Collect</span>
@@ -554,8 +554,8 @@ export function InvoiceListPage() {
               </div>
 
               {/* 2. Desktop Full Table View (Hidden on mobile, block on md+) */}
-              <div className="hidden md:block overflow-x-auto">
-                <Table>
+              <div className="hidden md:block overflow-x-auto [scrollbar-width:thin]">
+                <Table className="min-w-[980px]">
                   <TableHeader>
                     <TableRow>
                       <TableHead>Invoice #</TableHead>
@@ -647,13 +647,13 @@ export function InvoiceListPage() {
                           <div className="flex items-center justify-end gap-1">
                             {inv.status === 'DRAFT' && isSalesManager && (
                               <Button
-                                variant="default"
-                                size="sm"
+                                variant="ghost"
+                                size="xs"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   navigate(`/invoices/${inv.id}`);
                                 }}
-                                className="h-7 px-2 text-xs bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-lg cursor-pointer gap-1 shadow-2xs shrink-0"
+                                className="font-semibold text-amber-700 hover:text-amber-800 hover:bg-amber-50 gap-1 rounded-lg"
                                 title="Edit Draft Invoice"
                               >
                                 <Edit3 className="h-3.5 w-3.5" />

@@ -7,7 +7,12 @@ export interface TableProps extends React.HTMLAttributes<HTMLTableElement> {
 
 export const Table = React.forwardRef<HTMLTableElement, TableProps>(
   ({ className, containerClassName, ...props }, ref) => (
-    <div className={cn('relative w-full min-w-0 overflow-x-auto', containerClassName)}>
+    <div
+      className={cn(
+        'relative w-full min-w-0 overflow-x-auto [scrollbar-width:thin] [scrollbar-color:rgba(148,163,184,0.35)_transparent] [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-slate-200 hover:[&::-webkit-scrollbar-thumb]:bg-slate-300 [&::-webkit-scrollbar-track]:bg-transparent touch-pan-x',
+        containerClassName
+      )}
+    >
       <table ref={ref} className={cn('w-full caption-bottom text-[13.5px] tabular-nums leading-relaxed', className)} {...props} />
     </div>
   )

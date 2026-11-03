@@ -31,6 +31,7 @@ import { InvoiceListPage } from './features/invoices/InvoiceListPage';
 import { InvoiceDetailPage } from './features/invoices/InvoiceDetailPage';
 import { InvoiceDraftEditPage } from './features/invoices/InvoiceDraftEditPage';
 import { OrderApprovalDetailPage } from './features/approvals/OrderApprovalDetailPage';
+import { MyApprovalsPage } from './features/approvals/MyApprovalsPage';
 import { PaymentListPage } from './features/payments/PaymentListPage';
 import { PaymentCollectionPage } from './features/payments/PaymentCollectionPage';
 import { PaymentDetailPage } from './features/payments/PaymentDetailPage';
@@ -44,6 +45,7 @@ import { POSSessionsPage } from './features/pos/POSSessionsPage';
 import { WarrantyHubPage } from './features/warranty/WarrantyHubPage';
 import { SalesRepWarrantyPage } from './features/warranty/SalesRepWarrantyPage';
 import { CommissionHubPage } from './features/commissions/CommissionHubPage';
+import { CommissionConfigPage } from './features/commissions/CommissionConfigPage';
 import { FinanceLayout } from './features/finance/FinanceLayout';
 import { FinanceDashboardPage } from './features/finance/pages/FinanceDashboardPage';
 import { ChartOfAccountsPage } from './features/finance/pages/ChartOfAccountsPage';
@@ -165,6 +167,14 @@ export function App() {
           element={
             <ProtectedRoute>
               <ApprovalsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="approvals/my-approvals"
+          element={
+            <ProtectedRoute>
+              <MyApprovalsPage />
             </ProtectedRoute>
           }
         />
@@ -504,7 +514,23 @@ export function App() {
           path="commissions"
           element={
             <ProtectedRoute>
-              <CommissionHubPage />
+              <CommissionConfigPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="commissions/config"
+          element={
+            <ProtectedRoute>
+              <CommissionConfigPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="commissions/configuration"
+          element={
+            <ProtectedRoute>
+              <CommissionConfigPage />
             </ProtectedRoute>
           }
         />
@@ -523,6 +549,30 @@ export function App() {
           element={
             <ProtectedRoute>
               <ReportsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="reports/sales"
+          element={
+            <ProtectedRoute>
+              <ReportsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="reports/purchasing"
+          element={
+            <ProtectedRoute>
+              <PurchasingReportsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="reports/finance"
+          element={
+            <ProtectedRoute>
+              <FinanceReportsHubPage />
             </ProtectedRoute>
           }
         />

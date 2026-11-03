@@ -127,80 +127,154 @@ export function DispatchPage() {
               No orders found matching criteria
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Order Number</TableHead>
-                  <TableHead>Customer Name</TableHead>
-                  <TableHead>Order Date</TableHead>
-                  <TableHead className="text-right">Total</TableHead>
-                  <TableHead className="text-center">Status</TableHead>
-                  <TableHead className="text-center">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+            <>
+              {/* Mobile Cards View (< md) */}
+              <div className="block md:hidden divide-y divide-border/60">
                 {filteredOrders.map(o => (
-                  <TableRow key={o.id}>
-                    <TableCell className="font-medium">{o.id}</TableCell>
-                    <TableCell>{o.customerName || 'N/A'}</TableCell>
-                    <TableCell>{formatDate(o.createdAt)}</TableCell>
-                    <TableCell className="text-right">{formatCurrency(o.totalAmount || 0)}</TableCell>
-                    <TableCell className="text-center">
+                  <div key={o.id} className="p-4 space-y-3 bg-card hover:bg-muted/10 transition-colors">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <span className="font-mono text-xs font-bold text-primary block">{o.id}</span>
+                        <p className="font-semibold text-sm text-foreground truncate mt-0.5">{o.customerName || 'N/A'}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">{formatDate(o.createdAt)}</p>
+                      </div>
                       <Badge
                         variant="outline"
-                        className={`${getStatusColor(o.status)} text-[10px] font-mono font-semibold uppercase tracking-wider rounded-md px-2.5 py-0.5`}
+                        className={`${getStatusColor(o.status)} text-[10px] font-mono font-semibold uppercase tracking-wider rounded-md px-2 py-0.5 shrink-0`}
                       >
                         {o.status}
                       </Badge>
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <div className="flex items-center justify-center gap-1.5 flex-wrap">
+                    </div>
+
+                    <div className="flex items-center justify-between text-xs bg-muted/40 p-2.5 rounded-lg">
+                      <span className="text-muted-foreground font-medium">Order Total:</span>
+                      <span className="font-mono font-bold text-sm text-foreground">{formatCurrency(o.totalAmount || 0)}</span>
+                    </div>
+
+                    <div className="flex items-center gap-2 pt-1 flex-wrap">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          setSelectedOrderForDeliveryNote(o);
+                          setDeliveryNoteModalOpen(true);
+                        }}
+                        className="h-8 text-xs gap-1 border-slate-200 text-slate-700 bg-white hover:bg-slate-50 flex-1"
+                        title="Print 3-Ply Delivery Note (Customer, Accounts, Stores copies)"
+                      >
+                        <Printer className="h-3.5 w-3.5 text-primary" />
+                        <span>3-Ply Note</span>
+                      </Button>
+
+                      {(o.status === 'ISSUED' || o.status === 'INVOICED') && (
                         <Button
                           size="sm"
-                          variant="outline"
                           onClick={() => {
                             setSelectedOrderForDeliveryNote(o);
                             setDeliveryNoteModalOpen(true);
                           }}
-                          className="h-8 text-xs gap-1 border-slate-200 text-slate-700 bg-white hover:bg-slate-50"
-                          title="Print 3-Ply Delivery Note (Customer, Accounts, Stores copies)"
+                          disabled={processingId === o.id}
+                          className="h-8 text-xs bg-primary hover:bg-primary-hover text-white gap-1 flex-1"
                         >
-                          <Printer className="h-3.5 w-3.5 text-primary" />
-                          <span>3-Ply Note</span>
+                          <Truck className="h-3.5 w-3.5" />
+                          <span>Dispatch</span>
                         </Button>
+                      )}
 
-                        {(o.status === 'ISSUED' || o.status === 'INVOICED') && (
-                          <Button
-                            size="sm"
-                            onClick={() => {
-                              setSelectedOrderForDeliveryNote(o);
-                              setDeliveryNoteModalOpen(true);
-                            }}
-                            disabled={processingId === o.id}
-                            className="h-8 text-xs bg-primary hover:bg-primary-hover text-white gap-1"
-                          >
-                            <Truck className="h-3.5 w-3.5" />
-                            <span>Dispatch</span>
-                          </Button>
-                        )}
-
-                        {o.status === 'DISPATCHED' && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="h-8 text-xs bg-green-50 text-green-700 hover:bg-green-100 hover:text-green-800 border-green-200"
-                            onClick={() => handleAction(o.id, 'DELIVERED')}
-                            disabled={processingId === o.id}
-                          >
-                            Confirm Delivery
-                          </Button>
-                        )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
+                      {o.status === 'DISPATCHED' && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-8 text-xs bg-green-50 text-green-700 hover:bg-green-100 hover:text-green-800 border-green-200 flex-1"
+                          onClick={() => handleAction(o.id, 'DELIVERED')}
+                          disabled={processingId === o.id}
+                        >
+                          Confirm Delivery
+                        </Button>
+                      )}
+                    </div>
+                  </div>
                 ))}
-              </TableBody>
-            </Table>
+              </div>
+
+              {/* Desktop Table View (>= md) */}
+              <div className="hidden md:block overflow-x-auto [scrollbar-width:thin]">
+                <Table className="min-w-[800px] w-full text-xs">
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-32">Order Number</TableHead>
+                      <TableHead className="min-w-[180px]">Customer Name</TableHead>
+                      <TableHead className="w-28">Order Date</TableHead>
+                      <TableHead className="w-28 text-right">Total</TableHead>
+                      <TableHead className="w-28 text-center">Status</TableHead>
+                      <TableHead className="w-44 text-center">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredOrders.map(o => (
+                      <TableRow key={o.id} className="hover:bg-muted/30">
+                        <TableCell className="font-medium font-mono text-xs">{o.id}</TableCell>
+                        <TableCell className="font-semibold text-foreground truncate max-w-[220px]">{o.customerName || 'N/A'}</TableCell>
+                        <TableCell className="text-muted-foreground">{formatDate(o.createdAt)}</TableCell>
+                        <TableCell className="text-right font-mono font-bold text-foreground">{formatCurrency(o.totalAmount || 0)}</TableCell>
+                        <TableCell className="text-center">
+                          <Badge
+                            variant="outline"
+                            className={`${getStatusColor(o.status)} text-[10px] font-mono font-semibold uppercase tracking-wider rounded-md px-2.5 py-0.5`}
+                          >
+                            {o.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <div className="flex items-center justify-center gap-1.5 flex-wrap">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                setSelectedOrderForDeliveryNote(o);
+                                setDeliveryNoteModalOpen(true);
+                              }}
+                              className="h-7 text-xs gap-1 border-slate-200 text-slate-700 bg-white hover:bg-slate-50 px-2"
+                              title="Print 3-Ply Delivery Note (Customer, Accounts, Stores copies)"
+                            >
+                              <Printer className="h-3 w-3 text-primary" />
+                              <span>3-Ply Note</span>
+                            </Button>
+
+                            {(o.status === 'ISSUED' || o.status === 'INVOICED') && (
+                              <Button
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedOrderForDeliveryNote(o);
+                                  setDeliveryNoteModalOpen(true);
+                                }}
+                                disabled={processingId === o.id}
+                                className="h-7 text-xs bg-primary hover:bg-primary-hover text-white gap-1 px-2.5"
+                              >
+                                <Truck className="h-3 w-3" />
+                                <span>Dispatch</span>
+                              </Button>
+                            )}
+
+                            {o.status === 'DISPATCHED' && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-7 text-xs bg-green-50 text-green-700 hover:bg-green-100 hover:text-green-800 border-green-200 px-2"
+                                onClick={() => handleAction(o.id, 'DELIVERED')}
+                                disabled={processingId === o.id}
+                              >
+                                Confirm Delivery
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>

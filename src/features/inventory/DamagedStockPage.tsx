@@ -443,17 +443,96 @@ export function DamagedStockPage() {
         </CardHeader>
 
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs">
+          {/* Mobile Card View (< md) */}
+          <div className="block md:hidden divide-y divide-slate-100">
+            {filteredDamagedItems.length === 0 ? (
+              <div className="py-10 text-center text-slate-400 p-4">
+                <CheckCircle2 className="h-8 w-8 text-emerald-500 mx-auto mb-2" />
+                <p className="text-xs font-medium text-slate-600">No damaged stock found in quarantine.</p>
+                <p className="text-[11px] text-slate-400 mt-0.5">All units are operational and available for sale.</p>
+              </div>
+            ) : (
+              filteredDamagedItems.map((item) => (
+                <div
+                  key={`${item.balance.productId}-${item.balance.locationId}`}
+                  className="p-4 space-y-3 bg-white hover:bg-slate-50/50 transition-colors"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <div className="font-semibold text-sm text-slate-900 truncate">{item.product.name}</div>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <span className="font-mono text-xs text-slate-500 font-semibold">{item.product.sku}</span>
+                        <span className="text-xs text-slate-300">·</span>
+                        <Badge variant="outline" className="font-mono text-[10px] bg-slate-50 px-1 py-0">
+                          {item.balance.locationId}
+                        </Badge>
+                      </div>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <span className="text-[10px] text-slate-400 block font-medium uppercase">Damaged</span>
+                      <span className="font-mono font-bold text-rose-700 text-base">{item.balance.damagedQuantity} units</span>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 bg-slate-50 p-2.5 rounded-lg text-xs">
+                    <div>
+                      <span className="text-[10px] text-slate-400 block uppercase font-medium">Unit Cost</span>
+                      <span className="font-mono font-semibold text-slate-700">{formatCurrency(item.unitCost)}</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-slate-400 block uppercase font-medium">Total Loss Value</span>
+                      <span className="font-mono font-bold text-rose-700">{formatCurrency(item.totalValuation)}</span>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col gap-1.5 pt-1">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleOpenReturnModal(item)}
+                      className="h-8 text-xs gap-1 text-indigo-700 border-indigo-200 hover:bg-indigo-50 font-medium w-full justify-center"
+                    >
+                      <Undo2 className="h-3.5 w-3.5" />
+                      Return to Supplier (Debit Note)
+                    </Button>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleOpenScrapModal(item)}
+                        className="h-8 text-xs gap-1 text-rose-700 border-rose-200 hover:bg-rose-50 font-medium justify-center"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                        Scrap / Write-Off
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleOpenRepairModal(item)}
+                        className="h-8 text-xs gap-1 text-emerald-700 border-emerald-200 hover:bg-emerald-50 font-medium justify-center"
+                      >
+                        <Wrench className="h-3.5 w-3.5" />
+                        Repair &amp; Restore
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          {/* Desktop Table View (>= md) */}
+          <div className="hidden md:block overflow-x-auto [scrollbar-width:thin]">
+            <table className="w-full min-w-[780px] text-xs">
               <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200">
                 <tr>
-                  <th className="py-2.5 px-3 text-left">Product / SKU</th>
-                  <th className="py-2.5 px-3 text-left">Location</th>
-                  <th className="py-2.5 px-3 text-right">Damaged Qty</th>
-                  <th className="py-2.5 px-3 text-right">Unit Cost</th>
-                  <th className="py-2.5 px-3 text-right">Total Valuation</th>
-                  <th className="py-2.5 px-3 text-left">Last Audit</th>
-                  <th className="py-2.5 px-3 text-center">Action Flows</th>
+                  <th className="py-2.5 px-3 text-left min-w-[180px]">Product / SKU</th>
+                  <th className="py-2.5 px-3 text-left w-24">Location</th>
+                  <th className="py-2.5 px-3 text-right w-24">Damaged Qty</th>
+                  <th className="py-2.5 px-3 text-right w-28">Unit Cost</th>
+                  <th className="py-2.5 px-3 text-right w-28">Total Valuation</th>
+                  <th className="py-2.5 px-3 text-left w-24">Last Audit</th>
+                  <th className="py-2.5 px-3 text-center min-w-[280px]">Action Flows</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -478,7 +557,7 @@ export function DamagedStockPage() {
                       className="hover:bg-slate-50/80 transition-colors"
                     >
                       <td className="py-3 px-3">
-                        <div className="font-semibold text-slate-900">{item.product.name}</div>
+                        <div className="font-semibold text-slate-900 truncate max-w-[220px]">{item.product.name}</div>
                         <div className="font-mono text-slate-500 text-[11px]">{item.product.sku}</div>
                       </td>
                       <td className="py-3 px-3">
@@ -499,7 +578,7 @@ export function DamagedStockPage() {
                         {formatDate(item.balance.lastUpdated)}
                       </td>
                       <td className="py-3 px-3 text-center">
-                        <div className="flex items-center justify-center gap-1.5">
+                        <div className="flex items-center justify-center gap-1.5 flex-wrap">
                           {/* Flow 1: Return to Supplier via Debit Note */}
                           <Button
                             variant="outline"
@@ -509,7 +588,7 @@ export function DamagedStockPage() {
                             title="Generate Supplier Debit Note to return damaged items"
                           >
                             <Undo2 className="h-3 w-3" />
-                            Return to Supplier
+                            Return
                           </Button>
 
                           {/* Flow 2: Scrap / Write-Off */}
@@ -521,7 +600,7 @@ export function DamagedStockPage() {
                             title="Scrap and write off irreparable stock to loss"
                           >
                             <Trash2 className="h-3 w-3" />
-                            Scrap / Write-Off
+                            Scrap
                           </Button>
 
                           {/* Flow 3: Repair & Restore */}
@@ -533,7 +612,7 @@ export function DamagedStockPage() {
                             title="Repair and return unit to good available inventory"
                           >
                             <Wrench className="h-3 w-3" />
-                            Repair &amp; Restore
+                            Repair
                           </Button>
                         </div>
                       </td>

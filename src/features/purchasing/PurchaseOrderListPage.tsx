@@ -194,7 +194,7 @@ export function PurchaseOrderListPage() {
       <Card className="border-slate-200 shadow-2xs overflow-hidden">
         <CardContent className="p-0">
           <div className="overflow-x-auto">
-            <table className="w-full text-xs text-left text-slate-600">
+            <table className="w-full text-xs text-left text-slate-600 min-w-[850px]">
               <thead className="bg-slate-50/80 text-[11px] uppercase tracking-wider text-slate-500 border-b border-slate-200">
                 <tr>
                   <th className="py-3 px-4 font-semibold">PO Number</th>
