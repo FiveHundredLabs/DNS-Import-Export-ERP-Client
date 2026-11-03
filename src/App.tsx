@@ -31,6 +31,7 @@ import { InvoiceListPage } from './features/invoices/InvoiceListPage';
 import { InvoiceDetailPage } from './features/invoices/InvoiceDetailPage';
 import { InvoiceDraftEditPage } from './features/invoices/InvoiceDraftEditPage';
 import { OrderApprovalDetailPage } from './features/approvals/OrderApprovalDetailPage';
+import { MyApprovalsPage } from './features/approvals/MyApprovalsPage';
 import { PaymentListPage } from './features/payments/PaymentListPage';
 import { PaymentCollectionPage } from './features/payments/PaymentCollectionPage';
 import { PaymentDetailPage } from './features/payments/PaymentDetailPage';
@@ -166,6 +167,14 @@ export function App() {
           element={
             <ProtectedRoute>
               <ApprovalsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="approvals/my-approvals"
+          element={
+            <ProtectedRoute>
+              <MyApprovalsPage />
             </ProtectedRoute>
           }
         />
@@ -540,6 +549,30 @@ export function App() {
           element={
             <ProtectedRoute>
               <ReportsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="reports/sales"
+          element={
+            <ProtectedRoute>
+              <ReportsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="reports/purchasing"
+          element={
+            <ProtectedRoute>
+              <PurchasingReportsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="reports/finance"
+          element={
+            <ProtectedRoute>
+              <FinanceReportsHubPage />
             </ProtectedRoute>
           }
         />

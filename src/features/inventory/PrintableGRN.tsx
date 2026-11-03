@@ -67,7 +67,7 @@ export function PrintableGRN({ grn, open, onOpenChange, pricingData }: Printable
       onOpenChange={onOpenChange}
       size="5xl"
       maxWidth="max-w-5xl"
-      className="p-0 overflow-hidden max-w-5xl"
+      className="p-0 overflow-hidden max-w-5xl w-full"
       hideCloseButton
     >
       <div className="flex flex-col max-h-[92vh] bg-slate-100">
@@ -108,28 +108,28 @@ export function PrintableGRN({ grn, open, onOpenChange, pricingData }: Printable
         `}</style>
 
         {/* ── Modal Header (Screen Only) ── */}
-        <div className="p-4 border-b border-slate-200 bg-white flex flex-row items-center justify-between shrink-0 shadow-xs z-10">
-          <div className="flex items-center gap-3">
-            <div className="h-9 w-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
-              <FileText className="h-5 w-5" />
+        <div className="p-3 sm:p-4 border-b border-slate-200 bg-white flex flex-row items-center justify-between shrink-0 shadow-xs z-10 gap-2">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+            <div className="h-8 w-8 sm:h-9 sm:w-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+              <FileText className="h-4 w-4 sm:h-5 sm:w-5" />
             </div>
-            <div>
-              <h2 className="text-sm sm:text-base font-bold text-slate-900 leading-tight">
+            <div className="min-w-0">
+              <h2 className="text-xs sm:text-sm md:text-base font-bold text-slate-900 leading-tight truncate">
                 Official Goods Received Note — Print Preview
               </h2>
-              <p className="text-[11px] text-slate-500 mt-0.5">
+              <p className="text-[10px] sm:text-[11px] text-slate-500 mt-0.5 hidden sm:block truncate">
                 Standard corporate A4 intake voucher. Verify physical verification counts before submitting.
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             <Button
               type="button"
               variant="outline"
               size="sm"
               onClick={() => onOpenChange(false)}
-              className="text-xs h-8 text-slate-600"
+              className="text-xs h-8 text-slate-600 px-2.5 sm:px-3"
             >
               Close
             </Button>
@@ -137,67 +137,67 @@ export function PrintableGRN({ grn, open, onOpenChange, pricingData }: Printable
               type="button"
               size="sm"
               onClick={handlePrint}
-              className="gap-1.5 text-xs h-8 bg-primary hover:bg-primary-hover text-white font-bold shadow-xs px-3.5"
+              className="gap-1.5 text-xs h-8 bg-primary hover:bg-primary-hover text-white font-bold shadow-xs px-3 sm:px-3.5"
             >
               <Printer className="h-3.5 w-3.5" />
-              Print (A4)
+              <span>Print (A4)</span>
             </Button>
           </div>
         </div>
 
         {/* ── Scrollable Document Canvas ── */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-8 flex justify-center">
+        <div className="flex-1 overflow-y-auto p-2 sm:p-4 md:p-6 flex justify-center [scrollbar-width:thin]">
           <div
             id="printable-grn-document"
             ref={printContentRef}
-            className="w-full max-w-[210mm] bg-white border border-slate-200 shadow-xl rounded-xl p-8 sm:p-10 text-slate-800 font-sans min-h-[297mm] flex flex-col justify-between"
+            className="w-full max-w-[210mm] bg-white border border-slate-200 shadow-xl rounded-xl p-4 sm:p-6 md:p-8 print:p-8 text-slate-800 font-sans min-h-[297mm] flex flex-col justify-between"
           >
             <div>
               {/* ── 1. CORPORATE HEADER ── */}
-              <div className="border-b-2 border-slate-900 pb-5 mb-5">
-                <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
+              <div className="border-b-2 border-slate-900 pb-4 mb-4">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-start gap-3">
                   {/* Left: Company Identity */}
-                  <div className="max-w-md">
+                  <div className="max-w-md min-w-0">
                     <div className="flex items-center gap-2">
-                      <div className="h-8 w-8 rounded-lg bg-slate-900 text-white flex items-center justify-center font-black text-sm tracking-wider">
+                      <div className="h-7 w-7 sm:h-8 sm:w-8 rounded-lg bg-slate-900 text-white flex items-center justify-center font-black text-xs sm:text-sm tracking-wider shrink-0">
                         DNS
                       </div>
-                      <h1 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900 uppercase">
+                      <h1 className="text-lg sm:text-xl md:text-2xl font-black tracking-tight text-slate-900 uppercase">
                         DNS Import &amp; Export (Pvt) Ltd
                       </h1>
                     </div>
-                    <p className="text-[11px] font-semibold text-slate-700 mt-1">
+                    <p className="text-[10px] sm:text-[11px] font-semibold text-slate-700 mt-1">
                       Central Logistics &amp; Distribution Operations • Colombo Port Logistics Bay 01
                     </p>
-                    <p className="text-[10px] text-slate-500">
+                    <p className="text-[9px] sm:text-[10px] text-slate-500">
                       Bay 1, Port Access Road, Colombo 13, Sri Lanka • Tel: +94 11 234 5678 / +94 77 123 4567
                     </p>
-                    <p className="text-[10px] text-slate-500 font-mono">
+                    <p className="text-[9px] sm:text-[10px] text-slate-500 font-mono">
                       Reg: PV-00234190 • VAT: 102341901-7000 • Customs Whse: CW-COL-01 • Email: warehouse@dnsgroup.lk
                     </p>
                   </div>
 
                   {/* Right: Document Title & Identifiers */}
-                  <div className="text-right flex flex-col items-end shrink-0">
-                    <div className="inline-block bg-slate-900 text-white font-black text-xs sm:text-sm px-3.5 py-1.5 uppercase tracking-wider rounded">
+                  <div className="text-left md:text-right flex flex-col items-start md:items-end shrink-0 w-full md:w-auto">
+                    <div className="inline-block bg-slate-900 text-white font-black text-[11px] sm:text-xs md:text-sm px-3 py-1 uppercase tracking-wider rounded">
                       Goods Received Note (GRN)
                     </div>
 
-                    <div className="mt-2 text-right">
-                      <span className="text-[10px] text-slate-400 block uppercase font-bold tracking-wider">
+                    <div className="mt-2 text-left md:text-right">
+                      <span className="text-[9px] sm:text-[10px] text-slate-400 block uppercase font-bold tracking-wider">
                         GRN Voucher Number
                       </span>
-                      <span className="text-lg sm:text-xl font-black font-mono text-slate-900 block leading-tight">
+                      <span className="text-base sm:text-lg md:text-xl font-black font-mono text-slate-900 block leading-tight whitespace-nowrap">
                         {grn.grnNumber || grn.id}
                       </span>
                     </div>
 
                     {/* Authentic Code-128 Barcode Simulation */}
-                    <div className="mt-1 flex flex-col items-end">
+                    <div className="mt-1 flex flex-col items-start md:items-end">
                       <BarcodeVisual
                         value={grn.grnNumber || grn.id}
-                        width={160}
-                        height={32}
+                        width={150}
+                        height={28}
                         showText={false}
                       />
                       <span className="text-[9px] font-mono text-slate-400 uppercase tracking-widest mt-0.5">
@@ -209,55 +209,55 @@ export function PrintableGRN({ grn, open, onOpenChange, pricingData }: Printable
               </div>
 
               {/* ── 2. STRUCTURED METADATA MATRIX ── */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 border border-slate-200 rounded-lg p-4 mb-5 bg-slate-50/50 text-xs">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 border border-slate-200 rounded-lg p-3 sm:p-4 mb-4 bg-slate-50/50 text-xs">
                 {/* Consignor / Supplier Details */}
-                <div className="space-y-1.5 border-b sm:border-b-0 sm:border-r border-slate-200 sm:pr-4 pb-3 sm:pb-0">
-                  <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">
+                <div className="space-y-1.5 border-b md:border-b-0 md:border-r border-slate-200 md:pr-4 pb-2.5 md:pb-0">
+                  <div className="flex items-center gap-1.5 text-[10px] sm:text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
                     <Building2 className="h-3.5 w-3.5 text-primary" />
                     Supplier / Consignor Details
                   </div>
-                  <div className="flex items-start justify-between">
-                    <span className="text-slate-500 font-medium w-32 shrink-0">Supplier Name:</span>
-                    <span className="font-bold text-slate-900 text-right">{grn.supplierName || '—'}</span>
+                  <div className="flex items-start justify-between gap-2 min-w-0">
+                    <span className="text-slate-500 font-medium w-28 sm:w-32 shrink-0">Supplier Name:</span>
+                    <span className="font-bold text-slate-900 text-right truncate">{grn.supplierName || '—'}</span>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-slate-500 font-medium w-32 shrink-0">Linked PO Ref:</span>
-                    <span className="font-mono font-bold text-primary">
+                  <div className="flex items-center justify-between gap-2 min-w-0">
+                    <span className="text-slate-500 font-medium w-28 sm:w-32 shrink-0">Linked PO Ref:</span>
+                    <span className="font-mono font-bold text-primary truncate">
                       {grn.purchaseOrderNumber || grn.poNumber || grn.poId || 'Direct Intake'}
                     </span>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-slate-500 font-medium w-32 shrink-0">Supplier Inv / DN #:</span>
-                    <span className="font-mono text-slate-800 font-semibold">
+                  <div className="flex items-center justify-between gap-2 min-w-0">
+                    <span className="text-slate-500 font-medium w-28 sm:w-32 shrink-0">Supplier Inv / DN #:</span>
+                    <span className="font-mono text-slate-800 font-semibold truncate">
                       {grn.supplierInvoiceNumber || '—'}
                     </span>
                   </div>
                 </div>
 
                 {/* Warehouse & Receiving Details */}
-                <div className="space-y-1.5 sm:pl-2">
-                  <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">
+                <div className="space-y-1.5 md:pl-2">
+                  <div className="flex items-center gap-1.5 text-[10px] sm:text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
                     <Clock className="h-3.5 w-3.5 text-primary" />
                     Receiving &amp; Intake Details
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-slate-500 font-medium w-32 shrink-0">Intake Date:</span>
-                    <span className="font-semibold text-slate-900">
+                  <div className="flex items-center justify-between gap-2 min-w-0">
+                    <span className="text-slate-500 font-medium w-28 sm:w-32 shrink-0">Intake Date:</span>
+                    <span className="font-semibold text-slate-900 truncate">
                       {formatDate(grn.receivedDate || grn.submittedAt || new Date().toISOString())}
                     </span>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-slate-500 font-medium w-32 shrink-0">Destination Bay:</span>
-                    <span className="font-semibold text-slate-800">
+                  <div className="flex items-center justify-between gap-2 min-w-0">
+                    <span className="text-slate-500 font-medium w-28 sm:w-32 shrink-0">Destination Bay:</span>
+                    <span className="font-semibold text-slate-800 truncate">
                       {grn.warehouseId || 'WH-MAIN'} (Port Bay 01)
                     </span>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-slate-500 font-medium w-32 shrink-0">Lifecycle Status:</span>
+                  <div className="flex items-center justify-between gap-2 min-w-0">
+                    <span className="text-slate-500 font-medium w-28 sm:w-32 shrink-0">Lifecycle Status:</span>
                     <span>
                       <Badge
                         variant="outline"
-                        className={`text-[10px] font-bold px-2 py-0 ${
+                        className={`text-[10px] font-bold px-2 py-0 shrink-0 ${
                           grn.status === 'APPROVED'
                             ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
                             : grn.status === 'SUBMITTED'
@@ -275,7 +275,7 @@ export function PrintableGRN({ grn, open, onOpenChange, pricingData }: Printable
               </div>
 
               {/* ── 3. RECEIVED LINE ITEMS TABLE ── */}
-              <div className="mb-5">
+              <div className="mb-4">
                 <div className="flex items-center justify-between mb-2">
                   <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
                     <PackageCheck className="h-4 w-4 text-primary" />
@@ -288,8 +288,8 @@ export function PrintableGRN({ grn, open, onOpenChange, pricingData }: Printable
                   </span>
                 </div>
 
-                <div className="border border-slate-300 rounded overflow-hidden">
-                  <table className="w-full border-collapse text-xs">
+                <div className="border border-slate-300 rounded overflow-x-auto print:overflow-visible [scrollbar-width:thin]">
+                  <table className="w-full min-w-[680px] print:min-w-0 border-collapse text-xs">
                     <thead>
                       <tr className="bg-slate-100 border-b border-slate-300 text-slate-700 font-bold">
                         <th className="py-2.5 px-2 border-r border-slate-300 text-center w-8">#</th>

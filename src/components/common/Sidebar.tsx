@@ -43,6 +43,8 @@ import {
   Truck,
   Banknote,
   Wallet,
+  LayoutDashboard,
+  ShoppingBag,
 } from 'lucide-react';
 import { useEffect } from 'react';
 import { useAuth } from '../../hooks/useAuth';
@@ -65,7 +67,8 @@ type RailCategory =
   | 'finance'
   | 'approvals'
   | 'reports'
-  | 'admin';
+  | 'admin'
+  | 'users';
 
 interface SidebarItem {
   id: string;
@@ -86,17 +89,154 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const location = useLocation();
   const navigate = useNavigate();
 
+  const isDirector = currentUser.role === 'DIRECTOR';
+
   const [activeCategory, setActiveCategory] = useState<RailCategory>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Automatically activate purchasing or finance category when navigating within their modules
+  // Automatically activate category when navigating within modules
   useEffect(() => {
-    if (location.pathname.startsWith('/purchasing') && canAccessRoute('/purchasing')) {
-      setActiveCategory('purchasing');
-    } else if (location.pathname.startsWith('/finance') && canAccessRoute('/finance')) {
-      setActiveCategory('finance');
+    if (isDirector) {
+      const p = location.pathname;
+      if (
+        p.startsWith('/purchasing/orders') ||
+        p.startsWith('/purchasing/grn') ||
+        p.startsWith('/purchasing/returns')
+      ) {
+        setActiveCategory('purchasing');
+      } else if (
+        p.startsWith('/quotations') ||
+        p.startsWith('/orders') ||
+        p.startsWith('/invoices') ||
+        p.startsWith('/payments/collect') ||
+        p.startsWith('/pos')
+      ) {
+        setActiveCategory('sales');
+      } else if (
+        p.startsWith('/customers') ||
+        p.startsWith('/purchasing/suppliers') ||
+        p.startsWith('/teams') ||
+        p.startsWith('/areas')
+      ) {
+        setActiveCategory('users');
+      } else if (p.startsWith('/inventory') || p.startsWith('/products')) {
+        setActiveCategory('inventory');
+      } else if (p.startsWith('/finance') || p === '/payments') {
+        setActiveCategory('finance');
+      } else if (p.startsWith('/approvals') || p.startsWith('/warranty')) {
+        setActiveCategory('approvals');
+      } else if (p.startsWith('/reports')) {
+        setActiveCategory('reports');
+      } else if (p.startsWith('/commissions') || location.search.includes('tab=settings')) {
+        setActiveCategory('admin');
+      } else if (p === '/' && !location.search.includes('tab=settings')) {
+        setActiveCategory('all');
+      }
+    } else {
+      if (location.pathname.startsWith('/purchasing') && canAccessRoute('/purchasing')) {
+        setActiveCategory('purchasing');
+      } else if (location.pathname.startsWith('/finance') && canAccessRoute('/finance')) {
+        setActiveCategory('finance');
+      }
     }
-  }, [location.pathname, canAccessRoute]);
+  }, [location.pathname, location.search, canAccessRoute, isDirector]);
+
+  // =========================================================================
+  // DIRECTOR SPECIFICATION: 9 DEDICATED SECTIONS (Strict role isolation)
+  // =========================================================================
+  const directorPurchasingItems: SidebarItem[] = [
+    { id: 'purchasing-orders', name: 'Purchase Orders', path: '/purchasing/orders', icon: ShoppingCart, category: 'purchasing' },
+    { id: 'purchasing-grn', name: 'Goods Received Notes (View Only)', path: '/purchasing/grn', icon: Boxes, category: 'purchasing' },
+    { id: 'purchasing-returns', name: 'Supplier Returns & RMA', path: '/purchasing/returns', icon: RotateCcw, category: 'purchasing' },
+  ];
+
+  const directorSalesItems: SidebarItem[] = [
+    { id: 'quotations', name: 'Quotations', path: '/quotations', icon: FileSpreadsheet, category: 'sales' },
+    { id: 'orders', name: 'Sales Orders', path: '/orders', icon: ShoppingCart, category: 'sales' },
+    { id: 'invoices', name: 'Invoices', path: '/invoices', icon: Receipt, category: 'sales' },
+    { id: 'customer-collections', name: 'Customer Collections', path: '/payments/collect', icon: Banknote, category: 'sales' },
+    { id: 'pos', name: 'Showroom POS', path: '/pos', icon: Store, category: 'sales' },
+  ];
+
+  const directorUserManagementItems: SidebarItem[] = [
+    { id: 'customers', name: 'Customer Master', path: '/customers', icon: Users2, category: 'users' },
+    { id: 'purchasing-suppliers', name: 'Supplier Management', path: '/purchasing/suppliers', icon: Store, category: 'users' },
+    { id: 'teams', name: 'Team Management', path: '/teams', icon: Users, category: 'users' },
+    { id: 'areas', name: 'Area Management', path: '/areas', icon: Compass, category: 'users' },
+  ];
+
+  const directorInventoryItems: SidebarItem[] = [
+    { id: 'inventory', name: 'Inventory Hub', path: '/inventory', icon: Boxes, category: 'inventory', exact: true },
+    { id: 'delivery-notes', name: 'Delivery Notes (Read Only)', path: '/inventory/delivery-notes', icon: Truck, category: 'inventory' },
+    { id: 'grn', name: 'GRN (Read Only)', path: '/inventory/grn', icon: Receipt, category: 'inventory' },
+    { id: 'products', name: 'Product Master', path: '/products', icon: Package, category: 'inventory' },
+    { id: 'damaged-stock', name: 'Damaged Stock & RMA', path: '/inventory/damaged-stock', icon: ShieldAlert, category: 'inventory' },
+  ];
+
+  const directorFinanceItems: SidebarItem[] = [
+    { id: 'accounts', name: 'Chart of Accounts', path: '/finance/accounts', icon: BookOpen, category: 'finance' },
+    { id: 'ap-bills', name: 'Vendor Bill Costing (AP)', path: '/finance/ap/bills/new', icon: Receipt, category: 'finance' },
+    { id: 'ap-advances', name: 'Supplier Advance Prepayments', path: '/finance/ap/advances', icon: Coins, category: 'finance' },
+    { id: 'ap-payments', name: 'Batch Supplier Payments', path: '/finance/ap/payments/new', icon: CreditCard, category: 'finance' },
+    { id: 'ap-debit-notes', name: 'Supplier Debit Notes', path: '/finance/ap/debit-notes', icon: Undo2, category: 'finance' },
+    { id: 'ar-handovers', name: 'Sales Rep Cash Handovers', path: '/payments', icon: Banknote, category: 'finance' },
+    { id: 'ar-approvals', name: 'Receipt Approval Queue (AR)', path: '/finance/ar/approvals', icon: CheckCircle2, category: 'finance' },
+    { id: 'ar-pdc', name: 'PDC Vault (Cheques in Hand)', path: '/finance/ar/pdc-vault', icon: Clock, category: 'finance' },
+    { id: 'ar-allocate', name: 'AR Collection Allocation', path: '/finance/ar/allocate', icon: SlidersHorizontal, category: 'finance' },
+    { id: 'ar-credit-notes', name: 'Customer Credit Notes', path: '/finance/ar/credit-notes', icon: RotateCcw, category: 'finance' },
+    { id: 'journal', name: 'Journal Entry Voucher', path: '/finance/journal/new', icon: Zap, category: 'finance' },
+    { id: 'cash-book', name: 'Cash Book & Vouchers', path: '/finance/cash-book', icon: Coins, category: 'finance' },
+    { id: 'reconciliation', name: 'Bank Reconciliation', path: '/finance/reconciliation', icon: Landmark, category: 'finance' },
+    { id: 'closing', name: 'Period Closing Lock', path: '/finance/settings/closing', icon: Lock, category: 'finance' },
+    { id: 'reports-hub', name: 'Financial Reports Hub', path: '/finance/reports', icon: BarChart3, category: 'finance' },
+    { id: 'monthly-audit', name: 'Monthly Audit & Double Entry', path: '/finance/reports/monthly-audit', icon: Layers, category: 'finance' },
+  ];
+
+  const directorApprovalItems: SidebarItem[] = [
+    { id: 'approvals', name: 'Approval Engine', path: '/approvals', icon: CheckCircle, category: 'approvals' },
+    { id: 'warranty', name: 'Warranty Hub', path: '/warranty', icon: ShieldCheck, category: 'approvals' },
+    { id: 'my-approvals', name: 'My Approvals', path: '/approvals/my-approvals', icon: CheckSquare, category: 'approvals', badge: 'Assigned' },
+  ];
+
+  const directorReportItems: SidebarItem[] = [
+    { id: 'purchase-reports', name: 'Purchase Reports', path: '/reports/purchasing', icon: ShoppingCart, category: 'reports' },
+    { id: 'sales-reports', name: 'Sales Reports', path: '/reports/sales', icon: BarChart3, category: 'reports' },
+    { id: 'finance-reports', name: 'Finance Reports', path: '/reports/finance', icon: Landmark, category: 'reports' },
+  ];
+
+  const directorAdminItems: SidebarItem[] = [
+    { id: 'tax-settings', name: 'Global Tax Configuration', path: '/?tab=settings&section=tax', icon: Percent, category: 'admin' },
+    { id: 'theme', name: 'Theme & Appearance', path: '/?tab=settings&section=appearance', icon: Settings, category: 'admin' },
+    { id: 'commissions-config', name: 'Commission Configuration', path: '/commissions', icon: Award, category: 'admin' },
+    { id: 'role-portal', name: 'Role Switcher Portal', path: '/login', icon: Users, category: 'admin' },
+  ];
+
+  const directorAllRawItems: SidebarItem[] = [
+    ...directorPurchasingItems,
+    ...directorSalesItems,
+    ...directorUserManagementItems,
+    ...directorInventoryItems,
+    ...directorFinanceItems,
+    ...directorApprovalItems,
+    ...directorReportItems,
+    ...directorAdminItems,
+  ];
+
+  const directorRailItems = [
+    { id: 'all' as RailCategory, label: 'Director Dashboard', icon: LayoutDashboard },
+    { id: 'purchasing' as RailCategory, label: 'Purchasing & Procurement', icon: ShoppingCart },
+    { id: 'sales' as RailCategory, label: 'Sales & Orders', icon: ShoppingBag },
+    { id: 'users' as RailCategory, label: 'User Management', icon: Users },
+    { id: 'inventory' as RailCategory, label: 'Inventory Hub', icon: Boxes },
+    { id: 'finance' as RailCategory, label: 'Finance', icon: Landmark },
+    { id: 'approvals' as RailCategory, label: 'Approval Hub', icon: ShieldCheck },
+    { id: 'reports' as RailCategory, label: 'Reports', icon: BarChart3 },
+    { id: 'admin' as RailCategory, label: 'Administration', icon: Settings },
+  ];
+
+  // =========================================================================
+  // STANDARD ROLE NAVIGATION (Preserved without modification for other roles)
+  // =========================================================================
 
   // 0. Purchasing & Procurement Module
   const purchasingItems: SidebarItem[] = [
@@ -193,6 +333,9 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
 
   // Filter items by role permission and director exclusivity
   const authorizedItems = useMemo(() => {
+    if (isDirector) {
+      return directorAllRawItems;
+    }
     return allRawItems.filter((item) => {
       if (item.directorOnly && currentUser.role !== 'DIRECTOR') {
         return false;
@@ -208,7 +351,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       }
       return canAccessRoute(item.path.split('?')[0]);
     });
-  }, [allRawItems, canAccessRoute, currentUser.role]);
+  }, [isDirector, directorAllRawItems, allRawItems, canAccessRoute, currentUser.role]);
 
   // Authorized favorite items
   const authorizedFavoriteItems = useMemo(() => {
@@ -238,7 +381,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const railItems = [
     { id: 'all' as RailCategory, label: 'Dashboard & Quick Links', icon: LayoutGrid },
     { id: 'purchasing' as RailCategory, label: 'Purchasing & Procurement', icon: ShoppingCart },
-    { id: 'sales' as RailCategory, label: 'Sales & Orders', icon: Calendar },
+    { id: 'sales' as RailCategory, label: 'Sales & Orders', icon: ShoppingBag },
     { id: 'customers' as RailCategory, label: 'Customers & CRM', icon: Users2 },
     { id: 'inventory' as RailCategory, label: 'Inventory & Products', icon: Boxes },
     { id: 'finance' as RailCategory, label: 'Finance & Payments', icon: CreditCard },
@@ -250,11 +393,14 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   // Filter rail categories: 'all' is always visible (Dashboard);
   // other parent categories are only visible if the user's role has permission to access at least 1 child item
   const authorizedRailItems = useMemo(() => {
+    if (isDirector) {
+      return directorRailItems;
+    }
     return railItems.filter((rail) => {
       if (rail.id === 'all') return true;
       return authorizedItems.some((item) => item.category === rail.id);
     });
-  }, [railItems, authorizedItems]);
+  }, [isDirector, directorRailItems, railItems, authorizedItems]);
 
   // Automatically reset to 'all' if the currently active category is unauthorized for this role
   useEffect(() => {
@@ -275,6 +421,28 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
 
   // Determine panel title
   const panelTitle = useMemo(() => {
+    if (isDirector) {
+      switch (activeCategory) {
+        case 'purchasing':
+          return 'Purchasing & Procurement';
+        case 'sales':
+          return 'Sales & Orders';
+        case 'users':
+          return 'User Management';
+        case 'inventory':
+          return 'Inventory Hub';
+        case 'finance':
+          return 'Finance';
+        case 'approvals':
+          return 'Approval Hub';
+        case 'reports':
+          return 'Reports';
+        case 'admin':
+          return 'Administration';
+        default:
+          return 'Director Dashboard';
+      }
+    }
     switch (activeCategory) {
       case 'purchasing':
         return 'Purchasing & Procurement';
@@ -295,7 +463,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       default:
         return 'Dashboard';
     }
-  }, [activeCategory]);
+  }, [isDirector, activeCategory]);
 
   const isDashboardActive = location.pathname === '/' && !location.search.includes('tab=settings');
 
@@ -389,7 +557,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       {/* Main Dual-Column Sidebar Container */}
       <aside
         className={cn(
-          'fixed inset-y-0 left-0 z-50 flex h-full select-none transition-transform duration-200 ease-in-out md:static md:translate-x-0',
+          'fixed inset-y-0 left-0 z-50 flex h-full select-none transition-transform duration-200 ease-in-out md:static md:translate-x-0 bg-primary',
           // On mobile, mobile nav roles always stay hidden (translate-x-full)
           isMobileNavRole
             ? 'md:translate-x-0 -translate-x-full'
@@ -479,7 +647,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         {/* ========================================================================= */}
         {/* COLUMN 2: EXPANDED SUB-NAVIGATION FLYOUT PANEL (CONTENT PAGE SHADE) */}
         {/* ========================================================================= */}
-        <div className="flex w-60 sm:w-64 flex-col border-r border-slate-200/90 bg-white rounded-tl-xl md:rounded-tl-[16px] overflow-hidden">
+        <div className="flex w-60 sm:w-64 flex-col border-r border-slate-200/90 bg-white rounded-tl-2xl md:rounded-tl-[24px] overflow-hidden">
           {/* Mobile Close Bar Header */}
           <div className="flex items-center justify-between px-4 py-2.5 border-b border-slate-100 md:hidden">
             <span className="text-xs font-semibold text-slate-500 tracking-wider uppercase">Navigation</span>
@@ -577,8 +745,12 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                         : 'bg-slate-100/80 text-slate-700 hover:bg-slate-200/70 hover:text-slate-900'
                     )}
                   >
-                    <LayoutGrid className="h-4 w-4 shrink-0 text-slate-700" />
-                    <span className="truncate">Dashboard</span>
+                    {isDirector ? (
+                      <LayoutDashboard className="h-4 w-4 shrink-0 text-slate-700" />
+                    ) : (
+                      <LayoutGrid className="h-4 w-4 shrink-0 text-slate-700" />
+                    )}
+                    <span className="truncate">{isDirector ? 'Director Dashboard' : 'Dashboard'}</span>
                   </NavLink>
 
                   {/* Favorites section (ONLY list rendered in dashboard submenu) */}
@@ -597,7 +769,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
 
                     <div className="space-y-0.5">
                       {authorizedFavoriteItems.length === 0 ? (
-                        <div className="px-3 py-6 text-center text-xs text-slate-400 border border-dashed border-slate-200 rounded-md">
+                        <div className="px-3 py-5 text-center text-xs text-slate-400 border border-dashed border-slate-200 rounded-md">
                           <Star className="h-4 w-4 mx-auto mb-1.5 text-slate-300 fill-none" />
                           No favorite items yet
                           <p className="mt-1 text-[11px] text-slate-500">

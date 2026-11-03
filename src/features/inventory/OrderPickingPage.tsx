@@ -171,51 +171,53 @@ export function OrderPickingPage() {
                 </div>
               </CardHeader>
               <CardContent>
-                <Table className="min-w-[700px]">
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Product</TableHead>
-                      <TableHead>SKU</TableHead>
-                      <TableHead className="text-right">Appr. Qty</TableHead>
-                      <TableHead className="text-right">Issued</TableHead>
-                      <TableHead className="text-right w-32">Qty to Pick</TableHead>
-                      <TableHead className="text-right">Remaining</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {selectedOrder.items?.map((item: any, idx: number) => {
-                      const product = MOCK_PRODUCTS.find(p => p.id === item.productId);
-                      const approved = item.approvedQuantity || item.quantity;
-                      const issued = item.issuedQuantity || 0;
-                      const maxToPick = Math.max(0, approved - issued);
-                      const currentPick = pickQuantities[idx] || 0;
-                      const remaining = approved - issued - currentPick;
+                <div className="overflow-x-auto [scrollbar-width:thin]">
+                  <Table className="min-w-[580px] w-full text-xs">
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Product</TableHead>
+                        <TableHead className="w-28">SKU</TableHead>
+                        <TableHead className="text-right w-20">Appr. Qty</TableHead>
+                        <TableHead className="text-right w-20">Issued</TableHead>
+                        <TableHead className="text-right w-28">Qty to Pick</TableHead>
+                        <TableHead className="text-right w-20">Remaining</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {selectedOrder.items?.map((item: any, idx: number) => {
+                        const product = MOCK_PRODUCTS.find(p => p.id === item.productId);
+                        const approved = item.approvedQuantity || item.quantity;
+                        const issued = item.issuedQuantity || 0;
+                        const maxToPick = Math.max(0, approved - issued);
+                        const currentPick = pickQuantities[idx] || 0;
+                        const remaining = approved - issued - currentPick;
 
-                      return (
-                        <TableRow key={idx}>
-                          <TableCell>{product?.name || item.productId}</TableCell>
-                          <TableCell>{product?.sku || '-'}</TableCell>
-                          <TableCell className="text-right">{approved}</TableCell>
-                          <TableCell className="text-right">{issued}</TableCell>
-                          <TableCell className="text-right">
-                            <Input 
-                              type="number" 
-                              min="0" 
-                              max={maxToPick}
-                              value={currentPick.toString()}
-                              onChange={(e) => handleQtyChange(idx, e.target.value, maxToPick)}
-                              disabled={maxToPick === 0 || processing}
-                              className="text-right"
-                            />
-                          </TableCell>
-                          <TableCell className="text-right font-medium">
-                            {remaining}
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
+                        return (
+                          <TableRow key={idx}>
+                            <TableCell className="font-semibold text-foreground">{product?.name || item.productId}</TableCell>
+                            <TableCell className="font-mono text-xs text-muted-foreground">{product?.sku || '-'}</TableCell>
+                            <TableCell className="text-right font-mono font-medium">{approved}</TableCell>
+                            <TableCell className="text-right font-mono font-medium">{issued}</TableCell>
+                            <TableCell className="text-right">
+                              <Input 
+                                type="number" 
+                                min="0" 
+                                max={maxToPick}
+                                value={currentPick.toString()}
+                                onChange={(e) => handleQtyChange(idx, e.target.value, maxToPick)}
+                                disabled={maxToPick === 0 || processing}
+                                className="text-right h-8 text-xs font-mono"
+                              />
+                            </TableCell>
+                            <TableCell className="text-right font-mono font-bold text-foreground">
+                              {remaining}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
               </CardContent>
             </>
           ) : (
