@@ -8,6 +8,7 @@ import {
   ExternalLink,
   Building,
   Percent,
+  CreditCard,
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { cn } from '../../utils/cn';
@@ -159,6 +160,20 @@ export function UserProfileMenu({ className }: UserProfileMenuProps) {
               </div>
               <span className="text-[10px] text-slate-400 font-sans">Overview</span>
             </Link>
+
+            {(currentUser.role === 'DIRECTOR' || currentUser.role === 'MANAGER') && (
+              <Link
+                to="/?tab=settings&section=credit-terms"
+                onClick={() => setIsOpen(false)}
+                className="flex items-center justify-between px-3 py-2 text-xs font-medium text-slate-700 rounded-lg hover:bg-slate-100/90 transition-colors group"
+              >
+                <div className="flex items-center gap-2.5">
+                  <CreditCard className="h-4 w-4 text-slate-500 group-hover:text-primary transition-colors" />
+                  <span>Default Credit Terms</span>
+                </div>
+                <span className="text-[10px] text-slate-400 font-sans">Settings</span>
+              </Link>
+            )}
 
             {currentUser.role === 'DIRECTOR' && (
               <Link

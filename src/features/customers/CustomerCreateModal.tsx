@@ -6,7 +6,8 @@ import { Select } from '../../components/ui/select';
 import { Customer, CustomerType, CustomerLoyaltyLevel } from '../../types/customer';
 import { useAreas } from '../../hooks/useAreas';
 import { useUsers } from '../../hooks/useUsers';
-import { AlertCircle } from 'lucide-react';
+import { creditTermsConfigService } from '../../services/CreditTermsConfigService';
+import { AlertCircle, CreditCard } from 'lucide-react';
 
 interface CustomerCreateModalProps {
   open: boolean;
@@ -218,10 +219,10 @@ export function CustomerCreateModal({
           email: email.trim(),
           address: address.trim(),
           commercialTerms: {
-            creditLimit: 500000,
-            creditDays: 14,
-            defaultDiscountPercentage: 5,
-            maxDiscountPercentage: 10,
+            creditLimit: creditTermsConfigService.getCreditTermsConfig().defaultCreditLimit,
+            creditDays: creditTermsConfigService.getCreditTermsConfig().defaultCreditDays,
+            defaultDiscountPercentage: creditTermsConfigService.getCreditTermsConfig().defaultDiscountPercentage,
+            maxDiscountPercentage: creditTermsConfigService.getCreditTermsConfig().maxDiscountPercentage,
           },
           approvalStage: 'PENDING_SALES_REVIEW',
           status: 'INACTIVE',
@@ -424,6 +425,24 @@ export function CustomerCreateModal({
             </Select>
           </div>
         </div>
+
+        {!editingCustomer && (
+          <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs space-y-1">
+            <div className="flex items-center justify-between">
+              <span className="font-semibold text-slate-700 flex items-center gap-1.5">
+                <CreditCard className="h-3.5 w-3.5 text-primary" />
+                Default Credit Terms (Auto-Assigned)
+              </span>
+              <span className="font-mono font-bold text-slate-800">
+                {creditTermsConfigService.getCreditTermsConfig().defaultCreditDays} Days • LKR{' '}
+                {creditTermsConfigService.getCreditTermsConfig().defaultCreditLimit.toLocaleString()}
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-500">
+              Configured under System Settings. Automatically applied upon registration.
+            </p>
+          </div>
+        )}
 
         <DialogFooter>
           <Button type="button" variant="outline" size="sm" onClick={() => onOpenChange(false)}>
