@@ -457,7 +457,7 @@ export function SalesRepDashboard() {
         </div>
 
         {/* 5-Card Grid: 2 cols on mobile, 5 cols on lg */}
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-2.5 sm:gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 sm:gap-4">
           {/* Card 1: Monthly Sales */}
           <div className="col-span-1 rounded-2xl border border-slate-200/90 bg-white p-3.5 sm:p-4 shadow-xs hover:shadow-sm transition-all flex flex-col justify-between">
             <div className="flex items-center justify-between gap-2">

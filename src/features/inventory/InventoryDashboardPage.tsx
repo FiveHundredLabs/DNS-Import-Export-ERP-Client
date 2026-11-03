@@ -762,24 +762,24 @@ function isPowerToolItem(item: { productId?: string; sku?: string; categoryName?
               </div>
             ) : (
               <>
-                <div className="overflow-x-auto">
-                  <Table className="text-xs">
+                <div className="overflow-x-auto [scrollbar-width:thin] [scrollbar-color:rgba(148,163,184,0.4)_transparent]">
+                  <Table className="text-xs min-w-[1100px] w-full">
                     <TableHeader className="bg-slate-100/70 border-b border-slate-200">
                       <TableRow>
-                        <TableHead className="w-10"></TableHead>
-                        <TableHead className="min-w-[180px]">Product &amp; SKU</TableHead>
-                        <TableHead className="min-w-[120px]">Source GRN</TableHead>
-                        <TableHead className="text-center min-w-[100px]">Status</TableHead>
-                        <TableHead className="text-right font-bold text-emerald-700">Available</TableHead>
-                        <TableHead className="text-right font-semibold text-blue-700">Reserved (Order)</TableHead>
-                        <TableHead className="text-right font-semibold text-indigo-700">Dispatched</TableHead>
-                        <TableHead className="text-right font-semibold text-teal-700">Delivered</TableHead>
-                        <TableHead className="text-right font-semibold text-rose-600">Rejected (Damage)</TableHead>
-                        <TableHead className="text-right">Unit Cost</TableHead>
-                        <TableHead className="text-right font-bold">Line Value</TableHead>
-                        <TableHead className="text-center min-w-[110px]">Unit Barcodes</TableHead>
-                        <TableHead className="text-center min-w-[100px]">Serials</TableHead>
-                        <TableHead className="text-right w-16">Action</TableHead>
+                        <TableHead className="w-10 px-2 text-center"></TableHead>
+                        <TableHead className="min-w-[220px] max-w-sm">Product &amp; SKU</TableHead>
+                        <TableHead className="w-36 min-w-[130px]">Source GRN</TableHead>
+                        <TableHead className="text-center w-28 min-w-[100px]">Status</TableHead>
+                        <TableHead className="text-right font-bold text-emerald-700 w-20 min-w-[75px] px-2">Available</TableHead>
+                        <TableHead className="text-right font-semibold text-blue-700 w-24 min-w-[85px] px-2">Reserved</TableHead>
+                        <TableHead className="text-right font-semibold text-indigo-700 w-24 min-w-[85px] px-2">Dispatched</TableHead>
+                        <TableHead className="text-right font-semibold text-teal-700 w-24 min-w-[85px] px-2">Delivered</TableHead>
+                        <TableHead className="text-right font-semibold text-rose-600 w-28 min-w-[100px] px-2">Rejected (Damage)</TableHead>
+                        <TableHead className="text-right w-28 min-w-[95px] px-2">Unit Cost</TableHead>
+                        <TableHead className="text-right font-bold w-32 min-w-[105px] px-2">Line Value</TableHead>
+                        <TableHead className="text-center w-32 min-w-[110px] px-2">Unit Barcodes</TableHead>
+                        <TableHead className="text-center w-24 min-w-[80px] px-2">Serials</TableHead>
+                        <TableHead className="text-right w-14 px-2">Action</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody className="divide-y divide-slate-100">
@@ -807,8 +807,8 @@ function isPowerToolItem(item: { productId?: string; sku?: string; categoryName?
                               </TableCell>
 
                               {/* Product info */}
-                              <TableCell className="py-2.5 px-3">
-                                <p className="font-bold text-slate-900 leading-tight truncate max-w-[220px]" title={item.productName}>
+                              <TableCell className="py-2.5 px-3 min-w-[260px]">
+                                <p className="font-bold text-slate-900 leading-snug line-clamp-2" title={item.productName}>
                                   {item.productName}
                                 </p>
                                 <div className="flex items-center gap-1.5 mt-0.5">
@@ -818,7 +818,7 @@ function isPowerToolItem(item: { productId?: string; sku?: string; categoryName?
                               </TableCell>
 
                               {/* Source GRN */}
-                              <TableCell className="py-2.5 px-3">
+                              <TableCell className="py-2.5 px-3 min-w-[140px]">
                                 <Link
                                   to={`/inventory/grn/${item.grnId}`}
                                   className="font-mono font-bold text-primary hover:underline flex items-center gap-1 text-[11.5px]"
@@ -826,7 +826,7 @@ function isPowerToolItem(item: { productId?: string; sku?: string; categoryName?
                                   {item.grnNumber}
                                   <ExternalLink className="h-2.5 w-2.5 opacity-60" />
                                 </Link>
-                                <p className="text-[10.5px] text-slate-500 truncate max-w-[140px]" title={item.supplierName}>
+                                <p className="text-[10.5px] text-slate-500 line-clamp-1" title={item.supplierName}>
                                   {item.supplierName}
                                 </p>
                               </TableCell>
@@ -837,12 +837,12 @@ function isPowerToolItem(item: { productId?: string; sku?: string; categoryName?
                               </TableCell>
 
                               {/* 1. Available */}
-                              <TableCell className="py-2.5 px-3 text-right font-mono font-bold text-emerald-700">
+                              <TableCell className="py-2 px-2 text-right font-mono font-bold text-emerald-700">
                                 {item.availableQuantity}
                               </TableCell>
 
                               {/* 2. Reserved (Allocated to Order) */}
-                              <TableCell className="py-2.5 px-3 text-right font-mono">
+                              <TableCell className="py-2 px-2 text-right font-mono">
                                 {item.reservedQuantity > 0 ? (
                                   <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 text-[10.5px] py-0 px-1.5 font-mono">
                                     {item.reservedQuantity}
@@ -853,7 +853,7 @@ function isPowerToolItem(item: { productId?: string; sku?: string; categoryName?
                               </TableCell>
 
                               {/* 3. Dispatched */}
-                              <TableCell className="py-2.5 px-3 text-right font-mono">
+                              <TableCell className="py-2 px-2 text-right font-mono">
                                 {item.dispatchedQuantity > 0 ? (
                                   <Badge variant="outline" className="bg-indigo-50 text-indigo-700 border-indigo-200 text-[10.5px] py-0 px-1.5 font-mono">
                                     {item.dispatchedQuantity}
@@ -864,7 +864,7 @@ function isPowerToolItem(item: { productId?: string; sku?: string; categoryName?
                               </TableCell>
 
                               {/* 4. Delivered */}
-                              <TableCell className="py-2.5 px-3 text-right font-mono">
+                              <TableCell className="py-2 px-2 text-right font-mono">
                                 {item.deliveredQuantity > 0 ? (
                                   <Badge variant="outline" className="bg-teal-50 text-teal-700 border-teal-200 text-[10.5px] py-0 px-1.5 font-mono">
                                     {item.deliveredQuantity}
@@ -875,7 +875,7 @@ function isPowerToolItem(item: { productId?: string; sku?: string; categoryName?
                               </TableCell>
 
                               {/* 5. Rejected / Damaged */}
-                              <TableCell className="py-2.5 px-3 text-right font-mono">
+                              <TableCell className="py-2 px-2 text-right font-mono">
                                 {item.damagedQuantity > 0 ? (
                                   <Badge className="bg-rose-100 text-rose-800 border-rose-200 text-[10px] py-0 px-1 font-mono">
                                     {item.damagedQuantity} damaged
@@ -886,12 +886,12 @@ function isPowerToolItem(item: { productId?: string; sku?: string; categoryName?
                               </TableCell>
 
                               {/* Unit Cost */}
-                              <TableCell className="py-2.5 px-3 text-right font-mono text-slate-600">
+                              <TableCell className="py-2 px-2 text-right font-mono text-slate-600">
                                 {formatCurrency(item.unitCost)}
                               </TableCell>
 
                               {/* Line Value */}
-                              <TableCell className="py-2.5 px-3 text-right font-mono font-bold text-slate-900">
+                              <TableCell className="py-2 px-2 text-right font-mono font-bold text-slate-900">
                                 {formatCurrency(item.lineValue)}
                               </TableCell>
 
@@ -1100,8 +1100,9 @@ function isPowerToolItem(item: { productId?: string; sku?: string; categoryName?
                 No damaged stock recorded. All received shipments are in good, saleable condition.
               </div>
             ) : (
-              <Table className="text-xs">
-                <TableHeader className="bg-slate-100/70 border-b border-slate-200">
+              <div className="overflow-x-auto [scrollbar-width:thin]">
+                <Table className="text-xs min-w-[1000px]">
+                  <TableHeader className="bg-slate-100/70 border-b border-slate-200">
                   <TableRow>
                     <TableHead>Product Name</TableHead>
                     <TableHead>SKU</TableHead>
@@ -1150,6 +1151,7 @@ function isPowerToolItem(item: { productId?: string; sku?: string; categoryName?
                   ))}
                 </TableBody>
               </Table>
+            </div>
             )}
           </CardContent>
         </Card>
@@ -1169,54 +1171,56 @@ function isPowerToolItem(item: { productId?: string; sku?: string; categoryName?
           </CardHeader>
 
           <CardContent className="p-0">
-            <Table className="text-xs">
-              <TableHeader className="bg-slate-100/70 border-b border-slate-200">
-                <TableRow>
-                  <TableHead>Serial Number</TableHead>
-                  <TableHead>Product Name</TableHead>
-                  <TableHead>SKU</TableHead>
-                  <TableHead>Inward GRN</TableHead>
-                  <TableHead>Bin Location</TableHead>
-                  <TableHead className="text-center">Warehouse Status</TableHead>
-                  <TableHead className="text-right">Received Date</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody className="divide-y divide-slate-100 font-mono">
-                {powerToolSerials.map((sn) => (
-                  <TableRow key={sn.id} className="hover:bg-slate-50">
-                    <TableCell className="font-bold text-indigo-800">{sn.serialNumber}</TableCell>
-                    <TableCell className="font-sans font-medium text-slate-900">{sn.productName}</TableCell>
-                    <TableCell className="text-slate-500">{sn.sku}</TableCell>
-                    <TableCell className="font-bold text-primary">
-                      {sn.grnNumber ? (
-                        <Link to={`/inventory/grn/${sn.grnId || sn.grnNumber}`} className="hover:underline">
-                          {sn.grnNumber}
-                        </Link>
-                      ) : (
-                        '—'
-                      )}
-                    </TableCell>
-                    <TableCell className="text-slate-600">{sn.binLocation || 'Warehouse Shelf'}</TableCell>
-                    <TableCell className="text-center">
-                      <Badge
-                        className={cn(
-                          'text-[10px] font-sans',
-                          sn.status === 'IN_STOCK' && 'bg-emerald-100 text-emerald-800 border-0',
-                          sn.status === 'ALLOCATED' && 'bg-blue-100 text-blue-800 border-0',
-                          sn.status === 'DISPATCHED' && 'bg-slate-100 text-slate-700 border-0',
-                          sn.status === 'DAMAGED' && 'bg-rose-100 text-rose-800 border-0'
-                        )}
-                      >
-                        {sn.status.replace('_', ' ')}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right text-slate-500 font-sans">
-                      {formatDate(sn.receivedDate)}
-                    </TableCell>
+            <div className="overflow-x-auto [scrollbar-width:thin]">
+              <Table className="text-xs min-w-[950px]">
+                <TableHeader className="bg-slate-100/70 border-b border-slate-200">
+                  <TableRow>
+                    <TableHead className="min-w-[140px]">Serial Number</TableHead>
+                    <TableHead className="min-w-[200px]">Product Name</TableHead>
+                    <TableHead className="min-w-[120px]">SKU</TableHead>
+                    <TableHead className="min-w-[130px]">Inward GRN</TableHead>
+                    <TableHead className="min-w-[120px]">Bin Location</TableHead>
+                    <TableHead className="text-center min-w-[120px]">Warehouse Status</TableHead>
+                    <TableHead className="text-right min-w-[110px]">Received Date</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody className="divide-y divide-slate-100 font-mono">
+                  {powerToolSerials.map((sn) => (
+                    <TableRow key={sn.id} className="hover:bg-slate-50">
+                      <TableCell className="font-bold text-indigo-800">{sn.serialNumber}</TableCell>
+                      <TableCell className="font-sans font-medium text-slate-900">{sn.productName}</TableCell>
+                      <TableCell className="text-slate-500">{sn.sku}</TableCell>
+                      <TableCell className="font-bold text-primary">
+                        {sn.grnNumber ? (
+                          <Link to={`/inventory/grn/${sn.grnId || sn.grnNumber}`} className="hover:underline">
+                            {sn.grnNumber}
+                          </Link>
+                        ) : (
+                          '—'
+                        )}
+                      </TableCell>
+                      <TableCell className="text-slate-600">{sn.binLocation || 'Warehouse Shelf'}</TableCell>
+                      <TableCell className="text-center">
+                        <Badge
+                          className={cn(
+                            'text-[10px] font-sans',
+                            sn.status === 'IN_STOCK' && 'bg-emerald-100 text-emerald-800 border-0',
+                            sn.status === 'ALLOCATED' && 'bg-blue-100 text-blue-800 border-0',
+                            sn.status === 'DISPATCHED' && 'bg-slate-100 text-slate-700 border-0',
+                            sn.status === 'DAMAGED' && 'bg-rose-100 text-rose-800 border-0'
+                          )}
+                        >
+                          {sn.status.replace('_', ' ')}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right text-slate-500 font-sans">
+                        {formatDate(sn.receivedDate)}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           </CardContent>
         </Card>
       )}

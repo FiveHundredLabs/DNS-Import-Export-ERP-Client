@@ -31,6 +31,38 @@ export interface StockMovement {
 
 export type GRNStatus = 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'COSTED' | 'PRICED' | 'REJECTED';
 
+export type ElectricalProductCategory = 'GENERAL_ELECTRICAL' | 'SERIAL_TRACKED' | 'WIRES_CABLES';
+
+export interface CableSpecification {
+  coreCount?: string;
+  conductorSize?: string;
+  voltageGrade?: string;
+  lengthPerRoll?: number;
+  drumNumber?: string;
+}
+
+export interface GRNAttachment {
+  id: string;
+  name: string;
+  size: string;
+  type: string;
+  uploadedAt: string;
+  uploadedBy: string;
+  fileUrl?: string;
+}
+
+export interface GRNQualityInspection {
+  status: 'PENDING' | 'PASSED' | 'PASSED_WITH_EXCEPTION' | 'FAILED';
+  inspectorName?: string;
+  inspectorId?: string;
+  inspectedAt?: string;
+  notes?: string;
+  damageDetails?: string;
+  visualInspectionPassed?: boolean;
+  specVerificationPassed?: boolean;
+  packagingCondition?: 'INTACT' | 'DAMAGED' | 'TAMPERED';
+}
+
 export interface UnitBarcodeRecord {
   unitIndex: number;
   unitBarcode: string;
@@ -43,15 +75,24 @@ export interface GRNItem {
   productId: string;
   productNameSnapshot: string;
   skuSnapshot: string;
+  supplierItemCode?: string;
+  category?: ElectricalProductCategory;
   expectedQuantity: number;
+  previouslyReceivedQuantity?: number;
   receivedQuantity: number;
+  acceptedQuantity?: number;
   damagedQuantity: number;
+  rejectedQuantity?: number;
   unitCostSnapshot: number;
   lineValue: number;
+  batchNumber?: string;
   serialNumbers?: string[];
   barcode?: string;
   serialNumber?: string;
-  uom?: string; // e.g. 'PCS', 'SET', 'MTR', 'BOX', 'KG'
+  uom?: string; // e.g. 'PCS', 'SET', 'MTR', 'ROLL', 'COIL', 'DRUM', 'BOX', 'KG'
+  cableSpecs?: CableSpecification;
+  damageReason?: string;
+  rejectionReason?: string;
   unitBarcodes?: string[];
   unitRecords?: UnitBarcodeRecord[];
   barcodesConfirmed?: boolean;
@@ -66,22 +107,38 @@ export interface GRN {
   poNumber?: string;
   supplierId: string;
   supplierName: string;
+  supplierAddress?: string;
+  supplierContact?: string;
+  supplierEmail?: string;
   purchaseOrderId?: string;
   purchaseOrderNumber?: string;
+  poDate?: string;
+  expectedDeliveryDate?: string;
   supplierInvoiceNumber?: string; // Physical commercial invoice or delivery document #
+  supplierDeliveryNoteNumber?: string;
+  referenceNumber?: string;
   receivedDate?: string;
   warehouseId: string;
+  receivingLocationBay?: string;
   status: GRNStatus;
   items: GRNItem[];
   totalValue: number;
   receivedById: string;
+  receivedByName?: string;
+  verifiedById?: string;
+  verifiedByName?: string;
+  approvedById?: string;
+  approvedByName?: string;
   notes?: string;
+  deliveryNotes?: string;
+  internalRemarks?: string;
+  inspection?: GRNQualityInspection;
+  attachments?: GRNAttachment[];
   barcodesGenerated?: boolean;
   barcodesConfirmed?: boolean;
   barcodesConfirmedAt?: string;
   barcodesConfirmedBy?: string;
   submittedAt?: string;
-  approvedById?: string;
   approvedAt?: string;
   rejectedReason?: string;
 }

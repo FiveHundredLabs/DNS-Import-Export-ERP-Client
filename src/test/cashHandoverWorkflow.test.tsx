@@ -13,6 +13,7 @@ import { HandoverDetailModal } from '../features/payments/components/HandoverDet
 import { PaymentListPage } from '../features/payments/PaymentListPage';
 import { User } from '../types/auth';
 import { MOCK_USERS } from '../mock/mockUsers';
+import { authService } from '../services/AuthService';
 
 const MOCK_SALES_REP: User = {
   id: 'usr-106',
@@ -321,6 +322,7 @@ describe('Daily Cash Handover & Payments Dashboard Workflow', () => {
 
   describe('7. PaymentListPage Tab & Handover UI Integration', () => {
     it('renders the 4 Payments Dashboard KPI Cards and allows switching to Cash Handovers tab', async () => {
+      authService.loginAs(MOCK_SALES_REP.id);
       render(
         <MemoryRouter initialEntries={['/payments?tab=handovers']}>
           <PaymentListPage />

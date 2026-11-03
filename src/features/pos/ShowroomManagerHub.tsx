@@ -408,16 +408,33 @@ export function ShowroomManagerHub() {
         </div>
 
         {/* High-Level Summary KPI Strip */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4 pt-3 border-t border-slate-100">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mt-4 pt-3 border-t border-slate-100">
           <div className="bg-slate-50/80 rounded-lg p-2.5 border border-slate-200/60">
             <div className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">
-              Today's Net Sales
+              Today's Total Sales
             </div>
             <div className="text-lg font-bold text-slate-900 mt-0.5">
               {formatCurrency(totalSalesToday)}
             </div>
             <div className="text-[10px] text-emerald-600 font-medium flex items-center gap-1 mt-0.5">
               <TrendingUp className="h-3 w-3" /> Central Showroom Floor
+            </div>
+          </div>
+
+          <div className="bg-slate-50/80 rounded-lg p-2.5 border border-slate-200/60">
+            <div className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">
+              Cash In & Cash Out
+            </div>
+            <div className="flex items-center gap-1.5 mt-1 text-xs font-mono font-bold flex-wrap">
+              <span className="text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200" title="Total Cash In">
+                +{formatCurrency(dayEndSummary?.cashInTotal || 0)}
+              </span>
+              <span className="text-rose-700 bg-rose-50 px-1.5 py-0.5 rounded border border-rose-200" title="Total Cash Out">
+                -{formatCurrency(dayEndSummary?.cashOutTotal || 0)}
+              </span>
+            </div>
+            <div className="text-[10px] text-slate-500 font-medium mt-1">
+              Net: {formatCurrency((dayEndSummary?.cashInTotal || 0) - (dayEndSummary?.cashOutTotal || 0))}
             </div>
           </div>
 

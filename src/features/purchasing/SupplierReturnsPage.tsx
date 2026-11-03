@@ -456,7 +456,7 @@ export function SupplierReturnsPage() {
                 </div>
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="w-full text-xs tabular-nums">
+                  <table className="w-full text-xs tabular-nums min-w-[850px]">
                     <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold">
                       <tr>
                         <th className="py-2.5 px-3 text-center w-10">#</th>
@@ -635,7 +635,7 @@ export function SupplierReturnsPage() {
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full text-xs tabular-nums">
+                <table className="w-full text-xs tabular-nums min-w-[850px]">
                   <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold">
                     <tr>
                       <th className="py-3 px-4 text-left font-semibold">Return #</th>

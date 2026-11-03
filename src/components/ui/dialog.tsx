@@ -10,6 +10,7 @@ interface DialogProps {
   size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl' | '5xl' | 'full';
   maxWidth?: string;
   className?: string;
+  hideCloseButton?: boolean;
 }
 
 const sizeClasses: Record<string, string> = {
@@ -24,7 +25,15 @@ const sizeClasses: Record<string, string> = {
   full: 'max-w-6xl',
 };
 
-export function Dialog({ open, onOpenChange, children, size = 'lg', maxWidth, className }: DialogProps) {
+export function Dialog({
+  open,
+  onOpenChange,
+  children,
+  size = 'lg',
+  maxWidth,
+  className,
+  hideCloseButton = false,
+}: DialogProps) {
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && open) {
@@ -51,13 +60,15 @@ export function Dialog({ open, onOpenChange, children, size = 'lg', maxWidth, cl
           className
         )}
       >
-        <button
-          onClick={() => onOpenChange(false)}
-          className="absolute right-4 top-4 rounded-sm p-1 text-slate-400 hover:text-slate-600 focus:outline-none focus:ring-2 focus:ring-primary"
-          aria-label="Close dialog"
-        >
-          <X className="h-4 w-4" />
-        </button>
+        {!hideCloseButton && (
+          <button
+            onClick={() => onOpenChange(false)}
+            className="absolute right-4 top-4 rounded-sm p-1 text-slate-400 hover:text-slate-600 focus:outline-none focus:ring-2 focus:ring-primary"
+            aria-label="Close dialog"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        )}
         {children}
       </div>
     </div>
