@@ -405,6 +405,9 @@ class HandoverService {
       customerCode: p.customerCode,
       amount: p.amount,
       paymentMethod: p.paymentMethod,
+      chequeNumber: p.chequeNumber || p.chequeDetails?.chequeNumber,
+      chequeDate: p.chequeDate || p.chequeDetails?.chequeDate,
+      bankName: p.bankName || p.chequeDetails?.bankName,
       collectedAt: p.collectedAt,
       invoiceAllocations: p.invoiceAllocations || [],
     }));
@@ -508,6 +511,42 @@ class HandoverService {
         });
       } catch (err) {
         console.warn(`Error settling payment ${item.paymentId} in handover:`, err);
+      }
+    }
+
+    // Auto-register any cheques in handover to PDC Vault
+    for (const item of handover.items) {
+      if (item.paymentMethod === 'CHEQUE') {
+        try {
+          const { pdcVaultService } = await import('../features/finance/services/pdcVaultService');
+          const existingPDCs = pdcVaultService.getPDCs();
+          const chqNum =
+            item.chequeNumber ||
+            `CHQ-${item.receiptNumber.replace(/[^0-9]/g, '').slice(-6) || Date.now().toString().slice(-6)}`;
+          const already = existingPDCs.some(
+            (c) =>
+              c.chequeNumber.toUpperCase() === chqNum.toUpperCase() ||
+              (c.receiptId && c.receiptId === item.paymentId) ||
+              (c.receiptNumber && c.receiptNumber === item.receiptNumber)
+          );
+          if (!already) {
+            pdcVaultService.registerCheque({
+              chequeNumber: chqNum,
+              receiptId: item.paymentId,
+              receiptNumber: item.receiptNumber,
+              customerId: item.customerId,
+              customerName: item.customerName,
+              customerCode: item.customerCode,
+              drawerBank: item.bankName || 'Commercial Bank of Ceylon',
+              chequeDate: item.chequeDate || new Date().toISOString().slice(0, 10),
+              receivedDate: item.collectedAt ? item.collectedAt.slice(0, 10) : new Date().toISOString().slice(0, 10),
+              amount: item.amount,
+              notes: `Registered via Handover ${handover.handoverNumber}`,
+            });
+          }
+        } catch (pdcErr) {
+          console.warn('Failed to register cheque in PDC vault during handover approval:', pdcErr);
+        }
       }
     }
 

@@ -18,6 +18,7 @@ import {
   Package,
 } from 'lucide-react';
 import { Button } from '../../components/ui/button';
+import { ConfirmButton } from '../../components/ui/confirm-button';
 import { Input } from '../../components/ui/input';
 import { Textarea } from '../../components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
@@ -675,39 +676,49 @@ export function PurchaseOrderCreateEditPage() {
           </span>
         }
         leftActions={
-          <Button
+          <ConfirmButton
             type="button"
             variant="ghost"
             size="sm"
-            onClick={() => navigate('/purchasing/orders')}
+            dialogVariant="destructive"
+            confirmTitle="Discard Changes"
+            confirmMessage="Are you sure you want to discard your changes and return to purchase orders?"
+            confirmText="Discard Changes"
+            onConfirm={() => navigate('/purchasing/orders')}
             className="text-xs text-slate-600 hover:text-slate-900"
           >
             Discard & Return
-          </Button>
+          </ConfirmButton>
         }
         rightActions={
           <>
-            <Button
+            <ConfirmButton
               variant="outline"
               size="sm"
+              confirmTitle="Save Draft Purchase Order"
+              confirmMessage="Save current purchase order line items and details as a draft?"
+              confirmText="Save Draft"
               disabled={submitting}
-              onClick={() => handleSaveOrder(false)}
+              onConfirm={() => handleSaveOrder(false)}
               className="gap-1.5 text-xs bg-white hover:bg-slate-50"
             >
               <Save className="h-3.5 w-3.5 text-slate-600" />
               <span>Save as Draft</span>
-            </Button>
+            </ConfirmButton>
 
-            <Button
+            <ConfirmButton
               variant="default"
               size="sm"
+              confirmTitle="Submit Purchase Order"
+              confirmMessage={`Submit Purchase Order totaling ${formatCurrency(calculation.grandTotal, currency)} for internal manager approval?`}
+              confirmText="Submit for Approval"
               disabled={submitting}
-              onClick={() => handleSaveOrder(true)}
+              onConfirm={() => handleSaveOrder(true)}
               className="gap-1.5 text-xs bg-primary hover:bg-primary-hover text-primary-foreground font-semibold shadow-xs"
             >
               <Send className="h-3.5 w-3.5" />
               <span>Submit for Approval</span>
-            </Button>
+            </ConfirmButton>
           </>
         }
       />

@@ -247,6 +247,40 @@ describe('Phase 12 — Accessibility, Responsive UI & Form Validation Audit (Sec
       expect(onCreateMock).not.toHaveBeenCalled();
     });
 
+    it('displays individual field-level validation errors in CustomerCreateModal', async () => {
+      const onCreateMock = vi.fn();
+
+      render(
+        <CustomerCreateModal
+          open={true}
+          onOpenChange={() => {}}
+          onCreate={onCreateMock}
+        />
+      );
+
+      // Submit empty form
+      const submitBtn = screen.getByRole('button', { name: /Submit for Commercial/i });
+      fireEvent.click(submitBtn);
+
+      // Field level errors
+      expect(screen.getByText('Shop / Business full name is required.')).toBeInTheDocument();
+      expect(screen.getByText('Contact person name is required.')).toBeInTheDocument();
+      expect(screen.getByText('Contact phone number is required.')).toBeInTheDocument();
+      expect(screen.getByText('Registered business address is required.')).toBeInTheDocument();
+      expect(screen.getByText('Please select an assigned operational Area.')).toBeInTheDocument();
+      expect(screen.getByText('Please select an assigned Sales Representative.')).toBeInTheDocument();
+
+      // Test format validation on phone & email
+      const phoneInput = screen.getByPlaceholderText('+94 77 123 4567 or 0771234567');
+      fireEvent.change(phoneInput, { target: { value: '123' } });
+      const emailInput = screen.getByPlaceholderText('dealer@company.lk');
+      fireEvent.change(emailInput, { target: { value: 'not-an-email' } });
+
+      fireEvent.click(submitBtn);
+      expect(screen.getByText('Please enter a valid phone number (e.g. +94 77 123 4567 or 0771234567).')).toBeInTheDocument();
+      expect(screen.getByText('Please enter a valid email address (e.g. dealer@company.lk).')).toBeInTheDocument();
+    });
+
     it('enforces Quotation input validation on zero/negative quantities and out-of-range discounts', async () => {
       await expect(
         quotationService.createQuotation(

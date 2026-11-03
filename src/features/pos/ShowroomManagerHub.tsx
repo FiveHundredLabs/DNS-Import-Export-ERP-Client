@@ -46,6 +46,7 @@ import {
   Check,
 } from 'lucide-react';
 import { Button } from '../../components/ui/button';
+import { ConfirmButton } from '../../components/ui/confirm-button';
 import { Input } from '../../components/ui/input';
 import { Badge } from '../../components/ui/badge';
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/card';
@@ -990,21 +991,29 @@ export function ShowroomManagerHub() {
                           <td className="px-4 py-3 text-right">
                             {sess.status === 'CLOSED' && sess.reconciliationStatus !== 'APPROVED' ? (
                               <div className="flex items-center justify-end gap-1.5">
-                                <Button
+                                <ConfirmButton
                                   size="sm"
-                                  onClick={() => handleReviewReconciliation(sess.id, true)}
+                                  confirmTitle="Approve Cash Reconciliation?"
+                                  confirmMessage="Are you sure you want to approve this shift reconciliation? Any cash shortage or surplus will be finalized."
+                                  confirmLabel="Approve Reconciliation"
+                                  variant="success"
+                                  onConfirm={() => handleReviewReconciliation(sess.id, true)}
                                   className="h-7 px-2 text-[11px] bg-emerald-600 hover:bg-emerald-700 text-white"
                                 >
                                   Approve
-                                </Button>
-                                <Button
+                                </ConfirmButton>
+                                <ConfirmButton
                                   size="sm"
                                   variant="outline"
-                                  onClick={() => handleReviewReconciliation(sess.id, false)}
+                                  confirmTitle="Request Shift Cash Recount?"
+                                  confirmMessage="Are you sure you want to reject this reconciliation and request a physical recount from the cashier?"
+                                  confirmLabel="Request Recount"
+                                  confirmVariant="destructive"
+                                  onConfirm={() => handleReviewReconciliation(sess.id, false)}
                                   className="h-7 px-2 text-[11px] text-rose-700 border-rose-300 hover:bg-rose-50"
                                 >
                                   Recount
-                                </Button>
+                                </ConfirmButton>
                               </div>
                             ) : (
                               <span className="text-[10px] text-slate-400">

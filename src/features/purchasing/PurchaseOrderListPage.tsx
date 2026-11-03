@@ -20,6 +20,7 @@ import {
   Calendar,
 } from 'lucide-react';
 import { Button } from '../../components/ui/button';
+import { ConfirmButton } from '../../components/ui/confirm-button';
 import { Input } from '../../components/ui/input';
 import { Badge } from '../../components/ui/badge';
 import { Card, CardContent } from '../../components/ui/card';
@@ -84,16 +85,12 @@ export function PurchaseOrderListPage() {
     };
   }, [purchaseOrders]);
 
-  const handleSubmitDraft = async (e: React.MouseEvent, id: string) => {
-    e.stopPropagation();
+  const handleSubmitDraft = async (id: string) => {
     await submitPO(id);
   };
 
-  const handleDeleteDraft = async (e: React.MouseEvent, id: string) => {
-    e.stopPropagation();
-    if (window.confirm('Are you sure you want to delete this draft Purchase Order?')) {
-      await deletePO(id);
-    }
+  const handleDeleteDraft = async (id: string) => {
+    await deletePO(id);
   };
 
   if (loading && purchaseOrders.length === 0) {
@@ -281,24 +278,32 @@ export function PurchaseOrderListPage() {
 
                         {po.status === 'DRAFT' && (
                           <>
-                            <Button
+                            <ConfirmButton
                               variant="outline"
                               size="xs"
-                              onClick={(e) => handleSubmitDraft(e, po.id)}
+                              dialogVariant="warning"
+                              confirmTitle="Submit Purchase Order"
+                              confirmMessage={`Submit Purchase Order ${po.poNumber} for management approval?`}
+                              confirmText="Submit for Approval"
+                              onConfirm={() => handleSubmitDraft(po.id)}
                               className="text-amber-800 border-amber-300 hover:bg-amber-50 font-medium"
                               title="Submit for Approval"
                             >
                               Submit
-                            </Button>
-                            <Button
+                            </ConfirmButton>
+                            <ConfirmButton
                               variant="ghost"
                               size="icon-sm"
-                              onClick={(e) => handleDeleteDraft(e, po.id)}
+                              dialogVariant="destructive"
+                              confirmTitle="Delete Draft Purchase Order"
+                              confirmMessage={`Are you sure you want to permanently delete draft Purchase Order ${po.poNumber}? This cannot be undone.`}
+                              confirmText="Delete Draft"
+                              onConfirm={() => handleDeleteDraft(po.id)}
                               className="text-rose-500 hover:text-rose-700 hover:bg-rose-50"
                               title="Delete Draft"
                             >
                               <Trash2 className="h-3.5 w-3.5" />
-                            </Button>
+                            </ConfirmButton>
                           </>
                         )}
                       </td>

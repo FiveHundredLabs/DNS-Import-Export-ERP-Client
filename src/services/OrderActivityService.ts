@@ -8,6 +8,7 @@ import {
   ProductReturnDetail,
   ReplacementDispatchDetail,
   InvoiceIssuanceDetail,
+  OrderStatus,
 } from '../types/order';
 import { User } from '../types/auth';
 import { orderService } from './OrderService';
@@ -174,7 +175,7 @@ export class OrderActivityService {
             actorName: h.actorName,
             actorRole: h.actorRole,
             timestamp: hTime,
-            statusBadge: { label: 'Closed', variant: 'destructive' },
+            statusBadge: { label: 'Closed', variant: 'danger' },
             comment: h.comment,
           });
         } else if (h.action === 'REJECT') {
@@ -312,7 +313,7 @@ export class OrderActivityService {
         actorName: order.closedByName || 'Sales Manager',
         actorRole: 'SALES_MANAGER',
         timestamp: closedTime,
-        statusBadge: { label: 'Closed', variant: 'destructive' },
+        statusBadge: { label: 'Closed', variant: 'danger' },
         comment: order.closureReason ? `[${order.closureReasonCode || 'OTHER'}] ${order.closureReason}` : undefined,
       });
     }
@@ -484,7 +485,10 @@ export class OrderActivityService {
     };
 
     const existingLog = this.getOrderActivityTimeline(approvedOrder);
-    const updatedLog = [...existingLog, approvalEvent, stockReservedEvent];
+    const hasApprovalEvent = existingLog.some((e) => e.type === 'ORDER_APPROVED');
+    const updatedLog = hasApprovalEvent
+      ? [...existingLog, stockReservedEvent]
+      : [...existingLog, approvalEvent, stockReservedEvent];
 
     return await (orderService as any).repo.update(approvedOrder.id, {
       activityLog: updatedLog,

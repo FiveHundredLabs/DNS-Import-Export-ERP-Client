@@ -16,6 +16,7 @@ import { commissionConfigService } from '../../services/CommissionConfigService'
 import { formatCurrency } from '../../utils/formatters';
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
+import { ConfirmButton } from '../../components/ui/confirm-button';
 import { Input } from '../../components/ui/input';
 import { Badge } from '../../components/ui/badge';
 import { Dialog, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../../components/ui/dialog';
@@ -188,7 +189,6 @@ export function CommissionConfigPage() {
 
   // Reset to defaults
   const handleResetDefaults = async () => {
-    if (!window.confirm('Reset all roles back to system default commission rules?')) return;
     try {
       setIsSaving(true);
       const res = await commissionConfigService.resetToDefaults();
@@ -515,17 +515,21 @@ export function CommissionConfigPage() {
                   </div>
 
                   <div className="flex items-center gap-2 shrink-0">
-                    <Button
+                    <ConfirmButton
                       type="button"
                       variant="outline"
                       size="sm"
-                      onClick={handleResetDefaults}
+                      confirmTitle="Reset All Commission Rules?"
+                      confirmMessage="Are you sure you want to reset all commission rules across all roles back to system defaults? Any unsaved edits will be lost."
+                      confirmLabel="Reset to Defaults"
+                      confirmVariant="destructive"
+                      onConfirm={handleResetDefaults}
                       disabled={isSaving}
                       className="text-xs h-8 gap-1.5 text-slate-600"
                     >
                       <RotateCcw className="h-3 w-3" />
                       Reset Defaults
-                    </Button>
+                    </ConfirmButton>
                     <Button
                       type="button"
                       size="sm"

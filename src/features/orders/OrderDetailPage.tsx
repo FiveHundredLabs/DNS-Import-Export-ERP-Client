@@ -14,6 +14,7 @@ import { OrderActivityTimeline } from './OrderActivityTimeline';
 import { PrintableSalesOrder } from './PrintableSalesOrder';
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
+import { ConfirmButton } from '../../components/ui/confirm-button';
 import { Badge } from '../../components/ui/badge';
 import {
   Dialog,
@@ -340,8 +341,8 @@ export function OrderDetailPage() {
             Full Activity Log
           </Button>
 
-          {/* Edit (if DRAFT) */}
-          {order.status === 'DRAFT' && (
+          {/* Edit (if DRAFT or pending approval) */}
+          {(order.status === 'DRAFT' || isPendingOrSpecial) && (
             <Button
               variant="outline"
               size="sm"
@@ -349,20 +350,24 @@ export function OrderDetailPage() {
               className="text-xs gap-1.5"
             >
               <Edit className="h-3.5 w-3.5" />
-              Edit Draft
+              {order.status === 'DRAFT' ? 'Edit Draft' : 'Edit Order'}
             </Button>
           )}
 
           {/* Submit for Approval (if DRAFT) */}
           {order.status === 'DRAFT' && (
-            <Button
+            <ConfirmButton
               size="sm"
-              onClick={handleSubmitForApproval}
+              dialogVariant="warning"
+              confirmTitle="Submit Sales Order"
+              confirmMessage={`Submit Sales Order ${order.orderNumber} for manager approval?`}
+              confirmText="Submit for Approval"
+              onConfirm={handleSubmitForApproval}
               className="bg-primary hover:bg-primary-hover text-primary-foreground text-xs gap-1.5 shadow-xs"
             >
               <Send className="h-3.5 w-3.5" />
               Submit for Approval
-            </Button>
+            </ConfirmButton>
           )}
 
           {/* Approve / Reject Actions */}
@@ -444,14 +449,17 @@ export function OrderDetailPage() {
             <>
               {order.status === 'APPROVED' && (
                 <>
-                  <Button
+                  <ConfirmButton
                     size="sm"
-                    onClick={() => handleFulfillmentAdvance('PICKING')}
+                    confirmTitle="Start Order Picking"
+                    confirmMessage={`Advance Order ${order.orderNumber} to Picking status? Warehouse picking slip will be generated.`}
+                    confirmText="Start Picking"
+                    onConfirm={() => handleFulfillmentAdvance('PICKING')}
                     className="bg-primary hover:bg-primary-hover text-primary-foreground text-xs gap-1.5"
                   >
                     <Boxes className="h-3.5 w-3.5" />
                     Start Picking
-                  </Button>
+                  </ConfirmButton>
                   <Button
                     size="sm"
                     onClick={handleGoToDraftInvoice}
@@ -465,14 +473,17 @@ export function OrderDetailPage() {
 
               {order.status === 'PICKING' && (
                 <>
-                  <Button
+                  <ConfirmButton
                     size="sm"
-                    onClick={() => handleFulfillmentAdvance('ISSUED')}
+                    confirmTitle="Issue Goods from Warehouse"
+                    confirmMessage={`Issue inventory for Order ${order.orderNumber}? Available warehouse stock will be decremented.`}
+                    confirmText="Issue Goods"
+                    onConfirm={() => handleFulfillmentAdvance('ISSUED')}
                     className="bg-primary hover:bg-primary-hover text-primary-foreground text-xs gap-1.5"
                   >
                     <PackageCheck className="h-3.5 w-3.5" />
                     Issue Goods
-                  </Button>
+                  </ConfirmButton>
                   <Button
                     size="sm"
                     onClick={handleGoToDraftInvoice}
@@ -486,14 +497,17 @@ export function OrderDetailPage() {
 
               {order.status === 'PARTIALLY_ISSUED' && (
                 <>
-                  <Button
+                  <ConfirmButton
                     size="sm"
-                    onClick={() => handleFulfillmentAdvance('ISSUED')}
+                    confirmTitle="Complete Goods Issue"
+                    confirmMessage={`Complete goods issue for remaining lines on Order ${order.orderNumber}?`}
+                    confirmText="Complete Issue"
+                    onConfirm={() => handleFulfillmentAdvance('ISSUED')}
                     className="bg-primary hover:bg-primary-hover text-primary-foreground text-xs gap-1.5"
                   >
                     <PackageCheck className="h-3.5 w-3.5" />
                     Complete Issue
-                  </Button>
+                  </ConfirmButton>
                   <Button
                     size="sm"
                     onClick={handleGoToDraftInvoice}
@@ -520,43 +534,53 @@ export function OrderDetailPage() {
                 <>
                   <Button
                     size="sm"
-                    onClick={() => handleGenerateInvoice(true)}
+                    onClick={handleGoToDraftInvoice}
                     className="bg-purple-600 hover:bg-purple-700 text-white text-xs gap-1.5 shadow-sm"
                   >
                     <FileText className="h-3.5 w-3.5" />
                     Invoice Remaining Lines
                   </Button>
-                  <Button
+                  <ConfirmButton
                     size="sm"
-                    onClick={() => handleFulfillmentAdvance('DISPATCHED')}
+                    confirmTitle="Dispatch Partial Delivery"
+                    confirmMessage={`Dispatch partial delivery for Order ${order.orderNumber}?`}
+                    confirmText="Dispatch Delivery"
+                    onConfirm={() => handleFulfillmentAdvance('DISPATCHED')}
                     className="bg-teal-600 hover:bg-teal-700 text-white text-xs gap-1.5"
                   >
                     <Truck className="h-3.5 w-3.5" />
                     Dispatch Partial Delivery
-                  </Button>
+                  </ConfirmButton>
                 </>
               )}
 
               {order.status === 'INVOICED' && (
-                <Button
+                <ConfirmButton
                   size="sm"
-                  onClick={() => handleFulfillmentAdvance('DISPATCHED')}
+                  confirmTitle="Dispatch Order"
+                  confirmMessage={`Dispatch Order ${order.orderNumber} for customer delivery?`}
+                  confirmText="Dispatch Order"
+                  onConfirm={() => handleFulfillmentAdvance('DISPATCHED')}
                   className="bg-teal-600 hover:bg-teal-700 text-white text-xs gap-1.5"
                 >
                   <Truck className="h-3.5 w-3.5" />
                   Dispatch Order
-                </Button>
+                </ConfirmButton>
               )}
 
               {order.status === 'DISPATCHED' && (
-                <Button
+                <ConfirmButton
                   size="sm"
-                  onClick={() => handleFulfillmentAdvance('DELIVERED')}
+                  confirmVariant="success"
+                  confirmTitle="Mark Order Delivered"
+                  confirmMessage={`Confirm customer delivery receipt for Order ${order.orderNumber}?`}
+                  confirmText="Mark Delivered"
+                  onConfirm={() => handleFulfillmentAdvance('DELIVERED')}
                   className="bg-emerald-700 hover:bg-emerald-800 text-white text-xs gap-1.5"
                 >
                   <CheckCircle className="h-3.5 w-3.5" />
                   Mark Delivered
-                </Button>
+                </ConfirmButton>
               )}
             </>
           )}
@@ -1077,35 +1101,52 @@ export function OrderDetailPage() {
               />
             </div>
 
-            <DialogFooter>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setActionType(null)}
-                disabled={isActionSubmitting}
-              >
-                Cancel
-              </Button>
-              <Button
-                size="sm"
-                onClick={handleActionConfirm}
-                disabled={
-                  isActionSubmitting ||
-                  ((actionType === 'REJECT' || actionType === 'CANCEL' || actionType === 'ESCALATE_MANAGER' || actionType === 'ESCALATE_DIRECTOR') &&
-                    actionComment.trim().length < 3)
-                }
-                className={
-                  actionType === 'APPROVE'
-                    ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
-                    : actionType === 'REJECT'
-                    ? 'bg-rose-600 hover:bg-rose-700 text-white'
-                    : actionType === 'CANCEL'
-                    ? 'bg-slate-700 hover:bg-slate-800 text-white'
-                    : 'bg-primary hover:bg-primary-hover text-primary-foreground'
-                }
-              >
-                {isActionSubmitting ? 'Processing...' : 'Confirm Action'}
-              </Button>
+            <DialogFooter className="flex items-center justify-between gap-2 flex-wrap sm:flex-nowrap">
+              {actionType === 'APPROVE' && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setActionType(null);
+                    navigate(`/orders/${order.id}/edit?action=approve`);
+                  }}
+                  className="text-xs gap-1.5 text-primary border-primary/30 hover:bg-primary/5 mr-auto"
+                >
+                  <Edit className="h-3.5 w-3.5" />
+                  Edit Order First
+                </Button>
+              )}
+              <div className="flex items-center gap-2 ml-auto">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setActionType(null)}
+                  disabled={isActionSubmitting}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={handleActionConfirm}
+                  disabled={
+                    isActionSubmitting ||
+                    ((actionType === 'REJECT' || actionType === 'CANCEL' || actionType === 'ESCALATE_MANAGER' || actionType === 'ESCALATE_DIRECTOR') &&
+                      actionComment.trim().length < 3)
+                  }
+                  className={
+                    actionType === 'APPROVE'
+                      ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                      : actionType === 'REJECT'
+                      ? 'bg-rose-600 hover:bg-rose-700 text-white'
+                      : actionType === 'CANCEL'
+                      ? 'bg-slate-700 hover:bg-slate-800 text-white'
+                      : 'bg-primary hover:bg-primary-hover text-primary-foreground'
+                  }
+                >
+                  {isActionSubmitting ? 'Processing...' : 'Confirm Action'}
+                </Button>
+              </div>
             </DialogFooter>
           </DialogContent>
         </Dialog>

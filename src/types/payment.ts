@@ -1,6 +1,6 @@
 import { BaseEntity } from './common';
 
-export type PaymentStatus = 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED';
+export type PaymentStatus = 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED' | 'BOUNCED' | 'DISHONOURED';
 
 export type PaymentMethod = 'CASH' | 'CHEQUE' | 'BANK_TRANSFER';
 

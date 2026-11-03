@@ -16,6 +16,7 @@ import { StatusBadge } from '../../../components/common/StatusBadge';
 import { FormField } from '../../../components/common/FormField';
 import { Card } from '../../../components/ui/card';
 import { Button } from '../../../components/ui/button';
+import { ConfirmButton } from '../../../components/ui/confirm-button';
 import { Input } from '../../../components/ui/input';
 import { Badge } from '../../../components/ui/badge';
 import {
@@ -907,15 +908,19 @@ export function CashBookPage() {
                             {/* Inline Approval Actions for Managers */}
                             {v.status === 'PENDING_APPROVAL' && canApprove && (
                               <>
-                                <Button
+                                <ConfirmButton
                                   size="sm"
-                                  onClick={() => handleApprove(v.id)}
+                                  confirmTitle="Approve Payment Voucher?"
+                                  confirmMessage={`Are you sure you want to approve voucher ${v.voucherNumber} for ${formatCurrency(v.amount)}? This will post the transaction to the ledger.`}
+                                  confirmLabel="Approve Voucher"
+                                  variant="success"
+                                  onConfirm={() => handleApprove(v.id)}
                                   className="h-7 px-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-semibold gap-1 cursor-pointer shadow-2xs"
                                   title="Direct Approve (MG-02)"
                                 >
                                   <CheckCircle2 className="h-3 w-3" />
                                   <span>Approve</span>
-                                </Button>
+                                </ConfirmButton>
                                 <Button
                                   variant="outline"
                                   size="sm"

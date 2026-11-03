@@ -2,6 +2,7 @@ import { Customer } from '../../types/customer';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../../components/ui/table';
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
+import { ConfirmButton } from '../../components/ui/confirm-button';
 import { formatCurrency } from '../../utils/formatters';
 import { Phone, MessageSquare, ChevronRight, MapPin, User, AlertCircle, ArrowUpRight, Trash2 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
@@ -60,19 +61,19 @@ export function CustomerTable({
                       </Badge>
                     )}
                     {onDelete && (
-                      <Button
+                      <ConfirmButton
                         variant="ghost"
                         size="icon"
-                        onClick={() => {
-                          if(window.confirm('Are you sure you want to delete this customer?')) {
-                            onDelete(c);
-                          }
-                        }}
+                        confirmTitle="Delete Customer?"
+                        confirmMessage={`Are you sure you want to delete customer "${c.name}"? This action cannot be undone.`}
+                        confirmLabel="Delete Customer"
+                        confirmVariant="destructive"
+                        onConfirm={() => onDelete(c)}
                         title="Delete Customer"
-                        className="hover:text-rose-600"
+                        className="hover:text-rose-600 h-8 w-8 p-0"
                       >
                         <Trash2 className="h-4 w-4" />
-                      </Button>
+                      </ConfirmButton>
                     )}
                   </div>
                   <h3 className="text-sm font-bold text-slate-900 mt-1 truncate">

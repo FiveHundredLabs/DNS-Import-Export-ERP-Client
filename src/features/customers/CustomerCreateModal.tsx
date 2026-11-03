@@ -6,6 +6,7 @@ import { Select } from '../../components/ui/select';
 import { Customer, CustomerType, CustomerLoyaltyLevel } from '../../types/customer';
 import { useAreas } from '../../hooks/useAreas';
 import { useUsers } from '../../hooks/useUsers';
+import { AlertCircle } from 'lucide-react';
 
 interface CustomerCreateModalProps {
   open: boolean;
@@ -39,6 +40,18 @@ export function CustomerCreateModal({
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<{
+    code?: string;
+    name?: string;
+    type?: string;
+    loyaltyLevel?: string;
+    contactPerson?: string;
+    phone?: string;
+    email?: string;
+    address?: string;
+    areaId?: string;
+    assignedRepId?: string;
+  }>({});
 
   useEffect(() => {
     if (open) {
@@ -73,6 +86,7 @@ export function CustomerCreateModal({
         setAssignedRepId('');
       }
       setError(null);
+      setFieldErrors({});
     }
   }, [open, editingCustomer]);
 
@@ -81,18 +95,78 @@ export function CustomerCreateModal({
   
   const salesRepsInArea = users.filter(u => u.role === 'SALES_REP' && u.areaId === areaId);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const validate = (): boolean => {
+    const errs: typeof fieldErrors = {};
+
+    if (!name.trim()) {
+      errs.name = 'Shop / Business full name is required.';
+    } else if (name.trim().length < 3) {
+      errs.name = 'Business name must be at least 3 characters.';
+    }
+
+    if (!contactPerson.trim()) {
+      errs.contactPerson = 'Contact person name is required.';
+    } else if (contactPerson.trim().length < 2) {
+      errs.contactPerson = 'Contact person must be at least 2 characters.';
+    }
+
+    if (!phone.trim()) {
+      errs.phone = 'Contact phone number is required.';
+    } else {
+      const cleanDigits = phone.replace(/[^0-9+]/g, '');
+      const validPhone = /^(?:\+94|0)?7[0-9]{8}$|^(?:\+94|0)?[1-9][0-9]{8}$/.test(cleanDigits) || cleanDigits.replace(/\D/g, '').length >= 9;
+      if (!validPhone) {
+        errs.phone = 'Please enter a valid phone number (e.g. +94 77 123 4567 or 0771234567).';
+      }
+    }
+
+    if (email.trim()) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email.trim())) {
+        errs.email = 'Please enter a valid email address (e.g. dealer@company.lk).';
+      }
+    }
+
+    if (!address.trim()) {
+      errs.address = 'Registered business address is required.';
+    } else if (address.trim().length < 5) {
+      errs.address = 'Please provide a complete registered address (min 5 characters).';
+    }
+
+    if (!areaId) {
+      errs.areaId = 'Please select an assigned operational Area.';
+    }
+
+    if (!assignedRepId) {
+      errs.assignedRepId = 'Please select an assigned Sales Representative.';
+    }
+
+    if (code.trim()) {
+      const codeRegex = /^[A-Z0-9\-]+$/;
+      if (!codeRegex.test(code.trim())) {
+        errs.code = 'Code must contain only uppercase letters, numbers, and dashes.';
+      }
+    }
+
+    setFieldErrors(errs);
+
+    // Exact message matching test expectations
     if (!name.trim() || !phone.trim() || !contactPerson.trim()) {
       setError('Name, Contact Person, and Phone are required.');
-      return;
+      return false;
     }
-    if (!areaId) {
-      setError('Please select an Area.');
-      return;
+
+    if (Object.keys(errs).length > 0) {
+      setError('Please review and correct the highlighted fields below.');
+      return false;
     }
-    if (!assignedRepId) {
-      setError('Please select a Sales Rep.');
+
+    return true;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!validate()) {
       return;
     }
 
@@ -105,7 +179,7 @@ export function CustomerCreateModal({
       if (editingCustomer && onUpdate) {
         await onUpdate(editingCustomer.id, {
           code: code || editingCustomer.code,
-          name,
+          name: name.trim(),
           type,
           loyaltyLevel,
           loyaltyTier:
@@ -118,15 +192,15 @@ export function CustomerCreateModal({
           areaName: selectedArea?.name,
           assignedRepId: rep?.id,
           assignedRepName: rep?.name,
-          contactPerson,
-          phone,
-          email,
-          address,
+          contactPerson: contactPerson.trim(),
+          phone: phone.trim(),
+          email: email.trim(),
+          address: address.trim(),
         });
       } else {
         await onCreate({
-          code: code || `CUST-${Date.now().toString().slice(-4)}`,
-          name,
+          code: code.trim() || `CUST-${Date.now().toString().slice(-4)}`,
+          name: name.trim(),
           type,
           loyaltyLevel,
           loyaltyTier:
@@ -139,10 +213,10 @@ export function CustomerCreateModal({
           areaName: selectedArea?.name || 'Kelaniya',
           assignedRepId: rep?.id || 'usr-106',
           assignedRepName: rep?.name || 'Kasun Wickramasinghe',
-          contactPerson,
-          phone,
-          email,
-          address,
+          contactPerson: contactPerson.trim(),
+          phone: phone.trim(),
+          email: email.trim(),
+          address: address.trim(),
           commercialTerms: {
             creditLimit: 500000,
             creditDays: 14,
@@ -173,21 +247,37 @@ export function CustomerCreateModal({
         </DialogDescription>
       </DialogHeader>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
-        {error && <div className="p-2 rounded bg-rose-50 text-rose-700 text-xs">{error}</div>}
+      <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+        {error && (
+          <div className="p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center gap-2">
+            <AlertCircle className="h-4 w-4 shrink-0 text-rose-600" />
+            <span>{error}</span>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div>
             <label className="block text-[13px] font-medium text-slate-700 mb-1.5">Customer Code</label>
             <Input
               value={code}
-              onChange={(e) => setCode(e.target.value.toUpperCase())}
+              onChange={(e) => {
+                setCode(e.target.value.toUpperCase());
+                if (fieldErrors.code) setFieldErrors((prev) => ({ ...prev, code: undefined }));
+              }}
+              error={fieldErrors.code}
               placeholder="e.g. DLR-COL-009"
             />
           </div>
           <div>
             <label className="block text-[13px] font-medium text-slate-700 mb-1.5">Customer Type</label>
-            <Select value={type} onChange={(e) => setType(e.target.value as CustomerType)}>
+            <Select
+              value={type}
+              onChange={(e) => {
+                setType(e.target.value as CustomerType);
+                if (fieldErrors.type) setFieldErrors((prev) => ({ ...prev, type: undefined }));
+              }}
+              error={fieldErrors.type}
+            >
               <option value="DEALER">Authorized Dealer</option>
               <option value="SHOWROOM">Showroom Outlet</option>
               <option value="DIRECT">Direct Contractor</option>
@@ -195,7 +285,14 @@ export function CustomerCreateModal({
           </div>
           <div>
             <label className="block text-[13px] font-medium text-slate-700 mb-1.5">Loyalty Level</label>
-            <Select value={loyaltyLevel} onChange={(e) => setLoyaltyLevel(e.target.value as CustomerLoyaltyLevel)}>
+            <Select
+              value={loyaltyLevel}
+              onChange={(e) => {
+                setLoyaltyLevel(e.target.value as CustomerLoyaltyLevel);
+                if (fieldErrors.loyaltyLevel) setFieldErrors((prev) => ({ ...prev, loyaltyLevel: undefined }));
+              }}
+              error={fieldErrors.loyaltyLevel}
+            >
               <option value="NEW">New (Level 1 Discount)</option>
               <option value="PREMIUM">Premium (Levels 1 & 2)</option>
               <option value="PLATINUM">Platinum (All Levels)</option>
@@ -209,7 +306,11 @@ export function CustomerCreateModal({
           </label>
           <Input
             value={name}
-            onChange={(e) => setName(e.target.value)}
+            onChange={(e) => {
+              setName(e.target.value);
+              if (fieldErrors.name) setFieldErrors((prev) => ({ ...prev, name: undefined }));
+            }}
+            error={fieldErrors.name}
             placeholder="e.g. Apex Power Engineering (Pvt) Ltd"
           />
         </div>
@@ -221,7 +322,11 @@ export function CustomerCreateModal({
             </label>
             <Input
               value={contactPerson}
-              onChange={(e) => setContactPerson(e.target.value)}
+              onChange={(e) => {
+                setContactPerson(e.target.value);
+                if (fieldErrors.contactPerson) setFieldErrors((prev) => ({ ...prev, contactPerson: undefined }));
+              }}
+              error={fieldErrors.contactPerson}
               placeholder="Mr. Janaka Silva"
             />
           </div>
@@ -231,8 +336,12 @@ export function CustomerCreateModal({
             </label>
             <Input
               value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="+94 77 123 4567"
+              onChange={(e) => {
+                setPhone(e.target.value);
+                if (fieldErrors.phone) setFieldErrors((prev) => ({ ...prev, phone: undefined }));
+              }}
+              error={fieldErrors.phone}
+              placeholder="+94 77 123 4567 or 0771234567"
             />
           </div>
         </div>
@@ -242,29 +351,43 @@ export function CustomerCreateModal({
           <Input
             type="email"
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(e) => {
+              setEmail(e.target.value);
+              if (fieldErrors.email) setFieldErrors((prev) => ({ ...prev, email: undefined }));
+            }}
+            error={fieldErrors.email}
             placeholder="dealer@company.lk"
           />
         </div>
 
         <div>
-          <label className="block text-[13px] font-medium text-slate-700 mb-1.5">Registered Address</label>
+          <label className="block text-[13px] font-medium text-slate-700 mb-1.5">
+            Registered Address <span className="text-rose-500">*</span>
+          </label>
           <Input
             value={address}
-            onChange={(e) => setAddress(e.target.value)}
+            onChange={(e) => {
+              setAddress(e.target.value);
+              if (fieldErrors.address) setFieldErrors((prev) => ({ ...prev, address: undefined }));
+            }}
+            error={fieldErrors.address}
             placeholder="120 High Level Road, Nugegoda"
           />
         </div>
 
         <div className="grid grid-cols-3 gap-3">
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">Area <span className="text-rose-500">*</span></label>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">
+              Area <span className="text-rose-500">*</span>
+            </label>
             <Select 
               value={areaId} 
               onChange={(e) => {
                 setAreaId(e.target.value);
                 setAssignedRepId(''); 
+                if (fieldErrors.areaId) setFieldErrors((prev) => ({ ...prev, areaId: undefined }));
               }}
+              error={fieldErrors.areaId}
             >
               <option value="">Select Area</option>
               {areas.map(a => (
@@ -282,11 +405,17 @@ export function CustomerCreateModal({
             />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">Sales Rep <span className="text-rose-500">*</span></label>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">
+              Sales Rep <span className="text-rose-500">*</span>
+            </label>
             <Select 
               value={assignedRepId} 
-              onChange={(e) => setAssignedRepId(e.target.value)}
+              onChange={(e) => {
+                setAssignedRepId(e.target.value);
+                if (fieldErrors.assignedRepId) setFieldErrors((prev) => ({ ...prev, assignedRepId: undefined }));
+              }}
               disabled={!areaId}
+              error={fieldErrors.assignedRepId}
             >
               <option value="">Select Sales Rep</option>
               {salesRepsInArea.map(r => (

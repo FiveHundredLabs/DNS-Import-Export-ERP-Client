@@ -5,6 +5,7 @@ import { useFinanceLedger } from '../../hooks/useFinanceLedger';
 import { CurrencyInput } from '../../components/CurrencyInput';
 import { DoubleEntryHoverBadge } from '../../components/DoubleEntryHoverBadge';
 import { Button } from '../../../../components/ui/button';
+import { ConfirmButton } from '../../../../components/ui/confirm-button';
 import { Input } from '../../../../components/ui/input';
 import { Badge } from '../../../../components/ui/badge';
 import { Card } from '../../../../components/ui/card';
@@ -46,6 +47,10 @@ export function SupplierDebitNotesPage() {
 
   // Form Header State
   const [selectedSupplierId, setSelectedSupplierId] = useState<string>('');
+  const selectedSupplier = useMemo(
+    () => suppliers.find((s) => s.id === selectedSupplierId),
+    [suppliers, selectedSupplierId]
+  );
   const [selectedGRNId, setSelectedGRNId] = useState<string>(
     searchParams.get('grnId') || ''
   );
@@ -593,15 +598,18 @@ export function SupplierDebitNotesPage() {
                 Cancel
               </Button>
               <div className="flex items-center gap-2">
-                <Button
+                <ConfirmButton
                   type="submit"
                   size="sm"
+                  confirmTitle="Issue Supplier Debit Note"
+                  confirmMessage={`Issue Supplier Debit Note for ${formatCurrency(totalDebitNoteAmount)} against ${selectedSupplier?.name || 'the selected supplier'}? This will debit Accounts Payable and credit Merchandise Inventory.`}
+                  confirmText="Issue Debit Note"
                   disabled={submitting || totalDebitNoteAmount <= 0}
                   className="bg-primary hover:bg-primary-hover text-white gap-2 font-semibold"
                 >
                   <CheckCircle2 className="h-4 w-4" />
                   <span>{submitting ? 'Posting...' : 'Issue Debit Note & Post GL'}</span>
-                </Button>
+                </ConfirmButton>
                 <DoubleEntryHoverBadge
                   title="Supplier Debit Note Double-Entry Impact"
                   description="Issuing this debit note reduces accounts payable and stock valuation:"

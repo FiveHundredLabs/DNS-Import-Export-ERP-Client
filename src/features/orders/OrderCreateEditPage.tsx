@@ -10,6 +10,8 @@ import { invoiceService } from '../../services/InvoiceService';
 import { toast } from 'sonner';
 import { Customer } from '../../types/customer';
 import { Product } from '../../types/product';
+import { SalesOrder } from '../../types/order';
+import { orderService } from '../../services/OrderService';
 import { CustomerSelector } from '../../components/selectors/CustomerSelector';
 import { CustomerSummaryCard } from '../../components/selectors/CustomerSummaryCard';
 import { ProductSelector } from '../../components/selectors/ProductSelector';
@@ -20,11 +22,12 @@ import { FormField } from '../../components/common/FormField';
 import { StatCard } from '../../components/common/StatCard';
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
+import { ConfirmButton } from '../../components/ui/confirm-button';
 import { Input } from '../../components/ui/input';
 import { Badge } from '../../components/ui/badge';
 import { formatCurrency } from '../../utils/formatters';
 import { cn } from '../../utils/cn';
-import { evaluateOrderApproval } from '../../rules/orderRules';
+import { evaluateOrderApproval, canApproveOrder } from '../../rules/orderRules';
 import {
   getProductDiscountLevels,
   getAllowedDiscountLevels,
@@ -97,6 +100,25 @@ export function OrderCreateEditPage() {
   const [notes, setNotes] = useState<string>('');
   const [quotationNumber, setQuotationNumber] = useState<string | undefined>(undefined);
 
+  const [existingOrder, setExistingOrder] = useState<SalesOrder | null>(null);
+  const [isRemarkModalOpen, setIsRemarkModalOpen] = useState(false);
+  const [changeRemarks, setChangeRemarks] = useState('');
+  const [pendingAction, setPendingAction] = useState<'save' | 'approve'>(
+    searchParams.get('action') === 'approve' ? 'approve' : 'save'
+  );
+
+  const isPendingOrder =
+    existingOrder?.status === 'PENDING_APPROVAL' || existingOrder?.status === 'SPECIAL_APPROVAL';
+  const userCanApprove = Boolean(
+    isPendingOrder &&
+    existingOrder &&
+    canApproveOrder(
+      currentUser.role,
+      existingOrder.currentApproverRole || existingOrder.targetApproverRole,
+      existingOrder.isSpecialApproval
+    )
+  );
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [pageLoading, setPageLoading] = useState(true);
   const [formError, setFormError] = useState<string | null>(null);
@@ -108,17 +130,20 @@ export function OrderCreateEditPage() {
         setPageLoading(true);
 
         if (isEdit && id) {
-          const existing = await import('../../services/OrderService').then((m) =>
-            m.orderService.getOrderById(id)
-          );
+          const existing = await orderService.getOrderById(id);
           if (!existing) {
             setFormError('Sales Order not found.');
             return;
           }
-          if (existing.status !== 'DRAFT') {
-            setFormError(`Only DRAFT orders can be edited. Current status is ${existing.status}`);
+          if (
+            existing.status !== 'DRAFT' &&
+            existing.status !== 'PENDING_APPROVAL' &&
+            existing.status !== 'SPECIAL_APPROVAL'
+          ) {
+            setFormError(`Only DRAFT or PENDING approval orders can be edited. Current status is ${existing.status}`);
             return;
           }
+          setExistingOrder(existing);
 
           const cust = await customerService.getCustomer(existing.customerId);
           if (cust) {
@@ -347,7 +372,7 @@ export function OrderCreateEditPage() {
   }, [items]);
 
 
-  const handleSubmit = async (saveAsDraft: boolean) => {
+  const handleSubmit = async (saveAsDraft: boolean, remark?: string, shouldApprove?: boolean) => {
     try {
       setFormError(null);
       if (!selectedCustomer) {
@@ -402,8 +427,25 @@ export function OrderCreateEditPage() {
           customerPoNumber: customerPoNumber.trim() || undefined,
           paymentTerms: paymentTerms.trim() || undefined,
           notes: notes.trim() || undefined,
-          saveAsDraft,
+          changeRemarks: remark,
+          saveAsDraft: isPendingOrder ? false : saveAsDraft,
         });
+
+        if (shouldApprove) {
+          await orderService.approveOrder(
+            id,
+            currentUser,
+            remark || 'Order verified, updated and approved.'
+          );
+          toast.success(`Sales Order ${existingOrder?.orderNumber || id} updated and approved!`);
+        } else {
+          toast.success(
+            isPendingOrder
+              ? `Sales Order ${existingOrder?.orderNumber || id} updated with change remarks!`
+              : `Sales Order draft updated successfully!`
+          );
+        }
+
         navigate(`/orders/${id}`);
       } else {
         const created = await createOrder({
@@ -445,6 +487,12 @@ export function OrderCreateEditPage() {
     }
   };
 
+  const handleInitiatePendingSave = (action: 'save' | 'approve') => {
+    setPendingAction(action);
+    setChangeRemarks('');
+    setIsRemarkModalOpen(true);
+  };
+
   if (pageLoading) {
     return <div className="p-12 text-center text-xs text-slate-500">Loading order editor...</div>;
   }
@@ -453,7 +501,13 @@ export function OrderCreateEditPage() {
     <div className="space-y-6 w-full pb-28">
       {/* Top Header */}
       <PageHeader
-        title={isEdit ? 'Edit Sales Order Draft' : 'Create Enterprise Sales Order'}
+        title={
+          isEdit
+            ? existingOrder?.status === 'DRAFT'
+              ? 'Edit Sales Order Draft'
+              : `Edit Sales Order (${existingOrder?.orderNumber || id})`
+            : 'Create Enterprise Sales Order'
+        }
         breadcrumbs={[
           { label: 'Sales Orders', href: '/orders' },
           { label: isEdit ? 'Edit Order' : 'New Order' },
@@ -994,31 +1048,157 @@ export function OrderCreateEditPage() {
           ) : null
         }
         rightActions={
-          <>
+          isPendingOrder ? (
+            <>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => navigate(`/orders/${id}`)}
+                disabled={isSubmitting}
+                className="gap-1.5 font-medium cursor-pointer"
+              >
+                <ArrowLeft className="h-3.5 w-3.5" />
+                <span>Cancel</span>
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => handleInitiatePendingSave('save')}
+                disabled={isSubmitting}
+                className="bg-primary hover:bg-primary-hover text-primary-foreground gap-1.5 font-semibold cursor-pointer shadow-xs"
+              >
+                <Save className="h-3.5 w-3.5" />
+                <span>Save Changes</span>
+              </Button>
+              {userCanApprove && (
+                <ConfirmButton
+                  type="button"
+                  size="sm"
+                  dialogVariant="success"
+                  confirmTitle="Save & Approve Order"
+                  confirmMessage="Confirm changes and approve this sales order immediately?"
+                  confirmText="Save & Approve"
+                  onConfirm={() => handleInitiatePendingSave('approve')}
+                  disabled={isSubmitting}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5 font-semibold cursor-pointer shadow-xs"
+                >
+                  <CheckCircle className="h-3.5 w-3.5" />
+                  <span>Save & Approve</span>
+                </ConfirmButton>
+              )}
+            </>
+          ) : (
+            <>
+              <ConfirmButton
+                type="button"
+                variant="outline"
+                size="sm"
+                confirmTitle="Save Order as Draft"
+                confirmMessage="Save changes as an unsubmitted draft? You can return to edit it later before submitting."
+                confirmText="Save as Draft"
+                onConfirm={() => handleSubmit(true)}
+                disabled={isSubmitting}
+                className="gap-1.5 font-medium cursor-pointer"
+              >
+                <Save className="h-3.5 w-3.5" />
+                <span>Save as Draft</span>
+              </ConfirmButton>
+              <ConfirmButton
+                type="button"
+                size="sm"
+                dialogVariant="warning"
+                confirmTitle="Submit Sales Order"
+                confirmMessage="Are you sure you want to submit this sales order? It will be entered into the approval queue and reserve available inventory."
+                confirmText="Submit Order"
+                onConfirm={() => handleSubmit(false)}
+                disabled={isSubmitting}
+                className="bg-primary hover:bg-primary-hover text-primary-foreground gap-1.5 font-semibold cursor-pointer shadow-xs"
+              >
+                <Send className="h-3.5 w-3.5" />
+                <span>Submit Order</span>
+              </ConfirmButton>
+            </>
+          )
+        }
+      />
+
+      {/* Change Remarks Dialog for Pending Approval Orders */}
+      <Dialog open={isRemarkModalOpen} onOpenChange={setIsRemarkModalOpen}>
+        <DialogContent className="sm:max-w-md bg-white">
+          <DialogHeader>
+            <DialogTitle className="text-sm font-bold flex items-center gap-2 text-slate-900">
+              <AlertTriangle className="h-4 w-4 text-amber-500" />
+              Order Change Remarks Required
+            </DialogTitle>
+            <DialogDescription className="text-xs text-slate-500">
+              This sales order is currently {existingOrder?.status === 'SPECIAL_APPROVAL' ? 'pending special approval' : 'pending approval'}. Please provide a clear remark describing the changes made before saving.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3 py-2">
+            <div>
+              <label className="text-xs font-semibold text-slate-700 block mb-1">
+                Change Remarks / Reason <span className="text-rose-500">*</span>
+              </label>
+              <textarea
+                value={changeRemarks}
+                onChange={(e) => setChangeRemarks(e.target.value)}
+                placeholder="e.g. Adjusted quantities and item pricing as requested by customer..."
+                rows={3}
+                className="w-full text-xs rounded-lg border border-slate-200 p-2.5 focus:border-primary focus:ring-1 focus:ring-primary outline-hidden"
+                autoFocus
+              />
+            </div>
+            {pendingAction === 'approve' && (
+              <div className="p-2.5 rounded-lg bg-emerald-50 border border-emerald-200 text-[11px] text-emerald-800 flex items-center gap-2">
+                <CheckCircle className="h-4 w-4 text-emerald-600 shrink-0" />
+                <span>Saving will update order items and pricing, record change remarks to activity log, and complete the approval workflow.</span>
+              </div>
+            )}
+          </div>
+
+          <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
             <Button
               type="button"
               variant="outline"
               size="sm"
-              onClick={() => handleSubmit(true)}
-              disabled={isSubmitting}
-              className="gap-1.5 font-medium cursor-pointer"
+              onClick={() => setIsRemarkModalOpen(false)}
+              className="text-xs"
             >
-              <Save className="h-3.5 w-3.5" />
-              <span>Save as Draft</span>
+              Cancel
             </Button>
             <Button
               type="button"
               size="sm"
-              onClick={() => handleSubmit(false)}
-              disabled={isSubmitting}
-              className="bg-primary hover:bg-primary-hover text-primary-foreground gap-1.5 font-semibold cursor-pointer shadow-xs"
+              disabled={!changeRemarks.trim() || isSubmitting}
+              onClick={() => {
+                const remarks = changeRemarks.trim();
+                setIsRemarkModalOpen(false);
+                handleSubmit(false, remarks, pendingAction === 'approve');
+              }}
+              className={cn(
+                "text-xs font-semibold gap-1.5",
+                pendingAction === 'approve'
+                  ? "bg-emerald-600 hover:bg-emerald-700 text-white"
+                  : "bg-primary hover:bg-primary-hover text-primary-foreground"
+              )}
             >
-              <Send className="h-3.5 w-3.5" />
-              <span>Submit Order</span>
+              {pendingAction === 'approve' ? (
+                <>
+                  <CheckCircle className="h-3.5 w-3.5" />
+                  Save & Approve
+                </>
+              ) : (
+                <>
+                  <Save className="h-3.5 w-3.5" />
+                  Confirm & Save Changes
+                </>
+              )}
             </Button>
-          </>
-        }
-      />
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

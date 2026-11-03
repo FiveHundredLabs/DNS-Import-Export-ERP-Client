@@ -12,6 +12,7 @@
 
 // Buttons & Actions
 export * from './button';
+export * from './confirm-button';
 
 // Form Inputs & Controls
 export * from './input';

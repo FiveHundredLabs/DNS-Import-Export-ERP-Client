@@ -21,6 +21,7 @@ import {
   PackageCheck,
 } from 'lucide-react';
 import { Button } from '../../components/ui/button';
+import { ConfirmButton } from '../../components/ui/confirm-button';
 import { Badge } from '../../components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Textarea } from '../../components/ui/textarea';
@@ -187,30 +188,37 @@ export function PurchaseOrderDetailPage() {
 
             {/* Submit for Approval */}
             {(po.status === 'DRAFT' || po.status === 'REJECTED') && (
-              <Button
+              <ConfirmButton
                 variant="default"
                 size="sm"
+                dialogVariant="warning"
+                confirmTitle="Submit Purchase Order"
+                confirmMessage={`Submit Purchase Order ${po.poNumber} for managerial authorization?`}
+                confirmText="Submit for Approval"
                 disabled={actionLoading}
-                onClick={handleSubmitForApproval}
+                onConfirm={handleSubmitForApproval}
                 className="gap-1.5 text-xs bg-amber-600 hover:bg-amber-700 text-white font-medium shadow-xs"
               >
                 <Send className="h-3.5 w-3.5" />
                 <span>Submit for Approval</span>
-              </Button>
+              </ConfirmButton>
             )}
 
             {/* Mark Sent to Supplier */}
             {po.status === 'APPROVED' && (
-              <Button
+              <ConfirmButton
                 variant="default"
                 size="sm"
+                confirmTitle="Dispatch to Supplier"
+                confirmMessage={`Confirm dispatch of Purchase Order ${po.poNumber} to supplier ${po.supplierName}?`}
+                confirmText="Dispatch to Supplier"
                 disabled={actionLoading}
-                onClick={handleMarkSent}
+                onConfirm={handleMarkSent}
                 className="gap-1.5 text-xs bg-blue-600 hover:bg-blue-700 text-white font-medium shadow-xs"
               >
                 <Send className="h-3.5 w-3.5" />
                 <span>Dispatch to Supplier</span>
-              </Button>
+              </ConfirmButton>
             )}
           </div>
         }
@@ -274,26 +282,33 @@ export function PurchaseOrderDetailPage() {
               rows={2}
             />
             <div className="flex gap-2 justify-end">
-              <Button
+              <ConfirmButton
                 variant="destructive"
                 size="sm"
+                confirmTitle="Reject Purchase Order"
+                confirmMessage={`Reject Purchase Order ${po.poNumber}? Rejection rationale will be recorded.`}
+                confirmText="Reject Order"
                 disabled={actionLoading}
-                onClick={handleManagerReject}
+                onConfirm={handleManagerReject}
                 className="gap-1.5 text-xs"
               >
                 <XCircle className="h-3.5 w-3.5" />
                 <span>Reject Order</span>
-              </Button>
-              <Button
+              </ConfirmButton>
+              <ConfirmButton
                 variant="default"
                 size="sm"
+                confirmVariant="success"
+                confirmTitle="Approve Purchase Order"
+                confirmMessage={`Approve Purchase Order ${po.poNumber} totaling ${formatCurrency(po.grandTotal, po.currency)}?`}
+                confirmText="Approve Purchase Order"
                 disabled={actionLoading}
-                onClick={handleManagerApprove}
+                onConfirm={handleManagerApprove}
                 className="gap-1.5 text-xs bg-emerald-600 hover:bg-emerald-700 text-white"
               >
                 <CheckCircle2 className="h-3.5 w-3.5" />
                 <span>Approve Purchase Order</span>
-              </Button>
+              </ConfirmButton>
             </div>
           </CardContent>
         </Card>

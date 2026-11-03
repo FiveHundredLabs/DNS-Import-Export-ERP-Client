@@ -76,6 +76,9 @@ class SupplierReturnService {
       unitCost: it.unitCost,
       lineTotal: it.returnedQuantity * it.unitCost,
       reason: it.reason || dto.reasonDescription,
+      barcode: it.barcode,
+      selectedBarcodes: it.selectedBarcodes,
+      serialNumbers: it.serialNumbers,
     }));
 
     const totalAmount = itemsWithTotals.reduce((sum, it) => sum + it.lineTotal, 0);

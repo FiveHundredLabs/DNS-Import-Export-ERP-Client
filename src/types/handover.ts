@@ -12,6 +12,9 @@ export interface CashHandoverItem {
   amount: number;
   paymentMethod: PaymentMethod;
   collectedAt: string;
+  chequeNumber?: string;
+  chequeDate?: string;
+  bankName?: string;
   invoiceAllocations: PaymentAllocation[];
 }
 

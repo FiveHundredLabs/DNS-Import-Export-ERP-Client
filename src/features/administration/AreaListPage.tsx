@@ -3,6 +3,7 @@ import { Area } from '../../mock/mockAreas';
 import { useAreas } from '../../hooks/useAreas';
 import { useUsers } from '../../hooks/useUsers';
 import { Button } from '../../components/ui/button';
+import { ConfirmButton } from '../../components/ui/confirm-button';
 import { Input } from '../../components/ui/input';
 import { Select } from '../../components/ui/select';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../../components/ui/table';
@@ -64,9 +65,7 @@ export function AreaListPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (window.confirm('Are you sure you want to delete this area?')) {
-      await deleteArea(id);
-    }
+    await deleteArea(id);
   };
 
   return (
@@ -131,9 +130,18 @@ export function AreaListPage() {
                     <Button variant="ghost" size="icon" onClick={() => handleOpenModal(area)} className="h-8 w-8 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50">
                       <Edit3 className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="icon" onClick={() => handleDelete(area.id)} className="h-8 w-8 text-slate-500 hover:text-rose-600 hover:bg-rose-50">
+                    <ConfirmButton
+                      variant="ghost"
+                      size="icon"
+                      confirmTitle="Delete Area?"
+                      confirmMessage={`Are you sure you want to delete the area "${area.name}" (${area.code})?`}
+                      confirmLabel="Delete Area"
+                      confirmVariant="destructive"
+                      onConfirm={() => handleDelete(area.id)}
+                      className="h-8 w-8 text-slate-500 hover:text-rose-600 hover:bg-rose-50"
+                    >
                       <Trash2 className="h-4 w-4" />
-                    </Button>
+                    </ConfirmButton>
                   </div>
                 </TableCell>
               </TableRow>

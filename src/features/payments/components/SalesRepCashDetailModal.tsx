@@ -34,6 +34,7 @@ import {
   MapPin,
   Calendar,
   Search,
+  X,
 } from 'lucide-react';
 
 export interface SalesRepCashDetailModalProps {
@@ -113,18 +114,24 @@ export function SalesRepCashDetailModal({
   });
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl max-h-[92vh] overflow-y-auto p-0 gap-0 border-slate-200 shadow-2xl rounded-2xl">
+    <Dialog
+      open={open}
+      onOpenChange={onOpenChange}
+      size="5xl"
+      hideCloseButton={true}
+      className="max-w-5xl w-full p-0 overflow-hidden rounded-3xl border border-slate-200/90 shadow-2xl bg-white"
+    >
+      <div className="flex flex-col max-h-[90vh] overflow-y-auto">
         {/* Header Profile Bar */}
-        <div className="bg-slate-900 text-white p-5 sm:p-6 rounded-t-2xl">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-3.5">
-              <div className="h-12 w-12 rounded-2xl bg-gradient-to-tr from-amber-500 to-amber-300 text-slate-900 font-extrabold text-lg flex items-center justify-center shadow-md">
+        <div className="bg-slate-900 text-white p-5 sm:p-7 relative">
+          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+            <div className="flex items-start gap-4">
+              <div className="h-14 w-14 rounded-2xl bg-gradient-to-tr from-amber-500 to-amber-300 text-slate-900 font-black text-xl flex items-center justify-center shadow-lg shadow-amber-500/20 shrink-0">
                 {rep.name.split(' ').map((n) => n[0]).slice(0, 2).join('')}
               </div>
-              <div>
+              <div className="space-y-1">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <h2 className="text-lg sm:text-xl font-bold tracking-tight text-white">{rep.name}</h2>
+                  <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-white">{rep.name}</h2>
                   <Badge variant="outline" className="border-amber-400/40 text-amber-300 bg-amber-500/10 text-[11px] font-semibold">
                     Sales Representative
                   </Badge>
@@ -142,18 +149,18 @@ export function SalesRepCashDetailModal({
                     </Badge>
                   )}
                 </div>
-                <div className="flex flex-wrap items-center gap-3 text-xs text-slate-300 mt-1 font-medium">
-                  <span className="flex items-center gap-1">
-                    <MapPin className="h-3.5 w-3.5 text-amber-400" /> {rep.areaName || 'Colombo Territory'}
+                <div className="flex flex-wrap items-center gap-3.5 text-xs text-slate-300 font-medium">
+                  <span className="flex items-center gap-1.5">
+                    <MapPin className="h-3.5 w-3.5 text-amber-400 shrink-0" /> {rep.areaName || 'Colombo Territory'}
                   </span>
                   {rep.phone && (
-                    <span className="flex items-center gap-1">
-                      <Phone className="h-3.5 w-3.5 text-slate-400" /> {rep.phone}
+                    <span className="flex items-center gap-1.5">
+                      <Phone className="h-3.5 w-3.5 text-slate-400 shrink-0" /> {rep.phone}
                     </span>
                   )}
                   {rep.email && (
-                    <span className="flex items-center gap-1">
-                      <Mail className="h-3.5 w-3.5 text-slate-400" /> {rep.email}
+                    <span className="flex items-center gap-1.5">
+                      <Mail className="h-3.5 w-3.5 text-slate-400 shrink-0" /> {rep.email}
                     </span>
                   )}
                   <span>· {rep.assignedCustomersCount || 14} Assigned Dealers</span>
@@ -161,69 +168,82 @@ export function SalesRepCashDetailModal({
               </div>
             </div>
 
-            {/* Quick Status Pill */}
-            <div className="bg-slate-800/80 border border-slate-700/80 px-4 py-2.5 rounded-xl text-right sm:self-center">
-              <span className="text-[11px] uppercase tracking-wider text-slate-400 font-bold block">Current Cash Balance</span>
-              <span className="text-xl font-mono font-extrabold text-amber-400">
-                {formatCurrency(totalCashInHand)}
-              </span>
+            <div className="flex items-center gap-3 self-end sm:self-start">
+              {/* Quick Status Pill */}
+              <div className="bg-slate-800/90 border border-slate-700/80 px-4 py-2.5 rounded-2xl text-right">
+                <span className="text-[10px] uppercase tracking-wider text-slate-400 font-bold block">Current Cash Balance</span>
+                <span className="text-xl sm:text-2xl font-mono font-black text-amber-400">
+                  {formatCurrency(totalCashInHand)}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => onOpenChange(false)}
+                className="h-9 w-9 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition-colors shrink-0"
+                aria-label="Close dialog"
+              >
+                <X className="h-4 w-4" />
+              </button>
             </div>
           </div>
 
           {/* 4 Summary Stat Mini-Cards */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mt-5 pt-4 border-t border-slate-800">
-            <div className="bg-slate-800/60 p-2.5 rounded-xl border border-slate-700/60">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide block">Current Cash in Hand</span>
-              <span className="text-base font-extrabold text-amber-300 font-mono mt-0.5 block truncate">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-6 pt-5 border-t border-slate-800/80">
+            <div className="bg-slate-800/70 p-3.5 rounded-2xl border border-slate-700/70 shadow-inner">
+              <span className="text-[10.5px] font-bold text-slate-400 uppercase tracking-wider block">Current Cash in Hand</span>
+              <span className="text-lg sm:text-xl font-extrabold text-amber-300 font-mono mt-1 block whitespace-nowrap">
                 {formatCurrency(totalCashInHand)}
               </span>
-              <span className="text-[10px] text-slate-400">{cashInHandPayments.length} receipts held</span>
+              <span className="text-[11px] text-slate-400 font-medium mt-0.5 block">{cashInHandPayments.length} receipts held</span>
             </div>
-            <div className="bg-slate-800/60 p-2.5 rounded-xl border border-slate-700/60">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide block">Pending Handover</span>
-              <span className="text-base font-extrabold text-sky-300 font-mono mt-0.5 block truncate">
+            <div className="bg-slate-800/70 p-3.5 rounded-2xl border border-slate-700/70 shadow-inner">
+              <span className="text-[10.5px] font-bold text-slate-400 uppercase tracking-wider block">Pending Handover</span>
+              <span className="text-lg sm:text-xl font-extrabold text-sky-300 font-mono mt-1 block whitespace-nowrap">
                 {formatCurrency(totalPendingHandoverAmount)}
               </span>
-              <span className="text-[10px] text-slate-400">{pendingHandovers.length} batch awaiting Finance</span>
+              <span className="text-[11px] text-slate-400 font-medium mt-0.5 block">{pendingHandovers.length} batch awaiting Finance</span>
             </div>
-            <div className="bg-slate-800/60 p-2.5 rounded-xl border border-slate-700/60">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide block">Approved by Finance</span>
-              <span className="text-base font-extrabold text-emerald-300 font-mono mt-0.5 block truncate">
+            <div className="bg-slate-800/70 p-3.5 rounded-2xl border border-slate-700/70 shadow-inner">
+              <span className="text-[10.5px] font-bold text-slate-400 uppercase tracking-wider block">Approved by Finance</span>
+              <span className="text-lg sm:text-xl font-extrabold text-emerald-300 font-mono mt-1 block whitespace-nowrap">
                 {formatCurrency(totalApprovedAmount)}
               </span>
-              <span className="text-[10px] text-slate-400">{approvedPayments.length} receipts banked</span>
+              <span className="text-[11px] text-slate-400 font-medium mt-0.5 block">{approvedPayments.length} receipts banked</span>
             </div>
-            <div className="bg-slate-800/60 p-2.5 rounded-xl border border-slate-700/60">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide block">24h Compliance</span>
+            <div className="bg-slate-800/70 p-3.5 rounded-2xl border border-slate-700/70 shadow-inner">
+              <span className="text-[10.5px] font-bold text-slate-400 uppercase tracking-wider block">24h Policy Compliance</span>
               <span className={cn(
-                "text-xs font-bold mt-1 block",
+                "text-sm sm:text-base font-bold mt-1 block whitespace-nowrap",
                 overdueCashPayments.length > 0 ? "text-rose-400" : "text-emerald-400"
               )}>
-                {overdueCashPayments.length > 0 ? `${overdueCashPayments.length} Overdue >24h` : '100% Policy Compliant'}
+                {overdueCashPayments.length > 0 ? `${overdueCashPayments.length} Overdue (>24h)` : '100% Policy Compliant'}
               </span>
-              <span className="text-[10px] text-slate-400">Handover deadline</span>
+              <span className="text-[11px] text-slate-400 font-medium mt-0.5 block">Handover deadline</span>
             </div>
           </div>
         </div>
 
         {/* Modal Navigation Tabs */}
-        <div className="px-5 sm:px-6 pt-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between gap-3 flex-wrap">
-          <div className="flex items-center gap-1">
+        <div className="px-5 sm:px-7 pt-3 bg-slate-50 border-b border-slate-200/90 flex items-center justify-between gap-3 flex-wrap">
+          <div className="flex items-center gap-2 overflow-x-auto">
             <button
               type="button"
               onClick={() => setActiveTab('CASH_IN_HAND')}
               className={cn(
-                "flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold border-b-2 transition-all -mb-px",
+                "flex items-center gap-2 px-4 py-2.5 text-xs font-bold rounded-t-xl transition-all border-b-2 -mb-px whitespace-nowrap",
                 activeTab === 'CASH_IN_HAND'
-                  ? "border-amber-600 text-amber-700 bg-white rounded-t-lg shadow-2xs"
-                  : "border-transparent text-slate-600 hover:text-slate-900"
+                  ? "border-amber-600 text-amber-900 bg-white shadow-2xs"
+                  : "border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-100/60"
               )}
             >
-              <Banknote className="h-4 w-4" />
-              <span>Cash in Hand &amp; Invoices Breakdown ({cashInHandPayments.length})</span>
+              <Banknote className="h-4 w-4 text-amber-600" />
+              <span>Cash in Hand &amp; Invoices Breakdown</span>
+              <span className="ml-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800">
+                {cashInHandPayments.length}
+              </span>
               {overdueCashPayments.length > 0 && (
-                <span className="h-4 min-w-4 px-1 rounded-full bg-rose-600 text-white text-[10px] font-bold flex items-center justify-center animate-pulse">
-                  {overdueCashPayments.length}
+                <span className="px-1.5 py-0.5 rounded-full bg-rose-600 text-white text-[10px] font-bold animate-pulse">
+                  {overdueCashPayments.length} Overdue
                 </span>
               )}
             </button>
@@ -231,33 +251,39 @@ export function SalesRepCashDetailModal({
               type="button"
               onClick={() => setActiveTab('HANDOVERS')}
               className={cn(
-                "flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold border-b-2 transition-all -mb-px",
+                "flex items-center gap-2 px-4 py-2.5 text-xs font-bold rounded-t-xl transition-all border-b-2 -mb-px whitespace-nowrap",
                 activeTab === 'HANDOVERS'
-                  ? "border-primary text-primary bg-white rounded-t-lg shadow-2xs"
-                  : "border-transparent text-slate-600 hover:text-slate-900"
+                  ? "border-primary text-primary-text bg-white shadow-2xs"
+                  : "border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-100/60"
               )}
             >
-              <Send className="h-4 w-4" />
-              <span>Previous Cash Handovers ({repHandovers.length})</span>
+              <Send className="h-4 w-4 text-primary" />
+              <span>Previous Cash Handovers</span>
+              <span className="ml-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-200/80 text-slate-700">
+                {repHandovers.length}
+              </span>
             </button>
             <button
               type="button"
               onClick={() => setActiveTab('HISTORY')}
               className={cn(
-                "flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold border-b-2 transition-all -mb-px",
+                "flex items-center gap-2 px-4 py-2.5 text-xs font-bold rounded-t-xl transition-all border-b-2 -mb-px whitespace-nowrap",
                 activeTab === 'HISTORY'
-                  ? "border-primary text-primary bg-white rounded-t-lg shadow-2xs"
-                  : "border-transparent text-slate-600 hover:text-slate-900"
+                  ? "border-primary text-primary-text bg-white shadow-2xs"
+                  : "border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-100/60"
               )}
             >
-              <Receipt className="h-4 w-4" />
-              <span>All Collections Ledger ({repPayments.length})</span>
+              <Receipt className="h-4 w-4 text-primary" />
+              <span>All Collections Ledger</span>
+              <span className="ml-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-200/80 text-slate-700">
+                {repPayments.length}
+              </span>
             </button>
           </div>
         </div>
 
         {/* Modal Tab Content */}
-        <div className="p-5 sm:p-6 space-y-4">
+        <div className="p-5 sm:p-7 space-y-5">
           {/* TAB 1: CASH IN HAND & INVOICE BREAKDOWN */}
           {activeTab === 'CASH_IN_HAND' && (
             <div className="space-y-4">
@@ -670,7 +696,25 @@ export function SalesRepCashDetailModal({
             </div>
           )}
         </div>
-      </DialogContent>
+
+        {/* Modal Footer */}
+        <div className="px-5 sm:px-7 py-3.5 bg-slate-50 border-t border-slate-200/90 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2 text-xs text-slate-500 font-medium">
+            <span>Rep ID: <strong className="font-mono text-slate-700">{rep.id}</strong></span>
+            <span>·</span>
+            <span>Territory: <strong className="text-slate-700">{rep.areaName || 'Main Territory'}</strong></span>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => onOpenChange(false)}
+            className="h-9 px-4 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-100 border-slate-200 shadow-2xs"
+          >
+            Close
+          </Button>
+        </div>
+      </div>
     </Dialog>
   );
 }
