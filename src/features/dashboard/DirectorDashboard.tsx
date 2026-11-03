@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { AppearanceSettings } from './AppearanceSettings';
 import { GlobalTaxSettings } from './GlobalTaxSettings';
+import { CustomerCreditTermsSettings } from './CustomerCreditTermsSettings';
 import { StatCard } from '../../components/common/StatCard';
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
@@ -66,24 +67,29 @@ export function DirectorDashboard() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { role } = useAuth();
   const isDirector = role === 'DIRECTOR';
+  const isManager = role === 'MANAGER';
+  const canAccessSettings = isDirector || isManager;
 
-  const activeTab = searchParams.get('tab') === 'settings' && isDirector ? 'settings' : 'overview';
-  const activeSection = searchParams.get('section') || 'tax';
+  const activeTab = searchParams.get('tab') === 'settings' && canAccessSettings ? 'settings' : 'overview';
+  const activeSection = searchParams.get('section') || (isDirector ? 'tax' : 'credit-terms');
 
-  const handleTabChange = (tab: 'overview' | 'settings', section?: 'tax' | 'appearance') => {
-    if (tab === 'settings' && isDirector) {
+  const handleTabChange = (
+    tab: 'overview' | 'settings',
+    section?: 'tax' | 'appearance' | 'credit-terms'
+  ) => {
+    if (tab === 'settings' && canAccessSettings) {
       setSearchParams({ tab: 'settings', section: section || activeSection });
     } else {
       setSearchParams({});
     }
   };
 
-  if (activeTab === 'settings' && isDirector) {
+  if (activeTab === 'settings' && canAccessSettings) {
     return (
       <div className="space-y-6">
         {/* Top Header & Tab Controls */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl w-fit">
+          <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl w-fit flex-wrap">
             <button
               onClick={() => handleTabChange('overview')}
               className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 transition-all cursor-pointer"
@@ -93,16 +99,30 @@ export function DirectorDashboard() {
             </button>
 
             <button
-              onClick={() => handleTabChange('settings', 'tax')}
+              onClick={() => handleTabChange('settings', 'credit-terms')}
               className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs transition-all cursor-pointer ${
-                activeSection === 'tax'
+                activeSection === 'credit-terms'
                   ? 'font-bold bg-white text-primary shadow-xs'
                   : 'font-semibold text-slate-600 hover:text-slate-900'
               }`}
             >
-              <Percent className={`h-3.5 w-3.5 ${activeSection === 'tax' ? 'text-primary' : 'text-slate-500'}`} />
-              <span>Settings &gt; Global Tax</span>
+              <CreditCard className={`h-3.5 w-3.5 ${activeSection === 'credit-terms' ? 'text-primary' : 'text-slate-500'}`} />
+              <span>Settings &gt; Default Credit Terms</span>
             </button>
+
+            {isDirector && (
+              <button
+                onClick={() => handleTabChange('settings', 'tax')}
+                className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs transition-all cursor-pointer ${
+                  activeSection === 'tax'
+                    ? 'font-bold bg-white text-primary shadow-xs'
+                    : 'font-semibold text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <Percent className={`h-3.5 w-3.5 ${activeSection === 'tax' ? 'text-primary' : 'text-slate-500'}`} />
+                <span>Settings &gt; Global Tax</span>
+              </button>
+            )}
 
             <button
               onClick={() => handleTabChange('settings', 'appearance')}
@@ -118,17 +138,23 @@ export function DirectorDashboard() {
           </div>
         </div>
 
-        {activeSection === 'appearance' ? <AppearanceSettings /> : <GlobalTaxSettings />}
+        {activeSection === 'appearance' ? (
+          <AppearanceSettings />
+        ) : activeSection === 'credit-terms' ? (
+          <CustomerCreditTermsSettings />
+        ) : (
+          <GlobalTaxSettings />
+        )}
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      {/* Top Header & Tab Controls for Director */}
-      {isDirector && (
+      {/* Top Header & Tab Controls for Director / Manager */}
+      {canAccessSettings && (
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl w-fit">
+          <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl w-fit flex-wrap">
             <button
               onClick={() => handleTabChange('overview')}
               className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold bg-white text-slate-900 shadow-xs transition-all cursor-pointer"
@@ -138,12 +164,22 @@ export function DirectorDashboard() {
             </button>
 
             <button
-              onClick={() => handleTabChange('settings', 'tax')}
+              onClick={() => handleTabChange('settings', 'credit-terms')}
               className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 transition-all cursor-pointer"
             >
-              <Percent className="h-3.5 w-3.5 text-slate-500" />
-              <span>Settings &gt; Global Tax</span>
+              <CreditCard className="h-3.5 w-3.5 text-slate-500" />
+              <span>Settings &gt; Default Credit Terms</span>
             </button>
+
+            {isDirector && (
+              <button
+                onClick={() => handleTabChange('settings', 'tax')}
+                className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 transition-all cursor-pointer"
+              >
+                <Percent className="h-3.5 w-3.5 text-slate-500" />
+                <span>Settings &gt; Global Tax</span>
+              </button>
+            )}
 
             <button
               onClick={() => handleTabChange('settings', 'appearance')}

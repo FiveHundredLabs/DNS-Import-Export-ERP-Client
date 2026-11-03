@@ -205,6 +205,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   ];
 
   const directorAdminItems: SidebarItem[] = [
+    { id: 'credit-terms-settings', name: 'Default Credit Terms', path: '/?tab=settings&section=credit-terms', icon: CreditCard, category: 'admin' },
     { id: 'tax-settings', name: 'Global Tax Configuration', path: '/?tab=settings&section=tax', icon: Percent, category: 'admin' },
     { id: 'theme', name: 'Theme & Appearance', path: '/?tab=settings&section=appearance', icon: Settings, category: 'admin' },
     { id: 'commissions-config', name: 'Commission Configuration', path: '/commissions', icon: Award, category: 'admin' },
@@ -316,6 +317,8 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     { id: 'teams', name: 'Team Management', path: '/teams', icon: Users, category: 'admin' },
     { id: 'areas', name: 'Area Management', path: '/areas', icon: Compass, category: 'admin' },
     { id: 'reports', name: 'Enterprise Reports', path: '/reports', icon: BarChart3, category: 'reports' },
+    { id: 'credit-terms-settings', name: 'Default Credit Terms', path: '/?tab=settings&section=credit-terms', icon: CreditCard, category: 'admin', allowedRoles: ['DIRECTOR', 'MANAGER'] },
+    { id: 'commissions-config', name: 'Commission Configuration', path: '/commissions', icon: Award, category: 'admin', allowedRoles: ['DIRECTOR', 'MANAGER'] },
     { id: 'tax-settings', name: 'Global Tax Configuration', path: '/?tab=settings&section=tax', icon: Percent, category: 'admin', directorOnly: true },
     { id: 'theme', name: 'Theme & Appearance', path: '/?tab=settings&section=appearance', icon: Settings, category: 'admin', directorOnly: true },
     { id: 'role-portal', name: 'Role Switcher Portal', path: '/login', icon: Users, category: 'admin' },
