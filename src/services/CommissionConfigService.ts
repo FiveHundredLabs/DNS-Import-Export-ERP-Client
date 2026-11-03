@@ -374,13 +374,14 @@ export class CommissionConfigService {
     const eligibleUsers = users.filter((u) => COMMISSION_ROLES.includes(u.role as CommissionRole));
 
     // Fetch existing actual invoices, orders, payments
-    const [allOrders, allInvoices, paymentsPage] = await Promise.all([
+    const [allOrders, invoicesPage, paymentsPage] = await Promise.all([
       orderService.getOrders(),
-      invoiceService.getInvoices(),
+      invoiceService.getInvoices({ pageSize: 10000 }),
       paymentService.getPayments({ pageSize: 10000 }),
     ]);
 
-    const payments = paymentsPage.data || [];
+    const allInvoices = (invoicesPage && Array.isArray((invoicesPage as any).data)) ? (invoicesPage as any).data : (Array.isArray(invoicesPage) ? invoicesPage : []);
+    const payments = (paymentsPage && Array.isArray((paymentsPage as any).data)) ? (paymentsPage as any).data : (Array.isArray(paymentsPage) ? paymentsPage : []);
 
     // Filter actual transactions occurring in the selected month
     const monthOrders = allOrders.filter((o) => (o.createdAt || '').startsWith(monthStr));
@@ -458,3 +459,4 @@ export class CommissionConfigService {
 }
 
 export const commissionConfigService = new CommissionConfigService();
+

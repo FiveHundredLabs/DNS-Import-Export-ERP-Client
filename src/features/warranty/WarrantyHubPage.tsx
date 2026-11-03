@@ -1635,7 +1635,7 @@ export function WarrantyHubPage() {
                   No distributor warranty notes on record.
                 </div>
               ) : (
-                <Table>
+                <Table className="min-w-[850px]">
                   <TableHeader>
                     <TableRow>
                       <TableHead>Note Number</TableHead>

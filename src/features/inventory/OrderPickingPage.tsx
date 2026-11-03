@@ -171,7 +171,7 @@ export function OrderPickingPage() {
                 </div>
               </CardHeader>
               <CardContent>
-                <Table>
+                <Table className="min-w-[700px]">
                   <TableHeader>
                     <TableRow>
                       <TableHead>Product</TableHead>

@@ -127,7 +127,7 @@ export function DispatchPage() {
               No orders found matching criteria
             </div>
           ) : (
-            <Table>
+            <Table className="min-w-[850px]">
               <TableHeader>
                 <TableRow>
                   <TableHead>Order Number</TableHead>

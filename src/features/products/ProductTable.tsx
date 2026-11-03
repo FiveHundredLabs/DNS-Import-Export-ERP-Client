@@ -26,7 +26,7 @@ export function ProductTable({
 
   return (
     <div className="rounded-2xl border border-slate-200/80 bg-white shadow-sm overflow-hidden">
-      <Table>
+      <Table className="min-w-[850px]">
 
         <TableHeader>
           <TableRow>

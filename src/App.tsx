@@ -44,6 +44,7 @@ import { POSSessionsPage } from './features/pos/POSSessionsPage';
 import { WarrantyHubPage } from './features/warranty/WarrantyHubPage';
 import { SalesRepWarrantyPage } from './features/warranty/SalesRepWarrantyPage';
 import { CommissionHubPage } from './features/commissions/CommissionHubPage';
+import { CommissionConfigPage } from './features/commissions/CommissionConfigPage';
 import { FinanceLayout } from './features/finance/FinanceLayout';
 import { FinanceDashboardPage } from './features/finance/pages/FinanceDashboardPage';
 import { ChartOfAccountsPage } from './features/finance/pages/ChartOfAccountsPage';
@@ -504,7 +505,23 @@ export function App() {
           path="commissions"
           element={
             <ProtectedRoute>
-              <CommissionHubPage />
+              <CommissionConfigPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="commissions/config"
+          element={
+            <ProtectedRoute>
+              <CommissionConfigPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="commissions/configuration"
+          element={
+            <ProtectedRoute>
+              <CommissionConfigPage />
             </ProtectedRoute>
           }
         />

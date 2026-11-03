@@ -54,16 +54,36 @@ import {
   FileCheck2,
   CheckCircle2,
   ArrowRight,
+  FileText,
+  SlidersHorizontal,
 } from 'lucide-react';
+import { MOCK_USERS } from '../../mock/mockUsers';
+import { MOCK_INVOICES } from '../../mock/mockInvoices';
+import { invoiceService } from '../../services/InvoiceService';
+import { Invoice } from '../../types/invoice';
+import { User } from '../../types/auth';
+import { SalesRepCashManagementView } from './components/SalesRepCashManagementView';
+import { SalesRepCashDetailModal } from './components/SalesRepCashDetailModal';
+import { InvoiceCollectionsLedger } from './components/InvoiceCollectionsLedger';
 
 export function PaymentListPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { role, currentUser } = useAuth();
-  const [viewMode, setViewMode] = useState<'HANDOVERS' | 'RECEIPTS' | 'CUSTOMERS'>(
-    searchParams.get('tab') === 'handovers' ? 'HANDOVERS' : 'RECEIPTS'
+
+  const isManager = ['SALES_MANAGER', 'AREA_MANAGER', 'MANAGER', 'DIRECTOR', 'FINANCE_MANAGER', 'ADMIN'].includes(role);
+
+  const [viewMode, setViewMode] = useState<'REPS' | 'INVOICE_LEDGER' | 'HANDOVERS' | 'RECEIPTS' | 'CUSTOMERS'>(
+    searchParams.get('tab') === 'handovers'
+      ? 'HANDOVERS'
+      : searchParams.get('tab') === 'receipts'
+      ? 'RECEIPTS'
+      : isManager
+      ? 'REPS'
+      : 'RECEIPTS'
   );
   const [payments, setPayments] = useState<Payment[]>([]);
+  const [invoices, setInvoices] = useState<Invoice[]>(MOCK_INVOICES);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [customerIdFilter, setCustomerIdFilter] = useState(searchParams.get('customerId') || '');
   const [startDate, setStartDate] = useState('');
@@ -79,6 +99,15 @@ export function PaymentListPage() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
+
+  // Sales Rep Detail Modal State
+  const [selectedRepForDetail, setSelectedRepForDetail] = useState<User | null>(null);
+  const [repDetailModalOpen, setRepDetailModalOpen] = useState(false);
+  const [repDetailInitialTab, setRepDetailInitialTab] = useState<'CASH_IN_HAND' | 'HANDOVERS' | 'HISTORY'>('CASH_IN_HAND');
+
+  const salesReps = useMemo(() => {
+    return MOCK_USERS.filter((u) => u.role === 'SALES_REP' || u.id === 'usr-106');
+  }, []);
 
   // Daily Handover Metrics & Handovers state
   const [dailyMetrics, setDailyMetrics] = useState<DailyHandoverMetrics>({
@@ -161,7 +190,18 @@ export function PaymentListPage() {
         console.error('Failed to load customers for payment filter', err);
       }
     }
+    async function loadInvoices() {
+      try {
+        const res = await invoiceService.getInvoices({ pageSize: 100 });
+        if (res && res.data && res.data.length > 0) {
+          setInvoices(res.data);
+        }
+      } catch (err) {
+        console.error('Failed to load invoices for allocations', err);
+      }
+    }
     loadCustomers();
+    loadInvoices();
   }, []);
 
   const fetchMetrics = async () => {
@@ -297,140 +337,168 @@ export function PaymentListPage() {
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
         <div>
-          <h1 className="text-xl font-bold tracking-tight text-slate-900">
-            {role === 'SALES_REP' ? 'Cash in Hand' : 'Customer Payments & Collections'}
-          </h1>
+          <div className="flex items-center gap-2 flex-wrap">
+            <h1 className="text-xl font-bold tracking-tight text-slate-900">
+              {role === 'SALES_REP' ? 'Cash in Hand (Wallet)' : 'Cash in Hand & Collections Management'}
+            </h1>
+            {isManager && (
+              <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 text-[10px] font-bold">
+                Executive Management Center
+              </Badge>
+            )}
+          </div>
           <p className="text-xs text-slate-500 mt-0.5 hidden sm:block">
             {role === 'SALES_REP'
               ? 'View collected cash balance in hand and submit physical handovers to Finance.'
-              : 'Real-time customer receivables, overdue balances, and mobile-friendly payment collection.'}
+              : 'Customer Payments & Collections · Real-time cash accountability, sales representative wallet balances, invoice allocations, and finance handover tracking.'}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          {/* Quick "Hand Over Cash" button for Sales Rep */}
-          <Button
-            size="sm"
-            data-testid="btn-hand-over-cash"
-            onClick={() => setCashHandoverModalOpen(true)}
-            className="bg-amber-600 hover:bg-amber-700 text-white text-xs gap-1.5 shadow-xs font-semibold rounded-xl"
-            title="Hand Over Collected Cash to Finance Department"
-          >
-            <Banknote className="h-3.5 w-3.5" /> Hand Over Cash
-          </Button>
+          {/* Quick Record Payment & Hand Over Cash - visible only to Sales Reps / Field Staff, hidden for Manager/Director */}
+          {!isManager && (
+            <>
+              <Button
+                size="sm"
+                data-testid="btn-record-payment"
+                onClick={() => navigate('/payments/new')}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs gap-1.5 shadow-xs font-semibold rounded-xl"
+              >
+                <CreditCard className="h-3.5 w-3.5" /> Record Payment
+              </Button>
+
+              <Button
+                size="sm"
+                data-testid="btn-hand-over-cash"
+                onClick={() => setCashHandoverModalOpen(true)}
+                className="bg-amber-600 hover:bg-amber-700 text-white text-xs gap-1.5 shadow-xs font-semibold rounded-xl"
+                title="Hand Over Collected Cash to Finance Department"
+              >
+                <Banknote className="h-3.5 w-3.5" /> Hand Over Cash
+              </Button>
+            </>
+          )}
 
           <Button
             variant="outline"
             size="sm"
-            onClick={fetchHandovers}
+            onClick={async () => {
+              await fetchPayments();
+              await fetchHandovers();
+              await fetchMetrics();
+            }}
             className="text-xs gap-1.5 rounded-xl border-slate-200 shadow-2xs font-semibold"
-            title="Refresh Handovers"
+            title="Refresh All Collections & Handovers"
           >
             <RefreshCw className="h-3.5 w-3.5" /> Refresh
           </Button>
         </div>
       </div>
 
-      {/* 4 Payments Dashboard KPI Cards (Simplified: Title, Icon, Value) */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
-        {/* 1. Today's Total Collections */}
-        <div className="rounded-2xl border border-slate-200/90 bg-white p-3.5 sm:p-4 shadow-xs hover:shadow-sm transition-all flex flex-col justify-between">
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-xs font-bold text-slate-700 truncate">
-              Today's Collections
-            </span>
-            <div className="h-8 w-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
-              <CreditCard className="h-4 w-4" />
-            </div>
-          </div>
-          <div className="mt-3 text-base sm:text-xl font-extrabold text-slate-900 tracking-tight font-mono truncate">
-            {formatCurrency(dailyMetrics.todayTotalCollected)}
-          </div>
-        </div>
-
-        {/* 2. Pending Handover */}
-        <div className="rounded-2xl border border-slate-200/90 bg-white p-3.5 sm:p-4 shadow-xs hover:shadow-sm transition-all flex flex-col justify-between">
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-xs font-bold text-slate-700 truncate">
-              Pending Handover
-            </span>
-            <div className="h-8 w-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
-              <Clock className="h-4 w-4" />
-            </div>
-          </div>
-          <div className="mt-3 text-base sm:text-xl font-extrabold text-amber-900 tracking-tight font-mono truncate">
-            {formatCurrency(dailyMetrics.pendingHandover)}
-          </div>
-          <div className="mt-1 flex items-center justify-between text-[10px] text-amber-700 font-semibold">
-            <span>Wallet / Cash in Hand</span>
-            {overdue24hList.length > 0 && (
-              <span className="text-[9.5px] font-bold text-rose-700 bg-rose-50 px-1.5 py-0.2 rounded border border-rose-200">
-                {overdue24hList.length} &gt;24h Overdue
-              </span>
-            )}
-          </div>
-        </div>
-
-        {/* 3. Handed Over */}
-        <div className="rounded-2xl border border-slate-200/90 bg-white p-3.5 sm:p-4 shadow-xs hover:shadow-sm transition-all flex flex-col justify-between">
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-xs font-bold text-slate-700 truncate">
-              Handed Over
-            </span>
-            <div className="h-8 w-8 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center shrink-0">
-              <Send className="h-4 w-4" />
-            </div>
-          </div>
-          <div className="mt-3 text-base sm:text-xl font-extrabold text-slate-900 tracking-tight font-mono truncate">
-            {formatCurrency(dailyMetrics.handedOver)}
-          </div>
-        </div>
-
-        {/* 4. Approved by Finance */}
-        <div className="rounded-2xl border border-slate-200/90 bg-white p-3.5 sm:p-4 shadow-xs hover:shadow-sm transition-all flex flex-col justify-between">
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-xs font-bold text-slate-700 truncate">
-              Approved by Finance
-            </span>
-            <div className="h-8 w-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
-              <ShieldCheck className="h-4 w-4" />
-            </div>
-          </div>
-          <div className="mt-3 text-base sm:text-xl font-extrabold text-emerald-900 tracking-tight font-mono truncate">
-            {formatCurrency(dailyMetrics.approvedByFinance)}
-          </div>
-        </div>
-      </div>
-
-      {/* 24-Hour Handover Compliance Alert Banner */}
-      {overdue24hList.length > 0 && (
-        <div className="rounded-2xl border-2 border-rose-300 bg-rose-50/90 p-3.5 sm:p-4 text-rose-950 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
-          <div className="flex items-center gap-2.5">
-            <div className="h-9 w-9 rounded-xl bg-rose-200/80 text-rose-800 flex items-center justify-center shrink-0 font-bold">
-              <AlertCircle className="h-5 w-5 text-rose-700" />
-            </div>
-            <div>
-              <div className="text-xs sm:text-sm font-bold flex items-center gap-2">
-                <span>Overdue Cash Handover Alert (&gt;24 Hours)</span>
-                <span className="text-[10px] bg-rose-600 text-white px-2 py-0.5 rounded-full font-bold">
-                  {overdue24hList.length} Overdue
+      {/* 4 Payments Dashboard KPI Cards (rendered on Receipts/Handovers view or for Sales Rep) */}
+      {(viewMode === 'RECEIPTS' || viewMode === 'HANDOVERS' || !isManager) && (
+        <>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
+            {/* 1. Today's Total Collections */}
+            <div className="rounded-2xl border border-slate-200/90 bg-white p-3.5 sm:p-4 shadow-xs hover:shadow-sm transition-all flex flex-col justify-between">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-bold text-slate-700 truncate">
+                  Today's Collections
                 </span>
+                <div className="h-8 w-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                  <CreditCard className="h-4 w-4" />
+                </div>
               </div>
-              <p className="text-[11px] sm:text-xs text-rose-800 mt-0.5">
-                All customer cash payments must be physically handed over to a Finance Officer within 24 hours of collection. {overdue24hList.length} payment(s) exceed this limit.
-              </p>
+              <div className="mt-3 text-base sm:text-xl font-extrabold text-slate-900 tracking-tight font-mono truncate">
+                {formatCurrency(dailyMetrics.todayTotalCollected)}
+              </div>
+            </div>
+
+            {/* 2. Pending Handover */}
+            <div className="rounded-2xl border border-slate-200/90 bg-white p-3.5 sm:p-4 shadow-xs hover:shadow-sm transition-all flex flex-col justify-between">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-bold text-slate-700 truncate">
+                  Pending Handover
+                </span>
+                <div className="h-8 w-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+                  <Clock className="h-4 w-4" />
+                </div>
+              </div>
+              <div className="mt-3 text-base sm:text-xl font-extrabold text-amber-900 tracking-tight font-mono truncate">
+                {formatCurrency(dailyMetrics.pendingHandover)}
+              </div>
+              <div className="mt-1 flex items-center justify-between text-[10px] text-amber-700 font-semibold">
+                <span>Wallet / Cash in Hand</span>
+                {overdue24hList.length > 0 && (
+                  <span className="text-[9.5px] font-bold text-rose-700 bg-rose-50 px-1.5 py-0.2 rounded border border-rose-200">
+                    {overdue24hList.length} &gt;24h Overdue
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* 3. Handed Over */}
+            <div className="rounded-2xl border border-slate-200/90 bg-white p-3.5 sm:p-4 shadow-xs hover:shadow-sm transition-all flex flex-col justify-between">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-bold text-slate-700 truncate">
+                  Handed Over
+                </span>
+                <div className="h-8 w-8 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center shrink-0">
+                  <Send className="h-4 w-4" />
+                </div>
+              </div>
+              <div className="mt-3 text-base sm:text-xl font-extrabold text-slate-900 tracking-tight font-mono truncate">
+                {formatCurrency(dailyMetrics.handedOver)}
+              </div>
+            </div>
+
+            {/* 4. Approved by Finance */}
+            <div className="rounded-2xl border border-slate-200/90 bg-white p-3.5 sm:p-4 shadow-xs hover:shadow-sm transition-all flex flex-col justify-between">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-bold text-slate-700 truncate">
+                  Approved by Finance
+                </span>
+                <div className="h-8 w-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                  <ShieldCheck className="h-4 w-4" />
+                </div>
+              </div>
+              <div className="mt-3 text-base sm:text-xl font-extrabold text-emerald-900 tracking-tight font-mono truncate">
+                {formatCurrency(dailyMetrics.approvedByFinance)}
+              </div>
             </div>
           </div>
-          <Button
-            size="sm"
-            onClick={() => {
-              setTargetHandoverPaymentId(undefined);
-              setCashHandoverModalOpen(true);
-            }}
-            className="h-8 px-3.5 text-xs font-bold bg-rose-700 hover:bg-rose-800 text-white rounded-xl shadow-xs shrink-0 gap-1.5"
-          >
-            <Banknote className="h-3.5 w-3.5" /> Hand Over to Finance Now
-          </Button>
-        </div>
+
+          {/* 24-Hour Handover Compliance Alert Banner */}
+          {overdue24hList.length > 0 && (
+            <div className="rounded-2xl border-2 border-rose-300 bg-rose-50/90 p-3.5 sm:p-4 text-rose-950 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+              <div className="flex items-center gap-2.5">
+                <div className="h-9 w-9 rounded-xl bg-rose-200/80 text-rose-800 flex items-center justify-center shrink-0 font-bold">
+                  <AlertCircle className="h-5 w-5 text-rose-700" />
+                </div>
+                <div>
+                  <div className="text-xs sm:text-sm font-bold flex items-center gap-2">
+                    <span>Overdue Cash Handover Alert (&gt;24 Hours)</span>
+                    <span className="text-[10px] bg-rose-600 text-white px-2 py-0.5 rounded-full font-bold">
+                      {overdue24hList.length} Overdue
+                    </span>
+                  </div>
+                  <p className="text-[11px] sm:text-xs text-rose-800 mt-0.5">
+                    All customer cash payments must be physically handed over to a Finance Officer within 24 hours of collection. {overdue24hList.length} payment(s) exceed this limit.
+                  </p>
+                </div>
+              </div>
+              <Button
+                size="sm"
+                onClick={() => {
+                  setTargetHandoverPaymentId(undefined);
+                  setCashHandoverModalOpen(true);
+                }}
+                className="h-8 px-3.5 text-xs font-bold bg-rose-700 hover:bg-rose-800 text-white rounded-xl shadow-xs shrink-0 gap-1.5"
+              >
+                <Banknote className="h-3.5 w-3.5" /> Hand Over to Finance Now
+              </Button>
+            </div>
+          )}
+        </>
       )}
 
       {/* View Switcher / Tab Navigation */}
@@ -441,12 +509,12 @@ export function PaymentListPage() {
               <button
                 type="button"
                 onClick={() => {
-                  setViewMode('RECEIPTS');
+                  setViewMode(isManager ? 'REPS' : 'RECEIPTS');
                   navigate('/payments');
                 }}
                 className={cn(
                   "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all",
-                  viewMode === 'RECEIPTS' ? "bg-white text-primary shadow-xs" : "text-slate-600 hover:text-slate-900"
+                  viewMode === 'RECEIPTS' || viewMode === 'REPS' ? "bg-white text-primary shadow-xs" : "text-slate-600 hover:text-slate-900"
                 )}
               >
                 <Receipt className="h-3.5 w-3.5" />
@@ -465,8 +533,69 @@ export function PaymentListPage() {
                 <span>Cash Handovers</span>
               </button>
             </div>
+          ) : isManager ? (
+            <>
+              {/* Executive Management Tabs */}
+              <button
+                type="button"
+                onClick={() => setViewMode('REPS')}
+                className={cn(
+                  "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all",
+                  viewMode === 'REPS' ? "bg-white text-primary shadow-xs" : "text-slate-600 hover:text-slate-900"
+                )}
+              >
+                <Users className="h-3.5 w-3.5" />
+                <span>Sales Reps Cash Float ({salesReps.length})</span>
+                {overdue24hList.length > 0 && (
+                  <span className="h-4 min-w-4 px-1 rounded-full bg-rose-600 text-white text-[10px] font-bold flex items-center justify-center animate-pulse">
+                    {overdue24hList.length}
+                  </span>
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode('INVOICE_LEDGER')}
+                className={cn(
+                  "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all",
+                  viewMode === 'INVOICE_LEDGER' ? "bg-white text-primary shadow-xs" : "text-slate-600 hover:text-slate-900"
+                )}
+              >
+                <FileText className="h-3.5 w-3.5" />
+                <span>Invoice Collections Ledger</span>
+              </button>
+              <button
+                type="button"
+                data-testid="tab-cash-handovers"
+                onClick={() => setViewMode('HANDOVERS')}
+                className={cn(
+                  "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all",
+                  viewMode === 'HANDOVERS' ? "bg-white text-primary shadow-xs" : "text-slate-600 hover:text-slate-900"
+                )}
+              >
+                <Banknote className="h-3.5 w-3.5" />
+                <span>Handover Batches ({handovers.length})</span>
+                {handovers.filter((h) => h.status === 'PENDING_APPROVAL').length > 0 && (
+                  <span className="h-4 min-w-4 px-1 rounded-full bg-amber-500 text-white text-[10px] font-bold flex items-center justify-center">
+                    {handovers.filter((h) => h.status === 'PENDING_APPROVAL').length}
+                  </span>
+                )}
+              </button>
+              <button
+                type="button"
+                data-testid="tab-receipts-ledger"
+                onClick={() => setViewMode('RECEIPTS')}
+                className={cn(
+                  "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all",
+                  viewMode === 'RECEIPTS' ? "bg-white text-primary shadow-xs" : "text-slate-600 hover:text-slate-900"
+                )}
+              >
+                <Receipt className="h-3.5 w-3.5" />
+                <span>All Receipts ({cashPayments.length})</span>
+              </button>
+            </>
           ) : (
             <>
+              {/* Sales Rep Personal Tabs */}
               <button
                 type="button"
                 data-testid="tab-receipts-ledger"
@@ -501,22 +630,40 @@ export function PaymentListPage() {
                   </span>
                 )}
               </button>
-              <button
-                type="button"
-                data-testid="tab-customer-accounts"
-                onClick={() => navigate('/payments/collect')}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-600 hover:text-slate-900"
-                title="Open Customer Accounts Collection Desk"
-              >
-                <Users className="h-3.5 w-3.5" />
-                <span>Customer Accounts</span>
-              </button>
             </>
           )}
         </div>
       </div>
 
-      {viewMode === 'HANDOVERS' || viewMode === 'CUSTOMERS' ? (
+      {isManager && viewMode === 'REPS' ? (
+        <SalesRepCashManagementView
+          salesReps={salesReps}
+          payments={payments}
+          handovers={handovers}
+          invoices={invoices}
+          onSelectRep={(rep, initialTab) => {
+            setSelectedRepForDetail(rep);
+            setRepDetailInitialTab(initialTab || 'CASH_IN_HAND');
+            setRepDetailModalOpen(true);
+          }}
+          onRefresh={async () => {
+            await fetchPayments();
+            await fetchHandovers();
+            await fetchMetrics();
+          }}
+        />
+      ) : isManager && viewMode === 'INVOICE_LEDGER' ? (
+        <InvoiceCollectionsLedger
+          payments={payments}
+          invoices={invoices}
+          salesReps={salesReps}
+          onInspectRep={(rep) => {
+            setSelectedRepForDetail(rep);
+            setRepDetailInitialTab('CASH_IN_HAND');
+            setRepDetailModalOpen(true);
+          }}
+        />
+      ) : viewMode === 'HANDOVERS' || viewMode === 'CUSTOMERS' ? (
         <div className="space-y-4">
           {/* Handover Cash History Section Header */}
           <div className="flex items-center justify-between pb-1">
@@ -683,8 +830,8 @@ export function PaymentListPage() {
                       </div>
 
                       {/* Desktop Table */}
-                      <div className="hidden md:block overflow-x-auto">
-                        <Table>
+                      <div className="hidden md:block overflow-x-auto [scrollbar-width:thin]">
+                        <Table className="min-w-[950px]">
                           <TableHeader>
                             <TableRow>
                               <TableHead>Handover #</TableHead>
@@ -1091,8 +1238,8 @@ export function PaymentListPage() {
               </div>
 
               {/* 2. Desktop Full Table View (Hidden on mobile, block on md+) */}
-              <div className="hidden md:block overflow-x-auto">
-                <Table className="w-full">
+              <div className="hidden md:block overflow-x-auto [scrollbar-width:thin]">
+                <Table className="min-w-[1050px]">
                   <TableHeader>
                     <TableRow className="bg-slate-50/75 text-[11.5px]">
                       <TableHead className="w-[105px] py-2.5 px-3">Receipt #</TableHead>
@@ -1487,6 +1634,21 @@ export function PaymentListPage() {
         handover={selectedHandover}
         currentUser={currentUser}
         onUpdate={handleHandoverUpdate}
+      />
+
+      {/* Sales Representative In-Depth Cash, Invoices & Handover Detail Modal */}
+      <SalesRepCashDetailModal
+        rep={selectedRepForDetail}
+        open={repDetailModalOpen}
+        onOpenChange={setRepDetailModalOpen}
+        payments={payments}
+        handovers={handovers}
+        invoices={invoices}
+        initialTab={repDetailInitialTab}
+        onInspectHandover={(h) => {
+          setSelectedHandover(h);
+          setHandoverDetailModalOpen(true);
+        }}
       />
     </div>
   );

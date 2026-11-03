@@ -515,7 +515,7 @@ export function FinanceManagerDashboard() {
 
         <div className="overflow-hidden rounded-xl border border-slate-200/90 bg-white shadow-sm">
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
+            <table className="w-full text-left text-xs min-w-[750px]">
               <thead className="border-b border-slate-200 bg-slate-50/80 text-xs font-semibold uppercase tracking-wider text-slate-500">
                 <tr>
                   <th className="px-4 py-3">Voucher #</th>

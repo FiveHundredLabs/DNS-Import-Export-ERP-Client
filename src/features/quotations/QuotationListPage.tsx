@@ -416,8 +416,8 @@ export function QuotationListPage() {
               </div>
 
               {/* 2. Desktop Full Table View (Hidden on mobile, block on md+) */}
-              <div className="hidden md:block overflow-x-auto">
-                <Table>
+              <div className="hidden md:block overflow-x-auto [scrollbar-width:thin]">
+                <Table className="min-w-[920px]">
                   <TableHeader>
                     <TableRow className="bg-slate-50/80">
                       <TableHead className="w-32">Quotation #</TableHead>

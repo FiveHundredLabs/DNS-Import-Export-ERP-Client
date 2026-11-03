@@ -554,8 +554,8 @@ export function InvoiceListPage() {
               </div>
 
               {/* 2. Desktop Full Table View (Hidden on mobile, block on md+) */}
-              <div className="hidden md:block overflow-x-auto">
-                <Table>
+              <div className="hidden md:block overflow-x-auto [scrollbar-width:thin]">
+                <Table className="min-w-[980px]">
                   <TableHeader>
                     <TableRow>
                       <TableHead>Invoice #</TableHead>
