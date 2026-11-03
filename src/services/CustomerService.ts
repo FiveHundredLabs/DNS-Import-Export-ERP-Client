@@ -6,6 +6,7 @@ import { determineCustomerApprovalRoute } from '../rules/approvalRules';
 import { hasPermission } from '../rules/permissions';
 import { User } from '../types/auth';
 import { approvalService } from './ApprovalService';
+import { creditTermsConfigService } from './CreditTermsConfigService';
 
 export class CustomerService {
   private repo: ICustomerRepository;
@@ -31,7 +32,19 @@ export class CustomerService {
     if (!data.phone || data.phone.trim().length < 8) {
       throw new Error('Valid phone number is required.');
     }
-    const created = await this.repo.create(data);
+    const defaultTerms = creditTermsConfigService.getCreditTermsConfig();
+    const payload = {
+      ...data,
+      commercialTerms: {
+        creditLimit: data.commercialTerms?.creditLimit ?? defaultTerms.defaultCreditLimit,
+        creditDays: data.commercialTerms?.creditDays ?? defaultTerms.defaultCreditDays,
+        defaultDiscountPercentage:
+          data.commercialTerms?.defaultDiscountPercentage ?? defaultTerms.defaultDiscountPercentage,
+        maxDiscountPercentage:
+          data.commercialTerms?.maxDiscountPercentage ?? defaultTerms.maxDiscountPercentage,
+      },
+    };
+    const created = await this.repo.create(payload);
 
     // Register customer creation in central approval engine for Sales Manager review
     try {
