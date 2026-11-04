@@ -137,6 +137,10 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         setActiveCategory('purchasing');
       } else if (location.pathname.startsWith('/finance') && canAccessRoute('/finance')) {
         setActiveCategory('finance');
+      } else if (location.pathname.startsWith('/customers')) {
+        setActiveCategory('customers');
+      } else if (location.pathname.startsWith('/inventory') || location.pathname.startsWith('/products')) {
+        setActiveCategory('inventory');
       }
     }
   }, [location.pathname, location.search, canAccessRoute, isDirector]);
@@ -483,6 +487,10 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     if (item.path === '/') {
       return location.pathname === '/' && !location.search.includes('tab=settings');
     }
+    // Prevent Customer Master (/customers) from highlighting when on Customer Onboarding (/customers/onboarding)
+    if (item.path === '/customers' && location.pathname.startsWith('/customers/onboarding')) {
+      return false;
+    }
     return location.pathname === item.path || location.pathname.startsWith(item.path + '/');
   };
 
@@ -491,6 +499,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     const Icon = item.icon;
     const itemIsFav = isFavorite(item.id);
     const active = isItemActive(item);
+    const isCustomerMasterExempt = item.path === '/customers' && location.pathname.startsWith('/customers/onboarding');
 
     return (
       <div
@@ -505,7 +514,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         {/* Left: Slate Gray Menu Item Icon (Small: h-3.5 w-3.5) + Item Name */}
         <NavLink
           to={item.path}
-          end={item.exact}
+          end={item.exact || isCustomerMasterExempt}
           onClick={onClose}
           className="flex items-center gap-2 min-w-0 flex-1 px-2 py-1.5 focus:outline-none"
         >

@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useCustomers } from '../../hooks/useCustomers';
 import { CustomerTable } from './CustomerTable';
 import { CustomerCreateModal } from './CustomerCreateModal';
@@ -17,7 +17,7 @@ import {
 import { TableLoadingSkeleton } from '../../components/common/LoadingSkeleton';
 import { EmptyState } from '../../components/common/EmptyState';
 import { ErrorState } from '../../components/common/ErrorState';
-import { Plus, Search, Users, RefreshCw, ShieldCheck, UserPlus } from 'lucide-react';
+import { Plus, Search, Users, RefreshCw, ShieldCheck } from 'lucide-react';
 import { Customer, CustomerApprovalStage } from '../../types/customer';
 import { useAuth } from '../../hooks/useAuth';
 
@@ -120,18 +120,6 @@ export function CustomerListPage() {
               <RefreshCw className="h-3.5 w-3.5" />
               <span>Refresh</span>
             </Button>
-
-            {canCreate && (
-              <Link to="/customers/onboarding">
-                <Button
-                  size="sm"
-                  className="gap-1.5 h-9 bg-primary hover:bg-primary-hover text-primary-foreground font-semibold shadow-xs"
-                >
-                  <UserPlus className="h-4 w-4" />
-                  <span>Customer Onboarding</span>
-                </Button>
-              </Link>
-            )}
           </div>
         }
       />
@@ -174,9 +162,7 @@ export function CustomerListPage() {
         <EmptyState
           icon={Users}
           title="No onboarded customers found"
-          description="Try adjusting your search criteria or onboard a new customer through the Customer Onboarding desk."
-          actionLabel={canCreate ? 'Customer Onboarding' : undefined}
-          onAction={() => navigate('/customers/onboarding')}
+          description="Try adjusting your search criteria or clear active filters."
         />
       ) : (
         <CustomerTable

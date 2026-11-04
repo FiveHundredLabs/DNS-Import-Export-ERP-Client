@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { useNavigate, useParams, Link } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { useAreas } from '../../hooks/useAreas';
 import { useUsers } from '../../hooks/useUsers';
@@ -32,7 +32,6 @@ import {
   ShieldAlert,
   Sparkles,
   RefreshCw,
-  Eye,
   Check,
   X,
   Lock,
@@ -71,6 +70,43 @@ const LOYALTY_LEVELS: { value: CustomerLoyaltyLevel; label: string }[] = [
   { value: 'PREMIUM', label: 'Premium (Level 2)' },
   { value: 'PLATINUM', label: 'Platinum (Level 3)' },
 ];
+
+export const LOYALTY_TIER_DEFAULTS: Record<
+  CustomerLoyaltyLevel,
+  {
+    label: string;
+    creditDays: number;
+    creditLimit: number;
+    defaultDiscount: number;
+    maxDiscount: number;
+    description: string;
+  }
+> = {
+  NEW: {
+    label: 'New (Level 1)',
+    creditDays: 30,
+    creditLimit: 500000,
+    defaultDiscount: 5,
+    maxDiscount: 10,
+    description: '30 Days Credit · LKR 500,000 Limit · 5% Discount (Standard Approval)',
+  },
+  PREMIUM: {
+    label: 'Premium (Level 2)',
+    creditDays: 45,
+    creditLimit: 1500000,
+    defaultDiscount: 7.5,
+    maxDiscount: 15,
+    description: '45 Days Credit · LKR 1,500,000 Limit · 7.5% Discount (Special Approval)',
+  },
+  PLATINUM: {
+    label: 'Platinum (Level 3)',
+    creditDays: 60,
+    creditLimit: 3000000,
+    defaultDiscount: 10,
+    maxDiscount: 20,
+    description: '60 Days Credit · LKR 3,000,000 Limit · 10% Discount (Special Approval)',
+  },
+};
 
 const CUSTOMER_TYPES: { value: CustomerType; label: string }[] = [
   { value: 'DEALER', label: 'Authorized Dealer' },
@@ -153,7 +189,7 @@ export function CustomerOnboardingPage() {
       }
 
       const results = await Promise.all(
-        stages.map((s) => customerService.listCustomers({ approvalStage: s, pageSize: 50 }))
+        stages.map((s) => customerService.listCustomers({ approvalStage: s, page: 1, pageSize: 50 }))
       );
       const all = results.flatMap((r) => r.data);
       setPendingCustomers(all);
@@ -238,6 +274,24 @@ export function CustomerOnboardingPage() {
     setDefaultDiscount(defaultConfig.defaultDiscountPercentage);
     setMaxDiscount(defaultConfig.maxDiscountPercentage);
   }, []);
+
+  const handleLoyaltyTierChange = (tier: CustomerLoyaltyLevel) => {
+    setLoyaltyLevel(tier);
+    const tierConfig = LOYALTY_TIER_DEFAULTS[tier];
+    if (tierConfig) {
+      const days = tier === 'NEW' ? defaultConfig.defaultCreditDays : tierConfig.creditDays;
+      const limit = tier === 'NEW' ? defaultConfig.defaultCreditLimit : tierConfig.creditLimit;
+      const defDisc = tier === 'NEW' ? defaultConfig.defaultDiscountPercentage : tierConfig.defaultDiscount;
+      const maxDisc = tier === 'NEW' ? defaultConfig.maxDiscountPercentage : tierConfig.maxDiscount;
+      setCreditDays(days);
+      setCreditLimit(limit);
+      setDefaultDiscount(defDisc);
+      setMaxDiscount(maxDisc);
+      toast.info(
+        `${tierConfig.label} terms applied: ${days} days credit, ${formatCurrency(limit)} limit.`
+      );
+    }
+  };
 
   // When area changes, auto-suggest the Area Manager
   useEffect(() => {
@@ -372,12 +426,6 @@ export function CustomerOnboardingPage() {
     if (creditLimit < 0) {
       errs.creditLimit = 'Credit limit must be a positive number.';
     }
-    if (defaultDiscount < 0 || defaultDiscount > 100) {
-      errs.defaultDiscount = 'Discount must be between 0 and 100%.';
-    }
-    if (maxDiscount < defaultDiscount) {
-      errs.maxDiscount = 'Max discount must be ≥ default discount.';
-    }
     setErrors(errs);
     return Object.keys(errs).length === 0;
   }
@@ -423,7 +471,7 @@ export function CustomerOnboardingPage() {
 
         await customerService.createCustomer(payload);
         toast.success(`Dealer "${displayName}" submitted for Sales Manager approval!`);
-        navigate('/customers');
+        handleReset();
       } catch (err: unknown) {
         toast.error(err instanceof Error ? err.message : 'Failed to submit onboarding request.');
       } finally {
@@ -531,8 +579,7 @@ export function CustomerOnboardingPage() {
       {/* Top Standardized ERP Page Header */}
       <PageHeader
         breadcrumbs={[
-          { label: 'Customers & Sales', href: '/customers' },
-          { label: 'Customer Master', href: '/customers' },
+          { label: 'Commercial Operations' },
           { label: 'Customer Onboarding' },
         ]}
         title="Customer Onboarding & Intake Studio"
@@ -570,13 +617,6 @@ export function CustomerOnboardingPage() {
               <RefreshCw className="w-3.5 h-3.5 text-slate-400" />
               New Intake
             </Button>
-
-            <Link to="/customers">
-              <Button size="sm" className="text-xs gap-1.5 bg-primary text-white hover:bg-primary-hover shadow-xs">
-                <Eye className="w-3.5 h-3.5" />
-                Customer Master
-              </Button>
-            </Link>
           </div>
         }
       />
@@ -1205,11 +1245,9 @@ export function CustomerOnboardingPage() {
 
                 {/* Step 1 Actions Footer */}
                 <div className="flex items-center justify-between pt-2">
-                  <Link to="/customers">
-                    <Button variant="ghost" size="sm" className="text-xs text-slate-500">
-                      Cancel &amp; Return
-                    </Button>
-                  </Link>
+                  <Button variant="ghost" size="sm" onClick={handleReset} className="text-xs text-slate-500">
+                    Reset Form
+                  </Button>
 
                   <Button
                     onClick={handleSubmitStep1}
@@ -1278,7 +1316,7 @@ export function CustomerOnboardingPage() {
                   </div>
                 )}
 
-                {/* 1. Territory & Field Staff Assignment */}
+                {/* 1. Territory & Commercial Tier Assignment */}
                 <Card className="border-slate-200/90 shadow-2xs overflow-hidden">
                   <CardHeader className="bg-slate-50/60 border-b border-slate-100 py-3.5 px-5 flex flex-row items-center justify-between">
                     <div className="flex items-center gap-2.5">
@@ -1287,41 +1325,24 @@ export function CustomerOnboardingPage() {
                       </div>
                       <div>
                         <CardTitle className="text-sm font-bold text-slate-900">
-                          1. Classification &amp; Territory Assignment
+                          1. Loyalty Tier &amp; Staff Assignment
                         </CardTitle>
                         <p className="text-[11px] text-slate-500">
-                          Area Manager and Sales Rep assignments are optional and can be updated anytime
+                          Selecting a Loyalty Tier automatically configures default credit days, credit limit and discounts
                         </p>
                       </div>
                     </div>
                   </CardHeader>
 
                   <CardContent className="p-5 space-y-4">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      {/* Customer Classification */}
-                      <div>
-                        <label className="text-xs font-semibold text-slate-700 mb-1.5 block">
-                          Customer Classification
-                        </label>
-                        <Select
-                          value={customerType}
-                          onChange={(e) => setCustomerType(e.target.value as CustomerType)}
-                          className="text-xs"
-                        >
-                          {CUSTOMER_TYPES.map((t) => (
-                            <option key={t.value} value={t.value}>
-                              {t.label}
-                            </option>
-                          ))}
-                        </Select>
-                      </div>
-
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                       {/* Loyalty Tier */}
                       <div>
                         <label className="text-xs font-semibold text-slate-700 mb-1.5 block">Loyalty Tier</label>
                         <Select
+                          data-testid="loyalty-tier-select"
                           value={loyaltyLevel}
-                          onChange={(e) => setLoyaltyLevel(e.target.value as CustomerLoyaltyLevel)}
+                          onChange={(e) => handleLoyaltyTierChange(e.target.value as CustomerLoyaltyLevel)}
                           className="text-xs"
                         >
                           {LOYALTY_LEVELS.map((l) => (
@@ -1498,44 +1519,6 @@ export function CustomerOnboardingPage() {
                             </button>
                           ))}
                         </div>
-                      </div>
-
-                      {/* Default Discount */}
-                      <div>
-                        <label className="text-xs font-semibold text-slate-700 mb-1.5 block">
-                          Default Standard Discount (%)
-                        </label>
-                        <Input
-                          type="number"
-                          min={0}
-                          max={100}
-                          step={0.5}
-                          value={defaultDiscount}
-                          onChange={(e) => {
-                            setDefaultDiscount(Number(e.target.value));
-                            setErrors((p) => ({ ...p, defaultDiscount: '' }));
-                          }}
-                          className="font-mono text-xs"
-                        />
-                      </div>
-
-                      {/* Max Allowed Discount */}
-                      <div>
-                        <label className="text-xs font-semibold text-slate-700 mb-1.5 block">
-                          Maximum Allowed Discount (%)
-                        </label>
-                        <Input
-                          type="number"
-                          min={0}
-                          max={100}
-                          step={0.5}
-                          value={maxDiscount}
-                          onChange={(e) => {
-                            setMaxDiscount(Number(e.target.value));
-                            setErrors((p) => ({ ...p, maxDiscount: '' }));
-                          }}
-                          className="font-mono text-xs"
-                        />
                       </div>
 
                       {/* Payment Terms Notes */}

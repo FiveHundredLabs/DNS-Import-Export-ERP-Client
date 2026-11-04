@@ -406,7 +406,7 @@ const Select = ({
           }}
           {...props}
         >
-          <SelectTrigger className={className} error={error} id={id}>
+          <SelectTrigger className={className} error={error} id={id} data-testid={(props as any)['data-testid']}>
             <SelectValue placeholder={placeholder || (selectedOption?.label ? undefined : 'Select option')}>
               {selectedOption?.label}
             </SelectValue>
