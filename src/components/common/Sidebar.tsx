@@ -266,11 +266,11 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   // 2. Customers, Invoices, Cash in Hand & POS
   const customerItems: SidebarItem[] = [
     { id: 'customer-collections', name: 'Customer Collections', path: '/payments/collect', icon: Banknote, category: 'sales', excludedRoles: ['CASHIER', 'SHOWROOM_MANAGER'] },
-    { id: 'cash-in-hand', name: 'Cash in Hand (Wallet)', path: '/payments', icon: Wallet, category: 'sales', excludedRoles: ['CASHIER', 'SHOWROOM_MANAGER', 'STOCK_KEEPER'] },
+    { id: 'cash-in-hand', name: 'Cash in Hand (Wallet)', path: '/payments', icon: Wallet, category: 'sales', excludedRoles: ['CASHIER', 'SHOWROOM_MANAGER', 'STOCK_KEEPER', 'STOCK_MANAGER'] },
     { id: 'customers', name: 'Customer Master', path: '/customers', icon: Users2, category: 'customers', excludedRoles: ['CASHIER', 'SHOWROOM_MANAGER'] },
     { id: 'customer-onboarding', name: 'Customer Onboarding', path: '/customers/onboarding', icon: UserPlus, category: 'customers', excludedRoles: ['CASHIER', 'SHOWROOM_MANAGER', 'STOCK_KEEPER', 'FINANCE_MANAGER', 'PURCHASING_OFFICER'] },
     { id: 'invoices', name: 'Invoices', path: '/invoices', icon: Receipt, category: 'sales', excludedRoles: ['CASHIER', 'SHOWROOM_MANAGER'] },
-    { id: 'pos', name: 'Showroom POS', path: '/pos', icon: Store, category: 'sales', excludedRoles: ['STOCK_KEEPER'] },
+    { id: 'pos', name: 'Showroom POS', path: '/pos', icon: Store, category: 'sales', excludedRoles: ['STOCK_KEEPER', 'STOCK_MANAGER'] },
   ];
 
   // 3. Products & Inventory
@@ -280,7 +280,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     { id: 'delivery-notes', name: 'Delivery Notes', path: '/inventory/delivery-notes', icon: Truck, category: 'inventory' },
     { id: 'products', name: 'Product Master', path: '/products', icon: Package, category: 'inventory', excludedRoles: ['STOCK_KEEPER'] },
     { id: 'damaged-stock', name: 'Damaged Stock & RMA', path: '/inventory/damaged-stock', icon: ShieldAlert, category: 'inventory' },
-    { id: 'inventory-pos', name: 'Showroom POS', path: '/pos', icon: Store, category: 'inventory', allowedRoles: ['STOCK_KEEPER'] },
+    { id: 'inventory-pos', name: 'Showroom POS', path: '/pos', icon: Store, category: 'inventory', allowedRoles: ['STOCK_KEEPER', 'STOCK_MANAGER'] },
   ];
 
   // 4. Finance, Banking & Ledger Core (arranged in logical lifecycle order)
@@ -296,7 +296,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     { id: 'ap-debit-notes', name: 'Supplier Debit Notes', path: '/finance/ap/debit-notes', icon: Undo2, category: 'finance' },
 
     // 3. Sales & Accounts Receivable (AR)
-    { id: 'ar-handovers', name: 'Sales Rep Cash Handovers', path: '/payments', icon: Banknote, category: 'finance' },
+    { id: 'ar-handovers', name: 'Sales Rep Cash Handovers', path: '/payments', icon: Banknote, category: 'finance', allowedRoles: ['DIRECTOR', 'MANAGER', 'FINANCE_MANAGER'] },
     { id: 'ar-approvals', name: 'Receipt Approval Queue (AR)', path: '/finance/ar/approvals', icon: CheckCircle2, category: 'finance' },
     { id: 'ar-pdc', name: 'PDC Vault (Cheques in Hand)', path: '/finance/ar/pdc-vault', icon: Clock, category: 'finance' },
     { id: 'ar-allocate', name: 'AR Collection Allocation', path: '/finance/ar/allocate', icon: SlidersHorizontal, category: 'finance' },
@@ -315,7 +315,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     // 7. Statutory Reports & Compliance
     { id: 'reports-hub', name: 'Financial Reports Hub', path: '/finance/reports', icon: BarChart3, category: 'finance' },
     { id: 'monthly-audit', name: 'Monthly Audit & Double Entry', path: '/finance/reports/monthly-audit', icon: Layers, category: 'finance' },
-    { id: 'commissions', name: 'Sales Commission', path: '/commissions', icon: Award, category: 'finance' },
+    { id: 'commissions', name: 'Sales Commission', path: '/commissions', icon: Award, category: 'finance', allowedRoles: ['DIRECTOR', 'MANAGER', 'FINANCE_MANAGER', 'SALES_MANAGER', 'AREA_MANAGER'] },
   ];
 
   // 5. Administration, Field Management & Intelligence
@@ -327,7 +327,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     { id: 'commissions-config', name: 'Commission Configuration', path: '/commissions', icon: Award, category: 'admin', allowedRoles: ['DIRECTOR', 'MANAGER'] },
     { id: 'tax-settings', name: 'Global Tax Configuration', path: '/?tab=settings&section=tax', icon: Percent, category: 'admin', directorOnly: true },
     { id: 'theme', name: 'Theme & Appearance', path: '/?tab=settings&section=appearance', icon: Settings, category: 'admin', directorOnly: true },
-    { id: 'role-portal', name: 'Role Switcher Portal', path: '/login', icon: Users, category: 'admin' },
+    { id: 'role-portal', name: 'Role Switcher Portal', path: '/login', icon: Users, category: 'admin', allowedRoles: ['DIRECTOR', 'MANAGER'] },
   ];
 
   // Combined item list in canonical Quick Links order
@@ -356,6 +356,16 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         return false;
       }
       if (item.path.includes('tab=settings') && !canAccessRoute('/settings')) {
+        return false;
+      }
+      // If the parent area/module is restricted, do not show items in that category in the navbar
+      if (item.category === 'finance' && !canAccessRoute('/finance')) {
+        return false;
+      }
+      if (item.category === 'purchasing' && !canAccessRoute('/purchasing')) {
+        return false;
+      }
+      if (item.category === 'inventory' && !canAccessRoute('/inventory') && item.path !== '/pos') {
         return false;
       }
       return canAccessRoute(item.path.split('?')[0]);

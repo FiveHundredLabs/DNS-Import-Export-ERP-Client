@@ -446,7 +446,7 @@ export function WarrantyHubPage() {
               className="border-emerald-300 text-emerald-800 hover:bg-emerald-50 text-xs font-semibold h-9 gap-1.5"
             >
               <FileCheck2 className="h-4 w-4" />
-              Enter Distributor Note
+              Register Warranty
             </Button>
           )}
 

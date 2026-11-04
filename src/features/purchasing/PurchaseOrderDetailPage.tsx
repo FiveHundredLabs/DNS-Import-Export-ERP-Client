@@ -42,7 +42,11 @@ export function PurchaseOrderDetailPage() {
   const po = purchaseOrders.find((p) => p.id === id);
 
   const isManagerOrDirector =
-    currentUser.role === 'DIRECTOR' || currentUser.role === 'MANAGER';
+    currentUser.role === 'DIRECTOR' ||
+    currentUser.role === 'MANAGER' ||
+    currentUser.role === 'PURCHASING_MANAGER';
+
+  const isPurchasingManager = currentUser.role === 'PURCHASING_MANAGER';
 
   const canApprove =
     isManagerOrDirector && po?.status === 'PENDING_APPROVAL';
@@ -102,6 +106,39 @@ export function PurchaseOrderDetailPage() {
       await refetch();
     } catch (err: any) {
       toast.error(err.message || 'Failed to reject purchase order');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handlePassToManager = async () => {
+    if (!po?.approvalRequestId) {
+      toast.error('No approval request reference found for this PO.');
+      return;
+    }
+    if (approvalComment.trim().length < 3) {
+      toast.error('An explanatory verification comment of at least 3 characters is required.');
+      return;
+    }
+
+    setActionLoading(true);
+    try {
+      await approvalService.processAction(
+        po.approvalRequestId,
+        'ESCALATE',
+        currentUser.id,
+        currentUser.name,
+        currentUser.role,
+        approvalComment,
+        'MANAGER'
+      );
+      toast.success(
+        `Purchase Order ${po.poNumber} verified and passed to General Manager for authorization.`
+      );
+      setApprovalComment('');
+      await refetch();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to pass purchase order to manager');
     } finally {
       setActionLoading(false);
     }
@@ -281,7 +318,7 @@ export function PurchaseOrderDetailPage() {
               className="bg-white text-xs"
               rows={2}
             />
-            <div className="flex gap-2 justify-end">
+            <div className="flex gap-2 justify-end flex-wrap">
               <ConfirmButton
                 variant="destructive"
                 size="sm"
@@ -295,6 +332,22 @@ export function PurchaseOrderDetailPage() {
                 <XCircle className="h-3.5 w-3.5" />
                 <span>Reject Order</span>
               </ConfirmButton>
+              {isPurchasingManager && (
+                <ConfirmButton
+                  variant="outline"
+                  size="sm"
+                  confirmVariant="default"
+                  confirmTitle="Approve & Pass to General Manager"
+                  confirmMessage={`Record your verification and pass Purchase Order ${po.poNumber} totaling ${formatCurrency(po.grandTotal, po.currency)} to the General Manager for secondary approval?`}
+                  confirmText="Approve & Pass"
+                  disabled={actionLoading}
+                  onConfirm={handlePassToManager}
+                  className="gap-1.5 text-xs text-indigo-700 border-indigo-300 hover:bg-indigo-50"
+                >
+                  <ArrowRight className="h-3.5 w-3.5" />
+                  <span>Approve &amp; Pass to Manager</span>
+                </ConfirmButton>
+              )}
               <ConfirmButton
                 variant="default"
                 size="sm"

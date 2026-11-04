@@ -323,6 +323,11 @@ export class DeliveryNoteService {
     approver: User,
     remarks: string = 'Rejection approved by warehouse operations manager.'
   ): Promise<DeliveryNote> {
+    if (approver.role === 'STOCK_KEEPER') {
+      throw new Error(
+        "Role 'STOCK_KEEPER' is not authorized to approve delivery note rejections. Requires STOCK_MANAGER authorization."
+      );
+    }
     const note = this.notes.find((n) => n.id === id);
     if (!note) {
       throw new Error(`Delivery Note ${id} not found.`);
@@ -437,6 +442,11 @@ export class DeliveryNoteService {
     approver: User,
     remarks: string = 'Rejection declined. Re-inspection required.'
   ): Promise<DeliveryNote> {
+    if (approver.role === 'STOCK_KEEPER') {
+      throw new Error(
+        "Role 'STOCK_KEEPER' is not authorized to decline delivery note rejections. Requires STOCK_MANAGER authorization."
+      );
+    }
     const note = this.notes.find((n) => n.id === id);
     if (!note) {
       throw new Error(`Delivery Note ${id} not found.`);

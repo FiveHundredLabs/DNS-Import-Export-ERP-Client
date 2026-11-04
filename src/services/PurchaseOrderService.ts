@@ -168,9 +168,16 @@ export class PurchaseOrderService {
     const poNumber = await this.repo.getNextPONumber();
     const shouldSubmit = dto.submitForApproval ?? false;
 
-    // Determine target approver based on amount threshold
-    // Above 500,000 LKR requires DIRECTOR; otherwise MANAGER approval
-    const targetApproverRole: UserRole = calculated.grandTotal > 500000 ? 'DIRECTOR' : 'MANAGER';
+    // Determine target approver based on amount threshold and initiator role
+    // Submissions above 500,000 LKR require DIRECTOR
+    // Submissions by PURCHASING_OFFICER route to PURCHASING_MANAGER
+    // Submissions by PURCHASING_MANAGER route to MANAGER
+    const targetApproverRole: UserRole =
+      calculated.grandTotal > 500000
+        ? 'DIRECTOR'
+        : user.role === 'PURCHASING_OFFICER'
+        ? 'PURCHASING_MANAGER'
+        : 'MANAGER';
 
     const newPO = await this.repo.create({
       poNumber,
@@ -303,7 +310,12 @@ export class PurchaseOrderService {
       throw new Error(`Cannot submit Purchase Order in '${existing.status}' status.`);
     }
 
-    const targetApproverRole: UserRole = existing.grandTotal > 500000 ? 'DIRECTOR' : 'MANAGER';
+    const targetApproverRole: UserRole =
+      existing.grandTotal > 500000
+        ? 'DIRECTOR'
+        : user.role === 'PURCHASING_OFFICER'
+        ? 'PURCHASING_MANAGER'
+        : 'MANAGER';
 
     const approvalReq = await approvalService.createApprovalRequest({
       documentType: 'PURCHASE_ORDER',

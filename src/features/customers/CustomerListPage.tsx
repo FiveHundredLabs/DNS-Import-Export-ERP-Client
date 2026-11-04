@@ -82,6 +82,7 @@ export function CustomerListPage() {
   };
 
   const canCreate = hasPermission('customers:create');
+  const canEdit = hasPermission('customers:edit');
 
   return (
     <div className="space-y-6">
@@ -168,11 +169,15 @@ export function CustomerListPage() {
         <CustomerTable
           customers={approvedCustomers}
           onView={(c) => navigate(`/customers/${c.id}`)}
-          onEdit={(c) => {
-            setEditingCustomer(c);
-            setModalMode('edit');
-            setCreateModalOpen(true);
-          }}
+          onEdit={
+            canEdit
+              ? (c) => {
+                  setEditingCustomer(c);
+                  setModalMode('edit');
+                  setCreateModalOpen(true);
+                }
+              : undefined
+          }
           onDelete={(c) => deleteCustomer(c.id)}
         />
       )}

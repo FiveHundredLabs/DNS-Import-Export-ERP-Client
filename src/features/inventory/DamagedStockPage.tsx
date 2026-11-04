@@ -569,7 +569,7 @@ export function DamagedStockPage() {
                     {item.effectiveDamagedQty === 0 ? (
                       <div className="p-2 rounded-lg bg-slate-50 border border-slate-200 text-center text-xs text-slate-600 font-medium">
                         <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 inline mr-1" />
-                        Disposition Recorded (Active until refresh)
+                        Disposition Recorded
                       </div>
                     ) : (
                       <>
@@ -701,7 +701,7 @@ export function DamagedStockPage() {
                           <div className="flex items-center justify-center">
                             <span className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-600 bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-200">
                               <CheckCircle2 className="h-3 w-3 text-emerald-600" />
-                              Disposition Recorded (Active until refresh)
+                              Disposition Recorded
                             </span>
                           </div>
                         ) : (

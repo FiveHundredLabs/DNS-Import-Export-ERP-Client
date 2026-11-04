@@ -6,9 +6,11 @@ export type UserRole =
   | 'AREA_MANAGER'
   | 'SALES_REP'
   | 'STOCK_KEEPER'
+  | 'STOCK_MANAGER'
   | 'CASHIER'
   | 'SHOWROOM_MANAGER'
-  | 'PURCHASING_OFFICER';
+  | 'PURCHASING_OFFICER'
+  | 'PURCHASING_MANAGER';
 
 export interface User {
   id: string;
@@ -82,11 +84,13 @@ export type Permission =
   | 'reports:area_only'
   | 'audit:view'
   | 'view:purchasing_dashboard'
+  | 'view:stock_manager_dashboard'
   | 'purchasing:suppliers_view'
   | 'purchasing:suppliers_manage'
   | 'purchasing:po_view'
   | 'purchasing:po_create'
   | 'purchasing:po_edit'
+  | 'purchasing:po_approve'
   | 'purchasing:grn_view'
   | 'purchasing:reports'
   | 'purchasing:returns_view'

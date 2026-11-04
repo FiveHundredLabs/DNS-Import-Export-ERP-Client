@@ -35,8 +35,9 @@ export function CustomerTable({
   onEdit,
   onDelete,
 }: CustomerTableProps) {
-  const { role } = useAuth();
+  const { role, hasPermission } = useAuth();
   const canDelete = role === 'DIRECTOR' || role === 'MANAGER';
+  const canEdit = hasPermission('customers:edit');
 
   return (
     <div>
@@ -163,7 +164,7 @@ export function CustomerTable({
                   </a>
 
                   {/* Edit Customer Button */}
-                  {onEdit && (
+                  {onEdit && canEdit && (
                     <button
                       type="button"
                       onClick={(e) => {
@@ -288,7 +289,6 @@ export function CustomerTable({
                       <span className="text-slate-400 font-normal">LKR 0.00</span>
                     )}
                   </TableCell>
-
                   <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                     <div className="flex items-center justify-end gap-1">
                       {/* View Details Button */}
@@ -302,7 +302,7 @@ export function CustomerTable({
                       </button>
 
                       {/* Edit Customer Button */}
-                      {onEdit && (
+                      {onEdit && canEdit && (
                         <button
                           type="button"
                           onClick={() => onEdit(c)}

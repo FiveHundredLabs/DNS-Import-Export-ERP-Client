@@ -38,6 +38,23 @@ describe('Stock Keeper Delivery Notes Flow', () => {
     });
   };
 
+  const setupOperationsManager = () => {
+    mockUseAuth.mockReturnValue({
+      role: 'MANAGER' as UserRole,
+      currentUser: {
+        id: 'usr-002',
+        name: 'Ruwan Wijesinghe',
+        role: 'MANAGER' as UserRole,
+        email: 'ruwan@dns.lk',
+        phone: '0772345678',
+        status: 'ACTIVE',
+      },
+      canAccessRoute: (path: string) => canAccessRoute('MANAGER', path),
+      hasPermission: () => true,
+      isAuthenticated: true,
+    });
+  };
+
   describe('1. Sidebar Navigation', () => {
     it('displays Delivery Notes directly bottom of GRN for Stock Keeper', async () => {
       setupStockKeeper();
@@ -263,6 +280,10 @@ describe('Stock Keeper Delivery Notes Flow', () => {
       const confirmBtn = screen.getByRole('button', { name: /confirm 100% delivered/i });
       fireEvent.click(confirmBtn);
 
+      // Click confirm on the newly added confirmation dialog popup
+      const dialogConfirmBtn = await screen.findByRole('button', { name: /yes, confirm delivered/i });
+      fireEvent.click(dialogConfirmBtn);
+
       await waitFor(() => {
         expect(screen.getByText(/Delivered & 100% Accepted/i)).toBeInTheDocument();
       });
@@ -318,7 +339,7 @@ describe('Stock Keeper Delivery Notes Flow', () => {
     });
 
     it('allows Operations Manager to approve customer rejection and log units into Quarantine Bay', async () => {
-      setupStockKeeper();
+      setupOperationsManager();
       vi.spyOn(window, 'prompt').mockReturnValue('Rejection verified. Damaged in transit.');
 
       // DN-2026-0003 is already seeded in REJECTION_PENDING_APPROVAL

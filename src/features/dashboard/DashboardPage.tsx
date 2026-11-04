@@ -51,7 +51,7 @@ export function DashboardPage() {
     return <AreaManagerDashboard />;
   }
 
-  if (role === 'PURCHASING_OFFICER') {
+  if (role === 'PURCHASING_OFFICER' || role === 'PURCHASING_MANAGER') {
     return <PurchasingDashboard />;
   }
 
@@ -86,6 +86,14 @@ export function DashboardPage() {
             <StatCard title="Damaged Stock Items" value="11 Units" variant="danger" icon={AlertCircle} />
           </>
         )}
+        {role === 'STOCK_MANAGER' && (
+          <>
+            <StatCard title="Stock Items" value="5 SKU Lines" variant="indigo" icon={Package} />
+            <StatCard title="GRNs for Approval" value="2 Pending" trend={{ value: 'Requires Sign-off', isPositive: false }} variant="warning" icon={FileCheck2} />
+            <StatCard title="Rejections to Review" value="1 Request" trend={{ value: 'Quarantine Bay', isPositive: false }} variant="danger" icon={AlertCircle} />
+            <StatCard title="Damaged Valuation" value={formatCurrency(458000)} variant="blue" icon={DollarSign} />
+          </>
+        )}
         {role === 'SHOWROOM_MANAGER' && (
           <>
             <StatCard title="Active Terminals" value="3 Online" variant="success" icon={Monitor} />
@@ -113,7 +121,7 @@ export function DashboardPage() {
       </div>
 
       {/* Role-Specific Operational Quick Actions */}
-      {role === 'STOCK_KEEPER' && (
+      {(role === 'STOCK_KEEPER' || role === 'STOCK_MANAGER') && (
         <div className="space-y-3">
           <h2 className="text-sm font-bold text-slate-800 uppercase tracking-wide">
             Operational Workspaces
