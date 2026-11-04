@@ -3,7 +3,6 @@ import { Payment } from '../../types/payment';
 import { printerService } from '../../services/PrinterService';
 import { Button } from '../../components/ui/button';
 import { formatCurrency } from '../../utils/formatters';
-import { encodeCode128, generateCode128SvgPath } from '../../utils/code128';
 import {
   Printer,
   CheckCircle2,
@@ -30,7 +29,6 @@ export function ThermalReceiptModal({
   payment,
   customerBalance,
 }: ThermalReceiptModalProps) {
-  const [paperWidth, setPaperWidth] = useState<'80mm' | '58mm'>('80mm');
   const [copied, setCopied] = useState(false);
 
   const showModal = isOpen !== undefined ? isOpen : Boolean(open);
@@ -41,12 +39,8 @@ export function ThermalReceiptModal({
 
   if (!showModal || !payment) return null;
 
-  const handlePrint = async () => {
-    await printerService.printPaymentReceipt(payment, customerBalance, paperWidth);
-  };
-
   const handlePrintAndHandover = async () => {
-    await printerService.printPaymentReceipt(payment, customerBalance, paperWidth);
+    await printerService.printPaymentReceipt(payment, customerBalance, '80mm');
     toast.success(`Receipt ${payment.receiptNumber} printed & handed over!`);
     handleClose();
   };
@@ -68,7 +62,6 @@ export function ThermalReceiptModal({
         : null,
       customerBalance !== undefined ? `*Remaining Ledger Due:* LKR ${customerBalance.toLocaleString()}` : null,
       `---------------------------------`,
-      `_Subject to Finance Department realization._`,
       `_Thank you for your business!_`,
     ].filter(Boolean).join('\n');
 
@@ -82,19 +75,6 @@ export function ThermalReceiptModal({
     }
   };
 
-  const is58mm = paperWidth === '58mm';
-
-  // Generate real barcode SVG for receipt number
-  let barcodeSvgPath = '';
-  let barcodeTotalModules = 120;
-  try {
-    const codeData = encodeCode128(payment.receiptNumber || 'REC-0000', 10);
-    barcodeSvgPath = generateCode128SvgPath(codeData, 28);
-    barcodeTotalModules = codeData.totalModules;
-  } catch {
-    // fallback if barcode fails
-  }
-
   const formattedDate = new Date(payment.collectedAt).toLocaleDateString('en-GB');
   const formattedTime = new Date(payment.collectedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
@@ -104,70 +84,40 @@ export function ThermalReceiptModal({
       <div className="fixed inset-0" onClick={handleClose} aria-hidden="true" />
 
       {/* Main Responsive Modal Card */}
-      <div className="relative z-[101] w-full max-w-[430px] max-h-[94dvh] bg-slate-900 border border-slate-700/80 rounded-2xl shadow-2xl flex flex-col overflow-hidden text-white animate-in zoom-in-95">
+      <div className="relative z-[101] w-full max-w-[420px] max-h-[94dvh] bg-slate-900 border border-slate-700/80 rounded-2xl shadow-2xl flex flex-col overflow-hidden text-white animate-in zoom-in-95">
         
-        {/* Fixed Responsive Header */}
-        <div className="shrink-0 px-3.5 py-2.5 sm:px-4 sm:py-3 border-b border-slate-800 bg-slate-900/95 flex items-center justify-between gap-2">
+        {/* Clean Responsive Header (Always 80mm Bill) */}
+        <div className="shrink-0 px-4 py-3 border-b border-slate-800 bg-slate-900/95 flex items-center justify-between gap-2">
           {/* Title & Icon */}
-          <div className="flex items-center gap-2 min-w-0 flex-1">
-            <div className="w-7 h-7 rounded-lg bg-slate-800 text-slate-200 flex items-center justify-center shrink-0 border border-slate-700">
+          <div className="flex items-center gap-2.5 min-w-0 flex-1">
+            <div className="w-8 h-8 rounded-lg bg-slate-800 text-slate-200 flex items-center justify-center shrink-0 border border-slate-700">
               <Printer className="h-4 w-4" />
             </div>
             <div className="min-w-0">
-              <h2 className="text-xs sm:text-sm font-bold text-white truncate leading-tight">
+              <h2 className="text-sm font-bold text-white truncate leading-tight">
                 Thermal Receipt Preview
               </h2>
-              <span className="text-[10px] text-slate-400 font-mono block truncate">
+              <span className="text-[11px] text-slate-400 font-mono block truncate">
                 Ref: {payment.receiptNumber}
               </span>
             </div>
           </div>
 
-          {/* Paper Width Switcher & Close */}
-          <div className="flex items-center gap-1.5 shrink-0">
-            <div className="flex items-center bg-slate-800 p-0.5 rounded-lg border border-slate-700 text-[11px]">
-              <button
-                type="button"
-                onClick={() => setPaperWidth('80mm')}
-                className={`px-2 py-0.5 sm:py-1 rounded-md font-semibold transition-all ${
-                  paperWidth === '80mm'
-                    ? 'bg-white text-slate-900 shadow-xs'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                80mm<span className="hidden sm:inline"> Standard</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setPaperWidth('58mm')}
-                className={`px-2 py-0.5 sm:py-1 rounded-md font-semibold transition-all ${
-                  paperWidth === '58mm'
-                    ? 'bg-white text-slate-900 shadow-xs'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                58mm<span className="hidden sm:inline"> Mobile</span>
-              </button>
-            </div>
-
-            <button
-              type="button"
-              onClick={handleClose}
-              className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
-              aria-label="Close receipt"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
+          {/* Close Button */}
+          <button
+            type="button"
+            onClick={handleClose}
+            className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors cursor-pointer shrink-0"
+            aria-label="Close receipt"
+          >
+            <X className="h-4 w-4" />
+          </button>
         </div>
 
-        {/* Scrollable Receipt Body (Pure Black & White Authentic Thermal Paper) */}
+        {/* Scrollable Receipt Body (Pure Black & White Standard 80mm Paper) */}
         <div className="flex-1 overflow-y-auto px-2 py-3 sm:px-4 sm:py-4 bg-slate-950/60 flex justify-center items-start">
-          <div
-            className={`transition-all bg-white text-black shadow-2xl rounded-none font-mono border border-neutral-300 my-auto ${
-              is58mm ? 'w-full max-w-[245px] text-[10.5px] p-3' : 'w-full max-w-[315px] sm:max-w-[325px] text-xs p-3.5 sm:p-5'
-            }`}
-          >
+          <div className="w-full max-w-[320px] sm:max-w-[330px] text-xs p-4 sm:p-5 bg-white text-black shadow-2xl rounded-none font-mono border border-neutral-300 my-auto">
+            
             {/* Top Serrated Edge Graphic */}
             <div className="w-full flex justify-center mb-2 overflow-hidden opacity-25 select-none text-black">
               <span className="text-[8px] tracking-widest font-mono">
@@ -311,41 +261,9 @@ export function ThermalReceiptModal({
               </>
             )}
 
-            {/* Barcode Section (Crisp Black on White) */}
-            {barcodeSvgPath && (
-              <div className="mt-3 text-center">
-                <svg
-                  viewBox={`0 0 ${barcodeTotalModules} 28`}
-                  className="h-6 w-auto mx-auto max-w-[180px]"
-                >
-                  <path d={barcodeSvgPath} fill="#000000" />
-                </svg>
-                <div className="text-[9px] tracking-widest text-neutral-700 font-mono mt-0.5">
-                  *{payment.receiptNumber}*
-                </div>
-              </div>
-            )}
-
-            {/* Signature Acknowledgement Lines (Monochrome) */}
-            <div className="grid grid-cols-2 gap-3 mt-4 pt-3 border-t border-dotted border-black text-center text-[9px] text-black">
-              <div>
-                <div className="border-b border-black mb-1 h-3" />
-                <span>Customer Signature</span>
-              </div>
-              <div>
-                <div className="border-b border-black mb-1 h-3" />
-                <span>Authorized Officer</span>
-              </div>
-            </div>
-
-            {/* Footer Notes & Legal Notice */}
-            <div className="border-t border-dashed border-black mt-3 pt-2 text-center space-y-1 text-black">
-              <div className="text-[9.5px] text-neutral-700 italic leading-snug">
-                {payment.status === 'APPROVED'
-                  ? 'Authorized and posted to official customer ledger.'
-                  : 'Subject to Finance Department realization. Retain this slip for ledger reconciliation.'}
-              </div>
-              <div className="text-[10px] font-bold text-black tracking-wide pt-0.5">
+            {/* Thank You Note */}
+            <div className="border-t border-dashed border-black mt-3 pt-2 text-center text-black">
+              <div className="text-[10px] font-bold tracking-wide">
                 Thank you for your business!
               </div>
             </div>
@@ -361,30 +279,17 @@ export function ThermalReceiptModal({
 
         {/* Fixed Mobile-Optimized Footer Action Bar */}
         <div className="shrink-0 p-3 sm:p-4 border-t border-slate-800 bg-slate-900/95 space-y-2">
-          {/* Quick Utility Actions Row */}
-          <div className="grid grid-cols-2 gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={handleShareWhatsApp}
-              className="border-slate-700 bg-slate-800/80 text-slate-200 hover:text-white hover:bg-slate-700 text-xs gap-1.5 h-9"
-            >
-              {copied ? <Check className="h-3.5 w-3.5 text-white" /> : <Share2 className="h-3.5 w-3.5 text-slate-300" />}
-              {copied ? 'Copied Details' : 'Share / WhatsApp'}
-            </Button>
-
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={handlePrint}
-              className="border-slate-700 bg-slate-800/80 text-slate-200 hover:text-white hover:bg-slate-700 text-xs gap-1.5 h-9"
-            >
-              <Printer className="h-3.5 w-3.5 text-slate-300" />
-              Print Thermal Receipt
-            </Button>
-          </div>
+          {/* Quick WhatsApp Share Action */}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleShareWhatsApp}
+            className="w-full border-slate-700 bg-slate-800/80 text-slate-200 hover:text-white hover:bg-slate-700 text-xs gap-1.5 h-9"
+          >
+            {copied ? <Check className="h-3.5 w-3.5 text-white" /> : <Share2 className="h-3.5 w-3.5 text-slate-300" />}
+            {copied ? 'Copied Receipt Details' : 'Share Receipt via WhatsApp'}
+          </Button>
 
           {/* Primary Action Button: Print & Handover */}
           <Button
