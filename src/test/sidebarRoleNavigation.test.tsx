@@ -53,7 +53,7 @@ describe('Role-Based Sidebar Navigation & Access Control', () => {
       expect(screen.queryByTitle('Administration')).not.toBeInTheDocument();
     });
 
-    it('SALES_REP cannot see Inventory, Enterprise Reports, or Administration categories', () => {
+    it('SALES_REP cannot see Inventory, Finance, Enterprise Reports, or Administration categories', () => {
       setupSidebarForRole('SALES_REP');
 
       // Accessible categories
@@ -61,9 +61,9 @@ describe('Role-Based Sidebar Navigation & Access Control', () => {
       expect(screen.getByTitle('Sales & Orders')).toBeInTheDocument();
       expect(screen.getByTitle('Customers & CRM')).toBeInTheDocument();
       expect(screen.getByTitle('Approvals & Warranty')).toBeInTheDocument(); // Has Warranty Hub
-      expect(screen.getByTitle('Finance & Payments')).toBeInTheDocument(); // Has Payments & Commissions
 
-      // Unauthorized categories hidden
+      // Unauthorized restricted categories hidden
+      expect(screen.queryByTitle('Finance & Payments')).not.toBeInTheDocument();
       expect(screen.queryByTitle('Inventory & Products')).not.toBeInTheDocument();
       expect(screen.queryByTitle('Enterprise Reports')).not.toBeInTheDocument();
       expect(screen.queryByTitle('Administration')).not.toBeInTheDocument();
@@ -98,13 +98,13 @@ describe('Role-Based Sidebar Navigation & Access Control', () => {
     it('DIRECTOR sees all categories including Administration', () => {
       setupSidebarForRole('DIRECTOR');
 
-      expect(screen.getByTitle('Dashboard & Quick Links')).toBeInTheDocument();
+      expect(screen.getByTitle('Director Dashboard')).toBeInTheDocument();
       expect(screen.getByTitle('Sales & Orders')).toBeInTheDocument();
-      expect(screen.getByTitle('Customers & CRM')).toBeInTheDocument();
-      expect(screen.getByTitle('Inventory & Products')).toBeInTheDocument();
-      expect(screen.getByTitle('Finance & Payments')).toBeInTheDocument();
-      expect(screen.getByTitle('Approvals & Warranty')).toBeInTheDocument();
-      expect(screen.getByTitle('Enterprise Reports')).toBeInTheDocument();
+      expect(screen.getByTitle('User Management')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /^Inventory Hub$/i })).toBeInTheDocument();
+      expect(screen.getByTitle('Finance')).toBeInTheDocument();
+      expect(screen.getByTitle('Approval Hub')).toBeInTheDocument();
+      expect(screen.getByTitle('Reports')).toBeInTheDocument();
       expect(screen.getByTitle('Administration')).toBeInTheDocument();
     });
   });

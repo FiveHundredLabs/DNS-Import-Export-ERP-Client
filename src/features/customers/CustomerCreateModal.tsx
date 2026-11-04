@@ -19,6 +19,7 @@ import { creditTermsConfigService } from '../../services/CreditTermsConfigServic
 import { formatCurrency } from '../../utils/formatters';
 import {
   AlertCircle,
+  AlertTriangle,
   CreditCard,
   Building2,
   MapPin,
@@ -258,6 +259,10 @@ export function CustomerCreateModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSalesRep) {
+      setError('Sales Representatives are not authorized to register new customers or edit customer details.');
+      return;
+    }
     if (!validate()) {
       return;
     }
@@ -403,13 +408,13 @@ export function CustomerCreateModal({
           )}
 
           {/* Sales Rep Mode Notice */}
-          {isSalesRep && !editingCustomer && (
-            <div className="p-3.5 rounded-2xl bg-emerald-50/80 border border-emerald-200/90 text-xs text-emerald-950 flex items-start gap-2.5">
-              <Sparkles className="h-4 w-4 text-emerald-700 shrink-0 mt-0.5" />
+          {isSalesRep && (
+            <div className="p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-xs text-rose-950 flex items-start gap-2.5">
+              <AlertTriangle className="h-4 w-4 text-rose-700 shrink-0 mt-0.5" />
               <div>
-                <span className="font-bold block">Sales Representative Account Setup</span>
-                <span className="text-[11px] text-emerald-800 leading-relaxed block mt-0.5">
-                  Registering a customer into your assigned territory. Standard commercial credit terms will be submitted for manager approval.
+                <span className="font-bold block">Access Restricted: Sales Representative</span>
+                <span className="text-[11px] text-rose-800 leading-relaxed block mt-0.5">
+                  Sales Representatives are not authorized to register new customers or edit customer records. Customer management is restricted to Area Managers and Head Office.
                 </span>
               </div>
             </div>
@@ -888,8 +893,8 @@ export function CustomerCreateModal({
             <Button
               type="submit"
               size="sm"
-              disabled={submitting}
-              className="bg-primary hover:bg-primary-hover text-white font-bold px-5 shadow-xs cursor-pointer"
+              disabled={submitting || isSalesRep}
+              className="bg-primary hover:bg-primary-hover text-white font-bold px-5 shadow-xs cursor-pointer disabled:opacity-50"
             >
               {submitting ? 'Submitting...' : editingCustomer ? 'Save Changes' : 'Submit for Commercial Setup'}
             </Button>

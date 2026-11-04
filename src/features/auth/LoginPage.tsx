@@ -15,6 +15,7 @@ import {
   ShoppingBag,
   ShoppingCart,
   Boxes,
+  PackageCheck,
   Store,
   Eye,
   EyeOff,
@@ -173,6 +174,32 @@ const ROLE_METAS: Record<UserRole, RoleMeta> = {
     avatarBg: 'bg-teal-600 text-white',
     icon: ShoppingCart,
   },
+  STOCK_MANAGER: {
+    role: 'STOCK_MANAGER',
+    title: 'Stock Manager',
+    department: 'Warehouse & Logistics Operations',
+    description: 'Warehouse leadership, GRN quantity & discrepancy approvals, delivery note rejection review, and inventory quarantine oversight.',
+    keyPermissions: ['Warehouse Operations Oversight', 'GRN Quantity Approvals', 'Customer Rejection Sign-off', 'Damaged & RMA Quarantine Resolution'],
+    defaultPath: '/inventory',
+    badgeBg: 'bg-amber-100',
+    badgeText: 'text-amber-800 border-amber-200',
+    accentBorder: 'hover:border-amber-400 group-hover:border-amber-400',
+    avatarBg: 'bg-amber-700 text-white',
+    icon: PackageCheck,
+  },
+  PURCHASING_MANAGER: {
+    role: 'PURCHASING_MANAGER',
+    title: 'Purchasing Manager',
+    department: 'Procurement & Vendor Governance',
+    description: 'Procurement management, purchase order sign-off & escalation to Executive Manager, supplier return authorization & purchasing analytics.',
+    keyPermissions: ['PO Approval & Verification', 'Pass PO to General Manager', 'Supplier Returns & Debit Notes', 'Supplier Master Agreement Sign-off'],
+    defaultPath: '/purchasing',
+    badgeBg: 'bg-cyan-100',
+    badgeText: 'text-cyan-800 border-cyan-200',
+    accentBorder: 'hover:border-cyan-400 group-hover:border-cyan-400',
+    avatarBg: 'bg-cyan-700 text-white',
+    icon: ShoppingCart,
+  },
 };
 
 type FilterCategory = 'ALL' | 'MANAGEMENT' | 'FINANCE_OPS' | 'SALES_RETAIL';
@@ -243,9 +270,9 @@ export function LoginPage() {
 
       // Category filter
       if (activeCategory === 'MANAGEMENT') {
-        if (!['DIRECTOR', 'MANAGER', 'SALES_MANAGER', 'SHOWROOM_MANAGER'].includes(user.role)) return false;
+        if (!['DIRECTOR', 'MANAGER', 'SALES_MANAGER', 'SHOWROOM_MANAGER', 'STOCK_MANAGER', 'PURCHASING_MANAGER'].includes(user.role)) return false;
       } else if (activeCategory === 'FINANCE_OPS') {
-        if (!['FINANCE_MANAGER', 'STOCK_KEEPER', 'PURCHASING_OFFICER'].includes(user.role)) return false;
+        if (!['FINANCE_MANAGER', 'STOCK_KEEPER', 'PURCHASING_OFFICER', 'STOCK_MANAGER', 'PURCHASING_MANAGER'].includes(user.role)) return false;
       } else if (activeCategory === 'SALES_RETAIL') {
         if (!['AREA_MANAGER', 'SALES_REP', 'CASHIER', 'SHOWROOM_MANAGER'].includes(user.role)) return false;
       }
@@ -491,13 +518,13 @@ export function LoginPage() {
                 {
                   id: 'MANAGEMENT',
                   label: `Executive & Management (${
-                    MOCK_USERS.filter((u) => ['DIRECTOR', 'MANAGER', 'SALES_MANAGER', 'SHOWROOM_MANAGER'].includes(u.role)).length
+                    MOCK_USERS.filter((u) => ['DIRECTOR', 'MANAGER', 'SALES_MANAGER', 'SHOWROOM_MANAGER', 'STOCK_MANAGER', 'PURCHASING_MANAGER'].includes(u.role)).length
                   })`,
                 },
                 {
                   id: 'FINANCE_OPS',
                   label: `Finance, Purchasing & Ops (${
-                    MOCK_USERS.filter((u) => ['FINANCE_MANAGER', 'STOCK_KEEPER', 'PURCHASING_OFFICER'].includes(u.role)).length
+                    MOCK_USERS.filter((u) => ['FINANCE_MANAGER', 'STOCK_KEEPER', 'PURCHASING_OFFICER', 'STOCK_MANAGER', 'PURCHASING_MANAGER'].includes(u.role)).length
                   })`,
                 },
                 {

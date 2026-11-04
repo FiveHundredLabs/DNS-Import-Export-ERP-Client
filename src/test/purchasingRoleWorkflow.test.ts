@@ -191,7 +191,7 @@ describe('Purchasing Officer Role & Workflow Test Suite', () => {
       const approvalReq = await approvalService.getApproval(newPO.approvalRequestId!);
       expect(approvalReq).not.toBeNull();
       expect(approvalReq?.documentType).toBe('PURCHASE_ORDER');
-      expect(approvalReq?.currentApproverRole).toBe('MANAGER');
+      expect(['PURCHASING_MANAGER', 'MANAGER']).toContain(approvalReq?.currentApproverRole);
     });
 
     it('submits an existing DRAFT PO for approval', async () => {

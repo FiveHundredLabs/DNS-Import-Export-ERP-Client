@@ -17,7 +17,7 @@ export class GRNService {
   }
 
   async approveGRN(grnId: string, managerId: string, managerName: string, role?: string) {
-    if (role && role !== 'MANAGER' && role !== 'DIRECTOR') {
+    if (role && role !== 'MANAGER' && role !== 'DIRECTOR' && role !== 'STOCK_MANAGER') {
       throw new Error(`Role ${role} is not authorized to approve GRNs.`);
     }
     const grn = await this.grnRepo.getById(grnId);
@@ -82,7 +82,7 @@ export class GRNService {
   }
 
   async rejectGRN(grnId: string, reason: string, rejectedById: string, rejectedByName: string, role?: string): Promise<void> {
-    if (role && role !== 'MANAGER' && role !== 'DIRECTOR') {
+    if (role && role !== 'MANAGER' && role !== 'DIRECTOR' && role !== 'STOCK_MANAGER') {
       throw new Error(`Role ${role} is not authorized to reject GRNs.`);
     }
     const grn = await this.grnRepo.getById(grnId);

@@ -414,7 +414,7 @@ export function GRNDetailPage({ backUrl, backTitle }: GRNDetailPageProps = {}) {
 
   const isStockKeeper = user?.role === 'STOCK_KEEPER';
   const isFinanceRole = ['FINANCE_OFFICER', 'FINANCE_MANAGER', 'DIRECTOR', 'ADMIN'].includes(user?.role || '');
-  const isManagerRole = ['DIRECTOR', 'MANAGER', 'SALES_MANAGER', 'FINANCE_MANAGER'].includes(user?.role || '');
+  const isManagerRole = ['DIRECTOR', 'MANAGER', 'SALES_MANAGER', 'FINANCE_MANAGER', 'STOCK_MANAGER'].includes(user?.role || '');
 
   if (loading) {
     return (

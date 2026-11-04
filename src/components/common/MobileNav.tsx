@@ -382,8 +382,8 @@ export function MobileNav() {
             </button>
           )}
 
-          {/* Targets */}
-          {canAccessRoute('/commissions') && (
+          {/* Targets / Commissions (Restricted from Sales Rep) */}
+          {canAccessRoute('/commissions') && role !== 'SALES_REP' && (
             <button
               onClick={() => handleNavClick('/commissions')}
               className={cn(

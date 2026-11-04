@@ -28,11 +28,12 @@ export function CustomerTable({
   onReviewCommercials,
   onDelete,
 }: CustomerTableProps) {
-  const { role } = useAuth();
+  const { role, hasPermission } = useAuth();
   const canCommercialReview =
     role === 'SALES_MANAGER' || role === 'MANAGER' || role === 'DIRECTOR';
   const canApprove =
     role === 'SALES_MANAGER' || role === 'MANAGER' || role === 'DIRECTOR';
+  const canEdit = hasPermission('customers:edit');
 
   return (
     <div>
@@ -158,7 +159,7 @@ export function CustomerTable({
                   </a>
 
                   {/* Edit Customer Button */}
-                  {onEdit && (
+                  {onEdit && canEdit && (
                     <button
                       type="button"
                       onClick={(e) => {
@@ -312,7 +313,7 @@ export function CustomerTable({
                           <CheckCircle2 className="h-4 w-4" />
                         </button>
                       )}
-                      {onEdit && (
+                      {onEdit && canEdit && (
                         <button
                           type="button"
                           onClick={() => onEdit(c)}

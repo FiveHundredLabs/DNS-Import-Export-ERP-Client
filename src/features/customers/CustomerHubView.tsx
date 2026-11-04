@@ -50,11 +50,13 @@ import { whatsAppService } from '../../services/WhatsAppService';
 import { customerService } from '../../services/CustomerService';
 import { CustomerCreateModal } from './CustomerCreateModal';
 import { useAuth } from '../../hooks/useAuth';
+import { toast } from 'sonner';
 
 export function CustomerHubView({ customer: initialCustomer }: { customer: Customer }) {
   const navigate = useNavigate();
-  const { role } = useAuth();
+  const { role, hasPermission, currentUser } = useAuth();
   const canApprove = role === 'SALES_MANAGER' || role === 'MANAGER' || role === 'DIRECTOR';
+  const canEdit = hasPermission('customers:edit');
 
   const [customer, setCustomer] = useState<Customer>(initialCustomer);
   const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
@@ -65,11 +67,17 @@ export function CustomerHubView({ customer: initialCustomer }: { customer: Custo
   }, [initialCustomer]);
 
   const handleUpdateCustomer = async (id: string, updates: Partial<Customer>) => {
+    if (!canEdit) {
+      toast.error('Permission Denied: Sales Representatives cannot edit customer details.');
+      return;
+    }
     try {
-      const updated = await customerService.updateCustomer(id, updates);
+      const updated = await customerService.updateCustomer(id, updates, currentUser);
       setCustomer(updated);
       setIsEditDrawerOpen(false);
-    } catch (err) {
+      toast.success('Customer details updated successfully.');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to update customer');
       console.error('Failed to update customer:', err);
     }
   };
@@ -346,19 +354,21 @@ export function CustomerHubView({ customer: initialCustomer }: { customer: Custo
             </Button>
           )}
 
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => {
-              setDrawerMode('edit');
-              setIsEditDrawerOpen(true);
-            }}
-            className="gap-1.5 text-xs text-slate-700 border-slate-300 hover:bg-slate-50 cursor-pointer"
-            title="Edit Customer Details, Commercial Terms & Assigned Sales Rep"
-          >
-            <Edit className="h-3.5 w-3.5 text-slate-600" />
-            <span>Edit Customer</span>
-          </Button>
+          {canEdit && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                setDrawerMode('edit');
+                setIsEditDrawerOpen(true);
+              }}
+              className="gap-1.5 text-xs text-slate-700 border-slate-300 hover:bg-slate-50 cursor-pointer"
+              title="Edit Customer Details, Commercial Terms & Assigned Sales Rep"
+            >
+              <Edit className="h-3.5 w-3.5 text-slate-600" />
+              <span>Edit Customer</span>
+            </Button>
+          )}
 
           <Button
             size="sm"
