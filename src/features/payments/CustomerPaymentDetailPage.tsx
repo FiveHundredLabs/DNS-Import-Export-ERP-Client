@@ -13,7 +13,6 @@ import {
   evaluateCustomerPaymentStatus,
   FifoAllocationBreakdown,
 } from '../../rules/customerPaymentRules';
-import { InvoiceListSelector } from './components/InvoiceListSelector';
 import { PaymentCollectionForm } from './components/PaymentCollectionForm';
 import { FifoAllocationPreview } from './components/FifoAllocationPreview';
 import { PaymentConfirmationModal } from './components/PaymentConfirmationModal';
@@ -136,21 +135,18 @@ export function CustomerPaymentDetailPage() {
     setAmount(val);
   };
 
-  // Handle invoice multi-selection
+  // Handle invoice prioritization checkbox toggle
   const handleToggleInvoice = (invId: string) => {
     setSelectedInvoiceIds((prev) => {
       const next = prev.includes(invId) ? prev.filter((id) => id !== invId) : [...prev, invId];
-      // If user selectively toggled specific invoices, update amount to sum of selected
-      if (next.length > 0) {
+      // If user hasn't entered an amount yet (0 or empty), auto-fill with the prioritized invoices' balance
+      if (amount === 0 || amount === '') {
         const selectedSum = invoices
           .filter((i) => next.includes(i.id))
-          .reduce((sum, i) => {
-            const uncoll = Math.max(0, i.balanceAmount - (i.collectedAmount || 0));
-            return sum + (partialAmounts[i.id] !== undefined ? partialAmounts[i.id] : uncoll);
-          }, 0);
-        setAmount(selectedSum);
-      } else {
-        setAmount(0);
+          .reduce((sum, i) => sum + Math.max(0, i.balanceAmount - (i.collectedAmount || 0)), 0);
+        if (selectedSum > 0) {
+          setAmount(selectedSum);
+        }
       }
       return next;
     });
@@ -209,7 +205,7 @@ export function CustomerPaymentDetailPage() {
       }
       return;
     }
-    const maxAllowed = targetedSingleInvoice ? targetedSingleInvoice.balance : (statusMeta?.totalOutstanding || 0);
+    const maxAllowed = statusMeta?.totalOutstanding || 0;
     if (maxAllowed > 0 && newAmount > maxAllowed) {
       setAmount(maxAllowed);
       if (targetedSingleInvoice) {
@@ -523,7 +519,7 @@ export function CustomerPaymentDetailPage() {
         <PaymentCollectionForm
           amount={amount}
           onAmountChange={handleAmountChange}
-          totalOutstanding={targetedSingleInvoice ? targetedSingleInvoice.balance : (statusMeta?.totalOutstanding || 0)}
+          totalOutstanding={statusMeta?.totalOutstanding || 0}
           totalOverdue={statusMeta?.totalOverdue || 0}
           paymentMethod={paymentMethod}
           onPaymentMethodChange={setPaymentMethod}
@@ -541,26 +537,14 @@ export function CustomerPaymentDetailPage() {
           } : null}
         />
 
-        {/* Section B: Outstanding Invoices Selector (Invoice-Wise & Complete Collection - BR-06, BR-07) */}
-        <div className="bg-white rounded-2xl border border-slate-200/90 p-4 shadow-xs">
-          <InvoiceListSelector
-            invoices={invoices}
-            selectedInvoiceIds={selectedInvoiceIds}
-            onToggleInvoice={handleToggleInvoice}
-            onSelectAll={handleSelectAllInvoices}
-            onClearAll={handleClearAllInvoices}
-            onCollectSingleFull={handleCollectSingleFull}
-            onCollectSinglePartial={handleCollectSinglePartial}
-            partialAmounts={partialAmounts}
-            onPartialAmountChange={handlePartialAmountChange}
-          />
-        </div>
-
-        {/* Section C: Live Automatic FIFO Allocation Breakdown */}
+        {/* Section B: Live Priority & Automatic FIFO Allocation Breakdown */}
         <FifoAllocationPreview
           paymentAmount={numAmount}
           invoices={invoices}
-          selectedInvoiceIds={selectedInvoiceIds.length > 0 ? selectedInvoiceIds : undefined}
+          selectedInvoiceIds={selectedInvoiceIds}
+          onToggleInvoice={handleToggleInvoice}
+          onSelectAll={handleSelectAllInvoices}
+          onClearAll={handleClearAllInvoices}
         />
 
         {/* Section C: Submission CTA (Responsive in-flow card for both mobile and desktop) */}

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import {
   calculateFifoAllocation,
   filterCustomersByPaymentStatus,
@@ -193,6 +193,31 @@ describe('Customer Payments & Collection Management Architecture', () => {
       expect(allocation.items[0].allocatedAmount).toBe(10000);
       expect(allocation.items[1].invoiceId).toBe('inv-test-2');
       expect(allocation.items[1].allocatedAmount).toBe(5000);
+    });
+
+    it('prioritizes manually selected/checked invoices first before cascading to FIFO for remaining balance', () => {
+      // Prioritize inv-test-3 with LKR 15,000 payment. inv-test-3 gets 10,000, then inv-test-1 gets 5,000
+      const allocation = calculateFifoAllocation(15000, sample5FifoInvoices, ['inv-test-3']);
+
+      expect(allocation.totalAllocated).toBe(15000);
+      expect(allocation.unallocatedAmount).toBe(0);
+
+      // Priority invoice inv-test-3 allocated first
+      expect(allocation.items[0].invoiceId).toBe('inv-test-3');
+      expect(allocation.items[0].allocatedAmount).toBe(10000);
+      expect(allocation.items[0].resultingStatus).toBe('FULLY_COLLECTED');
+      expect(allocation.items[0].isPrioritized).toBe(true);
+
+      // Oldest remaining invoice inv-test-1 allocated next with remaining 5,000
+      expect(allocation.items[1].invoiceId).toBe('inv-test-1');
+      expect(allocation.items[1].allocatedAmount).toBe(5000);
+      expect(allocation.items[1].resultingStatus).toBe('PARTIALLY_COLLECTED');
+      expect(allocation.items[1].isPrioritized).toBe(false);
+
+      // Other invoices receive no allocation
+      expect(allocation.items[2].invoiceId).toBe('inv-test-2');
+      expect(allocation.items[2].allocatedAmount).toBe(0);
+      expect(allocation.items[2].resultingStatus).toBe('UNTOUCHED');
     });
   });
 
@@ -439,6 +464,38 @@ describe('Customer Payments & Collection Management Architecture', () => {
       expect(screen.getByText('INV-2026-003')).toBeInTheDocument();
       expect(screen.getAllByText(/Settled/i).length).toBeGreaterThan(0);
       expect(screen.getAllByText(/Partial/i).length).toBeGreaterThan(0);
+    });
+
+    it('renders invoice checkboxes in cards and updates section header when prioritized', () => {
+      const onToggle = vi.fn();
+      const onReset = vi.fn();
+
+      render(
+        <FifoAllocationPreview
+          paymentAmount={25000}
+          invoices={sample5FifoInvoices.slice(0, 3)}
+          selectedInvoiceIds={['inv-test-2']}
+          onToggleInvoice={onToggle}
+          onClearAll={onReset}
+          defaultExpanded={true}
+        />
+      );
+
+      // Section header updates to reflect priority
+      expect(screen.getByText(/Priority & FIFO Allocation/i)).toBeInTheDocument();
+      expect(screen.getByText(/1 Prioritized/i)).toBeInTheDocument();
+      expect(screen.getByText(/Reset FIFO/i)).toBeInTheDocument();
+
+      // Checkboxes exist for invoices
+      const checkboxes = screen.getAllByRole('checkbox');
+      expect(checkboxes.length).toBe(3);
+
+      // First checkbox in list is the prioritized invoice inv-test-2
+      expect(checkboxes[0]).toBeChecked();
+
+      // Click second checkbox
+      fireEvent.click(checkboxes[1]);
+      expect(onToggle).toHaveBeenCalled();
     });
 
     it('renders CustomerPaymentFilters with all 6 filter tabs and count badges', () => {
