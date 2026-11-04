@@ -169,21 +169,6 @@ export function GRNListPage() {
         }
       />
 
-      {/* ── Director Read-Only Executive Oversight Banner ── */}
-      {isDirector && (
-        <div className="rounded-xl border border-indigo-200 bg-indigo-50/60 p-3.5 flex items-center justify-between text-xs text-indigo-900">
-          <div className="flex items-center gap-2">
-            <ShieldCheck className="h-4 w-4 text-indigo-600 shrink-0" />
-            <span>
-              <strong>Director Executive Oversight (Read-Only):</strong> Viewing physical intake specifications, serial registry, and QC sign-offs. Physical intake creation & editing are restricted to Stock Keepers.
-            </span>
-          </div>
-          <span className="text-[11px] font-mono text-indigo-700 font-semibold hidden sm:inline">
-            Read-Only Audit Mode
-          </span>
-        </div>
-      )}
-
       {/* ── Warehouse Isolation Mode Banner for Stock Keeper ── */}
       {isStockKeeper && (
         <div className="rounded-xl border border-emerald-200 bg-emerald-50/50 p-3.5 flex items-center justify-between text-xs text-emerald-800">
