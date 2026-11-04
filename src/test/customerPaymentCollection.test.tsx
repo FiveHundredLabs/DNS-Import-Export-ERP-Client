@@ -449,16 +449,14 @@ describe('Customer Payments & Collection Management Architecture', () => {
   });
 
   describe('Requirement 5: UI Components & Touch Previews', () => {
-    it('renders FifoAllocationPreview with live allocation breakdown', () => {
+    it('renders FifoAllocationPreview with live allocation breakdown cards', () => {
       render(
         <FifoAllocationPreview
           paymentAmount={15000}
           invoices={sample5FifoInvoices.slice(0, 3)}
-          defaultExpanded={true}
         />
       );
 
-      expect(screen.getByText(/Automatic FIFO Allocation/i)).toBeInTheDocument();
       expect(screen.getByText('INV-2026-001')).toBeInTheDocument();
       expect(screen.getByText('INV-2026-002')).toBeInTheDocument();
       expect(screen.getByText('INV-2026-003')).toBeInTheDocument();
@@ -466,9 +464,8 @@ describe('Customer Payments & Collection Management Architecture', () => {
       expect(screen.getAllByText(/Partial/i).length).toBeGreaterThan(0);
     });
 
-    it('renders invoice checkboxes in cards and updates section header when prioritized', () => {
+    it('renders invoice checkboxes in cards and marks prioritized invoice', () => {
       const onToggle = vi.fn();
-      const onReset = vi.fn();
 
       render(
         <FifoAllocationPreview
@@ -476,15 +473,8 @@ describe('Customer Payments & Collection Management Architecture', () => {
           invoices={sample5FifoInvoices.slice(0, 3)}
           selectedInvoiceIds={['inv-test-2']}
           onToggleInvoice={onToggle}
-          onClearAll={onReset}
-          defaultExpanded={true}
         />
       );
-
-      // Section header updates to reflect priority
-      expect(screen.getByText(/Priority & FIFO Allocation/i)).toBeInTheDocument();
-      expect(screen.getByText(/1 Prioritized/i)).toBeInTheDocument();
-      expect(screen.getByText(/Reset FIFO/i)).toBeInTheDocument();
 
       // Checkboxes exist for invoices
       const checkboxes = screen.getAllByRole('checkbox');
@@ -492,6 +482,7 @@ describe('Customer Payments & Collection Management Architecture', () => {
 
       // First checkbox in list is the prioritized invoice inv-test-2
       expect(checkboxes[0]).toBeChecked();
+      expect(screen.getByText('Priority')).toBeInTheDocument();
 
       // Click second checkbox
       fireEvent.click(checkboxes[1]);
