@@ -27,6 +27,13 @@ export function PaymentStatusBadge({ status, className }: PaymentStatusBadgeProp
           <XCircle className="h-3 w-3" /> Rejected
         </Badge>
       );
+    case 'BOUNCED':
+    case 'DISHONOURED':
+      return (
+        <Badge variant="destructive" className={`gap-1 font-semibold bg-rose-700 text-white ${className || ''}`}>
+          <XCircle className="h-3 w-3" /> Cheque Dishonoured
+        </Badge>
+      );
     default:
       return <Badge variant="outline">{status}</Badge>;
   }

@@ -6,6 +6,7 @@ import { invoiceService } from '../../../services/InvoiceService';
 import { SalesOrder, OrderStatus } from '../../../types/order';
 import { Dialog } from '../../../components/ui/dialog';
 import { Button } from '../../../components/ui/button';
+import { ConfirmButton } from '../../../components/ui/confirm-button';
 import { formatCurrency, formatDate } from '../../../utils/formatters';
 import { toast } from 'sonner';
 import {
@@ -300,10 +301,13 @@ export function CreateInvoiceModal({
             >
               Cancel
             </Button>
-            <Button
+            <ConfirmButton
               type="button"
               size="sm"
-              onClick={handleGenerateInvoice}
+              confirmTitle="Generate Invoice"
+              confirmMessage="Generate an official invoice for the selected sales order?"
+              confirmText="Generate Invoice"
+              onConfirm={handleGenerateInvoice}
               disabled={isSubmitting || !selectedOrderId}
               className="text-xs h-8 px-4 rounded-lg font-semibold gap-1.5"
             >
@@ -318,7 +322,7 @@ export function CreateInvoiceModal({
                   Generate Invoice
                 </>
               )}
-            </Button>
+            </ConfirmButton>
           </div>
         </div>
 

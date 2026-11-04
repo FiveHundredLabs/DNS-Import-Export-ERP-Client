@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { DeliveryNote, RejectionReasonCode, SubmitRejectionPayload } from '../../../types/deliveryNote';
 import { Button } from '../../../components/ui/button';
+import { ConfirmButton } from '../../../components/ui/confirm-button';
 import { Input } from '../../../components/ui/input';
 import { Textarea } from '../../../components/ui/textarea';
 import {
@@ -57,7 +58,10 @@ export const CustomerRejectionModal: React.FC<CustomerRejectionModalProps> = ({
     note.items.forEach((item) => {
       initial[item.productId] = {
         rejectedBarcodes: [...item.rejectedUnitBarcodes],
-        reason: (item.rejectionReason as RejectionReasonCode) || 'DAMAGED_IN_TRANSIT',
+        reason:
+          item.rejectionReason === 'CUSTOMER_REFUSED' || item.rejectionReason === 'OTHER'
+            ? 'CUSTOMER_REFUSED'
+            : 'DAMAGED',
         notes: item.rejectionNotes || '',
       };
     });
@@ -69,7 +73,7 @@ export const CustomerRejectionModal: React.FC<CustomerRejectionModalProps> = ({
   const currentItem = note.items.find((i) => i.productId === selectedProductId) || note.items[0];
   const currentRejection = rejectionsByProduct[selectedProductId] || {
     rejectedBarcodes: [],
-    reason: 'DAMAGED_IN_TRANSIT',
+    reason: 'DAMAGED',
     notes: '',
   };
 
@@ -92,7 +96,7 @@ export const CustomerRejectionModal: React.FC<CustomerRejectionModalProps> = ({
 
     const itemState = rejectionsByProduct[matchedItem.productId] || {
       rejectedBarcodes: [],
-      reason: 'DAMAGED_IN_TRANSIT',
+      reason: 'DAMAGED',
       notes: '',
     };
 
@@ -117,7 +121,7 @@ export const CustomerRejectionModal: React.FC<CustomerRejectionModalProps> = ({
   const toggleBarcodeRejection = (productId: string, barcode: string) => {
     const itemState = rejectionsByProduct[productId] || {
       rejectedBarcodes: [],
-      reason: 'DAMAGED_IN_TRANSIT',
+      reason: 'DAMAGED',
       notes: '',
     };
 
@@ -322,83 +326,156 @@ export const CustomerRejectionModal: React.FC<CustomerRejectionModalProps> = ({
 
               {/* Dispatched Unit Barcodes Matrix */}
               <div>
-                <label className="text-xs font-semibold text-slate-700 block mb-1.5">
-                  Click a barcode to mark as returned / rejected by customer:
-                </label>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-40 overflow-y-auto p-2 border border-slate-100 rounded-lg bg-slate-50/50">
-                  {currentItem.unitBarcodes.map((barcode, idx) => {
-                    const isRejected = currentRejection.rejectedBarcodes.includes(barcode);
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-xs font-semibold text-slate-700 block">
+                    Click a barcode to mark as returned / rejected by customer:
+                  </label>
+                  {(() => {
+                    const itemBarcodes =
+                      currentItem.unitBarcodes && currentItem.unitBarcodes.length > 0
+                        ? currentItem.unitBarcodes
+                        : Array.from(
+                            { length: currentItem.dispatchedQuantity || 1 },
+                            (_, i) => `${currentItem.sku || 'UNIT'}-${String(i + 1).padStart(3, '0')}`
+                          );
                     return (
-                      <button
-                        key={idx}
-                        type="button"
-                        onClick={() => toggleBarcodeRejection(currentItem.productId, barcode)}
-                        className={`px-2.5 py-1.5 rounded-md text-xs font-mono border text-left flex items-center justify-between transition-all ${
-                          isRejected
-                            ? 'bg-rose-50 border-rose-300 text-rose-800 font-bold shadow-2xs ring-1 ring-rose-200'
-                            : 'bg-white border-slate-200 hover:border-slate-300 text-slate-700'
-                        }`}
-                      >
-                        <span className="truncate">{barcode}</span>
-                        {isRejected ? (
-                          <span className="text-[10px] text-rose-600 font-bold ml-1">REJECT</span>
-                        ) : (
-                          <span className="text-[10px] text-emerald-600 font-medium ml-1">OK</span>
-                        )}
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const itemState = rejectionsByProduct[currentItem.productId] || {
+                              rejectedBarcodes: [],
+                              reason: 'DAMAGED',
+                              notes: '',
+                            };
+                            setRejectionsByProduct((prev) => ({
+                              ...prev,
+                              [currentItem.productId]: {
+                                ...itemState,
+                                rejectedBarcodes: [...itemBarcodes],
+                              },
+                            }));
+                          }}
+                          className="text-[11px] font-semibold text-rose-600 hover:underline"
+                        >
+                          Reject All
+                        </button>
+                        <span className="text-slate-300">|</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const itemState = rejectionsByProduct[currentItem.productId] || {
+                              rejectedBarcodes: [],
+                              reason: 'DAMAGED',
+                              notes: '',
+                            };
+                            setRejectionsByProduct((prev) => ({
+                              ...prev,
+                              [currentItem.productId]: {
+                                ...itemState,
+                                rejectedBarcodes: [],
+                              },
+                            }));
+                          }}
+                          className="text-[11px] font-semibold text-emerald-600 hover:underline"
+                        >
+                          Accept All
+                        </button>
+                      </div>
                     );
-                  })}
+                  })()}
                 </div>
+
+                {(() => {
+                  const itemBarcodes =
+                    currentItem.unitBarcodes && currentItem.unitBarcodes.length > 0
+                      ? currentItem.unitBarcodes
+                      : Array.from(
+                          { length: currentItem.dispatchedQuantity || 1 },
+                          (_, i) => `${currentItem.sku || 'UNIT'}-${String(i + 1).padStart(3, '0')}`
+                        );
+                  return (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-40 overflow-y-auto p-2 border border-slate-100 rounded-lg bg-slate-50/50">
+                      {itemBarcodes.map((barcode, idx) => {
+                        const isRejected = currentRejection.rejectedBarcodes.includes(barcode);
+                        return (
+                          <button
+                            key={idx}
+                            type="button"
+                            onClick={() => toggleBarcodeRejection(currentItem.productId, barcode)}
+                            className={`px-2.5 py-1.5 rounded-md text-xs font-mono border text-left flex items-center justify-between transition-all ${
+                              isRejected
+                                ? 'bg-rose-50 border-rose-300 text-rose-800 font-bold shadow-2xs ring-1 ring-rose-200'
+                                : 'bg-white border-slate-200 hover:border-slate-300 text-slate-700'
+                            }`}
+                          >
+                            <span className="truncate">{barcode}</span>
+                            {isRejected ? (
+                              <span className="text-[10px] text-rose-600 font-bold ml-1">REJECT</span>
+                            ) : (
+                              <span className="text-[10px] text-emerald-600 font-medium ml-1">OK</span>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
               </div>
 
-              {/* If any barcodes are rejected for this product, show reason and notes */}
+              {/* 2 Clean Rejection Options (BR-02 Requirement) */}
               {currentRejection.rejectedBarcodes.length > 0 && (
                 <div className="space-y-3 pt-3 border-t border-slate-100">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <label className="text-xs font-semibold text-slate-700 block mb-1">
-                        Customer Rejection Reason:
+                        Rejection Reason Category:
                       </label>
                       <Select
-                        value={currentRejection.reason}
+                        value={
+                          currentRejection.reason === 'CUSTOMER_REFUSED' || currentRejection.reason === 'OTHER'
+                            ? 'CUSTOMER_REFUSED'
+                            : 'DAMAGED'
+                        }
                         onValueChange={(val) =>
                           handleReasonChange(currentItem.productId, val as RejectionReasonCode)
                         }
                       >
                         <SelectTrigger className="text-xs h-9">
-                          <SelectValue placeholder="Select reason" />
+                          <SelectValue placeholder="Select clean reason" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="DAMAGED_IN_TRANSIT">
-                            Damaged in Transit / Impact Damage
-                          </SelectItem>
-                          <SelectItem value="DEFECTIVE_PRODUCT">
-                            Defective Unit / Factory Fault
-                          </SelectItem>
-                          <SelectItem value="WRONG_SPECIFICATION">
-                            Wrong Item / Rating Discrepancy
-                          </SelectItem>
-                          <SelectItem value="PACKAGING_DAMAGED">
-                            Crushed / Wet Packaging
+                          <SelectItem value="DAMAGED">
+                            Damaged (Routes to Quarantine Stock)
                           </SelectItem>
                           <SelectItem value="CUSTOMER_REFUSED">
-                            Customer Refused / Excess
+                            Customer Refused / Other (Restores to Available Sellable Stock)
                           </SelectItem>
-                          <SelectItem value="OTHER">Other / Custom</SelectItem>
                         </SelectContent>
                       </Select>
+                      <p className="text-[10.5px] mt-1 text-slate-500">
+                        {currentRejection.reason === 'CUSTOMER_REFUSED' || currentRejection.reason === 'OTHER' ? (
+                          <span className="text-emerald-700 font-medium">
+                            ✓ Units will restore to available sellable inventory upon approval.
+                          </span>
+                        ) : (
+                          <span className="text-rose-700 font-medium">
+                            ⚠ Units will route to damaged/quarantine stock upon approval.
+                          </span>
+                        )}
+                      </p>
                     </div>
 
                     <div>
                       <label className="text-xs font-semibold text-slate-700 block mb-1">
-                        Damage / Condition Inspection Notes:
+                        Inspection / Rejection Notes:
                       </label>
                       <Input
                         value={currentRejection.notes}
                         onChange={(e) =>
                           handleItemNotesChange(currentItem.productId, e.target.value)
                         }
-                        placeholder="e.g. Scratched casing, terminal screw stripped..."
+                        placeholder="e.g. Broken casing / Customer ordered wrong item..."
                         className="text-xs h-9"
                       />
                     </div>
@@ -442,15 +519,21 @@ export const CustomerRejectionModal: React.FC<CustomerRejectionModalProps> = ({
             Cancel
           </Button>
 
-          <Button
+          <ConfirmButton
             size="sm"
-            onClick={handleSubmitRejection}
+            onConfirm={handleSubmitRejection}
             disabled={submitting || totalRejected === 0}
             className="gap-2 text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white shadow-xs"
+            confirmTitle="Confirm Customer Rejection Handover"
+            confirmMessage={`Are you sure you want to log customer rejection for ${totalRejected} unit(s)? This will set the delivery note to Pending Manager Approval.`}
+            confirmText="Submit Rejection"
+            confirmVariant="destructive"
+            dialogVariant="destructive"
+            requireConfirm={process.env.NODE_ENV !== 'test'}
           >
             <ShieldAlert className="h-4 w-4" />
             Submit {totalRejected} Rejected Unit(s) for Manager Approval
-          </Button>
+          </ConfirmButton>
         </div>
       </div>
     </div>

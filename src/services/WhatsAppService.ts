@@ -14,6 +14,11 @@ export class WhatsAppService {
     return `https://wa.me/${cleanPhone}?text=${encodedMessage}`;
   }
 
+  openChat(phoneNumber: string, message: string): void {
+    const url = this.generateShareUrl(phoneNumber, message);
+    window.open(url, '_blank', 'noopener,noreferrer');
+  }
+
   shareDocument(params: {
     phoneNumber: string;
     customerName: string;

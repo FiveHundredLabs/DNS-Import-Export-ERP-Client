@@ -143,6 +143,17 @@ export function GRNCreateEditPage() {
   const activeUser = user || currentUser;
   const isStockKeeper = activeUser?.role === 'STOCK_KEEPER';
 
+  React.useEffect(() => {
+    if (activeUser?.role === 'DIRECTOR') {
+      toast.info('Director role has Read-Only access to GRNs. Inward physical intake is managed by Stock Keepers.');
+      if (id) {
+        navigate(`/inventory/grn/${id}`, { replace: true });
+      } else {
+        navigate('/inventory/grn', { replace: true });
+      }
+    }
+  }, [activeUser?.role, id, navigate]);
+
   // Reconstructed preview GRN for physical print before submission
   const previewGRN: GRN = useMemo(() => ({
     id: id || `grn-preview-${Date.now()}`,

@@ -9,6 +9,7 @@ import { pdfService } from '../../services/PdfService';
 import { whatsAppService } from '../../services/WhatsAppService';
 import { useAuth } from '../../hooks/useAuth';
 import { Button } from '../../components/ui/button';
+import { ConfirmButton } from '../../components/ui/confirm-button';
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/card';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../../components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
@@ -165,14 +166,18 @@ export function PaymentDetailPage() {
           >
             <Download className="h-3.5 w-3.5" /> Download PDF
           </Button>
-          <Button
+          <ConfirmButton
             variant="outline"
             size="sm"
-            onClick={() => whatsAppService.sharePaymentReceipt(payment)}
+            dialogVariant="success"
+            confirmTitle="Share WhatsApp Receipt"
+            confirmMessage={`Send payment receipt ${payment.receiptNumber} via WhatsApp to customer?`}
+            confirmText="Send via WhatsApp"
+            onConfirm={() => whatsAppService.sharePaymentReceipt(payment)}
             className="text-xs gap-1.5 text-emerald-700 hover:text-emerald-800"
           >
             <Send className="h-3.5 w-3.5" /> Share WhatsApp
-          </Button>
+          </ConfirmButton>
         </div>
       </div>
 

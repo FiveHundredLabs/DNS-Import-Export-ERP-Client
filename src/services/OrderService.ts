@@ -9,6 +9,7 @@ import {
   CreateOrderInput,
   UpdateOrderInput,
   OrderApprovalAction,
+  OrderActivityEvent,
 } from '../types/order';
 import { User, UserRole } from '../types/auth';
 import { PaginatedResult } from '../types/common';
@@ -303,12 +304,19 @@ export class OrderService {
     const requestedCreditDays =
       input.requestedCreditDays ?? input.creditDaysRequested ?? customer.commercialTerms?.creditDays ?? 30;
 
+    const actorUser = currentUser || {
+      id: customer.assignedRepId || 'usr-sales-rep',
+      name: customer.assignedRepName || 'Sales Representative',
+      role: 'SALES_REP' as UserRole,
+      areaName: customer.areaName || 'Western Territory',
+    };
+
     // Evaluate against Central Business Rules (Standard vs Special Order)
     const evalResult = evaluateOrderApproval({
       customer,
       items: rawForEvaluation,
       requestedCreditDays,
-      userRole: currentUser.role,
+      userRole: actorUser.role,
     });
 
     const isDraft = !!input.saveAsDraft;
@@ -321,8 +329,8 @@ export class OrderService {
     const existingOrders = await this.repo.getAll();
     const nextSeq = existingOrders.data.length + 1;
     const orderNumber = generateOrderNumber(
-      customer.areaName || currentUser.areaName,
-      currentUser.name,
+      customer.areaName || actorUser.areaName,
+      actorUser.name,
       nextSeq
     );
 
@@ -330,9 +338,9 @@ export class OrderService {
       {
         id: `hist-${Date.now().toString().slice(-4)}-1`,
         stepNumber: 1,
-        actorId: currentUser.id,
-        actorName: currentUser.name,
-        actorRole: currentUser.role,
+        actorId: actorUser.id,
+        actorName: actorUser.name,
+        actorRole: actorUser.role,
         action: isDraft ? 'CREATE' : 'SUBMIT',
         fromStatus: 'DRAFT',
         toStatus: initialStatus,
@@ -360,8 +368,8 @@ export class OrderService {
       requestedCreditDays,
       creditDaysRequested: requestedCreditDays,
       paymentTerms: input.paymentTerms || customer.commercialTerms?.paymentTermNotes || `${requestedCreditDays} Days PDC`,
-      salesRepId: currentUser.id,
-      salesRepNameSnapshot: currentUser.name,
+      salesRepId: actorUser.id,
+      salesRepNameSnapshot: actorUser.name,
       deliveryAddress: input.deliveryAddress || customer.deliveryAddress || customer.address,
       requestedDeliveryDate: input.requestedDeliveryDate,
       customerPoNumber: input.customerPoNumber,
@@ -389,9 +397,9 @@ export class OrderService {
         documentReferenceNumber: orderNumber,
         title: `${evalResult.isSpecialApproval ? 'Special' : 'Standard'} Order Approval for ${customer.name}`,
         description: `Order ${orderNumber} for LKR ${evalResult.totalAmount.toLocaleString()} submitted. ${evalResult.isSpecialApproval ? evalResult.specialApprovalReasons.join('; ') : 'Within standard commercial terms.'}`,
-        initiatorId: currentUser.id,
-        initiatorName: currentUser.name,
-        initiatorRole: currentUser.role,
+        initiatorId: actorUser.id,
+        initiatorName: actorUser.name,
+        initiatorRole: actorUser.role,
         currentApproverRole: evalResult.targetApproverRole,
         targetApproverRole: evalResult.targetApproverRole,
         isSpecialScenario: evalResult.isSpecialApproval,
@@ -419,15 +427,14 @@ export class OrderService {
     }
 
     const isPreApprovalModification =
-      ['AREA_MANAGER', 'SALES_MANAGER', 'MANAGER', 'DIRECTOR'].includes(currentUser.role) &&
-      (existing.status === 'PENDING_APPROVAL' || existing.status === 'SPECIAL_APPROVAL');
+      existing.status === 'PENDING_APPROVAL' || existing.status === 'SPECIAL_APPROVAL';
 
     if (existing.status !== 'DRAFT' && !isPreApprovalModification) {
       throw new Error(`Only DRAFT orders or orders pending approval can be edited. Current status is ${existing.status}.`);
     }
 
     if (currentUser.role === 'SALES_REP' && existing.salesRepId !== currentUser.id) {
-      throw new Error('Permission Denied: You can only edit your own draft orders.');
+      throw new Error('Permission Denied: You can only edit your own orders.');
     }
 
     const customerId = updates.customerId || existing.customerId;
@@ -468,10 +475,16 @@ export class OrderService {
     const isDraft = !isPreApprovalModification && (updates.saveAsDraft !== undefined ? updates.saveAsDraft : true);
     let nextStatus: OrderStatus = 'DRAFT';
     if (isPreApprovalModification) {
-      nextStatus = existing.status;
+      nextStatus = evalResult.isSpecialApproval ? 'SPECIAL_APPROVAL' : 'PENDING_APPROVAL';
     } else if (!isDraft) {
       nextStatus = evalResult.isSpecialApproval ? 'SPECIAL_APPROVAL' : 'PENDING_APPROVAL';
     }
+
+    const historyComment = isPreApprovalModification
+      ? updates.changeRemarks || updates.notes || `Order modified prior to approval by ${currentUser.name}.`
+      : isDraft
+      ? 'Draft order updated.'
+      : 'Order submitted for approval.';
 
     const historyEntry: OrderApprovalAction = {
       id: `hist-${Date.now().toString().slice(-4)}`,
@@ -479,10 +492,10 @@ export class OrderService {
       actorId: currentUser.id,
       actorName: currentUser.name,
       actorRole: currentUser.role,
-      action: isDraft ? 'CREATE' : 'SUBMIT',
+      action: isPreApprovalModification ? 'SUBMIT' : isDraft ? 'CREATE' : 'SUBMIT',
       fromStatus: existing.status,
       toStatus: nextStatus,
-      comment: isDraft ? 'Draft order updated.' : 'Order submitted for approval.',
+      comment: historyComment,
       timestamp: new Date().toISOString(),
     };
 
@@ -507,6 +520,24 @@ export class OrderService {
       approvalRequestId = approvalReq.id;
     }
 
+    const updatedActivityLog = existing.activityLog && existing.activityLog.length > 0 ? [...existing.activityLog] : [];
+    if (updates.changeRemarks) {
+      updatedActivityLog.push({
+        id: `act-${Date.now()}-mod`,
+        orderId: existing.id,
+        orderNumber: existing.orderNumber,
+        type: 'PRODUCT_MODIFIED',
+        title: 'Order Details & Items Modified',
+        description: `Order changes saved by ${currentUser.name} (${currentUser.role}). Remarks: ${updates.changeRemarks}`,
+        actorId: currentUser.id,
+        actorName: currentUser.name,
+        actorRole: currentUser.role,
+        timestamp: new Date().toISOString(),
+        statusBadge: { label: 'Modified', variant: 'amber' },
+        comment: updates.changeRemarks,
+      });
+    }
+
     return this.repo.update(id, {
       customerId: customer.id,
       customerCodeSnapshot: customer.code,
@@ -524,7 +555,9 @@ export class OrderService {
       requestedDeliveryDate: updates.requestedDeliveryDate ?? existing.requestedDeliveryDate,
       customerPoNumber: updates.customerPoNumber ?? existing.customerPoNumber,
       paymentTerms: updates.paymentTerms ?? existing.paymentTerms,
-      notes: updates.notes ?? existing.notes,
+      notes: updates.changeRemarks
+        ? (existing.notes ? `${existing.notes} | [Remark: ${updates.changeRemarks}]` : updates.changeRemarks)
+        : (updates.notes ?? existing.notes),
       status: nextStatus,
       isSpecialApproval: evalResult.isSpecialApproval,
       specialApprovalReasons: evalResult.specialApprovalReasons,
@@ -536,6 +569,7 @@ export class OrderService {
         : evalResult.targetApproverRole,
       approvalRequestId,
       approvalHistory: [...existing.approvalHistory, historyEntry],
+      activityLog: updatedActivityLog,
     });
   }
 
@@ -660,6 +694,24 @@ export class OrderService {
       return it;
     });
 
+    const currentActivityLog = order.activityLog && order.activityLog.length > 0 ? [...order.activityLog] : [];
+    if (currentActivityLog.length > 0) {
+      currentActivityLog.push({
+        id: `act-${Date.now()}-appr`,
+        orderId: order.id,
+        orderNumber: order.orderNumber,
+        type: 'ORDER_APPROVED',
+        title: 'Order Approved',
+        description: `Order approved by ${currentUser.name} (${currentUser.role}).`,
+        actorId: currentUser.id,
+        actorName: currentUser.name,
+        actorRole: currentUser.role,
+        timestamp: new Date().toISOString(),
+        statusBadge: { label: 'Approved', variant: 'success' },
+        comment,
+      });
+    }
+
     const updated = await this.repo.update(id, {
       items: updatedItems,
       status: 'APPROVED',
@@ -667,6 +719,7 @@ export class OrderService {
       approvedByName: currentUser.name,
       approvedAt: new Date().toISOString(),
       approvalHistory: [...order.approvalHistory, historyEntry],
+      ...(currentActivityLog.length > 0 ? { activityLog: currentActivityLog } : {}),
     });
 
     // Auto-generate draft invoice upon direct order approval
@@ -1194,7 +1247,7 @@ export class OrderService {
       actorName: closeActorName,
       actorRole: currentUser.role,
       timestamp: now,
-      statusBadge: { label: 'Closed', variant: 'destructive' },
+      statusBadge: { label: 'Closed', variant: 'danger' },
       comment: `[${params.reasonCode}] ${params.reasonNotes.trim()}`,
     };
 

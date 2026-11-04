@@ -6,6 +6,7 @@ import { MOCK_CUSTOMERS } from '../../../../mock/mockCustomers';
 import { MOCK_PRODUCTS } from '../../../../mock/mockProducts';
 import { arService } from '../../services/arService';
 import { Button } from '../../../../components/ui/button';
+import { ConfirmButton } from '../../../../components/ui/confirm-button';
 import { Input } from '../../../../components/ui/input';
 import { Badge } from '../../../../components/ui/badge';
 import { Card } from '../../../../components/ui/card';
@@ -740,14 +741,18 @@ export function CustomerCreditNotesPage() {
 
             {selectedCN.status === 'ISSUED' && (
               <div className="pt-2">
-                <Button
+                <ConfirmButton
                   variant="outline"
                   size="sm"
-                  onClick={() => handleVoidCreditNote(selectedCN)}
+                  dialogVariant="destructive"
+                  confirmTitle="Void Customer Credit Note"
+                  confirmMessage={`Are you sure you want to void Credit Note ${selectedCN.creditNoteNumber}? This will reverse the General Ledger postings and restore the customer's outstanding Accounts Receivable debt.`}
+                  confirmText="Void Credit Note"
+                  onConfirm={() => handleVoidCreditNote(selectedCN)}
                   className="w-full border-rose-200 text-rose-600 hover:bg-rose-50 text-xs"
                 >
                   Void Credit Note & Reverse Entries
-                </Button>
+                </ConfirmButton>
               </div>
             )}
           </div>
@@ -1150,15 +1155,18 @@ export function CustomerCreditNotesPage() {
                   ]}
                   title="Credit Note Double-Entry Impact"
                 />
-                <Button
+                <ConfirmButton
                   size="sm"
-                  onClick={handleSubmitCreditNote}
+                  confirmTitle="Issue Customer Credit Note"
+                  confirmMessage={`Are you sure you want to issue customer credit note for ${formatCurrency(formTotals.totalAmount)} to ${selectedCustomer?.name}? This will commit double-entry postings to the General Ledger and reduce Accounts Receivable.`}
+                  confirmText="Issue Credit Note"
+                  onConfirm={handleSubmitCreditNote}
                   disabled={submitting}
                   className="bg-primary hover:bg-primary-hover text-white gap-1.5 font-semibold"
                 >
                   <CheckCircle2 className="h-4 w-4" />
                   <span>Issue Credit Note & Commit Ledger</span>
-                </Button>
+                </ConfirmButton>
               </div>
             </div>
           </Card>

@@ -121,6 +121,9 @@ export interface SupplierReturnItem {
   unitCost: number;
   lineTotal: number;
   reason: string;
+  barcode?: string;
+  selectedBarcodes?: string[];
+  serialNumbers?: string[];
 }
 
 export interface SupplierReturn extends BaseEntity {
@@ -169,6 +172,9 @@ export interface CreateSupplierReturnDTO {
     returnedQuantity: number;
     unitCost: number;
     reason?: string;
+    barcode?: string;
+    selectedBarcodes?: string[];
+    serialNumbers?: string[];
   }>;
   autoApprove?: boolean;
 }

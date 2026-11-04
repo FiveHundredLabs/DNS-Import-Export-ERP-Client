@@ -4,6 +4,7 @@ import { User } from '../../../types/auth';
 import { handoverService } from '../../../services/HandoverService';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../../components/ui/dialog';
 import { Button } from '../../../components/ui/button';
+import { ConfirmButton } from '../../../components/ui/confirm-button';
 import { Input } from '../../../components/ui/input';
 import { AmountDisplay } from '../../../components/common/AmountDisplay';
 import { formatCurrency, formatDate, formatDateTime } from '../../../utils/formatters';
@@ -19,6 +20,7 @@ import {
   ArrowRight,
   Building,
   User as UserIcon,
+  CreditCard,
 } from 'lucide-react';
 import { cn } from '../../../utils/cn';
 
@@ -92,7 +94,12 @@ export function HandoverDetailModal({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && !processing && onClose()} size="2xl" className="max-w-2xl w-full p-4 sm:p-6 max-h-[90vh] overflow-y-auto">
+    <Dialog
+      open={isOpen}
+      onOpenChange={(open) => !open && !processing && onClose()}
+      size="4xl"
+      className="max-w-4xl w-full rounded-3xl border border-slate-200/90 shadow-2xl p-5 sm:p-7 max-h-[90vh] overflow-y-auto bg-white"
+    >
       <DialogContent className="space-y-4">
         <DialogHeader className="p-0">
           <div className="flex items-center justify-between gap-2 flex-wrap">
@@ -217,11 +224,29 @@ export function HandoverDetailModal({
                     <span className="font-mono font-bold text-slate-900 text-sm block">
                       {formatCurrency(item.amount)}
                     </span>
-                    <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700 uppercase">
-                      {item.paymentMethod}
-                    </span>
+                    {item.paymentMethod === 'CASH' ? (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200 uppercase">
+                        <Banknote className="h-3 w-3 text-emerald-600" />
+                        CASH
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-100 text-indigo-800 border border-indigo-200 uppercase">
+                        <CreditCard className="h-3 w-3 text-indigo-600" />
+                        CHEQUE
+                      </span>
+                    )}
                   </div>
                 </div>
+
+                {item.paymentMethod === 'CHEQUE' && (
+                  <div className="flex items-center gap-2 text-[10.5px] font-mono text-indigo-900 bg-indigo-50/80 px-2 py-1 rounded-md border border-indigo-100 flex-wrap">
+                    <span><strong>Chq #:</strong> {item.chequeNumber || 'N/A'}</span>
+                    <span>•</span>
+                    <span><strong>Bank:</strong> {item.bankName || 'N/A'}</span>
+                    <span>•</span>
+                    <span><strong>Date:</strong> {item.chequeDate ? formatDate(item.chequeDate) : 'N/A'}</span>
+                  </div>
+                )}
 
                 {/* Invoices breakdown */}
                 {item.invoiceAllocations && item.invoiceAllocations.length > 0 && (
@@ -289,15 +314,19 @@ export function HandoverDetailModal({
                   >
                     Cancel
                   </Button>
-                  <Button
+                  <ConfirmButton
                     type="button"
                     size="sm"
-                    onClick={handleReject}
+                    dialogVariant="destructive"
+                    confirmTitle="Reject Cash Handover"
+                    confirmMessage={`Are you sure you want to reject handover ${handover.handoverNumber}? All collections will remain under the sales representative's custody.`}
+                    confirmText="Reject Handover"
+                    onConfirm={handleReject}
                     disabled={processing || !rejectionReason.trim()}
                     className="bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold"
                   >
                     {processing ? 'Rejecting...' : 'Confirm Rejection'}
-                  </Button>
+                  </ConfirmButton>
                 </div>
               </div>
             ) : (
@@ -319,9 +348,13 @@ export function HandoverDetailModal({
                     <XCircle className="h-4 w-4 mr-1.5" />
                     Reject Handover
                   </Button>
-                  <Button
+                  <ConfirmButton
                     type="button"
-                    onClick={handleApprove}
+                    dialogVariant="success"
+                    confirmTitle="Approve Cash Handover & Settle"
+                    confirmMessage={`Confirm receipt of ${formatCurrency(handover.totalAmount)} from ${handover.salesRepName}? All ${handover.invoiceCount} invoices will be settled and payment records marked APPROVED.`}
+                    confirmText="Approve & Settle"
+                    onConfirm={handleApprove}
                     disabled={processing}
                     className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold h-11 rounded-xl shadow-xs gap-1.5"
                   >
@@ -333,7 +366,7 @@ export function HandoverDetailModal({
                         <span>Approve Handover & Settle Payments</span>
                       </>
                     )}
-                  </Button>
+                  </ConfirmButton>
                 </div>
               </div>
             )}

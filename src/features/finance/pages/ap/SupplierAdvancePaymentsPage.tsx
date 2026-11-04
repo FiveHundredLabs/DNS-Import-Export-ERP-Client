@@ -5,6 +5,7 @@ import { useFinanceLedger } from '../../hooks/useFinanceLedger';
 import { CurrencyInput } from '../../components/CurrencyInput';
 import { DoubleEntryHoverBadge } from '../../components/DoubleEntryHoverBadge';
 import { Button } from '../../../../components/ui/button';
+import { ConfirmButton } from '../../../../components/ui/confirm-button';
 import { Input } from '../../../../components/ui/input';
 import { Badge } from '../../../../components/ui/badge';
 import { Card } from '../../../../components/ui/card';
@@ -115,9 +116,12 @@ export function SupplierAdvancePaymentsPage() {
     }
   }, [suppliers, selectedSupplierId]);
 
+  // Selected supplier object
+  const selectedSupplier = suppliers.find((s) => s.id === selectedSupplierId);
+
   // Handle Recording Advance Payment
-  const handleRecordAdvance = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleRecordAdvance = async (e?: React.FormEvent | React.MouseEvent) => {
+    if (e) e.preventDefault();
     if (!selectedSupplierId) {
       toast.error('Please select a supplier');
       return;
@@ -475,15 +479,20 @@ export function SupplierAdvancePaymentsPage() {
                 Cancel
               </Button>
               <div className="flex items-center gap-2">
-                <Button
+                <ConfirmButton
                   type="submit"
                   size="sm"
+                  requireConfirm={process.env.NODE_ENV !== 'test'}
+                  confirmTitle="Post Supplier Advance Payment"
+                  confirmMessage={`Post advance payment of ${formatCurrency(advanceAmount)} to ${selectedSupplier?.name || 'the selected supplier'}? This will debit GL 1050 (Supplier Advances / Prepayments).`}
+                  confirmText="Post Advance Payment"
+                  onConfirm={handleRecordAdvance}
                   disabled={submitting || advanceAmount <= 0}
                   className="bg-primary hover:bg-primary-hover text-white gap-2 font-semibold"
                 >
                   <CheckCircle2 className="h-4 w-4" />
                   <span>{submitting ? 'Recording...' : 'Post Advance Payment'}</span>
-                </Button>
+                </ConfirmButton>
                 <DoubleEntryHoverBadge
                   title="Supplier Advance Prepayment GL Impact"
                   description="Disbursing this advance payment creates balancing GL postings:"

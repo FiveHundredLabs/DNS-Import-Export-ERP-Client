@@ -5,6 +5,7 @@ import { useFinanceLedger } from '../../hooks/useFinanceLedger';
 import { CurrencyInput } from '../../components/CurrencyInput';
 import { DoubleEntryHoverBadge } from '../../components/DoubleEntryHoverBadge';
 import { Button } from '../../../../components/ui/button';
+import { ConfirmButton } from '../../../../components/ui/confirm-button';
 import { Input } from '../../../../components/ui/input';
 import { Select } from '../../../../components/ui/select';
 import { Badge } from '../../../../components/ui/badge';
@@ -410,14 +411,18 @@ export function BatchSupplierPaymentPage() {
           </div>
 
           <div className="flex items-center gap-3">
-            <Button
-              onClick={handlePostPayment}
+            <ConfirmButton
+              confirmVariant="success"
+              confirmTitle="Post Batch Supplier Payment"
+              confirmMessage={`Are you sure you want to post supplier payment of ${formatCurrency(totalPaymentAmount)} to ${selectedSupplier?.name}? This will settle allocated bills and credit Cash/Bank.`}
+              confirmText="Post Payment"
+              onConfirm={handlePostPayment}
               disabled={!isFormValid || submitting}
               className="bg-primary hover:bg-primary-hover text-white shadow-xs font-semibold gap-1.5"
             >
               <FileCheck className="h-4 w-4" />
               <span>{submitting ? 'Posting Payment...' : 'Post Payment'}</span>
-            </Button>
+            </ConfirmButton>
 
             <DoubleEntryHoverBadge
               title="AP Payment Double-Entry Impact"

@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
+import { ConfirmButton } from '../../components/ui/confirm-button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table';
 import { Skeleton } from '../../components/ui/skeleton';
 import { useGRN } from '../../hooks/useGRN';
@@ -199,11 +200,21 @@ function ItemInlineBarcodes({
   );
 }
 
-export function GRNDetailPage() {
+interface GRNDetailPageProps {
+  backUrl?: string;
+  backTitle?: string;
+}
+
+export function GRNDetailPage({ backUrl, backTitle }: GRNDetailPageProps = {}) {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const { grnService } = useGRN();
   const { user } = useAuth();
+
+  const isPurchasingRoute = location.pathname.startsWith('/purchasing/grn');
+  const resolvedBackPath = backUrl || (isPurchasingRoute ? '/purchasing/grn' : '/inventory/grn');
+  const resolvedBackTitle = backTitle || (isPurchasingRoute ? 'Back to Goods Received Notes' : 'Back to Inward GRN Registry');
 
   const [grn, setGrn] = useState<GRN | null>(null);
   const [loading, setLoading] = useState(true);
@@ -376,7 +387,7 @@ export function GRNDetailPage() {
     try {
       await grnService.approveGRN(id, user.id, comment);
       toast.success('Goods Received Note approved and posted to inventory.');
-      navigate('/inventory/grn');
+      navigate(resolvedBackPath);
     } catch (err: any) {
       toast.error(err.message || 'Failed to approve GRN');
     }
@@ -391,11 +402,15 @@ export function GRNDetailPage() {
     try {
       await grnService.rejectGRN(id, user.id, comment);
       toast.error('GRN rejected and returned for inspection resolution.');
-      navigate('/inventory/grn');
+      navigate(resolvedBackPath);
     } catch (err: any) {
       toast.error(err.message || 'Failed to reject GRN');
     }
   };
+
+  const hasDamagedStock = useMemo(() => {
+    return grn?.items?.some((i) => (i.damagedQuantity || 0) > 0) ?? false;
+  }, [grn]);
 
   const isStockKeeper = user?.role === 'STOCK_KEEPER';
   const isFinanceRole = ['FINANCE_OFFICER', 'FINANCE_MANAGER', 'DIRECTOR', 'ADMIN'].includes(user?.role || '');
@@ -422,8 +437,8 @@ export function GRNDetailPage() {
         <AlertTriangle className="h-12 w-12 text-rose-500 mx-auto" />
         <h2 className="text-xl font-bold text-slate-900">Goods Received Note Unavailable</h2>
         <p className="text-sm text-slate-500">{error || 'Unable to locate the requested GRN manifest.'}</p>
-        <Button onClick={() => navigate('/inventory/grn')} className="mt-2">
-          Back to Inward GRN Registry
+        <Button onClick={() => navigate(resolvedBackPath)} className="mt-2">
+          {resolvedBackTitle}
         </Button>
       </div>
     );
@@ -469,11 +484,11 @@ export function GRNDetailPage() {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => navigate('/inventory/grn')}
+            onClick={() => navigate(resolvedBackPath)}
             className="text-slate-600 hover:text-slate-900 -ml-2 text-xs font-semibold gap-1.5"
           >
             <ArrowLeft className="h-4 w-4" />
-            <span>Back to Inward GRN Registry</span>
+            <span>{resolvedBackTitle}</span>
           </Button>
 
           <div className="flex items-center gap-2">
@@ -493,6 +508,21 @@ export function GRNDetailPage() {
           </div>
         </div>
 
+        {/* Director Executive Oversight Read-Only Notice */}
+        {user?.role === 'DIRECTOR' && (
+          <div className="rounded-2xl border border-indigo-200 bg-indigo-50/70 p-3.5 px-4 flex items-center justify-between text-xs text-indigo-900 shadow-2xs">
+            <div className="flex items-center gap-2">
+              <ShieldCheck className="h-4 w-4 text-indigo-600 shrink-0" />
+              <span>
+                <strong>Director Executive Oversight (Read-Only View):</strong> Inward warehouse manifests, barcode serialization logs, and receiving documentation are displayed in read-only inspection mode.
+              </span>
+            </div>
+            <span className="font-mono text-[11px] font-semibold text-indigo-700 hidden sm:inline">
+              Read-Only View
+            </span>
+          </div>
+        )}
+
         {/* Title, Status & Primary Actions */}
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs">
           <div className="space-y-1">
@@ -506,6 +536,11 @@ export function GRNDetailPage() {
                     GRN Number: {grn.grnNumber || grn.id}
                   </h1>
                   <StatusBadge status={grn.status} />
+                  {user?.role === 'DIRECTOR' && (
+                    <Badge variant="outline" className="text-xs bg-indigo-50 text-indigo-700 border-indigo-300 font-mono">
+                      READ-ONLY VIEW
+                    </Badge>
+                  )}
                   <Badge variant="outline" className="text-xs bg-slate-50 text-slate-700 border-slate-300 font-medium">
                     PO: {grn.purchaseOrderNumber || grn.poNumber || 'PO-2025-001'}
                   </Badge>
@@ -547,24 +582,32 @@ export function GRNDetailPage() {
             {/* Approval Workflow Actions */}
             {grn.status === 'SUBMITTED' && isManagerRole && (
               <>
-                <Button
+                <ConfirmButton
                   variant="default"
                   size="sm"
-                  onClick={handleApprove}
+                  dialogVariant="success"
+                  confirmTitle="Approve Goods Received Note"
+                  confirmMessage={`Confirm sign-off and approval of ${grn.grnNumber || grn.id}? This will officially post physical inventory to warehouse balances.`}
+                  confirmText="Approve & Post"
+                  onConfirm={handleApprove}
                   className="gap-1.5 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs"
                 >
                   <CheckCircle2 className="h-3.5 w-3.5" />
                   Approve GRN
-                </Button>
-                <Button
+                </ConfirmButton>
+                <ConfirmButton
                   variant="outline"
                   size="sm"
-                  onClick={handleReject}
+                  dialogVariant="destructive"
+                  confirmTitle="Reject Goods Received Note"
+                  confirmMessage={`Are you sure you want to reject ${grn.grnNumber || grn.id}? The shipment will be marked rejected and returned for inspection resolution.`}
+                  confirmText="Reject GRN"
+                  onConfirm={handleReject}
                   className="gap-1.5 text-xs font-semibold text-rose-700 border-rose-300 hover:bg-rose-50"
                 >
                   <XCircle className="h-3.5 w-3.5" />
                   Reject GRN
-                </Button>
+                </ConfirmButton>
               </>
             )}
 
@@ -578,6 +621,19 @@ export function GRNDetailPage() {
               >
                 <DollarSign className="h-3.5 w-3.5" />
                 Cost in Finance (AP)
+              </Button>
+            )}
+
+            {/* Damaged Stock Debit Note Redirect */}
+            {hasDamagedStock && isFinanceRole && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigate(`/finance/ap/debit-notes?grnId=${grn.id}`)}
+                className="gap-1.5 text-xs font-semibold border-rose-300 text-rose-700 hover:bg-rose-50 shadow-xs"
+              >
+                <AlertTriangle className="h-3.5 w-3.5" />
+                Return Damaged Stock (Debit Note)
               </Button>
             )}
           </div>

@@ -154,4 +154,65 @@ describe('Batch 6: Supplier Returns & AP Debit Notes (BR-08, PM-02)', () => {
     expect(screen.getByRole('button', { name: /new supplier return/i })).toBeInTheDocument();
     expect(screen.getByText(/Automated AP Debit Note & GL Ledger Linkage/i)).toBeInTheDocument();
   });
+
+  it('navigates to create view on New Supplier Return, auto-links PO from GRN, lists products/barcodes, and navigates back to list', async () => {
+    render(
+      <BrowserRouter>
+        <SupplierReturnsPage />
+      </BrowserRouter>
+    );
+
+    // Initial state: only "New Supplier Return" button in actions
+    const newReturnBtn = screen.getByRole('button', { name: /new supplier return/i });
+    fireEvent.click(newReturnBtn);
+
+    // Now in CREATE view
+    expect(screen.getByText(/New Supplier Return/i)).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: /back to returns/i })[0]).toBeInTheDocument();
+
+    // Verify GRN and auto-linked PO
+    expect(screen.getByText(/Inward GRN Manifest & Automatic PO Linkage/i)).toBeInTheDocument();
+    expect(screen.getByText(/Purchase Order #/i)).toBeInTheDocument();
+
+    // Verify products and barcodes are listed
+    expect(screen.getByText(/Select Products & Unit Barcodes to Return/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/Unit Barcodes/i)[0]).toBeInTheDocument();
+
+    // Click "Back to Returns" button
+    const backBtn = screen.getAllByRole('button', { name: /back to returns/i })[0];
+    fireEvent.click(backBtn);
+
+    // Returns back to registry list view
+    expect(screen.getByText(/Supplier Returns & Vendor RMA/i)).toBeInTheDocument();
+  });
+
+  it('allows selecting between multiple GRNs from the same supplier and searching products by barcode', async () => {
+    render(
+      <BrowserRouter>
+        <SupplierReturnsPage />
+      </BrowserRouter>
+    );
+
+    const newReturnBtn = screen.getByRole('button', { name: /new supplier return/i });
+    fireEvent.click(newReturnBtn);
+
+    // Schneider Electric Lanka has multiple GRNs (GRN-2025-001, GRN-2025-005, GRN-2025-050)
+    expect(screen.getByText(/Schneider Electric Lanka \(Pvt\) Ltd has/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /GRN-2025-005/i })).toBeInTheDocument();
+
+    // Click GRN-2025-005 to switch to it
+    fireEvent.click(screen.getByRole('button', { name: /GRN-2025-005/i }));
+    expect(screen.getAllByText('GRN-2025-005').length).toBeGreaterThan(0);
+
+    // Test searching product by barcode
+    const barcodeInput = screen.getByPlaceholderText(/search product by unit barcode/i);
+    expect(barcodeInput).toBeInTheDocument();
+
+    // Type a specific barcode from GRN-2025-005 (e.g., DNS-DNSMCB32A2)
+    fireEvent.change(barcodeInput, { target: { value: 'DNS-DNSMCB32A2' } });
+
+    // Verify search indicator and filtered product
+    expect(screen.getByText(/Showing products matching barcode/i)).toBeInTheDocument();
+    expect(screen.getByText(/Schneider Acti9 32A Double Pole MCB/i)).toBeInTheDocument();
+  });
 });

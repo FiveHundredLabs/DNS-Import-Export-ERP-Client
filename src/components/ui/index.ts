@@ -12,6 +12,7 @@
 
 // Buttons & Actions
 export * from './button';
+export * from './confirm-button';
 
 // Form Inputs & Controls
 export * from './input';
@@ -27,5 +28,6 @@ export * from './chart';
 
 // Overlays & Feedback
 export * from './dialog';
+export * from './drawer';
 export * from './alert';
 export * from './skeleton';

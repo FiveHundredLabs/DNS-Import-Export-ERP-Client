@@ -4,22 +4,33 @@ import { printerService } from '../../services/PrinterService';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
 import { Button } from '../../components/ui/button';
 import { formatCurrency, formatDate } from '../../utils/formatters';
-import { Printer, CheckCircle, Download, X } from 'lucide-react';
+import { Printer, CheckCircle2, Download, X, HandCoins } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface ThermalReceiptModalProps {
-  isOpen: boolean;
-  onClose: () => void;
+  isOpen?: boolean;
+  open?: boolean;
+  onClose?: () => void;
+  onOpenChange?: (open: boolean) => void;
   payment: Payment | null;
   customerBalance?: number;
 }
 
 export function ThermalReceiptModal({
   isOpen,
+  open,
   onClose,
+  onOpenChange,
   payment,
   customerBalance,
 }: ThermalReceiptModalProps) {
   const [paperWidth, setPaperWidth] = useState<'80mm' | '58mm'>('80mm');
+
+  const showModal = isOpen !== undefined ? isOpen : Boolean(open);
+  const handleClose = () => {
+    if (onClose) onClose();
+    if (onOpenChange) onOpenChange(false);
+  };
 
   if (!payment) return null;
 
@@ -27,10 +38,16 @@ export function ThermalReceiptModal({
     await printerService.printPaymentReceipt(payment, customerBalance, paperWidth);
   };
 
+  const handlePrintAndHandover = async () => {
+    await printerService.printPaymentReceipt(payment, customerBalance, paperWidth);
+    toast.success(`Receipt ${payment.receiptNumber} printed and handed over to customer!`);
+    handleClose();
+  };
+
   const is58mm = paperWidth === '58mm';
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+    <Dialog open={showModal} onOpenChange={(val) => !val && handleClose()}>
       <DialogContent className="sm:max-w-md bg-slate-900/90 text-white border-slate-700">
         <DialogHeader className="border-b border-slate-800 pb-3">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
@@ -163,17 +180,27 @@ export function ThermalReceiptModal({
           </div>
         </div>
 
-        <DialogFooter className="border-t border-slate-800 pt-3 flex flex-row items-center justify-between">
-          <Button variant="ghost" size="sm" onClick={onClose} className="text-xs text-slate-400 hover:text-white">
+        <DialogFooter className="border-t border-slate-800 pt-3 flex flex-row items-center justify-between gap-2 flex-wrap">
+          <Button variant="ghost" size="sm" onClick={handleClose} className="text-xs text-slate-400 hover:text-white">
             Close
           </Button>
-          <Button
-            size="sm"
-            onClick={handlePrint}
-            className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs gap-1.5"
-          >
-            <Printer className="h-3.5 w-3.5" /> Print Thermal Receipt
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handlePrint}
+              className="border-slate-600 text-slate-200 hover:text-white hover:bg-slate-800 text-xs gap-1.5"
+            >
+              <Printer className="h-3.5 w-3.5" /> Print Thermal Receipt
+            </Button>
+            <Button
+              size="sm"
+              onClick={handlePrintAndHandover}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs gap-1.5 font-bold shadow-xs"
+            >
+              <CheckCircle2 className="h-3.5 w-3.5" /> Print & Handover
+            </Button>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>

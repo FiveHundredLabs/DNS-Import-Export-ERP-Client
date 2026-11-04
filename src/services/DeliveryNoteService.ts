@@ -61,12 +61,12 @@ export class DeliveryNoteService {
       const q = filters.search.toLowerCase().trim();
       result = result.filter(
         (n) =>
-          n.deliveryNoteNumber.toLowerCase().includes(q) ||
-          n.invoiceNumber.toLowerCase().includes(q) ||
-          n.customerName.toLowerCase().includes(q) ||
-          n.customerCode.toLowerCase().includes(q) ||
-          n.driverName.toLowerCase().includes(q) ||
-          n.vehicleNumber.toLowerCase().includes(q)
+          n.deliveryNoteNumber?.toLowerCase().includes(q) ||
+          n.invoiceNumber?.toLowerCase().includes(q) ||
+          n.customerName?.toLowerCase().includes(q) ||
+          n.customerCode?.toLowerCase().includes(q) ||
+          n.driverName?.toLowerCase().includes(q) ||
+          n.vehicleNumber?.toLowerCase().includes(q)
       );
     }
 
@@ -78,6 +78,10 @@ export class DeliveryNoteService {
   async getById(id: string): Promise<DeliveryNote | null> {
     const found = this.notes.find((n) => n.id === id || n.deliveryNoteNumber === id);
     return found ? { ...found } : null;
+  }
+
+  async getDeliveryNoteById(id: string): Promise<DeliveryNote | null> {
+    return this.getById(id);
   }
 
   async getByOrderId(orderId: string): Promise<DeliveryNote[]> {
@@ -329,6 +333,97 @@ export class DeliveryNoteService {
     note.rejectionApprovedAt = new Date().toISOString();
     note.rejectionApprovalRemarks = remarks;
     note.updatedAt = new Date().toISOString();
+
+    // Automatically update the stock repository for each rejected line item
+    for (const item of note.items) {
+      const rejectedQty = item.rejectedQuantity || item.rejectedUnitBarcodes?.length || 0;
+      if (rejectedQty > 0) {
+        const isDamaged =
+          item.rejectionReason === 'DAMAGED' ||
+          item.rejectionReason === 'DAMAGED_IN_TRANSIT' ||
+          item.rejectionReason === 'DEFECTIVE_PRODUCT' ||
+          item.rejectionReason === 'PACKAGING_DAMAGED';
+
+        try {
+          // 1. Update Inventory Service repository (balances and stock movement audit log)
+          const { inventoryService } = await import('./InventoryService');
+          const repo = (inventoryService as any).repo;
+          if (repo) {
+            let balance = await repo.getBalance(item.productId, 'WH-MAIN');
+            if (!balance) {
+              const allBalances = await repo.getAllBalances();
+              balance =
+                allBalances.find((b: any) => b.productId === item.productId && b.locationType === 'WAREHOUSE') ||
+                allBalances.find((b: any) => b.productId === item.productId);
+            }
+            if (!balance) {
+              balance = {
+                id: `bal-dn-${Date.now()}-${item.productId}`,
+                productId: item.productId,
+                locationId: 'WH-MAIN',
+                locationType: 'WAREHOUSE',
+                availableQuantity: 0,
+                reservedQuantity: 0,
+                damagedQuantity: 0,
+                returnedQuantity: 0,
+                lastUpdated: new Date().toISOString(),
+              };
+            }
+            if (isDamaged) {
+              balance.damagedQuantity = (balance.damagedQuantity || 0) + rejectedQty;
+            } else {
+              balance.availableQuantity = (balance.availableQuantity || 0) + rejectedQty;
+            }
+            balance.lastUpdated = new Date().toISOString();
+            await repo.saveBalance(balance);
+
+            await repo.addMovement({
+              id: `mov-rej-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+              productId: item.productId,
+              sourceLocation: 'CUSTOMER_RETURN',
+              targetLocation: isDamaged ? 'DAMAGED_QUARANTINE' : (balance?.locationId || 'WH-MAIN'),
+              quantity: rejectedQty,
+              movementType: isDamaged ? 'DAMAGE_WRITE_OFF' : 'SALES_RETURN',
+              referenceDocumentType: 'DELIVERY_NOTE_REJECTION',
+              referenceDocumentId: note.deliveryNoteNumber,
+              performedById: approver.id,
+              performedByName: approver.name,
+              reason: `Rejection approval: ${item.rejectionReason || (isDamaged ? 'DAMAGED' : 'CUSTOMER_REFUSED')}. ${item.rejectionNotes || ''}`,
+              timestamp: new Date().toISOString(),
+            });
+          }
+
+          // 2. Update Product Master repository
+          const { productService } = await import('./ProductService');
+          const product = await productService.getProduct(item.productId);
+          if (product) {
+            if (isDamaged) {
+              await productService.updateProduct(item.productId, {
+                damagedStock: (product.damagedStock || 0) + rejectedQty,
+              });
+            } else {
+              await productService.updateProduct(item.productId, {
+                stockOnHand: (product.stockOnHand || 0) + rejectedQty,
+              });
+            }
+          }
+
+          try {
+            const { MOCK_PRODUCTS } = await import('../mock/mockProducts');
+            const mockP = MOCK_PRODUCTS.find((p) => p.id === item.productId);
+            if (mockP) {
+              if (isDamaged) {
+                mockP.damagedStock = (mockP.damagedStock || 0) + rejectedQty;
+              } else {
+                mockP.stockOnHand = (mockP.stockOnHand || 0) + rejectedQty;
+              }
+            }
+          } catch {}
+        } catch (stockErr) {
+          console.warn(`Failed to update stock repository for rejected product ${item.productId}:`, stockErr);
+        }
+      }
+    }
 
     this.persist();
     return { ...note };

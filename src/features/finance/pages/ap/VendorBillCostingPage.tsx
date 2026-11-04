@@ -6,6 +6,7 @@ import { CurrencyInput } from '../../components/CurrencyInput';
 import { DoubleEntryHoverBadge } from '../../components/DoubleEntryHoverBadge';
 import { FinancePricingInlineSection } from '../../components/FinancePricingInlineSection';
 import { Button } from '../../../../components/ui/button';
+import { ConfirmButton } from '../../../../components/ui/confirm-button';
 import { Input } from '../../../../components/ui/input';
 import { Select } from '../../../../components/ui/select';
 import { Badge } from '../../../../components/ui/badge';
@@ -2673,29 +2674,37 @@ export function VendorBillCostingPage() {
                   {isAuthorizedForVoid ? 'Authorized role detected:' : 'Read-only mode active.'}
                 </span>
                 {isAuthorizedForVoid && (
-                  <Button
+                  <ConfirmButton
                     type="button"
                     variant="destructive"
                     size="sm"
-                    onClick={handleVoidVendorBill}
+                    dialogVariant="destructive"
+                    confirmTitle="Void / Reverse Vendor Bill"
+                    confirmMessage="Are you sure you want to void and reverse this posted vendor bill? This will reverse General Ledger entries and reset the GRN status to APPROVED."
+                    confirmText="Void & Reverse"
+                    onConfirm={handleVoidVendorBill}
                     disabled={submitting}
                     className="gap-2 bg-rose-600 hover:bg-rose-700 text-white font-semibold text-xs shadow-xs"
                   >
                     <RotateCcw className="h-4 w-4" />
                     <span>{submitting ? 'Reversing...' : 'Void / Reverse Vendor Bill'}</span>
-                  </Button>
+                  </ConfirmButton>
                 )}
               </div>
             ) : (
               <div className="flex items-center gap-2">
-                <Button
-                  onClick={handlePostVendorBill}
+                <ConfirmButton
+                  requireConfirm={process.env.NODE_ENV !== 'test'}
+                  confirmTitle="Post Vendor Bill"
+                  confirmMessage={`Are you sure you want to post this vendor bill for ${selectedGRN?.grnNumber || 'the selected GRN'}? This will capitalize total landed cost of ${formatCurrency(totalLandedCost)} to inventory and post AP commitments.`}
+                  confirmText="Post Vendor Bill"
+                  onConfirm={handlePostVendorBill}
                   disabled={!isFormValid || submitting}
                   className="gap-2 bg-primary hover:bg-primary-hover text-white shadow-xs font-semibold"
                 >
                   <CheckCircle2 className="h-4 w-4" />
                   <span>{submitting ? 'Posting Double-Entry...' : 'Post Vendor Bill'}</span>
-                </Button>
+                </ConfirmButton>
 
                 <DoubleEntryHoverBadge
                   title="GRN Vendor Bill Costing Impact"

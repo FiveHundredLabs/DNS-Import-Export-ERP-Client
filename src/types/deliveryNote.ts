@@ -8,11 +8,12 @@ export type DeliveryNoteStatus =
   | 'REJECTION_DECLINED';
 
 export type RejectionReasonCode =
+  | 'DAMAGED'
+  | 'CUSTOMER_REFUSED'
   | 'DAMAGED_IN_TRANSIT'
   | 'DEFECTIVE_PRODUCT'
   | 'WRONG_SPECIFICATION'
   | 'PACKAGING_DAMAGED'
-  | 'CUSTOMER_REFUSED'
   | 'OTHER';
 
 export interface DeliveryNoteItem {

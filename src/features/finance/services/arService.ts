@@ -24,6 +24,7 @@ export interface ARReceiptItem {
   // Cheque details for PDC Vault
   chequeNumber?: string;
   drawerBank?: string;
+  bankName?: string;
   chequeDate?: string;
   pdcId?: string;
   // Inline settlement & allocation tracking

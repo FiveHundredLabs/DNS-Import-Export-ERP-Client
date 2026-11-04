@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import React from 'react';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { GRNService } from '../services/GRNService';
 import { PrintableGRN } from '../features/inventory/PrintableGRN';
 import { GRNDetailPage } from '../features/inventory/GRNDetailPage';
@@ -164,5 +164,55 @@ describe('Batch 1 — BR-01 & BR-02 GRN PO Enforcement and Official Printing', (
 
     const printButton = await screen.findByRole('button', { name: /Print GRN \(A4\)/i });
     expect(printButton).toBeTruthy();
+  });
+
+  it('redirects back to /purchasing/grn from PurchasingGRNDetailPage back button', async () => {
+    let currentPath = '';
+    function LocationWatcher() {
+      const location = useLocation();
+      currentPath = location.pathname;
+      return null;
+    }
+
+    render(
+      <MemoryRouter initialEntries={['/purchasing/grn/GRN-2026-TEST01']}>
+        <LocationWatcher />
+        <Routes>
+          <Route path="/purchasing/grn/:id" element={<PurchasingGRNDetailPage />} />
+          <Route path="/purchasing/grn" element={<div>Purchasing GRN Registry</div>} />
+          <Route path="/inventory/grn" element={<div>Inventory GRN Registry</div>} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    const backButton = await screen.findByRole('button', { name: /Back to Goods Received Notes/i });
+    expect(backButton).toBeTruthy();
+    fireEvent.click(backButton);
+    expect(currentPath).toBe('/purchasing/grn');
+  });
+
+  it('redirects back to /inventory/grn from GRNDetailPage back button when under /inventory/grn', async () => {
+    let currentPath = '';
+    function LocationWatcher() {
+      const location = useLocation();
+      currentPath = location.pathname;
+      return null;
+    }
+
+    render(
+      <MemoryRouter initialEntries={['/inventory/grn/GRN-2026-TEST01']}>
+        <LocationWatcher />
+        <Routes>
+          <Route path="/inventory/grn/:id" element={<GRNDetailPage />} />
+          <Route path="/purchasing/grn" element={<div>Purchasing GRN Registry</div>} />
+          <Route path="/inventory/grn" element={<div>Inventory GRN Registry</div>} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    const backButton = await screen.findByRole('button', { name: /Back to Inward GRN Registry/i });
+    expect(backButton).toBeTruthy();
+    fireEvent.click(backButton);
+    expect(currentPath).toBe('/inventory/grn');
   });
 });

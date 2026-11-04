@@ -350,6 +350,7 @@ export interface UpdateOrderInput {
   customerPoNumber?: string;
   paymentTerms?: string;
   notes?: string;
+  changeRemarks?: string;
   saveAsDraft?: boolean;
 }
 

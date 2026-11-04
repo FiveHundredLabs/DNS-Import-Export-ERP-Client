@@ -62,8 +62,12 @@ export function Dialog({
       >
         {!hideCloseButton && (
           <button
-            onClick={() => onOpenChange(false)}
-            className="absolute right-4 top-4 rounded-sm p-1 text-slate-400 hover:text-slate-600 focus:outline-none focus:ring-2 focus:ring-primary"
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onOpenChange(false);
+            }}
+            className="absolute right-4 top-4 z-50 rounded-full p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100/80 transition-colors focus:outline-none focus:ring-2 focus:ring-primary cursor-pointer"
             aria-label="Close dialog"
           >
             <X className="h-4 w-4" />

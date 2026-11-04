@@ -4,6 +4,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { authService } from '../../services/AuthService';
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
+import { ConfirmButton } from '../../components/ui/confirm-button';
 import { Input } from '../../components/ui/input';
 import { Badge } from '../../components/ui/badge';
 import {
@@ -155,16 +156,20 @@ export function GlobalTaxSettings() {
 
         {/* Action Controls */}
         <div className="flex items-center gap-2">
-          <Button
+          <ConfirmButton
             variant="outline"
             size="sm"
-            onClick={handleResetToDefault}
+            confirmTitle="Reset Tax Settings to Statutory Defaults?"
+            confirmMessage="This will restore the statutory default VAT rate of 18% and enable global tax enforcement across all new quotations and invoices."
+            confirmLabel="Reset Defaults"
+            confirmVariant="warning"
+            onConfirm={handleResetToDefault}
             className="text-xs gap-1.5 h-8 text-slate-600 hover:text-slate-900"
             title="Reset to 18% statutory default"
           >
             <RotateCcw className="h-3.5 w-3.5" />
             Reset Defaults
-          </Button>
+          </ConfirmButton>
 
           <Button
             size="sm"

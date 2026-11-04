@@ -204,7 +204,7 @@ export class PaymentService {
       amount: data.amount,
       paymentMethod: data.paymentMethod,
       status: 'PENDING_APPROVAL',
-      handoverStatus: data.paymentMethod === 'CASH' ? 'PENDING_HANDOVER' : undefined,
+      handoverStatus: (data.paymentMethod === 'CASH' || data.paymentMethod === 'CHEQUE') ? 'PENDING_HANDOVER' : undefined,
       chequeNumber: data.chequeNumber,
       chequeDate: data.chequeDate,
       bankName: data.bankName,
@@ -385,12 +385,60 @@ export class PaymentService {
             lastPaymentAmount: payment.amount,
           },
         });
+
+        try {
+          const { MOCK_CUSTOMERS } = await import('../mock/mockCustomers');
+          const mockCust = MOCK_CUSTOMERS.find((c) => c.id === payment.customerId);
+          if (mockCust) {
+            mockCust.financials.totalOutstanding = newTotalOutstanding;
+            mockCust.financials.availableCredit = newAvailableCredit;
+            mockCust.financials.overdue = totalOverdue;
+            mockCust.financials.nearDue = totalNearDue;
+            mockCust.financials.currentDue = totalCurrent;
+            mockCust.financials.lastPaymentDate = payment.collectedAt;
+            mockCust.financials.lastPaymentAmount = payment.amount;
+          }
+        } catch {}
       }
     } catch (err) {
       console.warn(`Customer financials update error for customer ${payment.customerId}:`, err);
     }
 
-    // 4. Synchronize central approval engine
+    // 4. Auto-register in PDC Vault if payment method is CHEQUE
+    if (payment.paymentMethod === 'CHEQUE') {
+      try {
+        const { pdcVaultService } = await import('../features/finance/services/pdcVaultService');
+        const existingPDCs = pdcVaultService.getPDCs();
+        const chqNum =
+          payment.chequeNumber ||
+          `CHQ-${payment.receiptNumber.replace(/[^0-9]/g, '').slice(-6) || Date.now().toString().slice(-6)}`;
+        const alreadyRegistered = existingPDCs.some(
+          (c) =>
+            c.chequeNumber.toUpperCase() === chqNum.toUpperCase() ||
+            (c.receiptId && c.receiptId === payment.id) ||
+            (c.receiptNumber && c.receiptNumber === payment.receiptNumber)
+        );
+        if (!alreadyRegistered) {
+          pdcVaultService.registerCheque({
+            chequeNumber: chqNum,
+            receiptId: payment.id,
+            receiptNumber: payment.receiptNumber,
+            customerId: payment.customerId,
+            customerName: payment.customerName,
+            customerCode: payment.customerCode,
+            drawerBank: payment.bankName || 'Commercial Bank of Ceylon',
+            chequeDate: payment.chequeDate || new Date().toISOString().slice(0, 10),
+            receivedDate: payment.collectedAt ? payment.collectedAt.slice(0, 10) : new Date().toISOString().slice(0, 10),
+            amount: payment.amount,
+            notes: `Auto-registered via Payment approval for receipt ${payment.receiptNumber}`,
+          });
+        }
+      } catch (pdcErr) {
+        console.warn('Failed to auto-register approved cheque into PDC vault:', pdcErr);
+      }
+    }
+
+    // 5. Synchronize central approval engine
     if (syncApprovalRequest) {
       try {
         const pending = await this.approvalSvc.getPendingApprovals();
