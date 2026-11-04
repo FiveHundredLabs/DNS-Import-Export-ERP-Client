@@ -352,15 +352,7 @@ export function CustomerPaymentDetailPage() {
             <span>Collections</span>
           </button>
 
-          <button
-            type="button"
-            onClick={() => navigate('/payments')}
-            className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-200 px-3 py-1.5 rounded-xl shadow-2xs active:scale-95 transition-all"
-            title="View Cash in Hand and Handover to Finance"
-          >
-            <Banknote className="h-4 w-4 text-amber-600" />
-            <span>Cash in Hand (Wallet)</span>
-          </button>
+
         </div>
 
         <div className="flex items-center gap-2">

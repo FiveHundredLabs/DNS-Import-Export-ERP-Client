@@ -181,7 +181,7 @@ export function PaymentCollectionForm({
         <label className="text-[11px] font-bold text-slate-700 block mb-1">
           Payment Method <span className="text-rose-500">*</span>
         </label>
-        <div className="grid grid-cols-3 gap-1.5">
+        <div className="grid grid-cols-3 gap-1 sm:gap-1.5">
           {paymentMethods.map((m) => {
             const Icon = m.icon;
             const isSelected = paymentMethod === m.id;
@@ -192,14 +192,15 @@ export function PaymentCollectionForm({
                 type="button"
                 onClick={() => onPaymentMethodChange(m.id)}
                 className={cn(
-                  'h-9 rounded-xl border flex items-center justify-center gap-1.5 text-xs font-bold transition-all active:scale-95',
+                  'h-9 px-1 sm:px-2 rounded-xl border flex items-center justify-center gap-1 sm:gap-1.5 text-[11px] sm:text-xs font-bold transition-all active:scale-95',
+
                   isSelected
                     ? 'border-primary bg-primary text-white shadow-2xs'
                     : 'border-slate-200 bg-slate-50/60 text-slate-700 hover:bg-slate-100'
                 )}
               >
                 <Icon className={cn('h-3.5 w-3.5', isSelected ? 'text-white' : 'text-slate-500')} />
-                <span>{m.label}</span>
+                <span className="truncate">{m.label}</span>
               </button>
             );
           })}
