@@ -551,7 +551,7 @@ export function CustomerPaymentDetailPage() {
         <div className="flex items-center justify-between p-3.5 sm:p-4 bg-white rounded-2xl border border-slate-200 shadow-xs">
           <div>
             <span className="text-[10px] sm:text-xs text-slate-500 font-bold uppercase tracking-wider block">
-              Total Collection
+              Total
             </span>
             <div className="text-base sm:text-lg font-black text-slate-900 mt-0.5">
               {numAmount > 0 ? (
