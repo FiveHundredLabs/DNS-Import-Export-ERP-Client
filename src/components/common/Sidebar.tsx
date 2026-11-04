@@ -45,6 +45,7 @@ import {
   Wallet,
   LayoutDashboard,
   ShoppingBag,
+  UserPlus,
 } from 'lucide-react';
 import { useEffect } from 'react';
 import { useAuth } from '../../hooks/useAuth';
@@ -117,8 +118,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         p.startsWith('/purchasing/suppliers') ||
         p.startsWith('/teams') ||
         p.startsWith('/areas')
-      ) {
-        setActiveCategory('users');
+      ) {        setActiveCategory('users');
       } else if (p.startsWith('/inventory') || p.startsWith('/products')) {
         setActiveCategory('inventory');
       } else if (p.startsWith('/finance') || p === '/payments') {
@@ -160,6 +160,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
 
   const directorUserManagementItems: SidebarItem[] = [
     { id: 'customers', name: 'Customer Master', path: '/customers', icon: Users2, category: 'users' },
+    { id: 'customer-onboarding', name: 'Customer Onboarding', path: '/customers/onboarding', icon: UserPlus, category: 'users' },
     { id: 'purchasing-suppliers', name: 'Supplier Management', path: '/purchasing/suppliers', icon: Store, category: 'users' },
     { id: 'teams', name: 'Team Management', path: '/teams', icon: Users, category: 'users' },
     { id: 'areas', name: 'Area Management', path: '/areas', icon: Compass, category: 'users' },
@@ -263,6 +264,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     { id: 'customer-collections', name: 'Customer Collections', path: '/payments/collect', icon: Banknote, category: 'sales', excludedRoles: ['CASHIER', 'SHOWROOM_MANAGER'] },
     { id: 'cash-in-hand', name: 'Cash in Hand (Wallet)', path: '/payments', icon: Wallet, category: 'sales', excludedRoles: ['CASHIER', 'SHOWROOM_MANAGER', 'STOCK_KEEPER'] },
     { id: 'customers', name: 'Customer Master', path: '/customers', icon: Users2, category: 'customers', excludedRoles: ['CASHIER', 'SHOWROOM_MANAGER'] },
+    { id: 'customer-onboarding', name: 'Customer Onboarding', path: '/customers/onboarding', icon: UserPlus, category: 'customers', excludedRoles: ['CASHIER', 'SHOWROOM_MANAGER', 'STOCK_KEEPER', 'FINANCE_MANAGER', 'PURCHASING_OFFICER'] },
     { id: 'invoices', name: 'Invoices', path: '/invoices', icon: Receipt, category: 'sales', excludedRoles: ['CASHIER', 'SHOWROOM_MANAGER'] },
     { id: 'pos', name: 'Showroom POS', path: '/pos', icon: Store, category: 'sales', excludedRoles: ['STOCK_KEEPER'] },
   ];

@@ -5,6 +5,7 @@ import { DashboardPage } from './features/dashboard/DashboardPage';
 import { ProductListPage } from './features/products/ProductListPage';
 import { ProductDetailPage } from './features/products/ProductDetailPage';
 import { CustomerListPage } from './features/customers/CustomerListPage';
+import { CustomerOnboardingPage } from './features/customers/CustomerOnboardingPage';
 import { CustomerDetailPage } from './features/customers/CustomerDetailPage';
 import { ApprovalsPage } from './features/approvals/ApprovalsPage';
 import { QuotationListPage } from './features/quotations/QuotationListPage';
@@ -150,6 +151,22 @@ export function App() {
           element={
             <ProtectedRoute>
               <CustomerListPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="customers/onboarding"
+          element={
+            <ProtectedRoute>
+              <CustomerOnboardingPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="customers/onboarding/:customerId"
+          element={
+            <ProtectedRoute>
+              <CustomerOnboardingPage />
             </ProtectedRoute>
           }
         />

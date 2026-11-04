@@ -326,6 +326,21 @@ export class ThermalPrinterService implements IPrinterService {
           : '';
 
       const is58mm = data.paperWidth === '58mm';
+
+      let barcodeHtml = '';
+      try {
+        const codeData = encodeCode128(data.receiptNumber || 'REC-0000', 8);
+        const pathD = generateCode128SvgPath(codeData, 24);
+        barcodeHtml = `
+          <div style="text-align: center; margin-top: 8px;">
+            <svg viewBox="0 0 ${codeData.totalModules} 24" style="height: 22px; width: auto; max-width: 180px; margin: 0 auto; display: block;">
+              <path d="${pathD}" fill="#000" />
+            </svg>
+            <div style="font-size: 8px; letter-spacing: 2px; margin-top: 2px;">*${data.receiptNumber}*</div>
+          </div>
+        `;
+      } catch {}
+
       const receiptHtml = `
         <!DOCTYPE html>
         <html>
@@ -377,7 +392,19 @@ export class ThermalPrinterService implements IPrinterService {
                 : ''
             }
             <div class="divider"></div>
-            <div class="center" style="font-size: 10px;">Subject to Realization / Finance Approval</div>
+            ${barcodeHtml}
+              <div style="display: flex; justify-content: space-between; margin-top: 14px; font-size: 9px; text-align: center;">
+                <div style="width: 45%;">
+                  <div style="border-bottom: 1px dotted #000; height: 10px; margin-bottom: 3px;"></div>
+                  <span>Customer Seal / Sign</span>
+                </div>
+                <div style="width: 45%;">
+                  <div style="border-bottom: 1px dotted #000; height: 10px; margin-bottom: 3px;"></div>
+                  <span>Authorized Officer</span>
+                </div>
+              </div>
+              <div class="divider"></div>
+              <div class="center" style="font-size: 9px; font-style: italic;">Subject to Finance Department realization. Retain this slip for ledger reconciliation.</div>
             <div class="center" style="font-size: 10px; margin-top: 4px;">Thank you for your business!</div>
             <script>
               window.onload = function() {
