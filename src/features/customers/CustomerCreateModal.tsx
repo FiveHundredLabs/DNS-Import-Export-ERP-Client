@@ -22,9 +22,6 @@ import {
   CreditCard,
   Building2,
   MapPin,
-  UserCheck,
-  Percent,
-  Clock,
   Sparkles,
   ShieldAlert,
   CheckCircle2,
@@ -42,6 +39,15 @@ interface CustomerCreateModalProps {
   onReject?: (id: string, reason?: string) => Promise<void>;
   editingCustomer?: Customer | null;
   mode?: 'create' | 'edit' | 'approve';
+}
+
+function generateCustomerCode(): string {
+  const chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  let rand = '';
+  for (let i = 0; i < 4; i++) {
+    rand += chars[Math.floor(Math.random() * chars.length)];
+  }
+  return `CUST-${rand}`;
 }
 
 export function CustomerCreateModal({
@@ -64,36 +70,39 @@ export function CustomerCreateModal({
 
   // Form State
   const [code, setCode] = useState('');
-  const [name, setName] = useState('');
-  const [type, setType] = useState<CustomerType>('DEALER');
+  const [displayName, setDisplayName] = useState('');
+  const [companyName, setCompanyName] = useState('');
   const [loyaltyLevel, setLoyaltyLevel] = useState<CustomerLoyaltyLevel>('NEW');
+
+  // Contact Details
   const [contactPerson, setContactPerson] = useState('');
-  const [phone, setPhone] = useState('');
+  const [primaryPhone, setPrimaryPhone] = useState('');
+  const [whatsappNumber, setWhatsappNumber] = useState('');
+  const [secondaryPhone, setSecondaryPhone] = useState('');
   const [email, setEmail] = useState('');
   const [address, setAddress] = useState('');
-  
+
+  // Tax Details
+  const [tinNumber, setTinNumber] = useState('');
+  const [vatNumber, setVatNumber] = useState('');
+
+  // Territory
   const [areaId, setAreaId] = useState('');
   const [assignedRepId, setAssignedRepId] = useState('');
 
   // Commercial Terms State (Allowed Credit Days & Credit Balance/Limit)
   const [creditDays, setCreditDays] = useState<number>(defaultTerms.defaultCreditDays);
   const [creditLimit, setCreditLimit] = useState<number>(defaultTerms.defaultCreditLimit);
-  const [defaultDiscountPercentage, setDefaultDiscountPercentage] = useState<number>(
-    defaultTerms.defaultDiscountPercentage
-  );
-  const [maxDiscountPercentage, setMaxDiscountPercentage] = useState<number>(
-    defaultTerms.maxDiscountPercentage
-  );
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<{
     code?: string;
-    name?: string;
-    type?: string;
-    loyaltyLevel?: string;
+    displayName?: string;
     contactPerson?: string;
-    phone?: string;
+    primaryPhone?: string;
+    whatsappNumber?: string;
+    secondaryPhone?: string;
     email?: string;
     address?: string;
     areaId?: string;
@@ -106,8 +115,8 @@ export function CustomerCreateModal({
     if (open) {
       if (editingCustomer) {
         setCode(editingCustomer.code);
-        setName(editingCustomer.name);
-        setType(editingCustomer.type);
+        setDisplayName(editingCustomer.name);
+        setCompanyName(editingCustomer.companyName || '');
         setLoyaltyLevel(
           editingCustomer.loyaltyLevel ||
             (editingCustomer.loyaltyTier === 'PLATINUM'
@@ -117,29 +126,32 @@ export function CustomerCreateModal({
               : 'NEW')
         );
         setContactPerson(editingCustomer.contactPerson);
-        setPhone(editingCustomer.phone);
+        setPrimaryPhone(editingCustomer.phone);
+        setWhatsappNumber(editingCustomer.whatsappNumber || '');
+        setSecondaryPhone(editingCustomer.secondaryPhone || '');
         setEmail(editingCustomer.email || '');
         setAddress(editingCustomer.address || '');
+        setTinNumber(editingCustomer.taxNumber || '');
+        setVatNumber(editingCustomer.vatNumber || '');
         setAreaId(editingCustomer.areaId || '');
         setAssignedRepId(editingCustomer.assignedRepId || '');
 
         setCreditDays(editingCustomer.commercialTerms?.creditDays ?? defaultTerms.defaultCreditDays);
         setCreditLimit(editingCustomer.commercialTerms?.creditLimit ?? defaultTerms.defaultCreditLimit);
-        setDefaultDiscountPercentage(
-          editingCustomer.commercialTerms?.defaultDiscountPercentage ?? defaultTerms.defaultDiscountPercentage
-        );
-        setMaxDiscountPercentage(
-          editingCustomer.commercialTerms?.maxDiscountPercentage ?? defaultTerms.maxDiscountPercentage
-        );
       } else {
-        setCode('');
-        setName('');
-        setType('DEALER');
+        setCode(generateCustomerCode());
+        setDisplayName('');
+        setCompanyName('');
         setLoyaltyLevel('NEW');
         setContactPerson('');
-        setPhone('');
+        setPrimaryPhone('');
+        setWhatsappNumber('');
+        setSecondaryPhone('');
         setEmail('');
         setAddress('');
+        setTinNumber('');
+        setVatNumber('');
+
         // If Area Manager, default to their area; if Sales Rep, default to their area and assign themselves
         if (isAreaManager && currentUser.areaId) {
           setAreaId(currentUser.areaId);
@@ -155,8 +167,6 @@ export function CustomerCreateModal({
         const currentDefaults = creditTermsConfigService.getCreditTermsConfig();
         setCreditDays(currentDefaults.defaultCreditDays);
         setCreditLimit(currentDefaults.defaultCreditLimit);
-        setDefaultDiscountPercentage(currentDefaults.defaultDiscountPercentage);
-        setMaxDiscountPercentage(currentDefaults.maxDiscountPercentage);
       }
       setError(null);
       setFieldErrors({});
@@ -180,10 +190,10 @@ export function CustomerCreateModal({
   const validate = (): boolean => {
     const errs: typeof fieldErrors = {};
 
-    if (!name.trim()) {
-      errs.name = 'Shop / Business full name is required.';
-    } else if (name.trim().length < 3) {
-      errs.name = 'Business name must be at least 3 characters.';
+    if (!displayName.trim()) {
+      errs.displayName = 'Display name is required.';
+    } else if (displayName.trim().length < 3) {
+      errs.displayName = 'Display name must be at least 3 characters.';
     }
 
     if (!contactPerson.trim()) {
@@ -192,16 +202,26 @@ export function CustomerCreateModal({
       errs.contactPerson = 'Contact person must be at least 2 characters.';
     }
 
-    if (!phone.trim()) {
-      errs.phone = 'Contact phone number is required.';
-    } else {
-      const cleanDigits = phone.replace(/[^0-9+]/g, '');
-      const validPhone =
+    const checkPhone = (ph: string) => {
+      const cleanDigits = ph.replace(/[^0-9+]/g, '');
+      return (
         /^(?:\+94|0)?7[0-9]{8}$|^(?:\+94|0)?[1-9][0-9]{8}$/.test(cleanDigits) ||
-        cleanDigits.replace(/\D/g, '').length >= 9;
-      if (!validPhone) {
-        errs.phone = 'Please enter a valid phone number (e.g. +94 77 123 4567 or 0771234567).';
-      }
+        cleanDigits.replace(/\D/g, '').length >= 9
+      );
+    };
+
+    if (!primaryPhone.trim()) {
+      errs.primaryPhone = 'Primary phone number is required.';
+    } else if (!checkPhone(primaryPhone)) {
+      errs.primaryPhone = 'Please enter a valid phone number (e.g. +94 77 123 4567 or 0771234567).';
+    }
+
+    if (whatsappNumber.trim() && !checkPhone(whatsappNumber)) {
+      errs.whatsappNumber = 'Please enter a valid WhatsApp phone number.';
+    }
+
+    if (secondaryPhone.trim() && !checkPhone(secondaryPhone)) {
+      errs.secondaryPhone = 'Please enter a valid secondary/landline phone number.';
     }
 
     if (email.trim()) {
@@ -226,13 +246,6 @@ export function CustomerCreateModal({
       errs.assignedRepId = 'Please select an assigned Sales Representative.';
     }
 
-    if (code.trim()) {
-      const codeRegex = /^[A-Z0-9\-]+$/;
-      if (!codeRegex.test(code.trim())) {
-        errs.code = 'Code must contain only uppercase letters, numbers, and dashes.';
-      }
-    }
-
     if (creditDays <= 0) {
       errs.creditDays = 'Allowed Credit Days must be greater than 0.';
     }
@@ -242,8 +255,7 @@ export function CustomerCreateModal({
 
     setFieldErrors(errs);
 
-    // Exact message matching test expectations
-    if (!name.trim() || !phone.trim() || !contactPerson.trim()) {
+    if (!displayName.trim() || !primaryPhone.trim() || !contactPerson.trim()) {
       setError('Name, Contact Person, and Phone are required.');
       return false;
     }
@@ -270,14 +282,14 @@ export function CustomerCreateModal({
 
       const parsedCreditDays = Number(creditDays) || defaultTerms.defaultCreditDays;
       const parsedCreditLimit = Number(creditLimit) || defaultTerms.defaultCreditLimit;
-      const parsedDiscount = Number(defaultDiscountPercentage) || defaultTerms.defaultDiscountPercentage;
-      const parsedMaxDiscount = Number(maxDiscountPercentage) || defaultTerms.maxDiscountPercentage;
+      const defaultDiscount = defaultTerms.defaultDiscountPercentage;
+      const maxDiscount = defaultTerms.maxDiscountPercentage;
 
       if (editingCustomer && onUpdate) {
         await onUpdate(editingCustomer.id, {
           code: code || editingCustomer.code,
-          name: name.trim(),
-          type,
+          name: displayName.trim(),
+          companyName: companyName.trim() || undefined,
           loyaltyLevel,
           loyaltyTier:
             loyaltyLevel === 'PLATINUM'
@@ -290,21 +302,26 @@ export function CustomerCreateModal({
           assignedRepId: rep?.id || assignedRepId || editingCustomer.assignedRepId,
           assignedRepName: rep?.name || editingCustomer.assignedRepName,
           contactPerson: contactPerson.trim(),
-          phone: phone.trim(),
+          phone: primaryPhone.trim(),
+          whatsappNumber: whatsappNumber.trim() || undefined,
+          secondaryPhone: secondaryPhone.trim() || undefined,
           email: email.trim(),
           address: address.trim(),
+          taxNumber: tinNumber.trim() || undefined,
+          vatNumber: vatNumber.trim() || undefined,
           commercialTerms: {
             creditLimit: parsedCreditLimit,
             creditDays: parsedCreditDays,
-            defaultDiscountPercentage: parsedDiscount,
-            maxDiscountPercentage: parsedMaxDiscount,
+            defaultDiscountPercentage: defaultDiscount,
+            maxDiscountPercentage: maxDiscount,
           },
         });
       } else {
         await onCreate({
-          code: code.trim() || `CUST-${Date.now().toString().slice(-4)}`,
-          name: name.trim(),
-          type,
+          code: code.trim() || generateCustomerCode(),
+          name: displayName.trim(),
+          companyName: companyName.trim() || undefined,
+          type: 'DEALER',
           loyaltyLevel,
           loyaltyTier:
             loyaltyLevel === 'PLATINUM'
@@ -317,14 +334,18 @@ export function CustomerCreateModal({
           assignedRepId: rep?.id || assignedRepId || 'usr-106',
           assignedRepName: rep?.name || 'Kasun Wickramasinghe',
           contactPerson: contactPerson.trim(),
-          phone: phone.trim(),
+          phone: primaryPhone.trim(),
+          whatsappNumber: whatsappNumber.trim() || undefined,
+          secondaryPhone: secondaryPhone.trim() || undefined,
           email: email.trim(),
           address: address.trim(),
+          taxNumber: tinNumber.trim() || undefined,
+          vatNumber: vatNumber.trim() || undefined,
           commercialTerms: {
             creditLimit: parsedCreditLimit,
             creditDays: parsedCreditDays,
-            defaultDiscountPercentage: parsedDiscount,
-            maxDiscountPercentage: parsedMaxDiscount,
+            defaultDiscountPercentage: defaultDiscount,
+            maxDiscountPercentage: maxDiscount,
           },
           approvalStage: 'PENDING_SALES_REVIEW',
           status: 'INACTIVE',
@@ -427,71 +448,62 @@ export function CustomerCreateModal({
 
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Shop / Business Full Name <span className="text-rose-500">*</span>
+                Display Name <span className="text-rose-500">*</span>
               </label>
               <Input
-                value={name}
+                value={displayName}
                 onChange={(e) => {
-                  setName(e.target.value);
-                  if (fieldErrors.name) setFieldErrors((prev) => ({ ...prev, name: undefined }));
+                  setDisplayName(e.target.value);
+                  if (fieldErrors.displayName) setFieldErrors((prev) => ({ ...prev, displayName: undefined }));
                 }}
-                error={fieldErrors.name}
+                error={fieldErrors.displayName}
                 placeholder="e.g. Apex Power Engineering (Pvt) Ltd"
                 className="bg-white"
               />
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Company Name <span className="text-[11px] font-normal text-slate-400">(optional)</span>
+              </label>
+              <Input
+                value={companyName}
+                onChange={(e) => setCompanyName(e.target.value)}
+                placeholder="e.g. Apex Holdings Ltd"
+                className="bg-white"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Customer Code</label>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Customer Code <span className="text-[11px] font-normal text-slate-400">(read-only)</span>
+                </label>
                 <Input
                   value={code}
-                  onChange={(e) => {
-                    setCode(e.target.value.toUpperCase());
-                    if (fieldErrors.code) setFieldErrors((prev) => ({ ...prev, code: undefined }));
-                  }}
-                  error={fieldErrors.code}
-                  placeholder="e.g. DLR-COL-009"
-                  className="bg-white font-mono"
+                  readOnly
+                  disabled
+                  placeholder="Auto-generated"
+                  className="bg-slate-100 font-mono text-slate-600 cursor-not-allowed"
                 />
               </div>
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Customer Type</label>
-                <Select
-                  value={type}
-                  onChange={(e) => {
-                    setType(e.target.value as CustomerType);
-                    if (fieldErrors.type) setFieldErrors((prev) => ({ ...prev, type: undefined }));
-                  }}
-                  error={fieldErrors.type}
-                  className="bg-white"
-                >
-                  <option value="DEALER">Authorized Dealer</option>
-                  <option value="SHOWROOM">Showroom Outlet</option>
-                  <option value="DIRECT">Direct Contractor</option>
-                </Select>
-              </div>
+
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">Loyalty Level</label>
                 <Select
                   value={loyaltyLevel}
-                  onChange={(e) => {
-                    setLoyaltyLevel(e.target.value as CustomerLoyaltyLevel);
-                    if (fieldErrors.loyaltyLevel)
-                      setFieldErrors((prev) => ({ ...prev, loyaltyLevel: undefined }));
-                  }}
-                  error={fieldErrors.loyaltyLevel}
+                  onChange={(e) => setLoyaltyLevel(e.target.value as CustomerLoyaltyLevel)}
                   className="bg-white"
                 >
                   <option value="NEW">New (Level 1 Discount)</option>
-                  <option value="PREMIUM">Premium (Levels 1 & 2)</option>
+                  <option value="PREMIUM">Premium (Levels 1 &amp; 2)</option>
                   <option value="PLATINUM">Platinum (All Levels)</option>
                 </Select>
               </div>
             </div>
           </div>
 
-          {/* SECTION 2: CONTACT & LOCATION */}
+          {/* SECTION 2: CONTACT & TERRITORY DETAILS */}
           <div className="rounded-2xl border border-slate-200/90 bg-slate-50/40 p-4 space-y-4">
             <div className="flex items-center justify-between border-b border-slate-200/60 pb-2">
               <span className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
@@ -520,16 +532,52 @@ export function CustomerCreateModal({
               </div>
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Contact Phone <span className="text-rose-500">*</span>
+                  Primary Phone Number <span className="text-rose-500">*</span>
                 </label>
                 <Input
-                  value={phone}
+                  value={primaryPhone}
                   onChange={(e) => {
-                    setPhone(e.target.value);
-                    if (fieldErrors.phone) setFieldErrors((prev) => ({ ...prev, phone: undefined }));
+                    setPrimaryPhone(e.target.value);
+                    if (fieldErrors.primaryPhone)
+                      setFieldErrors((prev) => ({ ...prev, primaryPhone: undefined }));
                   }}
-                  error={fieldErrors.phone}
+                  error={fieldErrors.primaryPhone}
                   placeholder="+94 77 123 4567 or 0771234567"
+                  className="bg-white"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  WhatsApp Number <span className="text-[11px] font-normal text-slate-400">(optional)</span>
+                </label>
+                <Input
+                  value={whatsappNumber}
+                  onChange={(e) => {
+                    setWhatsappNumber(e.target.value);
+                    if (fieldErrors.whatsappNumber)
+                      setFieldErrors((prev) => ({ ...prev, whatsappNumber: undefined }));
+                  }}
+                  error={fieldErrors.whatsappNumber}
+                  placeholder="+94 77 123 4567"
+                  className="bg-white"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Secondary Phone Number (Landline – optional)
+                </label>
+                <Input
+                  value={secondaryPhone}
+                  onChange={(e) => {
+                    setSecondaryPhone(e.target.value);
+                    if (fieldErrors.secondaryPhone)
+                      setFieldErrors((prev) => ({ ...prev, secondaryPhone: undefined }));
+                  }}
+                  error={fieldErrors.secondaryPhone}
+                  placeholder="011 234 5678"
                   className="bg-white"
                 />
               </div>
@@ -564,6 +612,31 @@ export function CustomerCreateModal({
                 placeholder="120 High Level Road, Nugegoda"
                 className="bg-white"
               />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  TIN Number <span className="text-[11px] font-normal text-slate-400">(optional)</span>
+                </label>
+                <Input
+                  value={tinNumber}
+                  onChange={(e) => setTinNumber(e.target.value)}
+                  placeholder="e.g. 109847291-7000"
+                  className="bg-white font-mono"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  VAT Number <span className="text-[11px] font-normal text-slate-400">(optional)</span>
+                </label>
+                <Input
+                  value={vatNumber}
+                  onChange={(e) => setVatNumber(e.target.value)}
+                  placeholder="e.g. 109847291-7000"
+                  className="bg-white font-mono"
+                />
+              </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -630,7 +703,7 @@ export function CustomerCreateModal({
             </div>
           </div>
 
-          {/* SECTION 3: COMMERCIAL TERMS & CREDIT SETUP (USER SPECIFICATION) */}
+          {/* SECTION 3: COMMERCIAL TERMS & CREDIT LIMITS */}
           <div className="rounded-2xl border border-slate-200/90 bg-slate-50/40 p-4 space-y-4">
             <div className="flex items-center justify-between border-b border-slate-200/60 pb-2">
               <span className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
@@ -757,39 +830,6 @@ export function CustomerCreateModal({
                 </div>
               </div>
             </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Default Discount (%)
-                </label>
-                <Input
-                  type="number"
-                  min={0}
-                  max={30}
-                  step={0.5}
-                  value={defaultDiscountPercentage}
-                  onChange={(e) => setDefaultDiscountPercentage(Number(e.target.value))}
-                  className="bg-white font-mono"
-                  placeholder="5"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Max Allowed Discount (%)
-                </label>
-                <Input
-                  type="number"
-                  min={0}
-                  max={50}
-                  step={0.5}
-                  value={maxDiscountPercentage}
-                  onChange={(e) => setMaxDiscountPercentage(Number(e.target.value))}
-                  className="bg-white font-mono"
-                  placeholder="10"
-                />
-              </div>
-            </div>
           </div>
         </DrawerContent>
 
@@ -807,7 +847,7 @@ export function CustomerCreateModal({
                   size="sm"
                   dialogVariant="destructive"
                   confirmTitle="Reject Customer Registration?"
-                  confirmMessage={`Are you sure you want to reject customer "${name}"? This registration will be sent back with rejected status.`}
+                  confirmMessage={`Are you sure you want to reject customer "${displayName}"? This registration will be sent back with rejected status.`}
                   confirmLabel="Reject Customer"
                   confirmVariant="destructive"
                   onConfirm={async () => {
@@ -839,7 +879,7 @@ export function CustomerCreateModal({
                 size="sm"
                 dialogVariant="success"
                 confirmTitle="Approve Customer & Activate Account?"
-                confirmMessage={`Confirm sign-off and approval for "${name}" with ${creditDays} Allowed Credit Days and ${formatCurrency(creditLimit)} limit? This will activate the account for order processing.`}
+                confirmMessage={`Confirm sign-off and approval for "${displayName}" with ${creditDays} Allowed Credit Days and ${formatCurrency(creditLimit)} limit? This will activate the account for order processing.`}
                 confirmLabel="Approve Customer"
                 confirmVariant="success"
                 onConfirm={async () => {
@@ -847,13 +887,11 @@ export function CustomerCreateModal({
                   const rep = users.find((r) => r.id === assignedRepId) || salesRepsInArea.find((r) => r.id === assignedRepId);
                   const parsedCreditDays = Number(creditDays) || defaultTerms.defaultCreditDays;
                   const parsedCreditLimit = Number(creditLimit) || defaultTerms.defaultCreditLimit;
-                  const parsedDiscount = Number(defaultDiscountPercentage) || defaultTerms.defaultDiscountPercentage;
-                  const parsedMaxDiscount = Number(maxDiscountPercentage) || defaultTerms.maxDiscountPercentage;
 
                   await onApprove(editingCustomer.id, {
                     code: code || editingCustomer.code,
-                    name: name.trim(),
-                    type,
+                    name: displayName.trim(),
+                    companyName: companyName.trim() || undefined,
                     loyaltyLevel,
                     loyaltyTier:
                       loyaltyLevel === 'PLATINUM'
@@ -866,14 +904,18 @@ export function CustomerCreateModal({
                     assignedRepId: rep?.id || assignedRepId || editingCustomer.assignedRepId,
                     assignedRepName: rep?.name || editingCustomer.assignedRepName,
                     contactPerson: contactPerson.trim(),
-                    phone: phone.trim(),
+                    phone: primaryPhone.trim(),
+                    whatsappNumber: whatsappNumber.trim() || undefined,
+                    secondaryPhone: secondaryPhone.trim() || undefined,
                     email: email.trim(),
                     address: address.trim(),
+                    taxNumber: tinNumber.trim() || undefined,
+                    vatNumber: vatNumber.trim() || undefined,
                     commercialTerms: {
                       creditLimit: parsedCreditLimit,
                       creditDays: parsedCreditDays,
-                      defaultDiscountPercentage: parsedDiscount,
-                      maxDiscountPercentage: parsedMaxDiscount,
+                      defaultDiscountPercentage: defaultTerms.defaultDiscountPercentage,
+                      maxDiscountPercentage: defaultTerms.maxDiscountPercentage,
                     },
                   });
                   onOpenChange(false);

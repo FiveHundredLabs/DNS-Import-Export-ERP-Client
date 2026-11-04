@@ -34,19 +34,23 @@ export type CustomerLoyaltyLevel = 'NEW' | 'PREMIUM' | 'PLATINUM';
 
 export interface Customer extends BaseEntity {
   code: string;
-  name: string;
+  name: string; // Display Name (required)
+  companyName?: string; // Company Name (optional)
   type: CustomerType;
   areaId: string;
   areaName: string;
   assignedRepId: string;
   assignedRepName: string;
   contactPerson: string;
-  phone: string;
+  phone: string; // Primary Phone Number (required)
+  whatsappNumber?: string; // WhatsApp Number (optional)
+  secondaryPhone?: string; // Secondary Phone / Landline (optional)
   email: string;
   address: string;
   deliveryAddress?: string;
   businessRegistrationNumber?: string;
-  taxNumber?: string;
+  taxNumber?: string; // TIN Number (optional)
+  vatNumber?: string; // VAT Number (optional)
   commercialTerms: CommercialTerms;
   financials: CustomerFinancials;
   approvalStage: CustomerApprovalStage;
