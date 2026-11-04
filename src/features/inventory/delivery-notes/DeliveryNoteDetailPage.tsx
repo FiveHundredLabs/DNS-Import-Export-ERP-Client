@@ -11,6 +11,7 @@ import { DeliveryNote, SubmitRejectionPayload } from '../../../types/deliveryNot
 import { PrintableDeliveryNote } from './PrintableDeliveryNote';
 import { CustomerRejectionModal } from './CustomerRejectionModal';
 import { DeliveryNoteBarcodeModal } from './DeliveryNoteBarcodeModal';
+import { ConfirmDialog } from '../../../components/ui/confirm-button';
 import { useAuth } from '../../../hooks/useAuth';
 import {
   Truck,
@@ -43,6 +44,7 @@ export const DeliveryNoteDetailPage: React.FC = () => {
   const [showPrintModal, setShowPrintModal] = useState(false);
   const [showRejectionModal, setShowRejectionModal] = useState(false);
   const [showBarcodeModal, setShowBarcodeModal] = useState(false);
+  const [showConfirmDeliveryModal, setShowConfirmDeliveryModal] = useState(false);
   const [barcodeFilterProduct, setBarcodeFilterProduct] = useState<string>('ALL');
   const [barcodeSingleCode, setBarcodeSingleCode] = useState<string | undefined>(undefined);
 
@@ -59,8 +61,7 @@ export const DeliveryNoteDetailPage: React.FC = () => {
   const isManagerOrAdmin =
     role === 'MANAGER' ||
     role === 'DIRECTOR' ||
-    role === 'ADMIN' ||
-    role === 'STOCK_KEEPER'; // Allow testing as Stock Keeper or Operations Manager
+    role === 'STOCK_MANAGER';
 
   const fetchNote = async () => {
     if (!id) return;
@@ -132,17 +133,13 @@ export const DeliveryNoteDetailPage: React.FC = () => {
   // Case A: 100% Delivered & Accepted without rejections
   const handleConfirmFullDelivery = async () => {
     if (!note) return;
-    const confirmed = window.confirm(
-      'Confirm that ALL dispatched units have been received and accepted by the customer with signed delivery slip?'
-    );
-    if (!confirmed) return;
-
     try {
       const updated = await deliveryNoteService.confirmFullyDelivered(
         note.id,
-        'Authorized Customer Representative'
+        currentUser?.name || 'Authorized Customer Representative'
       );
       setNote(updated);
+      setShowConfirmDeliveryModal(false);
       toast.success(
         `Delivery Note ${note.deliveryNoteNumber} marked as 100% Delivered and Accepted!`
       );
@@ -353,8 +350,8 @@ export const DeliveryNoteDetailPage: React.FC = () => {
 
               <Button
                 size="sm"
-                onClick={handleConfirmFullDelivery}
-                className="text-xs gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-xs"
+                onClick={() => setShowConfirmDeliveryModal(true)}
+                className="text-xs gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-xs cursor-pointer"
               >
                 <CheckCircle2 className="h-4 w-4" />
                 Confirm 100% Delivered
@@ -696,11 +693,11 @@ export const DeliveryNoteDetailPage: React.FC = () => {
                               setBarcodeSingleCode(undefined);
                               setShowBarcodeModal(true);
                             }}
-                            title={`Print ${item.unitBarcodes.length} unit barcode stickers`}
+                            title={`Print ${item.unitBarcodes?.length || 0} unit barcode stickers`}
                             className="h-7 px-2 text-[11px] gap-1 text-primary border-primary/30 hover:bg-primary/5 font-semibold"
                           >
                             <Printer className="h-3 w-3" />
-                            Print ({item.unitBarcodes.length})
+                            Print ({item.unitBarcodes?.length || 0})
                           </Button>
                         </div>
                       </TableCell>
@@ -801,6 +798,20 @@ export const DeliveryNoteDetailPage: React.FC = () => {
           items={barcodeItems}
           initialProductId={barcodeFilterProduct}
           initialSingleBarcode={barcodeSingleCode}
+        />
+      )}
+
+      {/* ── Confirmation Popup Modal for Marking Delivered ── */}
+      {note && (
+        <ConfirmDialog
+          open={showConfirmDeliveryModal}
+          onOpenChange={setShowConfirmDeliveryModal}
+          dialogVariant="success"
+          confirmTitle="Confirm 100% Delivery Acceptance"
+          confirmMessage={`Are you sure you want to mark Delivery Note ${note.deliveryNoteNumber} as 100% Delivered and Accepted? Confirm that all dispatched units have been received and accepted by ${note.customerName} with a signed physical delivery slip.`}
+          confirmText="Yes, Confirm Delivered"
+          cancelText="Cancel"
+          onConfirm={handleConfirmFullDelivery}
         />
       )}
     </div>

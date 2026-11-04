@@ -24,8 +24,12 @@ export class CustomerService {
   }
 
   async createCustomer(
-    data: Omit<Customer, 'id' | 'createdAt' | 'updatedAt' | 'financials'>
+    data: Omit<Customer, 'id' | 'createdAt' | 'updatedAt' | 'financials'>,
+    user?: User
   ): Promise<Customer> {
+    if (user && !hasPermission(user.role, 'customers:create')) {
+      throw new Error(`Role ${user.role} is not authorized to register new customers.`);
+    }
     if (!data.name || data.name.trim().length < 3) {
       throw new Error('Customer name must be at least 3 characters.');
     }
@@ -97,7 +101,10 @@ export class CustomerService {
     return created;
   }
 
-  async updateCustomer(id: string, updates: Partial<Customer>): Promise<Customer> {
+  async updateCustomer(id: string, updates: Partial<Customer>, user?: User): Promise<Customer> {
+    if (user && !hasPermission(user.role, 'customers:edit')) {
+      throw new Error(`Role ${user.role} is not authorized to edit customer details.`);
+    }
     return this.repo.update(id, updates);
   }
 
