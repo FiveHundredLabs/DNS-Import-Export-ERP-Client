@@ -354,28 +354,17 @@ export function PaymentListPage() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          {/* Quick Record Payment & Hand Over Cash - visible only to Sales Reps / Field Staff, hidden for Manager/Director */}
+          {/* Hand Over Cash - visible only to Sales Reps / Field Staff, hidden for Manager/Director */}
           {!isManager && (
-            <>
-              <Button
-                size="sm"
-                data-testid="btn-record-payment"
-                onClick={() => navigate('/payments/new')}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs gap-1.5 shadow-xs font-semibold rounded-xl"
-              >
-                <CreditCard className="h-3.5 w-3.5" /> Record Payment
-              </Button>
-
-              <Button
-                size="sm"
-                data-testid="btn-hand-over-cash"
-                onClick={() => setCashHandoverModalOpen(true)}
-                className="bg-amber-600 hover:bg-amber-700 text-white text-xs gap-1.5 shadow-xs font-semibold rounded-xl"
-                title="Hand Over Collected Cash to Finance Department"
-              >
-                <Banknote className="h-3.5 w-3.5" /> Hand Over Cash
-              </Button>
-            </>
+            <Button
+              size="sm"
+              data-testid="btn-hand-over-cash"
+              onClick={() => setCashHandoverModalOpen(true)}
+              className="bg-amber-600 hover:bg-amber-700 text-white text-xs gap-1.5 shadow-xs font-semibold rounded-xl"
+              title="Hand Over Collected Cash to Finance Department"
+            >
+              <Banknote className="h-3.5 w-3.5" /> Hand Over Cash
+            </Button>
           )}
 
           <Button

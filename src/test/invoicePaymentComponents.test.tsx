@@ -98,7 +98,7 @@ describe('Phase 7 — Invoice & Payment UI Components', () => {
     );
 
     expect(screen.getByText(/Cash in Hand & Collections Management|Payment Collections/i)).toBeInTheDocument();
-    expect(screen.getByText(/Record Payment|Executive Management Center/i)).toBeInTheDocument();
+    expect(screen.getByText(/Hand Over Cash|Executive Management Center/i)).toBeInTheDocument();
     expect(screen.getByPlaceholderText(/Search by receipt #/i)).toBeInTheDocument();
     expect(screen.getByText('All Receipts')).toBeInTheDocument();
     expect(screen.getByText('All Customers')).toBeInTheDocument();
