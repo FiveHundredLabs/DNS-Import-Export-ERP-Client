@@ -49,7 +49,7 @@ export function PaymentCollectionForm({
   const paymentMethods: { id: PaymentMethod; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
     { id: 'CASH', label: 'Cash', icon: Banknote },
     { id: 'CHEQUE', label: 'Cheque', icon: Building2 },
-    { id: 'BANK_TRANSFER', label: 'Bank Transfer', icon: Building2 },
+    { id: 'BANK_TRANSFER', label: 'Transfer', icon: Building2 },
   ];
 
   const inputRef = React.useRef<HTMLInputElement>(null);
