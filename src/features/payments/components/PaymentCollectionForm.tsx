@@ -1,7 +1,7 @@
 import React from 'react';
 import { PaymentMethod } from '../../../types/payment';
 import { Input } from '../../../components/ui/input';
-import { Banknote, CreditCard, Building2, Check, Sparkles } from 'lucide-react';
+import { Banknote, Building2, Check, Sparkles } from 'lucide-react';
 import { formatCurrency } from '../../../utils/formatters';
 import { cn } from '../../../utils/cn';
 import { toast } from 'sonner';
@@ -50,7 +50,6 @@ export function PaymentCollectionForm({
     { id: 'CASH', label: 'Cash', icon: Banknote },
     { id: 'CHEQUE', label: 'Cheque', icon: Building2 },
     { id: 'BANK_TRANSFER', label: 'Bank Transfer', icon: Building2 },
-    { id: 'CREDIT_CARD', label: 'Card', icon: CreditCard },
   ];
 
   const inputRef = React.useRef<HTMLInputElement>(null);
@@ -182,7 +181,7 @@ export function PaymentCollectionForm({
         <label className="text-[11px] font-bold text-slate-700 block mb-1">
           Payment Method <span className="text-rose-500">*</span>
         </label>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+        <div className="grid grid-cols-3 gap-1.5">
           {paymentMethods.map((m) => {
             const Icon = m.icon;
             const isSelected = paymentMethod === m.id;
