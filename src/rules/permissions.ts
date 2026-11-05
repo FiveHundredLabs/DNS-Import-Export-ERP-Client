@@ -79,7 +79,9 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'orders:escalate',
     'orders:close',
     'inventory:view',
+    'inventory:grn_create',
     'inventory:grn_approve',
+    'inventory:pick_issue',
     'inventory:damaged_recover',
     'invoices:view',
     'payments:view',
@@ -99,19 +101,16 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'reports:all',
     'reports:area_only',
     'audit:view',
-    'view:purchasing_dashboard',
     'purchasing:suppliers_view',
     'purchasing:suppliers_manage',
     'purchasing:po_view',
     'purchasing:po_create',
     'purchasing:po_edit',
     'purchasing:grn_view',
-    'purchasing:reports',
     'purchasing:returns_view',
     'purchasing:returns_create',
     'purchasing:payments_view',
     'purchasing:returns_approve',
-    'purchasing:payments_view',
   ],
   SALES_MANAGER: [
     'view:sales_manager_dashboard',
@@ -277,7 +276,6 @@ export function canAccessRoute(role: UserRole, path: string): boolean {
       role === 'MANAGER' ||
       role === 'SALES_MANAGER' ||
       role === 'FINANCE_MANAGER' ||
-      role === 'SHOWROOM_MANAGER' ||
       role === 'STOCK_MANAGER' ||
       role === 'PURCHASING_MANAGER' ||
       role === 'PURCHASING_OFFICER'
@@ -312,6 +310,9 @@ export function canAccessRoute(role: UserRole, path: string): boolean {
       hasPermission(role, 'finance:reports')
     );
   }
+  if (path === '/warranty/verification' || path.startsWith('/warranty/verification/')) {
+    return role === 'SALES_REP' || role === 'AREA_MANAGER';
+  }
   if (path.startsWith('/warranty')) {
     return hasPermission(role, 'warranty:view');
   }
@@ -319,10 +320,36 @@ export function canAccessRoute(role: UserRole, path: string): boolean {
     return hasPermission(role, 'commissions:view');
   }
   if (path.startsWith('/reports')) {
-    return (
-      hasPermission(role, 'reports:all') ||
-      hasPermission(role, 'reports:area_only')
-    );
+    // Area Manager: NO access to reports
+    if (role === 'AREA_MANAGER') {
+      return false;
+    }
+    // Showroom Manager: ONLY the showroom sales report
+    if (role === 'SHOWROOM_MANAGER') {
+      return path === '/reports/sales/showroom';
+    }
+    // Finance Manager: ONLY finance reports
+    if (role === 'FINANCE_MANAGER') {
+      return path === '/reports' || path.startsWith('/reports/finance');
+    }
+    // Purchasing Manager: ONLY purchasing reports
+    if (role === 'PURCHASING_MANAGER') {
+      return path === '/reports' || path.startsWith('/reports/purchasing');
+    }
+    // Sales Manager: ONLY sales reports
+    if (role === 'SALES_MANAGER') {
+      return path === '/reports' || path.startsWith('/reports/sales');
+    }
+    // Stock Manager: ONLY inventory reports
+    if (role === 'STOCK_MANAGER') {
+      return path === '/reports' || path.startsWith('/reports/inventory');
+    }
+    // Director and Manager: access all reports
+    if (role === 'DIRECTOR' || role === 'MANAGER') {
+      return true;
+    }
+    // Other roles with reports:all permission
+    return hasPermission(role, 'reports:all');
   }
   if (path.startsWith('/audit')) {
     return hasPermission(role, 'audit:view');

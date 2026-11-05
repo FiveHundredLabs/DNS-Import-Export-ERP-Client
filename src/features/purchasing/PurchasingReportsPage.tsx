@@ -1,4 +1,6 @@
 import { useState, useMemo } from 'react';
+import { Navigate } from 'react-router-dom';
+import { useAuth } from '../../hooks/useAuth';
 import { usePurchaseOrders } from '../../hooks/usePurchaseOrders';
 import { useFinanceLedger } from '../finance/hooks/useFinanceLedger';
 import { useGRN } from '../../hooks/useGRN';
@@ -34,6 +36,8 @@ type ReportType =
   | 'COST_SUMMARY';
 
 export function PurchasingReportsPage() {
+  const { currentUser } = useAuth();
+
   const { purchaseOrders, loading } = usePurchaseOrders();
   const { suppliers } = useFinanceLedger();
   const { grns } = useGRN();
