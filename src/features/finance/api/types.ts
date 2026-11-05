@@ -239,6 +239,7 @@ export interface CreateSupplierDTO {
   bankAccountNumber?: string;
   bankSwiftCode?: string;
   paymentTerms: string;
+  status?: 'ACTIVE' | 'INACTIVE';
 }
 
 export interface CreateJournalLineDTO {

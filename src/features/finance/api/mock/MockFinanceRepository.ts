@@ -851,6 +851,7 @@ export class MockFinanceRepository implements IFinanceRepository {
     };
 
     this.suppliers.push(newSupplier);
+    this.saveToStorage();
     return newSupplier;
   }
 
@@ -862,8 +863,18 @@ export class MockFinanceRepository implements IFinanceRepository {
     }
 
     const current = this.suppliers[index];
+    if (dto.code && dto.code.trim().toUpperCase() !== current.code) {
+      const codeExists = this.suppliers.find(
+        (s) => s.id !== id && s.code.toLowerCase() === dto.code!.trim().toLowerCase()
+      );
+      if (codeExists) {
+        throw new Error(`Supplier with code ${dto.code} already exists`);
+      }
+    }
+
     const updated: Supplier = {
       ...current,
+      code: dto.code ? dto.code.trim().toUpperCase() : current.code,
       name: dto.name?.trim() ?? current.name,
       contactPerson: dto.contactPerson?.trim() ?? current.contactPerson,
       email: dto.email?.trim() ?? current.email,
@@ -877,10 +888,12 @@ export class MockFinanceRepository implements IFinanceRepository {
       bankAccountNumber: dto.bankAccountNumber !== undefined ? dto.bankAccountNumber.trim() : current.bankAccountNumber,
       bankSwiftCode: dto.bankSwiftCode !== undefined ? dto.bankSwiftCode.trim() : current.bankSwiftCode,
       paymentTerms: dto.paymentTerms?.trim() ?? current.paymentTerms,
+      status: dto.status ?? current.status,
       updatedAt: new Date().toISOString(),
     };
 
     this.suppliers[index] = updated;
+    this.saveToStorage();
     return updated;
   }
 
@@ -891,6 +904,7 @@ export class MockFinanceRepository implements IFinanceRepository {
       throw new Error('Supplier not found');
     }
     this.suppliers.splice(index, 1);
+    this.saveToStorage();
   }
 
   // JOURNAL ENTRIES

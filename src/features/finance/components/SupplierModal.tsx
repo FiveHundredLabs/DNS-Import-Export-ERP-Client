@@ -31,6 +31,7 @@ export function SupplierModal({
   const [taxNumber, setTaxNumber] = useState('');
   const [vatNumber, setVatNumber] = useState('');
   const [paymentTerms, setPaymentTerms] = useState('Net 30');
+  const [status, setStatus] = useState<'ACTIVE' | 'INACTIVE'>('ACTIVE');
   const [bankName, setBankName] = useState('');
   const [bankBranch, setBankBranch] = useState('');
   const [bankAccountNumber, setBankAccountNumber] = useState('');
@@ -50,6 +51,7 @@ export function SupplierModal({
       setTaxNumber(supplierToEdit.taxNumber || '');
       setVatNumber(supplierToEdit.vatNumber || '');
       setPaymentTerms(supplierToEdit.paymentTerms);
+      setStatus(supplierToEdit.status || 'ACTIVE');
       setBankName(supplierToEdit.bankName || '');
       setBankBranch(supplierToEdit.bankBranch || '');
       setBankAccountNumber(supplierToEdit.bankAccountNumber || '');
@@ -65,6 +67,7 @@ export function SupplierModal({
       setTaxNumber('');
       setVatNumber('');
       setPaymentTerms('Net 30');
+      setStatus('ACTIVE');
       setBankName('');
       setBankBranch('');
       setBankAccountNumber('');
@@ -140,6 +143,7 @@ export function SupplierModal({
         bankAccountNumber: bankAccountNumber.trim() || undefined,
         bankSwiftCode: bankSwiftCode.trim() || undefined,
         paymentTerms,
+        status,
       });
 
       onOpenChange(false);
@@ -173,7 +177,7 @@ export function SupplierModal({
         )}
 
         {/* Basic Details */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className={`grid grid-cols-1 ${supplierToEdit ? 'sm:grid-cols-4' : 'sm:grid-cols-3'} gap-3`}>
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1">
               Supplier Code <span className="text-rose-500">*</span>
@@ -210,6 +214,17 @@ export function SupplierModal({
               <option value="Advance Payment">100% Advance Payment</option>
             </Select>
           </div>
+          {supplierToEdit && (
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Status <span className="text-rose-500">*</span>
+              </label>
+              <Select value={status} onChange={(e) => setStatus(e.target.value as 'ACTIVE' | 'INACTIVE')}>
+                <option value="ACTIVE">Active</option>
+                <option value="INACTIVE">Inactive</option>
+              </Select>
+            </div>
+          )}
         </div>
 
         <div>
