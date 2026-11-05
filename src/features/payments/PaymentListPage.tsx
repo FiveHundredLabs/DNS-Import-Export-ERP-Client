@@ -367,6 +367,19 @@ export function PaymentListPage() {
             </Button>
           )}
 
+          {isManager && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => navigate('/finance/income')}
+              className="text-xs gap-1.5 rounded-xl border-primary/30 text-primary hover:bg-primary/10 font-semibold"
+              title="Open Unified Income & Collections Desk"
+            >
+              <Banknote className="h-3.5 w-3.5" />
+              <span>Unified Income Desk</span>
+            </Button>
+          )}
+
           <Button
             variant="outline"
             size="sm"

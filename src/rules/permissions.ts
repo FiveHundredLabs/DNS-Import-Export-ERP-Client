@@ -315,6 +315,15 @@ export function canAccessRoute(role: UserRole, path: string): boolean {
   if (path.startsWith('/warranty')) {
     return hasPermission(role, 'warranty:view');
   }
+  if (path.startsWith('/my-performance')) {
+    return (
+      role === 'SALES_REP' ||
+      role === 'AREA_MANAGER' ||
+      role === 'SALES_MANAGER' ||
+      role === 'DIRECTOR' ||
+      role === 'MANAGER'
+    );
+  }
   if (path.startsWith('/commissions')) {
     return hasPermission(role, 'commissions:view');
   }

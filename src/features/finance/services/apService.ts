@@ -61,6 +61,7 @@ export interface VendorBill {
   status: 'OPEN' | 'PARTIALLY_PAID' | 'PAID' | 'POSTED' | 'VOIDED';
   journalEntryId?: string;
   appliedAdvanceId?: string;
+  purchaseOrderNumber?: string;
   freightBilledByThirdParty?: boolean;
   vendorPayableAmount?: number;
   accruedLandedCost?: number;
@@ -188,6 +189,7 @@ const INITIAL_BILLS: VendorBill[] = [
     vendorInvoiceNumber: 'INV-SCH-89104',
     grnId: 'GRN-2025-005',
     grnNumber: 'GRN-2025-005',
+    purchaseOrderNumber: 'PO-2026-001',
     supplierId: 'sup-1',
     supplierName: 'DNS Global Logistics & Electronics Ltd',
     invoiceDate: '2026-09-20',
@@ -1376,9 +1378,9 @@ class AccountsPayableService {
       }
     }
 
-    // Restore GRN status back to SUBMITTED so it can be re-costed or inspected
+    // Restore GRN status back to APPROVED so it can be re-costed or inspected
     if (bill.grnId) {
-      this.grnStatuses[bill.grnId] = 'SUBMITTED';
+      this.grnStatuses[bill.grnId] = 'APPROVED';
     }
 
     bill.status = 'VOIDED';

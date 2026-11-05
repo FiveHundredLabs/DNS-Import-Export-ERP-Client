@@ -299,8 +299,8 @@ export function FinanceDeskPage() {
               Universal Debit / Credit Entry
             </Badge>
           </div>
-          <p className="text-sm text-slate-500 mt-1">
-            Universal double-entry journal voucher form for miscellaneous expenses, fixed asset acquisitions, and manual ledger adjustments.
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Double-entry journal vouchers, adjustments, and ledger entries.
           </p>
         </div>
 
