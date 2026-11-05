@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useNavigate, useSearchParams, Link } from 'react-router-dom';
+import { useNavigate, useSearchParams, useLocation, Link } from 'react-router-dom';
 import { Invoice, InvoiceStatus, InvoicePaymentFilterType } from '../../types/invoice';
 import { Customer } from '../../types/customer';
 import { invoiceService } from '../../services/InvoiceService';
@@ -56,6 +56,7 @@ import { cn } from '../../utils/cn';
 
 export function InvoiceListPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const { role, currentUser } = useAuth();
   const activeRole = currentUser?.role || role;
@@ -443,7 +444,7 @@ export function InvoiceListPage() {
                   return (
                     <div
                       key={inv.id}
-                      onClick={() => navigate(`/invoices/${inv.id}`)}
+                      onClick={() => navigate(`/invoices/${inv.id}`, { state: { from: location.pathname + location.search } })}
                       className="rounded-2xl border border-slate-200/90 bg-white p-3 sm:p-3.5 shadow-2xs hover:border-primary/50 transition-all cursor-pointer active:scale-[0.99]"
                     >
                       {/* Top: Invoice #, Order #, Status */}
@@ -559,7 +560,7 @@ export function InvoiceListPage() {
                             size="sm"
                             onClick={(e) => {
                               e.stopPropagation();
-                              navigate(`/invoices/${inv.id}`);
+                              navigate(`/invoices/${inv.id}`, { state: { from: location.pathname + location.search } });
                             }}
                             className="h-8 px-2.5 text-xs font-semibold text-amber-700 hover:text-amber-800 hover:bg-amber-50 rounded-xl cursor-pointer gap-1 shrink-0"
                           >
@@ -572,7 +573,7 @@ export function InvoiceListPage() {
                             size="sm"
                             onClick={(e) => {
                               e.stopPropagation();
-                              navigate(`/invoices/${inv.id}?collect=true`);
+                              navigate(`/invoices/${inv.id}?collect=true`, { state: { from: location.pathname + location.search } });
                             }}
                             className="h-8 px-2.5 text-xs font-semibold text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50 rounded-xl cursor-pointer gap-1 shrink-0"
                           >
@@ -616,11 +617,11 @@ export function InvoiceListPage() {
                           inv.status === 'DRAFT' && "bg-amber-50/20 hover:bg-amber-50/50"
                         )}
                         tabIndex={0}
-                        onClick={() => navigate(`/invoices/${inv.id}`)}
+                        onClick={() => navigate(`/invoices/${inv.id}`, { state: { from: location.pathname + location.search } })}
                         onKeyDown={(e) => {
                           if (e.key === 'Enter' || e.key === ' ') {
                             e.preventDefault();
-                            navigate(`/invoices/${inv.id}`);
+                            navigate(`/invoices/${inv.id}`, { state: { from: location.pathname + location.search } });
                           }
                         }}
                       >
@@ -628,7 +629,7 @@ export function InvoiceListPage() {
                           <span
                             onClick={(e) => {
                               e.stopPropagation();
-                              navigate(`/invoices/${inv.id}`);
+                              navigate(`/invoices/${inv.id}`, { state: { from: location.pathname + location.search } });
                             }}
                             className="hover:underline cursor-pointer"
                           >
@@ -688,7 +689,7 @@ export function InvoiceListPage() {
                                 size="xs"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  navigate(`/invoices/${inv.id}`);
+                                  navigate(`/invoices/${inv.id}`, { state: { from: location.pathname + location.search } });
                                 }}
                                 className="font-semibold text-amber-700 hover:text-amber-800 hover:bg-amber-50 gap-1 rounded-lg"
                                 title="Edit Draft Invoice"
@@ -752,7 +753,7 @@ export function InvoiceListPage() {
                                 size="xs"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  navigate(`/invoices/${inv.id}?collect=true`);
+                                  navigate(`/invoices/${inv.id}?collect=true`, { state: { from: location.pathname + location.search } });
                                 }}
                                 className="font-semibold text-emerald-700 hover:bg-emerald-50 gap-1 rounded-lg"
                                 title="Collect Payment on this Invoice"

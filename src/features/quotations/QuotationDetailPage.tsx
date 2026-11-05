@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useSmartBack } from '../../hooks/useSmartBack';
 import { useAuth } from '../../hooks/useAuth';
 import { useQuotations } from '../../hooks/useQuotations';
 import { quotationService } from '../../services/QuotationService';
@@ -36,6 +37,7 @@ import {
 export function QuotationDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const goBack = useSmartBack('/quotations');
   const { currentUser } = useAuth();
   const {
     approveQuotation,
@@ -161,7 +163,7 @@ export function QuotationDetailPage() {
         <AlertTriangle className="h-10 w-10 text-rose-500 mx-auto" />
         <h3 className="font-bold text-slate-800 text-sm">Quotation Not Found</h3>
         <p className="text-xs text-slate-500">{error || 'The requested quotation could not be loaded.'}</p>
-        <Button onClick={() => navigate('/quotations')} variant="outline" size="sm" className="mt-2">
+        <Button onClick={goBack} variant="outline" size="sm" className="mt-2">
           Back to Quotations List
         </Button>
       </div>
@@ -173,7 +175,7 @@ export function QuotationDetailPage() {
       {/* Top Navigation & Action Toolbar */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <button
-          onClick={() => navigate('/quotations')}
+          onClick={goBack}
           className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-800"
         >
           <ArrowLeft className="h-3.5 w-3.5" />

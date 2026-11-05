@@ -407,7 +407,7 @@ export const StockManagerApprovalHub: React.FC = () => {
                       return (
                         <div
                           key={g.id}
-                          onClick={() => navigate(`/inventory/grn/${g.id}`)}
+                          onClick={() => navigate(`/inventory/grn/${g.id}`, { state: { from: '/inventory/approvals' } })}
                           className="p-3 rounded-xl border border-slate-200 bg-white hover:border-amber-400 hover:bg-amber-50/40 text-xs cursor-pointer transition-all space-y-2 shadow-2xs group"
                         >
                           <div className="flex items-start justify-between gap-3">
@@ -458,7 +458,7 @@ export const StockManagerApprovalHub: React.FC = () => {
                               size="sm"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                navigate(`/inventory/grn/${g.id}`);
+                                navigate(`/inventory/grn/${g.id}`, { state: { from: '/inventory/approvals' } });
                               }}
                               className="h-6 text-2xs font-semibold gap-1 bg-amber-600 hover:bg-amber-700 text-white shadow-2xs"
                             >
@@ -505,7 +505,7 @@ export const StockManagerApprovalHub: React.FC = () => {
                       return (
                         <div
                           key={g.id}
-                          onClick={() => navigate(`/inventory/grn/${g.id}`)}
+                          onClick={() => navigate(`/inventory/grn/${g.id}`, { state: { from: '/inventory/approvals' } })}
                           className="p-3 rounded-xl border border-slate-200 bg-white hover:border-blue-400 hover:bg-blue-50/40 text-xs cursor-pointer transition-all space-y-2 shadow-2xs group"
                         >
                           <div className="flex items-start justify-between gap-3">
@@ -563,7 +563,7 @@ export const StockManagerApprovalHub: React.FC = () => {
                               size="sm"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                navigate(`/inventory/grn/${g.id}`);
+                                navigate(`/inventory/grn/${g.id}`, { state: { from: '/inventory/approvals' } });
                               }}
                               className="h-6 text-2xs font-semibold gap-1 bg-blue-600 hover:bg-blue-700 text-white shadow-2xs"
                             >
@@ -635,7 +635,7 @@ export const StockManagerApprovalHub: React.FC = () => {
                           return (
                             <TableRow
                               key={g.id}
-                              onClick={() => navigate(`/inventory/grn/${g.id}`)}
+                              onClick={() => navigate(`/inventory/grn/${g.id}`, { state: { from: '/inventory/approvals' } })}
                               className="cursor-pointer hover:bg-slate-50/70 transition-colors"
                             >
                               <TableCell className="py-3 px-3 font-mono font-bold text-primary">
@@ -690,7 +690,7 @@ export const StockManagerApprovalHub: React.FC = () => {
                                   size="sm"
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    navigate(`/inventory/grn/${g.id}`);
+                                    navigate(`/inventory/grn/${g.id}`, { state: { from: '/inventory/approvals' } });
                                   }}
                                   className="h-7 text-xs font-semibold gap-1.5 bg-primary hover:bg-primary-hover text-white shadow-2xs"
                                 >
@@ -792,7 +792,7 @@ export const StockManagerApprovalHub: React.FC = () => {
                       {pendingAndRejectedDns.map((dn) => (
                         <TableRow
                           key={dn.id}
-                          onClick={() => navigate(`/inventory/delivery-notes/${dn.id}`)}
+                          onClick={() => navigate(`/inventory/delivery-notes/${dn.id}`, { state: { from: '/inventory/approvals' } })}
                           className="cursor-pointer transition-colors hover:bg-slate-50/80"
                         >
                           <TableCell className="py-3 px-3 font-mono font-bold text-primary">
@@ -843,7 +843,7 @@ export const StockManagerApprovalHub: React.FC = () => {
                               size="sm"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                navigate(`/inventory/delivery-notes/${dn.id}`);
+                                navigate(`/inventory/delivery-notes/${dn.id}`, { state: { from: '/inventory/approvals' } });
                               }}
                               className={cn(
                                 'h-7 text-xs font-semibold gap-1.5 shadow-2xs',

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useSmartBack } from '../../hooks/useSmartBack';
 import { Customer } from '../../types/customer';
 import { customerService } from '../../services/CustomerService';
 import { CustomerHubView } from './CustomerHubView';
@@ -11,6 +12,7 @@ import { useAuth } from '../../hooks/useAuth';
 export function CustomerDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { role, currentUser } = useAuth();
+  const goBack = useSmartBack('/customers');
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -66,11 +68,9 @@ export function CustomerDetailPage() {
 
   return (
     <div className="space-y-4">
-      <Link to="/customers">
-        <Button variant="ghost" size="sm" className="gap-1.5 text-xs">
-          <ArrowLeft className="h-4 w-4" /> Back to Customer Master
-        </Button>
-      </Link>
+      <Button variant="ghost" size="sm" className="gap-1.5 text-xs" onClick={goBack}>
+        <ArrowLeft className="h-4 w-4" /> Back to Customer Master
+      </Button>
       <CustomerHubView customer={customer} />
     </div>
   );

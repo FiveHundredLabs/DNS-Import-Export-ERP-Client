@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useSmartBack } from '../../hooks/useSmartBack';
 import { usePurchaseOrders } from '../../hooks/usePurchaseOrders';
 import { useAuth } from '../../hooks/useAuth';
 import { approvalService } from '../../services/ApprovalService';
@@ -40,6 +41,7 @@ import { toast } from 'sonner';
 export function PurchaseOrderDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const goBack = useSmartBack('/purchasing/orders');
   const { currentUser } = useAuth();
   const { purchaseOrders, loading, submitPO, markSent, refetch } = usePurchaseOrders();
 
@@ -210,7 +212,7 @@ export function PurchaseOrderDetailPage() {
         <AlertCircle className="h-10 w-10 text-rose-500 mx-auto" />
         <h2 className="text-xl font-bold text-slate-900">Purchase Order Not Found</h2>
         <p className="text-sm text-slate-500">The requested purchase order record could not be loaded.</p>
-        <Button onClick={() => navigate('/purchasing/orders')}>Back to Orders</Button>
+        <Button onClick={goBack}>Back to Orders</Button>
       </div>
     );
   }

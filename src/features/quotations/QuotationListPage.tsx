@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { useQuotations } from '../../hooks/useQuotations';
 import { useAuth } from '../../hooks/useAuth';
 import { Quotation, QuotationStatus } from '../../types/quotation';
@@ -55,6 +55,7 @@ const STATUS_FILTERS: Array<{ label: string; value: QuotationStatus | 'ALL' }> =
 
 export function QuotationListPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const { currentUser } = useAuth();
   const initialCustomerId = searchParams.get('customerId') || undefined;
@@ -313,7 +314,7 @@ export function QuotationListPage() {
                 {quotations.map((q) => (
                   <div
                     key={q.id}
-                    onClick={() => navigate(`/quotations/${q.id}`)}
+                    onClick={() => navigate(`/quotations/${q.id}`, { state: { from: location.pathname + location.search } })}
                     className="rounded-2xl border border-slate-200/90 bg-white p-3.5 shadow-xs hover:border-primary/50 transition-all cursor-pointer active:scale-[0.99]"
                   >
                     {/* Top Row: Quotation # & Status Badge */}
@@ -435,11 +436,11 @@ export function QuotationListPage() {
                         key={q.id}
                         className="hover:bg-slate-50/70 cursor-pointer transition-colors focus:outline-hidden focus:bg-slate-50"
                         tabIndex={0}
-                        onClick={() => navigate(`/quotations/${q.id}`)}
+                        onClick={() => navigate(`/quotations/${q.id}`, { state: { from: location.pathname + location.search } })}
                         onKeyDown={(e) => {
                           if (e.key === 'Enter' || e.key === ' ') {
                             e.preventDefault();
-                            navigate(`/quotations/${q.id}`);
+                            navigate(`/quotations/${q.id}`, { state: { from: location.pathname + location.search } });
                           }
                         }}
                       >

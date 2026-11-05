@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
+import { useSmartBack } from '../../hooks/useSmartBack';
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
 import { Input } from '../../components/ui/input';
@@ -15,6 +16,9 @@ import { cn } from '../../utils/cn';
 export function GRNUnitStickersPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
+  const defaultPath = location.pathname.startsWith('/purchasing') ? '/purchasing/grn' : '/inventory/grn';
+  const goBack = useSmartBack(defaultPath);
   const [searchParams, setSearchParams] = useSearchParams();
 
   const [grn, setGrn] = useState<GRN | null>(null);
@@ -208,7 +212,7 @@ export function GRNUnitStickersPage() {
         <Button
           variant="outline"
           size="sm"
-          onClick={() => navigate(-1)}
+          onClick={goBack}
           className="gap-2 font-medium text-slate-700 hover:text-slate-900 border-slate-300 bg-white"
         >
           <ArrowLeft className="h-4 w-4" />
@@ -230,7 +234,7 @@ export function GRNUnitStickersPage() {
         <Button
           variant="outline"
           size="sm"
-          onClick={() => navigate(-1)}
+          onClick={goBack}
           className="gap-2 font-medium text-slate-700 hover:text-slate-900 border-slate-300 bg-white shadow-2xs hover:bg-slate-50 cursor-pointer"
         >
           <ArrowLeft className="h-4 w-4" />

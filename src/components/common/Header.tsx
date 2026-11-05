@@ -127,7 +127,18 @@ export function Header({ onToggleSidebar }: HeaderProps) {
       <div className="flex items-center gap-2 sm:gap-4 min-w-0">
         {location.pathname !== '/' ? (
           <button
-            onClick={() => navigate(-1)}
+            onClick={() => {
+              const stateFrom = (location.state as { from?: string } | null)?.from;
+              if (stateFrom && stateFrom !== location.pathname) {
+                navigate(stateFrom);
+              } else if (window.history.length > 1) {
+                navigate(-1);
+              } else {
+                const parts = location.pathname.split('/').filter(Boolean);
+                parts.pop();
+                navigate(parts.length > 0 ? '/' + parts.join('/') : '/');
+              }
+            }}
             className="rounded-md p-2 text-primary-foreground/90 hover:bg-primary-foreground/15 hover:text-primary-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-primary-foreground md:hidden shrink-0 cursor-pointer"
             aria-label="Go back"
           >

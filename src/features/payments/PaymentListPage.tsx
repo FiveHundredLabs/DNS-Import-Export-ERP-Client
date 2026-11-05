@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useNavigate, useSearchParams, Link } from 'react-router-dom';
+import { useNavigate, useSearchParams, useLocation, Link } from 'react-router-dom';
 import { Payment, PaymentStatus, PaymentMethod } from '../../types/payment';
 import { Customer } from '../../types/customer';
 import { paymentService } from '../../services/PaymentService';
@@ -68,6 +68,7 @@ import { InvoiceCollectionsLedger } from './components/InvoiceCollectionsLedger'
 
 export function PaymentListPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const { role, currentUser } = useAuth();
 
@@ -1087,7 +1088,7 @@ export function PaymentListPage() {
                   return (
                     <div
                       key={p.id}
-                      onClick={() => navigate(`/payments/${p.id}`)}
+                      onClick={() => navigate(`/payments/${p.id}`, { state: { from: location.pathname + location.search } })}
                       className={cn(
                         "rounded-2xl border bg-white p-3.5 shadow-xs transition-all cursor-pointer active:scale-[0.99]",
                         h24.isOverdue && h24.handoverStatus === 'PENDING_HANDOVER'
@@ -1267,11 +1268,11 @@ export function PaymentListPage() {
                             h24.isOverdue && h24.handoverStatus === 'PENDING_HANDOVER' ? "bg-rose-50/30" : ""
                           )}
                           tabIndex={0}
-                          onClick={() => navigate(`/payments/${p.id}`)}
+                          onClick={() => navigate(`/payments/${p.id}`, { state: { from: location.pathname + location.search } })}
                           onKeyDown={(e) => {
                             if (e.key === 'Enter' || e.key === ' ') {
                               e.preventDefault();
-                              navigate(`/payments/${p.id}`);
+                              navigate(`/payments/${p.id}`, { state: { from: location.pathname + location.search } });
                             }
                           }}
                         >

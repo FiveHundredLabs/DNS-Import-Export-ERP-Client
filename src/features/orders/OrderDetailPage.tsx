@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useSmartBack } from '../../hooks/useSmartBack';
 import { useAuth } from '../../hooks/useAuth';
 import { orderService } from '../../services/OrderService';
 import { invoiceService } from '../../services/InvoiceService';
@@ -57,6 +58,7 @@ import {
 
 export function OrderDetailPage() {
   const navigate = useNavigate();
+  const goBack = useSmartBack('/orders');
   const { id } = useParams<{ id: string }>();
   const { currentUser } = useAuth();
   const isSalesRep = currentUser.role === 'SALES_REP';
@@ -283,7 +285,7 @@ export function OrderDetailPage() {
         <AlertTriangle className="h-10 w-10 text-rose-500 mx-auto" />
         <h3 className="font-bold text-slate-800 text-sm">Order Not Found</h3>
         <p className="text-xs text-slate-500">{error || 'The requested order could not be loaded.'}</p>
-        <Button onClick={() => navigate('/orders')} variant="outline" size="sm" className="mt-2">
+        <Button onClick={goBack} variant="outline" size="sm" className="mt-2">
           Back to Orders List
         </Button>
       </div>
@@ -312,7 +314,7 @@ export function OrderDetailPage() {
       {/* Top Navigation & Toolbar */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 print:hidden">
         <button
-          onClick={() => navigate('/orders')}
+          onClick={goBack}
           className="hidden sm:flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-800"
         >
           <ArrowLeft className="h-3.5 w-3.5" />
