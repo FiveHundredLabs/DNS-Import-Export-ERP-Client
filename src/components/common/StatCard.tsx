@@ -273,11 +273,11 @@ export function StatCard({
       {/* Main KPI Value */}
       <div className="mt-2 min-w-0">
         {isCurrency ? (
-          <AmountDisplay amount={value} className="text-slate-900 font-bold font-mono text-2xl tabular-nums" />
+          <AmountDisplay amount={value} className="text-slate-900 font-bold font-mono text-xl sm:text-2xl tabular-nums" />
         ) : (
           <div
             className={cn(
-              'text-2xl font-bold font-mono tracking-tight tabular-nums leading-tight truncate',
+              'text-xl sm:text-2xl font-bold font-mono tracking-tight tabular-nums leading-tight truncate',
               theme.valueColor
             )}
           >
