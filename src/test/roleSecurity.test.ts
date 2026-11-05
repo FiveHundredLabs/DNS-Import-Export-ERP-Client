@@ -529,9 +529,11 @@ describe('Phase 12 — Role Security & Permission Boundary Testing (Section 83)'
       expect(hasPermission('SHOWROOM_MANAGER', 'reports:all')).toBe(true);
     });
 
-    it('cannot access restricted back-office modules (/finance, /settings)', () => {
+    it('cannot access restricted back-office modules (/finance, /settings, /approvals)', () => {
       expect(canAccessRoute('SHOWROOM_MANAGER', '/finance')).toBe(false);
       expect(canAccessRoute('SHOWROOM_MANAGER', '/settings')).toBe(false);
+      expect(canAccessRoute('SHOWROOM_MANAGER', '/approvals')).toBe(false);
+      expect(canAccessRoute('SHOWROOM_MANAGER', '/approvals/my-approvals')).toBe(false);
     });
   });
 

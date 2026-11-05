@@ -276,7 +276,6 @@ export function canAccessRoute(role: UserRole, path: string): boolean {
       role === 'MANAGER' ||
       role === 'SALES_MANAGER' ||
       role === 'FINANCE_MANAGER' ||
-      role === 'SHOWROOM_MANAGER' ||
       role === 'STOCK_MANAGER' ||
       role === 'PURCHASING_MANAGER' ||
       role === 'PURCHASING_OFFICER'
@@ -311,6 +310,9 @@ export function canAccessRoute(role: UserRole, path: string): boolean {
       hasPermission(role, 'finance:reports')
     );
   }
+  if (path === '/warranty/verification' || path.startsWith('/warranty/verification/')) {
+    return role === 'SALES_REP' || role === 'AREA_MANAGER';
+  }
   if (path.startsWith('/warranty')) {
     return hasPermission(role, 'warranty:view');
   }
@@ -318,9 +320,6 @@ export function canAccessRoute(role: UserRole, path: string): boolean {
     return hasPermission(role, 'commissions:view');
   }
   if (path.startsWith('/reports')) {
-    if (role === 'MANAGER' && (path === '/reports/purchasing' || path.startsWith('/reports/purchasing/'))) {
-      return false;
-    }
     return (
       hasPermission(role, 'reports:all') ||
       hasPermission(role, 'reports:area_only')
@@ -340,18 +339,7 @@ export function canAccessRoute(role: UserRole, path: string): boolean {
     return role === 'DIRECTOR' || role === 'MANAGER';
   }
   if (path.startsWith('/purchasing')) {
-    if (role === 'DIRECTOR') return true;
-    if (role === 'MANAGER') {
-      if (
-        path === '/purchasing' ||
-        path === '/purchasing/' ||
-        path.startsWith('/purchasing/dashboard') ||
-        path.startsWith('/purchasing/reports')
-      ) {
-        return false;
-      }
-      return true;
-    }
+    if (role === 'DIRECTOR' || role === 'MANAGER') return true;
     if (role === 'PURCHASING_OFFICER' || role === 'PURCHASING_MANAGER') {
       if (path === '/purchasing' || path.startsWith('/purchasing/dashboard')) {
         return hasPermission(role, 'view:purchasing_dashboard');

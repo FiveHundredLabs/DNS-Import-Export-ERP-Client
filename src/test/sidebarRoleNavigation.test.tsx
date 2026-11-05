@@ -82,6 +82,19 @@ describe('Role-Based Sidebar Navigation & Access Control', () => {
       expect(screen.queryByTitle('Administration')).not.toBeInTheDocument();
     });
 
+    it('SHOWROOM_MANAGER does not see Approvals & Warranty, Finance, Customers, or Administration categories', () => {
+      setupSidebarForRole('SHOWROOM_MANAGER');
+
+      expect(screen.getByTitle('Dashboard & Quick Links')).toBeInTheDocument();
+      expect(screen.getByTitle('Sales & Orders')).toBeInTheDocument(); // POS
+
+      // Approvals & restricted categories must NOT be in the sidebar rail
+      expect(screen.queryByTitle('Approvals & Warranty')).not.toBeInTheDocument();
+      expect(screen.queryByTitle('Finance & Payments')).not.toBeInTheDocument();
+      expect(screen.queryByTitle('Customers & CRM')).not.toBeInTheDocument();
+      expect(screen.queryByTitle('Administration')).not.toBeInTheDocument();
+    });
+
     it('FINANCE_MANAGER cannot see Inventory or Administration categories', () => {
       setupSidebarForRole('FINANCE_MANAGER');
 
@@ -155,32 +168,22 @@ describe('Role-Based Sidebar Navigation & Access Control', () => {
       expect(screen.queryByText('Access Denied')).not.toBeInTheDocument();
     });
 
-    it('denies MANAGER from accessing /purchasing and /purchasing/reports', () => {
-      expect(canAccessRoute('MANAGER', '/purchasing')).toBe(false);
-      expect(canAccessRoute('MANAGER', '/purchasing/dashboard')).toBe(false);
-      expect(canAccessRoute('MANAGER', '/purchasing/reports')).toBe(false);
-      expect(canAccessRoute('MANAGER', '/reports/purchasing')).toBe(false);
-      expect(canAccessRoute('MANAGER', '/approvals')).toBe(true);
+    it('allows MANAGER to access purchasing module as like director', () => {
+      expect(canAccessRoute('MANAGER', '/purchasing')).toBe(true);
       expect(canAccessRoute('MANAGER', '/purchasing/orders')).toBe(true);
+      expect(canAccessRoute('MANAGER', '/approvals')).toBe(true);
+      expect(canAccessRoute('MANAGER', '/purchasing/payments')).toBe(true);
+      expect(canAccessRoute('MANAGER', '/purchasing/grn')).toBe(true);
+      expect(canAccessRoute('MANAGER', '/purchasing/returns')).toBe(true);
 
-      mockUseAuth.mockReturnValue({
-        role: 'MANAGER',
-        currentUser: { id: 'mgr-01', name: 'Manager User', role: 'MANAGER' },
-        canAccessRoute: (path: string) => canAccessRoute('MANAGER', path),
-        isAuthenticated: true,
-      });
+      setupSidebarForRole('MANAGER');
+      expect(screen.getByTitle('Purchasing & Procurement')).toBeInTheDocument();
+    });
 
-      render(
-        <MemoryRouter initialEntries={['/purchasing']}>
-          <ProtectedRoute>
-            <div data-testid="protected-content">Purchasing Dashboard</div>
-          </ProtectedRoute>
-        </MemoryRouter>
-      );
-
-      expect(screen.queryByTestId('protected-content')).not.toBeInTheDocument();
-      expect(screen.getByText('Access Denied')).toBeInTheDocument();
-      expect(screen.getByText(/MANAGER/)).toBeInTheDocument();
+    it('removes Warranty Verification from MANAGER side and restricts to sales reps / area managers', () => {
+      expect(canAccessRoute('MANAGER', '/warranty/verification')).toBe(false);
+      expect(canAccessRoute('SALES_REP', '/warranty/verification')).toBe(true);
+      expect(canAccessRoute('AREA_MANAGER', '/warranty/verification')).toBe(true);
     });
 
     it('DIRECTOR sidebar includes Cash in Hand under Sales and removes Stock Manager Approvals from Inventory', () => {

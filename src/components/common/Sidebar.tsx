@@ -133,7 +133,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         setActiveCategory('all');
       }
     } else {
-      if (location.pathname.startsWith('/purchasing') && canAccessRoute('/purchasing')) {
+      if (location.pathname.startsWith('/purchasing') && (canAccessRoute('/purchasing') || canAccessRoute('/purchasing/orders'))) {
         setActiveCategory('purchasing');
       } else if (location.pathname.startsWith('/finance') && canAccessRoute('/finance')) {
         setActiveCategory('finance');
@@ -250,11 +250,11 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   // 0. Purchasing & Procurement Module
   const purchasingItems: SidebarItem[] = [
     { id: 'purchasing-dashboard', name: 'Purchasing Dashboard', path: '/purchasing', icon: LayoutGrid, category: 'purchasing', exact: true, excludedRoles: ['MANAGER'] },
-    { id: 'purchasing-suppliers', name: 'Supplier Management', path: '/purchasing/suppliers', icon: Store, category: 'purchasing' },
+    { id: 'purchasing-suppliers', name: 'Supplier Management', path: '/purchasing/suppliers', icon: Store, category: 'purchasing', excludedRoles: ['MANAGER'] },
     { id: 'purchasing-orders', name: 'Purchase Orders', path: '/purchasing/orders', icon: ShoppingCart, category: 'purchasing' },
     { id: 'purchasing-approvals', name: 'PO Approvals', path: '/approvals', icon: ShieldCheck, category: 'purchasing' },
     { id: 'purchasing-payments', name: 'Supplier Payments (View Only)', path: '/purchasing/payments', icon: CreditCard, category: 'purchasing' },
-    { id: 'purchasing-grn', name: 'Goods Received (View Only)', path: '/purchasing/grn', icon: Boxes, category: 'purchasing' },
+    { id: 'purchasing-grn', name: 'Goods Received Notes (View Only)', path: '/purchasing/grn', icon: Boxes, category: 'purchasing' },
     { id: 'purchasing-reports', name: 'Purchase Reports', path: '/purchasing/reports', icon: BarChart3, category: 'purchasing', excludedRoles: ['MANAGER'] },
     { id: 'purchasing-returns', name: 'Supplier Returns & RMA', path: '/purchasing/returns', icon: RotateCcw, category: 'purchasing' },
   ];
@@ -274,9 +274,10 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       path: '/approvals',
       icon: role === 'STOCK_MANAGER' || role === 'PURCHASING_MANAGER' ? ShieldCheck : CheckCircle,
       category: 'approvals',
+      excludedRoles: ['SHOWROOM_MANAGER'],
     },
     { id: 'warranty', name: 'Warranty Hub', path: '/warranty', icon: ShieldCheck, category: 'approvals' },
-    { id: 'warranty-verification', name: 'Warranty Verification', path: '/warranty/verification', icon: Barcode, category: 'sales' },
+    { id: 'warranty-verification', name: 'Warranty Verification', path: '/warranty/verification', icon: Barcode, category: 'sales', allowedRoles: ['SALES_REP', 'AREA_MANAGER'] },
   ];
 
   // 2. Customers, Invoices, Cash in Hand & POS
@@ -378,7 +379,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       if (item.category === 'finance' && !canAccessRoute('/finance')) {
         return false;
       }
-      if (item.category === 'purchasing' && !canAccessRoute('/purchasing')) {
+      if (item.category === 'purchasing' && !canAccessRoute('/purchasing') && !canAccessRoute('/purchasing/orders')) {
         return false;
       }
       if (item.category === 'inventory' && !canAccessRoute('/inventory') && item.path !== '/pos') {

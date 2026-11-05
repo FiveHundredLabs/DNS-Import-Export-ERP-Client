@@ -32,7 +32,7 @@ export function PurchasingDashboard() {
   const { currentUser } = useAuth();
 
   if (currentUser?.role === 'MANAGER') {
-    return <Navigate to="/approvals" replace />;
+    return <Navigate to="/purchasing/orders" replace />;
   }
 
   const { purchaseOrders, loading } = usePurchaseOrders();
