@@ -88,6 +88,7 @@ import { PurchaseOrderListPage } from './features/purchasing/PurchaseOrderListPa
 import { PurchaseOrderCreateEditPage } from './features/purchasing/PurchaseOrderCreateEditPage';
 import { PurchaseOrderDetailPage } from './features/purchasing/PurchaseOrderDetailPage';
 import { PurchaseOrderPrintPage } from './features/purchasing/PurchaseOrderPrintPage';
+import { PurchaseOrderApprovalPage } from './features/purchasing/PurchaseOrderApprovalPage';
 import { PurchasingGRNListPage } from './features/purchasing/PurchasingGRNListPage';
 import { PurchasingGRNDetailPage } from './features/purchasing/PurchasingGRNDetailPage';
 import { PurchasingReportsPage } from './features/purchasing/PurchasingReportsPage';
@@ -717,6 +718,22 @@ export function App() {
           element={
             <ProtectedRoute>
               <PurchaseOrderPrintPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="purchasing/approvals/:id"
+          element={
+            <ProtectedRoute>
+              <PurchaseOrderApprovalPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="purchasing/orders/:id/approval"
+          element={
+            <ProtectedRoute>
+              <PurchaseOrderApprovalPage />
             </ProtectedRoute>
           }
         />

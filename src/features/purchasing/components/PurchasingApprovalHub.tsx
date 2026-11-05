@@ -578,46 +578,53 @@ export const PurchasingApprovalHub: React.FC = () => {
                       return (
                         <div
                           key={app.id}
-                          onClick={() => setSelectedApprovalId(app.id)}
-                          className={cn(
-                            'p-3 rounded-xl border text-xs cursor-pointer transition-all flex items-start justify-between gap-3',
-                            isSelected
-                              ? 'border-amber-400 bg-amber-50/60 shadow-2xs ring-2 ring-amber-300/60'
-                              : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50'
-                          )}
+                          onClick={() => navigate(`/purchasing/approvals/${app.id}`)}
+                          className="p-3 rounded-xl border border-slate-200 bg-white hover:border-amber-400 hover:bg-amber-50/40 text-xs cursor-pointer transition-all space-y-2 shadow-2xs group"
                         >
-                          <div className="space-y-1 min-w-0 flex-1">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <span className="font-mono font-bold text-slate-900 text-xs">
-                                {app.documentReferenceNumber}
-                              </span>
-                              <Badge variant="outline" className="bg-amber-100 text-amber-800 border-amber-300 text-2xs">
-                                Pending PM Approval
-                              </Badge>
-                              {isSelected && (
-                                <Badge variant="default" className="bg-amber-600 text-white text-2xs">
-                                  Selected
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="space-y-1 min-w-0 flex-1">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="font-mono font-bold text-slate-900 text-xs group-hover:text-amber-800">
+                                  {app.documentReferenceNumber}
+                                </span>
+                                <Badge variant="outline" className="bg-amber-100 text-amber-800 border-amber-300 text-2xs font-semibold">
+                                  Pending PM Approval
                                 </Badge>
-                              )}
+                              </div>
+                              <div className="text-2xs text-slate-600 truncate">
+                                <span className="text-slate-400">Supplier:</span>{' '}
+                                <span className="font-semibold text-slate-700">
+                                  {po?.supplierName || app.description.split('for ')[1]?.split(' totaling')[0] || 'Supplier'}
+                                </span>
+                              </div>
+                              <div className="text-2xs text-slate-500">
+                                <span className="text-slate-400">Initiator:</span> {app.initiatorName}
+                              </div>
                             </div>
-                            <div className="text-2xs text-slate-600 truncate">
-                              <span className="text-slate-400">Supplier:</span>{' '}
-                              <span className="font-semibold text-slate-700">
-                                {po?.supplierName || app.description.split('for ')[1]?.split(' totaling')[0] || 'Supplier'}
-                              </span>
-                            </div>
-                            <div className="text-2xs text-slate-500">
-                              <span className="text-slate-400">Initiator:</span> {app.initiatorName}
+
+                            <div className="text-right shrink-0">
+                              <div className="font-mono font-bold text-slate-900 text-xs">
+                                {formatCurrency(po?.grandTotal || 0)}
+                              </div>
+                              <div className="text-2xs text-slate-400 mt-1">
+                                {formatDate(app.createdAt)}
+                              </div>
                             </div>
                           </div>
 
-                          <div className="text-right shrink-0">
-                            <div className="font-mono font-bold text-slate-900 text-xs">
-                              {formatCurrency(po?.grandTotal || 0)}
-                            </div>
-                            <div className="text-2xs text-slate-400 mt-1">
-                              {formatDate(app.createdAt)}
-                            </div>
+                          <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
+                            <span className="text-2xs text-slate-500">Click to open dedicated approval page</span>
+                            <Button
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                navigate(`/purchasing/approvals/${app.id}`);
+                              }}
+                              className="h-6 text-2xs font-semibold gap-1 bg-amber-600 hover:bg-amber-700 text-white shadow-2xs"
+                            >
+                              <span>Review &amp; Approve</span>
+                              <ExternalLink className="h-2.5 w-2.5" />
+                            </Button>
                           </div>
                         </div>
                       );
@@ -660,46 +667,61 @@ export const PurchasingApprovalHub: React.FC = () => {
                       return (
                         <div
                           key={app.id}
-                          onClick={() => setSelectedApprovalId(app.id)}
-                          className={cn(
-                            'p-3 rounded-xl border text-xs cursor-pointer transition-all flex items-start justify-between gap-3',
-                            isSelected
-                              ? 'border-blue-400 bg-blue-50/60 shadow-2xs ring-2 ring-blue-300/60'
-                              : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50'
-                          )}
+                          onClick={() => navigate(`/purchasing/approvals/${app.id}`)}
+                          className="p-3 rounded-xl border border-slate-200 bg-white hover:border-blue-400 hover:bg-blue-50/40 text-xs cursor-pointer transition-all space-y-2 shadow-2xs group"
                         >
-                          <div className="space-y-1 min-w-0 flex-1">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <span className="font-mono font-bold text-slate-900 text-xs">
-                                {app.documentReferenceNumber}
-                              </span>
-                              <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-300 text-2xs">
-                                Awaiting Manager
-                              </Badge>
-                              {isSelected && (
-                                <Badge variant="default" className="bg-blue-600 text-white text-2xs">
-                                  Selected
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="space-y-1 min-w-0 flex-1">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="font-mono font-bold text-slate-900 text-xs group-hover:text-blue-800">
+                                  {app.documentReferenceNumber}
+                                </span>
+                                <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-300 text-2xs font-semibold">
+                                  Awaiting Manager
                                 </Badge>
-                              )}
+                              </div>
+                              <div className="text-2xs text-slate-600 truncate">
+                                <span className="text-slate-400">Supplier:</span>{' '}
+                                <span className="font-semibold text-slate-700">
+                                  {po?.supplierName || app.description.split('for ')[1]?.split(' totaling')[0] || 'Supplier'}
+                                </span>
+                              </div>
+                              <div className="text-2xs text-slate-500">
+                                <span className="text-slate-400">Initiator:</span> {app.initiatorName}
+                              </div>
                             </div>
-                            <div className="text-2xs text-slate-600 truncate">
-                              <span className="text-slate-400">Supplier:</span>{' '}
-                              <span className="font-semibold text-slate-700">
-                                {po?.supplierName || app.description.split('for ')[1]?.split(' totaling')[0] || 'Supplier'}
-                              </span>
-                            </div>
-                            <div className="text-2xs text-slate-500">
-                              <span className="text-slate-400">Initiator:</span> {app.initiatorName}
+
+                            <div className="text-right shrink-0">
+                              <div className="font-mono font-bold text-slate-900 text-xs">
+                                {formatCurrency(po?.grandTotal || 0)}
+                              </div>
+                              <div className="text-2xs text-slate-400 mt-1">
+                                {formatDate(app.createdAt)}
+                              </div>
                             </div>
                           </div>
 
-                          <div className="text-right shrink-0">
-                            <div className="font-mono font-bold text-slate-900 text-xs">
-                              {formatCurrency(po?.grandTotal || 0)}
-                            </div>
-                            <div className="text-2xs text-slate-400 mt-1">
-                              {formatDate(app.createdAt)}
-                            </div>
+                          <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
+                            <span className="text-2xs text-slate-500">
+                              {role === 'PURCHASING_MANAGER'
+                                ? 'Awaiting Manager (View-Only)'
+                                : 'Awaiting Manager Authorization'}
+                            </span>
+                            <Button
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                navigate(`/purchasing/approvals/${app.id}`);
+                              }}
+                              className="h-6 text-2xs font-semibold gap-1 bg-blue-600 hover:bg-blue-700 text-white shadow-2xs"
+                            >
+                              <span>
+                                {role === 'PURCHASING_MANAGER'
+                                  ? 'View Details (View-Only)'
+                                  : 'Review & Authorize'}
+                              </span>
+                              <ExternalLink className="h-2.5 w-2.5" />
+                            </Button>
                           </div>
                         </div>
                       );
@@ -710,433 +732,101 @@ export const PurchasingApprovalHub: React.FC = () => {
             </div>
           )}
 
-          {approvalsLoading || poLoading ? (
-            <TableLoadingSkeleton />
-          ) : !activeApproval ? (
-            <Card className="border-slate-200 bg-white">
-              <CardContent className="p-12 text-center">
-                <ShoppingCart className="h-12 w-12 text-slate-300 mx-auto mb-3" />
-                <h3 className="text-base font-bold text-slate-800">No Purchase Orders in this Queue</h3>
-                <p className="text-xs text-slate-500 max-w-md mx-auto mt-1">
-                  There are currently no purchase orders matching the selected status filter.
-                </p>
+          {statusFilter !== 'PENDING' && (
+            <Card className="border-slate-200 shadow-2xs bg-white overflow-hidden">
+              <CardHeader className="bg-slate-50 border-b border-slate-200/80 px-4 py-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <ShoppingCart className="h-4 w-4 text-primary" />
+                    <CardTitle className="text-sm font-bold text-slate-900">
+                      Purchase Order Approval Records
+                    </CardTitle>
+                  </div>
+                  <Badge variant="outline" className="font-mono text-xs">
+                    {filteredApprovals.length} Orders
+                  </Badge>
+                </div>
+              </CardHeader>
+              <CardContent className="p-0">
+                <div className="overflow-x-auto">
+                  <Table className="text-xs">
+                    <TableHeader className="bg-slate-100/70 border-b border-slate-200 text-slate-600 font-semibold text-2xs uppercase tracking-wider">
+                      <TableRow>
+                        <TableHead className="w-36 py-2.5 px-3">PO Reference</TableHead>
+                        <TableHead className="py-2.5 px-3">Supplier Name</TableHead>
+                        <TableHead className="py-2.5 px-3">Initiator</TableHead>
+                        <TableHead className="py-2.5 px-3 text-right">Amount (LKR)</TableHead>
+                        <TableHead className="py-2.5 px-3 text-center">Status</TableHead>
+                        <TableHead className="py-2.5 px-3 text-right">Action</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody className="divide-y divide-slate-100 font-sans">
+                      {filteredApprovals.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={6} className="py-8 text-center text-slate-400">
+                            No purchase orders found matching this filter.
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        filteredApprovals.map((app) => {
+                          const po = purchaseOrders.find(
+                            (p) => p.id === app.documentId || p.poNumber === app.documentReferenceNumber
+                          );
+                          return (
+                            <TableRow
+                              key={app.id}
+                              onClick={() => navigate('/purchasing/approvals/' + app.id)}
+                              className="cursor-pointer hover:bg-slate-50/80 transition-colors"
+                            >
+                              <TableCell className="font-mono font-bold text-primary py-3 px-3">
+                                {app.documentReferenceNumber}
+                              </TableCell>
+                              <TableCell className="font-semibold text-slate-800 py-3 px-3">
+                                {po?.supplierName || app.description.split('for ')[1]?.split(' totaling')[0] || 'Supplier'}
+                              </TableCell>
+                              <TableCell className="text-slate-600 py-3 px-3">
+                                {app.initiatorName}
+                              </TableCell>
+                              <TableCell className="text-right font-mono font-bold text-slate-900 py-3 px-3">
+                                {formatCurrency(po?.grandTotal || 0)}
+                              </TableCell>
+                              <TableCell className="text-center py-3 px-3">
+                                {app.status === 'APPROVED' ? (
+                                  <Badge className="bg-emerald-100 text-emerald-800 border-emerald-300 text-2xs font-semibold">
+                                    APPROVED
+                                  </Badge>
+                                ) : app.status === 'REJECTED' ? (
+                                  <Badge className="bg-rose-100 text-rose-800 border-rose-300 text-2xs font-semibold">
+                                    REJECTED
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="outline" className="text-2xs font-semibold">
+                                    {app.status}
+                                  </Badge>
+                                )}
+                              </TableCell>
+                              <TableCell className="text-right py-3 px-3">
+                                <Button
+                                  size="sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    navigate('/purchasing/approvals/' + app.id);
+                                  }}
+                                  className="h-7 text-xs font-semibold gap-1.5 bg-primary hover:bg-primary-hover text-white shadow-2xs"
+                                >
+                                  <ExternalLink className="h-3 w-3" />
+                                  <span>Inspect Full Document</span>
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
               </CardContent>
             </Card>
-          ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-              {/* Left Column: PO List & Detailed Document Inspection (7 cols) */}
-              <div className="lg:col-span-7 space-y-4">
-                {/* PO Selector Strip for Non-Pending Views (Approved, Rejected, All) */}
-                {statusFilter !== 'PENDING' && filteredApprovals.length > 0 && (
-                  <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
-                    {filteredApprovals.map((app) => {
-                      const isSelected = activeApproval?.id === app.id;
-                      return (
-                        <button
-                          key={app.id}
-                          type="button"
-                          onClick={() => setSelectedApprovalId(app.id)}
-                          className={cn(
-                            'flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium border shrink-0 transition-all text-left',
-                            isSelected
-                              ? 'bg-primary-light/50 border-primary text-primary font-bold shadow-2xs'
-                              : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
-                          )}
-                        >
-                          <ShoppingCart className="h-3.5 w-3.5 text-primary shrink-0" />
-                          <div>
-                            <div className="font-mono text-xs">{app.documentReferenceNumber}</div>
-                            <div className="text-2xs text-slate-500 truncate max-w-[140px]">
-                              {app.title.replace('Purchase Order Approval ', '')}
-                            </div>
-                          </div>
-                          {app.status === 'PENDING' ? (
-                            <Badge variant="outline" className="text-2xs bg-amber-50 text-amber-700 border-amber-300 ml-1">
-                              Pending
-                            </Badge>
-                          ) : app.status === 'APPROVED' ? (
-                            <Badge variant="outline" className="text-2xs bg-emerald-50 text-emerald-700 border-emerald-300 ml-1">
-                              Approved
-                            </Badge>
-                          ) : (
-                            <Badge variant="outline" className="text-2xs bg-rose-50 text-rose-700 border-rose-300 ml-1">
-                              {app.status}
-                            </Badge>
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-
-                {/* Document Inspection Card */}
-                {activeApproval && (
-                  <Card className="border-slate-200 shadow-2xs bg-white overflow-hidden">
-                    <CardHeader className="bg-slate-50 border-b border-slate-200/80 px-5 py-4">
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                        <div>
-                          <div className="flex items-center gap-2.5">
-                            <h2 className="text-lg font-bold text-slate-900 font-mono">
-                              {activeApproval.documentReferenceNumber}
-                            </h2>
-                            {activeApproval.status === 'PENDING' ? (
-                              <Badge variant="outline" className="bg-amber-100 text-amber-800 border-amber-300 text-xs">
-                                Awaiting {activeApproval.currentApproverRole}
-                              </Badge>
-                            ) : activeApproval.status === 'APPROVED' ? (
-                              <Badge variant="outline" className="bg-emerald-100 text-emerald-800 border-emerald-300 text-xs">
-                                Fully Approved
-                              </Badge>
-                            ) : (
-                              <Badge variant="outline" className="bg-rose-100 text-rose-800 border-rose-300 text-xs">
-                                {activeApproval.status}
-                              </Badge>
-                            )}
-                            {activeApproval.isSpecialScenario && (
-                              <Badge variant="outline" className="bg-purple-100 text-purple-800 border-purple-300 text-xs">
-                                High Value Exception
-                              </Badge>
-                            )}
-                          </div>
-                          <p className="text-xs text-slate-500 mt-0.5">
-                            Initiated by: <span className="font-semibold text-slate-700">{activeApproval.initiatorName}</span> on {formatDate(activeApproval.createdAt)}
-                          </p>
-                        </div>
-
-                        {activePO && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => navigate(`/purchasing/orders/${activePO.id}`)}
-                            className="gap-1 text-xs text-slate-700"
-                          >
-                            <ExternalLink className="h-3.5 w-3.5" />
-                            <span>View Full Document</span>
-                          </Button>
-                        )}
-                      </div>
-                    </CardHeader>
-
-                    <CardContent className="p-5 space-y-5">
-                      {/* 3 Summary Metrics Pills */}
-                      <div className="grid grid-cols-3 gap-3">
-                        <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/70 text-center">
-                          <p className="text-2xs uppercase tracking-wider font-semibold text-slate-500">Product Lines</p>
-                          <p className="text-lg font-bold text-slate-900 mt-0.5 font-mono">
-                            {activePO?.items?.length || 1}
-                          </p>
-                        </div>
-                        <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/70 text-center">
-                          <p className="text-2xs uppercase tracking-wider font-semibold text-slate-500">Total Units</p>
-                          <p className="text-lg font-bold text-slate-900 mt-0.5 font-mono">
-                            {activePO?.items?.reduce((sum, item) => sum + (item.quantity || 0), 0) || '—'}
-                          </p>
-                        </div>
-                        <div className="p-3 rounded-xl bg-primary-light/40 border border-primary-border text-center">
-                          <p className="text-2xs uppercase tracking-wider font-semibold text-primary">Grand Total (LKR)</p>
-                          <p className="text-lg font-bold text-primary mt-0.5 font-mono">
-                            {formatCurrency(activePO?.grandTotal || 0)}
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* Supplier Information Bar */}
-                      {activePO && (
-                        <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs space-y-2">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <Building2 className="h-4 w-4 text-slate-600" />
-                              <span className="font-bold text-slate-800">{activePO.supplierName}</span>
-                              <Badge variant="outline" className="font-mono text-2xs">
-                                {activePO.supplierCode}
-                              </Badge>
-                            </div>
-                            <span className="text-slate-500 font-mono">Terms: {activePO.paymentTerms || 'Net 30'}</span>
-                          </div>
-                          <div className="grid grid-cols-2 gap-2 text-2xs text-slate-600 pt-1 border-t border-slate-200/60">
-                            <div>
-                              <span className="text-slate-400">Expected Delivery:</span> {formatDate(activePO.expectedDeliveryDate)}
-                            </div>
-                            <div>
-                              <span className="text-slate-400">Order Date:</span> {formatDate(activePO.orderDate)}
-                            </div>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* PO Line Items Breakdown */}
-                      <div>
-                        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 mb-2 flex items-center gap-1.5">
-                          <FileText className="h-3.5 w-3.5 text-slate-500" />
-                          <span>Purchased Product Line Items</span>
-                        </h4>
-                        <div className="border border-slate-200 rounded-xl overflow-hidden">
-                          <table className="w-full text-xs text-left">
-                            <thead className="bg-slate-100/80 border-b border-slate-200 text-slate-600 font-semibold">
-                              <tr>
-                                <th className="p-2.5">Product Code & Description</th>
-                                <th className="p-2.5 text-right">Qty</th>
-                                <th className="p-2.5 text-right">Unit Price</th>
-                                <th className="p-2.5 text-right">Total</th>
-                              </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100">
-                              {activePO?.items?.map((item) => (
-                                <tr key={item.id} className="hover:bg-slate-50/50">
-                                  <td className="p-2.5">
-                                    <div className="font-medium text-slate-900">{item.productName}</div>
-                                    <div className="text-2xs font-mono text-slate-500">{item.productCode}</div>
-                                  </td>
-                                  <td className="p-2.5 text-right font-mono font-semibold">{item.quantity}</td>
-                                  <td className="p-2.5 text-right font-mono text-slate-600">{formatCurrency(item.unitPrice)}</td>
-                                  <td className="p-2.5 text-right font-mono font-bold text-slate-900">
-                                    {formatCurrency(item.total)}
-                                  </td>
-                                </tr>
-                              )) || (
-                                <tr>
-                                  <td colSpan={4} className="p-4 text-center text-slate-400">
-                                    Line items details loaded from reference: {activeApproval.description}
-                                  </td>
-                                </tr>
-                              )}
-                            </tbody>
-                          </table>
-                        </div>
-                      </div>
-
-                      {/* Approval History & Audit Trail */}
-                      <div>
-                        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 mb-2 flex items-center gap-1.5">
-                          <History className="h-3.5 w-3.5 text-slate-500" />
-                          <span>Approval Journey & History</span>
-                        </h4>
-                        <div className="space-y-2 border border-slate-200 rounded-xl p-3 bg-slate-50/50">
-                          {activeApproval.history && activeApproval.history.length > 0 ? (
-                            activeApproval.history.map((h, idx) => (
-                              <div key={h.id || idx} className="flex items-start gap-3 text-xs pb-2 border-b border-slate-200/60 last:border-b-0 last:pb-0">
-                                <div className="mt-0.5">
-                                  {h.action === 'APPROVE' ? (
-                                    <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-                                  ) : h.action === 'REJECT' ? (
-                                    <XCircle className="h-4 w-4 text-rose-600" />
-                                  ) : (
-                                    <Clock className="h-4 w-4 text-amber-600" />
-                                  )}
-                                </div>
-                                <div className="flex-1">
-                                  <div className="flex items-center justify-between">
-                                    <span className="font-semibold text-slate-800">
-                                      {h.actorName} ({h.actorRole})
-                                    </span>
-                                    <span className="text-2xs text-slate-400">{formatDateTime(h.timestamp)}</span>
-                                  </div>
-                                  <p className="text-slate-600 text-xs mt-0.5">{h.comment}</p>
-                                </div>
-                              </div>
-                            ))
-                          ) : (
-                            <p className="text-2xs text-slate-400">No approval history recorded.</p>
-                          )}
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
-              </div>
-
-              {/* Right Column: Approval Decision & Verification Actions (5 cols) */}
-              <div className="lg:col-span-5 space-y-4">
-                {activeApproval && (
-                  <Card className="border-slate-200 shadow-2xs bg-white">
-                    <CardHeader className="bg-slate-50 border-b border-slate-200/80 px-5 py-3.5">
-                      <CardTitle className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                        <ShieldCheck className="h-4 w-4 text-primary" />
-                        <span>Approval Decision & Review</span>
-                      </CardTitle>
-                    </CardHeader>
-
-                    <CardContent className="p-5 space-y-4">
-                      {/* Scenario B: Self-Approval Prevention Notice */}
-                      {isCreator && (
-                        <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-900 space-y-1">
-                          <div className="flex items-center gap-2 font-bold text-amber-800">
-                            <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" />
-                            <span>Self-Approval Strictly Prohibited (Scenario B)</span>
-                          </div>
-                          <p className="text-2xs text-amber-700 leading-relaxed">
-                            This Purchase Order was created by you ({currentUser.name}). In accordance with ERP governance,
-                            it has been routed directly to the higher-level General Manager for authorization without self-approval.
-                          </p>
-                        </div>
-                      )}
-
-                      {/* Purchasing Officer Notice */}
-                      {role === 'PURCHASING_OFFICER' && (
-                        <div className="p-3.5 rounded-xl bg-blue-50 border border-blue-200 text-xs text-blue-900 space-y-1">
-                          <div className="flex items-center gap-2 font-bold text-blue-800">
-                            <Info className="h-4 w-4 text-blue-600 shrink-0" />
-                            <span>Purchasing Officer View Mode</span>
-                          </div>
-                          <p className="text-2xs text-blue-700 leading-relaxed">
-                            You are viewing this PO's approval journey. Purchasing Officers submit POs for approval; authorization is handled by the Purchasing Manager and General Manager.
-                          </p>
-                        </div>
-                      )}
-
-                      {/* Purchasing Manager Verification Checklist (Scenario A) */}
-                      {canApprove && role === 'PURCHASING_MANAGER' && (
-                        <div className="space-y-2.5">
-                          <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
-                            Pre-Approval Verification Checklist
-                          </label>
-                          <div className="space-y-2 bg-slate-50 p-3 rounded-xl border border-slate-200 text-xs">
-                            <label className="flex items-center gap-2 cursor-pointer select-none text-slate-700 hover:text-slate-900">
-                              <input
-                                type="checkbox"
-                                checked={checklist.pricingCatalogChecked}
-                                onChange={(e) =>
-                                  setChecklist({ ...checklist, pricingCatalogChecked: e.target.checked })
-                                }
-                                className="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary"
-                              />
-                              <span>Supplier pricing verified against active catalog</span>
-                            </label>
-
-                            <label className="flex items-center gap-2 cursor-pointer select-none text-slate-700 hover:text-slate-900">
-                              <input
-                                type="checkbox"
-                                checked={checklist.deliveryScheduleVerified}
-                                onChange={(e) =>
-                                  setChecklist({ ...checklist, deliveryScheduleVerified: e.target.checked })
-                                }
-                                className="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary"
-                              />
-                              <span>Expected delivery schedule & credit terms confirmed</span>
-                            </label>
-
-                            <label className="flex items-center gap-2 cursor-pointer select-none text-slate-700 hover:text-slate-900">
-                              <input
-                                type="checkbox"
-                                checked={checklist.budgetQuotaConfirmed}
-                                onChange={(e) =>
-                                  setChecklist({ ...checklist, budgetQuotaConfirmed: e.target.checked })
-                                }
-                                className="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary"
-                              />
-                              <span>Quantities confirmed within quarterly budget quota</span>
-                            </label>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Explanatory Comment Box */}
-                      {canApprove && (
-                        <div className="space-y-1.5">
-                          <label className="text-xs font-bold text-slate-700">
-                            Explanatory Verification Comment <span className="text-rose-500">*</span>
-                          </label>
-                          <Textarea
-                            rows={3}
-                            placeholder="Enter review notes, verification findings, or rejection reason (min 3 chars)..."
-                            value={actionComment}
-                            onChange={(e) => setActionComment(e.target.value)}
-                            className="text-xs resize-none rounded-xl"
-                          />
-                        </div>
-                      )}
-
-                      {/* Forward to Manager Notice for Purchasing Manager */}
-                      {canApprove && role === 'PURCHASING_MANAGER' && (
-                        <div className="p-3 rounded-xl bg-blue-50/80 border border-blue-200 text-xs text-blue-900 flex items-start gap-2">
-                          <Info className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" />
-                          <div>
-                            <span className="font-bold block text-blue-950">Next Approval Stage:</span>
-                            <span className="text-2xs text-blue-800 leading-relaxed">
-                              Approving this Purchase Order will verify procurement specifications and forward it to the <strong>Manager (System Manager)</strong> for the next approval stage.
-                            </span>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Decision Action Buttons */}
-                      <div className="pt-2 border-t border-slate-200/80 space-y-2">
-                        {canApprove ? (
-                          <>
-                            <Button
-                              onClick={() =>
-                                setConfirmModal({
-                                  open: true,
-                                  type: 'APPROVE',
-                                  request: activeApproval,
-                                  po: activePO,
-                                })
-                              }
-                              className="w-full gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs h-10 rounded-xl cursor-pointer"
-                            >
-                              <CheckCircle2 className="h-4 w-4" />
-                              <span>
-                                {role === 'PURCHASING_MANAGER'
-                                  ? 'Approve & Forward to Manager (System Manager)'
-                                  : 'Authorize & Approve Purchase Order'}
-                              </span>
-                            </Button>
-
-                            <Button
-                              variant="outline"
-                              onClick={() =>
-                                setConfirmModal({
-                                  open: true,
-                                  type: 'REJECT',
-                                  request: activeApproval,
-                                  po: activePO,
-                                })
-                              }
-                              className="w-full gap-2 border-rose-200 bg-rose-50/50 hover:bg-rose-100 text-rose-700 font-semibold text-xs h-10 rounded-xl cursor-pointer"
-                            >
-                              <XCircle className="h-4 w-4" />
-                              <span>Reject Purchase Order</span>
-                            </Button>
-                          </>
-                        ) : (
-                          <div className="p-4 text-center bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-600 space-y-2">
-                            {activeApproval.status !== 'PENDING' ? (
-                              <p className="text-slate-500 font-medium">
-                                This purchase order has already been finalized ({activeApproval.status}).
-                              </p>
-                            ) : activeApproval.currentApproverRole === 'MANAGER' ||
-                              activeApproval.currentApproverRole === 'SYSTEM_MANAGER' ||
-                              activeApproval.currentApproverRole === 'GENERAL_MANAGER' ? (
-                              <>
-                                <div className="inline-flex items-center justify-center p-2 rounded-full bg-blue-100 text-blue-700 mx-auto">
-                                  <Clock className="h-4 w-4" />
-                                </div>
-                                <div className="font-bold text-slate-800 text-xs">
-                                  Awaiting action by MANAGER.
-                                </div>
-                                <p className="text-2xs text-slate-500 max-w-xs mx-auto leading-relaxed">
-                                  {isCreator
-                                    ? 'Direct procurement PO created by Purchasing Manager (Scenario B). Routed directly to Manager (System Manager) for authorization without self-approval.'
-                                    : 'This Purchase Order requires final approval from the Manager (System Manager). No further action is required from the Purchasing Manager at this stage.'}
-                                </p>
-                              </>
-                            ) : isCreator ? (
-                              <p className="text-amber-700 font-medium text-2xs">
-                                Awaiting Manager authorization. Creator self-approval is disabled.
-                              </p>
-                            ) : (
-                              <p className="text-slate-500 font-medium">
-                                Awaiting action by {activeApproval.currentApproverRole}.
-                              </p>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
-              </div>
-            </div>
           )}
         </div>
       )}

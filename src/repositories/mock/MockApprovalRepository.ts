@@ -24,7 +24,17 @@ export class MockApprovalRepository implements IApprovalRepository {
     try {
       if (typeof window !== 'undefined' && window.localStorage) {
         const stored = localStorage.getItem(APPROVALS_STORAGE_KEY);
-        this.approvals = stored ? JSON.parse(stored) : JSON.parse(JSON.stringify(MOCK_APPROVALS));
+        if (stored) {
+          const parsed: ApprovalRequest[] = JSON.parse(stored);
+          const existingIds = new Set(parsed.map((a) => a.id));
+          const missing = MOCK_APPROVALS.filter((a) => !existingIds.has(a.id));
+          this.approvals = [...parsed, ...JSON.parse(JSON.stringify(missing))];
+          if (missing.length > 0) {
+            this.saveToStorage();
+          }
+        } else {
+          this.approvals = JSON.parse(JSON.stringify(MOCK_APPROVALS));
+        }
       } else {
         this.approvals = JSON.parse(JSON.stringify(MOCK_APPROVALS));
       }

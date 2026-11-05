@@ -10,7 +10,9 @@ import { canAccessRoute, hasPermission } from '../rules/permissions';
 import { User } from '../types/auth';
 import { PurchasingSupplierPaymentsPage } from '../features/purchasing/PurchasingSupplierPaymentsPage';
 import { ApprovalsPage } from '../features/approvals/ApprovalsPage';
+import { PurchaseOrderApprovalPage } from '../features/purchasing/PurchaseOrderApprovalPage';
 import { authService } from '../services/AuthService';
+import { Routes, Route } from 'react-router-dom';
 
 // Mock users
 const mockPurchasingOfficer: User = {
@@ -582,7 +584,7 @@ describe('Purchasing Approval System & Supplier Payment Visibility', () => {
       expect(screen.queryByText(/Record Payment/i)).toBeNull();
     });
 
-    it('shows two sections on Purchasing Manager PO Approval page and displays approval UI with Manager forwarding notice', async () => {
+    it('shows two sections on Purchasing Manager PO Approval page and removes lower split cards', async () => {
       authService.switchRole('PURCHASING_MANAGER');
 
       render(
@@ -603,28 +605,143 @@ describe('Purchasing Approval System & Supplier Payment Visibility', () => {
       expect(screen.getAllByText(/Pending PM Approval/i).length).toBeGreaterThan(0);
       expect(screen.getAllByText(/Awaiting Manager/i).length).toBeGreaterThan(0);
 
-      // Verify existing PO approval UI is displayed for selected PO (PO-2026-0002)
+      // Verify buttons to review and navigate to dedicated approval page
+      expect(screen.getAllByText('Review & Approve').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('View Details (View-Only)').length).toBeGreaterThan(0);
+
+      // Verify the bottom split cards are REMOVED from /approvals
+      expect(screen.queryByText('Approval Decision & Review')).toBeNull();
+      expect(screen.queryByText(/Awaiting action by MANAGER/i)).toBeNull();
+      expect(screen.queryByText(/Pre-Approval Verification Checklist/i)).toBeNull();
+    });
+
+    it('navigates to dedicated PurchaseOrderApprovalPage showing full PO details, Print PO, and mock approval workflow for Stage 1 & Stage 2', async () => {
+      authService.switchRole('PURCHASING_MANAGER');
+
+      // Test Stage 1: Render dedicated approval page for app-po-01 (PO-2026-0002)
+      const { unmount } = render(
+        <MemoryRouter initialEntries={['/purchasing/approvals/app-po-01']}>
+          <Routes>
+            <Route path="/purchasing/approvals/:id" element={<PurchaseOrderApprovalPage />} />
+          </Routes>
+        </MemoryRouter>
+      );
+
+      // Verify dedicated page header and Back button
+      await waitFor(() => {
+        expect(screen.getByText('Back to Approvals')).toBeInTheDocument();
+        expect(screen.getByText('PO-2026-0002')).toBeInTheDocument();
+      });
+
+      // Verify Stage 1 badge
+      expect(screen.getByText(/Stage 1: Awaiting Purchasing Manager Approval/i)).toBeInTheDocument();
+
+      // Verify Print PO and Approve PO action buttons
+      expect(screen.getByRole('button', { name: /Print PO/i })).toBeInTheDocument();
+      const approveBtn = screen.getByRole('button', { name: /Approve PO/i });
+      expect(approveBtn).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /Reject PO/i })).toBeInTheDocument();
+
+      // Verify full PO details are shown
       expect(screen.getByText(/Product Lines/i)).toBeInTheDocument();
       expect(screen.getByText(/Total Units/i)).toBeInTheDocument();
       expect(screen.getByText(/Grand Total \(LKR\)/i)).toBeInTheDocument();
       expect(screen.getByText(/Purchased Product Line Items/i)).toBeInTheDocument();
-      expect(screen.getByText('Approval Decision & Review')).toBeInTheDocument();
+      expect(screen.getByText(/Siemens SINAMICS V20 7.5kW VFD Inverter/i)).toBeInTheDocument();
+      expect(screen.getAllByText(/Apex International Importers/i).length).toBeGreaterThan(0);
 
-      // Verify it clearly mentions forwarding to the Manager (System Manager) for the next approval stage
-      expect(screen.getByText(/Next Approval Stage:/i)).toBeInTheDocument();
-      expect(
-        screen.getByRole('button', { name: /Approve & Forward to Manager \(System Manager\)/i })
-      ).toBeInTheDocument();
+      // Verify PO activity log / history card is REMOVED
+      expect(screen.queryByText(/Approval History & Audit Trail/i)).toBeNull();
+      expect(screen.queryByText(/Verification Events/i)).toBeNull();
 
-      // Clicking on PO in Section 2 (PO-2026-0006) displays existing approval UI showing awaiting Manager
-      const po6Elements = screen.getAllByText('PO-2026-0006');
-      const po6Card = po6Elements[0].closest('div[class*="cursor-pointer"]');
-      if (po6Card) {
-        fireEvent.click(po6Card);
-      }
+      // Verify approval stepper and explanation banner
+      expect(screen.getByText(/Multi-Tier Approval Journey/i)).toBeInTheDocument();
+      expect(screen.getByText(/3\. Manager Authorization/i)).toBeInTheDocument();
+
+      // Click Approve PO to trigger mock Stage 1 approval workflow modal
+      fireEvent.click(approveBtn);
 
       await waitFor(() => {
-        expect(screen.getByText(/Awaiting action by MANAGER/i)).toBeInTheDocument();
+        expect(screen.getByText(/Approve & Forward Purchase Order/i)).toBeInTheDocument();
+        expect(screen.getByText(/Purchasing Manager Verification Checklist/i)).toBeInTheDocument();
+      });
+
+      // Confirm approval in modal
+      const confirmApproveBtn = screen.getByRole('button', {
+        name: /Approve & Forward to Manager/i,
+      });
+      fireEvent.click(confirmApproveBtn);
+
+      // Verify approval request progressed to Manager (Stage 2)
+      await waitFor(async () => {
+        const updated = await approvalService.getApproval('app-po-01');
+        expect(updated?.currentApproverRole).toBe('MANAGER');
+      });
+
+      unmount();
+
+      // Test Stage 2 View-Only access for Purchasing Manager
+      // When Purchasing Manager views a Stage 2 PO (e.g. app-po-02 awaiting Manager)
+      authService.switchRole('PURCHASING_MANAGER');
+
+      const { unmount: unmountPmView } = render(
+        <MemoryRouter initialEntries={['/purchasing/approvals/app-po-02']}>
+          <Routes>
+            <Route path="/purchasing/approvals/:id" element={<PurchaseOrderApprovalPage />} />
+          </Routes>
+        </MemoryRouter>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('PO-2026-0006')).toBeInTheDocument();
+        expect(screen.getByText(/Stage 2: Awaiting Manager Approval/i)).toBeInTheDocument();
+      });
+
+      // Verify Purchasing Manager has strictly view-only access at Stage 2
+      expect(screen.getByRole('button', { name: /Print PO/i })).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /Approve PO/i })).toBeNull();
+      expect(screen.queryByRole('button', { name: /Reject PO/i })).toBeNull();
+      expect(screen.getByText(/View-Only Mode \(Awaiting Manager\)/i)).toBeInTheDocument();
+      expect(screen.getByText(/Purchasing Manager View-Only Access/i)).toBeInTheDocument();
+
+      unmountPmView();
+
+      // Test Stage 2 Manager Authorization
+      authService.switchRole('MANAGER');
+
+      render(
+        <MemoryRouter initialEntries={['/purchasing/approvals/app-po-02']}>
+          <Routes>
+            <Route path="/purchasing/approvals/:id" element={<PurchaseOrderApprovalPage />} />
+          </Routes>
+        </MemoryRouter>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('PO-2026-0006')).toBeInTheDocument();
+        expect(screen.getByText(/Stage 2: Awaiting Manager Approval/i)).toBeInTheDocument();
+      });
+
+      expect(screen.getByRole('button', { name: /Print PO/i })).toBeInTheDocument();
+      const stage2ApproveBtn = screen.getByRole('button', { name: /Approve PO/i });
+      expect(stage2ApproveBtn).toBeInTheDocument();
+
+      // Click Approve PO for Stage 2 as Manager
+      fireEvent.click(stage2ApproveBtn);
+
+      await waitFor(() => {
+        expect(screen.getByText(/Manager Final Authorization/i)).toBeInTheDocument();
+        expect(screen.getByText(/Final Approval Stage:/i)).toBeInTheDocument();
+      });
+
+      const confirmStage2Btn = screen.getByRole('button', {
+        name: /Authorize & Approve PO/i,
+      });
+      fireEvent.click(confirmStage2Btn);
+
+      await waitFor(async () => {
+        const finalized = await approvalService.getApproval('app-po-02');
+        expect(finalized?.status).toBe('APPROVED');
       });
     });
   });
