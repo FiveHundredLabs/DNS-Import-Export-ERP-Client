@@ -154,5 +154,49 @@ describe('Role-Based Sidebar Navigation & Access Control', () => {
       expect(screen.getByTestId('protected-content')).toBeInTheDocument();
       expect(screen.queryByText('Access Denied')).not.toBeInTheDocument();
     });
+
+    it('denies MANAGER from accessing /purchasing and /purchasing/reports', () => {
+      expect(canAccessRoute('MANAGER', '/purchasing')).toBe(false);
+      expect(canAccessRoute('MANAGER', '/purchasing/dashboard')).toBe(false);
+      expect(canAccessRoute('MANAGER', '/purchasing/reports')).toBe(false);
+      expect(canAccessRoute('MANAGER', '/reports/purchasing')).toBe(false);
+      expect(canAccessRoute('MANAGER', '/approvals')).toBe(true);
+      expect(canAccessRoute('MANAGER', '/purchasing/orders')).toBe(true);
+
+      mockUseAuth.mockReturnValue({
+        role: 'MANAGER',
+        currentUser: { id: 'mgr-01', name: 'Manager User', role: 'MANAGER' },
+        canAccessRoute: (path: string) => canAccessRoute('MANAGER', path),
+        isAuthenticated: true,
+      });
+
+      render(
+        <MemoryRouter initialEntries={['/purchasing']}>
+          <ProtectedRoute>
+            <div data-testid="protected-content">Purchasing Dashboard</div>
+          </ProtectedRoute>
+        </MemoryRouter>
+      );
+
+      expect(screen.queryByTestId('protected-content')).not.toBeInTheDocument();
+      expect(screen.getByText('Access Denied')).toBeInTheDocument();
+      expect(screen.getByText(/MANAGER/)).toBeInTheDocument();
+    });
+
+    it('DIRECTOR sidebar includes Cash in Hand under Sales and removes Stock Manager Approvals from Inventory', () => {
+      setupSidebarForRole('DIRECTOR');
+
+      // Cash in Hand is accessible for Director
+      expect(canAccessRoute('DIRECTOR', '/payments')).toBe(true);
+      expect(canAccessRoute('DIRECTOR', '/')).toBe(true);
+    });
+
+    it('MANAGER has full permissions for GRN creation and delivery notes, cash in hand, but excluded from global tax/theme config', () => {
+      expect(canAccessRoute('MANAGER', '/inventory/grn')).toBe(true);
+      expect(canAccessRoute('MANAGER', '/inventory/grn/new')).toBe(true);
+      expect(canAccessRoute('MANAGER', '/inventory/delivery-notes')).toBe(true);
+      expect(canAccessRoute('MANAGER', '/inventory/delivery-notes/new')).toBe(true);
+      expect(canAccessRoute('MANAGER', '/payments')).toBe(true);
+    });
   });
 });

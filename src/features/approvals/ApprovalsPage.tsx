@@ -161,7 +161,6 @@ export function ApprovalsPage() {
                 { label: 'Quotations', value: 'QUOTATIONS', icon: FileText },
                 { label: 'Purchase Orders', value: 'PURCHASE_ORDERS', icon: ShoppingCart },
                 { label: 'Inbound GRNs', value: 'GRN', icon: Warehouse },
-                { label: 'Stock Manager Approvals', value: 'STOCK_VERIFICATIONS', icon: ShieldCheck },
                 { label: 'Customers & Finance', value: 'FINANCE_CUSTOMERS', icon: Landmark },
               ] as const
             ).map((cat) => {

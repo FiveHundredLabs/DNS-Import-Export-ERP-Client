@@ -79,7 +79,9 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'orders:escalate',
     'orders:close',
     'inventory:view',
+    'inventory:grn_create',
     'inventory:grn_approve',
+    'inventory:pick_issue',
     'inventory:damaged_recover',
     'invoices:view',
     'payments:view',
@@ -99,19 +101,16 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'reports:all',
     'reports:area_only',
     'audit:view',
-    'view:purchasing_dashboard',
     'purchasing:suppliers_view',
     'purchasing:suppliers_manage',
     'purchasing:po_view',
     'purchasing:po_create',
     'purchasing:po_edit',
     'purchasing:grn_view',
-    'purchasing:reports',
     'purchasing:returns_view',
     'purchasing:returns_create',
     'purchasing:payments_view',
     'purchasing:returns_approve',
-    'purchasing:payments_view',
   ],
   SALES_MANAGER: [
     'view:sales_manager_dashboard',
@@ -319,6 +318,9 @@ export function canAccessRoute(role: UserRole, path: string): boolean {
     return hasPermission(role, 'commissions:view');
   }
   if (path.startsWith('/reports')) {
+    if (role === 'MANAGER' && (path === '/reports/purchasing' || path.startsWith('/reports/purchasing/'))) {
+      return false;
+    }
     return (
       hasPermission(role, 'reports:all') ||
       hasPermission(role, 'reports:area_only')
@@ -338,7 +340,18 @@ export function canAccessRoute(role: UserRole, path: string): boolean {
     return role === 'DIRECTOR' || role === 'MANAGER';
   }
   if (path.startsWith('/purchasing')) {
-    if (role === 'DIRECTOR' || role === 'MANAGER') return true;
+    if (role === 'DIRECTOR') return true;
+    if (role === 'MANAGER') {
+      if (
+        path === '/purchasing' ||
+        path === '/purchasing/' ||
+        path.startsWith('/purchasing/dashboard') ||
+        path.startsWith('/purchasing/reports')
+      ) {
+        return false;
+      }
+      return true;
+    }
     if (role === 'PURCHASING_OFFICER' || role === 'PURCHASING_MANAGER') {
       if (path === '/purchasing' || path.startsWith('/purchasing/dashboard')) {
         return hasPermission(role, 'view:purchasing_dashboard');

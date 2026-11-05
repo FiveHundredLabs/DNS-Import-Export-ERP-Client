@@ -161,6 +161,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     { id: 'orders', name: 'Sales Orders', path: '/orders', icon: ShoppingCart, category: 'sales' },
     { id: 'invoices', name: 'Invoices', path: '/invoices', icon: Receipt, category: 'sales' },
     { id: 'customer-collections', name: 'Customer Collections', path: '/payments/collect', icon: Banknote, category: 'sales' },
+    { id: 'cash-in-hand', name: 'Cash in Hand (Wallet)', path: '/payments', icon: Wallet, category: 'sales' },
     { id: 'pos', name: 'Showroom POS', path: '/pos', icon: Store, category: 'sales' },
   ];
 
@@ -178,7 +179,6 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     { id: 'grn', name: 'GRN (Read Only)', path: '/inventory/grn', icon: Receipt, category: 'inventory' },
     { id: 'products', name: 'Product Master', path: '/products', icon: Package, category: 'inventory' },
     { id: 'damaged-stock', name: 'Damaged Stock & RMA', path: '/inventory/damaged-stock', icon: ShieldAlert, category: 'inventory' },
-    { id: 'stock-approvals', name: 'Stock Manager Approvals', path: '/approvals', icon: ShieldCheck, category: 'inventory', allowedRoles: ['STOCK_MANAGER'] },
   ];
 
   const directorFinanceItems: SidebarItem[] = [
@@ -249,13 +249,13 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
 
   // 0. Purchasing & Procurement Module
   const purchasingItems: SidebarItem[] = [
-    { id: 'purchasing-dashboard', name: 'Purchasing Dashboard', path: '/purchasing', icon: LayoutGrid, category: 'purchasing', exact: true },
+    { id: 'purchasing-dashboard', name: 'Purchasing Dashboard', path: '/purchasing', icon: LayoutGrid, category: 'purchasing', exact: true, excludedRoles: ['MANAGER'] },
     { id: 'purchasing-suppliers', name: 'Supplier Management', path: '/purchasing/suppliers', icon: Store, category: 'purchasing' },
     { id: 'purchasing-orders', name: 'Purchase Orders', path: '/purchasing/orders', icon: ShoppingCart, category: 'purchasing' },
     { id: 'purchasing-approvals', name: 'PO Approvals', path: '/approvals', icon: ShieldCheck, category: 'purchasing' },
     { id: 'purchasing-payments', name: 'Supplier Payments (View Only)', path: '/purchasing/payments', icon: CreditCard, category: 'purchasing' },
     { id: 'purchasing-grn', name: 'Goods Received (View Only)', path: '/purchasing/grn', icon: Boxes, category: 'purchasing' },
-    { id: 'purchasing-reports', name: 'Purchase Reports', path: '/purchasing/reports', icon: BarChart3, category: 'purchasing' },
+    { id: 'purchasing-reports', name: 'Purchase Reports', path: '/purchasing/reports', icon: BarChart3, category: 'purchasing', excludedRoles: ['MANAGER'] },
     { id: 'purchasing-returns', name: 'Supplier Returns & RMA', path: '/purchasing/returns', icon: RotateCcw, category: 'purchasing' },
   ];
 

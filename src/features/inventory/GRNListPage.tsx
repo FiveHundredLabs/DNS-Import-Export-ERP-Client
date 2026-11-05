@@ -44,6 +44,7 @@ export function GRNListPage() {
 
   const isStockKeeper = role === 'STOCK_KEEPER';
   const isDirector = role === 'DIRECTOR';
+  const isManager = role === 'MANAGER';
 
   // ─── Summary KPI Metrics & Visual Data ──────────────────────────────────────
   const stats = useMemo(() => {
@@ -164,7 +165,7 @@ export function GRNListPage() {
             <Badge variant="outline" className="bg-indigo-50 text-indigo-700 border-indigo-200 text-xs font-mono py-1 px-3">
               Read-Only View
             </Badge>
-          ) : isStockKeeper ? (
+          ) : isStockKeeper || isManager || role === 'STOCK_MANAGER' ? (
             <Button
               size="sm"
               onClick={() => navigate('/inventory/grn/new')}
