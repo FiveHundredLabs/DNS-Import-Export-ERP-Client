@@ -22,6 +22,7 @@ import {
   BookOpen,
   FolderTree,
   FileSpreadsheet,
+  FileText,
   Receipt,
   ShoppingCart,
   Compass,
@@ -334,6 +335,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
 
   // 6. Reports Suite — Direct Parity between Director & Manager
   const standardReportItems: SidebarItem[] = [
+    { id: 'pos-day-end-report', name: 'Day-End POS Report', path: '/reports/sales/pos-day-end', icon: FileText, category: 'reports', allowedRoles: ['DIRECTOR', 'MANAGER', 'SALES_MANAGER', 'SHOWROOM_MANAGER'] },
     { id: 'purchase-reports', name: 'Purchase Reports', path: '/reports/purchasing', icon: ShoppingCart, category: 'reports', allowedRoles: ['DIRECTOR', 'MANAGER'] },
     { id: 'sales-reports', name: 'Sales Reports', path: '/reports/sales', icon: BarChart3, category: 'reports', allowedRoles: ['DIRECTOR', 'MANAGER', 'SALES_MANAGER'] },
     { id: 'inventory-reports', name: 'Inventory Reports', path: '/reports/inventory', icon: Boxes, category: 'reports', allowedRoles: ['DIRECTOR', 'MANAGER'] },
