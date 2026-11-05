@@ -191,7 +191,7 @@ export const CustomerRejectionModal: React.FC<CustomerRejectionModalProps> = ({
 
       await onSubmit(payload);
       toast.success(
-        `Customer rejection logged for ${totalRejected} unit(s). Submitted for Manager Approval!`
+        `Customer rejection logged for ${totalRejected} unit(s). Submitted for Stock Manager Approval!`
       );
       onClose();
     } catch (err: any) {
@@ -503,11 +503,11 @@ export const CustomerRejectionModal: React.FC<CustomerRejectionModalProps> = ({
           <div className="p-3.5 rounded-xl border border-amber-200 bg-amber-50/70 text-xs text-amber-900 flex items-start gap-3">
             <ShieldAlert className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
             <div>
-              <div className="font-bold">Manager Approval Gating Required:</div>
+              <div className="font-bold">Stock Manager Approval Required:</div>
               <p className="text-[11px] text-amber-800 mt-0.5 leading-relaxed">
                 As per DNS Warehouse SOP, a Stock Keeper cannot unilaterally write off or finalize customer rejections.
-                Submitting this report will place the entire Delivery Note in <strong>Pending Manager Approval</strong>.
-                The Operations Manager will review the physical returned barcodes before confirming credit or stock quarantine adjustments.
+                Submitting this report will place the entire Delivery Note in <strong>Pending Stock Manager Approval</strong>.
+                The Stock Manager will review the physical returned barcodes before confirming credit or stock quarantine adjustments.
               </p>
             </div>
           </div>
@@ -524,15 +524,15 @@ export const CustomerRejectionModal: React.FC<CustomerRejectionModalProps> = ({
             onConfirm={handleSubmitRejection}
             disabled={submitting || totalRejected === 0}
             className="gap-2 text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white shadow-xs"
-            confirmTitle="Confirm Customer Rejection Handover"
-            confirmMessage={`Are you sure you want to log customer rejection for ${totalRejected} unit(s)? This will set the delivery note to Pending Manager Approval.`}
-            confirmText="Submit Rejection"
+            confirmTitle="Submit Customer Rejection for Stock Manager Approval"
+            confirmMessage={`Are you sure you want to submit the customer rejection for ${totalRejected} unit(s) to the Stock Manager for approval?`}
+            confirmText="Submit for Stock Manager Approval"
             confirmVariant="destructive"
             dialogVariant="destructive"
             requireConfirm={process.env.NODE_ENV !== 'test'}
           >
             <ShieldAlert className="h-4 w-4" />
-            Submit {totalRejected} Rejected Unit(s) for Manager Approval
+            Submit {totalRejected} Rejected Unit(s) for Stock Manager Approval
           </ConfirmButton>
         </div>
       </div>
