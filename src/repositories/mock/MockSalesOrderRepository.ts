@@ -79,7 +79,7 @@ export class MockSalesOrderRepository implements ISalesOrderRepository {
 
   async getById(id: string): Promise<SalesOrder | null> {
     await new Promise((resolve) => setTimeout(resolve, 40));
-    const order = this.orders.find((o) => o.id === id);
+    const order = this.orders.find((o) => o.id === id || o.orderNumber === id);
     return order ? JSON.parse(JSON.stringify(order)) : null;
   }
 

@@ -41,7 +41,7 @@ describe('Purchasing Officer Role & Workflow Test Suite', () => {
     it('grants required purchasing permissions to PURCHASING_OFFICER', () => {
       expect(hasPermission('PURCHASING_OFFICER', 'view:purchasing_dashboard')).toBe(true);
       expect(hasPermission('PURCHASING_OFFICER', 'purchasing:suppliers_view')).toBe(true);
-      expect(hasPermission('PURCHASING_OFFICER', 'purchasing:suppliers_manage')).toBe(true);
+      expect(hasPermission('PURCHASING_OFFICER', 'purchasing:suppliers_manage')).toBe(false);
       expect(hasPermission('PURCHASING_OFFICER', 'purchasing:po_view')).toBe(true);
       expect(hasPermission('PURCHASING_OFFICER', 'purchasing:po_create')).toBe(true);
       expect(hasPermission('PURCHASING_OFFICER', 'purchasing:po_edit')).toBe(true);
@@ -77,6 +77,7 @@ describe('Purchasing Officer Role & Workflow Test Suite', () => {
       expect(canAccessRoute('PURCHASING_OFFICER', '/purchasing/returns')).toBe(true);
 
       // Blocked routes
+      expect(canAccessRoute('PURCHASING_OFFICER', '/approvals')).toBe(false);
       expect(canAccessRoute('PURCHASING_OFFICER', '/finance')).toBe(false);
       expect(canAccessRoute('PURCHASING_OFFICER', '/pos')).toBe(false);
       expect(canAccessRoute('PURCHASING_OFFICER', '/settings')).toBe(false);

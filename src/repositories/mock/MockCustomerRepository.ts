@@ -59,7 +59,7 @@ export class MockCustomerRepository implements ICustomerRepository {
 
   async getById(id: string): Promise<Customer | null> {
     await new Promise((resolve) => setTimeout(resolve, 100));
-    const cust = this.customers.find((c) => c.id === id);
+    const cust = this.customers.find((c) => c.id === id || c.code === id);
     return cust ? { ...cust } : null;
   }
 

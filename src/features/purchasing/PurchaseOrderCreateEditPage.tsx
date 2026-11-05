@@ -38,7 +38,6 @@ import {
   DialogTitle,
 } from '../../components/ui/dialog';
 import { toast } from 'sonner';
-import { SUPPORTED_CURRENCIES } from '../../types/purchasing';
 
 interface LineFormState {
   id: string;
@@ -69,7 +68,7 @@ export function PurchaseOrderCreateEditPage() {
     new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
   );
   const [paymentTerms, setPaymentTerms] = useState<string>('Net 30');
-  const [currency, setCurrency] = useState<string>('LKR');
+  const currency = 'LKR';
   const [notes, setNotes] = useState<string>('');
 
   const [lines, setLines] = useState<LineFormState[]>([
@@ -132,7 +131,6 @@ export function PurchaseOrderCreateEditPage() {
         setExpectedDeliveryDate(existing.expectedDeliveryDate);
         setPaymentTerms(existing.paymentTerms);
         setNotes(existing.notes || '');
-        setCurrency(existing.currency || 'LKR');
         setLines(
           existing.items.map((item) => ({
             id: item.id,
@@ -339,7 +337,7 @@ export function PurchaseOrderCreateEditPage() {
       <FormSection
         icon={Building2}
         title="Vendor & Purchase Order Details"
-        description="Specify supplier particulars, procurement currency, and expected delivery timetable."
+        description="Specify supplier particulars, terms, and expected delivery timetable."
       >
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -410,22 +408,6 @@ export function PurchaseOrderCreateEditPage() {
                 onChange={(e) => setPaymentTerms(e.target.value)}
                 className="h-9 text-xs"
               />
-            </FormField>
-
-            <FormField label="Currency" htmlFor="currency-select">
-              <select
-                id="currency-select"
-                aria-label="Currency"
-                value={currency}
-                onChange={(e) => setCurrency(e.target.value)}
-                className="w-full h-9 text-xs rounded-md border border-slate-300 bg-white px-3 font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-400"
-              >
-                {SUPPORTED_CURRENCIES.map((c) => (
-                  <option key={c.code} value={c.code}>
-                    {c.code} - {c.name} ({c.symbol})
-                  </option>
-                ))}
-              </select>
             </FormField>
           </div>
         </div>

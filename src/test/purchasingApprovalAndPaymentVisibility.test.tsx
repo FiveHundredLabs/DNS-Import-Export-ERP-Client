@@ -536,7 +536,7 @@ describe('Purchasing Approval System & Supplier Payment Visibility', () => {
   // =========================================================================
   describe('Workflow 3: Purchasing Approvals Hub UI & Departmental Isolation (/approvals)', () => {
     it('verifies route permissions for /approvals for purchasing roles', () => {
-      expect(canAccessRoute('PURCHASING_OFFICER', '/approvals')).toBe(true);
+      expect(canAccessRoute('PURCHASING_OFFICER', '/approvals')).toBe(false);
       expect(canAccessRoute('PURCHASING_MANAGER', '/approvals')).toBe(true);
     });
 

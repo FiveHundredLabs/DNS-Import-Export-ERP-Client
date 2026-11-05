@@ -45,8 +45,8 @@ export function ApprovalsPage() {
     return <StockManagerApprovalHub />;
   }
 
-  // Purchasing Manager & Purchasing Officer dedicated PO Approvals & Supplier Payment Visibility Hub
-  if (role === 'PURCHASING_MANAGER' || role === 'PURCHASING_OFFICER') {
+  // Purchasing Manager dedicated PO Approvals & Supplier Payment Visibility Hub
+  if (role === 'PURCHASING_MANAGER') {
     return <PurchasingApprovalHub />;
   }
 

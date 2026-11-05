@@ -248,13 +248,13 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
 
   // 0. Purchasing & Procurement Module
   const purchasingItems: SidebarItem[] = [
-    { id: 'purchasing-dashboard', name: 'Purchasing Dashboard', path: '/purchasing', icon: LayoutGrid, category: 'purchasing', exact: true, excludedRoles: ['MANAGER'] },
+    { id: 'purchasing-dashboard', name: 'Purchasing Dashboard', path: '/purchasing', icon: LayoutGrid, category: 'purchasing', exact: true, excludedRoles: ['MANAGER', 'PURCHASING_OFFICER', 'PURCHASING_MANAGER'] },
     { id: 'purchasing-suppliers', name: 'Supplier Management', path: '/purchasing/suppliers', icon: Store, category: 'purchasing', excludedRoles: ['MANAGER'] },
     { id: 'purchasing-orders', name: 'Purchase Orders', path: '/purchasing/orders', icon: ShoppingCart, category: 'purchasing' },
-    { id: 'purchasing-approvals', name: 'PO Approvals', path: '/approvals', icon: ShieldCheck, category: 'purchasing' },
+    { id: 'purchasing-approvals', name: 'PO Approvals', path: '/approvals', icon: ShieldCheck, category: 'purchasing', excludedRoles: ['PURCHASING_OFFICER'] },
     { id: 'purchasing-payments', name: 'Supplier Payments (View Only)', path: '/purchasing/payments', icon: CreditCard, category: 'purchasing' },
     { id: 'purchasing-grn', name: 'Goods Received Notes (View Only)', path: '/purchasing/grn', icon: Boxes, category: 'purchasing' },
-    { id: 'purchasing-reports', name: 'Purchase Reports', path: '/purchasing/reports', icon: BarChart3, category: 'purchasing', excludedRoles: ['MANAGER'] },
+    { id: 'purchasing-reports', name: 'Purchase Reports', path: '/purchasing/reports', icon: BarChart3, category: 'purchasing', excludedRoles: ['MANAGER', 'PURCHASING_OFFICER', 'PURCHASING_MANAGER'] },
     { id: 'purchasing-returns', name: 'Supplier Returns & RMA', path: '/purchasing/returns', icon: RotateCcw, category: 'purchasing' },
   ];
 
@@ -267,7 +267,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       name:
         role === 'STOCK_MANAGER'
           ? 'Stock Manager Approvals'
-          : role === 'PURCHASING_MANAGER' || role === 'PURCHASING_OFFICER'
+          : role === 'PURCHASING_MANAGER'
           ? 'Purchasing Approvals'
           : role === 'AREA_MANAGER'
           ? 'Order Approvals'
@@ -277,7 +277,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       path: '/approvals',
       icon: role === 'STOCK_MANAGER' || role === 'PURCHASING_MANAGER' ? ShieldCheck : CheckCircle,
       category: 'approvals',
-      excludedRoles: ['SHOWROOM_MANAGER', 'SALES_REP', 'STOCK_KEEPER', 'CASHIER'],
+      excludedRoles: ['SHOWROOM_MANAGER', 'SALES_REP', 'STOCK_KEEPER', 'CASHIER', 'PURCHASING_OFFICER'],
     },
     {
       id: 'my-approvals',

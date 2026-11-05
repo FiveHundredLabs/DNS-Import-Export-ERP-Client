@@ -201,5 +201,39 @@ describe('Role-Based Sidebar Navigation & Access Control', () => {
       expect(canAccessRoute('MANAGER', '/inventory/delivery-notes/new')).toBe(true);
       expect(canAccessRoute('MANAGER', '/payments')).toBe(true);
     });
+
+    it('removes Purchasing Dashboard and Purchase Reports from navigation bar for PURCHASING_OFFICER', () => {
+      setupSidebarForRole('PURCHASING_OFFICER');
+
+      // Purchasing & Procurement is visible
+      expect(screen.getByTitle('Purchasing & Procurement')).toBeInTheDocument();
+
+      // Navigation bar must NOT include Purchasing Dashboard, Purchase Reports, or Approvals
+      expect(screen.queryByText('Purchasing Dashboard')).not.toBeInTheDocument();
+      expect(screen.queryByText('Purchase Reports')).not.toBeInTheDocument();
+      expect(screen.queryByText('PO Approvals')).not.toBeInTheDocument();
+      expect(screen.queryByText('Approvals Engine')).not.toBeInTheDocument();
+      expect(screen.queryByText('Purchasing Approvals')).not.toBeInTheDocument();
+      expect(canAccessRoute('PURCHASING_OFFICER', '/approvals')).toBe(false);
+
+      // Allowed purchasing navigation items are present
+      expect(screen.getByText('Purchase Orders')).toBeInTheDocument();
+      expect(screen.getByText('Supplier Management')).toBeInTheDocument();
+    });
+
+    it('removes Purchasing Dashboard and Purchase Reports from navigation bar for PURCHASING_MANAGER', () => {
+      setupSidebarForRole('PURCHASING_MANAGER');
+
+      // Purchasing & Procurement is visible
+      expect(screen.getByTitle('Purchasing & Procurement')).toBeInTheDocument();
+
+      // Navigation bar must NOT include Purchasing Dashboard or Purchase Reports
+      expect(screen.queryByText('Purchasing Dashboard')).not.toBeInTheDocument();
+      expect(screen.queryByText('Purchase Reports')).not.toBeInTheDocument();
+
+      // Allowed purchasing navigation items are present
+      expect(screen.getByText('Purchase Orders')).toBeInTheDocument();
+      expect(screen.getByText('Supplier Management')).toBeInTheDocument();
+    });
   });
 });
