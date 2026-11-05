@@ -864,8 +864,8 @@ export function PaymentCollectionPage() {
 
             {/* Allocation Summary Footer */}
             {selectedCustomer && (
-              <div className="flex flex-col sm:flex-row justify-between items-center gap-3 p-3 bg-slate-50 rounded-lg border border-slate-200 text-xs">
-                <div className="flex items-center gap-4">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 p-3 bg-slate-50 rounded-lg border border-slate-200 text-xs">
+                <div className="flex flex-wrap items-center gap-4">
                   <div>
                     <span className="text-slate-500">Collected: </span>
                     <span className="font-mono font-bold text-slate-900">

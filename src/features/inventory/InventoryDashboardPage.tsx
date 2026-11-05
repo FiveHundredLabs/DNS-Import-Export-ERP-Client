@@ -573,7 +573,7 @@ function isPowerToolItem(item: { productId?: string; sku?: string; categoryName?
 
       {/* ── Navigation Tabs ── */}
       <div className="flex items-center justify-between border-b border-slate-200">
-        <div className="flex items-center gap-2 overflow-x-auto">
+        <div className="flex items-center gap-2 overflow-x-auto w-full max-w-full no-scrollbar">
           <button
             type="button"
             onClick={() => setActiveTab('LEDGER')}
