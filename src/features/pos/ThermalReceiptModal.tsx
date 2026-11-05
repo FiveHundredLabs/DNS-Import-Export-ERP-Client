@@ -46,9 +46,14 @@ export function ThermalReceiptModal({
         {/* 80mm Thermal Receipt Simulation Paper */}
         <div className="my-5 rounded-lg border border-dashed border-slate-300 bg-slate-50 p-4 font-mono text-xs text-slate-800 shadow-inner">
           <div className="text-center">
-            <p className="font-bold text-sm tracking-wide text-slate-900">
-              DNS DISTRIBUTION (PVT) LTD
-            </p>
+            <div className="flex items-center justify-center gap-2 mb-1">
+              <div className="w-6 h-6 rounded bg-white p-0.5 border border-slate-200 flex items-center justify-center overflow-hidden shrink-0">
+                <img src="/logo.png" alt="DNS Logo" className="h-full w-full object-contain" />
+              </div>
+              <p className="font-bold text-sm tracking-wide text-slate-900">
+                DNS IMPORT & EXPORT (PVT) LTD
+              </p>
+            </div>
             <p className="text-[11px] text-slate-600">Showroom Sales Outlet</p>
             <p className="text-[10px] text-slate-500">142 First Cross Street, Colombo 11</p>
             <p className="text-[10px] text-slate-500">Tel: +94 11 234 5678 | VAT: 109847291-7000</p>
@@ -172,7 +177,7 @@ export function ThermalReceiptModal({
 
           <div className="mt-4 text-center text-[10px] text-slate-400">
             <p>Authorized Showroom Invoice Receipt</p>
-            <p>Thank you for choosing DNS Distribution!</p>
+            <p>Thank you for choosing DNS Import & Export!</p>
           </div>
         </div>
 

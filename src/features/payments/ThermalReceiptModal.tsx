@@ -47,7 +47,7 @@ export function ThermalReceiptModal({
 
   const handleShareWhatsApp = () => {
     const lines = [
-      `*DNS DISTRIBUTION (PVT) LTD*`,
+      `*DNS IMPORT & EXPORT (PVT) LTD*`,
       `*COLLECTION ACKNOWLEDGEMENT*`,
       `---------------------------------`,
       `*Receipt No:* ${payment.receiptNumber}`,
@@ -127,12 +127,12 @@ export function ThermalReceiptModal({
 
             {/* Company Branding (Pure Black & White) */}
             <div className="text-center text-black">
-              <div className="flex items-center justify-center gap-1.5 mb-0.5">
-                <span className="w-4 h-4 bg-black text-white rounded-xs flex items-center justify-center font-black text-[9px]">
-                  D
-                </span>
+              <div className="flex items-center justify-center gap-2 mb-1">
+                <div className="w-6 h-6 rounded bg-white p-0.5 border border-neutral-300 flex items-center justify-center overflow-hidden shrink-0">
+                  <img src="/logo.png" alt="DNS Logo" className="h-full w-full object-contain" />
+                </div>
                 <span className="font-extrabold text-sm sm:text-base tracking-wide text-black">
-                  DNS DISTRIBUTION (PVT) LTD
+                  DNS IMPORT & EXPORT (PVT) LTD
                 </span>
               </div>
               <div className="text-[10px] text-neutral-700 font-sans font-medium">

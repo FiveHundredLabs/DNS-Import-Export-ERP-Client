@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { useSmartBack } from '../../hooks/useSmartBack';
 import { useAuth } from '../../hooks/useAuth';
 import { authService } from '../../services/AuthService';
 import { orderActivityService, UserActivityItem } from '../../services/OrderActivityService';
@@ -42,6 +43,7 @@ const AVATAR_PRESETS = [
 
 export function ProfilePage() {
   const navigate = useNavigate();
+  const goBack = useSmartBack('/');
   const { currentUser, role } = useAuth();
 
   // Profile Form State
@@ -169,7 +171,7 @@ export function ProfilePage() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => navigate(-1)}
+            onClick={goBack}
             className="h-8 w-8 p-0 rounded-xl border-slate-200 shadow-2xs hover:bg-slate-100"
             title="Go Back"
           >

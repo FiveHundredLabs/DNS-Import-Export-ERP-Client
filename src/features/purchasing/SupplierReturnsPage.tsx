@@ -53,7 +53,8 @@ export interface GRNReturnProductLine {
 
 export function SupplierReturnsPage() {
   const navigate = useNavigate();
-  const { currentUser } = useAuth();
+  const { currentUser, role } = useAuth();
+  const isPurchasingRole = role === 'PURCHASING_OFFICER' || role === 'PURCHASING_MANAGER';
 
   const [activeTab, setActiveTab] = useState<'REGISTRY' | 'CREATE'>('REGISTRY');
   const [returns, setReturns] = useState<SupplierReturn[]>([]);
@@ -593,16 +594,18 @@ export function SupplierReturnsPage() {
             </p>
           </div>
         </div>
-        <Link to="/finance/ap/debit-notes" className="shrink-0">
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-8 text-xs font-semibold bg-white text-blue-800 border-blue-300 hover:bg-blue-100 gap-1"
-          >
-            <ExternalLink className="h-3.5 w-3.5" />
-            <span>Open Finance Debit Notes</span>
-          </Button>
-        </Link>
+        {!isPurchasingRole && (
+          <Link to="/finance/ap/debit-notes" className="shrink-0">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 text-xs font-semibold bg-white text-blue-800 border-blue-300 hover:bg-blue-100 gap-1"
+            >
+              <ExternalLink className="h-3.5 w-3.5" />
+              <span>Open Finance Debit Notes</span>
+            </Button>
+          </Link>
+        )}
       </div>
 
       {activeTab === 'CREATE' ? (
@@ -1318,13 +1321,19 @@ export function SupplierReturnsPage() {
                         </td>
                         <td className="py-3 px-3">
                           {ret.linkedDebitNoteNumber ? (
-                            <Link
-                              to={`/finance/ap/debit-notes`}
-                              className="inline-flex items-center gap-1 font-mono font-bold text-emerald-700 bg-emerald-50 px-2 py-1 rounded-md border border-emerald-200 hover:bg-emerald-100 transition-colors"
-                            >
-                              <span>{ret.linkedDebitNoteNumber}</span>
-                              <ExternalLink className="h-3 w-3" />
-                            </Link>
+                            isPurchasingRole ? (
+                              <span className="inline-flex items-center gap-1 font-mono font-bold text-emerald-700 bg-emerald-50 px-2 py-1 rounded-md border border-emerald-200">
+                                {ret.linkedDebitNoteNumber}
+                              </span>
+                            ) : (
+                              <Link
+                                to={`/finance/ap/debit-notes`}
+                                className="inline-flex items-center gap-1 font-mono font-bold text-emerald-700 bg-emerald-50 px-2 py-1 rounded-md border border-emerald-200 hover:bg-emerald-100 transition-colors"
+                              >
+                                <span>{ret.linkedDebitNoteNumber}</span>
+                                <ExternalLink className="h-3 w-3" />
+                              </Link>
+                            )
                           ) : (
                             <span className="text-[11px] text-slate-400 italic">Pending approval</span>
                           )}

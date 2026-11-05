@@ -195,8 +195,8 @@ export function PrintableGRN({ grn, open, onOpenChange, pricingData }: Printable
                   {/* Left: Company Identity */}
                   <div className="max-w-md min-w-0">
                     <div className="flex items-center gap-2">
-                      <div className="h-7 w-7 sm:h-8 sm:w-8 rounded-lg bg-slate-900 text-white flex items-center justify-center font-black text-xs sm:text-sm tracking-wider shrink-0">
-                        DNS
+                      <div className="h-8 w-8 sm:h-9 sm:w-9 rounded-md bg-white border border-slate-200 p-0.5 shadow-2xs flex items-center justify-center shrink-0 overflow-hidden">
+                        <img src="/logo.png" alt="DNS Logo" className="h-full w-full object-contain" />
                       </div>
                       <h1 className="text-lg sm:text-xl md:text-2xl font-black tracking-tight text-slate-900 uppercase">
                         DNS Import &amp; Export (Pvt) Ltd

@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom';
+import { useSmartBack } from '../../hooks/useSmartBack';
 import { useAuth } from '../../hooks/useAuth';
 import { useOrders } from '../../hooks/useOrders';
 import { orderService } from '../../services/OrderService';
@@ -38,6 +39,7 @@ export function OrderActivityLogPage() {
   const { id } = useParams<{ id?: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
+  const goBack = useSmartBack('/orders');
   const { currentUser, role } = useAuth();
 
   // Mode: Default to 'user-activity' (user's comprehensive monthly activity log)
@@ -204,7 +206,7 @@ export function OrderActivityLogPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
         <div>
           <button
-            onClick={() => navigate(-1)}
+            onClick={goBack}
             className="hidden sm:flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-800 transition-colors mb-1 font-medium cursor-pointer"
           >
             <ArrowLeft className="h-3.5 w-3.5" />

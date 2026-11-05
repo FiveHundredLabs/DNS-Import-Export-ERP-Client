@@ -26,32 +26,37 @@ export function SalesRepGreetingCard() {
       <div className="absolute -top-12 -right-12 w-48 h-48 rounded-full bg-white/10 blur-2xl pointer-events-none" />
       <div className="absolute -bottom-10 -left-10 w-40 h-40 rounded-full bg-white/5 blur-xl pointer-events-none" />
 
-      <div className="min-w-0 flex-1 relative z-10">
-        {/* 1. Greeting & Name */}
-        <h1 className="text-base sm:text-lg font-extrabold tracking-tight text-white leading-tight truncate">
-          {greetingMessage}
-        </h1>
+      <div className="flex items-start justify-between gap-3 relative z-10">
+        <div className="min-w-0 flex-1">
+          {/* 1. Greeting & Name */}
+          <h1 className="text-base sm:text-lg font-extrabold tracking-tight text-white leading-tight truncate">
+            {greetingMessage}
+          </h1>
 
-        {/* 2. Territory */}
-        <div className="flex items-center gap-1.5 text-xs text-white/90 font-medium mt-1 truncate">
-          <MapPin className="h-3.5 w-3.5 text-rose-300 shrink-0" />
-          <span className="truncate">{territoryName}</span>
+          {/* 2. Territory */}
+          <div className="flex items-center gap-1.5 text-xs text-white/90 font-medium mt-1 truncate">
+            <MapPin className="h-3.5 w-3.5 text-rose-300 shrink-0" />
+            <span className="truncate">{territoryName}</span>
+          </div>
+
+          {/* 3. Dealer Information */}
+          <div className="flex items-center gap-2 text-[11px] text-white/80 font-medium mt-1">
+            <div className="flex items-center gap-1 shrink-0">
+              <Users className="h-3 w-3 text-sky-300 shrink-0" />
+              <span>{assignedDealersCount} Assigned Dealers</span>
+            </div>
+            <span className="opacity-40">•</span>
+            <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-300 bg-emerald-500/20 px-1.5 py-0.5 rounded-md border border-emerald-400/30">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              Active Route
+            </span>
+          </div>
         </div>
 
-        {/* 3. Dealer Information */}
-        <div className="flex items-center gap-2 text-[11px] text-white/80 font-medium mt-1">
-          <div className="flex items-center gap-1 shrink-0">
-            <Users className="h-3 w-3 text-sky-300 shrink-0" />
-            <span>{assignedDealersCount} Assigned Dealers</span>
-          </div>
-          <span className="opacity-40">•</span>
-          <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-300 bg-emerald-500/20 px-1.5 py-0.5 rounded-md border border-emerald-400/30">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-            Active Route
-          </span>
+        <div className="h-10 w-10 rounded-xl bg-white p-1 shadow-sm ring-1 ring-white/30 shrink-0 overflow-hidden flex items-center justify-center">
+          <img src="/logo.png" alt="DNS Logo" className="h-full w-full object-contain" />
         </div>
       </div>
     </div>
   );
 }
-

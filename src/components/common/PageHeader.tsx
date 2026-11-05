@@ -1,5 +1,5 @@
 import React from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { ArrowLeft, ChevronRight } from 'lucide-react';
 import { Button } from '../ui/button';
 import { cn } from '../../utils/cn';
@@ -50,13 +50,15 @@ export function PageHeader({
   className,
 }: PageHeaderProps) {
   const navigate = useNavigate();
+  const location = useLocation();
   const hasBackAction = Boolean(backUrl || onBack);
 
   const handleBack = () => {
     if (onBack) {
       onBack();
     } else if (backUrl) {
-      navigate(backUrl);
+      const stateFrom = (location.state as { from?: string } | null)?.from;
+      navigate(stateFrom && stateFrom !== location.pathname ? stateFrom : backUrl);
     }
   };
 

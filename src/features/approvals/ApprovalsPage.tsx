@@ -303,6 +303,7 @@ export function ApprovalsPage() {
                       {getDocumentLink(app) ? (
                         <Link
                           to={getDocumentLink(app)!}
+                          state={{ from: '/approvals' }}
                           className="font-mono font-semibold text-[13px] text-primary hover:underline flex items-center gap-1"
                         >
                           {app.documentReferenceNumber}
@@ -332,7 +333,7 @@ export function ApprovalsPage() {
                     </div>
                     {isDirectRecordApproval(app) ? (
                       getDocumentLink(app) && (
-                        <Link to={getDocumentLink(app)!}>
+                        <Link to={getDocumentLink(app)!} state={{ from: '/approvals' }}>
                           <Button
                             size="sm"
                             className="text-xs gap-1.5 bg-primary hover:bg-primary-hover text-white font-semibold shadow-xs cursor-pointer"

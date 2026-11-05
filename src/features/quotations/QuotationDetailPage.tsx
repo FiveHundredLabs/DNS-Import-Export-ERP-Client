@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useSmartBack } from '../../hooks/useSmartBack';
 import { useAuth } from '../../hooks/useAuth';
 import { useQuotations } from '../../hooks/useQuotations';
 import { quotationService } from '../../services/QuotationService';
@@ -36,6 +37,7 @@ import {
 export function QuotationDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const goBack = useSmartBack('/quotations');
   const { currentUser } = useAuth();
   const {
     approveQuotation,
@@ -161,7 +163,7 @@ export function QuotationDetailPage() {
         <AlertTriangle className="h-10 w-10 text-rose-500 mx-auto" />
         <h3 className="font-bold text-slate-800 text-sm">Quotation Not Found</h3>
         <p className="text-xs text-slate-500">{error || 'The requested quotation could not be loaded.'}</p>
-        <Button onClick={() => navigate('/quotations')} variant="outline" size="sm" className="mt-2">
+        <Button onClick={goBack} variant="outline" size="sm" className="mt-2">
           Back to Quotations List
         </Button>
       </div>
@@ -173,7 +175,7 @@ export function QuotationDetailPage() {
       {/* Top Navigation & Action Toolbar */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <button
-          onClick={() => navigate('/quotations')}
+          onClick={goBack}
           className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-800"
         >
           <ArrowLeft className="h-3.5 w-3.5" />
@@ -360,8 +362,12 @@ export function QuotationDetailPage() {
         <CardContent className="p-4 sm:p-8 space-y-6">
           {/* Document Header */}
           <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 border-b border-slate-200 pb-6">
-            <div>
-              <h2 className="text-2xl font-semibold text-slate-900 tracking-tight">DNS DISTRIBUTION (PVT) LTD</h2>
+            <div className="flex items-start gap-3.5">
+              <div className="h-12 w-12 rounded-lg bg-white border border-slate-200 p-1 shadow-2xs flex items-center justify-center shrink-0 overflow-hidden">
+                <img src="/logo.png" alt="DNS Logo" className="h-full w-full object-contain" />
+              </div>
+              <div>
+                <h2 className="text-2xl font-semibold text-slate-900 tracking-tight">DNS IMPORT & EXPORT (PVT) LTD</h2>
               <p className="text-xs text-slate-500 font-medium mt-0.5">
                 Authorized Electrical, Automation & Industrial Wholesale Distributor
               </p>
@@ -369,6 +375,7 @@ export function QuotationDetailPage() {
                 142 First Cross Street, Colombo 11, Sri Lanka | Tel: +94 11 234 5678
               </p>
               <p className="text-xs text-slate-400">VAT Registration No: 109847291-7000</p>
+            </div>
             </div>
 
             <div className="text-left sm:text-right space-y-1">
