@@ -133,7 +133,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         setActiveCategory('all');
       }
     } else {
-      if (location.pathname.startsWith('/purchasing') && canAccessRoute('/purchasing')) {
+      if (location.pathname.startsWith('/purchasing') && (canAccessRoute('/purchasing') || canAccessRoute('/purchasing/orders'))) {
         setActiveCategory('purchasing');
       } else if (location.pathname.startsWith('/finance') && canAccessRoute('/finance')) {
         setActiveCategory('finance');
@@ -141,6 +141,8 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         setActiveCategory('customers');
       } else if (location.pathname.startsWith('/inventory') || location.pathname.startsWith('/products')) {
         setActiveCategory('inventory');
+      } else if (location.pathname.startsWith('/reports')) {
+        setActiveCategory('reports');
       }
     }
   }, [location.pathname, location.search, canAccessRoute, isDirector]);
@@ -161,6 +163,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     { id: 'orders', name: 'Sales Orders', path: '/orders', icon: ShoppingCart, category: 'sales' },
     { id: 'invoices', name: 'Invoices', path: '/invoices', icon: Receipt, category: 'sales' },
     { id: 'customer-collections', name: 'Customer Collections', path: '/payments/collect', icon: Banknote, category: 'sales' },
+    { id: 'cash-in-hand', name: 'Cash in Hand (Wallet)', path: '/payments', icon: Wallet, category: 'sales' },
     { id: 'my-performance', name: 'Performance & Incentives', path: '/my-performance', icon: Award, category: 'sales' },
     { id: 'pos', name: 'Showroom POS', path: '/pos', icon: Store, category: 'sales' },
   ];
@@ -179,7 +182,6 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     { id: 'grn', name: 'GRN (Read Only)', path: '/inventory/grn', icon: Receipt, category: 'inventory' },
     { id: 'products', name: 'Product Master', path: '/products', icon: Package, category: 'inventory' },
     { id: 'damaged-stock', name: 'Damaged Stock & RMA', path: '/inventory/damaged-stock', icon: ShieldAlert, category: 'inventory' },
-    { id: 'stock-approvals', name: 'Stock Manager Approvals', path: '/approvals', icon: ShieldCheck, category: 'inventory', allowedRoles: ['STOCK_MANAGER'] },
   ];
 
   const directorFinanceItems: SidebarItem[] = [
@@ -205,6 +207,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const directorReportItems: SidebarItem[] = [
     { id: 'purchase-reports', name: 'Purchase Reports', path: '/reports/purchasing', icon: ShoppingCart, category: 'reports' },
     { id: 'sales-reports', name: 'Sales Reports', path: '/reports/sales', icon: BarChart3, category: 'reports' },
+    { id: 'inventory-reports', name: 'Inventory Reports', path: '/reports/inventory', icon: Boxes, category: 'reports' },
     { id: 'finance-reports', name: 'Finance Reports', path: '/reports/finance', icon: Landmark, category: 'reports' },
   ];
 
@@ -245,13 +248,13 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
 
   // 0. Purchasing & Procurement Module
   const purchasingItems: SidebarItem[] = [
-    { id: 'purchasing-dashboard', name: 'Purchasing Dashboard', path: '/purchasing', icon: LayoutGrid, category: 'purchasing', exact: true },
-    { id: 'purchasing-suppliers', name: 'Supplier Management', path: '/purchasing/suppliers', icon: Store, category: 'purchasing' },
+    { id: 'purchasing-dashboard', name: 'Purchasing Dashboard', path: '/purchasing', icon: LayoutGrid, category: 'purchasing', exact: true, excludedRoles: ['MANAGER'] },
+    { id: 'purchasing-suppliers', name: 'Supplier Management', path: '/purchasing/suppliers', icon: Store, category: 'purchasing', excludedRoles: ['MANAGER'] },
     { id: 'purchasing-orders', name: 'Purchase Orders', path: '/purchasing/orders', icon: ShoppingCart, category: 'purchasing' },
     { id: 'purchasing-approvals', name: 'PO Approvals', path: '/approvals', icon: ShieldCheck, category: 'purchasing' },
     { id: 'purchasing-payments', name: 'Supplier Payments (View Only)', path: '/purchasing/payments', icon: CreditCard, category: 'purchasing' },
-    { id: 'purchasing-grn', name: 'Goods Received (View Only)', path: '/purchasing/grn', icon: Boxes, category: 'purchasing' },
-    { id: 'purchasing-reports', name: 'Purchase Reports', path: '/purchasing/reports', icon: BarChart3, category: 'purchasing' },
+    { id: 'purchasing-grn', name: 'Goods Received Notes (View Only)', path: '/purchasing/grn', icon: Boxes, category: 'purchasing' },
+    { id: 'purchasing-reports', name: 'Purchase Reports', path: '/purchasing/reports', icon: BarChart3, category: 'purchasing', excludedRoles: ['MANAGER'] },
     { id: 'purchasing-returns', name: 'Supplier Returns & RMA', path: '/purchasing/returns', icon: RotateCcw, category: 'purchasing' },
   ];
 
@@ -266,13 +269,27 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
           ? 'Stock Manager Approvals'
           : role === 'PURCHASING_MANAGER' || role === 'PURCHASING_OFFICER'
           ? 'Purchasing Approvals'
+          : role === 'AREA_MANAGER'
+          ? 'Order Approvals'
+          : role === 'SALES_MANAGER'
+          ? 'My Approvals'
           : 'Approvals Engine',
       path: '/approvals',
       icon: role === 'STOCK_MANAGER' || role === 'PURCHASING_MANAGER' ? ShieldCheck : CheckCircle,
       category: 'approvals',
+      excludedRoles: ['SHOWROOM_MANAGER', 'SALES_REP', 'STOCK_KEEPER', 'CASHIER'],
+    },
+    {
+      id: 'my-approvals',
+      name: 'My Approvals',
+      path: '/approvals/my-approvals',
+      icon: CheckSquare,
+      category: 'approvals',
+      badge: 'Assigned',
+      allowedRoles: ['DIRECTOR', 'MANAGER'],
     },
     { id: 'warranty', name: 'Warranty Hub', path: '/warranty', icon: ShieldCheck, category: 'approvals' },
-    { id: 'warranty-verification', name: 'Warranty Verification', path: '/warranty/verification', icon: Barcode, category: 'sales' },
+    { id: 'warranty-verification', name: 'Warranty Verification', path: '/warranty/verification', icon: Barcode, category: 'sales', allowedRoles: ['SALES_REP', 'AREA_MANAGER'] },
   ];
 
   // 2. Customers, Invoices, Cash in Hand & POS
@@ -284,11 +301,13 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     { id: 'invoices', name: 'Invoices', path: '/invoices', icon: Receipt, category: 'sales', excludedRoles: ['CASHIER', 'SHOWROOM_MANAGER'] },
     { id: 'my-performance', name: 'Performance & Incentives', path: '/my-performance', icon: Award, category: 'sales', allowedRoles: ['SALES_REP', 'AREA_MANAGER', 'SALES_MANAGER', 'MANAGER', 'DIRECTOR'] },
     { id: 'pos', name: 'Showroom POS', path: '/pos', icon: Store, category: 'sales', excludedRoles: ['STOCK_KEEPER', 'STOCK_MANAGER'] },
+    { id: 'showroom-sales-report', name: 'Showroom Sales Report', path: '/reports/sales/showroom', icon: Store, category: 'sales', allowedRoles: ['SHOWROOM_MANAGER'] },
   ];
 
   // 3. Products & Inventory
   const inventoryItems: SidebarItem[] = [
     { id: 'inventory', name: 'Inventory Hub', path: '/inventory', icon: Boxes, category: 'inventory', exact: true },
+    { id: 'inventory-reports-stock', name: 'Inventory Reports', path: '/reports/inventory', icon: BarChart3, category: 'inventory', allowedRoles: ['STOCK_MANAGER'] },
     { id: 'grn', name: 'GRN', path: '/inventory/grn', icon: Receipt, category: 'inventory' },
     { id: 'delivery-notes', name: 'Delivery Notes', path: '/inventory/delivery-notes', icon: Truck, category: 'inventory' },
     { id: 'products', name: 'Product Master', path: '/products', icon: Package, category: 'inventory', excludedRoles: ['STOCK_KEEPER'] },
@@ -315,12 +334,20 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const adminItems: SidebarItem[] = [
     { id: 'teams', name: 'Team Management', path: '/teams', icon: Users, category: 'admin' },
     { id: 'areas', name: 'Area Management', path: '/areas', icon: Compass, category: 'admin' },
-    { id: 'reports', name: 'Enterprise Reports', path: '/reports', icon: BarChart3, category: 'reports' },
+    { id: 'reports', name: 'Enterprise Reports', path: '/reports', icon: BarChart3, category: 'reports', excludedRoles: ['DIRECTOR', 'MANAGER', 'FINANCE_MANAGER', 'SALES_MANAGER', 'AREA_MANAGER'] },
     { id: 'credit-terms-settings', name: 'Default Credit Terms', path: '/?tab=settings&section=credit-terms', icon: CreditCard, category: 'admin', allowedRoles: ['DIRECTOR', 'MANAGER'] },
     { id: 'commissions-config', name: 'Commission Configuration', path: '/commissions', icon: Award, category: 'admin', allowedRoles: ['DIRECTOR', 'MANAGER'] },
     { id: 'tax-settings', name: 'Global Tax Configuration', path: '/?tab=settings&section=tax', icon: Percent, category: 'admin', directorOnly: true },
     { id: 'theme', name: 'Theme & Appearance', path: '/?tab=settings&section=appearance', icon: Settings, category: 'admin', directorOnly: true },
     { id: 'role-portal', name: 'Role Switcher Portal', path: '/login', icon: Users, category: 'admin', allowedRoles: ['DIRECTOR', 'MANAGER'] },
+  ];
+
+  // 6. Reports Suite — Direct Parity between Director & Manager
+  const standardReportItems: SidebarItem[] = [
+    { id: 'purchase-reports', name: 'Purchase Reports', path: '/reports/purchasing', icon: ShoppingCart, category: 'reports', allowedRoles: ['DIRECTOR', 'MANAGER'] },
+    { id: 'sales-reports', name: 'Sales Reports', path: '/reports/sales', icon: BarChart3, category: 'reports', allowedRoles: ['DIRECTOR', 'MANAGER', 'SALES_MANAGER'] },
+    { id: 'inventory-reports', name: 'Inventory Reports', path: '/reports/inventory', icon: Boxes, category: 'reports', allowedRoles: ['DIRECTOR', 'MANAGER'] },
+    { id: 'finance-reports', name: 'Finance Reports', path: '/reports/finance', icon: Landmark, category: 'reports', allowedRoles: ['DIRECTOR', 'MANAGER', 'FINANCE_MANAGER'] },
   ];
 
   // Combined item list in canonical Quick Links order
@@ -330,6 +357,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     ...customerItems,
     ...inventoryItems,
     ...financeItems,
+    ...standardReportItems,
     ...adminItems,
   ];
 
@@ -355,7 +383,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       if (item.category === 'finance' && !canAccessRoute('/finance')) {
         return false;
       }
-      if (item.category === 'purchasing' && !canAccessRoute('/purchasing')) {
+      if (item.category === 'purchasing' && !canAccessRoute('/purchasing') && !canAccessRoute('/purchasing/orders')) {
         return false;
       }
       if (item.category === 'inventory' && !canAccessRoute('/inventory') && item.path !== '/pos') {
@@ -398,7 +426,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     { id: 'inventory' as RailCategory, label: 'Inventory & Products', icon: Boxes },
     { id: 'finance' as RailCategory, label: 'Finance & Payments', icon: CreditCard },
     { id: 'approvals' as RailCategory, label: 'Approvals & Warranty', icon: ShieldCheck },
-    { id: 'reports' as RailCategory, label: 'Enterprise Reports', icon: BarChart3 },
+    { id: 'reports' as RailCategory, label: currentUser.role === 'SALES_MANAGER' ? 'Sales Reports' : 'Enterprise Reports', icon: BarChart3 },
     { id: 'admin' as RailCategory, label: 'Administration', icon: Settings },
   ];
 
@@ -469,7 +497,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       case 'approvals':
         return 'Approvals & Hub';
       case 'reports':
-        return 'Analytics & Reports';
+        return currentUser.role === 'SALES_MANAGER' ? 'Sales Reports' : currentUser.role === 'MANAGER' ? 'Reports' : 'Analytics & Reports';
       case 'admin':
         return 'Administration';
       default:

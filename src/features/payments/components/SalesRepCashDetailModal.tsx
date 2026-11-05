@@ -122,7 +122,7 @@ export function SalesRepCashDetailModal({
       open={open}
       onOpenChange={onOpenChange}
       width="3xl"
-      className="p-0 flex flex-col bg-slate-50/60"
+      className="p-0 flex flex-col bg-slate-50 shadow-2xl"
     >
       {/* 1. Header Profile Surface */}
       <DrawerHeader className="p-6 bg-white border-b border-slate-200/90 shadow-2xs space-y-4">
@@ -288,11 +288,11 @@ export function SalesRepCashDetailModal({
       </DrawerHeader>
 
       {/* 2. Content Body Area */}
-      <DrawerContent className="p-6 space-y-5 flex-1 overflow-y-auto">
+      <DrawerContent className="p-6 space-y-5 flex-1 overflow-y-auto bg-slate-50">
         {/* TAB 1: CASH IN HAND & INVOICE BREAKDOWN */}
         {activeTab === 'CASH_IN_HAND' && (
           <div className="space-y-4">
-            <div className="flex items-center justify-between gap-3 flex-wrap bg-amber-50/90 border border-amber-200/90 p-3.5 rounded-2xl text-xs text-amber-900">
+            <div className="flex items-center justify-between gap-3 flex-wrap bg-amber-50 border border-amber-200 p-3.5 rounded-2xl text-xs text-amber-900 shadow-2xs">
               <div className="flex items-center gap-2">
                 <Banknote className="h-4 w-4 text-amber-700 shrink-0" />
                 <span>
@@ -305,7 +305,7 @@ export function SalesRepCashDetailModal({
             </div>
 
             {cashInHandPayments.length === 0 ? (
-              <div className="text-center py-14 border-2 border-dashed border-slate-200 rounded-3xl bg-white">
+              <div className="text-center py-14 border-2 border-dashed border-slate-200 rounded-3xl bg-white shadow-2xs">
                 <ShieldCheck className="h-12 w-12 text-emerald-500 mx-auto mb-2.5" />
                 <p className="text-sm font-bold text-slate-800">No Cash Held in Hand</p>
                 <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
@@ -322,7 +322,7 @@ export function SalesRepCashDetailModal({
                       className={cn(
                         "rounded-2xl p-5 transition-all bg-white shadow-xs border",
                         h24.isOverdue
-                          ? "border-rose-300 ring-1 ring-rose-200 bg-rose-50/20"
+                          ? "border-rose-300 ring-1 ring-rose-200"
                           : "border-slate-200/90 hover:border-slate-300"
                       )}
                     >
@@ -395,9 +395,9 @@ export function SalesRepCashDetailModal({
                           </span>
                         </div>
 
-                        <div className="overflow-x-auto rounded-xl border border-slate-200/90 bg-slate-50/50">
+                        <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-2xs">
                           <table className="w-full text-left text-xs">
-                            <thead className="bg-slate-100/80 text-[10.5px] uppercase font-bold text-slate-600 border-b border-slate-200">
+                            <thead className="bg-slate-100 text-[10.5px] uppercase font-bold text-slate-600 border-b border-slate-200">
                               <tr>
                                 <th className="py-2.5 px-3.5 font-bold">Invoice #</th>
                                 <th className="py-2.5 px-3.5 font-bold">Customer</th>
@@ -407,7 +407,7 @@ export function SalesRepCashDetailModal({
                                 <th className="py-2.5 px-3.5 text-center font-bold">Status</th>
                               </tr>
                             </thead>
-                            <tbody className="divide-y divide-slate-200/80 bg-white">
+                            <tbody className="divide-y divide-slate-100 bg-white">
                               {payment.invoiceAllocations && payment.invoiceAllocations.length > 0 ? (
                                 payment.invoiceAllocations.map((alloc, idx) => {
                                   const inv = getInvoiceDetails(alloc.invoiceNumber);
@@ -415,7 +415,7 @@ export function SalesRepCashDetailModal({
                                   const remainingBalance = inv?.balanceAmount ?? Math.max(0, invTotal - alloc.allocatedAmount);
 
                                   return (
-                                    <tr key={idx} className="hover:bg-slate-50/70 transition-colors">
+                                    <tr key={idx} className="hover:bg-slate-50 transition-colors">
                                       <td className="py-2.5 px-3.5 font-mono font-bold text-primary">
                                         {alloc.invoiceNumber}
                                       </td>
@@ -425,7 +425,7 @@ export function SalesRepCashDetailModal({
                                       <td className="py-2.5 px-3.5 text-right font-mono text-slate-600">
                                         {formatCurrency(invTotal)}
                                       </td>
-                                      <td className="py-2.5 px-3.5 text-right font-mono font-bold text-emerald-700 bg-emerald-50/50">
+                                      <td className="py-2.5 px-3.5 text-right font-mono font-bold text-emerald-700 bg-emerald-50">
                                         +{formatCurrency(alloc.allocatedAmount)}
                                       </td>
                                       <td className="py-2.5 px-3.5 text-right font-mono font-bold text-slate-900">

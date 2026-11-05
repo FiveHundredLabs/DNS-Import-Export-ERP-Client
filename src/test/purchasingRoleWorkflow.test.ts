@@ -83,9 +83,14 @@ describe('Purchasing Officer Role & Workflow Test Suite', () => {
       expect(canAccessRoute('PURCHASING_OFFICER', '/teams')).toBe(false);
     });
 
-    it('allows DIRECTOR and MANAGER to access purchasing routes', () => {
+    it('allows DIRECTOR and MANAGER to access purchasing routes as like director', () => {
       expect(canAccessRoute('DIRECTOR', '/purchasing')).toBe(true);
+      expect(canAccessRoute('DIRECTOR', '/purchasing/orders')).toBe(true);
       expect(canAccessRoute('MANAGER', '/purchasing')).toBe(true);
+      expect(canAccessRoute('MANAGER', '/purchasing/orders')).toBe(true);
+      expect(canAccessRoute('MANAGER', '/purchasing/payments')).toBe(true);
+      expect(canAccessRoute('MANAGER', '/purchasing/grn')).toBe(true);
+      expect(canAccessRoute('MANAGER', '/purchasing/returns')).toBe(true);
     });
 
     it('blocks other non-procurement roles from /purchasing routes', () => {

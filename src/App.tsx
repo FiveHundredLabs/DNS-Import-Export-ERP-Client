@@ -81,6 +81,39 @@ import { CashBookPage } from './features/finance/pages/CashBookPage';
 import { IncomeDeskPage } from './features/finance/pages/IncomeDeskPage';
 import { ExpenseDeskPage } from './features/finance/pages/ExpenseDeskPage';
 import { ReportsPage } from './features/reports/ReportsPage';
+import { ReportsHubDispatcher } from './features/reports/ReportsHubDispatcher';
+
+// Sales Reports
+import { SalesReportsHubPage } from './features/reports/sales/SalesReportsHubPage';
+import { SalesSummaryReportPage } from './features/reports/sales/SalesSummaryReportPage';
+import { SalesOrderReportPage } from './features/reports/sales/SalesOrderReportPage';
+import { SalesRepPerformanceReportPage } from './features/reports/sales/SalesRepPerformanceReportPage';
+import { AreaSalesReportPage } from './features/reports/sales/AreaSalesReportPage';
+import { SalesTargetReportPage } from './features/reports/sales/SalesTargetReportPage';
+import { CustomerSalesReportPage } from './features/reports/sales/CustomerSalesReportPage';
+import { ProductSalesReportPage } from './features/reports/sales/ProductSalesReportPage';
+import { SalesCollectionReportPage } from './features/reports/sales/SalesCollectionReportPage';
+import { SalesOutstandingReportPage } from './features/reports/sales/SalesOutstandingReportPage';
+import { SalesProfitabilityReportPage } from './features/reports/sales/SalesProfitabilityReportPage';
+import { ShowroomSalesReportPage } from './features/reports/sales/ShowroomSalesReportPage';
+
+// Purchasing Reports
+import { PurchasingReportsHubPage } from './features/reports/purchasing/PurchasingReportsHubPage';
+import { POReportPage } from './features/reports/purchasing/POReportPage';
+import { PurchaseSummaryReportPage } from './features/reports/purchasing/PurchaseSummaryReportPage';
+import { SupplierPurchaseReportPage } from './features/reports/purchasing/SupplierPurchaseReportPage';
+import { GRNReportPage } from './features/reports/purchasing/GRNReportPage';
+import { PurchaseReturnReportPage } from './features/reports/purchasing/PurchaseReturnReportPage';
+import { PurchaseCostAnalysisPage } from './features/reports/purchasing/PurchaseCostAnalysisPage';
+import { SupplierPaymentReportPage } from './features/reports/purchasing/SupplierPaymentReportPage';
+import { PurchaseOutstandingReportPage } from './features/reports/purchasing/PurchaseOutstandingReportPage';
+
+// Inventory Reports
+import { InventoryReportsHubPage } from './features/reports/inventory/InventoryReportsHubPage';
+import { StockSummaryReportPage } from './features/reports/inventory/StockSummaryReportPage';
+import { StockMovementReportPage } from './features/reports/inventory/StockMovementReportPage';
+import { StockValuationReportPage } from './features/reports/inventory/StockValuationReportPage';
+import { LowStockReportPage } from './features/reports/inventory/LowStockReportPage';
 import { ProtectedRoute } from './components/common/ProtectedRoute';
 import { LoginPage } from './features/auth/LoginPage';
 import { Toaster } from 'sonner';
@@ -607,7 +640,7 @@ export function App() {
           path="reports"
           element={
             <ProtectedRoute>
-              <ReportsPage />
+              <ReportsHubDispatcher />
             </ProtectedRoute>
           }
         />
@@ -615,18 +648,56 @@ export function App() {
           path="reports/sales"
           element={
             <ProtectedRoute>
-              <ReportsPage />
+              <SalesReportsHubPage />
             </ProtectedRoute>
           }
         />
+        <Route path="reports/sales/summary" element={<ProtectedRoute><SalesSummaryReportPage /></ProtectedRoute>} />
+        <Route path="reports/sales/orders" element={<ProtectedRoute><SalesOrderReportPage /></ProtectedRoute>} />
+        <Route path="reports/sales/rep-performance" element={<ProtectedRoute><SalesRepPerformanceReportPage /></ProtectedRoute>} />
+        <Route path="reports/sales/reps" element={<ProtectedRoute><SalesRepPerformanceReportPage /></ProtectedRoute>} />
+        <Route path="reports/sales/area" element={<ProtectedRoute><AreaSalesReportPage /></ProtectedRoute>} />
+        <Route path="reports/sales/areas" element={<ProtectedRoute><AreaSalesReportPage /></ProtectedRoute>} />
+        <Route path="reports/sales/targets" element={<ProtectedRoute><SalesTargetReportPage /></ProtectedRoute>} />
+        <Route path="reports/sales/customers" element={<ProtectedRoute><CustomerSalesReportPage /></ProtectedRoute>} />
+        <Route path="reports/sales/products" element={<ProtectedRoute><ProductSalesReportPage /></ProtectedRoute>} />
+        <Route path="reports/sales/collections" element={<ProtectedRoute><SalesCollectionReportPage /></ProtectedRoute>} />
+        <Route path="reports/sales/outstanding" element={<ProtectedRoute><SalesOutstandingReportPage /></ProtectedRoute>} />
+        <Route path="reports/sales/profitability" element={<ProtectedRoute><SalesProfitabilityReportPage /></ProtectedRoute>} />
+        <Route path="reports/sales/showroom" element={<ProtectedRoute><ShowroomSalesReportPage /></ProtectedRoute>} />
+
         <Route
           path="reports/purchasing"
           element={
             <ProtectedRoute>
-              <PurchasingReportsPage />
+              <PurchasingReportsHubPage />
             </ProtectedRoute>
           }
         />
+        <Route path="reports/purchasing/orders" element={<ProtectedRoute><POReportPage /></ProtectedRoute>} />
+        <Route path="reports/purchasing/summary" element={<ProtectedRoute><PurchaseSummaryReportPage /></ProtectedRoute>} />
+        <Route path="reports/purchasing/suppliers" element={<ProtectedRoute><SupplierPurchaseReportPage /></ProtectedRoute>} />
+        <Route path="reports/purchasing/grn" element={<ProtectedRoute><GRNReportPage /></ProtectedRoute>} />
+        <Route path="reports/purchasing/returns" element={<ProtectedRoute><PurchaseReturnReportPage /></ProtectedRoute>} />
+        <Route path="reports/purchasing/cost-analysis" element={<ProtectedRoute><PurchaseCostAnalysisPage /></ProtectedRoute>} />
+        <Route path="reports/purchasing/payments" element={<ProtectedRoute><SupplierPaymentReportPage /></ProtectedRoute>} />
+        <Route path="reports/purchasing/outstanding" element={<ProtectedRoute><PurchaseOutstandingReportPage /></ProtectedRoute>} />
+
+        <Route
+          path="reports/inventory"
+          element={
+            <ProtectedRoute>
+              <InventoryReportsHubPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route path="reports/inventory/stock-summary" element={<ProtectedRoute><StockSummaryReportPage /></ProtectedRoute>} />
+        <Route path="reports/inventory/summary" element={<ProtectedRoute><StockSummaryReportPage /></ProtectedRoute>} />
+        <Route path="reports/inventory/movements" element={<ProtectedRoute><StockMovementReportPage /></ProtectedRoute>} />
+        <Route path="reports/inventory/valuation" element={<ProtectedRoute><StockValuationReportPage /></ProtectedRoute>} />
+        <Route path="reports/inventory/low-stock" element={<ProtectedRoute><LowStockReportPage /></ProtectedRoute>} />
+        <Route path="reports/inventory/reorder" element={<ProtectedRoute><LowStockReportPage /></ProtectedRoute>} />
+
         <Route
           path="reports/finance"
           element={
@@ -777,7 +848,7 @@ export function App() {
           path="purchasing/reports"
           element={
             <ProtectedRoute>
-              <PurchasingReportsPage />
+              <PurchasingReportsHubPage />
             </ProtectedRoute>
           }
         />
