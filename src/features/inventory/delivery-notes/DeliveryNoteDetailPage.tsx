@@ -53,10 +53,11 @@ export const DeliveryNoteDetailPage: React.FC = () => {
   // Expandable row barcode drawers
   const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({});
 
+  const effectiveRole = role || currentUser?.role;
   const isManagerOrAdmin =
-    role === 'MANAGER' ||
-    role === 'DIRECTOR' ||
-    role === 'STOCK_MANAGER';
+    effectiveRole === 'MANAGER' ||
+    effectiveRole === 'DIRECTOR' ||
+    effectiveRole === 'STOCK_MANAGER';
 
   const fetchNote = async () => {
     if (!id) return;
@@ -252,7 +253,13 @@ export const DeliveryNoteDetailPage: React.FC = () => {
     return (
       <div className="p-8 text-center space-y-3">
         <div className="text-sm font-bold text-slate-800">Delivery Note Not Found</div>
-        <Button size="sm" onClick={() => navigate('/inventory/delivery-notes')}>
+        <Button size="sm" onClick={() => {
+              if (window.history.length > 1) {
+                navigate(-1);
+              } else {
+                navigate(effectiveRole === 'STOCK_MANAGER' ? '/approvals?tab=delivery-notes' : '/inventory/delivery-notes');
+              }
+            }}>
           Back to List
         </Button>
       </div>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
@@ -232,25 +232,26 @@ export function GRNDetailPage({ backUrl, backTitle }: GRNDetailPageProps = {}) {
   // Product category filter for the items table
   const [categoryFilter, setCategoryFilter] = useState<'ALL' | 'GENERAL_ELECTRICAL' | 'SERIAL_TRACKED' | 'WIRES_CABLES' | 'DAMAGED'>('ALL');
 
-  useEffect(() => {
-    const fetchGRN = async () => {
-      if (!id) return;
-      try {
-        setLoading(true);
-        const data = await grnService.getGRNById(id);
-        if (!data) {
-          setError('GRN record not found');
-        } else {
-          setGrn(data);
-        }
-      } catch (err: any) {
-        setError(err.message || 'Error loading GRN');
-      } finally {
-        setLoading(false);
+  const fetchGRN = useCallback(async () => {
+    if (!id) return;
+    try {
+      setLoading(true);
+      const data = await grnService.getGRNById(id);
+      if (!data) {
+        setError('GRN record not found');
+      } else {
+        setGrn(data);
       }
-    };
-    fetchGRN();
+    } catch (err: any) {
+      setError(err.message || 'Error loading GRN');
+    } finally {
+      setLoading(false);
+    }
   }, [id, grnService]);
+
+  useEffect(() => {
+    fetchGRN();
+  }, [fetchGRN]);
 
   // Ensure all GRN items have unitRecords populated and categorical classifications
   const preparedItems = useMemo(() => {
@@ -386,9 +387,9 @@ export function GRNDetailPage({ backUrl, backTitle }: GRNDetailPageProps = {}) {
   const handleApprove = async () => {
     if (!id || !user) return;
     try {
-      await grnService.approveGRN(id, user.id, comment);
-      toast.success('Goods Received Note approved and posted to inventory.');
-      navigate(resolvedBackPath);
+      await grnService.approveGRN(id, user.id, user.name || 'Finance Officer', user.role);
+      toast.success('Goods Received Note approved by Finance and posted to inventory.');
+      fetchGRN();
     } catch (err: any) {
       toast.error(err.message || 'Failed to approve GRN');
     }
@@ -403,7 +404,7 @@ export function GRNDetailPage({ backUrl, backTitle }: GRNDetailPageProps = {}) {
     try {
       await grnService.rejectGRN(id, user.id, comment);
       toast.error('GRN rejected and returned for inspection resolution.');
-      navigate(resolvedBackPath);
+      fetchGRN();
     } catch (err: any) {
       toast.error(err.message || 'Failed to reject GRN');
     }
@@ -413,8 +414,8 @@ export function GRNDetailPage({ backUrl, backTitle }: GRNDetailPageProps = {}) {
     if (!id || !user) return;
     try {
       await grnService.verifyAndApproveGRN(id, { id: user.id, name: user.name, role: user.role }, remarks);
-      toast.success('GRN physical verification approved! Forwarded to Finance for Landed Costing & Bill creation.');
-      refetch();
+      toast.success('GRN physical verification approved! Forwarded to Finance for approval.');
+      fetchGRN();
     } catch (err: any) {
       toast.error(err.message || 'Failed to verify GRN');
     }
@@ -424,8 +425,8 @@ export function GRNDetailPage({ backUrl, backTitle }: GRNDetailPageProps = {}) {
     if (!id || !user) return;
     try {
       await grnService.rejectGRNVerification(id, { id: user.id, name: user.name, role: user.role }, reason);
-      toast.error('GRN verification rejected. Shipment returned for inspection resolution.');
-      refetch();
+      toast.error('GRN verification rejected. Shipment returned to Stock Keeper for inspection resolution.');
+      fetchGRN();
     } catch (err: any) {
       toast.error(err.message || 'Failed to reject GRN');
     }
@@ -436,8 +437,9 @@ export function GRNDetailPage({ backUrl, backTitle }: GRNDetailPageProps = {}) {
   }, [grn]);
 
   const isStockKeeper = user?.role === 'STOCK_KEEPER';
-  const isFinanceRole = ['FINANCE_OFFICER', 'FINANCE_MANAGER', 'DIRECTOR', 'ADMIN'].includes(user?.role || '');
-  const isManagerRole = ['DIRECTOR', 'MANAGER', 'SALES_MANAGER', 'FINANCE_MANAGER', 'STOCK_MANAGER'].includes(user?.role || '');
+  const isStockManager = user?.role === 'STOCK_MANAGER';
+  const isFinanceRole = ['FINANCE_OFFICER', 'FINANCE_MANAGER', 'DIRECTOR', 'ADMIN', 'MANAGER'].includes(user?.role || '');
+  const isManagementApprover = ['DIRECTOR', 'MANAGER', 'FINANCE_MANAGER', 'FINANCE_OFFICER'].includes(user?.role || '');
 
   if (loading) {
     return (
@@ -593,8 +595,10 @@ export function GRNDetailPage({ backUrl, backTitle }: GRNDetailPageProps = {}) {
               variant="outline"
               size="sm"
               onClick={() => {
-                setSelectedProductForModal('ALL');
-                setIsBarcodeModalOpen(true);
+                const stickersPath = isPurchasingRoute
+                  ? `/purchasing/grn/${id}/stickers`
+                  : `/inventory/grn/${id}/stickers`;
+                navigate(stickersPath);
               }}
               className="gap-1.5 text-xs font-semibold text-primary border-primary/30 hover:bg-primary/5 shadow-2xs"
             >
@@ -603,14 +607,55 @@ export function GRNDetailPage({ backUrl, backTitle }: GRNDetailPageProps = {}) {
             </Button>
 
             {/* Approval Workflow Actions */}
-            {grn.status === 'SUBMITTED' && isManagerRole && (
+            {/* 1. STOCK MANAGER WORKFLOW: Verifies and forwards to Finance; NEVER posts directly to Inventory */}
+            {isStockManager && grn.status === 'PENDING_STOCK_MANAGER_APPROVAL' && (
               <>
                 <ConfirmButton
                   variant="default"
                   size="sm"
                   dialogVariant="success"
-                  confirmTitle="Approve Goods Received Note"
-                  confirmMessage={`Confirm sign-off and approval of ${grn.grnNumber || grn.id}? This will officially post physical inventory to warehouse balances.`}
+                  confirmTitle="Approve Physical Inbound Verification"
+                  confirmMessage={`Confirm physical verification of ${grn.grnNumber || grn.id}? This will approve physical receipt and forward the GRN to Finance for approval. It will NOT be posted to Inventory until Finance approves.`}
+                  confirmText="Approve & Forward to Finance"
+                  onConfirm={() => handleStockManagerApprove(comment || 'Physical quantities & barcode compliance verified by Stock Manager. Forwarded to Finance AP.')}
+                  className="gap-1.5 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs"
+                >
+                  <CheckCircle2 className="h-3.5 w-3.5" />
+                  Approve GRN
+                </ConfirmButton>
+                <ConfirmButton
+                  variant="outline"
+                  size="sm"
+                  dialogVariant="destructive"
+                  confirmTitle="Reject Physical Inbound Verification"
+                  confirmMessage={`Are you sure you want to reject ${grn.grnNumber || grn.id}? The shipment will be marked rejected and returned to the Stock Keeper for resolution.`}
+                  confirmText="Reject GRN"
+                  onConfirm={() => handleStockManagerReject(comment || 'Physical stock verification rejected by Stock Manager.')}
+                  className="gap-1.5 text-xs font-semibold text-rose-700 border-rose-300 hover:bg-rose-50"
+                >
+                  <XCircle className="h-3.5 w-3.5" />
+                  Reject GRN
+                </ConfirmButton>
+              </>
+            )}
+
+            {/* If Stock Manager is viewing a GRN that has already been approved and forwarded to Finance */}
+            {isStockManager && (grn.status === 'SUBMITTED' || grn.status === 'COSTED') && (
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-50 border border-amber-300 text-amber-800 text-xs font-semibold select-none">
+                <Clock className="h-3.5 w-3.5 text-amber-600" />
+                <span>Forwarded to Finance for Approval</span>
+              </div>
+            )}
+
+            {/* 2. FINANCE / MANAGEMENT WORKFLOW: Only Finance approves and posts to Inventory */}
+            {!isStockManager && isManagementApprover && (grn.status === 'SUBMITTED' || grn.status === 'COSTED') && (
+              <>
+                <ConfirmButton
+                  variant="default"
+                  size="sm"
+                  dialogVariant="success"
+                  confirmTitle="Finance Approval & Inventory Post"
+                  confirmMessage={`Confirm Finance sign-off and approval of ${grn.grnNumber || grn.id}? This will officially approve the GRN and post physical inventory to warehouse balances.`}
                   confirmText="Approve & Post"
                   onConfirm={handleApprove}
                   className="gap-1.5 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs"
@@ -632,6 +677,14 @@ export function GRNDetailPage({ backUrl, backTitle }: GRNDetailPageProps = {}) {
                   Reject GRN
                 </ConfirmButton>
               </>
+            )}
+
+            {/* If GRN is already approved and posted to inventory */}
+            {grn.status === 'APPROVED' && (
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 border border-emerald-300 text-emerald-800 text-xs font-semibold select-none">
+                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+                <span>Approved by Finance • Posted to Inventory</span>
+              </div>
             )}
 
             {/* Finance Costing Redirect */}

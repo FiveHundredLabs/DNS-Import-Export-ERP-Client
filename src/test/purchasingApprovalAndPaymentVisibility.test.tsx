@@ -581,5 +581,51 @@ describe('Purchasing Approval System & Supplier Payment Visibility', () => {
       expect(screen.queryByText(/Post Payment/i)).toBeNull();
       expect(screen.queryByText(/Record Payment/i)).toBeNull();
     });
+
+    it('shows two sections on Purchasing Manager PO Approval page and displays approval UI with Manager forwarding notice', async () => {
+      authService.switchRole('PURCHASING_MANAGER');
+
+      render(
+        <MemoryRouter initialEntries={['/approvals']}>
+          <ApprovalsPage />
+        </MemoryRouter>
+      );
+
+      // Verify the two sections exist and list their POs
+      await waitFor(() => {
+        expect(screen.getByText('POs Pending Purchasing Manager Approval')).toBeInTheDocument();
+        expect(screen.getByText('POs Pending Manager Approval')).toBeInTheDocument();
+        expect(screen.getAllByText('PO-2026-0002').length).toBeGreaterThan(0);
+        expect(screen.getAllByText('PO-2026-0006').length).toBeGreaterThan(0);
+      });
+
+      // Verify badges for Stage 1 (Pending PM) and Stage 2 (Awaiting Manager)
+      expect(screen.getAllByText(/Pending PM Approval/i).length).toBeGreaterThan(0);
+      expect(screen.getAllByText(/Awaiting Manager/i).length).toBeGreaterThan(0);
+
+      // Verify existing PO approval UI is displayed for selected PO (PO-2026-0002)
+      expect(screen.getByText(/Product Lines/i)).toBeInTheDocument();
+      expect(screen.getByText(/Total Units/i)).toBeInTheDocument();
+      expect(screen.getByText(/Grand Total \(LKR\)/i)).toBeInTheDocument();
+      expect(screen.getByText(/Purchased Product Line Items/i)).toBeInTheDocument();
+      expect(screen.getByText('Approval Decision & Review')).toBeInTheDocument();
+
+      // Verify it clearly mentions forwarding to the Manager (System Manager) for the next approval stage
+      expect(screen.getByText(/Next Approval Stage:/i)).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: /Approve & Forward to Manager \(System Manager\)/i })
+      ).toBeInTheDocument();
+
+      // Clicking on PO in Section 2 (PO-2026-0006) displays existing approval UI showing awaiting Manager
+      const po6Elements = screen.getAllByText('PO-2026-0006');
+      const po6Card = po6Elements[0].closest('div[class*="cursor-pointer"]');
+      if (po6Card) {
+        fireEvent.click(po6Card);
+      }
+
+      await waitFor(() => {
+        expect(screen.getByText(/Awaiting action by MANAGER/i)).toBeInTheDocument();
+      });
+    });
   });
 });

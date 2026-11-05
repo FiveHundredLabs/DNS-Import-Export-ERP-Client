@@ -32,6 +32,7 @@ import {
   Sparkles,
   ExternalLink,
 } from 'lucide-react';
+import { UnitSerialBarcodeInspector } from './UnitSerialBarcodeInspector';
 
 interface GRNStockManagerVerificationPanelProps {
   grn: GRN;
@@ -400,8 +401,10 @@ export const GRNStockManagerVerificationPanel: React.FC<GRNStockManagerVerificat
                       </button>
 
                       <div className="text-[10px] text-slate-400 font-mono">
-                        {hasSerials ? (
-                          <span className="text-emerald-700 font-medium">{item.serialNumbers?.length} serials verified</span>
+                        {Math.max(item.receivedQuantity, item.serialNumbers?.length || 0) > 0 ? (
+                          <span className="text-emerald-700 font-medium">
+                            {Math.max(item.receivedQuantity, item.serialNumbers?.length || 0)} serials & barcodes verified
+                          </span>
                         ) : (
                           <span>No unit serials</span>
                         )}
@@ -446,67 +449,18 @@ export const GRNStockManagerVerificationPanel: React.FC<GRNStockManagerVerificat
                           </div>
                         )}
 
-                        {/* Unit Barcodes Stickers */}
-                        {totalUnitTags > 0 && (
-                          <div className="space-y-1">
-                            <div className="flex items-center justify-between text-[10px] font-semibold text-slate-600">
-                              <span className="flex items-center gap-1">
-                                <Barcode className="h-3 w-3" />
-                                Scanned Unit Barcodes ({totalUnitTags} units)
-                              </span>
-                              <Badge variant="outline" className="text-[9px] bg-emerald-50 text-emerald-700 border-emerald-200">
-                                {labeledUnitTags}/{totalUnitTags} Affixed
-                              </Badge>
-                            </div>
-                            <div className="flex flex-wrap gap-1 max-h-24 overflow-y-auto p-1.5 bg-white rounded border border-slate-200">
-                              {item.unitRecords?.map((rec, rIdx) => (
-                                <span
-                                  key={rIdx}
-                                  className={cn(
-                                    'inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-mono border',
-                                    rec.status === 'LABELED'
-                                      ? 'bg-slate-50 text-slate-700 border-slate-200'
-                                      : 'bg-amber-50 text-amber-800 border-amber-200'
-                                  )}
-                                >
-                                  {rec.unitBarcode}
-                                  {rec.status === 'LABELED' && (
-                                    <CheckCircle2 className="h-2.5 w-2.5 text-emerald-600 shrink-0" />
-                                  )}
-                                </span>
-                              )) ||
-                                item.unitBarcodes?.map((bc, bIdx) => (
-                                  <span
-                                    key={bIdx}
-                                    className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-mono bg-slate-50 text-slate-700 border border-slate-200"
-                                  >
-                                    {bc}
-                                    <CheckCircle2 className="h-2.5 w-2.5 text-emerald-600 shrink-0" />
-                                  </span>
-                                ))}
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Serial Numbers List */}
-                        {hasSerials && (
-                          <div className="space-y-1">
-                            <div className="flex items-center justify-between text-[10px] font-semibold text-slate-600">
-                              <span>Registered Serial Registry</span>
-                              <span className="text-emerald-700 font-mono">{item.serialNumbers?.length} units</span>
-                            </div>
-                            <div className="flex flex-wrap gap-1 max-h-20 overflow-y-auto p-1.5 bg-white rounded border border-slate-200">
-                              {item.serialNumbers?.map((sn, sIdx) => (
-                                <span
-                                  key={sIdx}
-                                  className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-emerald-50 text-emerald-800 border border-emerald-200"
-                                >
-                                  {sn}
-                                </span>
-                              ))}
-                            </div>
-                          </div>
-                        )}
+                        {/* Unit Serial & Barcode Inspector */}
+                        <div className="pt-1">
+                          <UnitSerialBarcodeInspector
+                            totalUnits={item.receivedQuantity}
+                            unitRecords={item.unitRecords}
+                            unitBarcodes={item.unitBarcodes}
+                            serialNumbers={item.serialNumbers}
+                            sku={item.skuSnapshot}
+                            productName={item.productNameSnapshot}
+                            grnNumber={grn.grnNumber}
+                          />
+                        </div>
                       </div>
                     )}
                   </div>
@@ -610,7 +564,7 @@ export const GRNStockManagerVerificationPanel: React.FC<GRNStockManagerVerificat
                     size="sm"
                     dialogVariant="success"
                     confirmTitle="Approve Physical Inbound Verification"
-                    confirmMessage={`Confirm physical stock verification for ${grn.grnNumber}? This will forward the GRN directly to Finance for Landed Costing & Vendor Bill creation.`}
+                    confirmMessage={`Confirm physical stock verification for ${grn.grnNumber}? This will forward the GRN directly to Finance for approval and landed costing. Physical inventory will NOT be posted until Finance approves.`}
                     confirmText="Verify & Forward to Finance"
                     onConfirm={() => onApprove(approvalRemarks)}
                     disabled={isSubmitting}

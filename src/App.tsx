@@ -21,6 +21,7 @@ import { InventoryDashboardPage } from './features/inventory/InventoryDashboardP
 import { GRNListPage } from './features/inventory/GRNListPage';
 import { GRNCreateEditPage } from './features/inventory/GRNCreateEditPage';
 import { GRNDetailPage } from './features/inventory/GRNDetailPage';
+import { GRNUnitStickersPage } from './features/inventory/GRNUnitStickersPage';
 import { StockBalancePage } from './features/inventory/StockBalancePage';
 import { DamagedStockPage } from './features/inventory/DamagedStockPage';
 import { StockMovementsPage } from './features/inventory/StockMovementsPage';
@@ -330,6 +331,14 @@ export function App() {
           element={
             <ProtectedRoute>
               <GRNDetailPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="inventory/grn/:id/stickers"
+          element={
+            <ProtectedRoute>
+              <GRNUnitStickersPage />
             </ProtectedRoute>
           }
         />
@@ -724,6 +733,14 @@ export function App() {
           element={
             <ProtectedRoute>
               <PurchasingGRNDetailPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="purchasing/grn/:id/stickers"
+          element={
+            <ProtectedRoute>
+              <GRNUnitStickersPage />
             </ProtectedRoute>
           }
         />

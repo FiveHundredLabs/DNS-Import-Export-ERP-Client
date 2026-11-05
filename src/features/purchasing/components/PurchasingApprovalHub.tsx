@@ -153,7 +153,52 @@ export const PurchasingApprovalHub: React.FC = () => {
     return approvals.filter((a) => a.documentType === 'PURCHASE_ORDER');
   }, [approvals]);
 
-  // Filtered PO Approvals
+  // Section 1: POs Pending Purchasing Manager Approval
+  const pendingPmApprovals = useMemo(() => {
+    return poApprovals.filter(
+      (a) => a.status === 'PENDING' && a.currentApproverRole === 'PURCHASING_MANAGER'
+    );
+  }, [poApprovals]);
+
+  // Section 2: POs Pending Manager Approval (System Manager / General Manager)
+  const pendingManagerApprovals = useMemo(() => {
+    return poApprovals.filter(
+      (a) =>
+        a.status === 'PENDING' &&
+        (a.currentApproverRole === 'MANAGER' ||
+          a.currentApproverRole === 'SYSTEM_MANAGER' ||
+          a.currentApproverRole === 'GENERAL_MANAGER')
+    );
+  }, [poApprovals]);
+
+  // Search filtered lists for Section 1 and Section 2
+  const filteredPendingPmApprovals = useMemo(() => {
+    if (!poSearch.trim()) return pendingPmApprovals;
+    const q = poSearch.toLowerCase();
+    return pendingPmApprovals.filter((app) => {
+      return (
+        app.documentReferenceNumber.toLowerCase().includes(q) ||
+        app.title.toLowerCase().includes(q) ||
+        app.initiatorName.toLowerCase().includes(q) ||
+        app.description.toLowerCase().includes(q)
+      );
+    });
+  }, [pendingPmApprovals, poSearch]);
+
+  const filteredPendingManagerApprovals = useMemo(() => {
+    if (!poSearch.trim()) return pendingManagerApprovals;
+    const q = poSearch.toLowerCase();
+    return pendingManagerApprovals.filter((app) => {
+      return (
+        app.documentReferenceNumber.toLowerCase().includes(q) ||
+        app.title.toLowerCase().includes(q) ||
+        app.initiatorName.toLowerCase().includes(q) ||
+        app.description.toLowerCase().includes(q)
+      );
+    });
+  }, [pendingManagerApprovals, poSearch]);
+
+  // Filtered PO Approvals (for general status tab filtering if selected)
   const filteredApprovals = useMemo(() => {
     return poApprovals.filter((app) => {
       // Status filtering
@@ -185,10 +230,27 @@ export const PurchasingApprovalHub: React.FC = () => {
   // Selected Active Approval Request and corresponding Purchase Order
   const activeApproval = useMemo(() => {
     if (selectedApprovalId) {
-      return poApprovals.find((a) => a.id === selectedApprovalId) || null;
+      const found = poApprovals.find((a) => a.id === selectedApprovalId);
+      if (found) return found;
     }
-    return filteredApprovals[0] || poApprovals[0] || null;
-  }, [poApprovals, selectedApprovalId, filteredApprovals]);
+    return (
+      filteredPendingPmApprovals[0] ||
+      filteredPendingManagerApprovals[0] ||
+      pendingPmApprovals[0] ||
+      pendingManagerApprovals[0] ||
+      filteredApprovals[0] ||
+      poApprovals[0] ||
+      null
+    );
+  }, [
+    poApprovals,
+    selectedApprovalId,
+    filteredPendingPmApprovals,
+    filteredPendingManagerApprovals,
+    pendingPmApprovals,
+    pendingManagerApprovals,
+    filteredApprovals,
+  ]);
 
   const activePO = useMemo(() => {
     if (!activeApproval) return null;
@@ -313,7 +375,7 @@ export const PurchasingApprovalHub: React.FC = () => {
       if (confirmModal.type === 'APPROVE') {
         if (role === 'PURCHASING_MANAGER') {
           toast.success(
-            `Purchase Order ${confirmModal.request.documentReferenceNumber} verified and forwarded to General Manager.`
+            `Purchase Order ${confirmModal.request.documentReferenceNumber} verified and forwarded to the Manager (System Manager) for the next approval stage.`
           );
         } else {
           toast.success(`Purchase Order ${confirmModal.request.documentReferenceNumber} approved successfully.`);
@@ -452,8 +514,7 @@ export const PurchasingApprovalHub: React.FC = () => {
                 <div className="inline-flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs shrink-0">
                   {(
                     [
-                      { label: 'Pending Verification', value: 'PENDING' },
-                      { label: 'Forwarded to GM', value: 'FORWARDED' },
+                      { label: 'Active Queues (Pending PM & Manager)', value: 'PENDING' },
                       { label: 'Authorized / Approved', value: 'APPROVED' },
                       { label: 'Rejected', value: 'REJECTED' },
                       { label: 'All Requests', value: 'ALL' },
@@ -478,9 +539,180 @@ export const PurchasingApprovalHub: React.FC = () => {
             </CardContent>
           </Card>
 
+          {/* TWO SECTIONS FOR PURCHASING MANAGER:
+              1. POs Pending Purchasing Manager Approval
+              2. POs Pending Manager Approval */}
+          {statusFilter === 'PENDING' && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* SECTION 1: POs Pending Purchasing Manager Approval */}
+              <Card className="border-slate-200 shadow-2xs bg-white">
+                <CardHeader className="bg-amber-50/70 border-b border-amber-200/70 px-4 py-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <ShoppingCart className="h-4 w-4 text-amber-600" />
+                      <CardTitle className="text-sm font-bold text-slate-900">
+                        POs Pending Purchasing Manager Approval
+                      </CardTitle>
+                    </div>
+                    <Badge variant="outline" className="bg-amber-100 text-amber-800 border-amber-300 font-mono text-xs font-bold">
+                      {filteredPendingPmApprovals.length} Awaiting PM
+                    </Badge>
+                  </div>
+                  <p className="text-2xs text-slate-500 mt-0.5">
+                    Stage 1: Purchase Orders submitted by Purchasing Officers awaiting Purchasing Manager verification.
+                  </p>
+                </CardHeader>
+                <CardContent className="p-3 space-y-2 max-h-60 overflow-y-auto">
+                  {filteredPendingPmApprovals.length === 0 ? (
+                    <div className="py-6 text-center text-slate-400 text-xs">
+                      <CheckCircle2 className="h-6 w-6 text-emerald-400 mx-auto mb-1 opacity-70" />
+                      <p className="font-semibold text-slate-600">No POs Pending Purchasing Manager Approval</p>
+                      <p className="text-2xs">All submitted POs have been verified or no orders are currently in Stage 1.</p>
+                    </div>
+                  ) : (
+                    filteredPendingPmApprovals.map((app) => {
+                      const isSelected = activeApproval?.id === app.id;
+                      const po = purchaseOrders.find(
+                        (p) => p.id === app.documentId || p.poNumber === app.documentReferenceNumber
+                      );
+                      return (
+                        <div
+                          key={app.id}
+                          onClick={() => setSelectedApprovalId(app.id)}
+                          className={cn(
+                            'p-3 rounded-xl border text-xs cursor-pointer transition-all flex items-start justify-between gap-3',
+                            isSelected
+                              ? 'border-amber-400 bg-amber-50/60 shadow-2xs ring-2 ring-amber-300/60'
+                              : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50'
+                          )}
+                        >
+                          <div className="space-y-1 min-w-0 flex-1">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-mono font-bold text-slate-900 text-xs">
+                                {app.documentReferenceNumber}
+                              </span>
+                              <Badge variant="outline" className="bg-amber-100 text-amber-800 border-amber-300 text-2xs">
+                                Pending PM Approval
+                              </Badge>
+                              {isSelected && (
+                                <Badge variant="default" className="bg-amber-600 text-white text-2xs">
+                                  Selected
+                                </Badge>
+                              )}
+                            </div>
+                            <div className="text-2xs text-slate-600 truncate">
+                              <span className="text-slate-400">Supplier:</span>{' '}
+                              <span className="font-semibold text-slate-700">
+                                {po?.supplierName || app.description.split('for ')[1]?.split(' totaling')[0] || 'Supplier'}
+                              </span>
+                            </div>
+                            <div className="text-2xs text-slate-500">
+                              <span className="text-slate-400">Initiator:</span> {app.initiatorName}
+                            </div>
+                          </div>
+
+                          <div className="text-right shrink-0">
+                            <div className="font-mono font-bold text-slate-900 text-xs">
+                              {formatCurrency(po?.grandTotal || 0)}
+                            </div>
+                            <div className="text-2xs text-slate-400 mt-1">
+                              {formatDate(app.createdAt)}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* SECTION 2: POs Pending Manager Approval */}
+              <Card className="border-slate-200 shadow-2xs bg-white">
+                <CardHeader className="bg-blue-50/70 border-b border-blue-200/70 px-4 py-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <ShieldCheck className="h-4 w-4 text-blue-600" />
+                      <CardTitle className="text-sm font-bold text-slate-900">
+                        POs Pending Manager Approval
+                      </CardTitle>
+                    </div>
+                    <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-300 font-mono text-xs font-bold">
+                      {filteredPendingManagerApprovals.length} Awaiting Manager
+                    </Badge>
+                  </div>
+                  <p className="text-2xs text-slate-500 mt-0.5">
+                    Stage 2: Purchase Orders awaiting final authorization from the Manager (System Manager).
+                  </p>
+                </CardHeader>
+                <CardContent className="p-3 space-y-2 max-h-60 overflow-y-auto">
+                  {filteredPendingManagerApprovals.length === 0 ? (
+                    <div className="py-6 text-center text-slate-400 text-xs">
+                      <Clock className="h-6 w-6 text-slate-300 mx-auto mb-1 opacity-70" />
+                      <p className="font-semibold text-slate-600">No POs Pending Manager Approval</p>
+                      <p className="text-2xs">No purchase orders are currently awaiting Manager (System Manager) authorization.</p>
+                    </div>
+                  ) : (
+                    filteredPendingManagerApprovals.map((app) => {
+                      const isSelected = activeApproval?.id === app.id;
+                      const po = purchaseOrders.find(
+                        (p) => p.id === app.documentId || p.poNumber === app.documentReferenceNumber
+                      );
+                      return (
+                        <div
+                          key={app.id}
+                          onClick={() => setSelectedApprovalId(app.id)}
+                          className={cn(
+                            'p-3 rounded-xl border text-xs cursor-pointer transition-all flex items-start justify-between gap-3',
+                            isSelected
+                              ? 'border-blue-400 bg-blue-50/60 shadow-2xs ring-2 ring-blue-300/60'
+                              : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50'
+                          )}
+                        >
+                          <div className="space-y-1 min-w-0 flex-1">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-mono font-bold text-slate-900 text-xs">
+                                {app.documentReferenceNumber}
+                              </span>
+                              <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-300 text-2xs">
+                                Awaiting Manager
+                              </Badge>
+                              {isSelected && (
+                                <Badge variant="default" className="bg-blue-600 text-white text-2xs">
+                                  Selected
+                                </Badge>
+                              )}
+                            </div>
+                            <div className="text-2xs text-slate-600 truncate">
+                              <span className="text-slate-400">Supplier:</span>{' '}
+                              <span className="font-semibold text-slate-700">
+                                {po?.supplierName || app.description.split('for ')[1]?.split(' totaling')[0] || 'Supplier'}
+                              </span>
+                            </div>
+                            <div className="text-2xs text-slate-500">
+                              <span className="text-slate-400">Initiator:</span> {app.initiatorName}
+                            </div>
+                          </div>
+
+                          <div className="text-right shrink-0">
+                            <div className="font-mono font-bold text-slate-900 text-xs">
+                              {formatCurrency(po?.grandTotal || 0)}
+                            </div>
+                            <div className="text-2xs text-slate-400 mt-1">
+                              {formatDate(app.createdAt)}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
           {approvalsLoading || poLoading ? (
             <TableLoadingSkeleton />
-          ) : filteredApprovals.length === 0 ? (
+          ) : !activeApproval ? (
             <Card className="border-slate-200 bg-white">
               <CardContent className="p-12 text-center">
                 <ShoppingCart className="h-12 w-12 text-slate-300 mx-auto mb-3" />
@@ -494,46 +726,48 @@ export const PurchasingApprovalHub: React.FC = () => {
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
               {/* Left Column: PO List & Detailed Document Inspection (7 cols) */}
               <div className="lg:col-span-7 space-y-4">
-                {/* PO Selector Strip */}
-                <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
-                  {filteredApprovals.map((app) => {
-                    const isSelected = activeApproval?.id === app.id;
-                    return (
-                      <button
-                        key={app.id}
-                        type="button"
-                        onClick={() => setSelectedApprovalId(app.id)}
-                        className={cn(
-                          'flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium border shrink-0 transition-all text-left',
-                          isSelected
-                            ? 'bg-primary-light/50 border-primary text-primary font-bold shadow-2xs'
-                            : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
-                        )}
-                      >
-                        <ShoppingCart className="h-3.5 w-3.5 text-primary shrink-0" />
-                        <div>
-                          <div className="font-mono text-xs">{app.documentReferenceNumber}</div>
-                          <div className="text-2xs text-slate-500 truncate max-w-[140px]">
-                            {app.title.replace('Purchase Order Approval ', '')}
+                {/* PO Selector Strip for Non-Pending Views (Approved, Rejected, All) */}
+                {statusFilter !== 'PENDING' && filteredApprovals.length > 0 && (
+                  <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
+                    {filteredApprovals.map((app) => {
+                      const isSelected = activeApproval?.id === app.id;
+                      return (
+                        <button
+                          key={app.id}
+                          type="button"
+                          onClick={() => setSelectedApprovalId(app.id)}
+                          className={cn(
+                            'flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium border shrink-0 transition-all text-left',
+                            isSelected
+                              ? 'bg-primary-light/50 border-primary text-primary font-bold shadow-2xs'
+                              : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                          )}
+                        >
+                          <ShoppingCart className="h-3.5 w-3.5 text-primary shrink-0" />
+                          <div>
+                            <div className="font-mono text-xs">{app.documentReferenceNumber}</div>
+                            <div className="text-2xs text-slate-500 truncate max-w-[140px]">
+                              {app.title.replace('Purchase Order Approval ', '')}
+                            </div>
                           </div>
-                        </div>
-                        {app.status === 'PENDING' ? (
-                          <Badge variant="outline" className="text-2xs bg-amber-50 text-amber-700 border-amber-300 ml-1">
-                            Pending
-                          </Badge>
-                        ) : app.status === 'APPROVED' ? (
-                          <Badge variant="outline" className="text-2xs bg-emerald-50 text-emerald-700 border-emerald-300 ml-1">
-                            Approved
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline" className="text-2xs bg-rose-50 text-rose-700 border-rose-300 ml-1">
-                            {app.status}
-                          </Badge>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
+                          {app.status === 'PENDING' ? (
+                            <Badge variant="outline" className="text-2xs bg-amber-50 text-amber-700 border-amber-300 ml-1">
+                              Pending
+                            </Badge>
+                          ) : app.status === 'APPROVED' ? (
+                            <Badge variant="outline" className="text-2xs bg-emerald-50 text-emerald-700 border-emerald-300 ml-1">
+                              Approved
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-2xs bg-rose-50 text-rose-700 border-rose-300 ml-1">
+                              {app.status}
+                            </Badge>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
 
                 {/* Document Inspection Card */}
                 {activeApproval && (
@@ -812,6 +1046,19 @@ export const PurchasingApprovalHub: React.FC = () => {
                         </div>
                       )}
 
+                      {/* Forward to Manager Notice for Purchasing Manager */}
+                      {canApprove && role === 'PURCHASING_MANAGER' && (
+                        <div className="p-3 rounded-xl bg-blue-50/80 border border-blue-200 text-xs text-blue-900 flex items-start gap-2">
+                          <Info className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" />
+                          <div>
+                            <span className="font-bold block text-blue-950">Next Approval Stage:</span>
+                            <span className="text-2xs text-blue-800 leading-relaxed">
+                              Approving this Purchase Order will verify procurement specifications and forward it to the <strong>Manager (System Manager)</strong> for the next approval stage.
+                            </span>
+                          </div>
+                        </div>
+                      )}
+
                       {/* Decision Action Buttons */}
                       <div className="pt-2 border-t border-slate-200/80 space-y-2">
                         {canApprove ? (
@@ -825,12 +1072,12 @@ export const PurchasingApprovalHub: React.FC = () => {
                                   po: activePO,
                                 })
                               }
-                              className="w-full gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs h-10 rounded-xl"
+                              className="w-full gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs h-10 rounded-xl cursor-pointer"
                             >
                               <CheckCircle2 className="h-4 w-4" />
                               <span>
                                 {role === 'PURCHASING_MANAGER'
-                                  ? 'Approve & Forward to General Manager'
+                                  ? 'Approve & Forward to Manager (System Manager)'
                                   : 'Authorize & Approve Purchase Order'}
                               </span>
                             </Button>
@@ -845,19 +1092,43 @@ export const PurchasingApprovalHub: React.FC = () => {
                                   po: activePO,
                                 })
                               }
-                              className="w-full gap-2 border-rose-200 bg-rose-50/50 hover:bg-rose-100 text-rose-700 font-semibold text-xs h-10 rounded-xl"
+                              className="w-full gap-2 border-rose-200 bg-rose-50/50 hover:bg-rose-100 text-rose-700 font-semibold text-xs h-10 rounded-xl cursor-pointer"
                             >
                               <XCircle className="h-4 w-4" />
                               <span>Reject Purchase Order</span>
                             </Button>
                           </>
                         ) : (
-                          <div className="p-3 text-center bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-500">
-                            {activeApproval.status !== 'PENDING'
-                              ? `This purchase order has already been finalized (${activeApproval.status}).`
-                              : isCreator
-                              ? 'Awaiting General Manager authorization. Creator self-approval is disabled.'
-                              : `Awaiting action by ${activeApproval.currentApproverRole}.`}
+                          <div className="p-4 text-center bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-600 space-y-2">
+                            {activeApproval.status !== 'PENDING' ? (
+                              <p className="text-slate-500 font-medium">
+                                This purchase order has already been finalized ({activeApproval.status}).
+                              </p>
+                            ) : activeApproval.currentApproverRole === 'MANAGER' ||
+                              activeApproval.currentApproverRole === 'SYSTEM_MANAGER' ||
+                              activeApproval.currentApproverRole === 'GENERAL_MANAGER' ? (
+                              <>
+                                <div className="inline-flex items-center justify-center p-2 rounded-full bg-blue-100 text-blue-700 mx-auto">
+                                  <Clock className="h-4 w-4" />
+                                </div>
+                                <div className="font-bold text-slate-800 text-xs">
+                                  Awaiting action by MANAGER.
+                                </div>
+                                <p className="text-2xs text-slate-500 max-w-xs mx-auto leading-relaxed">
+                                  {isCreator
+                                    ? 'Direct procurement PO created by Purchasing Manager (Scenario B). Routed directly to Manager (System Manager) for authorization without self-approval.'
+                                    : 'This Purchase Order requires final approval from the Manager (System Manager). No further action is required from the Purchasing Manager at this stage.'}
+                                </p>
+                              </>
+                            ) : isCreator ? (
+                              <p className="text-amber-700 font-medium text-2xs">
+                                Awaiting Manager authorization. Creator self-approval is disabled.
+                              </p>
+                            ) : (
+                              <p className="text-slate-500 font-medium">
+                                Awaiting action by {activeApproval.currentApproverRole}.
+                              </p>
+                            )}
                           </div>
                         )}
                       </div>
@@ -1126,14 +1397,16 @@ export const PurchasingApprovalHub: React.FC = () => {
               <span>
                 {confirmModal.type === 'APPROVE'
                   ? role === 'PURCHASING_MANAGER'
-                    ? 'Confirm Verification & Forward to GM'
+                    ? 'Confirm Approval & Forward to Manager (System Manager)'
                     : 'Authorize Purchase Order'
                   : 'Confirm Purchase Order Rejection'}
               </span>
             </DialogTitle>
             <DialogDescription className="text-xs pt-1">
               {confirmModal.type === 'APPROVE'
-                ? `You are about to verify Purchase Order ${confirmModal.request?.documentReferenceNumber}. This decision will be permanently logged in the audit ledger.`
+                ? role === 'PURCHASING_MANAGER'
+                  ? `Confirm verification of Purchase Order ${confirmModal.request?.documentReferenceNumber}? Your approval will be forwarded to the Manager (System Manager) for the next approval stage.`
+                  : `You are about to authorize Purchase Order ${confirmModal.request?.documentReferenceNumber}. This decision will be permanently logged in the audit ledger.`
                 : `Are you sure you want to reject Purchase Order ${confirmModal.request?.documentReferenceNumber}? This will terminate the approval workflow.`}
             </DialogDescription>
           </DialogHeader>

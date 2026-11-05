@@ -142,14 +142,34 @@ export class GRNService {
   }
 
   /**
-   * Post-finance approval and inventory posting
+   * Finance approval and inventory posting.
+   * Only Finance or Executive Management can perform final approval to officially post physical stock to inventory.
+   * Stock Manager physical verification approves the intake and forwards to Finance, but NEVER posts to inventory.
    */
   async approveGRN(grnId: string, managerId: string, managerName: string, role?: string) {
-    if (role && role !== 'MANAGER' && role !== 'DIRECTOR' && role !== 'STOCK_MANAGER') {
-      throw new Error(`Role ${role} is not authorized to approve GRNs.`);
+    if (role === 'STOCK_MANAGER') {
+      throw new Error(
+        'Stock Manager approval does not post directly to inventory. The GRN must be forwarded to Finance for approval. Only after Finance approves will stock be posted to inventory.'
+      );
     }
+    if (
+      role &&
+      role !== 'FINANCE_MANAGER' &&
+      role !== 'FINANCE_OFFICER' &&
+      role !== 'DIRECTOR' &&
+      role !== 'MANAGER'
+    ) {
+      throw new Error(`Role ${role} is not authorized to approve GRNs into inventory. Only Finance or Executive Management can approve.`);
+    }
+
     const grn = await this.grnRepo.getById(grnId);
     if (!grn) throw new Error('GRN not found');
+
+    if (grn.status === 'PENDING_STOCK_MANAGER_APPROVAL') {
+      throw new Error(
+        `GRN ${grn.grnNumber || grnId} must first be verified and approved by the Stock Manager before Finance approval.`
+      );
+    }
     grn.status = 'APPROVED';
     grn.approvedById = managerId;
     grn.approvedByName = managerName;

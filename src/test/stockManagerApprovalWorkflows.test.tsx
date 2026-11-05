@@ -1,14 +1,17 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import '@testing-library/jest-dom';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { authService } from '../services/AuthService';
-import { grnService, grnRepository } from '../services/GRNService';
+import { grnService, grnRepository, GRNService } from '../services/GRNService';
 import { MockGRNRepository } from '../repositories/mock/MockGRNRepository';
+import { MockInventoryRepository } from '../repositories/mock/MockInventoryRepository';
 import { deliveryNoteService } from '../services/DeliveryNoteService';
 import { apService } from '../features/finance/services/apService';
 import { GRNStockManagerVerificationPanel } from '../features/inventory/components/GRNStockManagerVerificationPanel';
+import { UnitSerialBarcodeInspector } from '../features/inventory/components/UnitSerialBarcodeInspector';
 import { ApprovalsPage } from '../features/approvals/ApprovalsPage';
+import { DeliveryNoteDetailPage } from '../features/inventory/delivery-notes/DeliveryNoteDetailPage';
 import { GRN } from '../types/inventory';
 import { DeliveryNote, SubmitRejectionPayload } from '../types/deliveryNote';
 import { User } from '../types/auth';
@@ -35,6 +38,14 @@ describe('Stock Manager Workflow-Specific Approval System', () => {
     name: 'Kasun Bandara',
     email: 'cashier@dnserp.com',
     role: 'CASHIER',
+    status: 'ACTIVE',
+  };
+
+  const financeOfficerUser: User = {
+    id: 'usr-fin-01',
+    name: 'Nimal Finance',
+    email: 'finance@dnserp.com',
+    role: 'FINANCE_OFFICER',
     status: 'ACTIVE',
   };
 
@@ -218,6 +229,55 @@ describe('Stock Manager Workflow-Specific Approval System', () => {
       // Verify Stock Manager verification buttons
       expect(screen.getByText('Approve & Forward to Finance')).toBeInTheDocument();
       expect(screen.getByText('Reject Verification')).toBeInTheDocument();
+    });
+
+    it('displays all 450 unit serial numbers and barcodes when inspecting 450 received units', () => {
+      // Line item with 450 units received
+      const grn450 = buildSampleGRN('GRN-2025-001');
+      grn450.items[0].expectedQuantity = 450;
+      grn450.items[0].receivedQuantity = 450;
+      grn450.status = 'PENDING_STOCK_MANAGER_APPROVAL';
+
+      const mockApprove = vi.fn();
+      const mockReject = vi.fn();
+
+      render(
+        <MemoryRouter>
+          <GRNStockManagerVerificationPanel
+            grn={grn450}
+            currentUser={stockManagerUser}
+            onApprove={mockApprove}
+            onReject={mockReject}
+          />
+        </MemoryRouter>
+      );
+
+      // Verify the 450 units line summary badge is displayed
+      expect(screen.getByText(/450 serials & barcodes verified/i)).toBeInTheDocument();
+
+      // Click to expand item details and inspector
+      const expandBtn = screen.getByText(/Show Barcode & Details/i);
+      fireEvent.click(expandBtn);
+
+      // Verify inspector header and mode tabs
+      expect(screen.getByText(/450 \/ 450 Units Barcoded & Serialized/i)).toBeInTheDocument();
+      expect(screen.getByText(/Barcodes \(450\)/i)).toBeInTheDocument();
+      expect(screen.getByText(/Serials \(450\)/i)).toBeInTheDocument();
+
+      // Verify pagination showing initial page (50 items)
+      expect(screen.getByText(/1 - 50 of 450 units/i)).toBeInTheDocument();
+
+      // Verify unit #1 is rendered in table
+      expect(screen.getByText('#1')).toBeInTheDocument();
+
+      // Search for unit 450
+      const searchInput = screen.getByPlaceholderText(/Search across all 450 units/i);
+      fireEvent.change(searchInput, { target: { value: '450' } });
+
+      // After filtering for '450', unit 450 should be visible with its assigned barcode and registered serial
+      expect(screen.getByText('#450')).toBeInTheDocument();
+      expect(screen.getByText('SN-450')).toBeInTheDocument();
+      expect(screen.getByText(/DNS-.*-450/)).toBeInTheDocument();
     });
   });
 
@@ -486,24 +546,212 @@ describe('Stock Manager Workflow-Specific Approval System', () => {
       });
 
       // Verify tabs
-      expect(screen.getByText(/Inbound Goods Receipts/i)).toBeInTheDocument();
-      expect(screen.getByText(/Delivery Note Customer Rejections/i)).toBeInTheDocument();
-      expect(screen.getByText(/Verification Audit Log & History/i)).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /Inbound Goods Receipts/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /Delivery Note Customer Rejections/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /Verification Audit Log & History/i })).toBeInTheDocument();
 
-      // Wait for data load and verify split layout: Left Panel header
+      // Wait for data load and verify pending GRN table renders cleanly
       await waitFor(() => {
         expect(
-          screen.getByText('Warehouse Goods Receipt (Read-Only Physical Intake)')
+          screen.getByText('Inbound Goods Receipts Pending Approval')
         ).toBeInTheDocument();
       });
 
-      // Verify Right Panel header
+      // Verify removed cards and dropdown are NOT in the document
       expect(
-        screen.getByText('Stock Manager Verification Decision')
-      ).toBeInTheDocument();
+        screen.queryByText('Warehouse Goods Receipt (Read-Only Physical Intake)')
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByText('Stock Manager Verification Decision')
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByText('Quick Inbound GRN:')
+      ).not.toBeInTheDocument();
 
       // Verify that generic Enterprise Approvals Engine content is NOT shown
       expect(screen.queryByText('Enterprise Approvals Engine')).not.toBeInTheDocument();
+    });
+
+    it('shows pending & rejected Distribution Notes table without split cards and navigates to detailed page on click', async () => {
+      authService.switchRole('STOCK_MANAGER');
+
+      render(
+        <MemoryRouter initialEntries={['/approvals?tab=delivery-notes']}>
+          <ApprovalsPage />
+        </MemoryRouter>
+      );
+
+      // Verify that the removed split cards & dropdown selector are NOT in the document
+      await waitFor(() => {
+        expect(
+          screen.queryByText('Delivery Note Customer Rejection (Physical Return)')
+        ).not.toBeInTheDocument();
+        expect(
+          screen.queryByText('Stock Manager Rejection Authorization')
+        ).not.toBeInTheDocument();
+        expect(
+          screen.queryByText('Selected Delivery Note:')
+        ).not.toBeInTheDocument();
+      });
+
+      // Verify Distribution Notes table is present
+      expect(screen.getByText('Pending & Rejected Distribution Notes')).toBeInTheDocument();
+      expect(
+        screen.getByText(
+          /Click any Delivery Note to open its detailed page with full unit serialization/i
+        )
+      ).toBeInTheDocument();
+
+      // Verify pending and rejected notes exist in the table
+      expect(screen.getByText('DN-2026-0003')).toBeInTheDocument();
+      expect(screen.getByText('Kandy Industrial Electrical Mart')).toBeInTheDocument();
+
+      // Verify action buttons exist
+      const actionBtns = screen.getAllByRole('button', { name: /Review & Authorize|Inspect Delivery Note/i });
+      expect(actionBtns.length).toBeGreaterThan(0);
+    });
+
+    it('renders detailed page with full delivery note details and authorization controls when inspecting a delivery note', async () => {
+      authService.switchRole('STOCK_MANAGER');
+
+      render(
+        <MemoryRouter initialEntries={['/inventory/delivery-notes/dn-003']}>
+          <Routes>
+            <Route path="/inventory/delivery-notes/:id" element={<DeliveryNoteDetailPage />} />
+          </Routes>
+        </MemoryRouter>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText(/DN-2026-0003/i)).toBeInTheDocument();
+        expect(screen.getAllByText(/Kandy Industrial Electrical Mart/i).length).toBeGreaterThan(0);
+      });
+
+      // Verify detailed sections: customer consignee, transport logistics, dispatched lines
+      expect(screen.getByText(/Consignee & Deliver-To Customer/i)).toBeInTheDocument();
+      expect(screen.getByText(/Transport & Dispatch Logistics/i)).toBeInTheDocument();
+      expect(screen.getByText(/Dispatched Line Items & Physical Unit Barcodes/i)).toBeInTheDocument();
+
+      // Stock Manager authorization actions
+      expect(screen.getByRole('button', { name: /Approve Customer Rejection/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /Decline Rejection/i })).toBeInTheDocument();
+    });
+
+    it('shows ONLY GRNs that are pending approval and navigates to the full GRN document when clicked', async () => {
+      authService.switchRole('STOCK_MANAGER');
+
+      render(
+        <MemoryRouter initialEntries={['/approvals?tab=grn']}>
+          <ApprovalsPage />
+        </MemoryRouter>
+      );
+
+      // Wait for data load
+      await waitFor(() => {
+        expect(screen.getByText('Inbound Goods Receipts Pending Approval')).toBeInTheDocument();
+      });
+
+      // Verify GRN Queue shows strictly Pending Approval count
+      expect(screen.getByText(/Pending Approval \(/i)).toBeInTheDocument();
+
+      // Non-pending status filter buttons ('Verified / Forwarded', 'All GRNs') should NOT exist
+      expect(screen.queryByRole('button', { name: 'Verified / Forwarded' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'All GRNs' })).not.toBeInTheDocument();
+
+      // Verify pending GRNs are displayed (e.g. GRN-2025-007, GRN-2025-008)
+      expect(screen.getAllByText('GRN-2025-007').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('GRN-2025-008').length).toBeGreaterThan(0);
+
+      // Verify already approved GRN-2025-001 is NOT listed in the pending approvals table
+      expect(screen.queryByText('GRN-2025-001')).not.toBeInTheDocument();
+
+      // Verify "Inspect Full GRN Document" action button is available on the pending GRN rows
+      const inspectButtons = screen.getAllByRole('button', { name: /Inspect Full GRN Document/i });
+      expect(inspectButtons.length).toBeGreaterThan(0);
+    });
+
+    it('Stock Manager approval forwards GRN to Finance and DOES NOT post to inventory; only Finance approval posts stock', async () => {
+      const invRepo = new MockInventoryRepository();
+      const grnRepo = new MockGRNRepository();
+      const grnSvc = new GRNService(grnRepo, invRepo);
+
+      // Create a test GRN in PENDING_STOCK_MANAGER_APPROVAL
+      const testGRN: GRN = {
+        id: 'GRN-TEST-FIN-01',
+        grnNumber: 'GRN-TEST-FIN-01',
+        supplierId: 'sup-001',
+        supplierName: 'Schneider Electric Lanka',
+        warehouseId: 'WH-MAIN',
+        status: 'PENDING_STOCK_MANAGER_APPROVAL',
+        totalValue: 500000,
+        receivedById: 'usr-keeper-01',
+        receivedByName: 'Amal Perera',
+        items: [
+          {
+            productId: 'prod-001',
+            productNameSnapshot: 'Schneider Acti9 32A MCB',
+            skuSnapshot: 'DNS-MCB-32A',
+            expectedQuantity: 100,
+            receivedQuantity: 100,
+            damagedQuantity: 0,
+            unitCostSnapshot: 2500,
+            lineValue: 250000,
+          },
+        ],
+      };
+      await grnRepo.save(testGRN);
+
+      // Verify baseline stock balance
+      const initialBal = await invRepo.getBalance('prod-001', 'WH-MAIN');
+      const initialQty = initialBal?.availableQuantity || 0;
+
+      // 1. Stock Manager approves the GRN
+      const approvedBySM = await grnSvc.verifyAndApproveGRN(
+        testGRN.id,
+        { id: stockManagerUser.id, name: stockManagerUser.name, role: stockManagerUser.role },
+        'Physical count verified. Forwarded to Finance.'
+      );
+
+      // GRN is now SUBMITTED (forwarded to Finance)
+      expect(approvedBySM.status).toBe('SUBMITTED');
+      expect(approvedBySM.stockManagerApproval?.status).toBe('APPROVED');
+
+      // CRUCIAL: Stock balance must NOT have been posted or increased!
+      const balAfterSM = await invRepo.getBalance('prod-001', 'WH-MAIN');
+      expect((balAfterSM?.availableQuantity || 0)).toBe(initialQty);
+
+      // Verify no GRN_INWARD movement was created yet
+      const movementsAfterSM = await invRepo.getMovements();
+      const smMovement = movementsAfterSM.find(m => m.referenceDocumentId === testGRN.id);
+      expect(smMovement).toBeUndefined();
+
+      // 2. Stock Manager attempting to call approveGRN directly must be blocked
+      await expect(
+        grnSvc.approveGRN(testGRN.id, stockManagerUser.id, stockManagerUser.name, stockManagerUser.role)
+      ).rejects.toThrow(/Stock Manager approval does not post directly to inventory/i);
+
+      // 3. Finance Manager approves the GRN
+      await grnSvc.approveGRN(
+        testGRN.id,
+        financeOfficerUser.id,
+        financeOfficerUser.name,
+        'FINANCE_MANAGER'
+      );
+
+      // GRN status is now APPROVED
+      const finalGRN = await grnRepo.getById(testGRN.id);
+      expect(finalGRN?.status).toBe('APPROVED');
+
+      // ONLY AFTER Finance approves should stock be posted to inventory
+      const finalBal = await invRepo.getBalance('prod-001', 'WH-MAIN');
+      expect((finalBal?.availableQuantity || 0)).toBe(initialQty + 100);
+
+      // Inward movement must now be recorded
+      const movementsAfterFinance = await invRepo.getMovements();
+      const finMovement = movementsAfterFinance.find(m => m.referenceDocumentId === testGRN.id);
+      expect(finMovement).toBeDefined();
+      expect(finMovement?.movementType).toBe('GRN_INWARD');
+      expect(finMovement?.quantity).toBe(100);
     });
   });
 

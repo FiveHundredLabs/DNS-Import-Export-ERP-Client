@@ -325,18 +325,14 @@ export const MOCK_GRNS: GRN[] = [
         damagedQuantity: 0,
         unitCostSnapshot: 2200,
         lineValue: 990000,
-        serialNumbers: [
-          'SN-RHD-2025-001',
-          'SN-RHD-2025-002',
-          'SN-RHD-2025-003',
-          'SN-RHD-2025-004',
-          'SN-RHD-2025-005',
-          'SN-RHD-2025-006',
-          'SN-RHD-2025-007',
-          'SN-RHD-2025-008',
-          'SN-RHD-2025-009',
-          'SN-RHD-2025-010',
-        ],
+        serialNumbers: Array.from({ length: 450 }, (_, i) => `SN-RHD-2025-${String(i + 1).padStart(3, '0')}`),
+        unitBarcodes: Array.from({ length: 450 }, (_, i) => `DNS-MCB32A2P-001-${String(i + 1).padStart(3, '0')}`),
+        unitRecords: Array.from({ length: 450 }, (_, i) => ({
+          unitIndex: i + 1,
+          unitBarcode: `DNS-MCB32A2P-001-${String(i + 1).padStart(3, '0')}`,
+          serialNumber: `SN-RHD-2025-${String(i + 1).padStart(3, '0')}`,
+          status: 'LABELED' as const,
+        })),
       },
       {
         productId: 'prod-002',
@@ -936,6 +932,99 @@ export const MOCK_GRNS: GRN[] = [
     approvedById: 'usr-101',
     approvedAt: '2025-08-16T10:00:00Z',
   },
+  {
+    id: 'GRN-2025-007',
+    grnNumber: 'GRN-2025-007',
+    supplierId: 'sup-001',
+    supplierName: 'Schneider Electric Lanka (Pvt) Ltd',
+    purchaseOrderId: 'PO-2025-001',
+    purchaseOrderNumber: 'PO-2025-001',
+    warehouseId: 'WH-MAIN',
+    status: 'PENDING_STOCK_MANAGER_APPROVAL',
+    stockManagerApproval: {
+      status: 'PENDING'
+    },
+    items: [
+      {
+        productId: 'prod-001',
+        productNameSnapshot: 'Schneider Acti9 32A Double Pole MCB',
+        skuSnapshot: 'DNS-MCB-32A-2P',
+        expectedQuantity: 450,
+        receivedQuantity: 450,
+        damagedQuantity: 0,
+        unitCostSnapshot: 2200,
+        lineValue: 990000,
+        serialNumbers: Array.from({ length: 450 }, (_, i) => `SN-RHD-2025-${String(i + 1).padStart(3, '0')}`),
+        unitBarcodes: Array.from({ length: 450 }, (_, i) => `DNS-MCB32A2P-007-${String(i + 1).padStart(3, '0')}`),
+        unitRecords: Array.from({ length: 450 }, (_, i) => ({
+          unitIndex: i + 1,
+          unitBarcode: `DNS-MCB32A2P-007-${String(i + 1).padStart(3, '0')}`,
+          serialNumber: `SN-RHD-2025-${String(i + 1).padStart(3, '0')}`,
+          status: 'LABELED' as const,
+        })),
+      },
+      {
+        productId: 'prod-002',
+        productNameSnapshot: 'Schneider Acti9 63A Triple Pole MCB',
+        skuSnapshot: 'DNS-MCB-63A-3P',
+        expectedQuantity: 180,
+        receivedQuantity: 180,
+        damagedQuantity: 1,
+        damageReason: 'Hairline crack on top screw terminal during transport',
+        unitCostSnapshot: 5800,
+        lineValue: 1044000,
+      }
+    ],
+    totalValue: 2034000,
+    receivedById: 'usr-keeper-01',
+    receivedByName: 'Amal Perera (Stock Keeper)',
+    submittedAt: '2026-10-31T14:00:00Z',
+    createdAt: '2026-10-31T10:00:00Z',
+    updatedAt: '2026-10-31T14:00:00Z',
+  },
+  {
+    id: 'GRN-2025-008',
+    grnNumber: 'GRN-2025-008',
+    supplierId: 'sup-003',
+    supplierName: 'Signify Lanka (Philips)',
+    purchaseOrderId: 'PO-2025-003',
+    purchaseOrderNumber: 'PO-2025-003',
+    warehouseId: 'WH-MAIN',
+    status: 'PENDING_STOCK_MANAGER_APPROVAL',
+    stockManagerApproval: {
+      status: 'PENDING'
+    },
+    items: [
+      {
+        productId: 'prod-004',
+        productNameSnapshot: 'Philips SmartBright 600x600 48W Recessed Panel',
+        skuSnapshot: 'DNS-LED-PNL-48W',
+        expectedQuantity: 320,
+        receivedQuantity: 320,
+        damagedQuantity: 6,
+        damageReason: 'Outer corner bracket deformed during pallet unloading',
+        unitCostSnapshot: 4200,
+        lineValue: 1344000,
+      },
+      {
+        productId: 'prod-008',
+        productNameSnapshot: 'Schneider Resi9 16A Single Pole Type B MCB',
+        skuSnapshot: 'DNS-MCB-16A-1P',
+        expectedQuantity: 250,
+        receivedQuantity: 250,
+        damagedQuantity: 1,
+        damageReason: 'DIN release clip chipped',
+        unitCostSnapshot: 1450,
+        lineValue: 362500,
+      }
+    ],
+    totalValue: 1706500,
+    receivedById: 'usr-keeper-01',
+    receivedByName: 'Amal Perera (Stock Keeper)',
+    submittedAt: '2026-11-01T11:00:00Z',
+    createdAt: '2026-11-01T08:30:00Z',
+    updatedAt: '2026-11-01T11:00:00Z',
+  }
 ];
 
 
@@ -1045,5 +1134,4 @@ export const MOCK_PURCHASE_ORDERS: PurchaseOrder[] = [
         unitCost: 185000,
       },
     ],
-  },
-];
+  },];

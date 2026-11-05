@@ -443,3 +443,4 @@ export const UnitSerialBarcodeInspector: React.FC<UnitSerialBarcodeInspectorProp
     </div>
   );
 };
+
