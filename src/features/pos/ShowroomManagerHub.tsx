@@ -11,8 +11,8 @@ import {
   POSRefundCondition,
   POSTransaction,
   DayEndClosingSummary,
-  POSReportType,
 } from '../../types/pos';
+import { DayEndPOSReportContent } from './DayEndPOSReport';
 import { formatCurrency, formatDateTime } from '../../utils/formatters';
 import { cn } from '../../utils/cn';
 
@@ -128,10 +128,8 @@ export function ShowroomManagerHub() {
   // -------------------------------------------------------------
   // Reports State
   // -------------------------------------------------------------
-  const [selectedReportType, setSelectedReportType] = useState<POSReportType>('DAY_END_CLOSING');
   const [reportDate, setReportDate] = useState<string>(new Date().toISOString().slice(0, 10));
   const [dayEndSummary, setDayEndSummary] = useState<DayEndClosingSummary | null>(null);
-  const [loadingReport, setLoadingReport] = useState(false);
 
   // Selected product details for offer modal
   const selectedOfferProduct = useMemo(
@@ -150,14 +148,11 @@ export function ShowroomManagerHub() {
   useEffect(() => {
     let isMounted = true;
     async function loadDayEnd() {
-      setLoadingReport(true);
       try {
         const summary = await getDayEndReport(reportDate);
         if (isMounted) setDayEndSummary(summary);
       } catch (err) {
         console.error('Failed to load day-end summary:', err);
-      } finally {
-        if (isMounted) setLoadingReport(false);
       }
     }
     loadDayEnd();
@@ -1110,161 +1105,11 @@ export function ShowroomManagerHub() {
         {/* TAB 6: DAY-END & COMPREHENSIVE POS REPORTS */}
         {/* ========================================================= */}
         {activeTab === 'REPORTS' && (
-          <div className="space-y-5">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-              <div>
-                <h2 className="text-base font-bold text-slate-900">Showroom POS Executive Reports</h2>
-                <p className="text-xs text-slate-500">
-                  Comprehensive sales, tender methods, cashier productivity, reconciliation, and day-end audits.
-                </p>
-              </div>
-
-              <div className="flex items-center gap-2.5">
-                <Input
-                  type="date"
-                  value={reportDate}
-                  onChange={(e) => setReportDate(e.target.value)}
-                  className="w-40 text-xs h-8"
-                />
-
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => window.print()}
-                  className="gap-1.5 text-xs text-slate-700 bg-white"
-                >
-                  <Printer className="h-3.5 w-3.5" />
-                  <span>Print Report</span>
-                </Button>
-              </div>
-            </div>
-
-            {dayEndSummary && (
-              <div className="space-y-5">
-                {/* 13-Metric Master Summary Cards */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
-                  <div className="bg-white p-3 rounded-lg border border-slate-200">
-                    <span className="text-[10px] text-slate-500 font-semibold uppercase">Gross Sales</span>
-                    <div className="text-base font-bold text-slate-900">{formatCurrency(dayEndSummary.grossSales)}</div>
-                  </div>
-                  <div className="bg-white p-3 rounded-lg border border-slate-200">
-                    <span className="text-[10px] text-slate-500 font-semibold uppercase">Total Discounts</span>
-                    <div className="text-base font-bold text-amber-700">{formatCurrency(dayEndSummary.totalDiscounts)}</div>
-                  </div>
-                  <div className="bg-white p-3 rounded-lg border border-slate-200">
-                    <span className="text-[10px] text-slate-500 font-semibold uppercase">Net Sales</span>
-                    <div className="text-base font-bold text-indigo-700">{formatCurrency(dayEndSummary.netSales)}</div>
-                  </div>
-                  <div className="bg-white p-3 rounded-lg border border-slate-200">
-                    <span className="text-[10px] text-slate-500 font-semibold uppercase">Cash Tendered</span>
-                    <div className="text-base font-bold text-emerald-700">{formatCurrency(dayEndSummary.cashSales)}</div>
-                  </div>
-                  <div className="bg-white p-3 rounded-lg border border-slate-200">
-                    <span className="text-[10px] text-slate-500 font-semibold uppercase">Card Tendered</span>
-                    <div className="text-base font-bold text-blue-700">{formatCurrency(dayEndSummary.cardSales)}</div>
-                  </div>
-                  <div className="bg-white p-3 rounded-lg border border-slate-200">
-                    <span className="text-[10px] text-slate-500 font-semibold uppercase">Refunds / Voids</span>
-                    <div className="text-base font-bold text-rose-700">
-                      {formatCurrency(dayEndSummary.refundTotals + dayEndSummary.voidTotals)}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Terminal Breakdown */}
-                <Card className="border-slate-200">
-                  <CardHeader className="p-4 border-b border-slate-100 bg-slate-50/50">
-                    <CardTitle className="text-xs font-bold text-slate-800 uppercase tracking-wider">
-                      Terminal-Wise Daily Performance
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="p-0">
-                    <table className="w-full text-xs text-left text-slate-600">
-                      <thead className="bg-slate-50 text-[11px] font-semibold text-slate-500 border-b border-slate-200">
-                        <tr>
-                          <th className="px-4 py-2.5">Terminal Code</th>
-                          <th className="px-4 py-2.5">Terminal Name</th>
-                          <th className="px-4 py-2.5 text-center">Transactions</th>
-                          <th className="px-4 py-2.5 text-right">Total Sales</th>
-                          <th className="px-4 py-2.5 text-right">Cash Sales</th>
-                          <th className="px-4 py-2.5 text-right">Expected Drawer Cash</th>
-                          <th className="px-4 py-2.5 text-right">Actual Counted</th>
-                          <th className="px-4 py-2.5 text-right">Variance</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100">
-                        {dayEndSummary.terminalSummaries.map((t) => (
-                          <tr key={t.terminalId} className="hover:bg-slate-50/60">
-                            <td className="px-4 py-2.5 font-mono font-bold text-slate-900">{t.terminalCode}</td>
-                            <td className="px-4 py-2.5">{t.terminalName}</td>
-                            <td className="px-4 py-2.5 text-center font-semibold">{t.transactionCount}</td>
-                            <td className="px-4 py-2.5 text-right font-semibold text-slate-900">
-                              {formatCurrency(t.totalSales)}
-                            </td>
-                            <td className="px-4 py-2.5 text-right text-emerald-700 font-medium">
-                              {formatCurrency(t.cashSales)}
-                            </td>
-                            <td className="px-4 py-2.5 text-right font-mono">{formatCurrency(t.expectedCash)}</td>
-                            <td className="px-4 py-2.5 text-right font-mono">{formatCurrency(t.actualCash)}</td>
-                            <td className="px-4 py-2.5 text-right font-mono font-bold">
-                              {t.difference === 0 ? (
-                                <span className="text-emerald-600">0.00</span>
-                              ) : t.difference > 0 ? (
-                                <span className="text-blue-600">+{formatCurrency(t.difference)}</span>
-                              ) : (
-                                <span className="text-rose-600">{formatCurrency(t.difference)}</span>
-                              )}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </CardContent>
-                </Card>
-
-                {/* Cashier Productivity */}
-                <Card className="border-slate-200">
-                  <CardHeader className="p-4 border-b border-slate-100 bg-slate-50/50">
-                    <CardTitle className="text-xs font-bold text-slate-800 uppercase tracking-wider">
-                      Cashier Productivity & Float Integrity
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="p-0">
-                    <table className="w-full text-xs text-left text-slate-600">
-                      <thead className="bg-slate-50 text-[11px] font-semibold text-slate-500 border-b border-slate-200">
-                        <tr>
-                          <th className="px-4 py-2.5">Cashier Name</th>
-                          <th className="px-4 py-2.5 text-center">Shifts Completed</th>
-                          <th className="px-4 py-2.5 text-center">Sales Transactions</th>
-                          <th className="px-4 py-2.5 text-right">Total Net Sales</th>
-                          <th className="px-4 py-2.5 text-right">Cash Difference</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100">
-                        {dayEndSummary.cashierSummaries.map((c) => (
-                          <tr key={c.cashierId} className="hover:bg-slate-50/60">
-                            <td className="px-4 py-2.5 font-semibold text-slate-900">{c.cashierName}</td>
-                            <td className="px-4 py-2.5 text-center">{c.shiftsCount}</td>
-                            <td className="px-4 py-2.5 text-center">{c.transactionsCount}</td>
-                            <td className="px-4 py-2.5 text-right font-bold text-slate-900">
-                              {formatCurrency(c.totalSales)}
-                            </td>
-                            <td className="px-4 py-2.5 text-right font-mono font-semibold">
-                              {c.cashDifference === 0 ? (
-                                <span className="text-emerald-600">0.00</span>
-                              ) : (
-                                <span className="text-rose-600">{formatCurrency(c.cashDifference)}</span>
-                              )}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </CardContent>
-                </Card>
-              </div>
-            )}
-          </div>
+          <DayEndPOSReportContent
+            reportDate={reportDate}
+            onReportDateChange={setReportDate}
+            summary={dayEndSummary}
+          />
         )}
       </div>
 

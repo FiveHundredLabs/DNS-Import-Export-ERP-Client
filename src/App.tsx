@@ -41,6 +41,7 @@ import { PaymentDetailPage } from './features/payments/PaymentDetailPage';
 import { CustomerPaymentDetailPage } from './features/payments/CustomerPaymentDetailPage';
 import { CustomerPaymentsTab } from './features/payments/CustomerPaymentsTab';
 import { ShowroomManagerHub } from './features/pos/ShowroomManagerHub';
+import { DayEndPOSReportPage } from './features/pos/DayEndPOSReport';
 import { POSTransactionHistoryPage } from './features/pos/POSTransactionHistoryPage';
 import { POSSessionsPage } from './features/pos/POSSessionsPage';
 import { WarrantyHubPage } from './features/warranty/WarrantyHubPage';
@@ -640,6 +641,7 @@ export function App() {
         <Route path="reports/sales/outstanding" element={<ProtectedRoute><SalesOutstandingReportPage /></ProtectedRoute>} />
         <Route path="reports/sales/profitability" element={<ProtectedRoute><SalesProfitabilityReportPage /></ProtectedRoute>} />
         <Route path="reports/sales/showroom" element={<ProtectedRoute><ShowroomSalesReportPage /></ProtectedRoute>} />
+        <Route path="reports/sales/pos-day-end" element={<ProtectedRoute><DayEndPOSReportPage /></ProtectedRoute>} />
 
         <Route
           path="reports/purchasing"
