@@ -141,6 +141,8 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         setActiveCategory('customers');
       } else if (location.pathname.startsWith('/inventory') || location.pathname.startsWith('/products')) {
         setActiveCategory('inventory');
+      } else if (location.pathname.startsWith('/reports')) {
+        setActiveCategory('reports');
       }
     }
   }, [location.pathname, location.search, canAccessRoute, isDirector]);
@@ -209,6 +211,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const directorReportItems: SidebarItem[] = [
     { id: 'purchase-reports', name: 'Purchase Reports', path: '/reports/purchasing', icon: ShoppingCart, category: 'reports' },
     { id: 'sales-reports', name: 'Sales Reports', path: '/reports/sales', icon: BarChart3, category: 'reports' },
+    { id: 'inventory-reports', name: 'Inventory Reports', path: '/reports/inventory', icon: Boxes, category: 'reports' },
     { id: 'finance-reports', name: 'Finance Reports', path: '/reports/finance', icon: Landmark, category: 'reports' },
   ];
 
@@ -301,11 +304,13 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     { id: 'customer-onboarding', name: 'Customer Onboarding', path: '/customers/onboarding', icon: UserPlus, category: 'customers', excludedRoles: ['CASHIER', 'SHOWROOM_MANAGER', 'STOCK_KEEPER', 'FINANCE_MANAGER', 'PURCHASING_OFFICER'] },
     { id: 'invoices', name: 'Invoices', path: '/invoices', icon: Receipt, category: 'sales', excludedRoles: ['CASHIER', 'SHOWROOM_MANAGER'] },
     { id: 'pos', name: 'Showroom POS', path: '/pos', icon: Store, category: 'sales', excludedRoles: ['STOCK_KEEPER', 'STOCK_MANAGER'] },
+    { id: 'showroom-sales-report', name: 'Showroom Sales Report', path: '/reports/sales/showroom', icon: Store, category: 'sales', allowedRoles: ['SHOWROOM_MANAGER'] },
   ];
 
   // 3. Products & Inventory
   const inventoryItems: SidebarItem[] = [
     { id: 'inventory', name: 'Inventory Hub', path: '/inventory', icon: Boxes, category: 'inventory', exact: true },
+    { id: 'inventory-reports-stock', name: 'Inventory Reports', path: '/reports/inventory', icon: BarChart3, category: 'inventory', allowedRoles: ['STOCK_MANAGER'] },
     { id: 'grn', name: 'GRN', path: '/inventory/grn', icon: Receipt, category: 'inventory' },
     { id: 'delivery-notes', name: 'Delivery Notes', path: '/inventory/delivery-notes', icon: Truck, category: 'inventory' },
     { id: 'products', name: 'Product Master', path: '/products', icon: Package, category: 'inventory', excludedRoles: ['STOCK_KEEPER'] },
@@ -352,12 +357,20 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const adminItems: SidebarItem[] = [
     { id: 'teams', name: 'Team Management', path: '/teams', icon: Users, category: 'admin' },
     { id: 'areas', name: 'Area Management', path: '/areas', icon: Compass, category: 'admin' },
-    { id: 'reports', name: 'Enterprise Reports', path: '/reports', icon: BarChart3, category: 'reports' },
+    { id: 'reports', name: 'Enterprise Reports', path: '/reports', icon: BarChart3, category: 'reports', excludedRoles: ['DIRECTOR', 'MANAGER', 'FINANCE_MANAGER', 'SALES_MANAGER'] },
     { id: 'credit-terms-settings', name: 'Default Credit Terms', path: '/?tab=settings&section=credit-terms', icon: CreditCard, category: 'admin', allowedRoles: ['DIRECTOR', 'MANAGER'] },
     { id: 'commissions-config', name: 'Commission Configuration', path: '/commissions', icon: Award, category: 'admin', allowedRoles: ['DIRECTOR', 'MANAGER'] },
     { id: 'tax-settings', name: 'Global Tax Configuration', path: '/?tab=settings&section=tax', icon: Percent, category: 'admin', directorOnly: true },
     { id: 'theme', name: 'Theme & Appearance', path: '/?tab=settings&section=appearance', icon: Settings, category: 'admin', directorOnly: true },
     { id: 'role-portal', name: 'Role Switcher Portal', path: '/login', icon: Users, category: 'admin', allowedRoles: ['DIRECTOR', 'MANAGER'] },
+  ];
+
+  // 6. Reports Suite — Direct Parity between Director & Manager
+  const standardReportItems: SidebarItem[] = [
+    { id: 'purchase-reports', name: 'Purchase Reports', path: '/reports/purchasing', icon: ShoppingCart, category: 'reports', allowedRoles: ['DIRECTOR', 'MANAGER'] },
+    { id: 'sales-reports', name: 'Sales Reports', path: '/reports/sales', icon: BarChart3, category: 'reports', allowedRoles: ['DIRECTOR', 'MANAGER', 'SALES_MANAGER'] },
+    { id: 'inventory-reports', name: 'Inventory Reports', path: '/reports/inventory', icon: Boxes, category: 'reports', allowedRoles: ['DIRECTOR', 'MANAGER'] },
+    { id: 'finance-reports', name: 'Finance Reports', path: '/reports/finance', icon: Landmark, category: 'reports', allowedRoles: ['DIRECTOR', 'MANAGER', 'FINANCE_MANAGER'] },
   ];
 
   // Combined item list in canonical Quick Links order
@@ -367,6 +380,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     ...customerItems,
     ...inventoryItems,
     ...financeItems,
+    ...standardReportItems,
     ...adminItems,
   ];
 
@@ -435,7 +449,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     { id: 'inventory' as RailCategory, label: 'Inventory & Products', icon: Boxes },
     { id: 'finance' as RailCategory, label: 'Finance & Payments', icon: CreditCard },
     { id: 'approvals' as RailCategory, label: 'Approvals & Warranty', icon: ShieldCheck },
-    { id: 'reports' as RailCategory, label: 'Enterprise Reports', icon: BarChart3 },
+    { id: 'reports' as RailCategory, label: currentUser.role === 'SALES_MANAGER' ? 'Sales Reports' : 'Enterprise Reports', icon: BarChart3 },
     { id: 'admin' as RailCategory, label: 'Administration', icon: Settings },
   ];
 
@@ -506,7 +520,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       case 'approvals':
         return 'Approvals & Hub';
       case 'reports':
-        return 'Analytics & Reports';
+        return currentUser.role === 'SALES_MANAGER' ? 'Sales Reports' : currentUser.role === 'MANAGER' ? 'Reports' : 'Analytics & Reports';
       case 'admin':
         return 'Administration';
       default:

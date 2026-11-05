@@ -38,10 +38,6 @@ type ReportType =
 export function PurchasingReportsPage() {
   const { currentUser } = useAuth();
 
-  if (currentUser?.role === 'MANAGER') {
-    return <Navigate to="/purchasing/orders" replace />;
-  }
-
   const { purchaseOrders, loading } = usePurchaseOrders();
   const { suppliers } = useFinanceLedger();
   const { grns } = useGRN();

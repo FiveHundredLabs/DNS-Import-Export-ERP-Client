@@ -320,10 +320,32 @@ export function canAccessRoute(role: UserRole, path: string): boolean {
     return hasPermission(role, 'commissions:view');
   }
   if (path.startsWith('/reports')) {
-    return (
-      hasPermission(role, 'reports:all') ||
-      hasPermission(role, 'reports:area_only')
-    );
+    // Showroom Manager: ONLY the showroom sales report
+    if (role === 'SHOWROOM_MANAGER') {
+      return path === '/reports/sales/showroom';
+    }
+    // Finance Manager: ONLY finance reports
+    if (role === 'FINANCE_MANAGER') {
+      return path === '/reports' || path.startsWith('/reports/finance');
+    }
+    // Purchasing Manager: ONLY purchasing reports
+    if (role === 'PURCHASING_MANAGER') {
+      return path === '/reports' || path.startsWith('/reports/purchasing');
+    }
+    // Sales Manager: ONLY sales reports
+    if (role === 'SALES_MANAGER') {
+      return path === '/reports' || path.startsWith('/reports/sales');
+    }
+    // Stock Manager: ONLY inventory reports
+    if (role === 'STOCK_MANAGER') {
+      return path === '/reports' || path.startsWith('/reports/inventory');
+    }
+    // Director and Manager: access all reports
+    if (role === 'DIRECTOR' || role === 'MANAGER') {
+      return true;
+    }
+    // Other roles with reports:all permission
+    return hasPermission(role, 'reports:all') || hasPermission(role, 'reports:area_only');
   }
   if (path.startsWith('/audit')) {
     return hasPermission(role, 'audit:view');
