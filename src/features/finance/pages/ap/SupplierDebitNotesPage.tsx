@@ -27,10 +27,11 @@ import {
   AlertTriangle,
   FileText,
   Warehouse,
+  Undo2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
-export function SupplierDebitNotesPage() {
+export function SupplierDebitNotesPage({ hideTopSwitcher = false }: { hideTopSwitcher?: boolean } = {}) {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { suppliers } = useFinanceLedger();
@@ -278,6 +279,31 @@ export function SupplierDebitNotesPage() {
 
   return (
     <div className="space-y-6">
+      {!hideTopSwitcher && (
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-2 border-b border-border/60">
+          <div className="flex items-center p-1 bg-muted/60 rounded-xl border border-border/80">
+            <button
+              type="button"
+              onClick={() => navigate('/finance/notes?tab=credit')}
+              className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold text-muted-foreground hover:text-foreground transition-all"
+            >
+              <RotateCcw className="h-3.5 w-3.5 text-primary" />
+              <span>Customer Credit Notes (AR)</span>
+            </button>
+            <button
+              type="button"
+              className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-background text-foreground shadow-xs border border-border/50"
+            >
+              <Undo2 className="h-3.5 w-3.5 text-amber-600" />
+              <span>Supplier Debit Notes (AP)</span>
+            </button>
+          </div>
+          <span className="text-xs text-muted-foreground hidden sm:inline">
+            Unified Commercial Notes Desk
+          </span>
+        </div>
+      )}
+
       {/* Header */}
       <PageHeader
         title="Supplier Debit Notes (Purchase Returns)"

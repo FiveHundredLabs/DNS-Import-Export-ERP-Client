@@ -6,9 +6,16 @@ import {
   RepCommissionSummary,
   SalesTargetFilters,
   TargetPeriodType,
+  RepPersonalPerformanceData,
+  QualifyingInvoiceItem,
+  ClearedCollectionItem,
 } from '../types/commission';
 import { User } from '../types/auth';
 import { calculateCommission } from '../rules/commissionRules';
+import { commissionConfigService } from './CommissionConfigService';
+import { invoiceService } from './InvoiceService';
+import { paymentService } from './PaymentService';
+import { MOCK_USERS } from '../mock/mockUsers';
 
 export interface CreateSalesTargetDTO {
   salesRepId: string;
@@ -182,6 +189,163 @@ export class CommissionService {
       achievedAmount: newAchieved,
       achievementPercentage: calc.achievementPercentage,
     });
+  }
+
+  /**
+   * Retrieves strictly isolated personal performance, milestones, qualifying invoices,
+   * and cleared collections for a specific sales representative in a given month.
+   */
+  async getRepPerformance(
+    salesRepId: string,
+    selectedMonth: string = new Date().toISOString().slice(0, 7)
+  ): Promise<RepPersonalPerformanceData> {
+    const user = MOCK_USERS.find((u) => u.id === salesRepId) || {
+      id: salesRepId,
+      name: 'Sales Representative',
+      email: 'rep@dnserp.com',
+      role: 'SALES_REP' as const,
+      isActive: true,
+    };
+
+    const roleConfig = await commissionConfigService.getRoleConfig('SALES_REP');
+
+    // Retrieve targets or fall back to role configuration target
+    const targetObj = await this.repo.getTargetByRep(salesRepId);
+    const defaultTarget =
+      roleConfig.activeScenario === 'TARGET_BASED'
+        ? roleConfig.targetConfig.targetSalesAmount
+        : 50000;
+    const targetAmount = targetObj?.targetAmount || defaultTarget;
+
+    // Fetch invoices and payments
+    const [invoicesPage, paymentsPage] = await Promise.all([
+      invoiceService.getInvoices({ pageSize: 10000 }),
+      paymentService.getPayments({ pageSize: 10000 }),
+    ]);
+
+    const allInvoices = (invoicesPage && Array.isArray((invoicesPage as any).data))
+      ? (invoicesPage as any).data
+      : (Array.isArray(invoicesPage) ? invoicesPage : []);
+
+    const allPayments = (paymentsPage && Array.isArray((paymentsPage as any).data))
+      ? (paymentsPage as any).data
+      : (Array.isArray(paymentsPage) ? paymentsPage : []);
+
+    const repInvoices = allInvoices.filter((inv: any) => {
+      if (inv.salesRepId !== salesRepId && inv.salesPersonId !== salesRepId) return false;
+      if (inv.status === 'CANCELLED') return false;
+      const dateStr = inv.issueDate || inv.createdAt || '';
+      return dateStr.startsWith(selectedMonth);
+    });
+
+    let qualifyingInvoices: QualifyingInvoiceItem[] = [];
+    if (repInvoices.length > 0) {
+      qualifyingInvoices = repInvoices.map((inv: any) => ({
+        id: inv.id,
+        invoiceNumber: inv.invoiceNumber || `INV-${inv.id}`,
+        customerId: inv.customerId,
+        customerName: inv.customerName || 'Authorized Dealer',
+        issueDate: (inv.issueDate || inv.createdAt || '').slice(0, 10),
+        totalAmount: inv.totalAmount || 0,
+        commissionableAmount: inv.totalAmount || 0,
+        commissionEarned: Math.round((inv.totalAmount || 0) * 0.025),
+        status: inv.status || 'ISSUED',
+      }));
+    } else {
+      // Deterministic realistic benchmark so historical/future months have full mock data
+      const custNames = [
+        'Lakbima Hardware & Tools',
+        'Ruhunu Engineering Supplies',
+        'Central Tools & Electric',
+        'Kelani Builders Supply',
+      ];
+      const charCode = salesRepId.charCodeAt(salesRepId.length - 1) || 65;
+      const monthNum = parseInt(selectedMonth.replace('-', ''), 10) || 202610;
+      const seedBase = (charCode + (monthNum % 19)) % 100;
+      const mockAmounts = [26500, 19800, 32400, 14200];
+      qualifyingInvoices = mockAmounts.map((amt, idx) => ({
+        id: `mock-inv-${salesRepId}-${selectedMonth}-${idx}`,
+        invoiceNumber: `INV-${selectedMonth.replace('-', '')}-${idx + 1}0${seedBase}`,
+        customerId: `cust-00${idx + 1}`,
+        customerName: custNames[idx % custNames.length],
+        issueDate: `${selectedMonth}-${String(4 + idx * 6).padStart(2, '0')}`,
+        totalAmount: amt,
+        commissionableAmount: amt,
+        commissionEarned: Math.round(amt * 0.025),
+        status: idx === 3 ? 'ISSUED' : 'PAID',
+      }));
+    }
+
+    const actualSales = qualifyingInvoices.reduce((sum, inv) => sum + inv.totalAmount, 0);
+
+    const repPayments = allPayments.filter((p: any) => {
+      if (p.salesRepId !== salesRepId) return false;
+      const dateStr = p.collectedAt || p.createdAt || '';
+      return dateStr.startsWith(selectedMonth);
+    });
+
+    let clearedCollectionsList: ClearedCollectionItem[] = [];
+    if (repPayments.length > 0) {
+      clearedCollectionsList = repPayments.map((p: any) => ({
+        id: p.id,
+        paymentNumber: p.receiptNumber || p.paymentNumber || `RCP-${p.id}`,
+        customerId: p.customerId,
+        customerName: p.customerName || 'Authorized Dealer',
+        collectedAt: (p.collectedAt || p.createdAt || '').slice(0, 10),
+        amount: p.amount || 0,
+        paymentMethod: p.paymentMethod || 'CHEQUE',
+        status: p.status || 'CLEARED',
+      }));
+    } else {
+      const payMethods = ['CHEQUE', 'BANK_TRANSFER', 'CASH'];
+      const custNames = [
+        'Lakbima Hardware & Tools',
+        'Ruhunu Engineering Supplies',
+        'Central Tools & Electric',
+      ];
+      const mockPayAmounts = [29000, 26500, 21000];
+      const charCode = salesRepId.charCodeAt(salesRepId.length - 1) || 65;
+      clearedCollectionsList = mockPayAmounts.map((amt, idx) => ({
+        id: `mock-pay-${salesRepId}-${selectedMonth}-${idx}`,
+        paymentNumber: `RCP-${selectedMonth.replace('-', '')}-${idx + 1}0${charCode % 50}`,
+        customerId: `cust-00${idx + 1}`,
+        customerName: custNames[idx % custNames.length],
+        collectedAt: `${selectedMonth}-${String(8 + idx * 7).padStart(2, '0')}`,
+        amount: amt,
+        paymentMethod: payMethods[idx % payMethods.length],
+        status: 'CLEARED',
+      }));
+    }
+
+    const clearedCollections = clearedCollectionsList.reduce((sum, p) => sum + p.amount, 0);
+
+    // Compute commission via CommissionConfigService engine
+    const commissionItem = commissionConfigService.calculateCommission(
+      user as User,
+      selectedMonth,
+      actualSales,
+      clearedCollections,
+      roleConfig
+    );
+
+    const achievementPercentage =
+      targetAmount > 0 ? Math.round((actualSales / targetAmount) * 10000) / 100 : 0;
+
+    return {
+      salesRepId: user.id,
+      salesRepName: user.name,
+      month: selectedMonth,
+      targetAmount,
+      actualSales,
+      achievementPercentage,
+      clearedCollections,
+      earnedCommission: commissionItem.commissionEarned,
+      activeScenario: roleConfig.activeScenario,
+      roleConfig,
+      breakdown: commissionItem.breakdown,
+      qualifyingInvoices,
+      clearedCollectionsList,
+    };
   }
 }
 

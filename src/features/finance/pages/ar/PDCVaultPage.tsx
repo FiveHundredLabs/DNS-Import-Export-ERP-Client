@@ -209,8 +209,8 @@ export function PDCVaultPage() {
               GL Asset Account 1018
             </Badge>
           </div>
-          <p className="text-sm text-slate-500 mt-1">
-            Safe custody tracking and bank realization for un-cleared customer cheques. Prevents premature recognition as 1010 Bank operating cash.
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Safe custody, maturity tracking, and bank realization for post-dated cheques.
           </p>
         </div>
 

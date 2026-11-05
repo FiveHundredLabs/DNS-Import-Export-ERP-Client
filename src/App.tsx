@@ -49,6 +49,7 @@ import { WarrantyHubPage } from './features/warranty/WarrantyHubPage';
 import { SalesRepWarrantyPage } from './features/warranty/SalesRepWarrantyPage';
 import { CommissionHubPage } from './features/commissions/CommissionHubPage';
 import { CommissionConfigPage } from './features/commissions/CommissionConfigPage';
+import { PerformanceDashboardPage } from './features/performance/PerformanceDashboardPage';
 import { CustomerCreditTermsSettings } from './features/dashboard/CustomerCreditTermsSettings';
 import { FinanceLayout } from './features/finance/FinanceLayout';
 import { FinanceDashboardPage } from './features/finance/pages/FinanceDashboardPage';
@@ -72,10 +73,13 @@ import { ReceiptApprovalQueuePage } from './features/finance/pages/ar/ReceiptApp
 import { ARCollectionAllocationPage } from './features/finance/pages/ar/ARCollectionAllocationPage';
 import { PDCVaultPage } from './features/finance/pages/ar/PDCVaultPage';
 import { CustomerCreditNotesPage } from './features/finance/pages/ar/CustomerCreditNotesPage';
+import { CommercialNotesPage } from './features/finance/pages/CommercialNotesPage';
 import { ManualJournalPage } from './features/finance/pages/journal/ManualJournalPage';
 import { BankReconciliationPage } from './features/finance/pages/reconciliation/BankReconciliationPage';
 import { FinancialPeriodLockPage } from './features/finance/pages/settings/FinancialPeriodLockPage';
 import { CashBookPage } from './features/finance/pages/CashBookPage';
+import { IncomeDeskPage } from './features/finance/pages/IncomeDeskPage';
+import { ExpenseDeskPage } from './features/finance/pages/ExpenseDeskPage';
 import { ReportsPage } from './features/reports/ReportsPage';
 import { ReportsHubDispatcher } from './features/reports/ReportsHubDispatcher';
 
@@ -583,6 +587,14 @@ export function App() {
           }
         />
         <Route
+          path="my-performance"
+          element={
+            <ProtectedRoute>
+              <PerformanceDashboardPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="commissions"
           element={
             <ProtectedRoute>
@@ -868,8 +880,14 @@ export function App() {
           <Route path="payment-approvals" element={<Navigate to="/finance/ar/approvals" replace />} />
 
           <Route path="journal/new" element={<ManualJournalPage />} />
-          <Route path="accounts" element={<ChartOfAccountsPage />} />
-          <Route path="cash-book" element={<CashBookPage />} />
+          <Route path="accounts" element={<ChartOfAccountsPage defaultView="ACCOUNTS" />} />
+          <Route path="categories" element={<ChartOfAccountsPage defaultView="CATEGORIES" />} />
+          <Route path="cash-book" element={<Navigate to="/finance/expense" replace />} />
+          <Route path="notes" element={<CommercialNotesPage />} />
+
+          {/* Unified Income & Expense Desks (Al Akleel Unified Architecture) */}
+          <Route path="income" element={<IncomeDeskPage />} />
+          <Route path="expense" element={<ExpenseDeskPage />} />
 
           {/* Accounts Payable (AP) Workflows */}
           <Route path="ap/bills/new" element={<VendorBillCostingPage />} />

@@ -133,8 +133,8 @@ export function FinancialPeriodLockPage() {
               Period Closing Controls
             </Badge>
           </div>
-          <p className="text-sm text-slate-500 mt-1">
-            Enforce audit boundary protection by locking books as of specified cut-off dates to prevent retrospective modifications.
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Accounting period lock dates and retrospective edit prevention.
           </p>
         </div>
 

@@ -265,8 +265,8 @@ export function PaymentApprovalPage() {
               Payment Approvals & Sub-Ledger
             </Badge>
           </div>
-          <p className="text-sm text-slate-500 mt-1">
-            Verify sales rep and POS cash collections, deposit into Bank or Cash float, and auto-post double-entry journal vouchers.
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Collection verification, bank deposits, and automatic GL journal postings.
           </p>
         </div>
       </div>
