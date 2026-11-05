@@ -337,8 +337,8 @@ export function LoginPage() {
       <header className="relative z-10 border-b border-slate-800/80 bg-slate-900/90 backdrop-blur-md px-6 py-3.5">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-white font-black text-base shadow-md shadow-primary/30 ring-1 ring-white/20">
-              DNS
+            <div className="flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center rounded-xl bg-white p-1 shadow-md shadow-black/20 ring-1 ring-white/30 shrink-0 overflow-hidden">
+              <img src="/logo.png" alt="DNS Logo" className="h-full w-full object-contain" />
             </div>
             <div>
               <div className="font-bold text-white tracking-tight text-base sm:text-lg flex items-center gap-2">

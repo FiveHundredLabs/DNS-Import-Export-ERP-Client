@@ -65,14 +65,19 @@ export function DashboardPage() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-slate-900">
+        <div className="flex items-center gap-3.5">
+          <div className="h-11 w-11 rounded-xl bg-white border border-slate-200 p-1 shadow-2xs flex items-center justify-center overflow-hidden shrink-0 hidden sm:flex">
+            <img src="/logo.png" alt="DNS Logo" className="h-full w-full object-contain" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight text-slate-900">
             {role.replace('_', ' ')} Performance Snap
           </h1>
           <p className="text-xs text-slate-500 mt-0.5">
             Authenticated as <span className="font-semibold text-slate-700">{currentUser.name}</span> • Role workspace & operational analytics
           </p>
         </div>
+      </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

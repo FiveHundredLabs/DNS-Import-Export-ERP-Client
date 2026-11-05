@@ -208,23 +208,28 @@ export function FinanceManagerDashboard() {
     <div className="space-y-6 pb-12">
       {/* Top Banner & Authentication Context */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-xs">
-        <div>
-          <div className="flex items-center gap-2 mb-2">
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold tracking-wide uppercase bg-emerald-50 text-emerald-700 border border-emerald-200">
-              <ShieldCheck className="h-3.5 w-3.5" /> Finance Controller Workspace
-            </span>
-            {periodLock.enabled && (
-              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">
-                <Lock className="h-3 w-3" /> Period Locked: {formatDate(periodLock.lockDate || '')}
-              </span>
-            )}
+        <div className="flex items-start gap-4">
+          <div className="h-12 w-12 rounded-xl bg-white border border-slate-200 p-1 shadow-2xs flex items-center justify-center overflow-hidden shrink-0 hidden sm:flex">
+            <img src="/logo.png" alt="DNS Logo" className="h-full w-full object-contain" />
           </div>
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
-            Finance Command Dashboard
-          </h1>
-          <p className="text-xs text-slate-500 mt-1">
-            Logged in as <span className="font-semibold text-slate-700">{currentUser.name}</span> • Commercial Banking, Double-Entry GL & Receivables/Payables Clearing
-          </p>
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold tracking-wide uppercase bg-emerald-50 text-emerald-700 border border-emerald-200">
+                <ShieldCheck className="h-3.5 w-3.5" /> Finance Controller Workspace
+              </span>
+              {periodLock.enabled && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">
+                  <Lock className="h-3 w-3" /> Period Locked: {formatDate(periodLock.lockDate || '')}
+                </span>
+              )}
+            </div>
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
+              Finance Command Dashboard
+            </h1>
+            <p className="text-xs text-slate-500 mt-1">
+              Logged in as <span className="font-semibold text-slate-700">{currentUser.name}</span> • Commercial Banking, Double-Entry GL & Receivables/Payables Clearing
+            </p>
+          </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5 shrink-0">

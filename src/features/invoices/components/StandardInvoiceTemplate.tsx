@@ -19,8 +19,8 @@ export function StandardInvoiceTemplate({ invoice }: StandardInvoiceTemplateProp
         <div className="flex items-start justify-between gap-6 border-b-2 border-slate-900 pb-5">
           <div className="space-y-1.5">
             <div className="flex items-center gap-2.5">
-              <div className="h-9 w-9 rounded-lg bg-primary text-white flex items-center justify-center font-black text-sm tracking-tighter shadow-sm shrink-0">
-                DNS
+              <div className="h-10 w-10 rounded-md bg-white border border-slate-200 p-0.5 shadow-2xs flex items-center justify-center shrink-0 overflow-hidden">
+                <img src="/logo.png" alt="DNS Logo" className="h-full w-full object-contain" />
               </div>
               <div>
                 <h1 className="text-lg font-bold tracking-tight text-slate-900 leading-none">

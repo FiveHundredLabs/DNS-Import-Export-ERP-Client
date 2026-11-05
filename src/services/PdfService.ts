@@ -920,7 +920,7 @@ export class PdfService implements IPdfService {
             <div style="display: flex; justify-content: space-between; border-bottom: 2px solid #0f172a; padding-bottom: 12px; margin-bottom: 14px;">
               <div>
                 <div style="display: flex; align-items: center; gap: 8px;">
-                  <div style="background: #0f172a; color: #fff; width: 32px; height: 32px; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; font-weight: 900; font-size: 13px;">DNS</div>
+                  <div style="background: #ffffff; border: 1px solid #cbd5e1; width: 32px; height: 32px; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; overflow: hidden; padding: 2px; box-sizing: border-box;"><img src="/logo.png" alt="DNS Logo" style="width: 100%; height: 100%; object-fit: contain;" /></div>
                   <div>
                     <div style="font-size: 17px; font-weight: 800; color: #0f172a; line-height: 1;">DNS IMPORT & EXPORT (PVT) LTD</div>
                     <div style="font-size: 10px; color: #64748b; margin-top: 3px;">Authorized Wholesale Electrical, Automation & Industrial Solutions</div>
@@ -968,7 +968,7 @@ export class PdfService implements IPdfService {
           : `
             <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #0f172a; padding-bottom: 8px; margin-bottom: 12px;">
               <div style="display: flex; align-items: center; gap: 6px;">
-                <div style="background: #0f172a; color: #fff; width: 22px; height: 22px; border-radius: 4px; display: inline-flex; align-items: center; justify-content: center; font-weight: 900; font-size: 10px;">DNS</div>
+                <div style="background: #ffffff; border: 1px solid #cbd5e1; width: 22px; height: 22px; border-radius: 4px; display: inline-flex; align-items: center; justify-content: center; overflow: hidden; padding: 1px; box-sizing: border-box;"><img src="/logo.png" alt="DNS Logo" style="width: 100%; height: 100%; object-fit: contain;" /></div>
                 <span style="font-weight: 700; font-size: 12px; color: #0f172a;">DNS IMPORT & EXPORT (PVT) LTD</span>
                 <span style="font-size: 10px; color: #64748b; margin-left: 6px;">VAT: 109847291-7000</span>
               </div>

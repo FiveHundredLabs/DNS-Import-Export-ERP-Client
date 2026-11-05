@@ -264,8 +264,8 @@ export function PrintablePaymentVoucher({
             {/* 1. Company Letterhead & Document Banner */}
             <div className="flex flex-col sm:flex-row items-start justify-between border-b-2 border-slate-900 pb-6 gap-4">
               <div className="flex items-start gap-4">
-                <div className="h-12 w-12 rounded-xl bg-primary flex items-center justify-center text-white font-black text-base tracking-wider shadow-sm shrink-0">
-                  DNS
+                <div className="h-12 w-12 rounded-xl bg-white border border-slate-200 p-1 shadow-2xs flex items-center justify-center shrink-0 overflow-hidden">
+                  <img src="/logo.png" alt="DNS Logo" className="h-full w-full object-contain" />
                 </div>
                 <div>
                   <h1 className="text-2xl font-black tracking-tight text-slate-950 uppercase leading-none">

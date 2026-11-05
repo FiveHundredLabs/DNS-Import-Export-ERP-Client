@@ -596,7 +596,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       {/* Main Dual-Column Sidebar Container */}
       <aside
         className={cn(
-          'fixed inset-y-0 left-0 z-50 flex h-full select-none transition-transform duration-200 ease-in-out md:static md:translate-x-0 bg-primary',
+          'fixed inset-y-0 left-0 z-50 flex h-full select-none transition-transform duration-200 ease-in-out md:static md:translate-x-0 bg-primary text-primary-foreground',
           // On mobile, mobile nav roles always stay hidden (translate-x-full)
           isMobileNavRole
             ? 'md:translate-x-0 -translate-x-full'
@@ -689,7 +689,12 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         <div className="flex w-60 sm:w-64 flex-col border-r border-slate-200/90 bg-white rounded-tl-2xl md:rounded-tl-[24px] overflow-hidden">
           {/* Mobile Close Bar Header */}
           <div className="flex items-center justify-between px-4 py-2.5 border-b border-slate-100 md:hidden">
-            <span className="text-xs font-semibold text-slate-500 tracking-wider uppercase">Navigation</span>
+            <div className="flex items-center gap-2">
+              <div className="h-6 w-6 rounded-md bg-white p-0.5 border border-slate-200 shadow-2xs overflow-hidden shrink-0">
+                <img src="/logo.png" alt="DNS Logo" className="h-full w-full object-contain" />
+              </div>
+              <span className="text-xs font-bold text-slate-800 tracking-tight">DNS ERP</span>
+            </div>
             <button
               onClick={onClose}
               className="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
@@ -846,6 +851,25 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
               </div>
             )}
           </nav>
+
+          {/* Sidebar Footer with Corporate Identity */}
+          <div className="p-3 border-t border-slate-100 bg-slate-50/70 flex items-center gap-2.5 shrink-0">
+            <div className="h-7 w-7 rounded-md bg-white p-0.5 border border-slate-200 shadow-2xs overflow-hidden shrink-0">
+              <img
+                src="/logo.png"
+                alt="DNS Logo"
+                className="h-full w-full object-contain"
+              />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="text-[11px] font-bold text-slate-800 truncate leading-tight">
+                DNS Import &amp; Export
+              </div>
+              <div className="text-[9.5px] text-slate-400 font-medium truncate">
+                Official Enterprise ERP
+              </div>
+            </div>
+          </div>
         </div>
       </aside>
     </>

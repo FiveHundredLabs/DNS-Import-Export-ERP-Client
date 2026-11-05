@@ -29,8 +29,8 @@ export function IrdTaxInvoiceTemplate({ invoice }: IrdTaxInvoiceTemplateProps) {
             {/* Supplier Profile */}
             <div className="space-y-1">
               <div className="flex items-center gap-2">
-                <div className="h-8 w-8 rounded bg-slate-900 text-white flex items-center justify-center font-black text-xs tracking-wider shrink-0">
-                  DNS
+                <div className="h-9 w-9 rounded-md bg-white border border-slate-200 p-0.5 shadow-2xs flex items-center justify-center shrink-0 overflow-hidden">
+                  <img src="/logo.png" alt="DNS Logo" className="h-full w-full object-contain" />
                 </div>
                 <div>
                   <h1 className="text-base font-extrabold tracking-tight text-slate-950 uppercase">

@@ -75,7 +75,7 @@ export class ReportPdfService {
       <div class="report-header">
         <div class="company-row">
           <div class="company-identity">
-            <div class="company-logo-badge">DNS</div>
+            <div class="company-logo-badge"><img src="/logo.png" alt="DNS Logo" style="width:100%;height:100%;object-fit:contain;" /></div>
             <div class="company-details">
               <h1 class="company-title">${company.legalName}</h1>
               <div class="company-reg-line">
@@ -212,15 +212,14 @@ export class ReportPdfService {
       .company-logo-badge {
         width: 44px;
         height: 44px;
-        background: #263183;
-        color: #ffffff;
-        font-weight: 800;
-        font-size: 18px;
+        background: #ffffff;
+        border: 1px solid #cbd5e1;
         display: flex;
         align-items: center;
         justify-content: center;
         border-radius: 6px;
-        letter-spacing: 0.5px;
+        padding: 2px;
+        box-sizing: border-box;
       }
       .company-details {
         display: flex;

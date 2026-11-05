@@ -140,8 +140,8 @@ function POFirstPageHeader({
       <div className="flex items-start justify-between gap-6 border-b-2 border-slate-900 pb-3">
         <div className="space-y-1">
           <div className="flex items-center gap-2.5">
-            <div className="h-9 w-9 rounded-lg bg-slate-900 text-white flex items-center justify-center font-black text-sm tracking-tighter shadow-sm shrink-0">
-              DNS
+            <div className="h-9 w-9 rounded-md bg-white border border-slate-200 p-0.5 shadow-2xs flex items-center justify-center shrink-0 overflow-hidden">
+              <img src="/logo.png" alt="DNS Logo" className="h-full w-full object-contain" />
             </div>
             <div>
               <h1 className="text-lg font-bold tracking-tight text-slate-900 leading-none">
@@ -243,8 +243,8 @@ function POContinuationHeader({
   return (
     <div className="flex items-center justify-between pb-2.5 border-b-2 border-slate-900 mb-2">
       <div className="flex items-center gap-2">
-        <div className="h-6 w-6 rounded bg-slate-900 text-white flex items-center justify-center font-black text-xs shrink-0">
-          DNS
+        <div className="h-6 w-6 rounded bg-white border border-slate-200 p-0.5 shadow-2xs flex items-center justify-center shrink-0 overflow-hidden">
+          <img src="/logo.png" alt="DNS Logo" className="h-full w-full object-contain" />
         </div>
         <div>
           <span className="font-bold text-slate-900 text-xs">DNS IMPORT & EXPORT (PVT) LTD</span>

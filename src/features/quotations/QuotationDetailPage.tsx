@@ -362,8 +362,12 @@ export function QuotationDetailPage() {
         <CardContent className="p-4 sm:p-8 space-y-6">
           {/* Document Header */}
           <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 border-b border-slate-200 pb-6">
-            <div>
-              <h2 className="text-2xl font-semibold text-slate-900 tracking-tight">DNS IMPORT & EXPORT (PVT) LTD</h2>
+            <div className="flex items-start gap-3.5">
+              <div className="h-12 w-12 rounded-lg bg-white border border-slate-200 p-1 shadow-2xs flex items-center justify-center shrink-0 overflow-hidden">
+                <img src="/logo.png" alt="DNS Logo" className="h-full w-full object-contain" />
+              </div>
+              <div>
+                <h2 className="text-2xl font-semibold text-slate-900 tracking-tight">DNS IMPORT & EXPORT (PVT) LTD</h2>
               <p className="text-xs text-slate-500 font-medium mt-0.5">
                 Authorized Electrical, Automation & Industrial Wholesale Distributor
               </p>
@@ -371,6 +375,7 @@ export function QuotationDetailPage() {
                 142 First Cross Street, Colombo 11, Sri Lanka | Tel: +94 11 234 5678
               </p>
               <p className="text-xs text-slate-400">VAT Registration No: 109847291-7000</p>
+            </div>
             </div>
 
             <div className="text-left sm:text-right space-y-1">

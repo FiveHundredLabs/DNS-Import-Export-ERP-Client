@@ -182,7 +182,7 @@ export function Header({ onToggleSidebar }: HeaderProps) {
           </Link>
         ) : (
           <div className="flex items-center gap-2 min-w-0">
-            <Link to="/" className="hidden md:flex items-center gap-2 shrink-0 group" title="DNS ERP Dashboard">
+            <Link to="/" className="flex items-center gap-2 shrink-0 group" title="DNS ERP Dashboard">
               <div className="flex h-8 w-8 items-center justify-center rounded-md bg-white p-0.5 shadow-sm ring-1 ring-white/20 transition-transform group-hover:scale-105 overflow-hidden">
                 <img
                   src="/logo.png"
@@ -190,11 +190,11 @@ export function Header({ onToggleSidebar }: HeaderProps) {
                   className="h-full w-full object-contain"
                 />
               </div>
-              <span className="font-semibold text-primary-foreground tracking-tight text-base">
+              <span className="hidden sm:inline font-semibold text-primary-foreground tracking-tight text-base">
                 DNS ERP
               </span>
             </Link>
-            <span className="text-primary-foreground/50 font-light hidden md:inline">/</span>
+            <span className="text-primary-foreground/50 font-light hidden sm:inline">/</span>
             <h1 className="text-sm sm:text-base md:text-lg font-bold text-primary-foreground tracking-tight truncate">
               {currentTitle}
             </h1>

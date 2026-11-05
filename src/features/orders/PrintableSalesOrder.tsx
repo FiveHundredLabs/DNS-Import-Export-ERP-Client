@@ -109,9 +109,13 @@ export function PrintableSalesOrder({ order, open, onOpenChange }: PrintableSale
             {/* ── Document Header ── */}
             <div className="border-b-2 border-slate-800 pb-5 mb-6">
               <div className="flex justify-between items-start">
-                <div>
-                  <h1 className="text-2xl font-black tracking-tight text-slate-900 uppercase">
-                    DNS Import & Export (Pvt) Ltd
+                <div className="flex items-start gap-3.5">
+                  <div className="h-12 w-12 rounded-lg bg-white border border-slate-200 p-1 shadow-2xs flex items-center justify-center shrink-0 overflow-hidden">
+                    <img src="/logo.png" alt="DNS Logo" className="h-full w-full object-contain" />
+                  </div>
+                  <div>
+                    <h1 className="text-2xl font-black tracking-tight text-slate-900 uppercase">
+                      DNS Import & Export (Pvt) Ltd
                   </h1>
                   <p className="text-xs text-slate-600 font-semibold mt-0.5">
                     Authorized Electrical, Industrial Switchgear &amp; Automation Importers
@@ -122,6 +126,7 @@ export function PrintableSalesOrder({ order, open, onOpenChange }: PrintableSale
                   <p className="text-xs text-slate-500">
                     Hotline: +94 11 234 5678 | Email: sales@dnsdistribution.lk | VAT Reg: 109847291-7000
                   </p>
+                </div>
                 </div>
                 <div className="text-right">
                   <div className="inline-block bg-slate-900 text-white font-black text-sm px-3.5 py-1 uppercase tracking-wider rounded">

@@ -95,8 +95,8 @@ export const PrintableDeliveryNote: React.FC<PrintableDeliveryNoteProps> = ({ no
             <div className="flex justify-between items-start border-b-2 border-slate-900 pb-5 mb-6">
               <div>
                 <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-slate-950 flex items-center justify-center text-white font-black text-sm">
-                    DNS
+                  <div className="w-9 h-9 rounded-md bg-white border border-slate-200 p-0.5 shadow-2xs flex items-center justify-center shrink-0 overflow-hidden">
+                    <img src="/logo.png" alt="DNS Logo" className="h-full w-full object-contain" />
                   </div>
                   <div>
                     <h1 className="text-xl font-black tracking-tight text-slate-950 leading-tight">
