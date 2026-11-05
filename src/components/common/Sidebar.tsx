@@ -185,9 +185,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     { id: 'damaged-stock', name: 'Damaged Stock & RMA', path: '/inventory/damaged-stock', icon: ShieldAlert, category: 'inventory' },
   ];
 
-  const directorFinanceItems: SidebarItem[] = [
-    { id: 'reports-hub', name: 'Financial Reports Hub', path: '/finance/reports', icon: BarChart3, category: 'finance' },
-  ];
+  const directorFinanceItems: SidebarItem[] = [];
 
   const directorApprovalItems: SidebarItem[] = [
     { id: 'approvals', name: 'Approval Engine', path: '/approvals', icon: CheckCircle, category: 'approvals' },
@@ -227,7 +225,6 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     { id: 'sales' as RailCategory, label: 'Sales & Orders', icon: ShoppingBag },
     { id: 'users' as RailCategory, label: 'User Management', icon: Users },
     { id: 'inventory' as RailCategory, label: 'Inventory Hub', icon: Boxes },
-    { id: 'finance' as RailCategory, label: 'Finance', icon: Landmark },
     { id: 'approvals' as RailCategory, label: 'Approval Hub', icon: ShieldCheck },
     { id: 'reports' as RailCategory, label: 'Reports', icon: BarChart3 },
     { id: 'admin' as RailCategory, label: 'Administration', icon: Settings },
@@ -317,7 +314,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     { id: 'ar-pdc', name: 'PDC Vault (1018)', path: '/finance/ar/pdc-vault', icon: Clock, category: 'finance', excludedRoles: ['MANAGER', 'DIRECTOR'] },
     { id: 'reconciliation', name: 'Bank Reconciliation', path: '/finance/reconciliation', icon: Landmark, category: 'finance', excludedRoles: ['MANAGER', 'DIRECTOR'] },
     { id: 'closing', name: 'Period Closing Lock', path: '/finance/settings/closing', icon: Lock, category: 'finance', excludedRoles: ['MANAGER', 'DIRECTOR'] },
-    { id: 'reports-hub', name: 'Financial Reports Hub', path: '/finance/reports', icon: BarChart3, category: 'finance' },
+    { id: 'reports-hub', name: 'Financial Reports Hub', path: '/finance/reports', icon: BarChart3, category: 'finance', excludedRoles: ['MANAGER', 'DIRECTOR'] },
   ];
 
   // 5. Administration, Field Management & Intelligence
