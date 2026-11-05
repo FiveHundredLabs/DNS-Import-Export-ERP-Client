@@ -56,8 +56,6 @@ export function PerformanceDashboardPage() {
 
   const isSalesRep = role === 'SALES_REP';
   const isAreaManager = role === 'AREA_MANAGER';
-  const isExecutiveOrSalesManager =
-    role === 'DIRECTOR' || role === 'MANAGER' || role === 'SALES_MANAGER';
 
   return (
     <div className="space-y-6">
@@ -70,110 +68,97 @@ export function PerformanceDashboardPage() {
             </span>
             <div>
               <h1 className="text-xl font-bold text-slate-900 tracking-tight">
-                Performance & Incentives
+                Performance & Incentives Desk
               </h1>
               <p className="text-xs text-slate-500">
                 {isSalesRep
-                  ? 'Your personal sales milestones, incentive scheme progression, and verified collections.'
+                  ? 'Based on sales generated, track your collected cash and the cash incentive you earn.'
                   : isAreaManager
-                  ? `Territory performance oversight, subordinate sales audit, and regional manager incentives.`
-                  : 'Executive performance monitoring and regional territory commission audits.'}
+                  ? 'Territory sales rep leaderboard, cash collection metrics, and your managerial incentive based on team performance.'
+                  : 'This module is restricted to Sales Representatives and Area Managers.'}
               </p>
             </div>
           </div>
         </div>
 
         {/* Global Controls: Role Indicator & Global Month Selector */}
-        <div className="flex flex-wrap items-center gap-3">
-          <Badge
-            variant="outline"
-            className="text-xs font-semibold py-1 px-2.5 border-slate-300 bg-white text-slate-700 shadow-2xs"
-          >
-            {isSalesRep ? (
-              <span className="flex items-center gap-1.5 text-indigo-700 font-bold">
-                <User className="h-3.5 w-3.5" /> Sales Representative Desk
-              </span>
-            ) : isAreaManager ? (
-              <span className="flex items-center gap-1.5 text-emerald-700 font-bold">
-                <MapPin className="h-3.5 w-3.5" /> Area Territory Manager Desk
-              </span>
-            ) : (
-              <span className="flex items-center gap-1.5 text-purple-700 font-bold">
-                <Award className="h-3.5 w-3.5" /> Executive Oversight Desk
-              </span>
-            )}
-          </Badge>
-
-          {/* Month Stepper & Selector */}
-          <div className="flex items-center gap-1 bg-white border border-slate-300 rounded-lg p-0.5 shadow-2xs">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => handleMonthStep(-1)}
-              className="h-8 w-8 text-slate-500 hover:text-slate-900 cursor-pointer"
-              title="Previous Month"
+        {(isSalesRep || isAreaManager) && (
+          <div className="flex flex-wrap items-center gap-3">
+            <Badge
+              variant="outline"
+              className="text-xs font-semibold py-1 px-2.5 border-slate-300 bg-white text-slate-700 shadow-2xs"
             >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
+              {isSalesRep ? (
+                <span className="flex items-center gap-1.5 text-indigo-700 font-bold">
+                  <User className="h-3.5 w-3.5" /> Sales Representative Desk
+                </span>
+              ) : (
+                <span className="flex items-center gap-1.5 text-emerald-700 font-bold">
+                  <MapPin className="h-3.5 w-3.5" /> Area Territory Manager Desk
+                </span>
+              )}
+            </Badge>
 
-            <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-              <SelectTrigger className="h-8 border-0 text-xs font-semibold min-w-36 bg-transparent text-slate-800 shadow-none focus:ring-0">
-                <Calendar className="h-3.5 w-3.5 mr-1.5 text-indigo-600" />
-                <SelectValue placeholder="Select Month" />
-              </SelectTrigger>
-              <SelectContent>
-                {availableMonths.map((m) => (
-                  <SelectItem key={m.value} value={m.value} className="text-xs">
-                    {m.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {/* Month Stepper & Selector */}
+            <div className="flex items-center gap-1 bg-white border border-slate-300 rounded-lg p-0.5 shadow-2xs">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => handleMonthStep(-1)}
+                className="h-8 w-8 text-slate-500 hover:text-slate-900 cursor-pointer"
+                title="Previous Month"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
 
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => handleMonthStep(1)}
-              className="h-8 w-8 text-slate-500 hover:text-slate-900 cursor-pointer"
-              title="Next Month"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
+              <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+                <SelectTrigger className="h-8 border-0 text-xs font-semibold min-w-36 bg-transparent text-slate-800 shadow-none focus:ring-0">
+                  <Calendar className="h-3.5 w-3.5 mr-1.5 text-indigo-600" />
+                  <SelectValue placeholder="Select Month" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableMonths.map((m) => (
+                    <SelectItem key={m.value} value={m.value} className="text-xs">
+                      {m.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => handleMonthStep(1)}
+                className="h-8 w-8 text-slate-500 hover:text-slate-900 cursor-pointer"
+                title="Next Month"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
-      {/* Main View: Conditional Rendering based on Role */}
+      {/* Main View: Strictly for Sales Rep & Area Manager Only */}
       {isSalesRep ? (
-        /* STRICT DATA ISOLATION: Sales Reps ONLY see their own personal data */
         <RepPersonalPerformanceView
           repId={currentUser.id}
           month={selectedMonth}
         />
       ) : isAreaManager ? (
-        /* STRICT DATA ISOLATION: Area Managers ONLY see their assigned territory */
         <ManagerTerritoryView
           areaId={currentUser.areaId || 'area-01'}
           month={selectedMonth}
           canSwitchArea={false}
         />
-      ) : isExecutiveOrSalesManager ? (
-        /* Executives can view and switch territories */
-        <ManagerTerritoryView
-          areaId={selectedAreaId}
-          month={selectedMonth}
-          canSwitchArea={true}
-          onAreaChange={setSelectedAreaId}
-        />
       ) : (
-        /* Fallback for other roles */
-        <Card className="p-8 text-center space-y-3 bg-white border-slate-200">
-          <ShieldAlert className="h-10 w-10 text-amber-500 mx-auto" />
-          <h3 className="text-base font-bold text-slate-800">Standard Desk Notice</h3>
+        <div className="bg-white border border-slate-200 rounded-xl p-12 text-center space-y-3">
+          <ShieldAlert className="h-10 w-10 text-slate-400 mx-auto" />
+          <h3 className="text-base font-semibold text-slate-900">Access Restricted</h3>
           <p className="text-xs text-slate-500 max-w-md mx-auto">
-            The Performance & Incentives module is configured for Sales Representatives, Area Managers, and Sales Executives.
+            This module is reserved exclusively for Sales Representatives and Area Managers to track personal and territory cash collection incentives.
           </p>
-        </Card>
+        </div>
       )}
     </div>
   );

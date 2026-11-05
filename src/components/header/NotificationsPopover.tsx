@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Bell,
   CheckCheck,
@@ -17,40 +18,45 @@ interface NotificationItem {
   time: string;
   type: 'order' | 'approval' | 'stock' | 'payment';
   unread: boolean;
+  link?: string;
 }
 
 const INITIAL_NOTIFICATIONS: NotificationItem[] = [
   {
     id: 'n-1',
-    title: 'Quotation #QT-2025-084 Approved',
-    description: 'Executive Director approved pricing discount exception (15%) for Lanka Electro.',
+    title: 'Quotation #QT-2025-002 Pending Approval',
+    description: 'Discount matrix override exception for Southern Marine requires authorization.',
     time: '12m ago',
     type: 'approval',
     unread: true,
+    link: '/quotations/qt-002',
   },
   {
     id: 'n-2',
-    title: 'Low Stock Alert: Acti9 32A MCB',
-    description: 'Central Warehouse stock reached 14 units (reorder threshold: 25).',
-    time: '45m ago',
-    type: 'stock',
+    title: 'Special Order #SO-1045 Pending Approval',
+    description: 'Requested discount exceeds customer ceiling (16% > 15%) for Muthurajawela Engineering.',
+    time: '25m ago',
+    type: 'approval',
     unread: true,
+    link: '/orders/ord-1045',
   },
   {
     id: 'n-3',
-    title: 'Payment Received: LKR 450,000',
-    description: 'Cheque #883921 cleared for Apex Electricals against INV-0492.',
-    time: '2h ago',
-    type: 'payment',
+    title: 'Dealer Onboarding DLR-GAM-004 Review',
+    description: 'Commercial terms setup for Kelani Valley Lighting Mart submitted for review.',
+    time: '40m ago',
+    type: 'approval',
     unread: true,
+    link: '/customers/onboarding/cust-004',
   },
   {
     id: 'n-4',
-    title: 'Dispatch Scheduled: Order #SO-1092',
-    description: 'Assigned to Fleet Vehicle 04 for Kelaniya route.',
-    time: '5h ago',
+    title: 'Sales Order #SO-1046 Territory Approval',
+    description: 'Standard order for Kelani Valley Lighting Mart pending Area Manager territory review.',
+    time: '1h ago',
     type: 'order',
     unread: false,
+    link: '/orders/ord-1046',
   },
 ];
 
@@ -59,6 +65,7 @@ interface NotificationsPopoverProps {
 }
 
 export function NotificationsPopover({ className }: NotificationsPopoverProps) {
+  const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
   const [notifications, setNotifications] = useState<NotificationItem[]>(INITIAL_NOTIFICATIONS);
   const popoverRef = useRef<HTMLDivElement>(null);
@@ -164,8 +171,19 @@ export function NotificationsPopover({ className }: NotificationsPopoverProps) {
             {notifications.map((item) => (
               <div
                 key={item.id}
+                onClick={() => {
+                  if (item.unread) {
+                    setNotifications((prev) =>
+                      prev.map((n) => (n.id === item.id ? { ...n, unread: false } : n))
+                    );
+                  }
+                  if (item.link) {
+                    setIsOpen(false);
+                    navigate(item.link);
+                  }
+                }}
                 className={cn(
-                  'py-2.5 px-2 rounded-lg transition-colors flex items-start gap-2.5',
+                  'py-2.5 px-2 rounded-lg transition-colors flex items-start gap-2.5 cursor-pointer',
                   item.unread ? 'bg-slate-50/80 hover:bg-slate-100/70' : 'hover:bg-slate-50'
                 )}
               >

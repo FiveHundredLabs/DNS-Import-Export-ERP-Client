@@ -12,6 +12,7 @@ import { salesManagerDashboardService } from '../services/SalesManagerDashboardS
 import { commissionConfigService } from '../services/CommissionConfigService';
 import { User } from '../types/auth';
 import { RoleCommissionConfig } from '../types/commissionConfig';
+import { canAccessRoute } from '../rules/permissions';
 
 const mockSalesRepUser: User = {
   id: 'usr-106',
@@ -89,33 +90,36 @@ describe('Role-Aware Performance & Incentives UI Module', () => {
       );
 
       // Verify header and badge
-      expect(screen.getByText('Performance & Incentives')).toBeInTheDocument();
+      expect(screen.getByText(/Performance & Incentives Desk/i)).toBeInTheDocument();
       expect(screen.getByText(/Sales Representative Desk/i)).toBeInTheDocument();
 
       // Wait for data load
       await waitFor(() => {
-        expect(screen.getByText(/Personal Incentive Desk/i)).toBeInTheDocument();
+        expect(screen.getByText(/Personal Sales & Cash Incentive Statement/i)).toBeInTheDocument();
       });
 
       // Strict data isolation: rep sees their own name
       expect(screen.getByText(/Kasun Wickramasinghe/i)).toBeInTheDocument();
-      expect(screen.getByText(/Strict Data Isolation Active/i)).toBeInTheDocument();
+      expect(screen.getByText(/Isolated Representative Ledger/i)).toBeInTheDocument();
 
       // 3 KPI Cards must be rendered
-      expect(screen.getByText(/My Sales vs. Target/i)).toBeInTheDocument();
-      expect(screen.getAllByText(/My Cleared Collections/i).length).toBeGreaterThan(0);
-      expect(screen.getAllByText(/Earned Commission/i).length).toBeGreaterThan(0);
+      expect(screen.getByText(/1\. Sales Generated/i)).toBeInTheDocument();
+      expect(screen.getByText(/2\. Collected Cash/i)).toBeInTheDocument();
+      expect(screen.getByText(/3\. Earned Cash Incentive/i)).toBeInTheDocument();
 
-      // Ensure NO leaderboard, rankings, or peer table is present
-      expect(screen.queryByText(/Territory Subordinate Sales Team/i)).toBeNull();
-      expect(screen.queryByText(/Leaderboard/i)).toBeNull();
-      expect(screen.queryByText(/Rank #/i)).toBeNull();
+      // Ensure NO leaderboard, rankings, or peer table is present in rep view
+      expect(screen.queryByText(/Sales Representative Performance & Incentive Leaderboard/i)).toBeNull();
+      expect(screen.queryByText(/Attention Needed/i)).toBeNull();
 
-      // Invoices and Collections tabs are present
-      expect(screen.getByText(/My Qualifying Invoices/i)).toBeInTheDocument();
+      // Unified Sales & Cash Collection Ledger is present
+      expect(screen.getByText(/Sales & Cash Collection Ledger/i)).toBeInTheDocument();
+      expect(screen.getByText('Invoice #')).toBeInTheDocument();
+      expect(screen.getByText('Dealer Account')).toBeInTheDocument();
+      expect(screen.getByText('Sale Amount')).toBeInTheDocument();
+      expect(screen.getAllByText('Collected Cash').length).toBeGreaterThan(0);
     });
 
-    it('allows toggling between My Qualifying Invoices and My Cleared Collections tabs', async () => {
+    it('filters sales and cash collection ledger by dealer or invoice', async () => {
       currentUserMock = mockSalesRepUser;
 
       render(
@@ -125,27 +129,28 @@ describe('Role-Aware Performance & Incentives UI Module', () => {
       );
 
       await waitFor(() => {
-        expect(screen.getByText(/My Qualifying Invoices/i)).toBeInTheDocument();
+        expect(screen.getByText(/Sales & Cash Collection Ledger/i)).toBeInTheDocument();
       });
 
-      // Invoices table headers visible
-      expect(screen.getByText('Invoice #')).toBeInTheDocument();
-      expect(screen.getByText('Customer Account')).toBeInTheDocument();
+      // Find an invoice row in the table
+      const invoiceCells = screen.getAllByRole('cell');
+      expect(invoiceCells.length).toBeGreaterThan(0);
 
-      // Switch to Collections tab button
-      const collectionsTabBtn = screen.getByRole('button', { name: /My Cleared Collections/i });
-      fireEvent.click(collectionsTabBtn);
+      // Search input is present and filter works
+      const searchInput = screen.getByPlaceholderText(/Search invoice or dealer/i);
+      expect(searchInput).toBeInTheDocument();
+
+      // Search for a non-existent dealer and verify table empties
+      fireEvent.change(searchInput, { target: { value: 'NonExistentDealer12345' } });
 
       await waitFor(() => {
-        expect(screen.getByText('Receipt / Ref #')).toBeInTheDocument();
-        expect(screen.getByText('Collection Date')).toBeInTheDocument();
-        expect(screen.getByText('Amount Cleared')).toBeInTheDocument();
+        expect(screen.getByText(/No records found matching your filter/i)).toBeInTheDocument();
       });
     });
   });
 
   describe('3. Area Manager Territory View & Audit Drawer', () => {
-    it('renders Manager Incentive Banner and Subordinate Team Table strictly for assigned territory', async () => {
+    it('renders Manager Incentive Overview and Subordinate Leaderboard strictly for assigned territory without target column or gimmick badges', async () => {
       currentUserMock = mockAreaManagerUser;
 
       render(
@@ -159,22 +164,27 @@ describe('Role-Aware Performance & Incentives UI Module', () => {
       expect(screen.getByText(/Area Territory Manager Desk/i)).toBeInTheDocument();
 
       await waitFor(() => {
-        expect(screen.getByText(/Territory Oversight/i)).toBeInTheDocument();
+        expect(screen.getByText(/Territory Overview/i)).toBeInTheDocument();
       });
 
-      // Manager Incentive Banner elements
-      expect(screen.getByText(/Territory Sales Volume/i)).toBeInTheDocument();
-      expect(screen.getByText(/Territory Surplus Volume/i)).toBeInTheDocument();
-      expect(screen.getByText(/Cleared Regional Collections/i)).toBeInTheDocument();
-      expect(screen.getByText(/My Manager Incentive Payout/i)).toBeInTheDocument();
-      expect(screen.getByText(/Territory Boundary Enforced/i)).toBeInTheDocument();
+      // Manager's own performance elements
+      expect(screen.getByText(/Team Sales Generated/i)).toBeInTheDocument();
+      expect(screen.getByText(/Team Cash Realized/i)).toBeInTheDocument();
+      expect(screen.getByText(/Collection Realization/i)).toBeInTheDocument();
+      expect(screen.getByText(/Manager Incentive Payout/i)).toBeInTheDocument();
+      expect(screen.getByText(/Territory Scoped/i)).toBeInTheDocument();
 
-      // Subordinate Team Table
-      expect(screen.getByText(/Territory Subordinate Sales Team/i)).toBeInTheDocument();
-      expect(screen.getAllByText(/View/i).length).toBeGreaterThan(0);
+      // Subordinate Leaderboard Table
+      expect(screen.getByText(/Sales Representative Performance & Incentive Leaderboard/i)).toBeInTheDocument();
+      expect(screen.getAllByText(/View Ledger/i).length).toBeGreaterThan(0);
+
+      // Verify no target column and no gimmick badges like "Attention Needed"
+      expect(screen.queryByText('Target Quota')).toBeNull();
+      expect(screen.queryByText(/Attention Needed/i)).toBeNull();
+      expect(screen.queryByText(/Super Achiever/i)).toBeNull();
     });
 
-    it('opens slide-over audit drawer when [View] is clicked on a subordinate sales rep', async () => {
+    it('opens slide-over audit drawer when [View Ledger] is clicked on a subordinate sales rep', async () => {
       currentUserMock = mockAreaManagerUser;
 
       render(
@@ -184,19 +194,60 @@ describe('Role-Aware Performance & Incentives UI Module', () => {
       );
 
       await waitFor(() => {
-        expect(screen.getByText(/Territory Subordinate Sales Team/i)).toBeInTheDocument();
+        expect(screen.getByText(/Sales Representative Performance & Incentive Leaderboard/i)).toBeInTheDocument();
       });
 
-      // Click the first [View] button
-      const viewButtons = screen.getAllByRole('button', { name: /View/i });
+      // Click the first [View Ledger] button
+      const viewButtons = screen.getAllByRole('button', { name: /View Ledger/i });
       fireEvent.click(viewButtons[0]);
 
       // Verify the slide-over drawer opened
       await waitFor(() => {
-        expect(screen.getByText(/Audit:/i)).toBeInTheDocument();
-        expect(screen.getByText(/Detailed invoice breakdown, cleared collections/i)).toBeInTheDocument();
+        expect(screen.getByText(/Representative Ledger:/i)).toBeInTheDocument();
         expect(screen.getByText(/Close Audit Drawer/i)).toBeInTheDocument();
       });
+    });
+  });
+
+  describe('4. Strict Role Navigation & Access Boundaries', () => {
+    it('restricts /my-performance navigation and access exclusively to SALES_REP and AREA_MANAGER', () => {
+      // Allowed roles
+      expect(canAccessRoute('SALES_REP', '/my-performance')).toBe(true);
+      expect(canAccessRoute('AREA_MANAGER', '/my-performance')).toBe(true);
+
+      // Disallowed roles (MUST NOT see this navigation)
+      expect(canAccessRoute('DIRECTOR', '/my-performance')).toBe(false);
+      expect(canAccessRoute('SALES_MANAGER', '/my-performance')).toBe(false);
+      expect(canAccessRoute('MANAGER', '/my-performance')).toBe(false);
+      expect(canAccessRoute('STOCK_KEEPER', '/my-performance')).toBe(false);
+      expect(canAccessRoute('STOCK_MANAGER', '/my-performance')).toBe(false);
+      expect(canAccessRoute('CASHIER', '/my-performance')).toBe(false);
+      expect(canAccessRoute('SHOWROOM_MANAGER', '/my-performance')).toBe(false);
+      expect(canAccessRoute('FINANCE_MANAGER', '/my-performance')).toBe(false);
+    });
+
+    it('renders Access Restricted notice when an unauthorized user attempts to view /my-performance', () => {
+      currentUserMock = {
+        id: 'usr-dir-01',
+        name: 'Director Jane',
+        email: 'director@dnserp.com',
+        role: 'DIRECTOR',
+        phone: '0771234567',
+        isActive: true,
+      };
+
+      render(
+        <MemoryRouter initialEntries={['/my-performance']}>
+          <Routes>
+            <Route path="/my-performance" element={<PerformanceDashboardPage />} />
+          </Routes>
+        </MemoryRouter>
+      );
+
+      expect(screen.getByText('Access Restricted')).toBeInTheDocument();
+      expect(
+        screen.getByText(/This module is reserved exclusively for Sales Representatives and Area Managers/i)
+      ).toBeInTheDocument();
     });
   });
 

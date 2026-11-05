@@ -86,7 +86,7 @@ export function QuotationListPage() {
       toast.success(`Quotation ${q.quotationNumber} successfully converted to Sales Order ${res.orderNumber}!`, {
         action: {
           label: 'View Order',
-          onClick: () => navigate(`/orders/${res.convertedToOrderId || res.orderNumber}`),
+          onClick: () => navigate(`/orders/${res.id || res.orderNumber}`),
         },
       });
     } catch (err: unknown) {

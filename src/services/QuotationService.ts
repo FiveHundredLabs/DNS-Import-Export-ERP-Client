@@ -700,6 +700,16 @@ export class QuotationService {
 
     return payload;
   }
+
+  /**
+   * Updates the quotation with the actual created Sales Order ID after conversion.
+   */
+  async updateConvertedOrderId(quotationId: string, orderId: string, orderNumber?: string): Promise<void> {
+    await this.repo.update(quotationId, {
+      convertedToOrderId: orderId,
+      ...(orderNumber ? { convertedOrderNumber: orderNumber } : {}),
+    });
+  }
 }
 
 export const quotationService = new QuotationService();

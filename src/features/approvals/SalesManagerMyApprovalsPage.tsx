@@ -297,23 +297,11 @@ export function SalesManagerMyApprovalsPage() {
                   </div>
                   <Button
                     size="sm"
-                    variant="outline"
                     onClick={() => handleOpenDocument(app)}
-                    className="text-xs gap-1.5 bg-white hover:bg-slate-50 text-slate-700"
+                    className="text-xs gap-1.5 bg-primary hover:bg-primary-hover text-white font-semibold shadow-xs cursor-pointer"
                   >
                     <span>Inspect Record</span>
                     <ExternalLink className="h-3.5 w-3.5" />
-                  </Button>
-                  <Button
-                    size="sm"
-                    onClick={() => {
-                      setSelectedRequest(app);
-                      setActionDialogOpen(true);
-                    }}
-                    className="text-xs gap-1.5 bg-primary hover:bg-primary-hover text-white font-semibold"
-                  >
-                    <ShieldCheck className="h-3.5 w-3.5" />
-                    <span>Take Action</span>
                   </Button>
                 </div>
               </CardHeader>

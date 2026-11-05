@@ -213,26 +213,12 @@ export function AreaManagerOrderApprovalsPage() {
                   </div>
                   <Button
                     size="sm"
-                    variant="outline"
                     onClick={() => navigate(`/orders/${app.documentId}`)}
-                    className="text-xs gap-1.5 bg-white hover:bg-slate-50 text-slate-700"
+                    className="text-xs gap-1.5 bg-primary hover:bg-primary-hover text-white font-semibold shadow-xs cursor-pointer"
                   >
-                    <span>Inspect Order</span>
+                    <span>Inspect Record</span>
                     <ExternalLink className="h-3.5 w-3.5" />
                   </Button>
-                  {statusTab === 'PENDING' && (
-                    <Button
-                      size="sm"
-                      onClick={() => {
-                        setSelectedRequest(app);
-                        setActionDialogOpen(true);
-                      }}
-                      className="text-xs gap-1.5 bg-primary hover:bg-primary-hover text-white font-semibold"
-                    >
-                      <ShieldCheck className="h-3.5 w-3.5" />
-                      <span>Review &amp; Approve</span>
-                    </Button>
-                  )}
                 </div>
               </CardHeader>
 

@@ -16,14 +16,11 @@ import { MOCK_AREAS } from '../../mock/mockAreas';
 import {
   MapPin,
   TrendingUp,
-  Target,
-  Sparkles,
   Banknote,
-  Users,
   ShieldCheck,
-  Award,
   AlertCircle,
-  ArrowUpRight,
+  Coins,
+  Percent,
 } from 'lucide-react';
 
 interface ManagerTerritoryViewProps {
@@ -77,18 +74,18 @@ export function ManagerTerritoryView({
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center py-16 space-y-3">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-indigo-600 border-t-transparent" />
-        <p className="text-xs text-slate-500 font-medium">Aggregating territory performance & subordinate ledger...</p>
+      <div className="flex flex-col items-center justify-center py-20 space-y-3">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-slate-300 border-t-indigo-600" />
+        <p className="text-xs text-slate-500 font-medium">Loading territory performance & team leaderboard...</p>
       </div>
     );
   }
 
   if (error || !data) {
     return (
-      <div className="p-6 bg-rose-50 border border-rose-200 rounded-xl text-center space-y-2">
-        <AlertCircle className="h-8 w-8 text-rose-500 mx-auto" />
-        <p className="text-sm font-semibold text-rose-900">Territory Data Unavailable</p>
+      <div className="p-6 bg-white border border-rose-200 rounded-xl text-center space-y-2">
+        <AlertCircle className="h-6 w-6 text-rose-500 mx-auto" />
+        <p className="text-sm font-semibold text-slate-900">Territory Data Unavailable</p>
         <p className="text-xs text-rose-600">{error || 'Could not locate area records.'}</p>
       </div>
     );
@@ -98,159 +95,128 @@ export function ManagerTerritoryView({
     areaName,
     region,
     managerName,
-    territoryTarget,
     territorySales,
-    territoryAchievementPercentage,
     territoryCollections,
-    surplusSales,
+    territoryCashRealizationPercentage,
     managerCommission,
-    managerBreakdown,
+    managerIncentiveRate,
+    managerFormulaExplanation,
     subordinateReps,
   } = data;
 
-  const isTerritoryTargetMet = territoryAchievementPercentage >= 100;
-
   return (
     <div className="space-y-6">
-      {/* SECTION 1: MANAGER INCENTIVE BANNER */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 text-white p-6 shadow-md border border-slate-800">
-        <div className="relative z-10 space-y-5">
-          {/* Top Bar: Territory Title & Area Switcher if permitted */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/10 pb-4">
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <span className="p-1.5 rounded-lg bg-indigo-500/20 text-indigo-300">
-                  <MapPin className="h-5 w-5" />
-                </span>
-                <h2 className="text-xl font-bold tracking-tight">
-                  {areaName} Territory Oversight
-                </h2>
-                <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/30 text-xs">
-                  {region}
-                </Badge>
-              </div>
-              <p className="text-xs text-slate-300">
-                Area Manager: <strong className="text-white">{managerName}</strong> | Period:{' '}
-                <span className="text-indigo-200 font-semibold">{month}</span>
-              </p>
-            </div>
-
-            <div className="flex items-center gap-3">
-              {canSwitchArea && onAreaChange && (
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-slate-300 font-medium">Territory:</span>
-                  <Select value={areaId} onValueChange={onAreaChange}>
-                    <SelectTrigger className="h-8 text-xs bg-white/10 border-white/20 text-white min-w-36">
-                      <SelectValue placeholder="Switch Area" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {MOCK_AREAS.map((a) => (
-                        <SelectItem key={a.id} value={a.id}>
-                          {a.name} ({a.code})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-
-              <Badge className="bg-indigo-500/20 text-indigo-200 border-indigo-400/30 font-medium text-xs">
-                <ShieldCheck className="h-3 w-3 mr-1 inline" /> Territory Boundary Enforced
+      {/* SECTION 1: MANAGER INCENTIVE & TERRITORY SUMMARY (Clean Enterprise Surface) */}
+      <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-xs space-y-5">
+        {/* Header Bar */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
+          <div className="space-y-0.5">
+            <div className="flex items-center gap-2">
+              <MapPin className="h-4 w-4 text-slate-500" />
+              <h2 className="text-base font-semibold text-slate-900">
+                {areaName} Territory Overview
+              </h2>
+              <Badge variant="outline" className="text-[11px] font-normal border-slate-200 text-slate-600 bg-slate-50">
+                {region}
               </Badge>
             </div>
+            <p className="text-xs text-slate-500">
+              Area Manager: <strong className="text-slate-800">{managerName}</strong> | Accounting Period: <span className="font-medium text-slate-700">{month}</span>
+            </p>
           </div>
 
-          {/* Core Metrics Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            {/* 1. Territory Sales vs Target */}
-            <div className="p-4 rounded-xl bg-white/5 border border-white/10 space-y-2">
-              <span className="text-xs text-slate-400 font-medium flex items-center justify-between">
-                Territory Sales Volume
-                <Target className="h-4 w-4 text-indigo-400" />
-              </span>
-              <div className="text-2xl font-bold text-white">
-                {formatCurrency(territorySales)}
-              </div>
-              <div className="flex items-center justify-between text-xs text-slate-400">
-                <span>Target: {formatCurrency(territoryTarget)}</span>
-                <Badge
-                  className={`text-[10px] font-bold ${
-                    isTerritoryTargetMet
-                      ? 'bg-emerald-500/20 text-emerald-300 border-emerald-400/30'
-                      : 'bg-amber-500/20 text-amber-300 border-amber-400/30'
-                  }`}
-                >
-                  {territoryAchievementPercentage}% Achieved
-                </Badge>
-              </div>
-              <div className="w-full bg-white/10 rounded-full h-1.5 overflow-hidden">
-                <div
-                  className={`h-full rounded-full ${
-                    isTerritoryTargetMet ? 'bg-emerald-400' : 'bg-indigo-400'
-                  }`}
-                  style={{ width: `${Math.min(territoryAchievementPercentage, 100)}%` }}
-                />
-              </div>
-            </div>
+          <div className="flex items-center gap-2">
+            {canSwitchArea && onAreaChange && (
+              <Select value={areaId} onValueChange={onAreaChange}>
+                <SelectTrigger className="h-8 text-xs bg-white border-slate-200 text-slate-700 min-w-36">
+                  <SelectValue placeholder="Switch Territory" />
+                </SelectTrigger>
+                <SelectContent>
+                  {MOCK_AREAS.map((a) => (
+                    <SelectItem key={a.id} value={a.id} className="text-xs">
+                      {a.name} ({a.code})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
 
-            {/* 2. Surplus Volume */}
-            <div className="p-4 rounded-xl bg-white/5 border border-white/10 space-y-2">
-              <span className="text-xs text-slate-400 font-medium flex items-center justify-between">
-                Territory Surplus Volume
-                <TrendingUp className="h-4 w-4 text-emerald-400" />
-              </span>
-              <div className="text-2xl font-bold text-emerald-400">
-                {formatCurrency(surplusSales)}
-              </div>
-              <p className="text-xs text-slate-300">
-                {surplusSales > 0
-                  ? `Sales exceeding target threshold by ${formatCurrency(surplusSales)}`
-                  : 'Target threshold not yet crossed'}
-              </p>
-            </div>
+            <Badge variant="outline" className="text-xs font-normal border-slate-200 text-slate-600 bg-slate-50">
+              <ShieldCheck className="h-3.5 w-3.5 mr-1 text-emerald-600 inline" /> Territory Scoped
+            </Badge>
+          </div>
+        </div>
 
-            {/* 3. Regional Collections */}
-            <div className="p-4 rounded-xl bg-white/5 border border-white/10 space-y-2">
-              <span className="text-xs text-slate-400 font-medium flex items-center justify-between">
-                Cleared Regional Collections
-                <Banknote className="h-4 w-4 text-indigo-400" />
-              </span>
-              <div className="text-2xl font-bold text-white">
-                {formatCurrency(territoryCollections)}
-              </div>
-              <p className="text-xs text-slate-300">
-                Total settled receipts across all assigned dealers
-              </p>
+        {/* 4 Clean Metric Cards (No gradients, no dark backgrounds) */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Card 1: Team Sales Generated */}
+          <div className="p-4 rounded-lg bg-slate-50/80 border border-slate-200/80 space-y-1.5">
+            <span className="text-xs font-medium text-slate-500 flex items-center justify-between">
+              Team Sales Generated
+              <TrendingUp className="h-4 w-4 text-slate-400" />
+            </span>
+            <div className="text-xl font-bold text-slate-900">
+              {formatCurrency(territorySales)}
             </div>
+            <p className="text-[11px] text-slate-500">
+              Total invoiced sales delivered by team
+            </p>
+          </div>
 
-            {/* 4. Personal Manager Incentive Payout */}
-            <div className="p-4 rounded-xl bg-gradient-to-br from-indigo-900/60 to-purple-900/50 border border-indigo-400/30 space-y-2 shadow-inner">
-              <span className="text-xs text-indigo-200 font-semibold flex items-center justify-between">
-                My Manager Incentive Payout
-                <Sparkles className="h-4 w-4 text-amber-300" />
-              </span>
-              <div className="text-2xl font-extrabold text-amber-300">
-                {formatCurrency(managerCommission)}
-              </div>
-              <p className="text-xs text-slate-200 font-medium leading-tight">
-                {managerBreakdown.rateOrTierApplied || 'Territory Incentive Scheme'}
-              </p>
+          {/* Card 2: Team Cash Collected */}
+          <div className="p-4 rounded-lg bg-slate-50/80 border border-slate-200/80 space-y-1.5">
+            <span className="text-xs font-medium text-slate-500 flex items-center justify-between">
+              Team Cash Realized
+              <Banknote className="h-4 w-4 text-slate-400" />
+            </span>
+            <div className="text-xl font-bold text-slate-900">
+              {formatCurrency(territoryCollections)}
+            </div>
+            <p className="text-[11px] text-slate-500">
+              Verified collections settled this month
+            </p>
+          </div>
+
+          {/* Card 3: Collection Realization Rate */}
+          <div className="p-4 rounded-lg bg-slate-50/80 border border-slate-200/80 space-y-1.5">
+            <span className="text-xs font-medium text-slate-500 flex items-center justify-between">
+              Collection Realization
+              <Percent className="h-4 w-4 text-slate-400" />
+            </span>
+            <div className="text-xl font-bold text-slate-900">
+              {territoryCashRealizationPercentage}%
+            </div>
+            <div className="w-full bg-slate-200 rounded-full h-1.5 overflow-hidden">
+              <div
+                className="h-full bg-indigo-600 rounded-full"
+                style={{ width: `${Math.min(territoryCashRealizationPercentage, 100)}%` }}
+              />
             </div>
           </div>
 
-          {/* Formula Breakdown Callout */}
-          <div className="p-3 rounded-lg bg-white/5 border border-white/10 text-xs text-slate-300 flex items-start gap-2.5">
-            <Award className="h-4 w-4 text-amber-300 shrink-0 mt-0.5" />
-            <div className="leading-relaxed">
-              <strong>Manager Scheme Formula:</strong>{' '}
-              {managerBreakdown.explanation ||
-                `Commission is earned as a bonus on territory sales exceeding target.`}
+          {/* Card 4: Manager Incentive Payout */}
+          <div className="p-4 rounded-lg bg-indigo-50/50 border border-indigo-200/80 space-y-1.5">
+            <span className="text-xs font-semibold text-indigo-900 flex items-center justify-between">
+              Manager Incentive Payout
+              <Coins className="h-4 w-4 text-indigo-600" />
+            </span>
+            <div className="text-xl font-bold text-indigo-700">
+              {formatCurrency(managerCommission)}
             </div>
+            <p className="text-[11px] text-indigo-800">
+              Based on team collected cash ({managerIncentiveRate}% rate)
+            </p>
           </div>
+        </div>
+
+        {/* Informational Calculation Note */}
+        <div className="text-xs text-slate-500 bg-slate-50 p-3 rounded-lg border border-slate-200/70 flex items-center gap-2">
+          <Coins className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+          <span>{managerFormulaExplanation}</span>
         </div>
       </div>
 
-      {/* SECTION 2: SUBORDINATE REPS TABLE */}
+      {/* SECTION 2: SALES REP PERFORMANCE & INCENTIVE LEADERBOARD */}
       <SubordinateRepsTable
         reps={subordinateReps}
         onViewRep={(repId) => setSelectedRepId(repId)}
