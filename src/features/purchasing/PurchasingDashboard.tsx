@@ -23,6 +23,7 @@ import {
   AlertCircle,
   Package,
   CreditCard,
+  ShieldCheck,
 } from 'lucide-react';
 import { TableLoadingSkeleton } from '../../components/common/LoadingSkeleton';
 
@@ -97,6 +98,14 @@ export function PurchasingDashboard() {
         <div className="flex items-center gap-2">
           <Button
             variant="outline"
+            onClick={() => navigate('/approvals?tab=po-approvals')}
+            className="gap-1.5 text-xs bg-white hover:bg-slate-50 text-slate-700 shadow-2xs"
+          >
+            <ShieldCheck className="h-4 w-4 text-primary" />
+            <span>PO Approvals</span>
+          </Button>
+          <Button
+            variant="outline"
             onClick={() => navigate('/purchasing/payments')}
             className="gap-1.5 text-xs bg-white hover:bg-slate-50 text-slate-700 shadow-2xs"
           >
@@ -136,7 +145,7 @@ export function PurchasingDashboard() {
           </CardContent>
         </Card>
 
-        <Card className="border-slate-200 shadow-2xs">
+        <Card className="border-slate-200 shadow-2xs hover:border-amber-300 transition-all cursor-pointer" onClick={() => navigate('/approvals?tab=po-approvals')}>
           <CardContent className="p-5">
             <div className="flex items-center justify-between">
               <div>

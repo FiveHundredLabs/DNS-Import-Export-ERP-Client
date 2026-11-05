@@ -279,7 +279,8 @@ export function canAccessRoute(role: UserRole, path: string): boolean {
       role === 'FINANCE_MANAGER' ||
       role === 'SHOWROOM_MANAGER' ||
       role === 'STOCK_MANAGER' ||
-      role === 'PURCHASING_MANAGER'
+      role === 'PURCHASING_MANAGER' ||
+      role === 'PURCHASING_OFFICER'
     );
   }
   if (path.startsWith('/quotations')) {

@@ -9,6 +9,8 @@ import { MockApprovalRepository } from '../repositories/mock/MockApprovalReposit
 import { canAccessRoute, hasPermission } from '../rules/permissions';
 import { User } from '../types/auth';
 import { PurchasingSupplierPaymentsPage } from '../features/purchasing/PurchasingSupplierPaymentsPage';
+import { ApprovalsPage } from '../features/approvals/ApprovalsPage';
+import { authService } from '../services/AuthService';
 
 // Mock users
 const mockPurchasingOfficer: User = {
@@ -527,5 +529,57 @@ describe('Purchasing Approval System & Supplier Payment Visibility', () => {
       expect(screen.queryByText(/New Disbursement/i)).toBeNull();
     });
   });
-});
+  // =========================================================================
+  // 3. Purchasing Approvals Hub & Role Routing (/approvals)
+  // =========================================================================
+  describe('Workflow 3: Purchasing Approvals Hub UI & Departmental Isolation (/approvals)', () => {
+    it('verifies route permissions for /approvals for purchasing roles', () => {
+      expect(canAccessRoute('PURCHASING_OFFICER', '/approvals')).toBe(true);
+      expect(canAccessRoute('PURCHASING_MANAGER', '/approvals')).toBe(true);
+    });
 
+    it('renders PurchasingApprovalHub for PURCHASING_MANAGER without cross-department sales discounts', async () => {
+      authService.switchRole('PURCHASING_MANAGER');
+
+      render(
+        <MemoryRouter initialEntries={['/approvals']}>
+          <ApprovalsPage />
+        </MemoryRouter>
+      );
+
+      // Verify Purchasing Approval Hub header
+      await waitFor(() => {
+        expect(screen.getByText('Purchasing Approvals & Visibility Hub')).toBeDefined();
+      });
+
+      // Verify 3 dedicated tabs
+      expect(screen.getByText('Purchase Order Approvals')).toBeDefined();
+      expect(screen.getByText('Supplier Payments Visibility')).toBeDefined();
+      expect(screen.getByText('Approval Audit Log & History')).toBeDefined();
+
+      // Ensure NO Sales Quotation discount (QT-2026-008) is displayed to Purchasing Manager
+      expect(screen.queryByText('Discount Approval for Muthurajawela Engineering Enterprises')).toBeNull();
+      expect(screen.queryByText(/Enterprise Approvals Engine/i)).toBeNull();
+    });
+
+    it('switches to Supplier Payments Visibility tab in view-only mode within the hub', async () => {
+      authService.switchRole('PURCHASING_MANAGER');
+
+      render(
+        <MemoryRouter initialEntries={['/approvals?tab=supplier-payments']}>
+          <ApprovalsPage />
+        </MemoryRouter>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('Total Supplier Disbursements')).toBeDefined();
+      });
+
+      expect(screen.getByText('Settlement Payments Recorded')).toBeDefined();
+      expect(screen.getByText('Supplier Advances Tracked')).toBeDefined();
+      // Ensure view-only: no recording buttons
+      expect(screen.queryByText(/Post Payment/i)).toBeNull();
+      expect(screen.queryByText(/Record Payment/i)).toBeNull();
+    });
+  });
+});

@@ -157,6 +157,57 @@ export class UnitBarcodeService {
       isFullyConfirmed: totalUnits > 0 && confirmedUnits >= totalUnits,
     };
   }
+  /**
+   * Ensures that all received units (e.g. 450 units) have complete serial numbers,
+   * unit barcodes, and unit records populated.
+   */
+  ensureUnitDetails(item: GRNItem, grnNumber: string = 'GRN-2025-001'): GRNItem {
+    const totalCount = Math.max(0, item.receivedQuantity || 0);
+    if (totalCount === 0) return item;
+
+    const sku = item.skuSnapshot || (item as any).sku || 'ITEM';
+    const cleanSku = sku.replace(/[^A-Za-z0-9]/g, '').toUpperCase().slice(0, 10);
+    const grnSuffix = grnNumber.replace(/[^A-Za-z0-9]/g, '').slice(-4).toUpperCase() || 'WH1';
+
+    let serialPrefix = 'SN-RHD-2025-';
+    if (item.serialNumbers && item.serialNumbers.length > 0) {
+      const match = item.serialNumbers[0].match(/^(.*?)(\d+)$/);
+      if (match) serialPrefix = match[1];
+    }
+
+    const currentSerials: string[] = item.serialNumbers ? [...item.serialNumbers] : [];
+    for (let i = currentSerials.length + 1; i <= totalCount; i++) {
+      currentSerials.push(serialPrefix + String(i).padStart(3, '0'));
+    }
+
+    const unitRecords: UnitBarcodeRecord[] = [];
+    const unitBarcodes: string[] = [];
+
+    for (let i = 1; i <= totalCount; i++) {
+      const seq = String(i).padStart(3, '0');
+      const rec = item.unitRecords?.[i - 1];
+      const bc = rec?.unitBarcode || item.unitBarcodes?.[i - 1] || `DNS-${cleanSku}-${grnSuffix}-${seq}`;
+      const sn = rec?.serialNumber || currentSerials[i - 1];
+
+      unitBarcodes.push(bc);
+      unitRecords.push({
+        unitIndex: i,
+        unitBarcode: bc,
+        serialNumber: sn,
+        status: 'LABELED',
+        labeledAt: rec?.labeledAt || new Date().toISOString(),
+      });
+    }
+
+    return {
+      ...item,
+      serialNumbers: currentSerials.slice(0, totalCount),
+      unitBarcodes,
+      unitRecords,
+      barcodesConfirmed: true,
+    };
+  }
+
 }
 
 export const unitBarcodeService = new UnitBarcodeService();

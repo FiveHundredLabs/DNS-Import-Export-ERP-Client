@@ -664,6 +664,14 @@ export function App() {
           }
         />
         <Route
+          path="purchasing/approvals"
+          element={
+            <ProtectedRoute>
+              <PurchasingApprovalHub />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="purchasing/orders"
           element={
             <ProtectedRoute>
