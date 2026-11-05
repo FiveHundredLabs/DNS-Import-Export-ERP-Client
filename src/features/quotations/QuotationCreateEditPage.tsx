@@ -18,6 +18,7 @@ import { FormField } from '../../components/common/FormField';
 import { DocumentActionBar } from '../../components/common/DocumentActionBar';
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
+import { ConfirmButton } from '../../components/ui/confirm-button';
 import { Input } from '../../components/ui/input';
 import { Badge } from '../../components/ui/badge';
 import {
@@ -776,21 +777,31 @@ export function QuotationCreateEditPage() {
         }
         rightActions={
           <>
-            <Button
+            <ConfirmButton
               type="button"
               variant="outline"
               size="sm"
-              onClick={() => handleSubmit(true)}
+              confirmTitle="Save Draft Quotation"
+              confirmMessage="Save quotation as draft? You can return and modify pricing or line items later."
+              confirmText="Save Draft"
+              onConfirm={() => handleSubmit(true)}
               disabled={isSubmitting || !selectedCustomer || items.length === 0}
               className="gap-1.5 font-medium cursor-pointer"
             >
               <Save className="h-3.5 w-3.5" />
               <span>Save as Draft</span>
-            </Button>
-            <Button
+            </ConfirmButton>
+            <ConfirmButton
               type="button"
               size="sm"
-              onClick={() => handleSubmit(false)}
+              confirmTitle={totals.anyRequiresApproval ? 'Submit Quotation for Approval' : 'Generate Quotation'}
+              confirmMessage={
+                totals.anyRequiresApproval
+                  ? `Quotation contains discounts exceeding sales rep limits. Submit for manager approval?`
+                  : `Generate and issue official quotation totaling ${formatCurrency(totals.grandTotal)}?`
+              }
+              confirmText={totals.anyRequiresApproval ? 'Submit for Approval' : 'Generate Quotation'}
+              onConfirm={() => handleSubmit(false)}
               disabled={isSubmitting || !selectedCustomer || items.length === 0}
               className="bg-primary hover:bg-primary-hover text-primary-foreground gap-1.5 font-semibold cursor-pointer shadow-xs"
             >
@@ -802,7 +813,7 @@ export function QuotationCreateEditPage() {
                   ? 'Submit for Approval'
                   : 'Generate Quotation'}
               </span>
-            </Button>
+            </ConfirmButton>
           </>
         }
       />

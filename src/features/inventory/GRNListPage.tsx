@@ -43,6 +43,7 @@ export function GRNListPage() {
   const [search, setSearch] = useState('');
 
   const isStockKeeper = role === 'STOCK_KEEPER';
+  const isDirector = role === 'DIRECTOR';
 
   // ─── Summary KPI Metrics & Visual Data ──────────────────────────────────────
   const stats = useMemo(() => {
@@ -50,8 +51,9 @@ export function GRNListPage() {
     const totalGRNs = list.length;
     const approvedGRNs = list.filter((g) => g.status === 'APPROVED' || g.status === 'COSTED').length;
     const submittedGRNs = list.filter((g) => g.status === 'SUBMITTED').length;
+    const pendingVerificationGRNs = list.filter((g) => g.status === 'PENDING_STOCK_MANAGER_APPROVAL').length;
     const draftGRNs = list.filter((g) => g.status === 'DRAFT').length;
-    const rejectedGRNs = list.filter((g) => g.status === 'REJECTED').length;
+    const rejectedGRNs = list.filter((g) => g.status === 'REJECTED' || g.status === 'STOCK_MANAGER_REJECTED').length;
 
     let totalReceivedUnits = 0;
     let totalDamagedUnits = 0;
@@ -92,6 +94,7 @@ export function GRNListPage() {
       totalGRNs,
       approvedGRNs,
       submittedGRNs,
+      pendingVerificationGRNs,
       draftGRNs,
       rejectedGRNs,
       totalReceivedUnits,
@@ -107,7 +110,13 @@ export function GRNListPage() {
   const filteredGRNs = useMemo(() => {
     return (
       grns?.filter((g) => {
-        if (filter !== 'All' && g.status !== filter.toUpperCase()) return false;
+        if (filter === 'Pending Verification') {
+          if (g.status !== 'PENDING_STOCK_MANAGER_APPROVAL') return false;
+        } else if (filter === 'Rejected') {
+          if (g.status !== 'REJECTED' && g.status !== 'STOCK_MANAGER_REJECTED') return false;
+        } else if (filter !== 'All' && g.status !== filter.toUpperCase()) {
+          return false;
+        }
         if (search.trim()) {
           const s = search.toLowerCase().trim();
           if (
@@ -151,14 +160,20 @@ export function GRNListPage() {
           { label: 'GRN Registry' },
         ]}
         actions={
-          <Button
-            size="sm"
-            onClick={() => navigate('/inventory/grn/new')}
-            className="gap-1.5 text-xs font-semibold shadow-xs h-9 px-4"
-          >
-            <PlusCircle className="h-4 w-4" />
-            <span>New GRN Intake</span>
-          </Button>
+          isDirector ? (
+            <Badge variant="outline" className="bg-indigo-50 text-indigo-700 border-indigo-200 text-xs font-mono py-1 px-3">
+              Read-Only View
+            </Badge>
+          ) : isStockKeeper ? (
+            <Button
+              size="sm"
+              onClick={() => navigate('/inventory/grn/new')}
+              className="gap-1.5 text-xs font-semibold shadow-xs h-9 px-4"
+            >
+              <PlusCircle className="h-4 w-4" />
+              <span>New GRN Intake</span>
+            </Button>
+          ) : null
         }
       />
 
@@ -368,6 +383,7 @@ export function GRNListPage() {
               {[
                 { label: 'All', count: stats.totalGRNs },
                 { label: 'Draft', count: stats.draftGRNs },
+                { label: 'Pending Verification', count: stats.pendingVerificationGRNs },
                 { label: 'Submitted', count: stats.submittedGRNs },
                 { label: 'Approved', count: stats.approvedGRNs },
                 { label: 'Rejected', count: stats.rejectedGRNs },

@@ -7,6 +7,7 @@ import { JournalEntry, JournalEntryStatus } from '../../api/types';
 import { CurrencyInput } from '../../components/CurrencyInput';
 import { DoubleEntryHoverBadge } from '../../components/DoubleEntryHoverBadge';
 import { Button } from '../../../../components/ui/button';
+import { ConfirmButton } from '../../../../components/ui/confirm-button';
 import { cn } from '../../../../utils/cn';
 import { Input } from '../../../../components/ui/input';
 import { Select } from '../../../../components/ui/select';
@@ -990,16 +991,19 @@ export function ManualJournalPage() {
           </div>
           {loadedJournal?.status === 'POSTED' && isAuthorizedForVoid && (
             <div className="flex items-center gap-2 shrink-0">
-              <Button
+              <ConfirmButton
                 variant="destructive"
                 size="sm"
-                onClick={handleVoidJournal}
+                confirmTitle="Void / Reverse Journal Entry"
+                confirmMessage={`Are you sure you want to void posted journal entry ${loadedJournal?.entryNumber}? Counter-entries will be generated to reverse ledger account balances.`}
+                confirmText="Void & Reverse Entry"
+                onConfirm={handleVoidJournal}
                 disabled={submitting}
                 className="gap-1.5 text-xs shadow-xs"
               >
                 <RotateCcw className="h-3.5 w-3.5" />
                 <span>Void / Reverse</span>
-              </Button>
+              </ConfirmButton>
               {reversalImpactLines.length > 0 && (
                 <DoubleEntryHoverBadge
                   title={`GL Reversal Impact (${loadedJournal.entryNumber})`}
@@ -1416,15 +1420,18 @@ export function ManualJournalPage() {
                 {isAuditLocked ? (
                   loadedJournal?.status === 'POSTED' && isAuthorizedForVoid ? (
                     <div className="flex items-center gap-2">
-                      <Button
+                      <ConfirmButton
                         variant="destructive"
-                        onClick={handleVoidJournal}
+                        confirmTitle="Void / Reverse Journal Entry"
+                        confirmMessage={`Are you sure you want to void posted journal entry ${loadedJournal?.entryNumber}? Counter-entries will be generated to reverse ledger account balances.`}
+                        confirmText="Void & Reverse Entry"
+                        onConfirm={handleVoidJournal}
                         disabled={submitting}
                         className="font-semibold gap-1.5 shadow-xs"
                       >
                         <RotateCcw className="h-4 w-4" />
                         <span>{submitting ? 'Voiding...' : 'Void / Reverse Journal'}</span>
-                      </Button>
+                      </ConfirmButton>
                       {reversalImpactLines.length > 0 && (
                         <DoubleEntryHoverBadge
                           size="sm"
@@ -1453,26 +1460,34 @@ export function ManualJournalPage() {
                     </Button>
 
                     {!isFinanceManager ? (
-                      <Button
+                      <ConfirmButton
                         size="sm"
-                        onClick={() => handleSaveEntry('PENDING_APPROVAL')}
+                        confirmTitle="Submit Journal for Approval?"
+                        confirmMessage="This manual journal voucher will be submitted to the Finance Manager for ledger review and posting."
+                        confirmLabel="Submit for Approval"
+                        variant="warning"
+                        onConfirm={() => handleSaveEntry('PENDING_APPROVAL')}
                         disabled={!isFormValid || submitting}
                         className="bg-amber-600 hover:bg-amber-700 text-white shadow-xs font-semibold gap-1.5 text-xs"
                         title="Junior clerks submit vouchers for Manager approval"
                       >
                         <Clock className="h-3.5 w-3.5" />
                         <span>Submit for Approval</span>
-                      </Button>
+                      </ConfirmButton>
                     ) : (
-                      <Button
+                      <ConfirmButton
                         size="sm"
-                        onClick={() => handleSaveEntry('POSTED')}
+                        confirmTitle="Post Journal to General Ledger?"
+                        confirmMessage="Posting this journal will permanently write debit and credit entries to the general ledger accounts."
+                        confirmLabel="Post Journal"
+                        variant="default"
+                        onConfirm={() => handleSaveEntry('POSTED')}
                         disabled={!isFormValid || submitting}
                         className="bg-primary hover:bg-primary-hover text-white shadow-xs font-semibold gap-1.5 text-xs"
                       >
                         <Send className="h-3.5 w-3.5" />
                         <span>{submitting ? 'Posting...' : 'Post Journal'}</span>
-                      </Button>
+                      </ConfirmButton>
                     )}
 
                     {lines.some((l) => l.accountId && (l.debit > 0 || l.credit > 0)) && (

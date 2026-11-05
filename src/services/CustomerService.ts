@@ -24,8 +24,12 @@ export class CustomerService {
   }
 
   async createCustomer(
-    data: Omit<Customer, 'id' | 'createdAt' | 'updatedAt' | 'financials'>
+    data: Omit<Customer, 'id' | 'createdAt' | 'updatedAt' | 'financials'>,
+    user?: User
   ): Promise<Customer> {
+    if (user && !hasPermission(user.role, 'customers:create')) {
+      throw new Error(`Role ${user.role} is not authorized to register new customers.`);
+    }
     if (!data.name || data.name.trim().length < 3) {
       throw new Error('Customer name must be at least 3 characters.');
     }
@@ -33,32 +37,45 @@ export class CustomerService {
       throw new Error('Valid phone number is required.');
     }
     const defaultTerms = creditTermsConfigService.getCreditTermsConfig();
+    const creditLimit = data.commercialTerms?.creditLimit ?? defaultTerms.defaultCreditLimit;
+    const creditDays = data.commercialTerms?.creditDays ?? defaultTerms.defaultCreditDays;
+    const defaultDiscount = data.commercialTerms?.defaultDiscountPercentage ?? defaultTerms.defaultDiscountPercentage;
+    const maxDiscount = data.commercialTerms?.maxDiscountPercentage ?? defaultTerms.maxDiscountPercentage;
+
+    const isSpecialAttention =
+      creditLimit > defaultTerms.defaultCreditLimit ||
+      creditDays > defaultTerms.defaultCreditDays ||
+      creditDays > defaultTerms.requireDirectorApprovalAboveDays ||
+      creditLimit > defaultTerms.requireDirectorApprovalAboveLimit;
+
     const payload = {
       ...data,
       commercialTerms: {
-        creditLimit: data.commercialTerms?.creditLimit ?? defaultTerms.defaultCreditLimit,
-        creditDays: data.commercialTerms?.creditDays ?? defaultTerms.defaultCreditDays,
-        defaultDiscountPercentage:
-          data.commercialTerms?.defaultDiscountPercentage ?? defaultTerms.defaultDiscountPercentage,
-        maxDiscountPercentage:
-          data.commercialTerms?.maxDiscountPercentage ?? defaultTerms.maxDiscountPercentage,
+        creditLimit,
+        creditDays,
+        defaultDiscountPercentage: defaultDiscount,
+        maxDiscountPercentage: maxDiscount,
       },
     };
     const created = await this.repo.create(payload);
 
-    // Register customer creation in central approval engine for Sales Manager review
+    // Register customer creation in central approval engine for Sales Manager/Director review
     try {
       await approvalService.createApprovalRequest({
         documentType: 'CUSTOMER_CREATION',
         documentId: created.id,
         documentReferenceNumber: created.code,
-        title: `Commercial Terms Setup: ${created.name}`,
-        description: `New customer registered by Area Manager in ${created.areaName}. Requires commercial terms definition.`,
+        title: isSpecialAttention
+          ? `[SPECIAL ATTENTION] Commercial Terms Setup: ${created.name}`
+          : `Commercial Terms Setup: ${created.name}`,
+        description: isSpecialAttention
+          ? `Special Attention Required: Proposed terms (Credit Limit: LKR ${creditLimit.toLocaleString()}, Allowed Credit: ${creditDays} Days) exceed standard policy defaults (Max standard: LKR ${defaultTerms.defaultCreditLimit.toLocaleString()}, ${defaultTerms.defaultCreditDays} Days). Mandates Director authorization.`
+          : `New customer registered in ${created.areaName} with standard policy commercial terms (Credit Limit: LKR ${creditLimit.toLocaleString()}, ${creditDays} Days). Manager approval sufficient.`,
         initiatorId: 'usr-105',
         initiatorName: 'Nimal Bandara (Area Manager)',
         initiatorRole: 'AREA_MANAGER',
-        currentApproverRole: 'SALES_MANAGER',
-        isSpecialScenario: false,
+        currentApproverRole: isSpecialAttention ? 'DIRECTOR' : 'SALES_MANAGER',
+        isSpecialScenario: isSpecialAttention,
         status: 'PENDING',
         history: [
           {
@@ -70,7 +87,9 @@ export class CustomerService {
             action: 'APPROVE',
             fromStatus: 'DRAFT',
             toStatus: 'PENDING_SALES_REVIEW',
-            comment: 'Dealer registered following initial site visit.',
+            comment: isSpecialAttention
+              ? `Dealer registered with exceptional credit terms (${creditDays} days, LKR ${creditLimit.toLocaleString()}). Flagged for Special Attention.`
+              : 'Dealer registered following initial site visit with standard policy commercial terms.',
             timestamp: new Date().toISOString(),
           },
         ],
@@ -82,7 +101,10 @@ export class CustomerService {
     return created;
   }
 
-  async updateCustomer(id: string, updates: Partial<Customer>): Promise<Customer> {
+  async updateCustomer(id: string, updates: Partial<Customer>, user?: User): Promise<Customer> {
+    if (user && !hasPermission(user.role, 'customers:edit')) {
+      throw new Error(`Role ${user.role} is not authorized to edit customer details.`);
+    }
     return this.repo.update(id, updates);
   }
 

@@ -131,7 +131,7 @@ export function ReceiptApprovalQueuePage() {
     setDrawerBank(receipt.bankName || 'Commercial Bank of Ceylon');
   };
 
-  const handleConfirmApproval = () => {
+  const handleConfirmApproval = async () => {
     if (!approvingItem) return;
 
     if (totalAllocated <= 0 && customerOpenInvoices.length > 0) {
@@ -141,25 +141,20 @@ export function ReceiptApprovalQueuePage() {
 
     try {
       setProcessingId(approvingItem.id);
-      const allocationArray = Object.entries(customAllocations)
-        .filter(([_, amt]) => amt > 0)
-        .map(([invoiceId, allocatedAmount]) => ({
-          invoiceId,
-          allocatedAmount,
-        }));
 
-      const approved = arService.approveReceipt(
-        approvingItem.id,
+      const approved = await arService.approveReceipt(approvingItem.id, {
         depositAccountId,
-        allocationArray,
-        approvingItem.paymentMethod === 'CHEQUE'
-          ? {
-              chequeNumber: chequeNumber || 'CHQ-89012',
-              drawerBank,
-              maturityDate: chequeDate,
-            }
-          : undefined
-      );
+        autoFIFO,
+        allocations: customAllocations,
+        chequeDetails:
+          approvingItem.paymentMethod === 'CHEQUE'
+            ? {
+                chequeNumber: chequeNumber || 'CHQ-89012',
+                drawerBank,
+                chequeDate,
+              }
+            : undefined,
+      });
 
       toast.success(
         `Receipt ${approved.receiptNumber} approved! Posted Dr ${depositAccountId === 'acc-1018' ? '1018 (PDC Vault)' : depositAccountId === 'acc-1040' ? '1040 (Cash in Hand)' : '1010 (Bank)'}, Cr 1020 A/R with FIFO invoice settlement.`
@@ -739,14 +734,29 @@ export function ReceiptApprovalQueuePage() {
 
             {/* Open Invoices Auto-FIFO Settlement Table */}
             <div className="space-y-2">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between flex-wrap gap-2">
                 <div>
                   <h4 className="font-bold text-slate-900 text-xs">Customer Open Invoices Settlement</h4>
                   <p className="text-[11px] text-slate-500">
                     Allocate collection across pending unpaid invoices. Auto-FIFO allocates oldest debts first.
                   </p>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-3">
+                  <label className="flex items-center gap-1.5 cursor-pointer text-xs font-semibold text-slate-700 select-none">
+                    <input
+                      type="checkbox"
+                      aria-label="Apply via Auto-FIFO"
+                      checked={autoFIFO}
+                      onChange={(e) => {
+                        setAutoFIFO(e.target.checked);
+                        if (e.target.checked && approvingItem) {
+                          handleApplyAutoFIFO();
+                        }
+                      }}
+                      className="rounded border-slate-300 text-primary focus:ring-primary h-3.5 w-3.5"
+                    />
+                    <span>Apply via Auto-FIFO</span>
+                  </label>
                   <Button
                     type="button"
                     variant="outline"
@@ -856,7 +866,7 @@ export function ReceiptApprovalQueuePage() {
                 className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold gap-1.5 shadow-xs"
               >
                 <CheckCircle2 className="h-4 w-4" />
-                <span>Confirm Bank Clearing & Post to Ledger</span>
+                <span>Confirm Approval & Inline Settle / Post to Ledger</span>
               </Button>
             </DialogFooter>
           </div>
@@ -869,7 +879,7 @@ export function ReceiptApprovalQueuePage() {
           <DialogHeader>
             <DialogTitle className="text-sm font-bold text-rose-900 flex items-center gap-2">
               <AlertCircle className="h-4 w-4 text-rose-600" />
-              <span>Reject Receipt {rejectingItem?.receiptNumber}</span>
+              <span>Reject Customer Payment Receipt {rejectingItem?.receiptNumber}</span>
             </DialogTitle>
           </DialogHeader>
 
@@ -881,7 +891,7 @@ export function ReceiptApprovalQueuePage() {
               value={rejectionReason}
               onChange={(e) => setRejectionReason(e.target.value)}
               rows={3}
-              placeholder="e.g. Deposit slip unreadable, cheque signature mismatch, or wrong drawee bank..."
+              placeholder="e.g. Deposit slip unreadable, deposit slip seal is illegible, cheque signature mismatch..."
               className="text-xs font-sans"
               required
             />

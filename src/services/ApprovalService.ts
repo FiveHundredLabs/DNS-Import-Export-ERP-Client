@@ -15,7 +15,7 @@ export class ApprovalService {
   private listeners: ApprovalActionListener[] = [];
 
   constructor(repo?: IApprovalRepository) {
-    this.repo = repo || new MockApprovalRepository();
+    this.repo = repo || MockApprovalRepository.getInstance();
   }
 
   onAction(listener: ApprovalActionListener) {

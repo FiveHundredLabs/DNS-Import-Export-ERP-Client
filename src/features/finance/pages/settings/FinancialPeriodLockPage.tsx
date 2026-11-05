@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { periodLockService } from '../../services/periodLockService';
 import { yearEndCloseService, YearEndClosePreview } from '../../services/yearEndCloseService';
 import { Button } from '../../../../components/ui/button';
+import { ConfirmButton } from '../../../../components/ui/confirm-button';
 import { Input } from '../../../../components/ui/input';
 import { Badge } from '../../../../components/ui/badge';
 import { Card } from '../../../../components/ui/card';
@@ -452,9 +453,13 @@ export function FinancialPeriodLockPage() {
 
             {/* Execute Button */}
             <div className="flex justify-end pt-2">
-              <Button
+              <ConfirmButton
                 type="button"
-                onClick={handleExecuteYearEndClose}
+                confirmTitle={`Execute Year-End Close (${fiscalYearEnd})?`}
+                confirmMessage="This will balance all temporary revenue and expense accounts to Retained Earnings, record closing journal entries, and advance lock dates. This action cannot be undone."
+                confirmLabel="Confirm & Execute Close"
+                variant="destructive"
+                onConfirm={handleExecuteYearEndClose}
                 disabled={!closingPreview.canExecute || executingClose}
                 className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold gap-2 px-6"
               >
@@ -464,7 +469,7 @@ export function FinancialPeriodLockPage() {
                     ? 'Executing Closing Routine...'
                     : `Execute & Commit Year-End Close (${fiscalYearEnd})`}
                 </span>
-              </Button>
+              </ConfirmButton>
             </div>
           </div>
         )}

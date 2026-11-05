@@ -5,8 +5,10 @@ import { DashboardPage } from './features/dashboard/DashboardPage';
 import { ProductListPage } from './features/products/ProductListPage';
 import { ProductDetailPage } from './features/products/ProductDetailPage';
 import { CustomerListPage } from './features/customers/CustomerListPage';
+import { CustomerOnboardingPage } from './features/customers/CustomerOnboardingPage';
 import { CustomerDetailPage } from './features/customers/CustomerDetailPage';
 import { ApprovalsPage } from './features/approvals/ApprovalsPage';
+import { StockManagerApprovalHub } from './features/inventory/components/StockManagerApprovalHub';
 import { QuotationListPage } from './features/quotations/QuotationListPage';
 import { QuotationCreateEditPage } from './features/quotations/QuotationCreateEditPage';
 import { QuotationDetailPage } from './features/quotations/QuotationDetailPage';
@@ -19,6 +21,7 @@ import { InventoryDashboardPage } from './features/inventory/InventoryDashboardP
 import { GRNListPage } from './features/inventory/GRNListPage';
 import { GRNCreateEditPage } from './features/inventory/GRNCreateEditPage';
 import { GRNDetailPage } from './features/inventory/GRNDetailPage';
+import { GRNUnitStickersPage } from './features/inventory/GRNUnitStickersPage';
 import { StockBalancePage } from './features/inventory/StockBalancePage';
 import { DamagedStockPage } from './features/inventory/DamagedStockPage';
 import { StockMovementsPage } from './features/inventory/StockMovementsPage';
@@ -85,9 +88,12 @@ import { PurchaseOrderListPage } from './features/purchasing/PurchaseOrderListPa
 import { PurchaseOrderCreateEditPage } from './features/purchasing/PurchaseOrderCreateEditPage';
 import { PurchaseOrderDetailPage } from './features/purchasing/PurchaseOrderDetailPage';
 import { PurchaseOrderPrintPage } from './features/purchasing/PurchaseOrderPrintPage';
+import { PurchaseOrderApprovalPage } from './features/purchasing/PurchaseOrderApprovalPage';
 import { PurchasingGRNListPage } from './features/purchasing/PurchasingGRNListPage';
 import { PurchasingGRNDetailPage } from './features/purchasing/PurchasingGRNDetailPage';
 import { PurchasingReportsPage } from './features/purchasing/PurchasingReportsPage';
+import { PurchasingSupplierPaymentsPage } from './features/purchasing/PurchasingSupplierPaymentsPage';
+import { PurchasingApprovalHub } from './features/purchasing/components/PurchasingApprovalHub';
 import { ProfilePage } from './features/profile/ProfilePage';
 import { SupplierReturnsPage } from './features/purchasing/SupplierReturnsPage';
 
@@ -150,6 +156,22 @@ export function App() {
           element={
             <ProtectedRoute>
               <CustomerListPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="customers/onboarding"
+          element={
+            <ProtectedRoute>
+              <CustomerOnboardingPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="customers/onboarding/:customerId"
+          element={
+            <ProtectedRoute>
+              <CustomerOnboardingPage />
             </ProtectedRoute>
           }
         />
@@ -314,6 +336,14 @@ export function App() {
           }
         />
         <Route
+          path="inventory/grn/:id/stickers"
+          element={
+            <ProtectedRoute>
+              <GRNUnitStickersPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="inventory/stock"
           element={
             <ProtectedRoute>
@@ -366,6 +396,14 @@ export function App() {
           element={
             <ProtectedRoute>
               <DeliveryNoteCreatePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="inventory/approvals"
+          element={
+            <ProtectedRoute>
+              <StockManagerApprovalHub />
             </ProtectedRoute>
           }
         />
@@ -628,6 +666,22 @@ export function App() {
           }
         />
         <Route
+          path="purchasing/payments"
+          element={
+            <ProtectedRoute>
+              <PurchasingSupplierPaymentsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="purchasing/approvals"
+          element={
+            <ProtectedRoute>
+              <PurchasingApprovalHub />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="purchasing/orders"
           element={
             <ProtectedRoute>
@@ -668,6 +722,22 @@ export function App() {
           }
         />
         <Route
+          path="purchasing/approvals/:id"
+          element={
+            <ProtectedRoute>
+              <PurchaseOrderApprovalPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="purchasing/orders/:id/approval"
+          element={
+            <ProtectedRoute>
+              <PurchaseOrderApprovalPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="purchasing/grn"
           element={
             <ProtectedRoute>
@@ -680,6 +750,14 @@ export function App() {
           element={
             <ProtectedRoute>
               <PurchasingGRNDetailPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="purchasing/grn/:id/stickers"
+          element={
+            <ProtectedRoute>
+              <GRNUnitStickersPage />
             </ProtectedRoute>
           }
         />

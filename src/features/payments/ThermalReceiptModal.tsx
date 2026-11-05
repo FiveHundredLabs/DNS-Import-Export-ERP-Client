@@ -1,181 +1,320 @@
 import { useState } from 'react';
 import { Payment } from '../../types/payment';
 import { printerService } from '../../services/PrinterService';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
 import { Button } from '../../components/ui/button';
-import { formatCurrency, formatDate } from '../../utils/formatters';
-import { Printer, CheckCircle, Download, X } from 'lucide-react';
+import { formatCurrency } from '../../utils/formatters';
+import {
+  Printer,
+  CheckCircle2,
+  X,
+  Share2,
+  Check,
+} from 'lucide-react';
+import { toast } from 'sonner';
 
 interface ThermalReceiptModalProps {
-  isOpen: boolean;
-  onClose: () => void;
+  isOpen?: boolean;
+  open?: boolean;
+  onClose?: () => void;
+  onOpenChange?: (open: boolean) => void;
   payment: Payment | null;
   customerBalance?: number;
 }
 
 export function ThermalReceiptModal({
   isOpen,
+  open,
   onClose,
+  onOpenChange,
   payment,
   customerBalance,
 }: ThermalReceiptModalProps) {
-  const [paperWidth, setPaperWidth] = useState<'80mm' | '58mm'>('80mm');
+  const [copied, setCopied] = useState(false);
 
-  if (!payment) return null;
-
-  const handlePrint = async () => {
-    await printerService.printPaymentReceipt(payment, customerBalance, paperWidth);
+  const showModal = isOpen !== undefined ? isOpen : Boolean(open);
+  const handleClose = () => {
+    if (onClose) onClose();
+    if (onOpenChange) onOpenChange(false);
   };
 
-  const is58mm = paperWidth === '58mm';
+  if (!showModal || !payment) return null;
+
+  const handlePrintAndHandover = async () => {
+    await printerService.printPaymentReceipt(payment, customerBalance, '80mm');
+    toast.success(`Receipt ${payment.receiptNumber} printed & handed over!`);
+    handleClose();
+  };
+
+  const handleShareWhatsApp = () => {
+    const lines = [
+      `*DNS DISTRIBUTION (PVT) LTD*`,
+      `*COLLECTION ACKNOWLEDGEMENT*`,
+      `---------------------------------`,
+      `*Receipt No:* ${payment.receiptNumber}`,
+      `*Date:* ${new Date(payment.collectedAt).toLocaleDateString()} ${new Date(payment.collectedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
+      `*Customer:* ${payment.customerName}`,
+      `*Officer:* ${payment.salesRepName}`,
+      `*Payment Method:* ${payment.paymentMethod}`,
+      payment.chequeNumber ? `*Cheque No:* ${payment.chequeNumber} (${payment.bankName || ''})` : null,
+      `*Amount Paid:* LKR ${payment.amount.toLocaleString()}`,
+      payment.invoiceAllocations && payment.invoiceAllocations.length > 0
+        ? `*Settled Invoices:*\n${payment.invoiceAllocations.map((a) => ` • ${a.invoiceNumber}: LKR ${a.allocatedAmount.toLocaleString()}`).join('\n')}`
+        : null,
+      customerBalance !== undefined ? `*Remaining Ledger Due:* LKR ${customerBalance.toLocaleString()}` : null,
+      `---------------------------------`,
+      `_Thank you for your business!_`,
+    ].filter(Boolean).join('\n');
+
+    if (navigator.share) {
+      navigator.share({ title: `Receipt ${payment.receiptNumber}`, text: lines }).catch(() => {});
+    } else {
+      navigator.clipboard.writeText(lines);
+      setCopied(true);
+      toast.success('Receipt details copied! Paste in WhatsApp or SMS.');
+      setTimeout(() => setCopied(false), 2500);
+    }
+  };
+
+  const formattedDate = new Date(payment.collectedAt).toLocaleDateString('en-GB');
+  const formattedTime = new Date(payment.collectedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-md bg-slate-900/90 text-white border-slate-700">
-        <DialogHeader className="border-b border-slate-800 pb-3">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-            <DialogTitle className="text-sm font-bold flex items-center gap-2 text-white">
-              <Printer className="h-4 w-4 text-emerald-400" />
-              Thermal Receipt Preview
-            </DialogTitle>
-            <div className="flex items-center gap-1 bg-slate-800 p-0.5 rounded-md text-[11px] self-start sm:self-auto">
-              <button
-                type="button"
-                onClick={() => setPaperWidth('80mm')}
-                className={`px-2 py-0.5 rounded font-medium transition-colors ${
-                  paperWidth === '80mm'
-                    ? 'bg-emerald-600 text-white shadow-xs'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                80mm Standard
-              </button>
-              <button
-                type="button"
-                onClick={() => setPaperWidth('58mm')}
-                className={`px-2 py-0.5 rounded font-medium transition-colors ${
-                  paperWidth === '58mm'
-                    ? 'bg-emerald-600 text-white shadow-xs'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                58mm Mobile
-              </button>
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-2 sm:p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in-0 duration-150">
+      {/* Backdrop tap to close */}
+      <div className="fixed inset-0" onClick={handleClose} aria-hidden="true" />
+
+      {/* Main Responsive Modal Card */}
+      <div className="relative z-[101] w-full max-w-[420px] max-h-[94dvh] bg-slate-900 border border-slate-700/80 rounded-2xl shadow-2xl flex flex-col overflow-hidden text-white animate-in zoom-in-95">
+        
+        {/* Clean Responsive Header (Always 80mm Bill) */}
+        <div className="shrink-0 px-4 py-3 border-b border-slate-800 bg-slate-900/95 flex items-center justify-between gap-2">
+          {/* Title & Icon */}
+          <div className="flex items-center gap-2.5 min-w-0 flex-1">
+            <div className="w-8 h-8 rounded-lg bg-slate-800 text-slate-200 flex items-center justify-center shrink-0 border border-slate-700">
+              <Printer className="h-4 w-4" />
+            </div>
+            <div className="min-w-0">
+              <h2 className="text-sm font-bold text-white truncate leading-tight">
+                Thermal Receipt Preview
+              </h2>
+              <span className="text-[11px] text-slate-400 font-mono block truncate">
+                Ref: {payment.receiptNumber}
+              </span>
             </div>
           </div>
-        </DialogHeader>
 
-        {/* Realistic ESC/POS Paper simulation */}
-        <div
-          className={`my-2 p-3 sm:p-4 bg-amber-50/95 text-slate-900 rounded shadow-inner font-mono text-xs max-h-[460px] overflow-y-auto mx-auto transition-all ${
-            is58mm ? 'w-full max-w-[260px] text-[11px]' : 'w-full max-w-[340px]'
-          }`}
-        >
-          <div className="text-center font-bold text-sm tracking-wide">
-            DNS DISTRIBUTION (PVT) LTD
-          </div>
-          <div className="text-center text-[10px] text-slate-600">
-            Colombo 11, Sri Lanka | Tel: +94 11 234 5678
-          </div>
-          <div className="text-center text-[10px] text-slate-600">
-            VAT Reg: 109847291-7000
-          </div>
-          <div className="border-t border-dashed border-slate-400 my-2" />
+          {/* Close Button */}
+          <button
+            type="button"
+            onClick={handleClose}
+            className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors cursor-pointer shrink-0"
+            aria-label="Close receipt"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
 
-          <div className="text-center font-bold text-xs uppercase mb-1">
-            {payment.status === 'APPROVED' ? 'OFFICIAL RECEIPT' : 'COLLECTION ACKNOWLEDGEMENT'}
-          </div>
-
-          <div className="flex justify-between text-[11px] py-0.5">
-            <span className="text-slate-500">Rcpt No:</span>
-            <span className="font-bold">{payment.receiptNumber}</span>
-          </div>
-          <div className="flex justify-between text-[11px] py-0.5">
-            <span className="text-slate-500">Date:</span>
-            <span>{new Date(payment.collectedAt).toLocaleDateString()}</span>
-          </div>
-          <div className="flex justify-between text-[11px] py-0.5">
-            <span className="text-slate-500">Customer:</span>
-            <span className="font-bold truncate max-w-[170px]">{payment.customerName}</span>
-          </div>
-          <div className="flex justify-between text-[11px] py-0.5">
-            <span className="text-slate-500">Officer:</span>
-            <span>{payment.salesRepName}</span>
-          </div>
-
-          <div className="border-t border-dashed border-slate-400 my-2" />
-
-          <div className="flex justify-between text-[11px] py-0.5">
-            <span className="text-slate-500">Method:</span>
-            <span className="font-bold">{payment.paymentMethod}</span>
-          </div>
-          {payment.chequeNumber && (
-            <div className="flex justify-between text-[11px] py-0.5">
-              <span className="text-slate-500">Cheque No:</span>
-              <span>{payment.chequeNumber}</span>
+        {/* Scrollable Receipt Body (Pure Black & White Standard 80mm Paper) */}
+        <div className="flex-1 overflow-y-auto px-2 py-3 sm:px-4 sm:py-4 bg-slate-950/60 flex justify-center items-start">
+          <div className="w-full max-w-[320px] sm:max-w-[330px] text-xs p-4 sm:p-5 bg-white text-black shadow-2xl rounded-none font-mono border border-neutral-300 my-auto">
+            
+            {/* Top Serrated Edge Graphic */}
+            <div className="w-full flex justify-center mb-2 overflow-hidden opacity-25 select-none text-black">
+              <span className="text-[8px] tracking-widest font-mono">
+                ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
+              </span>
             </div>
-          )}
-          {payment.bankName && (
-            <div className="flex justify-between text-[11px] py-0.5">
-              <span className="text-slate-500">Bank:</span>
-              <span>{payment.bankName}</span>
-            </div>
-          )}
 
-          <div className="flex justify-between items-center text-sm font-semibold pt-2 pb-1 border-t border-slate-900 mt-2">
-            <span>AMOUNT PAID:</span>
-            <span className="tabular-nums">{formatCurrency(payment.amount)}</span>
-          </div>
-
-          {payment.invoiceAllocations && payment.invoiceAllocations.length > 0 && (
-            <>
-              <div className="border-t border-dashed border-slate-400 my-2" />
-              <div className="font-semibold text-xs uppercase text-slate-600 mb-1">
-                Settled Invoices:
+            {/* Company Branding (Pure Black & White) */}
+            <div className="text-center text-black">
+              <div className="flex items-center justify-center gap-1.5 mb-0.5">
+                <span className="w-4 h-4 bg-black text-white rounded-xs flex items-center justify-center font-black text-[9px]">
+                  D
+                </span>
+                <span className="font-extrabold text-sm sm:text-base tracking-wide text-black">
+                  DNS DISTRIBUTION (PVT) LTD
+                </span>
               </div>
-              {payment.invoiceAllocations.map((alloc) => (
-                <div key={alloc.invoiceId} className="flex justify-between text-[11px] py-0.5">
-                  <span className="truncate max-w-[160px]">{alloc.invoiceNumber}</span>
-                  <span className="font-semibold">{formatCurrency(alloc.allocatedAmount)}</span>
+              <div className="text-[10px] text-neutral-700 font-sans font-medium">
+                Official Electrical & Technology Wholesaler
+              </div>
+              <div className="text-[10px] text-neutral-700">
+                Colombo 11, Sri Lanka | Tel: +94 11 234 5678
+              </div>
+              <div className="text-[10px] text-neutral-600">
+                VAT Reg: 109847291-7000
+              </div>
+            </div>
+
+            {/* Black Dashed Divider */}
+            <div className="border-t border-dashed border-black my-2.5" />
+
+            {/* Document Title Badge (Crisp Monochrome) */}
+            <div className="text-center">
+              <div className="inline-block border border-black bg-black text-white text-[10px] sm:text-[11px] font-bold px-3 py-0.5 uppercase tracking-wider">
+                {payment.status === 'APPROVED' ? 'OFFICIAL RECEIPT' : 'COLLECTION ACKNOWLEDGEMENT'}
+              </div>
+              <div className="text-[9.5px] text-neutral-600 mt-1 uppercase tracking-wide">
+                Authorized Field Rep Collection Slip
+              </div>
+            </div>
+
+            {/* Black Dashed Divider */}
+            <div className="border-t border-dashed border-black my-2" />
+
+            {/* Meta Key-Value Details */}
+            <div className="space-y-1 text-black">
+              <div className="flex justify-between items-baseline">
+                <span className="text-neutral-600">Rcpt No:</span>
+                <span className="font-bold text-black text-[12px]">{payment.receiptNumber}</span>
+              </div>
+              <div className="flex justify-between items-baseline">
+                <span className="text-neutral-600">Date &amp; Time:</span>
+                <span className="text-black">{formattedDate} {formattedTime}</span>
+              </div>
+              <div className="flex justify-between items-start gap-2 pt-0.5">
+                <span className="text-neutral-600 shrink-0">Customer:</span>
+                <span className="font-bold text-right text-black break-words leading-tight">
+                  {payment.customerName}
+                </span>
+              </div>
+              <div className="flex justify-between items-baseline pt-0.5">
+                <span className="text-neutral-600">Officer:</span>
+                <span className="text-black font-medium">{payment.salesRepName}</span>
+              </div>
+            </div>
+
+            {/* Black Dashed Divider */}
+            <div className="border-t border-dashed border-black my-2.5" />
+
+            {/* Payment Method Details (Monochrome Box) */}
+            <div className="space-y-1 border border-black p-2 text-black">
+              <div className="flex justify-between items-center">
+                <span className="font-bold text-[11px]">Method:</span>
+                <span className="font-black text-[11px] uppercase tracking-wide border border-black px-1.5 py-0.5">
+                  {payment.paymentMethod}
+                </span>
+              </div>
+              {payment.chequeNumber && (
+                <div className="flex justify-between text-[11px] pt-0.5">
+                  <span className="text-neutral-700">Cheque No:</span>
+                  <span className="font-bold">{payment.chequeNumber}</span>
                 </div>
-              ))}
-            </>
-          )}
+              )}
+              {payment.bankName && (
+                <div className="flex justify-between text-[11px]">
+                  <span className="text-neutral-700">Drawee Bank:</span>
+                  <span>{payment.bankName}</span>
+                </div>
+              )}
+              {payment.chequeDate && (
+                <div className="flex justify-between text-[11px]">
+                  <span className="text-neutral-700">Cheque Date:</span>
+                  <span>{payment.chequeDate}</span>
+                </div>
+              )}
+            </div>
 
-          {customerBalance !== undefined && (
-            <>
-              <div className="border-t border-dashed border-slate-400 my-2" />
-              <div className="flex justify-between text-[11px] font-bold">
-                <span>Remaining Ledger Due:</span>
-                <span>{formatCurrency(customerBalance)}</span>
+            {/* Amount Paid Big Display (Pure Black & White Solid Block) */}
+            <div className="my-2.5 p-2 bg-black text-white text-center">
+              <div className="text-[10px] uppercase tracking-widest font-bold text-neutral-300">
+                Amount Paid
               </div>
-            </>
-          )}
+              <div className="text-base sm:text-lg font-black tracking-tight mt-0.5 tabular-nums text-white">
+                {formatCurrency(payment.amount)}
+              </div>
+            </div>
 
-          <div className="border-t border-dashed border-slate-400 my-2" />
-          <div className="text-center text-[10px] text-slate-500 italic">
-            {payment.status === 'APPROVED'
-              ? 'Authorized and posted to customer ledger.'
-              : 'Subject to Finance Department realization.'}
-          </div>
-          <div className="text-center text-[10px] font-bold text-slate-700 mt-1">
-            Thank you for your business!
+            {/* Settled Invoices Table */}
+            {payment.invoiceAllocations && payment.invoiceAllocations.length > 0 && (
+              <>
+                <div className="border-t border-dashed border-black my-2" />
+                <div className="font-bold text-[10.5px] uppercase text-black mb-1 flex justify-between">
+                  <span>Settled Invoices</span>
+                  <span>Amount</span>
+                </div>
+                <div className="space-y-0.5 text-black">
+                  {payment.invoiceAllocations.map((alloc) => (
+                    <div key={alloc.invoiceId} className="flex justify-between items-baseline text-[11px] py-0.5">
+                      <span className="truncate max-w-[160px] font-medium">
+                        {alloc.invoiceNumber}
+                      </span>
+                      <span className="font-bold tabular-nums">
+                        {formatCurrency(alloc.allocatedAmount)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+
+            {/* Remaining Ledger Balance Due */}
+            {customerBalance !== undefined && (
+              <>
+                <div className="border-t border-dashed border-black my-2" />
+                <div className="flex justify-between items-center py-1 border-t border-b border-black text-[11px]">
+                  <span className="font-bold text-black">Remaining Ledger Due:</span>
+                  <span className="font-black text-black tabular-nums">
+                    {formatCurrency(customerBalance)}
+                  </span>
+                </div>
+              </>
+            )}
+
+            {/* Thank You Note */}
+            <div className="border-t border-dashed border-black mt-3 pt-2 text-center text-black">
+              <div className="text-[10px] font-bold tracking-wide">
+                Thank you for your business!
+              </div>
+            </div>
+
+            {/* Bottom Serrated Edge Graphic */}
+            <div className="w-full flex justify-center mt-2 overflow-hidden opacity-25 select-none text-black">
+              <span className="text-[8px] tracking-widest font-mono">
+                ▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼
+              </span>
+            </div>
           </div>
         </div>
 
-        <DialogFooter className="border-t border-slate-800 pt-3 flex flex-row items-center justify-between">
-          <Button variant="ghost" size="sm" onClick={onClose} className="text-xs text-slate-400 hover:text-white">
-            Close
-          </Button>
+        {/* Fixed Mobile-Optimized Footer Action Bar */}
+        <div className="shrink-0 p-3 sm:p-4 border-t border-slate-800 bg-slate-900/95 space-y-2">
+          {/* Quick WhatsApp Share Action */}
           <Button
+            type="button"
+            variant="outline"
             size="sm"
-            onClick={handlePrint}
-            className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs gap-1.5"
+            onClick={handleShareWhatsApp}
+            className="w-full border-slate-700 bg-slate-800/80 text-slate-200 hover:text-white hover:bg-slate-700 text-xs gap-1.5 h-9"
           >
-            <Printer className="h-3.5 w-3.5" /> Print Thermal Receipt
+            {copied ? <Check className="h-3.5 w-3.5 text-white" /> : <Share2 className="h-3.5 w-3.5 text-slate-300" />}
+            {copied ? 'Copied Receipt Details' : 'Share Receipt via WhatsApp'}
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+
+          {/* Primary Action Button: Print & Handover */}
+          <Button
+            type="button"
+            size="sm"
+            onClick={handlePrintAndHandover}
+            className="w-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold gap-2 h-10 shadow-lg cursor-pointer"
+          >
+            <CheckCircle2 className="h-4 w-4" />
+            Print &amp; Handover
+          </Button>
+
+          {/* Dismiss Text Link */}
+          <div className="text-center pt-0.5">
+            <button
+              type="button"
+              onClick={handleClose}
+              className="text-[11px] text-slate-400 hover:text-slate-200 underline decoration-slate-600 hover:decoration-slate-400 cursor-pointer"
+            >
+              Close Preview
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
   );
 }

@@ -3,6 +3,7 @@ import { User } from '../../types/auth';
 import { useUsers } from '../../hooks/useUsers';
 import { useAreas } from '../../hooks/useAreas';
 import { Button } from '../../components/ui/button';
+import { ConfirmButton } from '../../components/ui/confirm-button';
 import { Input } from '../../components/ui/input';
 import { Select } from '../../components/ui/select';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../../components/ui/table';
@@ -47,9 +48,7 @@ export function TeamListPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (window.confirm('Are you sure you want to delete this team member?')) {
-      await deleteUser(id);
-    }
+    await deleteUser(id);
   };
 
   return (
@@ -105,9 +104,18 @@ export function TeamListPage() {
                     <Button variant="ghost" size="icon" onClick={() => handleOpenModal(user)} className="h-8 w-8 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50">
                       <Edit3 className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="icon" onClick={() => handleDelete(user.id)} className="h-8 w-8 text-slate-500 hover:text-rose-600 hover:bg-rose-50">
+                    <ConfirmButton
+                      variant="ghost"
+                      size="icon"
+                      confirmTitle="Delete Team Member?"
+                      confirmMessage={`Are you sure you want to remove ${user.name} from the team?`}
+                      confirmLabel="Delete Member"
+                      confirmVariant="destructive"
+                      onConfirm={() => handleDelete(user.id)}
+                      className="h-8 w-8 text-slate-500 hover:text-rose-600 hover:bg-rose-50"
+                    >
                       <Trash2 className="h-4 w-4" />
-                    </Button>
+                    </ConfirmButton>
                   </div>
                 </TableCell>
               </TableRow>

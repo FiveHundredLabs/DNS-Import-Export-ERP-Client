@@ -37,6 +37,16 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 
+export interface VisualDisposition {
+  type: 'RETURN' | 'SCRAP' | 'REPAIR';
+  quantity: number;
+  referenceNumber?: string;
+  notes?: string;
+  supplierName?: string;
+  performedAt: string;
+  performedBy: string;
+}
+
 export function DamagedStockPage() {
   const { currentUser } = useAuth();
   const { suppliers } = useFinanceLedger();
@@ -44,6 +54,9 @@ export function DamagedStockPage() {
   const [movements, setMovements] = useState<StockMovement[]>([]);
   const [debitNotes, setDebitNotes] = useState<SupplierDebitNote[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // In-session visual disposition map (persists until browser refresh)
+  const [visualDispositions, setVisualDispositions] = useState<Record<string, VisualDisposition>>({});
 
   // Filters
   const [searchQuery, setSearchQuery] = useState('');
@@ -58,6 +71,11 @@ export function DamagedStockPage() {
   const [activeItem, setActiveItem] = useState<{
     balance: StockBalance;
     product: (typeof MOCK_PRODUCTS)[0];
+    effectiveDamagedQty: number;
+    disposition?: VisualDisposition;
+    unitCost: number;
+    totalValuation: number;
+    key: string;
   } | null>(null);
 
   // Modal Form Inputs
@@ -100,15 +118,24 @@ export function DamagedStockPage() {
           pricing: { costPrice: 0, retailPrice: 0, wholesalePrice: 0 },
         };
         const unitCost = (prod.pricing as any)?.costPrice || 2000;
-        const totalValuation = (b.damagedQuantity || 0) * unitCost;
+        const key = `${b.productId}-${b.locationId}`;
+        const disposition = visualDispositions[key];
+        const effectiveDamagedQty = disposition
+          ? Math.max(0, (b.damagedQuantity || 0) - disposition.quantity)
+          : (b.damagedQuantity || 0);
+        const totalValuation = effectiveDamagedQty * unitCost;
+
         return {
           balance: b,
           product: prod,
           unitCost,
           totalValuation,
+          disposition,
+          effectiveDamagedQty,
+          key,
         };
       });
-  }, [balances]);
+  }, [balances, visualDispositions]);
 
   // Filtered damaged items
   const filteredDamagedItems = useMemo(() => {
@@ -123,9 +150,9 @@ export function DamagedStockPage() {
     });
   }, [damagedItems, searchQuery, selectedLocation]);
 
-  // Overall KPIs
+  // Overall KPIs calculated from effective in-session damaged quantity
   const totalDamagedUnits = useMemo(() => {
-    return damagedItems.reduce((sum, item) => sum + (item.balance.damagedQuantity || 0), 0);
+    return damagedItems.reduce((sum, item) => sum + item.effectiveDamagedQty, 0);
   }, [damagedItems]);
 
   const totalDamagedValuation = useMemo(() => {
@@ -139,7 +166,7 @@ export function DamagedStockPage() {
   // Open Return to Supplier Modal
   const handleOpenReturnModal = (item: (typeof damagedItems)[0]) => {
     setActiveItem(item);
-    setActionQuantity(1);
+    setActionQuantity(item.effectiveDamagedQty || 1);
     setActionReason('Defective OEM components returned under warranty claim');
     setActionUnitCost(item.unitCost);
     setActionSupplierId(suppliers[0]?.id || 'sup-001');
@@ -149,7 +176,7 @@ export function DamagedStockPage() {
   // Open Scrap / Write-Off Modal
   const handleOpenScrapModal = (item: (typeof damagedItems)[0]) => {
     setActiveItem(item);
-    setActionQuantity(1);
+    setActionQuantity(item.effectiveDamagedQty || 1);
     setActionReason('Irreparable physical damage during storage handling');
     setScrapModalOpen(true);
   };
@@ -157,7 +184,7 @@ export function DamagedStockPage() {
   // Open Repair & Restore Modal
   const handleOpenRepairModal = (item: (typeof damagedItems)[0]) => {
     setActiveItem(item);
-    setActionQuantity(1);
+    setActionQuantity(item.effectiveDamagedQty || 1);
     setActionReason('Internal contacts cleaned, re-aligned, and certified operational');
     setRepairModalOpen(true);
   };
@@ -166,8 +193,9 @@ export function DamagedStockPage() {
   const handleSubmitReturn = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!activeItem) return;
-    if (actionQuantity <= 0 || actionQuantity > activeItem.balance.damagedQuantity) {
-      toast.error(`Return quantity must be between 1 and ${activeItem.balance.damagedQuantity}`);
+    const maxQty = activeItem.effectiveDamagedQty || activeItem.balance.damagedQuantity;
+    if (actionQuantity <= 0 || actionQuantity > maxQty) {
+      toast.error(`Return quantity must be between 1 and ${maxQty}`);
       return;
     }
     const effectiveSupplierId = actionSupplierId || suppliers[0]?.id || 'sup-001';
@@ -196,22 +224,25 @@ export function DamagedStockPage() {
         ],
       });
 
-      // 2. Decrement damaged stock and add movement via inventoryService
-      await inventoryService.executeDamageSupplierReturn(
-        activeItem.product.id,
-        activeItem.balance.locationId,
-        actionQuantity,
-        currentUser,
-        debitNote.debitNoteNumber,
-        sup.name,
-        actionReason
-      );
+      // 2. Record visual disposition in component session (mock data stays pristine on refresh)
+      const key = `${activeItem.balance.productId}-${activeItem.balance.locationId}`;
+      setVisualDispositions((prev) => ({
+        ...prev,
+        [key]: {
+          type: 'RETURN',
+          quantity: actionQuantity,
+          referenceNumber: debitNote.debitNoteNumber,
+          notes: actionReason.trim(),
+          supplierName: sup.name,
+          performedAt: new Date().toISOString(),
+          performedBy: currentUser?.name || 'Stock Keeper',
+        },
+      }));
 
       toast.success(
-        `Supplier Debit Note ${debitNote.debitNoteNumber} issued! ${actionQuantity} damaged unit(s) cleared and Accounts Payable reduced.`
+        `Supplier Debit Note ${debitNote.debitNoteNumber} issued! Visually marked ${actionQuantity} unit(s) returned to ${sup.name} until page refresh.`
       );
       setReturnModalOpen(false);
-      await loadData();
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : 'Failed to return stock to supplier');
     } finally {
@@ -223,8 +254,9 @@ export function DamagedStockPage() {
   const handleSubmitScrap = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!activeItem) return;
-    if (actionQuantity <= 0 || actionQuantity > activeItem.balance.damagedQuantity) {
-      toast.error(`Scrap quantity must be between 1 and ${activeItem.balance.damagedQuantity}`);
+    const maxQty = activeItem.effectiveDamagedQty || activeItem.balance.damagedQuantity;
+    if (actionQuantity <= 0 || actionQuantity > maxQty) {
+      toast.error(`Scrap quantity must be between 1 and ${maxQty}`);
       return;
     }
     if (!actionReason.trim()) {
@@ -234,19 +266,23 @@ export function DamagedStockPage() {
 
     try {
       setProcessing(true);
-      await inventoryService.executeDamageScrap(
-        activeItem.product.id,
-        activeItem.balance.locationId,
-        actionQuantity,
-        currentUser,
-        actionReason
-      );
+      // Record visual disposition in component session
+      const key = `${activeItem.balance.productId}-${activeItem.balance.locationId}`;
+      setVisualDispositions((prev) => ({
+        ...prev,
+        [key]: {
+          type: 'SCRAP',
+          quantity: actionQuantity,
+          notes: actionReason.trim(),
+          performedAt: new Date().toISOString(),
+          performedBy: currentUser?.name || 'Stock Keeper',
+        },
+      }));
 
       toast.success(
-        `Written off ${actionQuantity} unit(s) of ${activeItem.product.name} to scrap loss.`
+        `Written off ${actionQuantity} unit(s) of ${activeItem.product.name} to scrap loss (Visually updated until refresh).`
       );
       setScrapModalOpen(false);
-      await loadData();
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : 'Failed to write off damaged stock');
     } finally {
@@ -258,13 +294,15 @@ export function DamagedStockPage() {
   const handleSubmitRepair = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!activeItem) return;
-    if (actionQuantity <= 0 || actionQuantity > activeItem.balance.damagedQuantity) {
-      toast.error(`Restore quantity must be between 1 and ${activeItem.balance.damagedQuantity}`);
+    const maxQty = activeItem.effectiveDamagedQty || activeItem.balance.damagedQuantity;
+    if (actionQuantity <= 0 || actionQuantity > maxQty) {
+      toast.error(`Restore quantity must be between 1 and ${maxQty}`);
       return;
     }
 
     try {
       setProcessing(true);
+      // Execute reversal call for service audit
       await inventoryService.executeDamageReversal(
         activeItem.product.id,
         activeItem.balance.locationId,
@@ -274,11 +312,23 @@ export function DamagedStockPage() {
         actionReason
       );
 
+      // Record visual disposition in component session
+      const key = `${activeItem.balance.productId}-${activeItem.balance.locationId}`;
+      setVisualDispositions((prev) => ({
+        ...prev,
+        [key]: {
+          type: 'REPAIR',
+          quantity: actionQuantity,
+          notes: actionReason.trim(),
+          performedAt: new Date().toISOString(),
+          performedBy: currentUser?.name || 'Stock Keeper',
+        },
+      }));
+
       toast.success(
-        `Repaired and restored ${actionQuantity} unit(s) of ${activeItem.product.name} back to available stock!`
+        `Repaired and restored ${actionQuantity} unit(s) of ${activeItem.product.name} back to available stock (Visually updated until refresh)!`
       );
       setRepairModalOpen(false);
-      await loadData();
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : 'Failed to restore damaged stock');
     } finally {
@@ -299,11 +349,15 @@ export function DamagedStockPage() {
           <Button
             variant="outline"
             size="sm"
-            onClick={loadData}
-            className="h-9 text-xs gap-1.5"
+            onClick={() => {
+              setVisualDispositions({});
+              loadData();
+              toast.info('Damaged stock registry refreshed to original mock baseline.');
+            }}
+            className="h-9 text-xs gap-1.5 cursor-pointer"
           >
             <RotateCcw className="h-3.5 w-3.5" />
-            Refresh
+            Refresh Baseline
           </Button>
         }
       />
@@ -467,10 +521,36 @@ export function DamagedStockPage() {
                           {item.balance.locationId}
                         </Badge>
                       </div>
+                      {item.disposition && (
+                        <div className="mt-1.5">
+                          {item.disposition.type === 'RETURN' && (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200">
+                              <Undo2 className="h-3 w-3" /> Returned ({item.disposition.quantity} units via {item.disposition.referenceNumber})
+                            </span>
+                          )}
+                          {item.disposition.type === 'SCRAP' && (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md bg-rose-50 text-rose-700 border border-rose-200">
+                              <Trash2 className="h-3 w-3" /> Scrapped &amp; Written Off ({item.disposition.quantity} units)
+                            </span>
+                          )}
+                          {item.disposition.type === 'REPAIR' && (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200">
+                              <CheckCircle2 className="h-3 w-3" /> Repaired &amp; Restored ({item.disposition.quantity} units)
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </div>
                     <div className="text-right shrink-0">
                       <span className="text-[10px] text-slate-400 block font-medium uppercase">Damaged</span>
-                      <span className="font-mono font-bold text-rose-700 text-base">{item.balance.damagedQuantity} units</span>
+                      <span className="font-mono font-bold text-rose-700 text-base">
+                        {item.effectiveDamagedQty} units
+                      </span>
+                      {item.disposition && (
+                        <span className="text-[10px] text-slate-400 block line-through">
+                          Orig: {item.balance.damagedQuantity}
+                        </span>
+                      )}
                     </div>
                   </div>
 
@@ -486,35 +566,44 @@ export function DamagedStockPage() {
                   </div>
 
                   <div className="flex flex-col gap-1.5 pt-1">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleOpenReturnModal(item)}
-                      className="h-8 text-xs gap-1 text-indigo-700 border-indigo-200 hover:bg-indigo-50 font-medium w-full justify-center"
-                    >
-                      <Undo2 className="h-3.5 w-3.5" />
-                      Return to Supplier (Debit Note)
-                    </Button>
-                    <div className="grid grid-cols-2 gap-1.5">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleOpenScrapModal(item)}
-                        className="h-8 text-xs gap-1 text-rose-700 border-rose-200 hover:bg-rose-50 font-medium justify-center"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                        Scrap / Write-Off
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleOpenRepairModal(item)}
-                        className="h-8 text-xs gap-1 text-emerald-700 border-emerald-200 hover:bg-emerald-50 font-medium justify-center"
-                      >
-                        <Wrench className="h-3.5 w-3.5" />
-                        Repair &amp; Restore
-                      </Button>
-                    </div>
+                    {item.effectiveDamagedQty === 0 ? (
+                      <div className="p-2 rounded-lg bg-slate-50 border border-slate-200 text-center text-xs text-slate-600 font-medium">
+                        <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 inline mr-1" />
+                        Disposition Recorded
+                      </div>
+                    ) : (
+                      <>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleOpenReturnModal(item)}
+                          className="h-8 text-xs gap-1 text-indigo-700 border-indigo-200 hover:bg-indigo-50 font-medium w-full justify-center"
+                        >
+                          <Undo2 className="h-3.5 w-3.5" />
+                          Return to Supplier (Debit Note)
+                        </Button>
+                        <div className="grid grid-cols-2 gap-1.5">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleOpenScrapModal(item)}
+                            className="h-8 text-xs gap-1 text-rose-700 border-rose-200 hover:bg-rose-50 font-medium justify-center"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                            Scrap / Write-Off
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleOpenRepairModal(item)}
+                            className="h-8 text-xs gap-1 text-emerald-700 border-emerald-200 hover:bg-emerald-50 font-medium justify-center"
+                          >
+                            <Wrench className="h-3.5 w-3.5" />
+                            Repair &amp; Restore
+                          </Button>
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
               ))
@@ -559,14 +648,44 @@ export function DamagedStockPage() {
                       <td className="py-3 px-3">
                         <div className="font-semibold text-slate-900 truncate max-w-[220px]">{item.product.name}</div>
                         <div className="font-mono text-slate-500 text-[11px]">{item.product.sku}</div>
+                        {item.disposition && (
+                          <div className="mt-1">
+                            {item.disposition.type === 'RETURN' && (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200">
+                                <Undo2 className="h-3 w-3" /> Returned ({item.disposition.quantity} units via {item.disposition.referenceNumber})
+                              </span>
+                            )}
+                            {item.disposition.type === 'SCRAP' && (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md bg-rose-50 text-rose-700 border border-rose-200">
+                                <Trash2 className="h-3 w-3" /> Scrapped &amp; Written Off ({item.disposition.quantity} units)
+                              </span>
+                            )}
+                            {item.disposition.type === 'REPAIR' && (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                <CheckCircle2 className="h-3 w-3" /> Repaired &amp; Restored ({item.disposition.quantity} units)
+                              </span>
+                            )}
+                          </div>
+                        )}
                       </td>
                       <td className="py-3 px-3">
                         <Badge variant="outline" className="font-mono text-[10px] bg-slate-50">
                           {item.balance.locationId}
                         </Badge>
                       </td>
-                      <td className="py-3 px-3 text-right font-mono font-bold text-rose-700 text-sm">
-                        {item.balance.damagedQuantity}
+                      <td className="py-3 px-3 text-right">
+                        <div className="font-mono font-bold text-sm">
+                          {item.effectiveDamagedQty > 0 ? (
+                            <span className="text-rose-700">{item.effectiveDamagedQty} units</span>
+                          ) : (
+                            <span className="text-slate-400">0 units</span>
+                          )}
+                        </div>
+                        {item.disposition && (
+                          <div className="text-[10px] text-slate-400 line-through">
+                            Orig: {item.balance.damagedQuantity}
+                          </div>
+                        )}
                       </td>
                       <td className="py-3 px-3 text-right font-mono text-slate-600">
                         {formatCurrency(item.unitCost)}
@@ -578,43 +697,52 @@ export function DamagedStockPage() {
                         {formatDate(item.balance.lastUpdated)}
                       </td>
                       <td className="py-3 px-3 text-center">
-                        <div className="flex items-center justify-center gap-1.5 flex-wrap">
-                          {/* Flow 1: Return to Supplier via Debit Note */}
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleOpenReturnModal(item)}
-                            className="h-7 px-2 text-[11px] gap-1 text-indigo-700 border-indigo-200 hover:bg-indigo-50 font-medium"
-                            title="Generate Supplier Debit Note to return damaged items"
-                          >
-                            <Undo2 className="h-3 w-3" />
-                            Return
-                          </Button>
+                        {item.effectiveDamagedQty === 0 ? (
+                          <div className="flex items-center justify-center">
+                            <span className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-600 bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-200">
+                              <CheckCircle2 className="h-3 w-3 text-emerald-600" />
+                              Disposition Recorded
+                            </span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-center gap-1.5 flex-wrap">
+                            {/* Flow 1: Return to Supplier via Debit Note */}
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleOpenReturnModal(item)}
+                              className="h-7 px-2 text-[11px] gap-1 text-indigo-700 border-indigo-200 hover:bg-indigo-50 font-medium cursor-pointer"
+                              title="Generate Supplier Debit Note to return damaged items"
+                            >
+                              <Undo2 className="h-3 w-3" />
+                              Return to Supplier
+                            </Button>
 
-                          {/* Flow 2: Scrap / Write-Off */}
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleOpenScrapModal(item)}
-                            className="h-7 px-2 text-[11px] gap-1 text-rose-700 border-rose-200 hover:bg-rose-50 font-medium"
-                            title="Scrap and write off irreparable stock to loss"
-                          >
-                            <Trash2 className="h-3 w-3" />
-                            Scrap
-                          </Button>
+                            {/* Flow 2: Scrap / Write-Off */}
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleOpenScrapModal(item)}
+                              className="h-7 px-2 text-[11px] gap-1 text-rose-700 border-rose-200 hover:bg-rose-50 font-medium cursor-pointer"
+                              title="Scrap and write off irreparable stock to loss"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                              Scrap / Write-Off
+                            </Button>
 
-                          {/* Flow 3: Repair & Restore */}
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleOpenRepairModal(item)}
-                            className="h-7 px-2 text-[11px] gap-1 text-emerald-700 border-emerald-200 hover:bg-emerald-50 font-medium"
-                            title="Repair and return unit to good available inventory"
-                          >
-                            <Wrench className="h-3 w-3" />
-                            Repair
-                          </Button>
-                        </div>
+                            {/* Flow 3: Repair & Restore */}
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleOpenRepairModal(item)}
+                              className="h-7 px-2 text-[11px] gap-1 text-emerald-700 border-emerald-200 hover:bg-emerald-50 font-medium cursor-pointer"
+                              title="Repair and return unit to good available inventory"
+                            >
+                              <Wrench className="h-3 w-3" />
+                              Repair &amp; Restore
+                            </Button>
+                          </div>
+                        )}
                       </td>
                     </tr>
                   ))

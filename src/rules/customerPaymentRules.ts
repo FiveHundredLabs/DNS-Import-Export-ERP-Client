@@ -49,6 +49,7 @@ export interface FifoAllocationItem {
   resultingStatus: 'FULLY_COLLECTED' | 'PARTIALLY_COLLECTED' | 'UNTOUCHED';
   isOverdue: boolean;
   daysOverdue?: number;
+  isPrioritized?: boolean;
 }
 
 export interface FifoAllocationBreakdown {
@@ -316,14 +317,8 @@ export function calculateFifoAllocation(
     return uncollectedBalance > 0;
   });
 
-  // If specific invoices were selected by the sales rep, restrict to them
-  if (selectedInvoiceIds && selectedInvoiceIds.length > 0) {
-    const selectedSet = new Set(selectedInvoiceIds);
-    eligibleInvoices = eligibleInvoices.filter((inv) => selectedSet.has(inv.id));
-  }
-
-  // Sort FIFO: oldest due date first, then oldest issue date, then invoiceNumber
-  const sortedInvoices = [...eligibleInvoices].sort((a, b) => {
+  // Helper to sort invoices FIFO: oldest due date first, then oldest issue date, then invoiceNumber
+  const sortByFifo = (a: Invoice, b: Invoice) => {
     const dueA = new Date(a.dueDate).getTime() || 0;
     const dueB = new Date(b.dueDate).getTime() || 0;
     if (dueA !== dueB) return dueA - dueB;
@@ -333,7 +328,21 @@ export function calculateFifoAllocation(
     if (issueA !== issueB) return issueA - issueB;
 
     return (a.invoiceNumber || '').localeCompare(b.invoiceNumber || '');
-  });
+  };
+
+  const selectedSet = new Set(selectedInvoiceIds || []);
+  let sortedInvoices: Invoice[];
+
+  // If specific invoices were checked/selected, prioritize them first (sorted FIFO among themselves),
+  // followed by remaining unselected invoices (sorted FIFO)
+  if (selectedSet.size > 0) {
+    const priorityInvoices = eligibleInvoices.filter((inv) => selectedSet.has(inv.id)).sort(sortByFifo);
+    const regularInvoices = eligibleInvoices.filter((inv) => !selectedSet.has(inv.id)).sort(sortByFifo);
+    sortedInvoices = [...priorityInvoices, ...regularInvoices];
+  } else {
+    // Pure FIFO: oldest due date first
+    sortedInvoices = [...eligibleInvoices].sort(sortByFifo);
+  }
 
   let remainingPayment = safeAmount;
   let totalAllocated = 0;
@@ -379,6 +388,7 @@ export function calculateFifoAllocation(
       resultingStatus,
       isOverdue: pastDue || inv.status === 'OVERDUE',
       daysOverdue,
+      isPrioritized: selectedSet.has(inv.id),
     };
   });
 

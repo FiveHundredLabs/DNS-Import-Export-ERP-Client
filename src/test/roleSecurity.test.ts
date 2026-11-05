@@ -72,7 +72,7 @@ describe('Phase 12 — Role Security & Permission Boundary Testing (Section 83)'
 
   describe('1. SALES_REP Role Boundaries', () => {
     it('cannot access restricted modules (/approvals, /inventory, /finance, /pos, /settings)', () => {
-      const restrictedRoutes = ['/approvals', '/inventory', '/finance', '/pos', '/settings'];
+      const restrictedRoutes = ['/approvals', '/inventory', '/finance', '/pos', '/settings', '/commissions'];
       for (const route of restrictedRoutes) {
         expect(canAccessRoute('SALES_REP', route)).toBe(false);
       }
@@ -83,7 +83,6 @@ describe('Phase 12 — Role Security & Permission Boundary Testing (Section 83)'
       expect(canAccessRoute('SALES_REP', '/quotations')).toBe(true);
       expect(canAccessRoute('SALES_REP', '/orders')).toBe(true);
       expect(canAccessRoute('SALES_REP', '/warranty')).toBe(true);
-      expect(canAccessRoute('SALES_REP', '/commissions')).toBe(true);
       expect(canAccessRoute('SALES_REP', '/profile')).toBe(true);
     });
 

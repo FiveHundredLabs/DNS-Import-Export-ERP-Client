@@ -22,7 +22,6 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'orders:escalate',
     'orders:close',
     'inventory:view',
-    'inventory:grn_create',
     'inventory:grn_approve',
     'inventory:pick_issue',
     'inventory:damaged_recover',
@@ -57,7 +56,9 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'purchasing:reports',
     'purchasing:returns_view',
     'purchasing:returns_create',
+    'purchasing:payments_view',
     'purchasing:returns_approve',
+    'purchasing:payments_view',
   ],
   MANAGER: [
     'view:manager_dashboard',
@@ -108,7 +109,9 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'purchasing:reports',
     'purchasing:returns_view',
     'purchasing:returns_create',
+    'purchasing:payments_view',
     'purchasing:returns_approve',
+    'purchasing:payments_view',
   ],
   SALES_MANAGER: [
     'view:sales_manager_dashboard',
@@ -150,6 +153,8 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'finance:cashbook_view',
     'finance:voucher_create',
     'finance:voucher_approve',
+    'commissions:view',
+    'commissions:manage',
     'reports:all',
     'audit:view',
   ],
@@ -158,6 +163,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'products:view',
     'customers:view',
     'customers:create',
+    'customers:edit',
     'quotations:view',
     'orders:view',
     'invoices:view',
@@ -177,13 +183,23 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'payments:view',
     'payments:create',
     'warranty:view',
-    'commissions:view',
   ],
   STOCK_KEEPER: [
     'view:stock_keeper_dashboard',
     'products:view',
     'inventory:view',
     'inventory:grn_create',
+    'inventory:pick_issue',
+    'inventory:damaged_recover',
+    'pos:operate',
+  ],
+  STOCK_MANAGER: [
+    'view:stock_keeper_dashboard',
+    'view:stock_manager_dashboard',
+    'products:view',
+    'inventory:view',
+    'inventory:grn_create',
+    'inventory:grn_approve',
     'inventory:pick_issue',
     'inventory:damaged_recover',
     'pos:operate',
@@ -212,6 +228,24 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'purchasing:reports',
     'purchasing:returns_view',
     'purchasing:returns_create',
+    'purchasing:payments_view',
+  ],
+  PURCHASING_MANAGER: [
+    'view:purchasing_dashboard',
+    'products:view',
+    'purchasing:suppliers_view',
+    'purchasing:suppliers_manage',
+    'purchasing:po_view',
+    'purchasing:po_create',
+    'purchasing:po_edit',
+    'purchasing:po_approve',
+    'purchasing:grn_view',
+    'purchasing:reports',
+    'purchasing:returns_view',
+    'purchasing:returns_create',
+    'purchasing:payments_view',
+    'purchasing:returns_approve',
+    'purchasing:payments_view',
   ],
 };
 
@@ -243,7 +277,10 @@ export function canAccessRoute(role: UserRole, path: string): boolean {
       role === 'MANAGER' ||
       role === 'SALES_MANAGER' ||
       role === 'FINANCE_MANAGER' ||
-      role === 'SHOWROOM_MANAGER'
+      role === 'SHOWROOM_MANAGER' ||
+      role === 'STOCK_MANAGER' ||
+      role === 'PURCHASING_MANAGER' ||
+      role === 'PURCHASING_OFFICER'
     );
   }
   if (path.startsWith('/quotations')) {
@@ -302,7 +339,7 @@ export function canAccessRoute(role: UserRole, path: string): boolean {
   }
   if (path.startsWith('/purchasing')) {
     if (role === 'DIRECTOR' || role === 'MANAGER') return true;
-    if (role === 'PURCHASING_OFFICER') {
+    if (role === 'PURCHASING_OFFICER' || role === 'PURCHASING_MANAGER') {
       if (path === '/purchasing' || path.startsWith('/purchasing/dashboard')) {
         return hasPermission(role, 'view:purchasing_dashboard');
       }
@@ -317,6 +354,9 @@ export function canAccessRoute(role: UserRole, path: string): boolean {
       }
       if (path.startsWith('/purchasing/reports')) {
         return hasPermission(role, 'purchasing:reports');
+      }
+      if (path.startsWith('/purchasing/payments')) {
+        return hasPermission(role, 'purchasing:payments_view');
       }
       if (path.startsWith('/purchasing/returns')) {
         return true;

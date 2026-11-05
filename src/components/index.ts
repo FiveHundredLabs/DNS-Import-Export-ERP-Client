@@ -31,6 +31,7 @@ export { PageHeader } from './common/PageHeader';
 export { FormSection } from './common/FormSection';
 export { FormField } from './common/FormField';
 export { DocumentActionBar } from './common/DocumentActionBar';
+export { ConfirmButton, ConfirmDialog } from './ui/confirm-button';
 export { Sidebar } from './common/Sidebar';
 export { MobileNav } from './common/MobileNav';
 export { InnerSidebar } from './common/InnerSidebar';

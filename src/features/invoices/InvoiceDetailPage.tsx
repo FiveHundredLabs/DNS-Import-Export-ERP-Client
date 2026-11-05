@@ -16,6 +16,7 @@ import { printerService } from '../../services/PrinterService';
 import { pdfService } from '../../services/PdfService';
 import { whatsAppService } from '../../services/WhatsAppService';
 import { Button } from '../../components/ui/button';
+import { ConfirmButton } from '../../components/ui/confirm-button';
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/card';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../../components/ui/table';
 import { Badge } from '../../components/ui/badge';
@@ -555,25 +556,32 @@ export function InvoiceDetailPage() {
 
           {isDraft && isSalesManager && (
             <>
-              <Button
+              <ConfirmButton
                 variant="outline"
                 size="sm"
-                onClick={handleSaveDraft}
+                confirmTitle="Save Draft Changes"
+                confirmMessage="Save changes to this draft invoice?"
+                confirmText="Save Draft"
                 disabled={savingDraft || finalizing}
+                onConfirm={handleSaveDraft}
                 className="text-xs gap-1.5 border-slate-300 font-semibold"
               >
                 <Save className="h-3.5 w-3.5 text-slate-600" />
                 <span>{savingDraft ? 'Saving...' : 'Save Draft Changes'}</span>
-              </Button>
-              <Button
+              </ConfirmButton>
+              <ConfirmButton
                 size="sm"
-                onClick={handleFinalizeAndIssue}
+                confirmVariant="success"
+                confirmTitle="Finalize & Issue Invoice"
+                confirmMessage={`Are you sure you want to finalize and issue Invoice ${invoice.invoiceNumber}? This will lock all line items and recognize Accounts Receivable.`}
+                confirmText="Finalize & Issue"
                 disabled={savingDraft || finalizing}
+                onConfirm={handleFinalizeAndIssue}
                 className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs gap-1.5 shadow-sm font-semibold"
               >
                 <CheckCircle2 className="h-3.5 w-3.5" />
                 <span>{finalizing ? 'Finalizing...' : 'Finalize & Issue'}</span>
-              </Button>
+              </ConfirmButton>
             </>
           )}
 

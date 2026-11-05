@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { useCustomers } from '../../hooks/useCustomers';
 import { CustomerTable } from './CustomerTable';
 import { CustomerCreateModal } from './CustomerCreateModal';
-import { CustomerCommercialApprovalModal } from './CustomerCommercialApprovalModal';
 import { PageHeader } from '../../components/common/PageHeader';
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
@@ -19,7 +18,7 @@ import { TableLoadingSkeleton } from '../../components/common/LoadingSkeleton';
 import { EmptyState } from '../../components/common/EmptyState';
 import { ErrorState } from '../../components/common/ErrorState';
 import { Plus, Search, Users, RefreshCw, ShieldCheck } from 'lucide-react';
-import { Customer } from '../../types/customer';
+import { Customer, CustomerApprovalStage } from '../../types/customer';
 import { useAuth } from '../../hooks/useAuth';
 
 export function CustomerListPage() {
@@ -28,17 +27,17 @@ export function CustomerListPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedType, setSelectedType] = useState('');
   const [createModalOpen, setCreateModalOpen] = useState(false);
-  const [reviewModalOpen, setReviewModalOpen] = useState(false);
-  const [selectedCustomerForReview, setSelectedCustomerForReview] = useState<Customer | null>(null);
-
+  const [modalMode, setModalMode] = useState<'create' | 'edit'>('edit');
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
 
+  // Strictly filter for customers who have completed the onboarding process (approvalStage: APPROVED)
   const initialFilters = useMemo(() => {
     return {
       page: 1,
-      pageSize: 10,
+      pageSize: 50,
       assignedRepId: role === 'SALES_REP' ? currentUser.id : undefined,
       areaId: role === 'AREA_MANAGER' ? currentUser.areaId : undefined,
+      approvalStage: 'APPROVED' as CustomerApprovalStage,
     };
   }, [role, currentUser]);
 
@@ -50,9 +49,13 @@ export function CustomerListPage() {
     createCustomer,
     updateCustomer,
     deleteCustomer,
-    setCommercialTerms,
     setFilters,
   } = useCustomers(initialFilters);
+
+  // Guarantee only approved (fully onboarded) customers are shown in Customer Master
+  const approvedCustomers = useMemo(() => {
+    return customers.filter((c) => c.approvalStage === 'APPROVED');
+  }, [customers]);
 
   const handleSearch = (q: string) => {
     setSearchTerm(q);
@@ -62,6 +65,7 @@ export function CustomerListPage() {
       page: 1,
       assignedRepId: role === 'SALES_REP' ? currentUser.id : prev.assignedRepId,
       areaId: role === 'AREA_MANAGER' ? currentUser.areaId : prev.areaId,
+      approvalStage: 'APPROVED',
     }));
   };
 
@@ -73,10 +77,12 @@ export function CustomerListPage() {
       page: 1,
       assignedRepId: role === 'SALES_REP' ? currentUser.id : prev.assignedRepId,
       areaId: role === 'AREA_MANAGER' ? currentUser.areaId : prev.areaId,
+      approvalStage: 'APPROVED',
     }));
   };
 
   const canCreate = hasPermission('customers:create');
+  const canEdit = hasPermission('customers:edit');
 
   return (
     <div className="space-y-6">
@@ -85,10 +91,10 @@ export function CustomerListPage() {
         title="Customer Master"
         subtitle={
           role === 'SALES_REP'
-            ? `Displaying accounts assigned directly to you (${currentUser.name}).`
+            ? `Displaying verified accounts assigned directly to you (${currentUser.name}).`
             : role === 'AREA_MANAGER'
-            ? `Displaying accounts in your managed area (${currentUser.areaName || 'Kelaniya'}).`
-            : 'Single central repository of dealers, credit lines, payment terms, and route assignments.'
+            ? `Displaying verified active accounts in your managed area (${currentUser.areaName || 'Kelaniya'}).`
+            : 'Single central repository of verified active dealers, credit lines, payment terms, and route assignments.'
         }
         badge={
           role === 'SALES_REP' ? (
@@ -101,7 +107,7 @@ export function CustomerListPage() {
             </Badge>
           ) : (
             <Badge variant="outline" className="text-xs font-mono">
-              Directory
+              Active Directory
             </Badge>
           )
         }
@@ -115,19 +121,6 @@ export function CustomerListPage() {
               <RefreshCw className="h-3.5 w-3.5" />
               <span>Refresh</span>
             </Button>
-            {canCreate && (
-              <Button
-                size="sm"
-                onClick={() => {
-                  setEditingCustomer(null);
-                  setCreateModalOpen(true);
-                }}
-                className="gap-1.5 h-9 bg-primary hover:bg-primary-hover text-primary-foreground font-semibold shadow-xs"
-              >
-                <Plus className="h-4 w-4" />
-                <span>Register Customer</span>
-              </Button>
-            )}
           </div>
         }
       />
@@ -161,44 +154,43 @@ export function CustomerListPage() {
         </div>
       </div>
 
-      {/* States */}
+      {/* Customer Master Table or Empty/Loading States */}
       {loading ? (
         <TableLoadingSkeleton />
       ) : error ? (
         <ErrorState message={error} onRetry={refetch} />
-      ) : customers.length === 0 ? (
+      ) : approvedCustomers.length === 0 ? (
         <EmptyState
           icon={Users}
-          title="No customers found"
-          description="Try adjusting your search criteria or register a new customer."
-          actionLabel={canCreate ? 'Register Customer' : undefined}
-          onAction={() => {
-            setEditingCustomer(null);
-            setCreateModalOpen(true);
-          }}
+          title="No onboarded customers found"
+          description="Try adjusting your search criteria or clear active filters."
         />
       ) : (
         <CustomerTable
-          customers={customers}
+          customers={approvedCustomers}
           onView={(c) => navigate(`/customers/${c.id}`)}
-          onEdit={(c) => {
-            setEditingCustomer(c);
-            setCreateModalOpen(true);
-          }}
+          onEdit={
+            canEdit
+              ? (c) => {
+                  setEditingCustomer(c);
+                  setModalMode('edit');
+                  setCreateModalOpen(true);
+                }
+              : undefined
+          }
           onDelete={(c) => deleteCustomer(c.id)}
-          onReviewCommercials={(c) => {
-            setSelectedCustomerForReview(c);
-            setReviewModalOpen(true);
-          }}
         />
       )}
 
-      {/* Area Manager Customer Creation Modal */}
+      {/* Customer Edit Drawer */}
       <CustomerCreateModal
         open={createModalOpen}
         onOpenChange={(open) => {
           setCreateModalOpen(open);
-          if (!open) setEditingCustomer(null);
+          if (!open) {
+            setEditingCustomer(null);
+            setModalMode('edit');
+          }
         }}
         onCreate={async (data) => {
           await createCustomer(data);
@@ -207,16 +199,7 @@ export function CustomerListPage() {
           await updateCustomer(id, data);
         }}
         editingCustomer={editingCustomer}
-      />
-
-      {/* Sales Manager Commercial Terms Setup Modal */}
-      <CustomerCommercialApprovalModal
-        customer={selectedCustomerForReview}
-        open={reviewModalOpen}
-        onOpenChange={setReviewModalOpen}
-        onSubmitTerms={async (customerId, terms) => {
-          await setCommercialTerms(customerId, terms);
-        }}
+        mode={modalMode}
       />
     </div>
   );

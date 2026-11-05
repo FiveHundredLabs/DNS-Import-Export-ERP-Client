@@ -11,6 +11,7 @@ import { QuotationStatusBadge } from './QuotationStatusBadge';
 import { toast } from 'sonner';
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
+import { ConfirmButton } from '../../components/ui/confirm-button';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../../components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../../components/ui/dialog';
 import { formatCurrency, formatDate } from '../../utils/formatters';
@@ -228,26 +229,34 @@ export function QuotationDetailPage() {
 
           {/* Issue Quotation (if DRAFT and standard authority) */}
           {quotation.status === 'DRAFT' && !quotation.requiresApproval && (
-            <Button
+            <ConfirmButton
               size="sm"
-              onClick={handleIssueQuotation}
+              confirmVariant="success"
+              confirmTitle="Issue Quotation"
+              confirmMessage={`Issue official Quotation ${quotation.quotationNumber} to ${quotation.customerName}?`}
+              confirmText="Issue Quotation"
+              onConfirm={handleIssueQuotation}
               className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs gap-1.5"
             >
               <CheckCircle className="h-3.5 w-3.5" />
               Issue Quotation
-            </Button>
+            </ConfirmButton>
           )}
 
           {/* Submit for Approval (if DRAFT) */}
           {quotation.status === 'DRAFT' && quotation.requiresApproval && (
-            <Button
+            <ConfirmButton
               size="sm"
-              onClick={handleSubmitForApproval}
+              dialogVariant="warning"
+              confirmTitle="Submit Quotation for Approval"
+              confirmMessage={`Submit Quotation ${quotation.quotationNumber} with discount of ${quotation.requestedDiscountPercent}% for manager approval?`}
+              confirmText="Submit for Approval"
+              onConfirm={handleSubmitForApproval}
               className="bg-amber-600 hover:bg-amber-700 text-white text-xs gap-1.5"
             >
               <Send className="h-3.5 w-3.5" />
               Submit for Approval
-            </Button>
+            </ConfirmButton>
           )}
 
           {/* Approve / Reject (for Managers when PENDING_APPROVAL) */}
@@ -275,15 +284,18 @@ export function QuotationDetailPage() {
 
           {/* Convert to Sales Order (if APPROVED and not expired) */}
           {quotation.status === 'APPROVED' && (
-            <Button
+            <ConfirmButton
               size="sm"
+              confirmTitle="Convert to Sales Order"
+              confirmMessage={`Convert approved Quotation ${quotation.quotationNumber} into an official Sales Order? Line items and pricing snapshots will be locked.`}
+              confirmText="Convert to Order"
               disabled={isConverting}
-              onClick={handleConvertToOrder}
+              onConfirm={handleConvertToOrder}
               className="bg-primary hover:bg-primary-hover text-primary-foreground text-xs gap-1.5 shadow-xs"
             >
               <ShoppingCart className="h-3.5 w-3.5" />
               {isConverting ? 'Converting...' : 'Convert to Sales Order'}
-            </Button>
+            </ConfirmButton>
           )}
         </div>
       </div>

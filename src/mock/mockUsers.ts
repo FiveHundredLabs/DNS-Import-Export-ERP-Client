@@ -131,4 +131,22 @@ export const MOCK_USERS: User[] = [
     phone: '+94 77 665 4433',
     isActive: true,
   },
+  {
+    id: 'usr-115',
+    name: 'Bandara Jayasinghe',
+    email: 'stock.manager@dnserp.com',
+    role: 'STOCK_MANAGER',
+    title: 'Warehouse & Logistics Manager',
+    phone: '+94 77 789 9900',
+    isActive: true,
+  },
+  {
+    id: 'usr-116',
+    name: 'Malik Samarasekera',
+    email: 'purchasing.manager@dnserp.com',
+    role: 'PURCHASING_MANAGER',
+    title: 'Purchasing & Procurement Manager',
+    phone: '+94 77 987 1122',
+    isActive: true,
+  },
 ];

@@ -6,6 +6,7 @@ import { handoverService } from '../../../services/HandoverService';
 import { UserSearchPicker } from './UserSearchPicker';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../../components/ui/dialog';
 import { Button } from '../../../components/ui/button';
+import { ConfirmButton } from '../../../components/ui/confirm-button';
 import { Input } from '../../../components/ui/input';
 import { AmountDisplay } from '../../../components/common/AmountDisplay';
 import { formatCurrency, formatDate, formatDateTime } from '../../../utils/formatters';
@@ -22,6 +23,7 @@ import {
   CheckSquare,
   Square,
   Lock,
+  CreditCard,
 } from 'lucide-react';
 import { cn } from '../../../utils/cn';
 
@@ -83,6 +85,14 @@ export function CashHandoverModal({
   // Aggregate totals
   const totalAmount = useMemo(() => {
     return selectedPayments.reduce((sum, p) => sum + p.amount, 0);
+  }, [selectedPayments]);
+
+  const totalCashAmount = useMemo(() => {
+    return selectedPayments.filter((p) => p.paymentMethod === 'CASH').reduce((sum, p) => sum + p.amount, 0);
+  }, [selectedPayments]);
+
+  const totalChequeAmount = useMemo(() => {
+    return selectedPayments.filter((p) => p.paymentMethod === 'CHEQUE').reduce((sum, p) => sum + p.amount, 0);
   }, [selectedPayments]);
 
   const uniqueCustomerCount = useMemo(() => {
@@ -147,7 +157,12 @@ export function CashHandoverModal({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && !submitting && onClose()} size="2xl" className="max-w-2xl w-full p-4 sm:p-6 max-h-[90vh] overflow-y-auto">
+    <Dialog
+      open={isOpen}
+      onOpenChange={(open) => !open && !submitting && onClose()}
+      size="3xl"
+      className="max-w-3xl w-full rounded-3xl border border-slate-200/90 shadow-2xl p-5 sm:p-7 max-h-[90vh] overflow-y-auto bg-white"
+    >
       <DialogContent className="space-y-4">
         <DialogHeader className="p-0">
           <div className="flex items-center gap-3">
@@ -199,6 +214,20 @@ export function CashHandoverModal({
               </div>
 
               <div className="flex items-center gap-2 flex-wrap">
+                <div className="px-3 py-1.5 rounded-xl bg-emerald-50 border border-emerald-200 text-center shadow-2xs">
+                  <span className="text-[10px] uppercase font-bold text-emerald-700 block">Cash Total</span>
+                  <span className="text-xs font-bold text-emerald-900 font-mono">
+                    {formatCurrency(totalCashAmount)}
+                  </span>
+                </div>
+                {totalChequeAmount > 0 && (
+                  <div className="px-3 py-1.5 rounded-xl bg-indigo-50 border border-indigo-200 text-center shadow-2xs">
+                    <span className="text-[10px] uppercase font-bold text-indigo-700 block">Cheques</span>
+                    <span className="text-xs font-bold text-indigo-900 font-mono">
+                      {formatCurrency(totalChequeAmount)}
+                    </span>
+                  </div>
+                )}
                 <div className="px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-center shadow-2xs">
                   <span className="text-[10px] uppercase font-bold text-slate-400 block">Customers</span>
                   <span className="text-xs font-bold text-slate-800 font-mono">
@@ -209,12 +238,6 @@ export function CashHandoverModal({
                   <span className="text-[10px] uppercase font-bold text-slate-400 block">Invoices</span>
                   <span className="text-xs font-bold text-slate-800 font-mono">
                     {totalInvoiceCount}
-                  </span>
-                </div>
-                <div className="px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-center shadow-2xs">
-                  <span className="text-[10px] uppercase font-bold text-slate-400 block">Collections</span>
-                  <span className="text-xs font-bold text-primary font-mono">
-                    {selectedPayments.length} of {eligiblePayments.length}
                   </span>
                 </div>
               </div>
@@ -291,7 +314,17 @@ export function CashHandoverModal({
                         <div className="flex items-center gap-2 text-[11px] text-slate-500 font-mono flex-wrap">
                           <span>{p.receiptNumber}</span>
                           <span>•</span>
-                          <span className="uppercase font-semibold">{p.paymentMethod}</span>
+                          {p.paymentMethod === 'CASH' ? (
+                            <span className="inline-flex items-center gap-1 font-bold text-[10px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full border border-emerald-200">
+                              <Banknote className="h-3 w-3 text-emerald-600" />
+                              CASH
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 font-bold text-[10px] bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded-full border border-indigo-200">
+                              <CreditCard className="h-3 w-3 text-indigo-600" />
+                              CHEQUE
+                            </span>
+                          )}
                           <span>•</span>
                           <span>{formatDate(p.collectedAt)}</span>
                           {(() => {
@@ -312,6 +345,17 @@ export function CashHandoverModal({
                             );
                           })()}
                         </div>
+
+                        {/* Cheque specific details badge */}
+                        {p.paymentMethod === 'CHEQUE' && (
+                          <div className="flex items-center gap-2 text-[10.5px] font-mono text-indigo-900 bg-indigo-50/80 px-2 py-1 rounded-md border border-indigo-100 mt-1 flex-wrap">
+                            <span><strong>Chq #:</strong> {p.chequeNumber || p.chequeDetails?.chequeNumber || 'N/A'}</span>
+                            <span>•</span>
+                            <span><strong>Bank:</strong> {p.bankName || p.chequeDetails?.bankName || 'N/A'}</span>
+                            <span>•</span>
+                            <span><strong>Date:</strong> {p.chequeDate || p.chequeDetails?.chequeDate ? formatDate(p.chequeDate || p.chequeDetails!.chequeDate) : 'N/A'}</span>
+                          </div>
+                        )}
 
                         {/* Invoice breakdown lines */}
                         {p.invoiceAllocations && p.invoiceAllocations.length > 0 && (
@@ -373,8 +417,12 @@ export function CashHandoverModal({
             >
               Cancel
             </Button>
-            <Button
+            <ConfirmButton
               type="submit"
+              dialogVariant="warning"
+              confirmTitle="Submit Daily Cash Handover"
+              confirmMessage={`Confirm cash handover of ${formatCurrency(totalAmount)} to ${selectedRecipient?.name || 'designated officer'}? This will lock collections in Pending Finance Approval.`}
+              confirmText="Submit Handover"
               disabled={submitting || selectedPaymentIds.size === 0 || !selectedRecipient}
               className="h-11 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs gap-1.5 flex-1"
             >
@@ -388,7 +436,7 @@ export function CashHandoverModal({
                   </span>
                 </>
               )}
-            </Button>
+            </ConfirmButton>
           </DialogFooter>
         </form>
       </DialogContent>

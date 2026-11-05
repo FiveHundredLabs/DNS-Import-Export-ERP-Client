@@ -274,18 +274,124 @@ class PDCVaultService {
       });
     }
 
-    // Reinstate customer outstanding & reduce available credit in MOCK_CUSTOMERS
+    // 2. Reinstate customer outstanding & reduce available credit in CustomerService & MOCK_CUSTOMERS
     try {
-      const customer = MOCK_CUSTOMERS.find((c) => c.id === cheque.customerId);
-      if (customer) {
-        const newTotalOutstanding = customer.financials.totalOutstanding + cheque.amount;
-        customer.financials.totalOutstanding = newTotalOutstanding;
-        customer.financials.availableCredit = Math.max(
+      const { customerService } = await import('../../../services/CustomerService');
+      const cust = await customerService.getCustomer(cheque.customerId);
+      if (cust) {
+        const newTotalOutstanding = (cust.financials?.totalOutstanding || 0) + cheque.amount;
+        const newAvailableCredit = Math.max(
           0,
-          customer.commercialTerms.creditLimit - newTotalOutstanding
+          (cust.commercialTerms?.creditLimit || 0) - newTotalOutstanding
         );
+        await customerService.updateCustomer(cust.id, {
+          financials: {
+            ...cust.financials,
+            totalOutstanding: newTotalOutstanding,
+            availableCredit: newAvailableCredit,
+            overdue: (cust.financials?.overdue || 0) + cheque.amount,
+          },
+        });
+        const customer = MOCK_CUSTOMERS.find((c) => c.id === cheque.customerId);
+        if (customer) {
+          customer.financials.totalOutstanding = newTotalOutstanding;
+          customer.financials.availableCredit = newAvailableCredit;
+          customer.financials.overdue = (customer.financials.overdue || 0) + cheque.amount;
+        }
+      } else {
+        const customer = MOCK_CUSTOMERS.find((c) => c.id === cheque.customerId);
+        if (customer) {
+          const newTotalOutstanding = customer.financials.totalOutstanding + cheque.amount;
+          customer.financials.totalOutstanding = newTotalOutstanding;
+          customer.financials.availableCredit = Math.max(
+            0,
+            customer.commercialTerms.creditLimit - newTotalOutstanding
+          );
+          customer.financials.overdue = (customer.financials.overdue || 0) + cheque.amount;
+        }
       }
-    } catch {}
+    } catch (custErr) {
+      console.warn('CustomerService update failed on cheque bounce:', custErr);
+    }
+
+    // 3. Reopen settled invoices in InvoiceService & mark payment status as BOUNCED/DISHONOURED
+    try {
+      const { invoiceService } = await import('../../../services/InvoiceService');
+      const { paymentService } = await import('../../../services/PaymentService');
+      const { calculateInvoiceStatus } = await import('../../../rules/invoiceRules');
+
+      // Find the payment associated with this cheque
+      const allPayments = await paymentService.getPayments({ pageSize: 500 });
+      const payment = allPayments.data.find(
+        (p) =>
+          (cheque.receiptId && p.id === cheque.receiptId) ||
+          (cheque.receiptNumber && p.receiptNumber === cheque.receiptNumber) ||
+          (cheque.chequeNumber && p.chequeNumber && p.chequeNumber.toUpperCase() === cheque.chequeNumber.toUpperCase()) ||
+          (cheque.chequeNumber && p.chequeDetails?.chequeNumber && p.chequeDetails.chequeNumber.toUpperCase() === cheque.chequeNumber.toUpperCase())
+      );
+
+      if (payment) {
+        // Mark payment status as BOUNCED / DISHONOURED
+        await paymentService.updatePayment(payment.id, {
+          status: 'BOUNCED',
+          rejectionReason: `Cheque Dishonoured: ${reason.trim()}`,
+        });
+
+        // Reopen invoices using payment allocations
+        if (payment.invoiceAllocations && payment.invoiceAllocations.length > 0) {
+          for (const alloc of payment.invoiceAllocations) {
+            const inv = await invoiceService.getInvoiceById(alloc.invoiceId);
+            if (inv) {
+              const allocAmount = alloc.allocatedAmount || 0;
+              const isPaymentApproved = payment.status === 'APPROVED';
+              const newPaidAmount = isPaymentApproved ? Math.max(0, inv.paidAmount - allocAmount) : inv.paidAmount;
+              const newCollectedAmount = !isPaymentApproved ? Math.max(0, (inv.collectedAmount || 0) - allocAmount) : (inv.collectedAmount || 0);
+              const newBalanceAmount = Math.min(inv.totalAmount, isPaymentApproved ? inv.balanceAmount + allocAmount : inv.balanceAmount);
+              const newStatus = calculateInvoiceStatus(
+                inv.totalAmount,
+                newPaidAmount,
+                inv.dueDate,
+                undefined,
+                newCollectedAmount
+              );
+              await invoiceService.updateInvoice(inv.id, {
+                paidAmount: newPaidAmount,
+                balanceAmount: newBalanceAmount,
+                collectedAmount: newCollectedAmount,
+                status: newStatus,
+              });
+            }
+          }
+        }
+      } else {
+        // Fallback: If no direct payment object found, look at customer invoices
+        const custInvoices = await invoiceService.getInvoicesByCustomer(cheque.customerId);
+        let remainingReopen = cheque.amount;
+        for (const inv of custInvoices) {
+          if (remainingReopen <= 0) break;
+          if (inv.paidAmount > 0) {
+            const toReopen = Math.min(inv.paidAmount, remainingReopen);
+            const newPaid = inv.paidAmount - toReopen;
+            const newBalance = inv.balanceAmount + toReopen;
+            const newStatus = calculateInvoiceStatus(
+              inv.totalAmount,
+              newPaid,
+              inv.dueDate,
+              undefined,
+              inv.collectedAmount
+            );
+            await invoiceService.updateInvoice(inv.id, {
+              paidAmount: newPaid,
+              balanceAmount: newBalance,
+              status: newStatus,
+            });
+            remainingReopen -= toReopen;
+          }
+        }
+      }
+    } catch (invErr) {
+      console.warn('InvoiceService reopen error on cheque bounce:', invErr);
+    }
 
     // Notify AR Service to reverse receipt status and reopen settled invoices
     if (cheque.receiptId) {

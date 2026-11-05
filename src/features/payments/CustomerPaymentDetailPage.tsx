@@ -13,7 +13,6 @@ import {
   evaluateCustomerPaymentStatus,
   FifoAllocationBreakdown,
 } from '../../rules/customerPaymentRules';
-import { InvoiceListSelector } from './components/InvoiceListSelector';
 import { PaymentCollectionForm } from './components/PaymentCollectionForm';
 import { FifoAllocationPreview } from './components/FifoAllocationPreview';
 import { PaymentConfirmationModal } from './components/PaymentConfirmationModal';
@@ -136,21 +135,18 @@ export function CustomerPaymentDetailPage() {
     setAmount(val);
   };
 
-  // Handle invoice multi-selection
+  // Handle invoice prioritization checkbox toggle
   const handleToggleInvoice = (invId: string) => {
     setSelectedInvoiceIds((prev) => {
       const next = prev.includes(invId) ? prev.filter((id) => id !== invId) : [...prev, invId];
-      // If user selectively toggled specific invoices, update amount to sum of selected
-      if (next.length > 0) {
+      // If user hasn't entered an amount yet (0 or empty), auto-fill with the prioritized invoices' balance
+      if (amount === 0 || amount === '') {
         const selectedSum = invoices
           .filter((i) => next.includes(i.id))
-          .reduce((sum, i) => {
-            const uncoll = Math.max(0, i.balanceAmount - (i.collectedAmount || 0));
-            return sum + (partialAmounts[i.id] !== undefined ? partialAmounts[i.id] : uncoll);
-          }, 0);
-        setAmount(selectedSum);
-      } else {
-        setAmount(0);
+          .reduce((sum, i) => sum + Math.max(0, i.balanceAmount - (i.collectedAmount || 0)), 0);
+        if (selectedSum > 0) {
+          setAmount(selectedSum);
+        }
       }
       return next;
     });
@@ -209,7 +205,7 @@ export function CustomerPaymentDetailPage() {
       }
       return;
     }
-    const maxAllowed = targetedSingleInvoice ? targetedSingleInvoice.balance : (statusMeta?.totalOutstanding || 0);
+    const maxAllowed = statusMeta?.totalOutstanding || 0;
     if (maxAllowed > 0 && newAmount > maxAllowed) {
       setAmount(maxAllowed);
       if (targetedSingleInvoice) {
@@ -356,15 +352,7 @@ export function CustomerPaymentDetailPage() {
             <span>Collections</span>
           </button>
 
-          <button
-            type="button"
-            onClick={() => navigate('/payments')}
-            className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-200 px-3 py-1.5 rounded-xl shadow-2xs active:scale-95 transition-all"
-            title="View Cash in Hand and Handover to Finance"
-          >
-            <Banknote className="h-4 w-4 text-amber-600" />
-            <span>Cash in Hand (Wallet)</span>
-          </button>
+
         </div>
 
         <div className="flex items-center gap-2">
@@ -523,7 +511,7 @@ export function CustomerPaymentDetailPage() {
         <PaymentCollectionForm
           amount={amount}
           onAmountChange={handleAmountChange}
-          totalOutstanding={targetedSingleInvoice ? targetedSingleInvoice.balance : (statusMeta?.totalOutstanding || 0)}
+          totalOutstanding={statusMeta?.totalOutstanding || 0}
           totalOverdue={statusMeta?.totalOverdue || 0}
           paymentMethod={paymentMethod}
           onPaymentMethodChange={setPaymentMethod}
@@ -541,33 +529,21 @@ export function CustomerPaymentDetailPage() {
           } : null}
         />
 
-        {/* Section B: Outstanding Invoices Selector (Invoice-Wise & Complete Collection - BR-06, BR-07) */}
-        <div className="bg-white rounded-2xl border border-slate-200/90 p-4 shadow-xs">
-          <InvoiceListSelector
-            invoices={invoices}
-            selectedInvoiceIds={selectedInvoiceIds}
-            onToggleInvoice={handleToggleInvoice}
-            onSelectAll={handleSelectAllInvoices}
-            onClearAll={handleClearAllInvoices}
-            onCollectSingleFull={handleCollectSingleFull}
-            onCollectSinglePartial={handleCollectSinglePartial}
-            partialAmounts={partialAmounts}
-            onPartialAmountChange={handlePartialAmountChange}
-          />
-        </div>
-
-        {/* Section C: Live Automatic FIFO Allocation Breakdown */}
+        {/* Section B: Live Priority & Automatic FIFO Allocation Breakdown */}
         <FifoAllocationPreview
           paymentAmount={numAmount}
           invoices={invoices}
-          selectedInvoiceIds={selectedInvoiceIds.length > 0 ? selectedInvoiceIds : undefined}
+          selectedInvoiceIds={selectedInvoiceIds}
+          onToggleInvoice={handleToggleInvoice}
+          onSelectAll={handleSelectAllInvoices}
+          onClearAll={handleClearAllInvoices}
         />
 
         {/* Section C: Submission CTA (Responsive in-flow card for both mobile and desktop) */}
         <div className="flex items-center justify-between p-3.5 sm:p-4 bg-white rounded-2xl border border-slate-200 shadow-xs">
           <div>
             <span className="text-[10px] sm:text-xs text-slate-500 font-bold uppercase tracking-wider block">
-              Total Collection
+              Total
             </span>
             <div className="text-base sm:text-lg font-black text-slate-900 mt-0.5">
               {numAmount > 0 ? (
@@ -597,6 +573,95 @@ export function CustomerPaymentDetailPage() {
         </div>
       </div>
 
+      {/* 5. Customer Payment & Receipt History with 1-Click Thermal Reprint */}
+      <div className="bg-white rounded-2xl border border-slate-200/90 p-4 sm:p-5 shadow-xs space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 rounded-lg bg-primary/10 text-primary">
+              <Receipt className="h-4 w-4" />
+            </div>
+            <div>
+              <h3 className="text-xs sm:text-sm font-bold text-slate-900">
+                Customer Payment & Receipt History
+              </h3>
+              <p className="text-[11px] text-slate-500">
+                Historical collection receipts with 1-click thermal print & customer handover
+              </p>
+            </div>
+          </div>
+          <span className="text-[11px] font-mono font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-full">
+            {paymentHistory.length} Receipts
+          </span>
+        </div>
+
+        {paymentHistory.length === 0 ? (
+          <div className="text-center py-6 text-xs text-slate-400 border border-dashed border-slate-200 rounded-xl">
+            No historical collections recorded for this customer yet.
+          </div>
+        ) : (
+          <div className="overflow-x-auto rounded-xl border border-slate-200">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 text-[11px] uppercase tracking-wider font-semibold">
+                <tr>
+                  <th className="py-2.5 px-3">Receipt #</th>
+                  <th className="py-2.5 px-3">Date</th>
+                  <th className="py-2.5 px-3">Method</th>
+                  <th className="py-2.5 px-3 text-right">Amount</th>
+                  <th className="py-2.5 px-3">Status</th>
+                  <th className="py-2.5 px-3 text-center">Receipt Handover</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {paymentHistory.map((p) => (
+                  <tr key={p.id} className="hover:bg-slate-50/70 transition-colors">
+                    <td className="py-2.5 px-3 font-mono font-bold text-slate-800">
+                      {p.receiptNumber}
+                    </td>
+                    <td className="py-2.5 px-3 text-slate-600">
+                      {formatDate(p.collectedAt)}
+                    </td>
+                    <td className="py-2.5 px-3">
+                      <span className="inline-flex items-center gap-1 font-semibold uppercase text-[10.5px]">
+                        {p.paymentMethod === 'CASH' && <Banknote className="h-3 w-3 text-emerald-600" />}
+                        {p.paymentMethod === 'CHEQUE' && <CreditCard className="h-3 w-3 text-indigo-600" />}
+                        {p.paymentMethod}
+                        {p.chequeNumber && (
+                          <span className="text-slate-400 font-mono text-[10px]">
+                            ({p.chequeNumber})
+                          </span>
+                        )}
+                      </span>
+                    </td>
+                    <td className="py-2.5 px-3 text-right font-mono font-bold text-slate-900">
+                      {formatCurrency(p.amount)}
+                    </td>
+                    <td className="py-2.5 px-3">
+                      <PaymentStatusBadge status={p.status} />
+                    </td>
+                    <td className="py-2.5 px-3 text-center">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setCreatedPayment(p);
+                          setThermalModalOpen(true);
+                        }}
+                        className="h-7 px-2.5 text-[11px] gap-1.5 border-emerald-300 text-emerald-800 hover:bg-emerald-50 hover:text-emerald-900 font-semibold"
+                        title="Print / Reprint Thermal Receipt to handover to customer"
+                      >
+                        <Printer className="h-3 w-3 text-emerald-600" />
+                        Print Receipt
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
       {/* 7. Confirmation Modal */}
       {confirmModalOpen && (
         <PaymentConfirmationModal
@@ -618,9 +683,12 @@ export function CustomerPaymentDetailPage() {
       {/* 8. Thermal Receipt Modal */}
       {createdPayment && (
         <ThermalReceiptModal
+          isOpen={thermalModalOpen}
           open={thermalModalOpen}
+          onClose={() => setThermalModalOpen(false)}
           onOpenChange={setThermalModalOpen}
           payment={createdPayment}
+          customerBalance={statusMeta?.totalOutstanding}
         />
       )}
     </div>

@@ -61,16 +61,16 @@ export class DeliveryNoteService {
       const q = filters.search.toLowerCase().trim();
       result = result.filter(
         (n) =>
-          n.deliveryNoteNumber.toLowerCase().includes(q) ||
-          n.invoiceNumber.toLowerCase().includes(q) ||
-          n.customerName.toLowerCase().includes(q) ||
-          n.customerCode.toLowerCase().includes(q) ||
-          n.driverName.toLowerCase().includes(q) ||
-          n.vehicleNumber.toLowerCase().includes(q)
+          n.deliveryNoteNumber?.toLowerCase().includes(q) ||
+          n.invoiceNumber?.toLowerCase().includes(q) ||
+          n.customerName?.toLowerCase().includes(q) ||
+          n.customerCode?.toLowerCase().includes(q) ||
+          n.driverName?.toLowerCase().includes(q) ||
+          n.vehicleNumber?.toLowerCase().includes(q)
       );
     }
 
-    return result.sort(
+    return result.filter(Boolean).sort(
       (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
   }
@@ -78,6 +78,10 @@ export class DeliveryNoteService {
   async getById(id: string): Promise<DeliveryNote | null> {
     const found = this.notes.find((n) => n.id === id || n.deliveryNoteNumber === id);
     return found ? { ...found } : null;
+  }
+
+  async getDeliveryNoteById(id: string): Promise<DeliveryNote | null> {
+    return this.getById(id);
   }
 
   async getByOrderId(orderId: string): Promise<DeliveryNote[]> {
@@ -198,6 +202,7 @@ export class DeliveryNoteService {
       totalDispatchedUnits,
       totalAcceptedUnits: totalDispatchedUnits,
       totalRejectedUnits: 0,
+      isLocked: true,
       createdBy: `${currentUser.name} (${currentUser.role || 'Stock Keeper'})`,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -220,9 +225,9 @@ export class DeliveryNoteService {
       throw new Error(`Delivery Note ${id} not found.`);
     }
 
-    Object.assign(note, updates, { updatedAt: new Date().toISOString() });
-    this.persist();
-    return { ...note };
+    throw new Error(
+      `Delivery Note ${note.deliveryNoteNumber} is locked. Once created, Delivery Notes are permanently non-editable to preserve inventory dispatch integrity.`
+    );
   }
 
   /**
@@ -259,8 +264,9 @@ export class DeliveryNoteService {
   }
 
   /**
-   * Records customer rejection of physical units (damaged, defective, wrong spec),
-   * sets the Delivery Note status to REJECTION_PENDING_APPROVAL, and submits for supervisor review.
+   * Records customer rejection of physical units (damaged, defective, wrong spec).
+   * Scenario A (Stock Keeper): sets status to REJECTION_PENDING_APPROVAL and creates approval request for Stock Manager.
+   * Scenario B (Stock Manager): self-approval bypassed; directly executes inventory movement and marks REJECTION_APPROVED.
    */
   async submitRejection(
     id: string,
@@ -300,28 +306,100 @@ export class DeliveryNoteService {
 
     note.totalAcceptedUnits = overallAccepted;
     note.totalRejectedUnits = overallRejected;
-    note.status = 'REJECTION_PENDING_APPROVAL';
-    note.rejectionSubmittedBy = `${currentUser.name} (${currentUser.role || 'Stock Keeper'})`;
-    note.rejectionSubmittedAt = new Date().toISOString();
-    note.rejectionNotes = payload.notes;
+
+    // Track detailed unit-level records for inspection
+    const details = [];
+    for (const rejItem of payload.rejectedItems) {
+      const itm = note.items.find((i) => i.productId === rejItem.productId);
+      for (const bc of rejItem.rejectedBarcodes) {
+        details.push({
+          productId: rejItem.productId,
+          productName: itm?.productName || 'Product',
+          sku: itm?.sku || '',
+          barcode: bc,
+          reason: rejItem.reason,
+          notes: rejItem.notes,
+        });
+      }
+    }
+    note.rejectedUnitsDetail = details;
     note.updatedAt = new Date().toISOString();
+
+    const isStockManager =
+      currentUser.role === 'STOCK_MANAGER' ||
+      currentUser.role === 'MANAGER' ||
+      currentUser.role === 'DIRECTOR';
+
+    if (isStockManager) {
+      // Scenario B: Stock Manager processes rejection -> No self-approval request generated
+      note.status = 'REJECTION_APPROVED';
+      note.rejectionApprovedBy = `${currentUser.name} (${currentUser.role || 'Stock Manager'})`;
+      note.rejectionApprovedAt = new Date().toISOString();
+      note.rejectionApprovalRemarks =
+        'Direct customer rejection processing by Stock Manager (Self-approval bypassed).';
+      delete note.rejectionApprovalRequest;
+      await this.executeRejectionStockAdjustment(note, currentUser);
+    } else {
+      // Scenario A: Stock Keeper processes rejection -> Requires Stock Manager approval
+      note.status = 'REJECTION_PENDING_APPROVAL';
+      note.rejectionSubmittedBy = `${currentUser.name} (${currentUser.role || 'Stock Keeper'})`;
+      note.rejectionSubmittedAt = new Date().toISOString();
+      note.rejectionNotes = payload.notes;
+      note.rejectionApprovalRequest = {
+        id: `req-${Date.now()}`,
+        deliveryNoteId: note.id,
+        deliveryNoteNumber: note.deliveryNoteNumber,
+        customerId: note.customerId,
+        customerName: note.customerName,
+        submittedBy: `${currentUser.name} (${currentUser.role || 'Stock Keeper'})`,
+        submittedById: currentUser.id,
+        submittedAt: new Date().toISOString(),
+        status: 'PENDING',
+        totalUnits: overallRejected,
+        items: payload.rejectedItems.map((r) => {
+          const itemMatch = note.items.find((it) => it.productId === r.productId);
+          return {
+            productId: r.productId,
+            productName: itemMatch?.productName || 'Product',
+            sku: itemMatch?.sku || '',
+            rejectedBarcodes: [...r.rejectedBarcodes],
+            reason: r.reason,
+            notes: r.notes,
+          };
+        }),
+      };
+    }
 
     this.persist();
     return { ...note };
   }
 
   /**
-   * Manager / Supervisor approves the customer rejection.
-   * Units are formally logged for Quarantine Bay return and finance credit processing.
+   * Stock Manager approves the customer rejection.
+   * Atomic stock movements & balances update (damaged to quarantine bay, undamaged to stock).
    */
   async approveRejection(
     id: string,
     approver: User,
     remarks: string = 'Rejection approved by warehouse operations manager.'
   ): Promise<DeliveryNote> {
+    if (
+      approver.role === 'STOCK_KEEPER' ||
+      (approver.role !== 'STOCK_MANAGER' && approver.role !== 'MANAGER' && approver.role !== 'DIRECTOR')
+    ) {
+      throw new Error(
+        `Role '${approver.role}' is not authorized to approve delivery note rejections. Requires STOCK_MANAGER authorization.`
+      );
+    }
     const note = this.notes.find((n) => n.id === id);
     if (!note) {
       throw new Error(`Delivery Note ${id} not found.`);
+    }
+
+    if (note.status !== 'REJECTION_PENDING_APPROVAL') {
+      throw new Error(
+        `Cannot approve: Delivery Note ${note.deliveryNoteNumber || id} is not pending rejection approval (current status: ${note.status}).`
+      );
     }
 
     note.status = 'REJECTION_APPROVED';
@@ -330,21 +408,46 @@ export class DeliveryNoteService {
     note.rejectionApprovalRemarks = remarks;
     note.updatedAt = new Date().toISOString();
 
+    if (note.rejectionApprovalRequest) {
+      note.rejectionApprovalRequest.status = 'APPROVED';
+      note.rejectionApprovalRequest.reviewedBy = approver.name;
+      note.rejectionApprovalRequest.reviewedById = approver.id;
+      note.rejectionApprovalRequest.reviewedAt = new Date().toISOString();
+      note.rejectionApprovalRequest.remarks = remarks;
+    }
+
+    await this.executeRejectionStockAdjustment(note, approver);
+
     this.persist();
     return { ...note };
   }
 
   /**
-   * Supervisor declines the customer rejection (e.g. requires re-inspection or disputes customer claim).
+   * Stock Manager declines the customer rejection (e.g. disputes customer claim, requires re-inspection).
+   * No inventory movements or stock adjustments occur.
    */
   async declineRejection(
     id: string,
     approver: User,
     remarks: string = 'Rejection declined. Re-inspection required.'
   ): Promise<DeliveryNote> {
+    if (
+      approver.role === 'STOCK_KEEPER' ||
+      (approver.role !== 'STOCK_MANAGER' && approver.role !== 'MANAGER' && approver.role !== 'DIRECTOR')
+    ) {
+      throw new Error(
+        `Role '${approver.role}' is not authorized to decline delivery note rejections. Requires STOCK_MANAGER authorization.`
+      );
+    }
     const note = this.notes.find((n) => n.id === id);
     if (!note) {
       throw new Error(`Delivery Note ${id} not found.`);
+    }
+
+    if (note.status !== 'REJECTION_PENDING_APPROVAL') {
+      throw new Error(
+        `Cannot decline: Delivery Note ${note.deliveryNoteNumber || id} is not pending rejection approval (current status: ${note.status}).`
+      );
     }
 
     note.status = 'REJECTION_DECLINED';
@@ -353,8 +456,111 @@ export class DeliveryNoteService {
     note.rejectionApprovalRemarks = remarks;
     note.updatedAt = new Date().toISOString();
 
+    if (note.rejectionApprovalRequest) {
+      note.rejectionApprovalRequest.status = 'DECLINED';
+      note.rejectionApprovalRequest.reviewedBy = approver.name;
+      note.rejectionApprovalRequest.reviewedById = approver.id;
+      note.rejectionApprovalRequest.reviewedAt = new Date().toISOString();
+      note.rejectionApprovalRequest.remarks = remarks;
+    }
+
     this.persist();
     return { ...note };
+  }
+
+  /**
+   * Internal helper to execute atomic stock adjustments and inventory movements
+   */
+  private async executeRejectionStockAdjustment(note: DeliveryNote, approver: User): Promise<void> {
+    for (const item of note.items) {
+      const rejectedQty = item.rejectedQuantity || item.rejectedUnitBarcodes?.length || 0;
+      if (rejectedQty > 0) {
+        const isDamaged =
+          item.rejectionReason === 'DAMAGED' ||
+          item.rejectionReason === 'DAMAGED_IN_TRANSIT' ||
+          item.rejectionReason === 'DEFECTIVE_PRODUCT' ||
+          item.rejectionReason === 'PACKAGING_DAMAGED';
+
+        try {
+          // 1. Update Inventory Service repository (balances and stock movement audit log)
+          const { inventoryService } = await import('./InventoryService');
+          const repo = (inventoryService as any).repo;
+          if (repo) {
+            let balance = await repo.getBalance(item.productId, 'WH-MAIN');
+            if (!balance) {
+              const allBalances = await repo.getAllBalances();
+              balance =
+                allBalances.find((b: any) => b.productId === item.productId && b.locationType === 'WAREHOUSE') ||
+                allBalances.find((b: any) => b.productId === item.productId);
+            }
+            if (!balance) {
+              balance = {
+                id: `bal-dn-${Date.now()}-${item.productId}`,
+                productId: item.productId,
+                locationId: 'WH-MAIN',
+                locationType: 'WAREHOUSE',
+                availableQuantity: 0,
+                reservedQuantity: 0,
+                damagedQuantity: 0,
+                returnedQuantity: 0,
+                lastUpdated: new Date().toISOString(),
+              };
+            }
+            if (isDamaged) {
+              balance.damagedQuantity = (balance.damagedQuantity || 0) + rejectedQty;
+            } else {
+              balance.availableQuantity = (balance.availableQuantity || 0) + rejectedQty;
+            }
+            balance.lastUpdated = new Date().toISOString();
+            await repo.saveBalance(balance);
+
+            await repo.addMovement({
+              id: `mov-rej-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+              productId: item.productId,
+              sourceLocation: 'CUSTOMER_RETURN',
+              targetLocation: isDamaged ? 'DAMAGED_QUARANTINE' : (balance?.locationId || 'WH-MAIN'),
+              quantity: rejectedQty,
+              movementType: isDamaged ? 'DAMAGE_WRITE_OFF' : 'SALES_RETURN',
+              referenceDocumentType: 'DELIVERY_NOTE_REJECTION',
+              referenceDocumentId: note.deliveryNoteNumber,
+              performedById: approver.id,
+              performedByName: approver.name,
+              reason: `Rejection approval: ${item.rejectionReason || (isDamaged ? 'DAMAGED' : 'CUSTOMER_REFUSED')}. ${item.rejectionNotes || ''}`,
+              timestamp: new Date().toISOString(),
+            });
+          }
+
+          // 2. Update Product Master repository
+          const { productService } = await import('./ProductService');
+          const product = await productService.getProduct(item.productId);
+          if (product) {
+            if (isDamaged) {
+              await productService.updateProduct(item.productId, {
+                damagedStock: (product.damagedStock || 0) + rejectedQty,
+              });
+            } else {
+              await productService.updateProduct(item.productId, {
+                stockOnHand: (product.stockOnHand || 0) + rejectedQty,
+              });
+            }
+          }
+
+          try {
+            const { MOCK_PRODUCTS } = await import('../mock/mockProducts');
+            const mockP = MOCK_PRODUCTS.find((p) => p.id === item.productId);
+            if (mockP) {
+              if (isDamaged) {
+                mockP.damagedStock = (mockP.damagedStock || 0) + rejectedQty;
+              } else {
+                mockP.stockOnHand = (mockP.stockOnHand || 0) + rejectedQty;
+              }
+            }
+          } catch {}
+        } catch (stockErr) {
+          console.warn(`Failed to update stock repository for rejected product ${item.productId}:`, stockErr);
+        }
+      }
+    }
   }
 }
 

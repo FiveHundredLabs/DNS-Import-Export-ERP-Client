@@ -17,8 +17,13 @@ export class MockCustomerRepository implements ICustomerRepository {
         (c) =>
           c.name.toLowerCase().includes(q) ||
           c.code.toLowerCase().includes(q) ||
+          (c.companyName && c.companyName.toLowerCase().includes(q)) ||
           c.contactPerson.toLowerCase().includes(q) ||
-          c.phone.includes(q)
+          c.phone.includes(q) ||
+          (c.whatsappNumber && c.whatsappNumber.includes(q)) ||
+          (c.secondaryPhone && c.secondaryPhone.includes(q)) ||
+          (c.taxNumber && c.taxNumber.toLowerCase().includes(q)) ||
+          (c.vatNumber && c.vatNumber.toLowerCase().includes(q))
       );
     }
 
@@ -91,9 +96,20 @@ export class MockCustomerRepository implements ICustomerRepository {
     const idx = this.customers.findIndex((c) => c.id === id);
     if (idx === -1) throw new Error(`Customer with id ${id} not found.`);
 
+    const current = this.customers[idx];
+    const newCommercialTerms = updates.commercialTerms || current.commercialTerms;
+    const baseFinancials = updates.financials || current.financials;
+
     const updated: Customer = {
-      ...this.customers[idx],
+      ...current,
       ...updates,
+      commercialTerms: newCommercialTerms,
+      financials: {
+        ...baseFinancials,
+        availableCredit:
+          updates.financials?.availableCredit ??
+          Math.max(0, newCommercialTerms.creditLimit - baseFinancials.totalOutstanding),
+      },
       updatedAt: new Date().toISOString(),
     };
 

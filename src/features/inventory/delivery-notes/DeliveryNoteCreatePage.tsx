@@ -12,6 +12,7 @@ import { BarcodeVisual } from '../../../components/common/BarcodeVisual';
 import { PaginationControls } from '../../../components/common/PaginationControls';
 import { PageHeader } from '../../../components/common/PageHeader';
 import { DeliveryNoteBarcodeModal } from './DeliveryNoteBarcodeModal';
+import { DeliveryNoteConfirmModal } from './DeliveryNoteConfirmModal';
 import {
   Truck,
   FileText,
@@ -49,6 +50,7 @@ export const DeliveryNoteCreatePage: React.FC = () => {
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
 
   // Stepper state: 1: Invoice & Logistics, 2: Item Allocation, 3: Barcode Studio, 4: Review & Dispatch
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4>(1);
@@ -282,8 +284,8 @@ export const DeliveryNoteCreatePage: React.FC = () => {
     }
   };
 
-  // Submit delivery note
-  const handleSubmit = async () => {
+  // Validate and initiate double-confirmation workflow
+  const handleInitiateSubmission = () => {
     if (!selectedInvoice) {
       toast.error('Please select an invoice first.');
       return;
@@ -306,6 +308,14 @@ export const DeliveryNoteCreatePage: React.FC = () => {
       setCurrentStep(2);
       return;
     }
+
+    // Open mandatory double-confirmation modal
+    setShowConfirmModal(true);
+  };
+
+  // Final submission after user confirms the permanent, non-editable delivery note
+  const handleFinalSubmit = async () => {
+    if (!selectedInvoice) return;
 
     try {
       setSubmitting(true);
@@ -338,6 +348,7 @@ export const DeliveryNoteCreatePage: React.FC = () => {
       };
 
       const created = await deliveryNoteService.createDeliveryNote(payload, user as any);
+      setShowConfirmModal(false);
       toast.success(
         `Delivery Note ${created.deliveryNoteNumber} created and ready for dispatch!`
       );
@@ -964,7 +975,7 @@ export const DeliveryNoteCreatePage: React.FC = () => {
                     <Button
                       type="button"
                       size="sm"
-                      onClick={handleSubmit}
+                      onClick={handleInitiateSubmission}
                       disabled={submitting || totalScannedUnits === 0}
                       className="gap-1.5 text-xs font-bold bg-primary hover:bg-primary-hover text-white shadow-xs"
                     >
@@ -1370,7 +1381,7 @@ export const DeliveryNoteCreatePage: React.FC = () => {
                   <Button
                     type="button"
                     size="sm"
-                    onClick={handleSubmit}
+                    onClick={handleInitiateSubmission}
                     disabled={submitting || totalScannedUnits === 0}
                     className="gap-1.5 text-xs font-bold bg-primary hover:bg-primary-hover text-white shadow-xs px-4"
                   >
@@ -1382,6 +1393,27 @@ export const DeliveryNoteCreatePage: React.FC = () => {
             </CardContent>
           </Card>
         </div>
+      )}
+
+      {/* ── Double Confirmation Modal (Permanent Lock Verification) ── */}
+      {selectedInvoice && showConfirmModal && (
+        <DeliveryNoteConfirmModal
+          isOpen={showConfirmModal}
+          onClose={() => setShowConfirmModal(false)}
+          onConfirm={handleFinalSubmit}
+          submitting={submitting}
+          invoice={selectedInvoice}
+          logistics={{
+            driverName: driverName.trim(),
+            driverPhone: driverPhone.trim(),
+            vehicleNumber: vehicleNumber.trim().toUpperCase(),
+            dispatchDate,
+            deliveryRoute: deliveryRoute.trim(),
+            notes: notes.trim(),
+          }}
+          allocatedBarcodes={allocatedBarcodes}
+          totalScannedUnits={totalScannedUnits}
+        />
       )}
 
       {/* ── Popup Barcode Stickers Modal (for Bulk, Item-wise & One-by-One Print) ── */}

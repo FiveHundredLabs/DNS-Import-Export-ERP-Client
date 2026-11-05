@@ -50,12 +50,27 @@ export class PurchaseOrderService {
       if (!po) return;
 
       if (action === 'APPROVE') {
-        await this.repo.update(po.id, {
-          status: 'APPROVED',
-          approvedBy: request.history[request.history.length - 1]?.actorId || 'mgr',
-          approvedByName: `${request.history[request.history.length - 1]?.actorName || 'Approver'} (${actorRole})`,
-          approvedAt: new Date().toISOString(),
-        });
+        if (request.status === 'APPROVED') {
+          // Final authorization reached
+          await this.repo.update(po.id, {
+            status: 'APPROVED',
+            approvedBy: request.history[request.history.length - 1]?.actorId || 'mgr',
+            approvedByName: `${request.history[request.history.length - 1]?.actorName || 'Approver'} (${actorRole})`,
+            approvedAt: new Date().toISOString(),
+          });
+        } else if (actorRole === 'PURCHASING_MANAGER') {
+          // Intermediate Stage 1 approval by Purchasing Manager (Scenario A)
+          const latestHistory = request.history[request.history.length - 1];
+          await this.repo.update(po.id, {
+            purchasingManagerApproval: {
+              approvedById: latestHistory?.actorId || 'pm',
+              approvedByName: latestHistory?.actorName || 'Purchasing Manager',
+              approvedAt: new Date().toISOString(),
+              remarks: comment,
+            },
+            notes: (po.notes ? po.notes + '\n' : '') + `[Purchasing Manager Verified - ${latestHistory?.actorName || 'Purchasing Manager'}] ${comment}`,
+          });
+        }
       } else if (action === 'REJECT') {
         await this.repo.update(po.id, {
           status: 'REJECTED',
@@ -168,9 +183,18 @@ export class PurchaseOrderService {
     const poNumber = await this.repo.getNextPONumber();
     const shouldSubmit = dto.submitForApproval ?? false;
 
-    // Determine target approver based on amount threshold
-    // Above 500,000 LKR requires DIRECTOR; otherwise MANAGER approval
-    const targetApproverRole: UserRole = calculated.grandTotal > 500000 ? 'DIRECTOR' : 'MANAGER';
+    // Determine target approver based on amount threshold and initiator role
+    // Submissions above 500,000 LKR require DIRECTOR
+    // Submissions by PURCHASING_OFFICER route to PURCHASING_MANAGER
+    // Submissions by PURCHASING_MANAGER route to MANAGER
+    const isPurchasingOfficer = user.role === 'PURCHASING_OFFICER';
+    const targetApproverRole: UserRole =
+      calculated.grandTotal > 500000
+        ? 'DIRECTOR'
+        : isPurchasingOfficer
+        ? 'PURCHASING_MANAGER'
+        : 'MANAGER';
+    const finalTargetRole: UserRole = calculated.grandTotal > 500000 ? 'DIRECTOR' : 'MANAGER';
 
     const newPO = await this.repo.create({
       poNumber,
@@ -198,6 +222,7 @@ export class PurchaseOrderService {
       deliveryInstructions: dto.deliveryInstructions,
       createdBy: user.id,
       createdByName: `${user.name} (${user.role})`,
+      createdByRole: user.role,
     });
 
     if (shouldSubmit) {
@@ -211,6 +236,7 @@ export class PurchaseOrderService {
         initiatorName: `${user.name} (${user.role})`,
         initiatorRole: user.role,
         currentApproverRole: targetApproverRole,
+        targetApproverRole: finalTargetRole,
         isSpecialScenario: calculated.grandTotal > 500000,
         specialReason:
           calculated.grandTotal > 500000
@@ -303,7 +329,14 @@ export class PurchaseOrderService {
       throw new Error(`Cannot submit Purchase Order in '${existing.status}' status.`);
     }
 
-    const targetApproverRole: UserRole = existing.grandTotal > 500000 ? 'DIRECTOR' : 'MANAGER';
+    const isPurchasingOfficer = user.role === 'PURCHASING_OFFICER';
+    const targetApproverRole: UserRole =
+      existing.grandTotal > 500000
+        ? 'DIRECTOR'
+        : isPurchasingOfficer
+        ? 'PURCHASING_MANAGER'
+        : 'MANAGER';
+    const finalTargetRole: UserRole = existing.grandTotal > 500000 ? 'DIRECTOR' : 'MANAGER';
 
     const approvalReq = await approvalService.createApprovalRequest({
       documentType: 'PURCHASE_ORDER',
@@ -315,6 +348,7 @@ export class PurchaseOrderService {
       initiatorName: `${user.name} (${user.role})`,
       initiatorRole: user.role,
       currentApproverRole: targetApproverRole,
+      targetApproverRole: finalTargetRole,
       isSpecialScenario: existing.grandTotal > 500000,
       specialReason:
         existing.grandTotal > 500000
