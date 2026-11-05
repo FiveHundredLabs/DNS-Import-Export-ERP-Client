@@ -167,7 +167,25 @@ export class POSService {
       createdAt: new Date().toISOString(),
     };
 
-    return this.posRepo.createToken(token);
+    const createdToken = await this.posRepo.createToken(token);
+
+    // Keep only the newly issued, unused authorization active for this showroom.
+    const existingTokens = await this.posRepo.getAllTokens();
+    const activeTokens = existingTokens.filter(
+      (existing) =>
+        existing.id !== createdToken.id &&
+        existing.showroomId === token.showroomId &&
+        existing.operationType === token.operationType &&
+        !existing.isUsed &&
+        !existing.isRevoked
+    );
+    await Promise.all(
+      activeTokens.map((existing) =>
+        this.posRepo.updateToken({ ...existing, isRevoked: true })
+      )
+    );
+
+    return createdToken;
   }
 
   /**
