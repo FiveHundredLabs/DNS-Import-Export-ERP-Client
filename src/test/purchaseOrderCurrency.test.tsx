@@ -308,52 +308,22 @@ describe('Purchase Order Multi-Currency Support', () => {
     });
   });
 
-  describe('PurchaseOrderCreateEditPage Form Currency Selection', () => {
-    it('renders currency selection dropdown with Chinese Yuan (CNY), US Dollar (USD), and Sri Lankan Rupee (LKR)', () => {
+  describe('PurchaseOrderCreateEditPage Form Currency Configuration', () => {
+    it('sets LKR only and does not render a currency selection dropdown', () => {
       render(
         <MemoryRouter>
           <PurchaseOrderCreateEditPage />
         </MemoryRouter>
       );
 
-      const currencySelect = screen.getByLabelText(/Currency/i) as HTMLSelectElement;
-      expect(currencySelect).toBeDefined();
+      // Verify currency dropdown is removed
+      const currencySelect = screen.queryByLabelText(/Currency/i);
+      expect(currencySelect).toBeNull();
 
-      // Verify options are present
-      const options = Array.from(currencySelect.options).map((o) => o.value);
-      expect(options).toContain('LKR');
-      expect(options).toContain('CNY');
-      expect(options).toContain('USD');
-
-      // Verify default is LKR
-      expect(currencySelect.value).toBe('LKR');
-    });
-
-    it('allows changing currency and dynamically updates table headers to the selected currency', () => {
-      render(
-        <MemoryRouter>
-          <PurchaseOrderCreateEditPage />
-        </MemoryRouter>
-      );
-
-      const currencySelect = screen.getByLabelText(/Currency/i) as HTMLSelectElement;
-
-      // Check initial LKR header
+      // Verify table headers and summary consistently display LKR
       expect(screen.getByText(/Unit Price \(LKR\)/i)).toBeDefined();
-
-      // Change currency to Chinese Yuan (CNY)
-      fireEvent.change(currencySelect, { target: { value: 'CNY' } });
-      expect(currencySelect.value).toBe('CNY');
-      expect(screen.getByText(/Unit Price \(CNY\)/i)).toBeDefined();
-      expect(screen.getByText(/Line Total \(CNY\)/i)).toBeDefined();
-      expect(screen.getByText(/Grand Total \(CNY\)/i)).toBeDefined();
-
-      // Change currency to US Dollar (USD)
-      fireEvent.change(currencySelect, { target: { value: 'USD' } });
-      expect(currencySelect.value).toBe('USD');
-      expect(screen.getByText(/Unit Price \(USD\)/i)).toBeDefined();
-      expect(screen.getByText(/Line Total \(USD\)/i)).toBeDefined();
-      expect(screen.getByText(/Grand Total \(USD\)/i)).toBeDefined();
+      expect(screen.getByText(/Line Total \(LKR\)/i)).toBeDefined();
+      expect(screen.getByText(/Grand Total \(LKR\)/i)).toBeDefined();
     });
   });
 });

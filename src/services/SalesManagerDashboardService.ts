@@ -2,6 +2,12 @@ import { reportService } from './ReportService';
 import { MOCK_USERS } from '../mock/mockUsers';
 import { MOCK_AREAS } from '../mock/mockAreas';
 import { User } from '../types/auth';
+import {
+  AreaTerritoryPerformanceData,
+  SubordinateRepPerformanceItem,
+} from '../types/commission';
+import { commissionService } from './CommissionService';
+import { commissionConfigService } from './CommissionConfigService';
 
 export interface SalesManagerKpis {
   teamSales: number;
@@ -104,6 +110,102 @@ class SalesManagerDashboardService {
       },
       areaManagerPerformances,
       agingBuckets: financeReport.agingBuckets,
+    };
+  }
+
+  /**
+   * Retrieves regional territory performance, manager surplus incentives,
+   * and subordinate rep arrays for an Area Manager's assigned territory.
+   */
+  async getAreaPerformance(
+    areaId: string,
+    selectedMonth: string = new Date().toISOString().slice(0, 7)
+  ): Promise<AreaTerritoryPerformanceData> {
+    const area = MOCK_AREAS.find((a) => a.id === areaId) || MOCK_AREAS[0];
+
+    const managerUser = MOCK_USERS.find((u) => u.id === area.areaManagerId) || {
+      id: area.areaManagerId || 'usr-105',
+      name: area.areaManagerName || 'Area Manager',
+      email: 'area.manager@dnserp.com',
+      role: 'AREA_MANAGER' as const,
+      areaId: area.id,
+      isActive: true,
+    };
+
+    let reps = MOCK_USERS.filter(
+      (u) => u.role === 'SALES_REP' && u.areaId === area.id && u.isActive
+    );
+    if (reps.length === 0) {
+      // Fallback to active sales reps to ensure area always displays assigned team
+      reps = MOCK_USERS.filter((u) => u.role === 'SALES_REP' && u.isActive).slice(0, 4);
+    }
+
+    const subordinateReps: SubordinateRepPerformanceItem[] = await Promise.all(
+      reps.map(async (rep) => {
+        const repPerf = await commissionService.getRepPerformance(rep.id, selectedMonth);
+        let status: 'BELOW_TARGET' | 'ON_TRACK' | 'TARGET_ACHIEVED' | 'SUPER_ACHIEVER' =
+          'BELOW_TARGET';
+        if (repPerf.achievementPercentage >= 120) {
+          status = 'SUPER_ACHIEVER';
+        } else if (repPerf.achievementPercentage >= 100) {
+          status = 'TARGET_ACHIEVED';
+        } else if (repPerf.achievementPercentage >= 80) {
+          status = 'ON_TRACK';
+        }
+
+        return {
+          repId: rep.id,
+          repName: rep.name,
+          target: repPerf.targetAmount,
+          actualSales: repPerf.actualSales,
+          achievementPercentage: repPerf.achievementPercentage,
+          clearedCollections: repPerf.clearedCollections,
+          earnedCommission: repPerf.earnedCommission,
+          status,
+          scenario: repPerf.breakdown.scenarioLabel,
+        };
+      })
+    );
+
+    const territorySales = subordinateReps.reduce((sum, r) => sum + r.actualSales, 0);
+    const territoryCollections = subordinateReps.reduce(
+      (sum, r) => sum + r.clearedCollections,
+      0
+    );
+    const territoryTarget =
+      subordinateReps.reduce((sum, r) => sum + r.target, 0) || 1000000;
+    const territoryAchievementPercentage =
+      territoryTarget > 0
+        ? Math.round((territorySales / territoryTarget) * 10000) / 100
+        : 0;
+    const surplusSales = Math.max(0, territorySales - territoryTarget);
+
+    const managerRoleConfig = await commissionConfigService.getRoleConfig('AREA_MANAGER');
+    const managerReport = commissionConfigService.calculateCommission(
+      managerUser as User,
+      selectedMonth,
+      territorySales,
+      territoryCollections,
+      managerRoleConfig
+    );
+
+    return {
+      areaId: area.id,
+      areaName: area.name,
+      region: area.region,
+      managerId: managerUser.id,
+      managerName: managerUser.name,
+      month: selectedMonth,
+      territoryTarget,
+      territorySales,
+      territoryAchievementPercentage,
+      territoryCollections,
+      surplusSales,
+      managerCommission: managerReport.commissionEarned,
+      activeScenario: managerRoleConfig.activeScenario,
+      managerRoleConfig,
+      managerBreakdown: managerReport.breakdown,
+      subordinateReps,
     };
   }
 }

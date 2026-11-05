@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { usePurchaseOrders } from '../../hooks/usePurchaseOrders';
 import { useAuth } from '../../hooks/useAuth';
@@ -23,6 +23,10 @@ import {
   Truck,
   AlertCircle,
   PackageCheck,
+  ShieldCheck,
+  CreditCard,
+  Info,
+  ArrowRight,
 } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { ConfirmButton } from '../../components/ui/confirm-button';
@@ -31,7 +35,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/ca
 import { Textarea } from '../../components/ui/textarea';
 import { TableLoadingSkeleton } from '../../components/common/LoadingSkeleton';
 import { PageHeader } from '../../components';
-import { ArrowRight } from 'lucide-react';
 import { toast } from 'sonner';
 
 export function PurchaseOrderDetailPage() {
@@ -42,20 +45,69 @@ export function PurchaseOrderDetailPage() {
 
   const [approvalComment, setApprovalComment] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
+  const [approvalRequest, setApprovalRequest] = useState<ApprovalRequest | null>(null);
 
   const po = purchaseOrders.find((p) => p.id === id);
 
-  const isManagerOrDirector =
-    currentUser.role === 'DIRECTOR' ||
-    currentUser.role === 'MANAGER' ||
-    currentUser.role === 'PURCHASING_MANAGER';
+  const refreshApproval = async (requestId?: string) => {
+    if (requestId) {
+      try {
+        const req = await approvalService.getApproval(requestId);
+        setApprovalRequest(req || null);
+      } catch {
+        setApprovalRequest(null);
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (po?.approvalRequestId) {
+      refreshApproval(po.approvalRequestId);
+    } else {
+      setApprovalRequest(null);
+    }
+  }, [po?.approvalRequestId]);
+
+  const linkedAdvances = useMemo<SupplierAdvance[]>(() => {
+    if (!po) return [];
+    try {
+      const allAdvances = apService.getSupplierAdvances();
+      return allAdvances.filter(
+        (adv: SupplierAdvance) =>
+          adv.purchaseOrderId === po.id ||
+          (adv.purchaseOrderNumber && adv.purchaseOrderNumber === po.poNumber)
+      );
+    } catch {
+      return [];
+    }
+  }, [po]);
 
   const isPurchasingManager = currentUser.role === 'PURCHASING_MANAGER';
+  const isPurchasingOfficer = currentUser.role === 'PURCHASING_OFFICER';
+  const isHigherManager =
+    currentUser.role === 'DIRECTOR' ||
+    currentUser.role === 'MANAGER';
 
-  const canApprove =
-    isManagerOrDirector && po?.status === 'PENDING_APPROVAL';
+  const isPendingApproval = po?.status === 'PENDING_APPROVAL';
 
-  const handleManagerApprove = async () => {
+  const isSelfApprovalBlocked =
+    isPurchasingManager &&
+    Boolean(po && (po.createdBy === currentUser.id || po.createdByRole === 'PURCHASING_MANAGER'));
+
+  const canPurchasingManagerApprove =
+    isPurchasingManager &&
+    !isSelfApprovalBlocked &&
+    (approvalRequest
+      ? approvalRequest.currentApproverRole === 'PURCHASING_MANAGER'
+      : !po?.purchasingManagerApproval && po?.createdByRole !== 'PURCHASING_MANAGER');
+
+  const canHigherManagerApprove =
+    isHigherManager &&
+    (approvalRequest
+      ? approvalRequest.currentApproverRole !== 'PURCHASING_MANAGER'
+      : Boolean(po?.purchasingManagerApproval || po?.createdByRole === 'PURCHASING_MANAGER' || po?.createdByRole !== 'PURCHASING_OFFICER'));
+
+  const handleApprove = async () => {
     if (!po?.approvalRequestId) {
       toast.error('No approval request reference found for this PO.');
       return;
@@ -75,9 +127,14 @@ export function PurchaseOrderDetailPage() {
         currentUser.role,
         approvalComment
       );
-      toast.success(`Purchase Order ${po.poNumber} has been approved.`);
+      if (currentUser.role === 'PURCHASING_MANAGER') {
+        toast.success(`Purchase Order ${po.poNumber} verified and forwarded to General Manager.`);
+      } else {
+        toast.success(`Purchase Order ${po.poNumber} has been approved.`);
+      }
       setApprovalComment('');
       await refetch();
+      await refreshApproval(po.approvalRequestId);
     } catch (err: any) {
       toast.error(err.message || 'Failed to approve purchase order');
     } finally {
@@ -85,7 +142,7 @@ export function PurchaseOrderDetailPage() {
     }
   };
 
-  const handleManagerReject = async () => {
+  const handleReject = async () => {
     if (!po?.approvalRequestId) {
       toast.error('No approval request reference found for this PO.');
       return;
@@ -108,6 +165,7 @@ export function PurchaseOrderDetailPage() {
       toast.success(`Purchase Order ${po.poNumber} has been rejected.`);
       setApprovalComment('');
       await refetch();
+      await refreshApproval(po.approvalRequestId);
     } catch (err: any) {
       toast.error(err.message || 'Failed to reject purchase order');
     } finally {
@@ -115,38 +173,8 @@ export function PurchaseOrderDetailPage() {
     }
   };
 
-  const handlePassToManager = async () => {
-    if (!po?.approvalRequestId) {
-      toast.error('No approval request reference found for this PO.');
-      return;
-    }
-    if (approvalComment.trim().length < 3) {
-      toast.error('An explanatory verification comment of at least 3 characters is required.');
-      return;
-    }
-
-    setActionLoading(true);
-    try {
-      await approvalService.processAction(
-        po.approvalRequestId,
-        'ESCALATE',
-        currentUser.id,
-        currentUser.name,
-        currentUser.role,
-        approvalComment,
-        'MANAGER'
-      );
-      toast.success(
-        `Purchase Order ${po.poNumber} verified and passed to General Manager for authorization.`
-      );
-      setApprovalComment('');
-      await refetch();
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to pass purchase order to manager');
-    } finally {
-      setActionLoading(false);
-    }
-  };
+  const handleManagerApprove = handleApprove;
+  const handleManagerReject = handleReject;
 
   const handleSubmitForApproval = async () => {
     if (!po) return;

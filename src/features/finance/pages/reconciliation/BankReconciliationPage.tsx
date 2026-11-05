@@ -679,8 +679,8 @@ export function BankReconciliationPage() {
               Phase 4 Treasury & Audit Control
             </Badge>
           </div>
-          <p className="text-sm text-slate-500 mt-1">
-            Split-pane electronic bank statement reconciliation with dynamic prior-balance locking and heuristic auto-matching.
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Electronic statement parsing, heuristic auto-matching, and balance reconciliation.
           </p>
         </div>
 

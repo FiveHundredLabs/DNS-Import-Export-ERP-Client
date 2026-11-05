@@ -867,8 +867,8 @@ export function ManualJournalPage() {
               </Badge>
             )}
           </div>
-          <p className="text-sm text-slate-500 mt-1">
-            Universal double-entry voucher screen for manual adjustments, accruals, overheads, and Maker-Checker approvals.
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Manual adjustments, accruals, overheads, and Maker-Checker double-entry postings.
           </p>
         </div>
 

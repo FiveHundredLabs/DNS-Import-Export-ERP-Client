@@ -149,8 +149,8 @@ export function ARCollectionAllocationPage() {
               Sub-Ledger Invoices
             </Badge>
           </div>
-          <p className="text-sm text-slate-500 mt-1">
-            Detailed invoice allocation desk: Distribute customer collection receipts across unpaid sales invoices (Defaults to Auto-FIFO, or customize manually).
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Auto-FIFO and manual allocation of collection receipts to open invoices.
           </p>
         </div>
 

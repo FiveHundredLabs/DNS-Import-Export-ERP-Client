@@ -407,7 +407,7 @@ export function StockBalancePage() {
                           <span className="text-sm font-bold text-emerald-700 font-mono">{b.availableForSale}</span>
                         </div>
                         <div>
-                          <span className="text-[10px] text-muted-foreground block font-medium uppercase">Reserved</span>
+                          <span className="text-[10px] text-muted-foreground block font-medium uppercase">Hold</span>
                           <span className="text-xs font-semibold text-blue-700 font-mono">{b.reservedQuantity}</span>
                         </div>
                         <div>
@@ -455,8 +455,9 @@ export function StockBalancePage() {
                       <TableHead className="min-w-[180px]">Product Name</TableHead>
                       <TableHead className="w-28">Category</TableHead>
                       <TableHead className="w-24 text-center">Location</TableHead>
-                      <TableHead className="w-20 text-right font-bold text-emerald-700">Available</TableHead>
+                      <TableHead className="w-20 text-right font-medium text-slate-700">Physical Stock</TableHead>
                       <TableHead className="w-24 text-right font-semibold text-blue-700">Reserved</TableHead>
+                      <TableHead className="w-24 text-right font-bold text-emerald-700">Available Stock</TableHead>
                       <TableHead className="w-24 text-right font-semibold text-indigo-700">Dispatched</TableHead>
                       <TableHead className="w-24 text-right font-semibold text-teal-700">Delivered</TableHead>
                       <TableHead className="w-24 text-right font-semibold text-rose-600">Damaged</TableHead>
@@ -479,7 +480,7 @@ export function StockBalancePage() {
                           <TableCell className="text-center">
                             <Badge variant="outline" className="text-[11px] px-1.5 py-0">{b.locationType}</Badge>
                           </TableCell>
-                          <TableCell className="text-right font-bold text-emerald-700 font-mono text-sm">{b.availableForSale}</TableCell>
+                          <TableCell className="text-right font-mono font-medium text-slate-700 text-xs">{b.physicalStock}</TableCell>
                           <TableCell className="text-right font-mono">
                             {b.reservedQuantity > 0 ? (
                               <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 text-[10.5px] py-0 px-1.5 font-mono">
@@ -489,6 +490,8 @@ export function StockBalancePage() {
                               <span className="text-muted-foreground text-xs">0</span>
                             )}
                           </TableCell>
+                          <TableCell className="text-right font-bold text-emerald-700 font-mono text-sm">{b.availableForSale}</TableCell>
+
                           <TableCell className="text-right font-mono">
                             {b.dispatchedQuantity > 0 ? (
                               <Badge variant="outline" className="bg-indigo-50 text-indigo-700 border-indigo-200 text-[10.5px] py-0 px-1.5 font-mono">

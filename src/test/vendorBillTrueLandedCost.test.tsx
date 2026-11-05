@@ -107,13 +107,12 @@ describe('Vendor Bill True Landed Cost Recalculation Engine', () => {
         </MemoryRouter>
       );
 
-      // Initial state has default sample expense rows
-      expect(screen.getByDisplayValue('Sea / Air freight charges')).toBeDefined();
-      expect(screen.getByDisplayValue('Port terminal handling & wharfage')).toBeDefined();
+      // Verify 2-step guided workflow is visible
+      expect(screen.getByText(/Step 1: Invoice & Landed Costing/i)).toBeDefined();
 
-      // Click "Add Additional Landed Expense" button
-      const addExpenseBtn = screen.getByRole('button', { name: /add additional landed expense/i });
-      fireEvent.click(addExpenseBtn);
+      // Click "+ Detail" to open custom expense breakdown
+      const detailBtn = screen.getByText('+ Detail');
+      fireEvent.click(detailBtn);
 
       // Find the inputs for the newly added empty expense line
       const descriptionInputs = screen.getAllByPlaceholderText(/e\.g\. carrier, wharfage, haulage details/i);
@@ -124,7 +123,6 @@ describe('Vendor Bill True Landed Cost Recalculation Engine', () => {
 
       // Find the corresponding amount inputs
       const amountInputs = screen.getAllByPlaceholderText('0.00');
-      // Set the amount to 45000 on the last expense input
       fireEvent.change(amountInputs[amountInputs.length - 1], { target: { value: '45000' } });
 
       await waitFor(() => {
@@ -141,12 +139,15 @@ describe('Vendor Bill True Landed Cost Recalculation Engine', () => {
         </MemoryRouter>
       );
 
-      // Find the remove buttons for the existing expenses
+      // Open detail and add an expense
+      const detailBtn = screen.getByText('+ Detail');
+      fireEvent.click(detailBtn);
+
       const removeButtons = screen.getAllByTitle('Remove expense line');
       const initialCount = removeButtons.length;
       expect(initialCount).toBeGreaterThan(0);
 
-      // Remove the last expense line
+      // Remove the expense line
       fireEvent.click(removeButtons[removeButtons.length - 1]);
 
       await waitFor(() => {
@@ -177,7 +178,7 @@ describe('Vendor Bill True Landed Cost Recalculation Engine', () => {
       });
     });
 
-    it('8. Renders 8 example products with compact cards and expanders', async () => {
+    it('8. Renders 8 example products in the costing table with Step 1 and Step 2 navigation', async () => {
       render(
         <MemoryRouter>
           <VendorBillCostingPage />
@@ -197,19 +198,17 @@ describe('Vendor Bill True Landed Cost Recalculation Engine', () => {
       expect(screen.getAllByText('Schneider TeSys D 25A 3-Pole AC3 Magnetic Contactor').length).toBeGreaterThan(0);
       expect(screen.getAllByText('Schneider Lisse 13A Single Switched Socket Outlet').length).toBeGreaterThan(0);
 
-      // Verify compact header information: Supplier Unit Cost, Landed Cost per Unit, Line Total
+      // Verify compact header information: Supplier Unit Cost, True Landed Cost, Line Total
       expect(screen.getAllByText('Supplier Unit Cost').length).toBeGreaterThan(0);
-      expect(screen.getAllByText('Landed Cost per Unit').length).toBeGreaterThan(0);
-      expect(screen.getAllByText('Line Total').length).toBeGreaterThan(0);
+      expect(screen.getAllByText(/True Landed Cost/i).length).toBeGreaterThan(0);
 
-      // Toggle bulk expand / collapse
-      const bulkToggleBtn = screen.getByTitle('Toggle all product costing cards');
-      expect(bulkToggleBtn).toBeDefined();
+      // Navigate to Step 2 via Continue button
+      const continueBtn = screen.getByRole('button', { name: /continue to pricing \(step 2\)/i });
+      fireEvent.click(continueBtn);
 
-      // Click to toggle all (Collapse All or Expand All)
-      fireEvent.click(bulkToggleBtn);
       await waitFor(() => {
-        expect(screen.getByText('8 Products')).toBeDefined();
+        expect(screen.getByText(/Commercial Price & Margin Assignment/i)).toBeDefined();
+        expect(screen.getByRole('button', { name: /back to costing \(step 1\)/i })).toBeDefined();
       });
     });
   });

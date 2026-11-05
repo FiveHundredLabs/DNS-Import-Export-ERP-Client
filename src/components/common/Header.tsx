@@ -36,6 +36,7 @@ const ROUTE_TITLES: Record<string, string> = {
   '/finance': 'Finance & Double-Entry Ledger',
   '/finance/cash-book': 'Cash Book & Payment Vouchers',
   '/warranty': 'Warranty Claim Hub',
+  '/my-performance': 'Performance & Incentives',
   '/commissions': 'Commission Configuration & Reports',
   '/commissions/config': 'Commission Configuration & Reports',
   '/commissions/configuration': 'Commission Configuration & Reports',
