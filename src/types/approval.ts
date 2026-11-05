@@ -5,6 +5,7 @@ export type ApprovalDocumentType =
   | 'CUSTOMER_CREATION'
   | 'PRODUCT_PRICE_CHANGE'
   | 'QUOTATION_DISCOUNT'
+  | 'SALES_ORDER'
   | 'SPECIAL_SALES_ORDER'
   | 'GRN_RECEIPT'
   | 'PAYMENT_RECEIPT'

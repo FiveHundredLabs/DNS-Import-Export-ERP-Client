@@ -1,5 +1,7 @@
 import { StockManagerApprovalHub } from '../inventory/components/StockManagerApprovalHub';
 import { PurchasingApprovalHub } from '../purchasing/components/PurchasingApprovalHub';
+import { SalesManagerMyApprovalsPage } from './SalesManagerMyApprovalsPage';
+import { AreaManagerOrderApprovalsPage } from './AreaManagerOrderApprovalsPage';
 import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useApprovals } from '../../hooks/useApprovals';
@@ -28,6 +30,7 @@ import {
   Warehouse,
   Landmark,
   Layers,
+  ShieldAlert,
 } from 'lucide-react';
 import { PageHeader, StatusBadge } from '../../components';
 import { formatDateTime } from '../../utils/formatters';
@@ -36,6 +39,7 @@ import { cn } from '../../utils/cn';
 export function ApprovalsPage() {
   const { currentUser, role } = useAuth();
 
+  // ── Role-based dispatch: each role renders its designated approval UI ──────
   // Stock Manager has dedicated physical intake & customer rejection verification workflow
   if (role === 'STOCK_MANAGER') {
     return <StockManagerApprovalHub />;
@@ -46,10 +50,37 @@ export function ApprovalsPage() {
     return <PurchasingApprovalHub />;
   }
 
+  // Sales Manager dedicated My Approvals page (Orders, Quotations, Customers)
+  if (role === 'SALES_MANAGER') {
+    return <SalesManagerMyApprovalsPage />;
+  }
+
+  // Area Manager dedicated Order Approvals page (Territory Orders)
+  if (role === 'AREA_MANAGER') {
+    return <AreaManagerOrderApprovalsPage />;
+  }
+
+  // Central Approval Engine is exclusively for Director and Manager
+  if (role !== 'DIRECTOR' && role !== 'MANAGER') {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] text-center space-y-3">
+        <div className="p-4 rounded-full bg-rose-50 border border-rose-200">
+          <ShieldCheck className="h-10 w-10 text-rose-400" />
+        </div>
+        <h2 className="text-lg font-bold text-slate-800">Access Restricted</h2>
+        <p className="text-sm text-slate-500 max-w-sm">
+          The central Approval Engine is available to Directors and Managers only.
+          Please use your role-specific approval page from the sidebar.
+        </p>
+      </div>
+    );
+  }
+
   const { approvals, loading, error, refetch, executeAction } = useApprovals(role);
   const [selectedRequest, setSelectedRequest] = useState<ApprovalRequest | null>(null);
   const [actionDialogOpen, setActionDialogOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [viewMode, setViewMode] = useState<'PENDING' | 'ALL'>('PENDING');
   const [categoryFilter, setCategoryFilter] = useState<'ALL' | 'ORDERS' | 'QUOTATIONS' | 'PURCHASE_ORDERS' | 'GRN' | 'STOCK_VERIFICATIONS' | 'FINANCE_CUSTOMERS'>('ALL');
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'PENDING' | 'APPROVED' | 'ESCALATED' | 'REJECTED'>('ALL');
 
@@ -61,6 +92,7 @@ export function ApprovalsPage() {
 
   const getDocumentLink = (app: ApprovalRequest): string | null => {
     if (app.documentType === 'PAYMENT_RECEIPT') return `/payments/${app.documentId}`;
+    if (app.documentType === 'SALES_ORDER') return `/orders/${app.documentId}`;
     if (app.documentType === 'SPECIAL_SALES_ORDER') return `/approvals/orders/${app.documentId}`;
     if (app.documentType === 'QUOTATION_DISCOUNT') return `/quotations/${app.documentId}`;
     if (app.documentType === 'GRN_RECEIPT') return `/inventory/grn/${app.documentId}`;
@@ -72,8 +104,16 @@ export function ApprovalsPage() {
 
   const filteredApprovals = useMemo(() => {
     return approvals.filter((app) => {
-      if (statusFilter !== 'ALL' && app.status !== statusFilter) return false;
-      if (categoryFilter === 'ORDERS' && app.documentType !== 'SPECIAL_SALES_ORDER') return false;
+      // Top-level view mode (Pending / All)
+      if (viewMode === 'PENDING' && app.status !== 'PENDING') return false;
+
+      // Secondary status filter (only shown when viewMode === 'ALL')
+      if (viewMode === 'ALL' && statusFilter !== 'ALL' && app.status !== statusFilter) return false;
+
+      // Category filter
+      if (categoryFilter === 'ORDERS' &&
+        app.documentType !== 'SPECIAL_SALES_ORDER' &&
+        app.documentType !== 'SALES_ORDER') return false;
       if (categoryFilter === 'QUOTATIONS' && app.documentType !== 'QUOTATION_DISCOUNT') return false;
       if (categoryFilter === 'PURCHASE_ORDERS' && app.documentType !== 'PURCHASE_ORDER') return false;
       if (categoryFilter === 'GRN' && app.documentType !== 'GRN_RECEIPT') return false;
@@ -95,13 +135,13 @@ export function ApprovalsPage() {
       }
       return true;
     });
-  }, [approvals, categoryFilter, statusFilter, searchQuery]);
+  }, [approvals, categoryFilter, statusFilter, viewMode, searchQuery]);
 
   return (
     <div className="space-y-5">
       <PageHeader
         title="Enterprise Approvals Engine"
-        subtitle="Unified multi-tier hierarchical decision workflows for orders, discount tiers, price floors, quotations, and inbound GRNs."
+        subtitle="Centralized multi-tier approval visibility for orders, quotations, purchase orders, GRNs, and customer workflows."
         badge={<StatusBadge status="ACTIVE" label="Central Engine" />}
         actions={
           <Button variant="outline" size="sm" onClick={() => refetch()} className="gap-1.5 bg-white hover:bg-slate-50 text-slate-700">
@@ -110,6 +150,44 @@ export function ApprovalsPage() {
           </Button>
         }
       />
+
+      {/* Primary View Mode Toggle: Pending / All */}
+      <div className="inline-flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 text-sm w-fit">
+        {([
+          { label: 'Pending Approvals', value: 'PENDING' as const },
+          { label: 'All Approvals', value: 'ALL' as const },
+        ]).map((mode) => (
+          <button
+            key={mode.value}
+            type="button"
+            onClick={() => setViewMode(mode.value)}
+            className={cn(
+              'px-4 py-1.5 rounded-lg font-semibold transition-all cursor-pointer text-xs',
+              viewMode === mode.value
+                ? 'bg-white text-slate-900 shadow-sm border border-slate-200/80'
+                : 'text-slate-500 hover:text-slate-800'
+            )}
+          >
+            {mode.value === 'PENDING' && (
+              <span className="flex items-center gap-1.5">
+                <Clock className="h-3.5 w-3.5 text-amber-500" />
+                {mode.label}
+                {approvals.filter(a => a.status === 'PENDING').length > 0 && (
+                  <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-black bg-amber-100 text-amber-800 border border-amber-300">
+                    {approvals.filter(a => a.status === 'PENDING').length}
+                  </span>
+                )}
+              </span>
+            )}
+            {mode.value === 'ALL' && (
+              <span className="flex items-center gap-1.5">
+                <Layers className="h-3.5 w-3.5" />
+                {mode.label}
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
 
       {/* Filter and Search Bar */}
       <Card className="border-slate-200 shadow-2xs">
@@ -125,31 +203,33 @@ export function ApprovalsPage() {
               />
             </div>
 
-            {/* Status Filter Tabs */}
-            <div className="inline-flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs shrink-0">
-              {(
-                [
-                  { label: 'All Statuses', value: 'ALL' },
-                  { label: 'Pending', value: 'PENDING' },
-                  { label: 'Approved', value: 'APPROVED' },
-                  { label: 'Escalated / Rejected', value: 'ESCALATED' },
-                ] as const
-              ).map((st) => (
-                <button
-                  key={st.value}
-                  type="button"
-                  onClick={() => setStatusFilter(st.value)}
-                  className={cn(
-                    'px-3 py-1 rounded-lg font-semibold transition-all cursor-pointer text-xs',
-                    statusFilter === st.value
-                      ? 'bg-white text-slate-900 shadow-2xs border border-slate-200/60'
-                      : 'text-slate-600 hover:text-slate-900'
-                  )}
+            {/* Status Filter Tabs — only shown in All Approvals mode */}
+            {viewMode === 'ALL' && (
+              <div className="inline-flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs shrink-0">
+                {(
+                  [
+                    { label: 'All Statuses', value: 'ALL' },
+                    { label: 'Pending', value: 'PENDING' },
+                    { label: 'Approved', value: 'APPROVED' },
+                    { label: 'Escalated / Rejected', value: 'ESCALATED' },
+                  ] as const
+                ).map((st) => (
+                  <button
+                    key={st.value}
+                    type="button"
+                    onClick={() => setStatusFilter(st.value)}
+                    className={cn(
+                      'px-3 py-1 rounded-lg font-semibold transition-all cursor-pointer text-xs',
+                      statusFilter === st.value
+                        ? 'bg-white text-slate-900 shadow-2xs border border-slate-200/60'
+                        : 'text-slate-600 hover:text-slate-900'
+                    )}
                 >
                   {st.label}
                 </button>
               ))}
             </div>
+            )}
           </div>
 
           {/* Unified Domain Categories Bar */}
