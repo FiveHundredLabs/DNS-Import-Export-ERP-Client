@@ -93,7 +93,7 @@ export function useReports(initialFilter: ReportFilter = {}) {
       });
 
       // Area performance (visible for DIRECTOR, MANAGER, AREA_MANAGER)
-      const allowedAreaRoles = ['DIRECTOR', 'MANAGER', 'AREA_MANAGER'];
+      const allowedAreaRoles = ['DIRECTOR', 'MANAGER'];
       if (allowedAreaRoles.includes(user.role)) {
         const areaToFetch =
           user.role === 'AREA_MANAGER'

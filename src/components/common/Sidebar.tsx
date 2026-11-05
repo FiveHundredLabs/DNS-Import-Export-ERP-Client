@@ -357,7 +357,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const adminItems: SidebarItem[] = [
     { id: 'teams', name: 'Team Management', path: '/teams', icon: Users, category: 'admin' },
     { id: 'areas', name: 'Area Management', path: '/areas', icon: Compass, category: 'admin' },
-    { id: 'reports', name: 'Enterprise Reports', path: '/reports', icon: BarChart3, category: 'reports', excludedRoles: ['DIRECTOR', 'MANAGER', 'FINANCE_MANAGER', 'SALES_MANAGER'] },
+    { id: 'reports', name: 'Enterprise Reports', path: '/reports', icon: BarChart3, category: 'reports', excludedRoles: ['DIRECTOR', 'MANAGER', 'FINANCE_MANAGER', 'SALES_MANAGER', 'AREA_MANAGER'] },
     { id: 'credit-terms-settings', name: 'Default Credit Terms', path: '/?tab=settings&section=credit-terms', icon: CreditCard, category: 'admin', allowedRoles: ['DIRECTOR', 'MANAGER'] },
     { id: 'commissions-config', name: 'Commission Configuration', path: '/commissions', icon: Award, category: 'admin', allowedRoles: ['DIRECTOR', 'MANAGER'] },
     { id: 'tax-settings', name: 'Global Tax Configuration', path: '/?tab=settings&section=tax', icon: Percent, category: 'admin', directorOnly: true },

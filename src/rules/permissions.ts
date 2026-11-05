@@ -320,6 +320,10 @@ export function canAccessRoute(role: UserRole, path: string): boolean {
     return hasPermission(role, 'commissions:view');
   }
   if (path.startsWith('/reports')) {
+    // Area Manager: NO access to reports
+    if (role === 'AREA_MANAGER') {
+      return false;
+    }
     // Showroom Manager: ONLY the showroom sales report
     if (role === 'SHOWROOM_MANAGER') {
       return path === '/reports/sales/showroom';
@@ -345,7 +349,7 @@ export function canAccessRoute(role: UserRole, path: string): boolean {
       return true;
     }
     // Other roles with reports:all permission
-    return hasPermission(role, 'reports:all') || hasPermission(role, 'reports:area_only');
+    return hasPermission(role, 'reports:all');
   }
   if (path.startsWith('/audit')) {
     return hasPermission(role, 'audit:view');
