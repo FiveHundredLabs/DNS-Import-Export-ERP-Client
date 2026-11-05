@@ -194,6 +194,64 @@ describe('Role-Based Sidebar Navigation & Access Control', () => {
       expect(canAccessRoute('DIRECTOR', '/')).toBe(true);
     });
 
+    it('at /payments/collect, only Customer Collections is highlighted and Cash in Hand is not highlighted', () => {
+      mockUseAuth.mockReturnValue({
+        role: 'DIRECTOR',
+        currentUser: {
+          id: 'user-director',
+          name: 'Director User',
+          role: 'DIRECTOR',
+          email: 'director@dns.lk',
+          phone: '0771234567',
+          status: 'ACTIVE',
+        },
+        canAccessRoute: (path: string) => canAccessRoute('DIRECTOR', path),
+        hasPermission: () => true,
+        isAuthenticated: true,
+      });
+
+      render(
+        <MemoryRouter initialEntries={['/payments/collect']}>
+          <Sidebar isOpen={true} onClose={() => {}} />
+        </MemoryRouter>
+      );
+
+      const customerCollectionsItem = screen.getByText('Customer Collections').closest('div');
+      const cashInHandItem = screen.getByText('Cash in Hand (Wallet)').closest('div');
+
+      expect(customerCollectionsItem).toHaveClass('bg-slate-100');
+      expect(cashInHandItem).not.toHaveClass('bg-slate-100');
+    });
+
+    it('at /payments, only Cash in Hand is highlighted and Customer Collections is not highlighted', () => {
+      mockUseAuth.mockReturnValue({
+        role: 'DIRECTOR',
+        currentUser: {
+          id: 'user-director',
+          name: 'Director User',
+          role: 'DIRECTOR',
+          email: 'director@dns.lk',
+          phone: '0771234567',
+          status: 'ACTIVE',
+        },
+        canAccessRoute: (path: string) => canAccessRoute('DIRECTOR', path),
+        hasPermission: () => true,
+        isAuthenticated: true,
+      });
+
+      render(
+        <MemoryRouter initialEntries={['/payments']}>
+          <Sidebar isOpen={true} onClose={() => {}} />
+        </MemoryRouter>
+      );
+
+      const customerCollectionsItem = screen.getByText('Customer Collections').closest('div');
+      const cashInHandItem = screen.getByText('Cash in Hand (Wallet)').closest('div');
+
+      expect(cashInHandItem).toHaveClass('bg-slate-100');
+      expect(customerCollectionsItem).not.toHaveClass('bg-slate-100');
+    });
+
     it('MANAGER has full permissions for GRN creation and delivery notes, cash in hand, but excluded from global tax/theme config', () => {
       expect(canAccessRoute('MANAGER', '/inventory/grn')).toBe(true);
       expect(canAccessRoute('MANAGER', '/inventory/grn/new')).toBe(true);

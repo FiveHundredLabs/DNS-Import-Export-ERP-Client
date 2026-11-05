@@ -2,9 +2,48 @@ import { IQuotationRepository, QuotationUserContext } from '../IQuotationReposit
 import { Quotation, QuotationFilters } from '../../types/quotation';
 import { PaginatedResult } from '../../types/common';
 import { MOCK_QUOTATIONS } from '../../mock/mockQuotations';
+import { MOCK_APPROVALS } from '../../mock/mockApprovals';
+
+const QUOTATIONS_STORAGE_KEY = 'dns_erp_quotations_v2';
 
 export class MockQuotationRepository implements IQuotationRepository {
-  private quotations: Quotation[] = [...MOCK_QUOTATIONS];
+  private quotations: Quotation[] = [];
+
+  constructor() {
+    this.init();
+  }
+
+  private init() {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const stored = localStorage.getItem(QUOTATIONS_STORAGE_KEY);
+        if (stored) {
+          const parsed: Quotation[] = JSON.parse(stored);
+          const existingIds = new Set(parsed.map((q) => q.id));
+          const missing = MOCK_QUOTATIONS.filter((q) => !existingIds.has(q.id));
+          this.quotations = [...parsed, ...JSON.parse(JSON.stringify(missing))];
+          if (missing.length > 0) {
+            this.persist();
+          }
+        } else {
+          this.quotations = JSON.parse(JSON.stringify(MOCK_QUOTATIONS));
+          this.persist();
+        }
+      } else {
+        this.quotations = JSON.parse(JSON.stringify(MOCK_QUOTATIONS));
+      }
+    } catch {
+      this.quotations = JSON.parse(JSON.stringify(MOCK_QUOTATIONS));
+    }
+  }
+
+  private persist(): void {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        localStorage.setItem(QUOTATIONS_STORAGE_KEY, JSON.stringify(this.quotations));
+      }
+    } catch {}
+  }
 
   async getAll(
     filters?: QuotationFilters,
@@ -75,8 +114,72 @@ export class MockQuotationRepository implements IQuotationRepository {
 
   async getById(id: string): Promise<Quotation | null> {
     await new Promise((resolve) => setTimeout(resolve, 50));
-    const found = this.quotations.find((q) => q.id === id || q.quotationNumber === id);
-    return found ? JSON.parse(JSON.stringify(found)) : null;
+    let found = this.quotations.find((q) => q.id === id || q.quotationNumber === id);
+    if (found) return JSON.parse(JSON.stringify(found));
+
+    // Fallback 1: check MOCK_QUOTATIONS directly
+    const mockQt = MOCK_QUOTATIONS.find((q) => q.id === id || q.quotationNumber === id);
+    if (mockQt) {
+      this.quotations.push(JSON.parse(JSON.stringify(mockQt)));
+      this.persist();
+      return JSON.parse(JSON.stringify(mockQt));
+    }
+
+    // Fallback 2: check if an approval request exists for this quotation
+    const approval = MOCK_APPROVALS.find(
+      (a) =>
+        a.documentType === 'QUOTATION_DISCOUNT' &&
+        (a.documentId === id || a.documentReferenceNumber === id)
+    );
+    if (approval) {
+      const fallbackQt: Quotation = {
+        id: approval.documentId,
+        quotationNumber: approval.documentReferenceNumber,
+        customerId: 'cust-003',
+        customerCodeSnapshot: 'DLR-KDY-003',
+        customerNameSnapshot: 'Kandy Power & Automation Solutions',
+        customerPhoneSnapshot: '+94 81 222 3344',
+        customerAddressSnapshot: '24 William Gopallawa Mawatha, Kandy',
+        salesRepId: approval.initiatorId || 'usr-106',
+        salesRepNameSnapshot: approval.initiatorName || 'Kasun Wickramasinghe',
+        items: [
+          {
+            id: `qti-${approval.documentId}-1`,
+            productId: 'prod-002',
+            skuSnapshot: 'DNS-MCB-63A-3P',
+            productNameSnapshot: 'Schneider Acti9 63A Triple Pole MCB',
+            uomSnapshot: 'PCS',
+            unitPriceSnapshot: 8400,
+            quantity: 50,
+            discountPercentage: 14,
+            discountAmount: 58800,
+            taxPercentage: 18,
+            taxAmount: 64998,
+            lineTotal: 426198,
+            requiresApproval: true,
+            approvalReason: approval.specialReason || 'Discount tier override approval',
+          },
+        ],
+        subtotal: 420000,
+        discountAmount: 58800,
+        taxAmount: 64998,
+        totalAmount: 426198,
+        status: 'PENDING_APPROVAL',
+        approvalStatus: 'PENDING',
+        targetApproverRole: approval.targetApproverRole || 'SALES_MANAGER',
+        validUntil: '2026-12-31',
+        notes: approval.description,
+        requiresApproval: true,
+        approvalReason: approval.specialReason || 'Special pricing override',
+        createdAt: approval.createdAt,
+        updatedAt: approval.updatedAt,
+      };
+      this.quotations.push(fallbackQt);
+      this.persist();
+      return JSON.parse(JSON.stringify(fallbackQt));
+    }
+
+    return null;
   }
 
   async create(
@@ -98,6 +201,7 @@ export class MockQuotationRepository implements IQuotationRepository {
     };
 
     this.quotations.unshift(newQuotation);
+    this.persist();
     return JSON.parse(JSON.stringify(newQuotation));
   }
 
@@ -116,6 +220,7 @@ export class MockQuotationRepository implements IQuotationRepository {
     };
 
     this.quotations[index] = updated;
+    this.persist();
     return JSON.parse(JSON.stringify(updated));
   }
 
@@ -124,6 +229,7 @@ export class MockQuotationRepository implements IQuotationRepository {
     const index = this.quotations.findIndex((q) => q.id === id);
     if (index === -1) return false;
     this.quotations.splice(index, 1);
+    this.persist();
     return true;
   }
 }

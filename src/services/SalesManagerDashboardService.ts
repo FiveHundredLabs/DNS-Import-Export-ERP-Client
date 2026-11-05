@@ -135,12 +135,13 @@ class SalesManagerDashboardService {
     let reps = MOCK_USERS.filter(
       (u) => u.role === 'SALES_REP' && u.areaId === area.id && u.isActive
     );
-    if (reps.length === 0) {
-      // Fallback to active sales reps to ensure area always displays assigned team
+    if (reps.length < 3) {
+      // Include active sales reps so every territory leaderboard displays a competitive team ranking
       reps = MOCK_USERS.filter((u) => u.role === 'SALES_REP' && u.isActive).slice(0, 4);
     }
 
-    const subordinateReps: SubordinateRepPerformanceItem[] = await Promise.all(
+    // Fetch subordinate reps and compute their sales, collected cash, and incentives
+    const unsortedSubordinateReps: Omit<SubordinateRepPerformanceItem, 'rank'>[] = await Promise.all(
       reps.map(async (rep) => {
         const repPerf = await commissionService.getRepPerformance(rep.id, selectedMonth);
         let status: 'BELOW_TARGET' | 'ON_TRACK' | 'TARGET_ACHIEVED' | 'SUPER_ACHIEVER' =
@@ -158,18 +159,30 @@ class SalesManagerDashboardService {
           repName: rep.name,
           target: repPerf.targetAmount,
           actualSales: repPerf.actualSales,
-          achievementPercentage: repPerf.achievementPercentage,
+          collectedCash: repPerf.collectedCash,
           clearedCollections: repPerf.clearedCollections,
+          cashRealizationPercentage: repPerf.cashRealizationPercentage,
+          achievementPercentage: repPerf.achievementPercentage,
           earnedCommission: repPerf.earnedCommission,
+          earnedIncentive: repPerf.earnedIncentive,
           status,
           scenario: repPerf.breakdown.scenarioLabel,
         };
       })
     );
 
+    // Sort as a true Leaderboard descending by collected cash (or sales)
+    unsortedSubordinateReps.sort((a, b) => b.collectedCash - a.collectedCash || b.actualSales - a.actualSales);
+
+    // Assign rank #1, #2, #3...
+    const subordinateReps: SubordinateRepPerformanceItem[] = unsortedSubordinateReps.map((r, idx) => ({
+      ...r,
+      rank: idx + 1,
+    }));
+
     const territorySales = subordinateReps.reduce((sum, r) => sum + r.actualSales, 0);
     const territoryCollections = subordinateReps.reduce(
-      (sum, r) => sum + r.clearedCollections,
+      (sum, r) => sum + r.collectedCash,
       0
     );
     const territoryTarget =
@@ -178,6 +191,8 @@ class SalesManagerDashboardService {
       territoryTarget > 0
         ? Math.round((territorySales / territoryTarget) * 10000) / 100
         : 0;
+    const territoryCashRealizationPercentage =
+      territorySales > 0 ? Math.round((territoryCollections / territorySales) * 10000) / 100 : 0;
     const surplusSales = Math.max(0, territorySales - territoryTarget);
 
     const managerRoleConfig = await commissionConfigService.getRoleConfig('AREA_MANAGER');
@@ -188,6 +203,14 @@ class SalesManagerDashboardService {
       territoryCollections,
       managerRoleConfig
     );
+
+    const managerIncentiveRate = managerRoleConfig.collectionConfig?.commissionPercentage || 1.5;
+    const managerFormulaExplanation =
+      managerRoleConfig.activeScenario === 'TARGET_BASED'
+        ? surplusSales > 0
+          ? `Earned 3.0% incentive bonus on team surplus sales of LKR ${surplusSales.toLocaleString()} exceeding territory quota.`
+          : `Team sales are at ${territoryAchievementPercentage}% of quota. Surplus incentive unlocks once quota is passed.`
+        : `Earned ${managerIncentiveRate}% override commission on total team collected cash of LKR ${territoryCollections.toLocaleString()}.`;
 
     return {
       areaId: area.id,
@@ -200,8 +223,11 @@ class SalesManagerDashboardService {
       territorySales,
       territoryAchievementPercentage,
       territoryCollections,
+      territoryCashRealizationPercentage,
       surplusSales,
       managerCommission: managerReport.commissionEarned,
+      managerIncentiveRate,
+      managerFormulaExplanation,
       activeScenario: managerRoleConfig.activeScenario,
       managerRoleConfig,
       managerBreakdown: managerReport.breakdown,

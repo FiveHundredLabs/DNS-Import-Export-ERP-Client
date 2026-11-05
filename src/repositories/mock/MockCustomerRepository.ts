@@ -2,9 +2,48 @@ import { ICustomerRepository, CustomerFilters } from '../ICustomerRepository';
 import { Customer, CommercialTerms, CustomerApprovalStage } from '../../types/customer';
 import { PaginatedResult } from '../../types/common';
 import { MOCK_CUSTOMERS } from '../../mock/mockCustomers';
+import { MOCK_APPROVALS } from '../../mock/mockApprovals';
+
+const CUSTOMERS_STORAGE_KEY = 'dns_erp_customers_v2';
 
 export class MockCustomerRepository implements ICustomerRepository {
-  private customers: Customer[] = [...MOCK_CUSTOMERS];
+  private customers: Customer[] = [];
+
+  constructor() {
+    this.init();
+  }
+
+  private init() {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const stored = localStorage.getItem(CUSTOMERS_STORAGE_KEY);
+        if (stored) {
+          const parsed: Customer[] = JSON.parse(stored);
+          const existingIds = new Set(parsed.map((c) => c.id));
+          const missing = MOCK_CUSTOMERS.filter((c) => !existingIds.has(c.id));
+          this.customers = [...parsed, ...JSON.parse(JSON.stringify(missing))];
+          if (missing.length > 0) {
+            this.persist();
+          }
+        } else {
+          this.customers = JSON.parse(JSON.stringify(MOCK_CUSTOMERS));
+          this.persist();
+        }
+      } else {
+        this.customers = JSON.parse(JSON.stringify(MOCK_CUSTOMERS));
+      }
+    } catch {
+      this.customers = JSON.parse(JSON.stringify(MOCK_CUSTOMERS));
+    }
+  }
+
+  private persist(): void {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        localStorage.setItem(CUSTOMERS_STORAGE_KEY, JSON.stringify(this.customers));
+      }
+    } catch {}
+  }
 
   async getAll(filters?: CustomerFilters): Promise<PaginatedResult<Customer>> {
     await new Promise((resolve) => setTimeout(resolve, 150));
@@ -59,8 +98,63 @@ export class MockCustomerRepository implements ICustomerRepository {
 
   async getById(id: string): Promise<Customer | null> {
     await new Promise((resolve) => setTimeout(resolve, 100));
-    const cust = this.customers.find((c) => c.id === id || c.code === id);
-    return cust ? { ...cust } : null;
+    let cust = this.customers.find((c) => c.id === id || c.code === id);
+    if (cust) return { ...cust };
+
+    // Fallback 1: check MOCK_CUSTOMERS directly
+    const mockCust = MOCK_CUSTOMERS.find((c) => c.id === id || c.code === id);
+    if (mockCust) {
+      this.customers.push({ ...mockCust });
+      this.persist();
+      return { ...mockCust };
+    }
+
+    // Fallback 2: check if an approval request exists for customer onboarding
+    const approval = MOCK_APPROVALS.find(
+      (a) =>
+        a.documentType === 'CUSTOMER_CREATION' &&
+        (a.documentId === id || a.documentReferenceNumber === id)
+    );
+    if (approval) {
+      const fallbackCust: Customer = {
+        id: approval.documentId,
+        code: approval.documentReferenceNumber,
+        name: 'Kelani Valley Lighting Mart',
+        type: 'DEALER',
+        areaId: 'area-04',
+        areaName: 'Kottawa',
+        assignedRepId: approval.initiatorId || 'usr-106',
+        assignedRepName: approval.initiatorName || 'Kasun Wickramasinghe',
+        contactPerson: 'Mr. Rohan Gunasekara',
+        phone: '+94 11 278 1122',
+        email: 'rohan@kelanivalley.lk',
+        address: '12 High Level Road, Kottawa',
+        commercialTerms: {
+          creditLimit: 800000,
+          creditDays: 21,
+          defaultDiscountPercentage: 5,
+          maxDiscountPercentage: 8,
+        },
+        financials: {
+          totalOutstanding: 620000,
+          currentDue: 400000,
+          nearDue: 220000,
+          overdue: 0,
+          availableCredit: 180000,
+        },
+        approvalStage: 'PENDING_SALES_REVIEW',
+        status: 'ACTIVE',
+        loyaltyTier: 'BRONZE',
+        loyaltyLevel: 'NEW',
+        createdAt: approval.createdAt,
+        updatedAt: approval.updatedAt,
+      };
+      this.customers.push(fallbackCust);
+      this.persist();
+      return { ...fallbackCust };
+    }
+
+    return null;
   }
 
   async create(
@@ -88,6 +182,7 @@ export class MockCustomerRepository implements ICustomerRepository {
     };
 
     this.customers.unshift(newCustomer);
+    this.persist();
     return newCustomer;
   }
 
@@ -114,6 +209,7 @@ export class MockCustomerRepository implements ICustomerRepository {
     };
 
     this.customers[idx] = updated;
+    this.persist();
     return updated;
   }
 

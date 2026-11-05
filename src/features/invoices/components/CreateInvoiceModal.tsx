@@ -60,6 +60,10 @@ export function CreateInvoiceModal({
   const [searchQuery, setSearchQuery] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  if (currentUser?.role === 'AREA_MANAGER') {
+    return null;
+  }
+
   const approvedStatuses: OrderStatus[] = [
     'APPROVED', 'PICKING', 'PARTIALLY_ISSUED',
     'ISSUED', 'DISPATCHED', 'DELIVERED', 'PARTIALLY_INVOICED',

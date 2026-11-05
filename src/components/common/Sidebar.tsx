@@ -109,7 +109,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         p.startsWith('/quotations') ||
         p.startsWith('/orders') ||
         p.startsWith('/invoices') ||
-        p.startsWith('/payments/collect') ||
+        p.startsWith('/payments') ||
         p.startsWith('/pos')
       ) {
         setActiveCategory('sales');
@@ -118,10 +118,11 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         p.startsWith('/purchasing/suppliers') ||
         p.startsWith('/teams') ||
         p.startsWith('/areas')
-      ) {        setActiveCategory('users');
+      ) {
+        setActiveCategory('users');
       } else if (p.startsWith('/inventory') || p.startsWith('/products')) {
         setActiveCategory('inventory');
-      } else if (p.startsWith('/finance') || p === '/payments') {
+      } else if (p.startsWith('/finance')) {
         setActiveCategory('finance');
       } else if (p.startsWith('/approvals') || p.startsWith('/warranty')) {
         setActiveCategory('approvals');
@@ -164,7 +165,6 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     { id: 'invoices', name: 'Invoices', path: '/invoices', icon: Receipt, category: 'sales' },
     { id: 'customer-collections', name: 'Customer Collections', path: '/payments/collect', icon: Banknote, category: 'sales' },
     { id: 'cash-in-hand', name: 'Cash in Hand (Wallet)', path: '/payments', icon: Wallet, category: 'sales' },
-    { id: 'my-performance', name: 'Performance & Incentives', path: '/my-performance', icon: Award, category: 'sales' },
     { id: 'pos', name: 'Showroom POS', path: '/pos', icon: Store, category: 'sales' },
   ];
 
@@ -186,7 +186,6 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
 
   const directorFinanceItems: SidebarItem[] = [
     { id: 'accounts', name: 'Chart of Accounts', path: '/finance/accounts', icon: BookOpen, category: 'finance' },
-    { id: 'categories', name: 'Category', path: '/finance/categories', icon: Layers, category: 'finance' },
     { id: 'income-desk', name: 'Income & Collections', path: '/finance/income', icon: Banknote, category: 'finance' },
     { id: 'expense-desk', name: 'Expense & Payables', path: '/finance/expense', icon: CreditCard, category: 'finance' },
     { id: 'ap-bills', name: 'Vendor Bill Costing (AP)', path: '/finance/ap/bills/new', icon: Receipt, category: 'finance' },
@@ -299,7 +298,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     { id: 'customers', name: 'Customer Master', path: '/customers', icon: Users2, category: 'customers', excludedRoles: ['CASHIER', 'SHOWROOM_MANAGER'] },
     { id: 'customer-onboarding', name: 'Customer Onboarding', path: '/customers/onboarding', icon: UserPlus, category: 'customers', excludedRoles: ['CASHIER', 'SHOWROOM_MANAGER', 'STOCK_KEEPER', 'FINANCE_MANAGER', 'PURCHASING_OFFICER'] },
     { id: 'invoices', name: 'Invoices', path: '/invoices', icon: Receipt, category: 'sales', excludedRoles: ['CASHIER', 'SHOWROOM_MANAGER'] },
-    { id: 'my-performance', name: 'Performance & Incentives', path: '/my-performance', icon: Award, category: 'sales', allowedRoles: ['SALES_REP', 'AREA_MANAGER', 'SALES_MANAGER', 'MANAGER', 'DIRECTOR'] },
+    { id: 'my-performance', name: 'Performance & Incentives', path: '/my-performance', icon: Award, category: 'sales', allowedRoles: ['SALES_REP', 'AREA_MANAGER'] },
     { id: 'pos', name: 'Showroom POS', path: '/pos', icon: Store, category: 'sales', excludedRoles: ['STOCK_KEEPER', 'STOCK_MANAGER'] },
     { id: 'showroom-sales-report', name: 'Showroom Sales Report', path: '/reports/sales/showroom', icon: Store, category: 'sales', allowedRoles: ['SHOWROOM_MANAGER'] },
   ];
@@ -318,7 +317,6 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   // 4. Finance, Banking & Ledger Core (arranged in logical lifecycle order)
   const financeItems: SidebarItem[] = [
     { id: 'accounts', name: 'Chart of Accounts', path: '/finance/accounts', icon: BookOpen, category: 'finance' },
-    { id: 'categories', name: 'Category', path: '/finance/categories', icon: Layers, category: 'finance' },
     { id: 'income-desk', name: 'Income & Collections', path: '/finance/income', icon: Banknote, category: 'finance' },
     { id: 'expense-desk', name: 'Expense & Payables', path: '/finance/expense', icon: CreditCard, category: 'finance' },
     { id: 'ap-bills', name: 'Vendor Bill Costing (AP)', path: '/finance/ap/bills/new', icon: Receipt, category: 'finance' },
@@ -522,6 +520,10 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     if (item.path === '/customers' && location.pathname.startsWith('/customers/onboarding')) {
       return false;
     }
+    // Prevent Cash in Hand (/payments) from highlighting when on Customer Collections (/payments/collect) or customer ledger routes
+    if (item.path === '/payments' && (location.pathname.startsWith('/payments/collect') || location.pathname.startsWith('/payments/customer'))) {
+      return false;
+    }
     return location.pathname === item.path || location.pathname.startsWith(item.path + '/');
   };
 
@@ -531,6 +533,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     const itemIsFav = isFavorite(item.id);
     const active = isItemActive(item);
     const isCustomerMasterExempt = item.path === '/customers' && location.pathname.startsWith('/customers/onboarding');
+    const isCashInHandExempt = item.path === '/payments' && (location.pathname.startsWith('/payments/collect') || location.pathname.startsWith('/payments/customer'));
 
     return (
       <div
@@ -545,7 +548,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         {/* Left: Slate Gray Menu Item Icon (Small: h-3.5 w-3.5) + Item Name */}
         <NavLink
           to={item.path}
-          end={item.exact || isCustomerMasterExempt}
+          end={item.exact || isCustomerMasterExempt || isCashInHandExempt}
           onClick={onClose}
           className="flex items-center gap-2 min-w-0 flex-1 px-2 py-1.5 focus:outline-none"
         >

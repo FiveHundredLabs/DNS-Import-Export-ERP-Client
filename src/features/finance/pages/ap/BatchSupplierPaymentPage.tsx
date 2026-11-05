@@ -1,11 +1,13 @@
-import { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apService, VendorBill } from '../../services/apService';
 import { MOCK_GRNS } from '../../../../mock/mockInventory';
 import { useFinanceLedger } from '../../hooks/useFinanceLedger';
+import { useAuth } from '../../../../hooks/useAuth';
 import { CurrencyInput } from '../../components/CurrencyInput';
 import { DoubleEntryHoverBadge } from '../../components/DoubleEntryHoverBadge';
 import { PurchaseOrderSelector } from '../../../../components/selectors/PurchaseOrderSelector';
+import { PaymentVouchersRegistry } from '../../components/PaymentVouchersRegistry';
 import { Button } from '../../../../components/ui/button';
 import { ConfirmButton } from '../../../../components/ui/confirm-button';
 import { Input } from '../../../../components/ui/input';
@@ -30,14 +32,31 @@ import {
   Printer,
   FileText,
   Trash2,
+  Calendar,
+  Building2,
+  Search,
+  ShoppingCart,
+  Check,
+  Sparkles,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { PrintablePaymentVoucher } from '../../components/PrintablePaymentVoucher';
-import { PaymentVoucher } from '../../../../types/cashbook';
+import { PaymentVoucher, CashVoucherCategory } from '../../../../types/cashbook';
+import { purchaseOrderService } from '../../../../services/PurchaseOrderService';
+import { PurchaseOrder } from '../../../../types/purchasing';
+import { financeRepository } from '../../api';
+import { JournalEntry } from '../../api/types';
+import { cashBookService } from '../../../../services/CashBookService';
+
+export type PaymentDeskMode =
+  | 'SETTLE_BILLS'
+  | 'ADVANCE_PREPAYMENT'
+  | 'OTHER_PAYMENTS'
+  | 'REGISTRY';
 
 export interface BatchSupplierPaymentPageProps {
   hideTopNav?: boolean;
-  initialMode?: 'SETTLE_BILLS' | 'ADVANCE_PREPAYMENT';
+  initialMode?: PaymentDeskMode;
   onViewRegistry?: () => void;
   voucherNumber?: string;
 }
@@ -49,38 +68,20 @@ export function BatchSupplierPaymentPage({
   voucherNumber,
 }: BatchSupplierPaymentPageProps = {}) {
   const navigate = useNavigate();
+  const { currentUser } = useAuth();
   const { suppliers, accounts } = useFinanceLedger();
-  const [currentVoucherNum, setCurrentVoucherNum] = useState<string>(() => voucherNumber || 'PV-2026-0081');
+
+  const [currentVoucherNum, setCurrentVoucherNum] = useState<string>(
+    () => voucherNumber || `PV-2026-${String(Math.floor(80 + Math.random() * 20)).padStart(4, '0')}`
+  );
   const [selectedVoucherForPrint, setSelectedVoucherForPrint] = useState<PaymentVoucher | null>(null);
-  const [debitAccountId, setDebitAccountId] = useState<string>('');
-  const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'BANK' | 'CHEQUE'>('BANK');
 
-  useEffect(() => {
-    if (voucherNumber && voucherNumber !== currentVoucherNum) {
-      setCurrentVoucherNum(voucherNumber);
-    }
-  }, [voucherNumber]);
-
-  const handleSaveDraft = () => {
-    toast.success(`Payment Voucher #${currentVoucherNum} saved as Draft!`);
-  };
-
-  const handleDeleteDraft = () => {
-    setTotalPaymentAmount(0);
-    setAllocations({});
-    setPaymentReference('');
-    setAdvanceAmount(0);
-    setAdvanceNotes('');
-    setPurchaseOrderNumber('');
-    toast.info(`Payment Voucher draft #${currentVoucherNum} reset.`);
-  };
-
-  // 2-in-1 Segmented Switcher: Settle Bills vs Supplier Advance Prepayment
-  const [deskMode, setDeskMode] = useState<'SETTLE_BILLS' | 'ADVANCE_PREPAYMENT'>(
+  // Active desk mode
+  const [deskMode, setDeskMode] = useState<PaymentDeskMode>(
     initialMode || 'SETTLE_BILLS'
   );
 
-  // Filter bank accounts (1010 / 1015)
+  // Filter bank and cash accounts (1010 / 1015 / 1040)
   const bankAccounts = useMemo(() => {
     return accounts.filter(
       (a) =>
@@ -92,76 +93,114 @@ export function BatchSupplierPaymentPage({
     );
   }, [accounts]);
 
-  const debitAccounts = useMemo(() => {
+  // Filter general expense & liability accounts for Other Payments
+  const expenseAndLiabilityAccounts = useMemo(() => {
     return accounts.filter(
-      (a) => a.accountClass === 'LIABILITY' || a.accountClass === 'EXPENSE' || a.code === '2010'
+      (a) =>
+        a.accountClass === 'EXPENSE' ||
+        a.accountClass === 'LIABILITY' ||
+        a.code === '1510' ||
+        a.code === '1060'
     );
   }, [accounts]);
 
-  // Header Inputs
+  // =========================================================================
+  // Shared / Invoice Settlement State
+  // =========================================================================
   const [selectedSupplierId, setSelectedSupplierId] = useState<string>('');
   const [paymentDate, setPaymentDate] = useState<string>(
     new Date().toISOString().slice(0, 10)
   );
   const [bankAccountId, setBankAccountId] = useState<string>('');
+  const [debitAccountId, setDebitAccountId] = useState<string>('');
+  const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'BANK' | 'CHEQUE'>('BANK');
   const [paymentReference, setPaymentReference] = useState<string>('');
   const [totalPaymentAmount, setTotalPaymentAmount] = useState<number>(0);
-
-  // Advance Prepayment Form Inputs
-  const [purchaseOrderNumber, setPurchaseOrderNumber] = useState<string>('');
-  const [advanceAmount, setAdvanceAmount] = useState<number>(0);
-  const [advanceNotes, setAdvanceNotes] = useState<string>('');
-
-  // Open bills for chosen supplier
   const [openBills, setOpenBills] = useState<VendorBill[]>([]);
-  // Map of billId -> amountToApply
   const [allocations, setAllocations] = useState<Record<string, number>>({});
   const [submitting, setSubmitting] = useState(false);
 
-  // Auto-select first bank account when loaded
+  // =========================================================================
+  // Supplier Advance State
+  // =========================================================================
+  const [purchaseOrderNumber, setPurchaseOrderNumber] = useState<string>('');
+  const [advanceAmount, setAdvanceAmount] = useState<number>(0);
+  const [advanceNotes, setAdvanceNotes] = useState<string>('');
+  const [allPurchaseOrders, setAllPurchaseOrders] = useState<PurchaseOrder[]>([]);
+
+  // =========================================================================
+  // Other Payments State
+  // =========================================================================
+  const [otherDebitAccountId, setOtherDebitAccountId] = useState<string>('');
+  const [otherBankAccountId, setOtherBankAccountId] = useState<string>('');
+  const [otherPaymentDate, setOtherPaymentDate] = useState<string>(
+    new Date().toISOString().slice(0, 10)
+  );
+  const [otherPayee, setOtherPayee] = useState<string>('');
+  const [otherPaymentMethod, setOtherPaymentMethod] = useState<'CASH' | 'BANK' | 'CHEQUE'>('BANK');
+  const [otherPaymentRef, setOtherPaymentRef] = useState<string>('');
+  const [otherAmount, setOtherAmount] = useState<number>(0);
+  const [otherCategory, setOtherCategory] = useState<CashVoucherCategory>('UTILITIES');
+  const [otherNarration, setOtherNarration] = useState<string>('');
+  const [journalEntries, setJournalEntries] = useState<JournalEntry[]>([]);
+  const [selectedJournalId, setSelectedJournalId] = useState<string | null>(null);
+
+  // Default finance user fallback
+  const effectiveUser = useMemo(() => {
+    return (
+      currentUser || {
+        id: 'usr-fin',
+        name: 'Finance Desk',
+        email: 'finance@dns.lk',
+        role: 'FINANCE_MANAGER',
+      }
+    );
+  }, [currentUser]);
+
+  // Load Purchase Orders
   useEffect(() => {
-    if (bankAccounts.length > 0 && !bankAccountId) {
-      setBankAccountId(bankAccounts[0].id);
-    }
-  }, [bankAccounts, bankAccountId]);
+    purchaseOrderService
+      .getAll()
+      .then((pos) => setAllPurchaseOrders(pos || []))
+      .catch(() => setAllPurchaseOrders([]));
+  }, []);
 
-  // Auto-select first debit account (prefer 2010 Accounts Payable)
+  // Load Journal Entries for Other Payments quick-settle
   useEffect(() => {
-    if (debitAccounts.length > 0 && !debitAccountId) {
-      const ap = debitAccounts.find((a) => a.code === '2010');
-      setDebitAccountId(ap ? ap.id : debitAccounts[0].id);
+    financeRepository
+      .getJournalEntries()
+      .then((entries) => {
+        // Filter relevant journal entries (expenses, accruals, standard entries)
+        const relevant = (entries || []).filter(
+          (j) => j.status === 'POSTED' && j.source !== 'PAYMENT'
+        );
+        setJournalEntries(relevant);
+      })
+      .catch(() => setJournalEntries([]));
+  }, []);
+
+  // Auto-select bank accounts
+  useEffect(() => {
+    if (bankAccounts.length > 0) {
+      if (!bankAccountId) setBankAccountId(bankAccounts[0].id);
+      if (!otherBankAccountId) setOtherBankAccountId(bankAccounts[0].id);
     }
-  }, [debitAccounts, debitAccountId]);
+  }, [bankAccounts, bankAccountId, otherBankAccountId]);
 
-  const handleTriggerPrint = () => {
-    const selectedSup = suppliers.find((s) => s.id === selectedSupplierId);
-    const bankAcc = accounts.find((a) => a.id === bankAccountId);
-    const debitAcc = accounts.find((a) => a.id === debitAccountId);
+  // Auto-select initial debit accounts
+  useEffect(() => {
+    if (accounts.length > 0) {
+      const ap = accounts.find((a) => a.code === '2010');
+      if (ap && !debitAccountId) setDebitAccountId(ap.id);
 
-    const voucher: PaymentVoucher = {
-      id: currentVoucherNum,
-      voucherNumber: currentVoucherNum,
-      date: paymentDate,
-      voucherType: 'PAYMENT',
-      category: 'SUPPLIER_PAYMENT',
-      payeeOrPayer: selectedSup?.name || 'Selected Supplier',
-      amount: totalPaymentAmount > 0 ? totalPaymentAmount : advanceAmount,
-      cashAccountCode: (bankAcc?.code === '1040' ? '1040' : '1010') as '1010' | '1040',
-      cashAccountName: bankAcc?.name || 'Operating Bank Account',
-      offsetAccountId: debitAcc?.id || 'acc-2010',
-      offsetAccountCode: debitAcc?.code || '2010',
-      offsetAccountName: debitAcc?.name || 'Accounts Payable (A/P Control)',
-      description: paymentReference ? `Ref: ${paymentReference}` : 'Supplier payment voucher',
-      status: 'APPROVED',
-      createdBy: 'usr-fin',
-      createdByName: 'Finance Manager',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    setSelectedVoucherForPrint(voucher);
-  };
+      const rentOrUtil = accounts.find(
+        (a) => a.code === '6030' || a.code === '5020' || a.accountClass === 'EXPENSE'
+      );
+      if (rentOrUtil && !otherDebitAccountId) setOtherDebitAccountId(rentOrUtil.id);
+    }
+  }, [accounts, debitAccountId, otherDebitAccountId]);
 
-  // Auto-select first supplier if available
+  // Auto-select first supplier
   useEffect(() => {
     if (suppliers.length > 0 && !selectedSupplierId) {
       setSelectedSupplierId(suppliers[0].id);
@@ -193,7 +232,17 @@ export function BatchSupplierPaymentPage({
     [accounts, bankAccountId]
   );
 
-  // Auto-detect unapplied advances for selected supplier
+  const otherSelectedBank = useMemo(
+    () => accounts.find((a) => a.id === otherBankAccountId),
+    [accounts, otherBankAccountId]
+  );
+
+  const otherSelectedDebitAccount = useMemo(
+    () => accounts.find((a) => a.id === otherDebitAccountId),
+    [accounts, otherDebitAccountId]
+  );
+
+  // Supplier advances available for offset
   const unappliedAdvances = useMemo(() => {
     if (!selectedSupplierId) return [];
     return apService.getUnappliedAdvancesForSupplier(
@@ -205,12 +254,46 @@ export function BatchSupplierPaymentPage({
     return unappliedAdvances.reduce((acc, a) => acc + (a.unappliedBalance || 0), 0);
   }, [unappliedAdvances]);
 
+  // POs for selected supplier
+  const supplierPurchaseOrders = useMemo(() => {
+    if (!selectedSupplierId) return [];
+    const supName = selectedSupplier?.name?.toLowerCase() || '';
+    const allAdvances = apService.getSupplierAdvances();
+
+    return allPurchaseOrders
+      .filter((po) => {
+        return (
+          po.supplierId === selectedSupplierId ||
+          po.supplierName?.toLowerCase() === supName ||
+          po.supplierCode === selectedSupplier?.code
+        );
+      })
+      .map((po) => {
+        const poAdvances = allAdvances.filter(
+          (adv) => adv.purchaseOrderNumber === po.poNumber
+        );
+        const advancePaid = poAdvances.reduce((sum, a) => sum + (a.amount || 0), 0);
+        const balanceDue = Math.max(0, new Decimal(po.grandTotal).minus(advancePaid).toNumber());
+        return {
+          ...po,
+          advancePaid,
+          balanceDue,
+        };
+      });
+  }, [allPurchaseOrders, selectedSupplierId, selectedSupplier]);
+
   const getBillPoRef = (bill: VendorBill): string => {
-    const matchingGrn = MOCK_GRNS.find((g) => g.id === bill.grnId || g.grnNumber === bill.grnNumber);
-    return (bill as any).purchaseOrderNumber || matchingGrn?.purchaseOrderNumber || (bill.grnNumber ? `PO-${bill.grnNumber.slice(-4)}` : 'PO-DIRECT');
+    const matchingGrn = MOCK_GRNS.find(
+      (g) => g.id === bill.grnId || g.grnNumber === bill.grnNumber
+    );
+    return (
+      (bill as any).purchaseOrderNumber ||
+      matchingGrn?.purchaseOrderNumber ||
+      (bill.grnNumber ? `PO-${bill.grnNumber.slice(-4)}` : 'PO-DIRECT')
+    );
   };
 
-  // 1-Click Apply Advance Deductions across all open bills prioritizing PO-linked advances
+  // 1-Click Apply Advance Deductions across open bills
   const handleApplyAdvanceDeductions = async () => {
     if (unappliedAdvances.length === 0 || openBills.length === 0) {
       toast.info('No unapplied advances or open bills to offset.');
@@ -243,18 +326,13 @@ export function BatchSupplierPaymentPage({
 
       if (appliedTotal > 0) {
         toast.success(
-          `Successfully applied ${formatCurrency(
-            appliedTotal
-          )} in advance deductions! Net batch payment updated.`
+          `Successfully applied ${formatCurrency(appliedTotal)} in advance deductions! Net batch payment updated.`
         );
-        // Refresh open bills
-        const selectedSup = suppliers.find((s) => s.id === selectedSupplierId);
         const updated = apService.getOpenBillsForSupplier(
-          selectedSup ? selectedSup.name : selectedSupplierId
+          selectedSupplier ? selectedSupplier.name : selectedSupplierId
         );
         setOpenBills(updated);
 
-        // Auto-allocate remaining balance
         const newAlloc: Record<string, number> = {};
         let netPayable = 0;
         updated.forEach((b) => {
@@ -296,40 +374,49 @@ export function BatchSupplierPaymentPage({
         `Applied ${formatCurrency(deductAmt)} from ${adv.advanceNumber} (${poRef ? `PO: ${poRef}` : 'Advance'}) to Bill ${bill.billNumber}!`
       );
 
-      const selectedSup = suppliers.find((s) => s.id === selectedSupplierId);
       const updated = apService.getOpenBillsForSupplier(
-        selectedSup ? selectedSup.name : selectedSupplierId
+        selectedSupplier ? selectedSupplier.name : selectedSupplierId
       );
       setOpenBills(updated);
-
-      const newAlloc: Record<string, number> = {};
-      let netPayable = 0;
-      updated.forEach((b) => {
-        newAlloc[b.id] = b.balanceDue;
-        netPayable += b.balanceDue;
-      });
-      setAllocations(newAlloc);
-      setTotalPaymentAmount(netPayable);
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : 'Failed to apply advance');
     }
   };
 
+  // Allocation change on a bill row
   const handleAllocationChange = (billId: string, val: number) => {
+    const currentAlloc = allocations[billId] || 0;
+    const diff = new Decimal(val || 0).minus(new Decimal(currentAlloc)).toNumber();
+
     setAllocations((prev) => ({
       ...prev,
       [billId]: val,
     }));
+
+    if (totalPaymentAmount === 0 || totalPaymentAmount === totalApplied) {
+      setTotalPaymentAmount((prev) =>
+        Math.max(0, new Decimal(prev || 0).plus(new Decimal(diff)).toNumber())
+      );
+    }
   };
 
+  // Pay Full on open bill: sets allocation AND adds amount to total payment amount
   const handleApplyFull = (bill: VendorBill) => {
+    const currentAlloc = allocations[bill.id] || 0;
+    const diff = new Decimal(bill.balanceDue).minus(new Decimal(currentAlloc)).toNumber();
+
     setAllocations((prev) => ({
       ...prev,
       [bill.id]: bill.balanceDue,
     }));
+
+    setTotalPaymentAmount((prev) => {
+      const updated = new Decimal(prev || 0).plus(new Decimal(diff)).toNumber();
+      return Math.max(0, updated);
+    });
   };
 
-  // Compute total applied using decimal.js
+  // Total applied across all bills
   const totalApplied = useMemo(() => {
     let sum = new Decimal(0);
     for (const val of Object.values(allocations)) {
@@ -363,6 +450,11 @@ export function BatchSupplierPaymentPage({
     isAllocationBalanced,
   ]);
 
+  // =========================================================================
+  // POST HANDLERS
+  // =========================================================================
+
+  // Post Invoice Settlement (Batch Supplier Payment)
   const handlePostPayment = async () => {
     if (!isFormValid) {
       toast.error('Validation failed: Total allocations must match Total Payment Amount.');
@@ -388,16 +480,39 @@ export function BatchSupplierPaymentPage({
         })),
       });
 
+      // Create Payment Voucher in CashBook
+      await cashBookService.createVoucher(
+        {
+          voucherType: 'PAYMENT',
+          category: 'SUPPLIER_PAYMENT',
+          payeeOrPayer: selectedSup?.name || 'Selected Supplier',
+          amount: totalPaymentAmount,
+          cashAccountCode: (bankAcc?.code === '1040' ? '1040' : '1010') as '1010' | '1040',
+          offsetAccountCode: '2010',
+          offsetAccountName: 'Accounts Payable',
+          description: `Batch Payment to ${selectedSup?.name || 'Supplier'} - Ref: ${paymentReference.trim()}`,
+          paymentMethod: paymentMethod === 'CHEQUE' ? 'CHEQUE' : paymentMethod === 'CASH' ? 'CASH' : 'BANK_TRANSFER',
+          chequeNumber: paymentMethod === 'CHEQUE' ? paymentReference : undefined,
+          date: paymentDate,
+          autoApprove: true,
+        },
+        effectiveUser as any
+      );
+
       toast.success(
-        `Batch Supplier Payment of ${formatCurrency(
+        `Batch Supplier Payment #${currentVoucherNum} of ${formatCurrency(
           totalPaymentAmount
         )} successfully posted and allocated to bills!`
       );
-      // Reset form to ready state
-      setSelectedSupplierId('');
+
+      // Prompt printable voucher
+      handleTriggerPrint();
+
+      // Reset form
       setAllocations({});
       setPaymentReference('');
       setTotalPaymentAmount(0);
+      setCurrentVoucherNum(`PV-2026-${String(Math.floor(80 + Math.random() * 20)).padStart(4, '0')}`);
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : 'Failed to post batch payment');
     } finally {
@@ -405,7 +520,7 @@ export function BatchSupplierPaymentPage({
     }
   };
 
-  // Handle Recording Supplier Advance Prepayment
+  // Post Supplier Advance Prepayment
   const handlePostAdvance = async (e?: React.FormEvent | React.MouseEvent) => {
     if (e) e.preventDefault();
     if (!selectedSupplierId) {
@@ -442,15 +557,38 @@ export function BatchSupplierPaymentPage({
         purchaseOrderNumber: purchaseOrderNumber.trim() || undefined,
       });
 
+      // Record in CashBook
+      await cashBookService.createVoucher(
+        {
+          voucherType: 'PAYMENT',
+          category: 'SUPPLIER_PAYMENT',
+          payeeOrPayer: sup?.name || 'Selected Supplier',
+          amount: advanceAmount,
+          cashAccountCode: (bank?.code === '1040' ? '1040' : '1010') as '1010' | '1040',
+          offsetAccountCode: '1050',
+          offsetAccountName: 'Advance Payments to Suppliers',
+          description: advanceNotes.trim() || (purchaseOrderNumber ? `Advance prepayment for PO ${purchaseOrderNumber}` : `Advance deposit to ${sup?.name}`),
+          paymentMethod: paymentMethod === 'CHEQUE' ? 'CHEQUE' : paymentMethod === 'CASH' ? 'CASH' : 'BANK_TRANSFER',
+          chequeNumber: paymentMethod === 'CHEQUE' ? paymentReference : undefined,
+          date: paymentDate,
+          autoApprove: true,
+        },
+        effectiveUser as any
+      );
+
       toast.success(
         `Supplier Advance Payment ${adv.advanceNumber} of ${formatCurrency(
           advanceAmount
         )} recorded! GL Entry: Dr 1050 Advance to Suppliers, Cr Bank Account.`
       );
+
+      handleTriggerPrint();
+
       setAdvanceAmount(0);
       setPaymentReference('');
       setAdvanceNotes('');
       setPurchaseOrderNumber('');
+      setCurrentVoucherNum(`PV-2026-${String(Math.floor(80 + Math.random() * 20)).padStart(4, '0')}`);
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : 'Failed to post advance prepayment');
     } finally {
@@ -458,99 +596,290 @@ export function BatchSupplierPaymentPage({
     }
   };
 
+  // Post Other / General Expense Payment Voucher
+  const handlePostOtherPayment = async (e?: React.FormEvent | React.MouseEvent) => {
+    if (e) e.preventDefault();
+    if (!otherDebitAccountId) {
+      toast.error('Please select an Expense or Liability debit account');
+      return;
+    }
+    if (!otherBankAccountId) {
+      toast.error('Please select a payment bank or cash account');
+      return;
+    }
+    if (!otherPayee.trim()) {
+      toast.error('Payee / Beneficiary name is required');
+      return;
+    }
+    if (!otherPaymentRef.trim()) {
+      toast.error('Payment reference is required (e.g. Cheque # or Transaction Ref)');
+      return;
+    }
+    if (otherAmount <= 0) {
+      toast.error('Payment amount must be greater than zero');
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      const debitAcc = accounts.find((a) => a.id === otherDebitAccountId);
+      const bankAcc = accounts.find((a) => a.id === otherBankAccountId);
+
+      if (!debitAcc || !bankAcc) {
+        throw new Error('Selected accounts not found');
+      }
+
+      // Create GL Journal Entry
+      await financeRepository.createJournalEntry({
+        date: otherPaymentDate,
+        description: `Direct Payment to ${otherPayee.trim()} - ${otherNarration.trim() || debitAcc.name}`,
+        reference: otherPaymentRef.trim(),
+        source: 'PAYMENT',
+        lines: [
+          {
+            accountId: debitAcc.id,
+            debit: otherAmount,
+            credit: 0,
+            description: otherNarration.trim() || `Payment to ${otherPayee.trim()}`,
+          },
+          {
+            accountId: bankAcc.id,
+            debit: 0,
+            credit: otherAmount,
+            description: `Disbursement from ${bankAcc.name} (${bankAcc.code})`,
+          },
+        ],
+      });
+
+      // Create Voucher in CashBook
+      const createdVoucher = await cashBookService.createVoucher(
+        {
+          voucherType: 'PAYMENT',
+          category: otherCategory,
+          payeeOrPayer: otherPayee.trim(),
+          amount: otherAmount,
+          cashAccountCode: (bankAcc.code === '1040' ? '1040' : '1010') as '1010' | '1040',
+          offsetAccountCode: debitAcc.code,
+          offsetAccountName: debitAcc.name,
+          description: otherNarration.trim() || `Direct payment to ${otherPayee.trim()} - Ref: ${otherPaymentRef.trim()}`,
+          paymentMethod: otherPaymentMethod === 'CHEQUE' ? 'CHEQUE' : otherPaymentMethod === 'CASH' ? 'CASH' : 'BANK_TRANSFER',
+          chequeNumber: otherPaymentMethod === 'CHEQUE' ? otherPaymentRef : undefined,
+          date: otherPaymentDate,
+          autoApprove: true,
+        },
+        effectiveUser as any
+      );
+
+      toast.success(
+        `Payment Voucher ${createdVoucher.voucherNumber} of ${formatCurrency(
+          otherAmount
+        )} generated and posted successfully! Dr ${debitAcc.code} ${debitAcc.name} / Cr ${bankAcc.code} ${bankAcc.name}`
+      );
+
+      setSelectedVoucherForPrint(createdVoucher);
+
+      // Reset other payment form
+      setOtherAmount(0);
+      setOtherPaymentRef('');
+      setOtherNarration('');
+      setOtherPayee('');
+      setSelectedJournalId(null);
+      setCurrentVoucherNum(`PV-2026-${String(Math.floor(80 + Math.random() * 20)).padStart(4, '0')}`);
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Failed to post payment voucher');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleSelectJournalEntry = (je: JournalEntry) => {
+    setSelectedJournalId(je.id);
+    setOtherPaymentDate(je.date);
+    setOtherPaymentRef(`PV-${je.entryNumber}`);
+    setOtherNarration(`Settlement of ${je.entryNumber}: ${je.description}`);
+
+    // If there is a debit line in the journal, pick its account
+    const debitLine = je.lines.find((l) => (l.debit || 0) > 0);
+    if (debitLine) {
+      const matchAcc = accounts.find(
+        (a) => a.id === debitLine.accountId || a.code === debitLine.accountCode
+      );
+      if (matchAcc) {
+        setOtherDebitAccountId(matchAcc.id);
+      }
+      setOtherAmount(debitLine.debit || je.totalDebit || 0);
+    } else {
+      setOtherAmount(je.totalDebit || 0);
+    }
+
+    if (je.description) {
+      setOtherPayee(je.description.split('-')[0].trim());
+    }
+
+    toast.info(`Journal Entry #${je.entryNumber} selected and payment details auto-populated!`);
+  };
+
+  const handleTriggerPrint = () => {
+    const selectedSup = suppliers.find((s) => s.id === selectedSupplierId);
+    const bankAcc = accounts.find((a) => a.id === bankAccountId);
+    const debitAcc = accounts.find((a) => a.id === debitAccountId);
+
+    const voucher: PaymentVoucher = {
+      id: currentVoucherNum,
+      voucherNumber: currentVoucherNum,
+      date: paymentDate,
+      voucherType: 'PAYMENT',
+      category: 'SUPPLIER_PAYMENT',
+      payeeOrPayer: selectedSup?.name || 'Selected Supplier',
+      amount: totalPaymentAmount > 0 ? totalPaymentAmount : advanceAmount,
+      cashAccountCode: (bankAcc?.code === '1040' ? '1040' : '1010') as '1010' | '1040',
+      cashAccountName: bankAcc?.name || 'Operating Bank Account',
+      offsetAccountId: debitAcc?.id || 'acc-2010',
+      offsetAccountCode: debitAcc?.code || '2010',
+      offsetAccountName: debitAcc?.name || 'Accounts Payable (A/P Control)',
+      description: paymentReference ? `Ref: ${paymentReference}` : 'Supplier payment voucher',
+      status: 'APPROVED',
+      createdBy: 'usr-fin',
+      createdByName: 'Finance Manager',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    setSelectedVoucherForPrint(voucher);
+  };
+
+  const handleSaveDraft = () => {
+    toast.success(`Payment Voucher #${currentVoucherNum} saved as Draft!`);
+  };
+
+  const handleDeleteDraft = () => {
+    setTotalPaymentAmount(0);
+    setAllocations({});
+    setPaymentReference('');
+    setAdvanceAmount(0);
+    setAdvanceNotes('');
+    setPurchaseOrderNumber('');
+    setOtherAmount(0);
+    setOtherPaymentRef('');
+    setOtherNarration('');
+    toast.info(`Payment Voucher draft #${currentVoucherNum} reset.`);
+  };
+
+  // If REGISTRY mode is selected, render the Payment Vouchers Registry view
+  if (deskMode === 'REGISTRY') {
+    return (
+      <div className="space-y-4">
+        <PaymentVouchersRegistry
+          onNewVoucher={() => setDeskMode('SETTLE_BILLS')}
+          onSelectVoucher={(v) => {
+            if (v.rawVoucher) setSelectedVoucherForPrint(v.rawVoucher);
+          }}
+        />
+        <PrintablePaymentVoucher
+          voucher={selectedVoucherForPrint}
+          open={Boolean(selectedVoucherForPrint)}
+          onOpenChange={(open) => !open && setSelectedVoucherForPrint(null)}
+        />
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-5">
-      {/* Top Header Section matching Image 3 */}
-      {onViewRegistry && (
-        <div className="flex items-center">
+    <div className="space-y-4">
+      {/* Document Action Bar matching Image 1 */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 border-b border-border/80 pb-3">
+        <div className="flex items-center gap-3">
           <Button
-            type="button"
-            variant="outline"
+            variant="ghost"
             size="sm"
-            onClick={onViewRegistry}
-            className="text-xs h-8 gap-1.5 font-medium border-slate-200 hover:bg-slate-50"
+            type="button"
+            onClick={() => setDeskMode('REGISTRY')}
+            className="text-xs h-8 gap-1.5 text-muted-foreground hover:text-foreground"
           >
             <ArrowLeft className="h-3.5 w-3.5" />
             <span>Back to Vouchers</span>
           </Button>
-        </div>
-      )}
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between pb-3 border-b border-border/80">
-        <div>
-          <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
-            <span>Finance</span>
-            <span>/</span>
-            <span>Expense</span>
-            <span>/</span>
-            <span className="font-semibold text-foreground font-mono">
-              Payment Voucher #{currentVoucherNum}
-            </span>
-          </div>
-          <div className="flex items-center gap-3">
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">
-              Payment Voucher <span className="font-mono text-primary font-bold">#{currentVoucherNum}</span>
-            </h1>
-            <span className="sr-only">Batch Supplier Payment Desk</span>
-            <Badge variant="outline" className="bg-muted text-foreground border-border text-xs">
-              Draft
-            </Badge>
+          <div className="h-5 w-px bg-border/60" />
+
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] font-mono text-muted-foreground">
+                Finance / Expense / Payment Voucher
+              </span>
+              <span className="font-mono text-sm font-bold text-foreground">
+                #{currentVoucherNum}
+              </span>
+              <span className="sr-only">Batch Supplier Payment Desk</span>
+              <Badge variant="outline" className="text-[10px] font-mono font-semibold py-0">
+                DRAFT
+              </Badge>
+            </div>
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          {onViewRegistry && (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={onViewRegistry}
-              className="text-xs h-8 gap-1.5 font-medium"
-            >
-              <FileText className="h-3.5 w-3.5" />
-              <span>All Vouchers</span>
-            </Button>
-          )}
-
+        <div className="flex items-center gap-2 flex-wrap">
           <Button
-            type="button"
             variant="outline"
             size="sm"
+            type="button"
+            onClick={() => setDeskMode('REGISTRY')}
+            className="text-xs h-8 gap-1.5"
+          >
+            <FileText className="h-3.5 w-3.5" />
+            <span>All Vouchers</span>
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            type="button"
             onClick={handleTriggerPrint}
-            className="text-xs h-8 gap-1.5 font-medium"
+            className="text-xs h-8 gap-1.5"
           >
             <Printer className="h-3.5 w-3.5" />
             <span>Download PDF</span>
           </Button>
 
           <Button
-            type="button"
             variant="outline"
             size="sm"
+            type="button"
             onClick={handleDeleteDraft}
-            className="text-xs h-8 gap-1.5 text-rose-600 border-rose-200 hover:bg-rose-50 font-medium"
+            className="text-xs h-8 gap-1.5 text-rose-600 border-rose-200 hover:bg-rose-50"
           >
             <Trash2 className="h-3.5 w-3.5" />
             <span>Delete</span>
           </Button>
 
           <Button
-            type="button"
             variant="outline"
             size="sm"
+            type="button"
             onClick={handleSaveDraft}
-            className="text-xs h-8 gap-1.5 font-medium"
+            className="text-xs h-8 gap-1.5"
           >
             <FileCheck className="h-3.5 w-3.5 text-primary" />
             <span>Save</span>
           </Button>
 
           <Button
-            type="button"
             variant="default"
             size="sm"
-            onClick={deskMode === 'SETTLE_BILLS' ? handlePostPayment : handlePostAdvance}
-            disabled={deskMode === 'SETTLE_BILLS' ? (!isFormValid || submitting) : (advanceAmount <= 0 || submitting)}
+            type="button"
+            onClick={
+              deskMode === 'SETTLE_BILLS'
+                ? handlePostPayment
+                : deskMode === 'ADVANCE_PREPAYMENT'
+                ? handlePostAdvance
+                : handlePostOtherPayment
+            }
+            disabled={
+              deskMode === 'SETTLE_BILLS'
+                ? !isFormValid || submitting
+                : deskMode === 'ADVANCE_PREPAYMENT'
+                ? advanceAmount <= 0 || !paymentReference.trim() || submitting
+                : otherAmount <= 0 || !otherPayee.trim() || submitting
+            }
             className="text-xs h-8 gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-xs"
           >
             <CheckCircle2 className="h-3.5 w-3.5" />
@@ -559,14 +888,14 @@ export function BatchSupplierPaymentPage({
         </div>
       </div>
 
-      {/* Al Akleel-Style 2-in-1 Segmented Switcher matching Image 3 */}
-      <div className="flex items-center justify-between gap-3 pb-1">
+      {/* Industrial Multi-Mode Switcher */}
+      <div className="flex flex-wrap items-center justify-between gap-3 pb-1 border-b border-border/40">
         <div className="flex items-center p-1 bg-muted/60 rounded-xl border border-border/80">
           <button
             type="button"
             onClick={() => setDeskMode('SETTLE_BILLS')}
             className={cn(
-              'flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all',
+              'flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all',
               deskMode === 'SETTLE_BILLS'
                 ? 'bg-background text-foreground shadow-xs border border-border/50'
                 : 'text-muted-foreground hover:text-foreground'
@@ -575,11 +904,12 @@ export function BatchSupplierPaymentPage({
             <Receipt className="h-3.5 w-3.5 text-primary" />
             <span>Invoice settlement (Settle Inbound GRN / Bill)</span>
           </button>
+
           <button
             type="button"
             onClick={() => setDeskMode('ADVANCE_PREPAYMENT')}
             className={cn(
-              'flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all',
+              'flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all',
               deskMode === 'ADVANCE_PREPAYMENT'
                 ? 'bg-background text-foreground shadow-xs border border-border/50'
                 : 'text-muted-foreground hover:text-foreground'
@@ -588,6 +918,38 @@ export function BatchSupplierPaymentPage({
             <Coins className="h-3.5 w-3.5 text-emerald-600" />
             <span>Supplier advance (Supplier Advance Prepayment)</span>
           </button>
+
+          <button
+            type="button"
+            onClick={() => setDeskMode('OTHER_PAYMENTS')}
+            className={cn(
+              'flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all',
+              deskMode === 'OTHER_PAYMENTS'
+                ? 'bg-background text-foreground shadow-xs border border-border/50'
+                : 'text-muted-foreground hover:text-foreground'
+            )}
+          >
+            <Wallet className="h-3.5 w-3.5 text-indigo-600" />
+            <span>Other payments (Direct / Journal Expense Voucher)</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setDeskMode('REGISTRY')}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold text-muted-foreground hover:text-foreground transition-all"
+          >
+            <FileText className="h-3.5 w-3.5 text-slate-600" />
+            <span>All Vouchers History</span>
+          </button>
+        </div>
+
+        <div className="text-xs text-muted-foreground hidden xl:flex items-center gap-1.5 font-medium">
+          <Sparkles className="h-3.5 w-3.5 text-primary" />
+          <span>
+            {deskMode === 'SETTLE_BILLS' && 'Disburse vendor bill payments with advance deduction'}
+            {deskMode === 'ADVANCE_PREPAYMENT' && 'Issue advance supplier prepayments with PO linkage'}
+            {deskMode === 'OTHER_PAYMENTS' && 'Pay utilities, rent, services, or settle journal entries'}
+          </span>
         </div>
       </div>
 
@@ -621,6 +983,7 @@ export function BatchSupplierPaymentPage({
             <Button
               variant="outline"
               size="sm"
+              type="button"
               onClick={() => navigate('/finance/ap/advances')}
               className="text-xs border-emerald-300 text-emerald-800 hover:bg-emerald-100/70 h-8 gap-1.5 shrink-0 font-semibold"
             >
@@ -631,34 +994,42 @@ export function BatchSupplierPaymentPage({
         </div>
       )}
 
-      {/* VIEW 1: SETTLE INBOUND BILLS */}
+      {/* ===================================================================== */}
+      {/* VIEW 1: INVOICE SETTLEMENT (SETTLE INBOUND BILLS)                     */}
+      {/* ===================================================================== */}
       {deskMode === 'SETTLE_BILLS' && (
         <div className="space-y-4">
-          {/* LEDGER ACCOUNTS & PAYMENT DETAILS (Two Distinct Cards matching Image 3) */}
+          {/* LEDGER ACCOUNTS & PAYMENT DETAILS */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {/* LEDGER ACCOUNTS */}
             <Card className="p-4 border-border shadow-xs bg-card space-y-3">
-              <div className="flex items-center gap-2 text-foreground font-bold text-xs uppercase tracking-wider">
-                <Landmark className="h-4 w-4 text-primary" />
-                <span>Ledger Accounts</span>
+              <div className="flex items-center gap-2 pb-1 border-b border-border/60">
+                <Building2 className="h-4 w-4 text-primary" />
+                <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                  LEDGER ACCOUNTS
+                </h3>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+
+              <div className="space-y-3 pt-1">
                 <div>
                   <label className="block text-xs font-semibold text-foreground mb-1">
                     Debit Account (A/P / Expense) <span className="text-rose-500">*</span>
                   </label>
                   <Select
-                    value={debitAccountId || accounts.find((a) => a.code === '2010')?.id || ''}
+                    value={debitAccountId}
                     onChange={(e) => setDebitAccountId(e.target.value)}
                     className="h-9 text-xs"
                   >
-                    {debitAccounts.map((a) => (
-                      <option key={a.id} value={a.id}>
-                        {a.code} - {a.name} ({a.accountClass})
-                      </option>
-                    ))}
+                    {accounts
+                      .filter((a) => a.accountClass === 'LIABILITY' || a.accountClass === 'EXPENSE')
+                      .map((a) => (
+                        <option key={a.id} value={a.id}>
+                          {a.code} - {a.name} ({a.accountClass})
+                        </option>
+                      ))}
                   </Select>
                 </div>
+
                 <div>
                   <label className="block text-xs font-semibold text-foreground mb-1">
                     Credit Account (Asset: Bank/Cash) <span className="text-rose-500">*</span>
@@ -666,11 +1037,11 @@ export function BatchSupplierPaymentPage({
                   <Select
                     value={bankAccountId}
                     onChange={(e) => setBankAccountId(e.target.value)}
-                    className="h-9 text-xs"
+                    className="h-9 text-xs font-medium"
                   >
-                    {bankAccounts.map((b) => (
-                      <option key={b.id} value={b.id}>
-                        {b.code} - {b.name}
+                    {bankAccounts.map((a) => (
+                      <option key={a.id} value={a.id}>
+                        {a.code} - {a.name}
                       </option>
                     ))}
                   </Select>
@@ -680,211 +1051,195 @@ export function BatchSupplierPaymentPage({
 
             {/* PAYMENT DETAILS */}
             <Card className="p-4 border-border shadow-xs bg-card space-y-3">
-              <div className="flex items-center gap-2 text-foreground font-bold text-xs uppercase tracking-wider">
-                <CreditCard className="h-4 w-4 text-emerald-600" />
-                <span>Payment Details (Payment Header Specifications)</span>
+              <div className="flex items-center gap-2 pb-1 border-b border-border/60">
+                <Receipt className="h-4 w-4 text-primary" />
+                <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                  PAYMENT DETAILS (PAYMENT HEADER SPECIFICATIONS)
+                </h3>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-foreground mb-1">
-                    Date <span className="text-rose-500">*</span>
-                  </label>
-                  <Input
-                    type="date"
-                    value={paymentDate}
-                    onChange={(e) => setPaymentDate(e.target.value)}
-                    className="h-9 text-xs"
-                    required
-                  />
+
+              <div className="space-y-3 pt-1">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                  <div>
+                    <label className="block text-xs font-semibold text-foreground mb-1">
+                      Date <span className="text-rose-500">*</span>
+                    </label>
+                    <Input
+                      type="date"
+                      value={paymentDate}
+                      onChange={(e) => setPaymentDate(e.target.value)}
+                      className="h-9 text-xs"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-foreground mb-1">
+                      Supplier <span className="text-rose-500">*</span>
+                    </label>
+                    <Select
+                      value={selectedSupplierId}
+                      onChange={(e) => setSelectedSupplierId(e.target.value)}
+                      className="h-9 text-xs font-semibold"
+                      required
+                    >
+                      {suppliers.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.name} ({s.code})
+                        </option>
+                      ))}
+                    </Select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-foreground mb-1">
+                      Payment Method <span className="text-rose-500">*</span>
+                    </label>
+                    <Select
+                      value={paymentMethod}
+                      onChange={(e) => setPaymentMethod(e.target.value as any)}
+                      className="h-9 text-xs"
+                    >
+                      <option value="BANK">Bank Transfer</option>
+                      <option value="CHEQUE">Cheque</option>
+                      <option value="CASH">Cash</option>
+                    </Select>
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-xs font-semibold text-foreground mb-1">
-                    Supplier <span className="text-rose-500">*</span>
-                  </label>
-                  <Select
-                    value={selectedSupplierId}
-                    onChange={(e) => setSelectedSupplierId(e.target.value)}
-                    className="h-9 text-xs"
-                  >
-                    {suppliers.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.name} ({s.code})
-                      </option>
-                    ))}
-                  </Select>
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-foreground mb-1">
-                    Payment Method <span className="text-rose-500">*</span>
-                  </label>
-                  <Select
-                    value={paymentMethod}
-                    onChange={(e) => {
-                      const m = e.target.value as any;
-                      setPaymentMethod(m);
-                      if (m === 'CASH') {
-                        const cash = accounts.find((a) => a.code === '1040');
-                        if (cash) setBankAccountId(cash.id);
-                      } else if (m === 'BANK') {
-                        const bank = accounts.find((a) => a.code.startsWith('1010') || a.name.toLowerCase().includes('bank'));
-                        if (bank) setBankAccountId(bank.id);
-                      }
-                    }}
-                    className="h-9 text-xs"
-                  >
-                    <option value="BANK">Bank Transfer</option>
-                    <option value="CASH">Cash in Hand</option>
-                    <option value="CHEQUE">Cheque</option>
-                  </Select>
-                </div>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                <div>
-                  <label className="block text-xs font-semibold text-foreground mb-1">
-                    Payment Ref / Cheque # <span className="text-rose-500">*</span>
-                  </label>
-                  <Input
-                    value={paymentReference}
-                    onChange={(e) => setPaymentReference(e.target.value)}
-                    placeholder="e.g. CHQ-20491 or TT-0042"
-                    className="h-9 text-xs font-mono"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-foreground mb-1">
-                    Total Payment Amount <span className="text-rose-500">*</span>
-                  </label>
-                  <CurrencyInput
-                    value={totalPaymentAmount}
-                    onChange={(val) => setTotalPaymentAmount(val)}
-                    placeholder="0.00"
-                  />
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  <div>
+                    <label className="block text-xs font-semibold text-foreground mb-1">
+                      Payment Ref / Cheque # <span className="text-rose-500">*</span>
+                    </label>
+                    <Input
+                      value={paymentReference}
+                      onChange={(e) => setPaymentReference(e.target.value)}
+                      placeholder="e.g. CHQ-20491 or TT-0042"
+                      className="h-9 text-xs font-mono"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-foreground mb-1">
+                      Total Payment Amount <span className="text-rose-500">*</span>
+                    </label>
+                    <CurrencyInput
+                      value={totalPaymentAmount}
+                      onChange={(val) => setTotalPaymentAmount(val)}
+                      placeholder="0.00"
+                    />
+                  </div>
                 </div>
               </div>
             </Card>
           </div>
 
-          {/* Allocation Grid */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
+          {/* Open Bills Table */}
+          <div className="rounded-xl border border-border bg-card shadow-xs overflow-hidden">
+            <div className="p-4 border-b border-border/80 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
               <div className="flex items-center gap-2">
-                <Receipt className="h-4 w-4 text-muted-foreground" />
-                <h2 className="text-sm font-bold text-foreground">
+                <Receipt className="h-4 w-4 text-primary" />
+                <h3 className="text-sm font-bold text-foreground">
                   Open Bills for Selected Supplier ({openBills.length})
-                </h2>
+                </h3>
               </div>
               <span className="text-xs text-muted-foreground">
                 Allocate payment portions to clear balances.
               </span>
             </div>
 
-            <div className="overflow-hidden rounded-xl border border-border bg-card shadow-2xs">
-              <div className="overflow-x-auto w-full">
-                <table className="w-full min-w-[900px] text-left text-xs">
-                  <thead className="border-b border-border bg-muted/60 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs tabular-nums">
+                <thead className="bg-muted/50 text-muted-foreground border-b border-border font-semibold">
+                  <tr>
+                    <th className="px-3.5 py-2.5">Bill Number</th>
+                    <th className="px-3.5 py-2.5">PO Ref</th>
+                    <th className="px-3.5 py-2.5">Vendor Inv #</th>
+                    <th className="px-3.5 py-2.5">Date</th>
+                    <th className="px-3.5 py-2.5 text-right">Original Amount</th>
+                    <th className="px-3.5 py-2.5 text-right">Balance Due</th>
+                    <th className="px-3.5 py-2.5 text-right w-44">Amount to Apply (LKR)</th>
+                    <th className="px-3.5 py-2.5 text-center w-28">Quick Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/60">
+                  {openBills.length === 0 ? (
                     <tr>
-                      <th className="px-4 py-2.5">Bill Number</th>
-                      <th className="px-4 py-2.5">PO Ref</th>
-                      <th className="px-4 py-2.5">Vendor Inv #</th>
-                      <th className="px-4 py-2.5">Date</th>
-                      <th className="px-4 py-2.5 text-right">Original Amount</th>
-                      <th className="px-4 py-2.5 text-right">Balance Due</th>
-                      <th className="px-4 py-2.5 text-right w-52">Amount to Apply (LKR)</th>
-                      <th className="px-4 py-2.5 text-center w-36">Quick Action</th>
+                      <td colSpan={8} className="py-8 text-center text-xs text-muted-foreground">
+                        No outstanding open bills found for this supplier.
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border/60">
-                    {openBills.length === 0 ? (
-                      <tr>
-                        <td colSpan={8} className="p-6 text-center text-xs text-muted-foreground">
-                          No open outstanding bills found for this supplier.
-                        </td>
-                      </tr>
-                    ) : (
-                      openBills.map((bill) => {
-                        const currentApplied = allocations[bill.id] || 0;
-                        const poRef = getBillPoRef(bill);
-                        const linkedAdv = unappliedAdvances.find(
-                          (a) => a.purchaseOrderNumber === poRef && a.unappliedBalance > 0
-                        );
-
-                        return (
-                          <tr key={bill.id} className="hover:bg-muted/40 transition-colors">
-                            <td className="px-4 py-3 font-mono font-bold text-primary">
-                              {bill.billNumber}
-                            </td>
-                            <td className="px-4 py-3 font-mono text-muted-foreground text-[11px]">
-                              <div className="font-semibold text-foreground">{poRef}</div>
-                              {linkedAdv && (
-                                <Badge
-                                  variant="outline"
-                                  className="text-[10px] py-0 border-emerald-300 text-emerald-800 bg-emerald-50 mt-0.5"
-                                  title={`Advance ${linkedAdv.advanceNumber} linked to ${poRef}`}
-                                >
-                                  Adv Linked ({formatCurrency(linkedAdv.unappliedBalance)})
-                                </Badge>
-                              )}
-                            </td>
-                            <td className="px-4 py-3 font-mono text-foreground">
-                              {bill.vendorInvoiceNumber}
-                            </td>
-                            <td className="px-4 py-3 text-muted-foreground">
-                              {formatDate(bill.invoiceDate)}
-                            </td>
-                            <td className="px-4 py-3 text-right font-mono tabular-nums text-foreground">
-                              {formatCurrency(bill.totalAmount)}
-                            </td>
-                            <td className="px-4 py-3 text-right font-mono font-bold tabular-nums text-rose-600">
-                              {formatCurrency(bill.balanceDue)}
-                            </td>
-                            <td className="px-4 py-3 text-right">
-                              <CurrencyInput
-                                value={currentApplied || ''}
-                                onChange={(val) => handleAllocationChange(bill.id, val)}
-                                placeholder="0.00"
-                                disabled={submitting}
-                              />
-                            </td>
-                            <td className="px-4 py-3 text-center whitespace-nowrap">
-                              <div className="inline-flex items-center gap-1.5 justify-center">
-                                {totalUnappliedAdvance > 0 && bill.balanceDue > 0 && (
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    type="button"
-                                    onClick={() => handleApplyAdvanceToSingleBill(bill)}
-                                    className="h-7 text-[11px] text-emerald-700 hover:text-emerald-800 border-emerald-300 hover:bg-emerald-50 px-2"
-                                    title="Offset advance deposit against this bill"
-                                  >
-                                    Apply Adv
-                                  </Button>
-                                )}
+                  ) : (
+                    openBills.map((bill) => {
+                      const poRef = getBillPoRef(bill);
+                      const currentAlloc = allocations[bill.id] || 0;
+                      return (
+                        <tr key={bill.id} className="hover:bg-muted/30 transition-colors">
+                          <td className="px-3.5 py-2.5 font-mono font-semibold text-primary">
+                            {bill.billNumber}
+                          </td>
+                          <td className="px-3.5 py-2.5 font-mono text-[11px] text-muted-foreground">
+                            {poRef}
+                          </td>
+                          <td className="px-3.5 py-2.5 font-mono text-muted-foreground">
+                            {bill.vendorInvoiceNumber || '-'}
+                          </td>
+                          <td className="px-3.5 py-2.5 text-muted-foreground">
+                            {formatDate(bill.invoiceDate)}
+                          </td>
+                          <td className="px-3.5 py-2.5 text-right font-mono">
+                            {formatCurrency(bill.totalAmount)}
+                          </td>
+                          <td className="px-3.5 py-2.5 text-right font-mono font-bold text-rose-600">
+                            {formatCurrency(bill.balanceDue)}
+                          </td>
+                          <td className="px-3.5 py-2.5 text-right">
+                            <CurrencyInput
+                              value={currentAlloc}
+                              onChange={(val) => handleAllocationChange(bill.id, val)}
+                              className="h-8 text-xs text-right font-mono"
+                            />
+                          </td>
+                          <td className="px-3.5 py-2.5 text-center">
+                            <div className="flex items-center justify-center gap-1">
+                              {totalUnappliedAdvance > 0 && (
                                 <Button
-                                  variant="ghost"
+                                  variant="outline"
                                   size="sm"
                                   type="button"
-                                  onClick={() => handleApplyFull(bill)}
-                                  className="h-7 text-[11px] text-primary hover:text-primary hover:bg-primary-light px-2"
+                                  onClick={() => handleApplyAdvanceToSingleBill(bill)}
+                                  className="h-7 text-[11px] text-emerald-700 hover:text-emerald-800 border-emerald-300 hover:bg-emerald-50 px-2"
+                                  title="Offset advance deposit against this bill"
                                 >
-                                  Pay Full
+                                  Apply Adv
                                 </Button>
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })
-                    )}
-                  </tbody>
-                </table>
-              </div>
+                              )}
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                type="button"
+                                onClick={() => handleApplyFull(bill)}
+                                className="h-7 text-[11px] text-primary hover:text-primary hover:bg-primary-light px-2 font-semibold"
+                              >
+                                Pay Full
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
 
           {/* Sticky Bottom Status & Validation Bar */}
           <div className="sticky bottom-4 z-20 rounded-xl border border-border bg-card/95 backdrop-blur-md p-4 shadow-lg">
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-              <div className="flex items-center gap-6 text-xs">
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+              <div className="flex flex-wrap items-center gap-6 text-xs">
                 <div>
                   <span className="text-muted-foreground block text-[11px] font-semibold uppercase">
                     Total Payment Header
@@ -926,7 +1281,9 @@ export function BatchSupplierPaymentPage({
                 <ConfirmButton
                   confirmVariant="success"
                   confirmTitle="Post Batch Supplier Payment"
-                  confirmMessage={`Are you sure you want to post supplier payment of ${formatCurrency(totalPaymentAmount)} to ${selectedSupplier?.name}? This will settle allocated bills and credit Cash/Bank.`}
+                  confirmMessage={`Are you sure you want to post supplier payment of ${formatCurrency(
+                    totalPaymentAmount
+                  )} to ${selectedSupplier?.name}? This will settle allocated bills and credit Cash/Bank.`}
                   confirmText="Post Payment"
                   onConfirm={handlePostPayment}
                   disabled={!isFormValid || submitting}
@@ -960,140 +1317,345 @@ export function BatchSupplierPaymentPage({
         </div>
       )}
 
-      {/* VIEW 2: SUPPLIER ADVANCE PREPAYMENT VOUCHER */}
+      {/* ===================================================================== */}
+      {/* VIEW 2: SUPPLIER ADVANCE PAYMENT VOUCHER (Industrial ERP Layout)      */}
+      {/* ===================================================================== */}
       {deskMode === 'ADVANCE_PREPAYMENT' && (
-        <Card className="p-6 border-border max-w-2xl mx-auto bg-card shadow-xs">
-          <form onSubmit={handlePostAdvance} className="space-y-4">
-            <div className="border-b border-border/60 pb-3 flex items-center justify-between">
-              <div>
-                <h2 className="text-base font-bold text-foreground">Supplier Advance Payment Voucher</h2>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  Prepay supplier before goods arrival or against open purchase orders.
-                </p>
-              </div>
-              <Badge variant="outline" className="bg-emerald-50 text-emerald-800 border-emerald-300 text-xs">
-                Dr 1050 / Cr Bank
-              </Badge>
-            </div>
-
-            <div className="space-y-3.5">
-              {/* Supplier Selection */}
-              <div>
-                <label className="block text-xs font-semibold text-foreground mb-1">
-                  Supplier Beneficiary <span className="text-rose-500">*</span>
-                </label>
-                <Select
-                  value={selectedSupplierId}
-                  onChange={(e) => setSelectedSupplierId(e.target.value)}
-                  className="h-9 text-xs"
-                  required
-                >
-                  {suppliers.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name} ({s.code})
-                    </option>
-                  ))}
-                </Select>
+        <div className="space-y-4">
+          {/* Top 2 Cards: LEDGER ACCOUNTS & PAYMENT DETAILS */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {/* LEDGER ACCOUNTS */}
+            <Card className="p-4 border-border shadow-xs bg-card space-y-3">
+              <div className="flex items-center justify-between pb-1 border-b border-border/60">
+                <div className="flex items-center gap-2">
+                  <Building2 className="h-4 w-4 text-emerald-600" />
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                    LEDGER ACCOUNTS
+                  </h3>
+                </div>
+                <Badge variant="outline" className="bg-emerald-50 text-emerald-800 border-emerald-300 text-[11px] font-mono">
+                  Dr 1050 / Cr Bank
+                </Badge>
               </div>
 
-              {/* Purchase Order Link (Auto-detecting & selecting) */}
-              <div>
-                <label className="block text-xs font-semibold text-foreground mb-1">
-                  Purchase Order Link (Optional)
-                </label>
-                <PurchaseOrderSelector
-                  supplierId={selectedSupplierId}
-                  selectedPoNumber={purchaseOrderNumber}
-                  onSelect={(po) => setPurchaseOrderNumber(po.poNumber)}
-                  placeholder="Link to Purchase Order (e.g. PO-2026-001)..."
-                  className="w-full text-xs"
-                />
-              </div>
-
-              {/* Date & Bank Account in 2 columns */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-3 pt-1">
                 <div>
                   <label className="block text-xs font-semibold text-foreground mb-1">
-                    Disbursement Date <span className="text-rose-500">*</span>
+                    Debit Account (Advance / Prepayment Asset) <span className="text-rose-500">*</span>
                   </label>
-                  <Input
-                    type="date"
-                    value={paymentDate}
-                    onChange={(e) => setPaymentDate(e.target.value)}
-                    className="h-9 text-xs"
-                    required
-                  />
+                  <Select value="1050" disabled className="h-9 text-xs bg-muted/40 font-mono">
+                    <option value="1050">1050 - Advance to Suppliers (CURRENT ASSET)</option>
+                  </Select>
                 </div>
 
                 <div>
                   <label className="block text-xs font-semibold text-foreground mb-1">
-                    Disbursement Bank (1010/1015) <span className="text-rose-500">*</span>
+                    Credit Account (Asset: Bank/Cash) <span className="text-rose-500">*</span>
                   </label>
                   <Select
                     value={bankAccountId}
                     onChange={(e) => setBankAccountId(e.target.value)}
-                    className="h-9 text-xs"
+                    className="h-9 text-xs font-medium"
                     required
                   >
-                    {bankAccounts.map((b) => (
-                      <option key={b.id} value={b.id}>
-                        {b.code} - {b.name}
+                    {bankAccounts.map((a) => (
+                      <option key={a.id} value={a.id}>
+                        {a.code} - {a.name}
                       </option>
                     ))}
                   </Select>
                 </div>
               </div>
+            </Card>
 
-              {/* Reference & Amount */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-foreground mb-1">
-                    Payment Reference / Cheque # <span className="text-rose-500">*</span>
-                  </label>
-                  <Input
-                    value={paymentReference}
-                    onChange={(e) => setPaymentReference(e.target.value)}
-                    placeholder="e.g. TT-ADV-8841 or Wire-Ref"
-                    className="h-9 text-xs font-mono"
-                    required
-                  />
+            {/* PAYMENT DETAILS */}
+            <Card className="p-4 border-border shadow-xs bg-card space-y-3">
+              <div className="flex items-center gap-2 pb-1 border-b border-border/60">
+                <Coins className="h-4 w-4 text-emerald-600" />
+                <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                  PAYMENT DETAILS (ADVANCE SPECIFICATIONS)
+                </h3>
+              </div>
+
+              <div className="space-y-3 pt-1">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                  <div>
+                    <label className="block text-xs font-semibold text-foreground mb-1">
+                      Disbursement Date <span className="text-rose-500">*</span>
+                    </label>
+                    <Input
+                      type="date"
+                      value={paymentDate}
+                      onChange={(e) => setPaymentDate(e.target.value)}
+                      className="h-9 text-xs"
+                      required
+                    />
+                  </div>
+
+                  <div className="sm:col-span-2">
+                    <label className="block text-xs font-semibold text-foreground mb-1">
+                      Supplier Beneficiary <span className="text-rose-500">*</span>
+                    </label>
+                    <Select
+                      value={selectedSupplierId}
+                      onChange={(e) => {
+                        setSelectedSupplierId(e.target.value);
+                        setPurchaseOrderNumber('');
+                      }}
+                      className="h-9 text-xs font-semibold"
+                      required
+                    >
+                      {suppliers.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.name} ({s.code})
+                        </option>
+                      ))}
+                    </Select>
+                  </div>
                 </div>
 
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                  <div>
+                    <label className="block text-xs font-semibold text-foreground mb-1">
+                      Payment Method <span className="text-rose-500">*</span>
+                    </label>
+                    <Select
+                      value={paymentMethod}
+                      onChange={(e) => setPaymentMethod(e.target.value as any)}
+                      className="h-9 text-xs"
+                    >
+                      <option value="BANK">Bank Transfer</option>
+                      <option value="CHEQUE">Cheque</option>
+                      <option value="CASH">Cash</option>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-foreground mb-1">
+                      Payment Ref / Cheque # <span className="text-rose-500">*</span>
+                    </label>
+                    <Input
+                      value={paymentReference}
+                      onChange={(e) => setPaymentReference(e.target.value)}
+                      placeholder="e.g. TT-ADV-8841"
+                      className="h-9 text-xs font-mono"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-foreground mb-1">
+                      Advance Prepayment (LKR) <span className="text-rose-500">*</span>
+                    </label>
+                    <CurrencyInput
+                      value={advanceAmount}
+                      onChange={(val) => setAdvanceAmount(val)}
+                      placeholder="0.00"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  <div>
+                    <label className="block text-xs font-semibold text-foreground mb-1">
+                      Linked Purchase Order (Optional)
+                    </label>
+                    <Input
+                      value={purchaseOrderNumber}
+                      onChange={(e) => setPurchaseOrderNumber(e.target.value)}
+                      placeholder="e.g. PO-2026-0001 (or select from table below)"
+                      className="h-9 text-xs font-mono"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-foreground mb-1">
+                      Voucher Notes / Terms
+                    </label>
+                    <Input
+                      value={advanceNotes}
+                      onChange={(e) => setAdvanceNotes(e.target.value)}
+                      placeholder="e.g. 30% upfront manufacturing deposit..."
+                      className="h-9 text-xs"
+                    />
+                  </div>
+                </div>
+              </div>
+            </Card>
+          </div>
+
+          {/* Open Purchase Orders for Selected Supplier (Table) */}
+          <div className="rounded-xl border border-border bg-card shadow-xs overflow-hidden">
+            <div className="p-4 border-b border-border/80 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <ShoppingCart className="h-4 w-4 text-emerald-600" />
+                <h3 className="text-sm font-bold text-foreground">
+                  Open Purchase Orders for Selected Supplier ({supplierPurchaseOrders.length})
+                </h3>
+              </div>
+              <span className="text-xs text-muted-foreground">
+                Click quick actions to link PO and allocate advance percentage.
+              </span>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs tabular-nums">
+                <thead className="bg-muted/50 text-muted-foreground border-b border-border font-semibold">
+                  <tr>
+                    <th className="px-3.5 py-2.5">PO Number</th>
+                    <th className="px-3.5 py-2.5">PO Date</th>
+                    <th className="px-3.5 py-2.5">Expected Delivery</th>
+                    <th className="px-3.5 py-2.5 text-right">PO Total Value</th>
+                    <th className="px-3.5 py-2.5 text-right">Prior Advances Paid</th>
+                    <th className="px-3.5 py-2.5 text-right">Remaining Balance</th>
+                    <th className="px-3.5 py-2.5 text-center">Status</th>
+                    <th className="px-3.5 py-2.5 text-right w-64">Quick Advance Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/60">
+                  {supplierPurchaseOrders.length === 0 ? (
+                    <tr>
+                      <td colSpan={8} className="py-8 text-center text-xs text-muted-foreground">
+                        No purchase orders on file for {selectedSupplier?.name}. You can record a General Unlinked Advance Prepayment.
+                      </td>
+                    </tr>
+                  ) : (
+                    supplierPurchaseOrders.map((po) => {
+                      const isLinked = purchaseOrderNumber === po.poNumber;
+                      return (
+                        <tr
+                          key={po.id}
+                          className={cn(
+                            'hover:bg-muted/30 transition-colors',
+                            isLinked && 'bg-emerald-50/50'
+                          )}
+                        >
+                          <td className="px-3.5 py-2.5 font-mono font-bold text-primary flex items-center gap-1.5">
+                            {isLinked && <Check className="h-3.5 w-3.5 text-emerald-600" />}
+                            <span>{po.poNumber}</span>
+                          </td>
+                          <td className="px-3.5 py-2.5 text-muted-foreground">
+                            {formatDate(po.orderDate)}
+                          </td>
+                          <td className="px-3.5 py-2.5 text-muted-foreground">
+                            {po.expectedDeliveryDate ? formatDate(po.expectedDeliveryDate) : '-'}
+                          </td>
+                          <td className="px-3.5 py-2.5 text-right font-mono font-semibold">
+                            {formatCurrency(po.grandTotal)}
+                          </td>
+                          <td className="px-3.5 py-2.5 text-right font-mono text-emerald-700">
+                            {formatCurrency(po.advancePaid)}
+                          </td>
+                          <td className="px-3.5 py-2.5 text-right font-mono font-bold text-foreground">
+                            {formatCurrency(po.balanceDue)}
+                          </td>
+                          <td className="px-3.5 py-2.5 text-center">
+                            <Badge variant="outline" className="text-[10px] font-mono">
+                              {po.status}
+                            </Badge>
+                          </td>
+                          <td className="px-3.5 py-2.5 text-right">
+                            <div className="flex items-center justify-end gap-1.5">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                type="button"
+                                onClick={() => {
+                                  setPurchaseOrderNumber(po.poNumber);
+                                  const thirtyPct = Math.round(po.grandTotal * 0.3);
+                                  setAdvanceAmount(thirtyPct);
+                                  setAdvanceNotes(`30% upfront manufacturing deposit for PO #${po.poNumber}`);
+                                }}
+                                className="h-7 text-[11px] px-2 border-emerald-300 text-emerald-800 hover:bg-emerald-50"
+                              >
+                                30% Adv
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                type="button"
+                                onClick={() => {
+                                  setPurchaseOrderNumber(po.poNumber);
+                                  const fiftyPct = Math.round(po.grandTotal * 0.5);
+                                  setAdvanceAmount(fiftyPct);
+                                  setAdvanceNotes(`50% advance deposit for PO #${po.poNumber}`);
+                                }}
+                                className="h-7 text-[11px] px-2 border-emerald-300 text-emerald-800 hover:bg-emerald-50"
+                              >
+                                50% Adv
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                type="button"
+                                onClick={() => {
+                                  setPurchaseOrderNumber(po.poNumber);
+                                  setAdvanceAmount(po.balanceDue);
+                                  setAdvanceNotes(`Full prepayment settlement for PO #${po.poNumber}`);
+                                }}
+                                className="h-7 text-[11px] px-2 text-primary hover:bg-primary-light font-semibold"
+                              >
+                                Pay Full
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Sticky Bottom Status & Validation Bar */}
+          <div className="sticky bottom-4 z-20 rounded-xl border border-border bg-card/95 backdrop-blur-md p-4 shadow-lg">
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+              <div className="flex flex-wrap items-center gap-6 text-xs">
                 <div>
-                  <label className="block text-xs font-semibold text-foreground mb-1">
-                    Advance Prepayment Amount <span className="text-rose-500">*</span>
-                  </label>
-                  <CurrencyInput
-                    value={advanceAmount}
-                    onChange={(val) => setAdvanceAmount(val)}
-                    placeholder="0.00"
-                  />
+                  <span className="text-muted-foreground block text-[11px] font-semibold uppercase">
+                    Total Advance Prepayment
+                  </span>
+                  <span className="text-base font-bold font-mono text-emerald-700 tabular-nums">
+                    {formatCurrency(advanceAmount)}
+                  </span>
+                </div>
+                <div className="h-8 w-px bg-border" />
+                <div>
+                  <span className="text-muted-foreground block text-[11px] font-semibold uppercase">
+                    Linked Purchase Order
+                  </span>
+                  <span className="text-sm font-bold font-mono text-foreground">
+                    {purchaseOrderNumber || 'General Advance Deposit (Unlinked)'}
+                  </span>
+                </div>
+                <div className="h-8 w-px bg-border" />
+                <div>
+                  <span className="text-muted-foreground block text-[11px] font-semibold uppercase">
+                    Double-Entry Impact
+                  </span>
+                  <span className="text-xs text-muted-foreground font-mono">
+                    Dr 1050 Advance to Suppliers / Cr {selectedBank?.code || '1010'} Bank
+                  </span>
                 </div>
               </div>
 
-              {/* Notes */}
-              <div>
-                <label className="block text-xs font-semibold text-foreground mb-1">
-                  Voucher Notes / Terms
-                </label>
-                <Input
-                  value={advanceNotes}
-                  onChange={(e) => setAdvanceNotes(e.target.value)}
-                  placeholder="e.g. 30% upfront manufacturing deposit per contract..."
-                  className="h-9 text-xs"
-                />
-              </div>
+              <div className="flex items-center gap-3">
+                <ConfirmButton
+                  confirmVariant="success"
+                  confirmTitle="Record Supplier Advance Payment"
+                  confirmMessage={`Are you sure you want to record supplier advance of ${formatCurrency(
+                    advanceAmount
+                  )} to ${selectedSupplier?.name}? This will debit 1050 Advance to Suppliers and credit Cash/Bank.`}
+                  confirmText="Record Advance"
+                  onConfirm={handlePostAdvance}
+                  disabled={submitting || advanceAmount <= 0 || !paymentReference.trim()}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs font-semibold gap-1.5"
+                >
+                  <Plus className="h-4 w-4" />
+                  <span>{submitting ? 'Recording Advance...' : 'Record Advance Payment'}</span>
+                </ConfirmButton>
 
-              {/* Double-entry preview */}
-              <div className="rounded-xl border border-border/80 bg-muted/40 p-3 flex items-center justify-between text-xs">
-                <div>
-                  <span className="font-semibold text-foreground block">
-                    Accounting Double-Entry Preview
-                  </span>
-                  <span className="text-muted-foreground text-[11px]">
-                    Debit 1050 Advance to Suppliers (Asset) | Credit {selectedBank?.code || '1010'} {selectedBank?.name || 'Bank'}
-                  </span>
-                </div>
                 <DoubleEntryHoverBadge
                   title="Supplier Advance Prepayment"
                   description="Posting advance dispatches funds to supplier asset holding:"
@@ -1113,32 +1675,368 @@ export function BatchSupplierPaymentPage({
                   ]}
                 />
               </div>
+            </div>
+          </div>
+        </div>
+      )}
 
-              {/* Submit Buttons */}
-              <div className="flex items-center justify-end gap-3 pt-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setDeskMode('SETTLE_BILLS')}
-                  className="text-xs"
+      {/* ===================================================================== */}
+      {/* VIEW 3: OTHER PAYMENTS (DIRECT EXPENSE / JOURNAL VOUCHER)             */}
+      {/* ===================================================================== */}
+      {deskMode === 'OTHER_PAYMENTS' && (
+        <div className="space-y-4">
+          {/* Top 2 Cards: LEDGER ACCOUNTS & PAYMENT DETAILS */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {/* LEDGER ACCOUNTS */}
+            <Card className="p-4 border-border shadow-xs bg-card space-y-3">
+              <div className="flex items-center justify-between pb-1 border-b border-border/60">
+                <div className="flex items-center gap-2">
+                  <Building2 className="h-4 w-4 text-indigo-600" />
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                    LEDGER ACCOUNTS
+                  </h3>
+                </div>
+                <Badge variant="outline" className="bg-indigo-50 text-indigo-800 border-indigo-300 text-[11px] font-mono">
+                  Dr Expense / Cr Bank
+                </Badge>
+              </div>
+
+              <div className="space-y-3 pt-1">
+                <div>
+                  <label className="block text-xs font-semibold text-foreground mb-1">
+                    Debit Account (Expense / Accrual / Asset) <span className="text-rose-500">*</span>
+                  </label>
+                  <Select
+                    value={otherDebitAccountId}
+                    onChange={(e) => setOtherDebitAccountId(e.target.value)}
+                    className="h-9 text-xs font-medium"
+                    required
+                  >
+                    <optgroup label="Operating Expenses (5000 - 6999)">
+                      {expenseAndLiabilityAccounts
+                        .filter((a) => a.accountClass === 'EXPENSE')
+                        .map((a) => (
+                          <option key={a.id} value={a.id}>
+                            {a.code} - {a.name}
+                          </option>
+                        ))}
+                    </optgroup>
+                    <optgroup label="Liabilities & Accruals (2000 - 2999)">
+                      {expenseAndLiabilityAccounts
+                        .filter((a) => a.accountClass === 'LIABILITY')
+                        .map((a) => (
+                          <option key={a.id} value={a.id}>
+                            {a.code} - {a.name}
+                          </option>
+                        ))}
+                    </optgroup>
+                    <optgroup label="Other Assets & Equipment (1000 - 1999)">
+                      {accounts
+                        .filter((a) => a.code === '1510' || a.code === '1060')
+                        .map((a) => (
+                          <option key={a.id} value={a.id}>
+                            {a.code} - {a.name}
+                          </option>
+                        ))}
+                    </optgroup>
+                  </Select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-foreground mb-1">
+                    Credit Account (Asset: Bank/Cash) <span className="text-rose-500">*</span>
+                  </label>
+                  <Select
+                    value={otherBankAccountId}
+                    onChange={(e) => setOtherBankAccountId(e.target.value)}
+                    className="h-9 text-xs font-medium"
+                    required
+                  >
+                    {bankAccounts.map((a) => (
+                      <option key={a.id} value={a.id}>
+                        {a.code} - {a.name}
+                      </option>
+                    ))}
+                  </Select>
+                </div>
+              </div>
+            </Card>
+
+            {/* PAYMENT DETAILS */}
+            <Card className="p-4 border-border shadow-xs bg-card space-y-3">
+              <div className="flex items-center gap-2 pb-1 border-b border-border/60">
+                <Wallet className="h-4 w-4 text-indigo-600" />
+                <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                  PAYMENT DETAILS (DIRECT EXPENSE SPECIFICATIONS)
+                </h3>
+              </div>
+
+              <div className="space-y-3 pt-1">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                  <div>
+                    <label className="block text-xs font-semibold text-foreground mb-1">
+                      Payment Date <span className="text-rose-500">*</span>
+                    </label>
+                    <Input
+                      type="date"
+                      value={otherPaymentDate}
+                      onChange={(e) => setOtherPaymentDate(e.target.value)}
+                      className="h-9 text-xs"
+                      required
+                    />
+                  </div>
+
+                  <div className="sm:col-span-2">
+                    <label className="block text-xs font-semibold text-foreground mb-1">
+                      Payee / Organization <span className="text-rose-500">*</span>
+                    </label>
+                    <Input
+                      value={otherPayee}
+                      onChange={(e) => setOtherPayee(e.target.value)}
+                      placeholder="e.g. Ceylon Electricity Board or Colombo Port Authority"
+                      className="h-9 text-xs font-medium"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                  <div>
+                    <label className="block text-xs font-semibold text-foreground mb-1">
+                      Payment Method <span className="text-rose-500">*</span>
+                    </label>
+                    <Select
+                      value={otherPaymentMethod}
+                      onChange={(e) => setOtherPaymentMethod(e.target.value as any)}
+                      className="h-9 text-xs"
+                    >
+                      <option value="BANK">Bank Transfer</option>
+                      <option value="CHEQUE">Cheque</option>
+                      <option value="CASH">Cash</option>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-foreground mb-1">
+                      Payment Ref / Cheque # <span className="text-rose-500">*</span>
+                    </label>
+                    <Input
+                      value={otherPaymentRef}
+                      onChange={(e) => setOtherPaymentRef(e.target.value)}
+                      placeholder="e.g. CHQ-88219 or WIRE-REF"
+                      className="h-9 text-xs font-mono"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-foreground mb-1">
+                      Payment Amount (LKR) <span className="text-rose-500">*</span>
+                    </label>
+                    <CurrencyInput
+                      value={otherAmount}
+                      onChange={(val) => setOtherAmount(val)}
+                      placeholder="0.00"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                  <div>
+                    <label className="block text-xs font-semibold text-foreground mb-1">
+                      Category
+                    </label>
+                    <Select
+                      value={otherCategory}
+                      onChange={(e) => setOtherCategory(e.target.value as any)}
+                      className="h-9 text-xs"
+                    >
+                      <option value="UTILITIES">Utilities (Electricity, Water, Phone)</option>
+                      <option value="OFFICE_EXPENSE">Office Rent & Overhead</option>
+                      <option value="TRAVEL_TRANSPORT">Freight & Vehicle Transport</option>
+                      <option value="PETTY_CASH">Petty Cash & Amenities</option>
+                      <option value="OTHER">Other / Taxes / Statutory</option>
+                    </Select>
+                  </div>
+
+                  <div className="sm:col-span-2">
+                    <label className="block text-xs font-semibold text-foreground mb-1">
+                      Narration / Expense Description <span className="text-rose-500">*</span>
+                    </label>
+                    <Input
+                      value={otherNarration}
+                      onChange={(e) => setOtherNarration(e.target.value)}
+                      placeholder="e.g. October warehouse power consumption bill payment"
+                      className="h-9 text-xs"
+                      required
+                    />
+                  </div>
+                </div>
+              </div>
+            </Card>
+          </div>
+
+          {/* Quick Journal Entry / Accrual Settle Table */}
+          <div className="rounded-xl border border-border bg-card shadow-xs overflow-hidden">
+            <div className="p-4 border-b border-border/80 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <FileText className="h-4 w-4 text-indigo-600" />
+                <h3 className="text-sm font-bold text-foreground">
+                  Select from Open Journal Entries / Accruals for Quick Settlement ({journalEntries.length})
+                </h3>
+              </div>
+              <span className="text-xs text-muted-foreground">
+                Click Select to automatically populate account, reference, and amount.
+              </span>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs tabular-nums">
+                <thead className="bg-muted/50 text-muted-foreground border-b border-border font-semibold">
+                  <tr>
+                    <th className="px-3.5 py-2.5">Entry #</th>
+                    <th className="px-3.5 py-2.5">Date</th>
+                    <th className="px-3.5 py-2.5">Reference</th>
+                    <th className="px-3.5 py-2.5">Account Code</th>
+                    <th className="px-3.5 py-2.5">Description / Narration</th>
+                    <th className="px-3.5 py-2.5 text-right">Amount (LKR)</th>
+                    <th className="px-3.5 py-2.5 text-right w-32">Quick Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/60">
+                  {journalEntries.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="py-8 text-center text-xs text-muted-foreground">
+                        No unsettled journal entries found. You can enter direct payment details above.
+                      </td>
+                    </tr>
+                  ) : (
+                    journalEntries.map((je) => {
+                      const isSelected = selectedJournalId === je.id;
+                      const line = je.lines.find((l) => (l.debit || 0) > 0) || je.lines[0];
+                      return (
+                        <tr
+                          key={je.id}
+                          className={cn(
+                            'hover:bg-muted/30 transition-colors',
+                            isSelected && 'bg-indigo-50/50'
+                          )}
+                        >
+                          <td className="px-3.5 py-2.5 font-mono font-bold text-primary flex items-center gap-1.5">
+                            {isSelected && <Check className="h-3.5 w-3.5 text-indigo-600" />}
+                            <span>{je.entryNumber}</span>
+                          </td>
+                          <td className="px-3.5 py-2.5 text-muted-foreground">
+                            {formatDate(je.date)}
+                          </td>
+                          <td className="px-3.5 py-2.5 font-mono text-muted-foreground">
+                            {je.reference || '-'}
+                          </td>
+                          <td className="px-3.5 py-2.5 font-mono text-slate-700">
+                            {line?.accountCode || '-'} {line?.accountName ? `(${line.accountName})` : ''}
+                          </td>
+                          <td className="px-3.5 py-2.5 text-foreground max-w-xs truncate" title={je.description}>
+                            {je.description}
+                          </td>
+                          <td className="px-3.5 py-2.5 text-right font-mono font-bold text-foreground">
+                            {formatCurrency(je.totalDebit || 0)}
+                          </td>
+                          <td className="px-3.5 py-2.5 text-right">
+                            <Button
+                              variant={isSelected ? 'default' : 'outline'}
+                              size="sm"
+                              type="button"
+                              onClick={() => handleSelectJournalEntry(je)}
+                              className={cn(
+                                'h-7 text-[11px] px-2.5 font-semibold gap-1',
+                                isSelected ? 'bg-indigo-600 hover:bg-indigo-700 text-white' : 'border-indigo-300 text-indigo-800 hover:bg-indigo-50'
+                              )}
+                            >
+                              <CheckCircle2 className="h-3 w-3" />
+                              <span>{isSelected ? 'Selected' : 'Select & Pay'}</span>
+                            </Button>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Sticky Bottom Status & Validation Bar */}
+          <div className="sticky bottom-4 z-20 rounded-xl border border-border bg-card/95 backdrop-blur-md p-4 shadow-lg">
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+              <div className="flex flex-wrap items-center gap-6 text-xs">
+                <div>
+                  <span className="text-muted-foreground block text-[11px] font-semibold uppercase">
+                    Total Payment Amount
+                  </span>
+                  <span className="text-base font-bold font-mono text-indigo-700 tabular-nums">
+                    {formatCurrency(otherAmount)}
+                  </span>
+                </div>
+                <div className="h-8 w-px bg-border" />
+                <div>
+                  <span className="text-muted-foreground block text-[11px] font-semibold uppercase">
+                    Debit Account
+                  </span>
+                  <span className="text-sm font-bold font-mono text-foreground">
+                    {otherSelectedDebitAccount?.code || 'Expense'} - {otherSelectedDebitAccount?.name || 'Selected Account'}
+                  </span>
+                </div>
+                <div className="h-8 w-px bg-border" />
+                <div>
+                  <span className="text-muted-foreground block text-[11px] font-semibold uppercase">
+                    Credit Account
+                  </span>
+                  <span className="text-sm font-bold font-mono text-foreground">
+                    {otherSelectedBank?.code || '1010'} - {otherSelectedBank?.name || 'Bank Account'}
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <ConfirmButton
+                  confirmVariant="success"
+                  confirmTitle="Generate & Post Payment Voucher"
+                  confirmMessage={`Are you sure you want to post payment voucher of ${formatCurrency(
+                    otherAmount
+                  )} to ${otherPayee}? This will debit ${otherSelectedDebitAccount?.name} and credit Cash/Bank.`}
+                  confirmText="Post Voucher"
+                  onConfirm={handlePostOtherPayment}
+                  disabled={submitting || otherAmount <= 0 || !otherPayee.trim() || !otherPaymentRef.trim()}
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs font-semibold gap-1.5"
                 >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  size="sm"
-                  disabled={submitting || advanceAmount <= 0 || !paymentReference.trim()}
-                  className="bg-primary hover:bg-primary-hover text-white text-xs font-semibold gap-1.5 shadow-xs"
-                >
-                  <Plus className="h-3.5 w-3.5" />
-                  <span>{submitting ? 'Recording Advance...' : 'Record Advance Payment'}</span>
-                </Button>
+                  <Plus className="h-4 w-4" />
+                  <span>{submitting ? 'Generating...' : 'Generate Payment Voucher'}</span>
+                </ConfirmButton>
+
+                <DoubleEntryHoverBadge
+                  title="Direct Expense Double-Entry Impact"
+                  description="Posting this payment commits balancing GL lines:"
+                  lines={[
+                    {
+                      accountCode: otherSelectedDebitAccount?.code || '5000',
+                      accountName: otherSelectedDebitAccount?.name || 'Expense Account',
+                      type: 'DEBIT',
+                      amount: otherAmount > 0 ? otherAmount : 'Payment Total',
+                    },
+                    {
+                      accountCode: otherSelectedBank?.code || '1010',
+                      accountName: otherSelectedBank?.name || 'Bank Account',
+                      type: 'CREDIT',
+                      amount: otherAmount > 0 ? otherAmount : 'Payment Total',
+                    },
+                  ]}
+                />
               </div>
             </div>
-          </form>
-        </Card>
+          </div>
+        </div>
       )}
+
       {/* Printable Payment Voucher Modal */}
       <PrintablePaymentVoucher
         voucher={selectedVoucherForPrint}

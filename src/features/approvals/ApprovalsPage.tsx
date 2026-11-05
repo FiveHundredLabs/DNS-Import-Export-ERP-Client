@@ -93,13 +93,22 @@ export function ApprovalsPage() {
   const getDocumentLink = (app: ApprovalRequest): string | null => {
     if (app.documentType === 'PAYMENT_RECEIPT') return `/payments/${app.documentId}`;
     if (app.documentType === 'SALES_ORDER') return `/orders/${app.documentId}`;
-    if (app.documentType === 'SPECIAL_SALES_ORDER') return `/approvals/orders/${app.documentId}`;
+    if (app.documentType === 'SPECIAL_SALES_ORDER') return `/orders/${app.documentId}`;
     if (app.documentType === 'QUOTATION_DISCOUNT') return `/quotations/${app.documentId}`;
     if (app.documentType === 'GRN_RECEIPT') return `/inventory/grn/${app.documentId}`;
-    if (app.documentType === 'CUSTOMER_CREATION') return `/customers/${app.documentId}`;
+    if (app.documentType === 'CUSTOMER_CREATION') return `/customers/onboarding/${app.documentId}`;
     if (app.documentType === 'PRODUCT_PRICE_CHANGE') return app.documentId ? `/products/${app.documentId}` : `/products`;
     if (app.documentType === 'PURCHASE_ORDER') return `/purchasing/orders/${app.documentId}`;
     return null;
+  };
+
+  const isDirectRecordApproval = (app: ApprovalRequest) => {
+    return (
+      app.documentType === 'SALES_ORDER' ||
+      app.documentType === 'SPECIAL_SALES_ORDER' ||
+      app.documentType === 'QUOTATION_DISCOUNT' ||
+      app.documentType === 'CUSTOMER_CREATION'
+    );
   };
 
   const filteredApprovals = useMemo(() => {
@@ -321,17 +330,31 @@ export function ApprovalsPage() {
                         <Clock className="h-3 w-3" /> {formatDateTime(app.createdAt)}
                       </div>
                     </div>
-                    {hasActionAuthority && (
-                      <Button
-                        size="sm"
-                        onClick={() => {
-                          setSelectedRequest(app);
-                          setActionDialogOpen(true);
-                        }}
-                        className="text-xs gap-1.5"
-                      >
-                        <ShieldCheck className="h-4 w-4" /> Take Action
-                      </Button>
+                    {isDirectRecordApproval(app) ? (
+                      getDocumentLink(app) && (
+                        <Link to={getDocumentLink(app)!}>
+                          <Button
+                            size="sm"
+                            className="text-xs gap-1.5 bg-primary hover:bg-primary-hover text-white font-semibold shadow-xs cursor-pointer"
+                          >
+                            <span>Inspect Record</span>
+                            <ExternalLink className="h-3.5 w-3.5" />
+                          </Button>
+                        </Link>
+                      )
+                    ) : (
+                      hasActionAuthority && (
+                        <Button
+                          size="sm"
+                          onClick={() => {
+                            setSelectedRequest(app);
+                            setActionDialogOpen(true);
+                          }}
+                          className="text-xs gap-1.5"
+                        >
+                          <ShieldCheck className="h-4 w-4" /> Take Action
+                        </Button>
+                      )
                     )}
                   </div>
                 </CardHeader>
@@ -344,7 +367,7 @@ export function ApprovalsPage() {
                         {app.description}
                       </p>
                     </div>
-                    {getDocumentLink(app) && (
+                    {!isDirectRecordApproval(app) && getDocumentLink(app) && (
                       <Link
                         to={getDocumentLink(app)!}
                         className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-white border border-slate-200 text-primary hover:bg-slate-50 font-semibold text-xs whitespace-nowrap self-start sm:self-center shadow-2xs"

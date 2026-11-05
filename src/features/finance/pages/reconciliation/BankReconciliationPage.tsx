@@ -30,6 +30,13 @@ import {
   FileText,
   Search,
   History,
+  CheckSquare,
+  Square,
+  LayoutList,
+  Columns2,
+  ArrowDownLeft,
+  ArrowUpRight,
+  Check,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -225,6 +232,8 @@ export function BankReconciliationPage() {
   const [statementFilter, setStatementFilter] = useState<'ALL' | 'CLEARED' | 'UNCLEARED'>('ALL');
   const [activeHoverId, setActiveHoverId] = useState<string | null>(null);
   const [dateToleranceDays, setDateToleranceDays] = useState<number>(3);
+  const [workspaceViewMode, setWorkspaceViewMode] = useState<'MANUAL' | 'SPLIT'>('MANUAL');
+  const [manualTypeFilter, setManualTypeFilter] = useState<'ALL' | 'DEPOSITS' | 'PAYMENTS'>('ALL');
 
   // Statement Upload Modal State
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
@@ -545,10 +554,13 @@ export function BankReconciliationPage() {
       }
 
       const isFee = adjustmentType === 'FEE';
+      const fallbackId = isFee ? 'acc-6030' : 'acc-4010';
+      const resolvedAdjAccountId = adjAccount?.id || fallbackId;
+
       const lines = isFee
         ? [
             {
-              accountId: adjAccount.id,
+              accountId: resolvedAdjAccountId,
               debit: adjustmentAmount,
               credit: 0,
               description: adjustmentDescription || 'Bank Service Charge & Processing Fee',
@@ -568,7 +580,7 @@ export function BankReconciliationPage() {
               description: 'Credit interest earned',
             },
             {
-              accountId: adjAccount.id,
+              accountId: resolvedAdjAccountId,
               debit: 0,
               credit: adjustmentAmount,
               description: adjustmentDescription || 'Bank Interest Income Earned',
@@ -649,6 +661,41 @@ export function BankReconciliationPage() {
       return true;
     });
   }, [systemTransactions, systemFilter, systemSearch]);
+
+  // Full-width manual verification filtered list (includes transaction type tabs: deposits vs payments)
+  const filteredManualSystemList = useMemo(() => {
+    return systemTransactions.filter((tx) => {
+      if (systemFilter === 'CLEARED' && !tx.isCleared) return false;
+      if (systemFilter === 'UNCLEARED' && tx.isCleared) return false;
+      if (manualTypeFilter === 'DEPOSITS' && tx.debit <= 0) return false;
+      if (manualTypeFilter === 'PAYMENTS' && tx.credit <= 0) return false;
+      if (systemSearch.trim()) {
+        const query = systemSearch.toLowerCase();
+        return (
+          tx.reference.toLowerCase().includes(query) ||
+          tx.description.toLowerCase().includes(query) ||
+          tx.amount.toString().includes(query)
+        );
+      }
+      return true;
+    });
+  }, [systemTransactions, systemFilter, manualTypeFilter, systemSearch]);
+
+  const handleMarkAllVisibleCleared = () => {
+    const visibleIds = new Set(filteredManualSystemList.map((t) => t.id));
+    setSystemTransactions((prev) =>
+      prev.map((t) => (visibleIds.has(t.id) ? { ...t, isCleared: true } : t))
+    );
+    toast.success(`Marked ${visibleIds.size} transaction(s) as Cleared.`);
+  };
+
+  const handleUnmarkAllVisible = () => {
+    const visibleIds = new Set(filteredManualSystemList.map((t) => t.id));
+    setSystemTransactions((prev) =>
+      prev.map((t) => (visibleIds.has(t.id) ? { ...t, isCleared: false } : t))
+    );
+    toast.info(`Unmarked ${visibleIds.size} transaction(s).`);
+  };
 
   const filteredStatementList = useMemo(() => {
     return statementTransactions.filter((stmt) => {
@@ -805,105 +852,146 @@ export function BankReconciliationPage() {
 
       {/* 6.1 Reconciliation Setup Modal / Form */}
       {!isWorkspaceActive ? (
-        <Card className="max-w-2xl mx-auto p-6 border-slate-200 shadow-sm bg-white space-y-6">
-          <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
-            <div className="p-2.5 rounded-lg bg-primary text-white shadow-xs">
-              <Landmark className="h-6 w-6" />
+        <Card className="w-full p-6 sm:p-8 border-slate-200 shadow-sm bg-white space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-slate-100 pb-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-lg bg-primary text-white shadow-xs">
+                <Landmark className="h-6 w-6" />
+              </div>
+              <div>
+                <h2 className="text-base font-bold text-slate-900">
+                  Reconciliation Setup & Statement Opening
+                </h2>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Specify the bank account, cut-off ending date, and closing balance from your physical or electronic statement.
+                </p>
+              </div>
             </div>
-            <div>
-              <h2 className="text-base font-bold text-slate-900">
-                Reconciliation Setup & Statement Opening
-              </h2>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Specify the bank account, cut-off ending date, and closing balance from your physical or electronic statement.
-              </p>
+
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="bg-emerald-50 text-emerald-800 border-emerald-200 text-xs py-1 px-2.5 flex items-center gap-1.5">
+                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+                <span>Manual Verification Ready</span>
+              </Badge>
             </div>
           </div>
 
-          <div className="space-y-4">
-            {/* Bank Account dropdown */}
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Bank Account <span className="text-rose-500">*</span>
-              </label>
-              <Select
-                value={selectedAccountId}
-                onChange={(e) => setSelectedAccountId(e.target.value)}
-                className="h-9 text-xs"
-              >
-                {bankAccounts.map((b) => (
-                  <option key={b.id} value={b.id}>
-                    {b.code} - {b.name} (Live Ledger Balance: {formatCurrency(b.currentBalance)})
-                  </option>
-                ))}
-              </Select>
-            </div>
-
-            {/* Locked Prior Balance Display */}
-            <div className="p-3.5 rounded-lg border border-slate-200 bg-slate-50/70 space-y-1.5">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
-                  <Lock className="h-3.5 w-3.5 text-amber-600" />
-                  Locked Prior Balance (Beginning Balance)
-                </span>
-                {isLockedFromPrior ? (
-                  <Badge variant="outline" className="bg-amber-50 text-amber-800 border-amber-200 text-[10px] font-medium">
-                    Locked to Prior Reconciled Period
-                  </Badge>
-                ) : (
-                  <Badge variant="outline" className="bg-slate-100 text-slate-700 border-slate-200 text-[10px]">
-                    Opening Balance Baseline
-                  </Badge>
-                )}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            {/* Left Column (7 cols): Parameters & Quick Method Info */}
+            <div className="lg:col-span-7 space-y-5">
+              {/* Bank Account dropdown */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Bank Account <span className="text-rose-500">*</span>
+                </label>
+                <Select
+                  value={selectedAccountId}
+                  onChange={(e) => setSelectedAccountId(e.target.value)}
+                  className="h-10 text-xs"
+                >
+                  {bankAccounts.map((b) => (
+                    <option key={b.id} value={b.id}>
+                      {b.code} - {b.name} (Live Ledger Balance: {formatCurrency(b.currentBalance)})
+                    </option>
+                  ))}
+                </Select>
               </div>
-              <div className="flex items-baseline justify-between pt-1">
-                <span className="font-mono text-base font-bold text-slate-900">
-                  {formatCurrency(beginningBalance)}
-                </span>
-                {priorReconciledPeriod && (
-                  <span className="text-[11px] text-slate-500">
-                    As of period ended {formatDate(priorReconciledPeriod.statementEndingDate)} (Reconciled by {priorReconciledPeriod.reconciledBy})
+
+              {/* Statement Ending Date & Target Balance */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Statement Ending Date <span className="text-rose-500">*</span>
+                  </label>
+                  <Input
+                    type="date"
+                    value={statementEndingDate}
+                    onChange={(e) => setStatementEndingDate(e.target.value)}
+                    className="h-10 text-xs"
+                    required
+                  />
+                  <span className="text-[10.5px] text-slate-400 mt-1 block">
+                    Cut-off date printed on your bank statement.
                   </span>
-                )}
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Target Statement Balance (From Physical / Electronic Statement) <span className="text-rose-500">*</span>
+                  </label>
+                  <CurrencyInput
+                    value={targetStatementBalance}
+                    onChange={(val) => setTargetStatementBalance(val)}
+                    placeholder="0.00"
+                  />
+                  <span className="text-[10.5px] text-slate-400 mt-1 block">
+                    Final closing balance from bank statement document.
+                  </span>
+                </div>
               </div>
-              <p className="text-[10.5px] text-slate-500 leading-relaxed">
-                Notice: In accordance with statutory audit controls, the beginning balance dynamically locks to the ending balance of the previously reconciled period and does not fluctuate with live ledger balance.
-              </p>
+
+              {/* Method Explainer Card */}
+              <div className="p-4 rounded-xl border border-primary/20 bg-primary-light/30 space-y-2">
+                <div className="flex items-center gap-2 text-primary font-semibold text-xs">
+                  <Sparkles className="h-4 w-4 text-primary" />
+                  <span>Streamlined Manual Reconciliation (No File Upload Needed)</span>
+                </div>
+                <p className="text-[11.5px] text-slate-600 leading-relaxed">
+                  You can reconcile directly against your physical paper statement or online banking portal. Simply tick the system ledger transactions that have cleared on your statement. The system continuously calculates cleared deposits, payments, and variance in real-time until difference equals exactly 0.00.
+                </p>
+              </div>
             </div>
 
-            {/* Statement Ending Date */}
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Statement Ending Date <span className="text-rose-500">*</span>
-              </label>
-              <Input
-                type="date"
-                value={statementEndingDate}
-                onChange={(e) => setStatementEndingDate(e.target.value)}
-                className="h-9 text-xs"
-                required
-              />
-            </div>
+            {/* Right Column (5 cols): Locked Prior Balance Card */}
+            <div className="lg:col-span-5 space-y-4">
+              <div className="p-4 sm:p-5 rounded-xl border border-slate-200 bg-slate-50/70 space-y-3.5 h-full flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
+                      <Lock className="h-3.5 w-3.5 text-amber-600" />
+                      Locked Prior Balance (Beginning Balance)
+                    </span>
+                    {isLockedFromPrior ? (
+                      <Badge variant="outline" className="bg-amber-50 text-amber-800 border-amber-200 text-[10px] font-medium">
+                        Locked to Prior Reconciled Period
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="bg-slate-100 text-slate-700 border-slate-200 text-[10px]">
+                        Opening Balance Baseline
+                      </Badge>
+                    )}
+                  </div>
+                  <div className="pt-1 pb-1">
+                    <span className="font-mono text-2xl sm:text-3xl font-bold text-slate-900 block tracking-tight">
+                      {formatCurrency(beginningBalance)}
+                    </span>
+                    {priorReconciledPeriod && (
+                      <span className="text-[11px] text-slate-500 block mt-1.5">
+                        As of period ended {formatDate(priorReconciledPeriod.statementEndingDate)} (Reconciled by {priorReconciledPeriod.reconciledBy})
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[11px] text-slate-500 leading-relaxed mt-2.5 border-t border-slate-200/80 pt-2.5">
+                    Notice: In accordance with statutory audit controls, the beginning balance dynamically locks to the ending balance of the previously reconciled period and does not fluctuate with live ledger balance.
+                  </p>
+                </div>
 
-            {/* Target Statement Balance */}
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Target Statement Balance (From Physical / Electronic Statement) <span className="text-rose-500">*</span>
-              </label>
-              <CurrencyInput
-                value={targetStatementBalance}
-                onChange={(val) => setTargetStatementBalance(val)}
-                placeholder="0.00"
-              />
+                <div className="pt-3 flex items-center justify-between text-xs text-slate-500 border-t border-slate-200/60">
+                  <span>Selected Bank Account:</span>
+                  <span className="font-mono font-bold text-slate-800">
+                    {selectedBankAccount?.code} ({selectedBankAccount?.name})
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
 
-          <div className="pt-2 flex items-center justify-between">
+          <div className="pt-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3">
             <Button
               variant="outline"
               size="sm"
               onClick={() => setIsUploadModalOpen(true)}
-              className="text-xs gap-1.5 border-slate-300"
+              className="text-xs gap-1.5 border-slate-300 w-full sm:w-auto"
             >
               <Upload className="h-3.5 w-3.5 text-primary" />
               <span>Upload Statement First (CSV / MT940)</span>
@@ -911,7 +999,7 @@ export function BankReconciliationPage() {
 
             <Button
               onClick={handleStartReconciliation}
-              className="bg-primary hover:bg-primary-hover text-white shadow-xs font-semibold gap-1.5"
+              className="bg-primary hover:bg-primary-hover text-white shadow-xs font-semibold gap-1.5 w-full sm:w-auto px-6 h-10 text-xs"
             >
               <span>Start Reconciliation</span>
               <ArrowRight className="h-4 w-4" />
@@ -987,8 +1075,36 @@ export function BankReconciliationPage() {
 
           {/* De-cluttered Matching Control Toolbar */}
           <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 bg-white p-3 rounded-lg border border-slate-200 shadow-2xs">
-            {/* Left Cluster: Matching Tools & Statement Import */}
+            {/* Left Cluster: View Switcher, Matching Tools & Statement Import */}
             <div className="flex flex-wrap items-center gap-2">
+              {/* Workspace View Mode Selector */}
+              <div className="flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200 text-xs">
+                <button
+                  type="button"
+                  onClick={() => setWorkspaceViewMode('MANUAL')}
+                  className={`flex items-center gap-1.5 px-3 py-1 rounded-md font-semibold transition-all ${
+                    workspaceViewMode === 'MANUAL'
+                      ? 'bg-white text-primary shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <LayoutList className="h-3.5 w-3.5" />
+                  <span>Manual Verification (Full Width)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setWorkspaceViewMode('SPLIT')}
+                  className={`flex items-center gap-1.5 px-3 py-1 rounded-md font-semibold transition-all ${
+                    workspaceViewMode === 'SPLIT'
+                      ? 'bg-white text-primary shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <Columns2 className="h-3.5 w-3.5" />
+                  <span>Split-Pane Feed Match</span>
+                </button>
+              </div>
+
               <div className="flex items-center bg-slate-50 p-1 rounded-md border border-slate-200 gap-1.5">
                 <Button
                   size="sm"
@@ -1099,8 +1215,293 @@ export function BankReconciliationPage() {
             </div>
           </div>
 
+          {/* FULL-WIDTH MANUAL RECONCILIATION TABLE */}
+          {workspaceViewMode === 'MANUAL' && (
+            <Card className="border-slate-200 shadow-2xs overflow-hidden w-full bg-white">
+              {/* Header */}
+              <div className="p-4 bg-slate-50 border-b border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-3">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-sm text-slate-900">
+                      System Records (GL {selectedBankAccount?.code}) — Manual Statement Verification
+                    </span>
+                    <Badge variant="outline" className="text-xs bg-white text-slate-700 font-semibold">
+                      {systemTransactions.length} lines total
+                    </Badge>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Tick each transaction that appears on your paper or online statement. Difference recalculates live to 0.00.
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  {/* Transaction Inflow/Outflow Type Tabs */}
+                  <div className="flex items-center bg-white p-0.5 rounded-lg border border-slate-200 text-xs">
+                    <button
+                      type="button"
+                      onClick={() => setManualTypeFilter('ALL')}
+                      className={`px-2.5 py-1 rounded font-medium transition-colors ${
+                        manualTypeFilter === 'ALL'
+                          ? 'bg-slate-900 text-white'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      All ({systemTransactions.length})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setManualTypeFilter('DEPOSITS')}
+                      className={`px-2.5 py-1 rounded font-medium transition-colors ${
+                        manualTypeFilter === 'DEPOSITS'
+                          ? 'bg-primary text-white'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      Deposits (Dr) ({systemTransactions.filter((t) => t.debit > 0).length})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setManualTypeFilter('PAYMENTS')}
+                      className={`px-2.5 py-1 rounded font-medium transition-colors ${
+                        manualTypeFilter === 'PAYMENTS'
+                          ? 'bg-emerald-700 text-white'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      Payments (Cr) ({systemTransactions.filter((t) => t.credit > 0).length})
+                    </button>
+                  </div>
+
+                  {/* Status Pills */}
+                  <div className="flex items-center bg-white p-0.5 rounded-lg border border-slate-200 text-xs">
+                    <button
+                      type="button"
+                      onClick={() => setSystemFilter('ALL')}
+                      className={`px-2.5 py-1 rounded font-medium ${
+                        systemFilter === 'ALL' ? 'bg-primary text-white' : 'text-slate-600'
+                      }`}
+                    >
+                      All
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSystemFilter('UNCLEARED')}
+                      className={`px-2.5 py-1 rounded font-medium ${
+                        systemFilter === 'UNCLEARED' ? 'bg-amber-600 text-white' : 'text-slate-600'
+                      }`}
+                    >
+                      Open ({systemTransactions.filter((t) => !t.isCleared).length})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSystemFilter('CLEARED')}
+                      className={`px-2.5 py-1 rounded font-medium ${
+                        systemFilter === 'CLEARED' ? 'bg-emerald-600 text-white' : 'text-slate-600'
+                      }`}
+                    >
+                      Cleared ({systemTransactions.filter((t) => t.isCleared).length})
+                    </button>
+                  </div>
+
+                  {/* Batch Tools */}
+                  <div className="flex items-center gap-1.5 pl-2 border-l border-slate-200">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleMarkAllVisibleCleared}
+                      className="text-xs h-7 px-2.5 text-emerald-700 border-emerald-300 hover:bg-emerald-50"
+                    >
+                      <CheckSquare className="h-3.5 w-3.5 mr-1" />
+                      <span>Clear All Visible</span>
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleUnmarkAllVisible}
+                      className="text-xs h-7 px-2 text-slate-500 hover:text-slate-800"
+                    >
+                      <Square className="h-3.5 w-3.5 mr-1" />
+                      <span>Unmark</span>
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Search Bar */}
+              <div className="p-2.5 border-b border-slate-100 bg-white">
+                <div className="relative">
+                  <Search className="h-4 w-4 absolute left-3 top-2.5 text-slate-400" />
+                  <Input
+                    placeholder="Search reference (DEP/CHQ), memo description, or amount..."
+                    value={systemSearch}
+                    onChange={(e) => setSystemSearch(e.target.value)}
+                    className="h-9 pl-9 text-xs border-slate-200 w-full"
+                  />
+                </div>
+              </div>
+
+              {/* Full Width Transactions Table */}
+              <div className="overflow-x-auto w-full">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-slate-50 border-b border-slate-200 text-[11px] font-bold uppercase tracking-wider text-slate-600">
+                    <tr>
+                      <th className="px-4 py-3 w-16 text-center">Verify</th>
+                      <th className="px-4 py-3 whitespace-nowrap">Date</th>
+                      <th className="px-4 py-3 whitespace-nowrap">Reference / Cheque</th>
+                      <th className="px-4 py-3">Description / Payee</th>
+                      <th className="px-4 py-3 text-center">Type</th>
+                      <th className="px-4 py-3 text-right">Inflow / Deposit (Dr)</th>
+                      <th className="px-4 py-3 text-right">Outflow / Payment (Cr)</th>
+                      <th className="px-4 py-3 text-center">Audit Status</th>
+                      <th className="px-4 py-3 text-center">Quick Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {filteredManualSystemList.map((tx) => {
+                      return (
+                        <tr
+                          key={tx.id}
+                          className={`transition-colors ${
+                            tx.isCleared
+                              ? 'bg-emerald-50/50 hover:bg-emerald-50/70'
+                              : 'hover:bg-slate-50/70'
+                          }`}
+                        >
+                          <td className="px-4 py-3 text-center">
+                            <input
+                              type="checkbox"
+                              checked={tx.isCleared}
+                              onChange={() => handleToggleSystemCleared(tx.id)}
+                              className="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary cursor-pointer"
+                            />
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap text-slate-600 font-mono text-xs">
+                            {formatDate(tx.date)}
+                          </td>
+                          <td className="px-4 py-3 font-mono font-bold text-slate-900 whitespace-nowrap">
+                            <div className="flex items-center gap-1.5">
+                              <span>{tx.reference}</span>
+                              {tx.reference.startsWith('ADJ-') && (
+                                <DoubleEntryHoverBadge
+                                  lines={
+                                    tx.type === 'PAYMENT'
+                                      ? [
+                                          {
+                                            accountCode: '6030',
+                                            accountName: 'Bank Fee Expense',
+                                            type: 'DEBIT',
+                                            amount: tx.amount,
+                                          },
+                                          {
+                                            accountCode: selectedBankAccount?.code || '1010',
+                                            accountName: selectedBankAccount?.name || 'Bank Account',
+                                            type: 'CREDIT',
+                                            amount: tx.amount,
+                                          },
+                                        ]
+                                      : [
+                                          {
+                                            accountCode: selectedBankAccount?.code || '1010',
+                                            accountName: selectedBankAccount?.name || 'Bank Account',
+                                            type: 'DEBIT',
+                                            amount: tx.amount,
+                                          },
+                                          {
+                                            accountCode: '4010',
+                                            accountName: 'Interest Income',
+                                            type: 'CREDIT',
+                                            amount: tx.amount,
+                                          },
+                                        ]
+                                  }
+                                  title="Bank Adjustment GL Posting"
+                                />
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 text-slate-800 font-medium">
+                            {tx.description}
+                          </td>
+                          <td className="px-4 py-3 text-center whitespace-nowrap">
+                            {tx.debit > 0 ? (
+                              <Badge variant="outline" className="bg-primary-light text-primary-text border-primary-border text-[10px] gap-1 font-semibold">
+                                <ArrowDownLeft className="h-3 w-3 text-primary" />
+                                <span>Deposit</span>
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="bg-slate-100 text-slate-700 border-slate-200 text-[10px] gap-1 font-semibold">
+                                <ArrowUpRight className="h-3 w-3 text-slate-500" />
+                                <span>Payment</span>
+                              </Badge>
+                            )}
+                          </td>
+                          <td className="px-4 py-3 text-right font-mono font-bold text-primary text-sm whitespace-nowrap">
+                            {tx.debit > 0 ? formatCurrency(tx.debit) : '—'}
+                          </td>
+                          <td className="px-4 py-3 text-right font-mono font-bold text-emerald-700 text-sm whitespace-nowrap">
+                            {tx.credit > 0 ? formatCurrency(tx.credit) : '—'}
+                          </td>
+                          <td className="px-4 py-3 text-center whitespace-nowrap">
+                            {tx.isCleared ? (
+                              <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-300 text-[11px] font-semibold gap-1">
+                                <Check className="h-3 w-3" />
+                                <span>Cleared</span>
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-300 text-[11px] font-semibold">
+                                <span>Uncleared</span>
+                              </Badge>
+                            )}
+                          </td>
+                          <td className="px-4 py-3 text-center whitespace-nowrap">
+                            <Button
+                              variant={tx.isCleared ? "outline" : "default"}
+                              size="sm"
+                              onClick={() => handleToggleSystemCleared(tx.id)}
+                              className={`h-7 px-3 text-xs font-semibold ${
+                                tx.isCleared
+                                  ? 'border-slate-200 text-slate-600 hover:bg-slate-100'
+                                  : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-2xs'
+                              }`}
+                            >
+                              {tx.isCleared ? 'Unverify' : 'Verify & Clear'}
+                            </Button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                    {filteredManualSystemList.length === 0 && (
+                      <tr>
+                        <td colSpan={9} className="px-4 py-10 text-center text-xs text-slate-400">
+                          No transactions found matching your criteria.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Table Summary Footer */}
+              <div className="p-3.5 bg-slate-50/80 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-600 font-mono">
+                <div className="flex items-center gap-4">
+                  <span>Showing {filteredManualSystemList.length} of {systemTransactions.length} entries</span>
+                  <span className="text-emerald-700 font-bold">
+                    {systemTransactions.filter((t) => t.isCleared).length} Cleared
+                  </span>
+                  <span className="text-amber-700">
+                    {systemTransactions.filter((t) => !t.isCleared).length} Outstanding
+                  </span>
+                </div>
+                <div className="flex items-center gap-4">
+                  <span>Total Deposits: <strong className="text-primary">{formatCurrency(clearedDeposits)}</strong></span>
+                  <span>Total Payments: <strong className="text-emerald-700">{formatCurrency(clearedPayments)}</strong></span>
+                </div>
+              </div>
+            </Card>
+          )}
+
           {/* Split-Pane Grid: Left = System Records, Right = Bank Statement */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className={workspaceViewMode === 'SPLIT' ? 'grid grid-cols-1 lg:grid-cols-2 gap-6' : 'hidden'}>
             {/* LEFT PANE: System General Ledger Transactions */}
             <div className="space-y-3">
               <Card className="border-slate-200 shadow-2xs overflow-hidden">

@@ -3,7 +3,7 @@ import { ApprovalRequest, ApprovalActionType } from '../../types/approval';
 import { UserRole } from '../../types/auth';
 import { MOCK_APPROVALS } from '../../mock/mockApprovals';
 
-const APPROVALS_STORAGE_KEY = 'dns_erp_approval_requests';
+const APPROVALS_STORAGE_KEY = 'dns_erp_approval_requests_v4';
 
 export class MockApprovalRepository implements IApprovalRepository {
   private static instance: MockApprovalRepository | null = null;
@@ -23,17 +23,41 @@ export class MockApprovalRepository implements IApprovalRepository {
   private init() {
     try {
       if (typeof window !== 'undefined' && window.localStorage) {
+        // Purge legacy storage versions to prevent broken/stale references on client machines
+        localStorage.removeItem('dns_erp_approval_requests');
+        localStorage.removeItem('dns_erp_approval_requests_v2');
+        localStorage.removeItem('dns_erp_approval_requests_v3');
+
         const stored = localStorage.getItem(APPROVALS_STORAGE_KEY);
         if (stored) {
           const parsed: ApprovalRequest[] = JSON.parse(stored);
-          const existingIds = new Set(parsed.map((a) => a.id));
+          const mockMap = new Map(MOCK_APPROVALS.map((m) => [m.id, m]));
+
+          // Ensure base approvals reflect canonical document IDs and details
+          const updatedParsed = parsed.map((item) => {
+            const base = mockMap.get(item.id);
+            if (base && item.status === 'PENDING') {
+              return {
+                ...item,
+                documentId: base.documentId,
+                documentReferenceNumber: base.documentReferenceNumber,
+                documentType: base.documentType,
+                title: base.title,
+                description: base.description,
+                currentApproverRole: base.currentApproverRole,
+                targetApproverRole: base.targetApproverRole,
+              };
+            }
+            return item;
+          });
+
+          const existingIds = new Set(updatedParsed.map((a) => a.id));
           const missing = MOCK_APPROVALS.filter((a) => !existingIds.has(a.id));
-          this.approvals = [...parsed, ...JSON.parse(JSON.stringify(missing))];
-          if (missing.length > 0) {
-            this.saveToStorage();
-          }
+          this.approvals = [...updatedParsed, ...JSON.parse(JSON.stringify(missing))];
+          this.saveToStorage();
         } else {
           this.approvals = JSON.parse(JSON.stringify(MOCK_APPROVALS));
+          this.saveToStorage();
         }
       } else {
         this.approvals = JSON.parse(JSON.stringify(MOCK_APPROVALS));
