@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { usePurchaseOrders } from '../../hooks/usePurchaseOrders';
+import { useAuth } from '../../hooks/useAuth';
 import { useFinanceLedger } from '../finance/hooks/useFinanceLedger';
 import { useGRN } from '../../hooks/useGRN';
 import { PurchaseOrderStatusBadge } from './components/PurchaseOrderStatusBadge';
@@ -21,11 +22,13 @@ import {
   ArrowRight,
   AlertCircle,
   Package,
+  CreditCard,
 } from 'lucide-react';
 import { TableLoadingSkeleton } from '../../components/common/LoadingSkeleton';
 
 export function PurchasingDashboard() {
   const navigate = useNavigate();
+  const { currentUser } = useAuth();
   const { purchaseOrders, loading } = usePurchaseOrders();
   const { suppliers } = useFinanceLedger();
   const { grns } = useGRN();
@@ -83,7 +86,7 @@ export function PurchasingDashboard() {
               Purchasing & Procurement Dashboard
             </h1>
             <Badge variant="outline" className="bg-primary-light text-primary border-primary-border text-xs font-mono">
-              ROLE: PURCHASING_OFFICER
+              ROLE: {currentUser?.role || 'PURCHASING_OFFICER'}
             </Badge>
           </div>
           <p className="text-sm text-slate-500 mt-1">
@@ -92,6 +95,14 @@ export function PurchasingDashboard() {
         </div>
 
         <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={() => navigate('/purchasing/payments')}
+            className="gap-1.5 text-xs bg-white hover:bg-slate-50 text-slate-700 shadow-2xs"
+          >
+            <CreditCard className="h-4 w-4 text-emerald-600" />
+            <span>Supplier Payments (View Only)</span>
+          </Button>
           <Button
             onClick={() => navigate('/purchasing/orders/new')}
             className="gap-1.5 bg-primary hover:bg-primary-hover text-primary-foreground font-semibold shadow-xs"

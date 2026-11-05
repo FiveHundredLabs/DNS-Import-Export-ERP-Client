@@ -16,6 +16,7 @@ import { PaginationControls } from '../../components/common/PaginationControls';
 import { UnitBarcodeRecord, GRN, GRNItem, ElectricalProductCategory } from '../../types/inventory';
 import { toast } from 'sonner';
 import { StatusBadge } from '../../components/common/StatusBadge';
+import { GRNStockManagerVerificationPanel } from './components/GRNStockManagerVerificationPanel';
 import { PrintableGRN } from './PrintableGRN';
 import { cn } from '../../utils/cn';
 import {
@@ -408,6 +409,28 @@ export function GRNDetailPage({ backUrl, backTitle }: GRNDetailPageProps = {}) {
     }
   };
 
+  const handleStockManagerApprove = async (remarks?: string) => {
+    if (!id || !user) return;
+    try {
+      await grnService.verifyAndApproveGRN(id, { id: user.id, name: user.name, role: user.role }, remarks);
+      toast.success('GRN physical verification approved! Forwarded to Finance for Landed Costing & Bill creation.');
+      refetch();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to verify GRN');
+    }
+  };
+
+  const handleStockManagerReject = async (reason: string) => {
+    if (!id || !user) return;
+    try {
+      await grnService.rejectGRNVerification(id, { id: user.id, name: user.name, role: user.role }, reason);
+      toast.error('GRN verification rejected. Shipment returned for inspection resolution.');
+      refetch();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to reject GRN');
+    }
+  };
+
   const hasDamagedStock = useMemo(() => {
     return grn?.items?.some((i) => (i.damagedQuantity || 0) > 0) ?? false;
   }, [grn]);
@@ -671,6 +694,14 @@ export function GRNDetailPage({ backUrl, backTitle }: GRNDetailPageProps = {}) {
       </div>
 
       {/* ───────────────────────────────────────────────────────────────────────── */}
+      {/* Stock Manager Verification Workspace (UI Reference Standard) */}
+      <GRNStockManagerVerificationPanel
+        grn={grn}
+        currentUser={user}
+        onApprove={handleStockManagerApprove}
+        onReject={handleStockManagerReject}
+      />
+
       {/* 2. EXECUTIVE GRN QUANTITY & VALUATION SUMMARY (KPI GRID) */}
       {/* ───────────────────────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">

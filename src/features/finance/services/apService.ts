@@ -1,5 +1,6 @@
 import { GRN } from '../../../types/inventory';
 import { MOCK_GRNS } from '../../../mock/mockInventory';
+import { MockGRNRepository } from '../../../repositories/mock/MockGRNRepository';
 import { MOCK_PRODUCTS } from '../../../mock/mockProducts';
 import { financeRepository } from '../api';
 import { DEFAULT_SUPPLIERS } from '../api/mock/MockFinanceRepository';
@@ -303,7 +304,106 @@ const INITIAL_BILLS: VendorBill[] = [
   },
 ];
 
+
+export interface SupplierPaymentAllocation {
+  billId: string;
+  billNumber?: string;
+  vendorInvoiceNumber?: string;
+  amountToApply: number;
+}
+
+export interface SupplierPaymentRecord {
+  id: string;
+  paymentNumber: string;
+  paymentReference: string;
+  paymentDate: string;
+  supplierId: string;
+  supplierName: string;
+  bankAccountId: string;
+  bankAccountCode: string;
+  bankAccountName?: string;
+  totalPaymentAmount: number;
+  paymentMethod: string;
+  allocations: SupplierPaymentAllocation[];
+  journalEntryId?: string;
+  notes?: string;
+  createdAt: string;
+}
+
+const AP_PAYMENTS_STORAGE_KEY = 'dns_finance_ap_supplier_payments';
+
+const INITIAL_PAYMENTS: SupplierPaymentRecord[] = [
+  {
+    id: 'pay-2026-001',
+    paymentNumber: 'PAY-2026-001',
+    paymentReference: 'CHQ-SCH-99881',
+    paymentDate: '2026-09-25',
+    supplierId: 'sup-1',
+    supplierName: 'DNS Global Logistics & Electronics Ltd',
+    bankAccountId: 'acc-1010',
+    bankAccountCode: '1010',
+    bankAccountName: 'Commercial Bank Operating (1010)',
+    totalPaymentAmount: 500000,
+    paymentMethod: 'CHEQUE',
+    allocations: [
+      {
+        billId: 'bill-101',
+        billNumber: 'BILL-2026-001',
+        vendorInvoiceNumber: 'INV-SCH-90214',
+        amountToApply: 500000,
+      },
+    ],
+    notes: 'Partial settlement against bill BILL-2026-001 via Cheque CHQ-SCH-99881',
+    createdAt: '2026-09-25T11:00:00Z',
+  },
+  {
+    id: 'pay-2026-002',
+    paymentNumber: 'PAY-2026-002',
+    paymentReference: 'TT-APEX-44120',
+    paymentDate: '2026-09-28',
+    supplierId: 'sup-2',
+    supplierName: 'Apex International Importers',
+    bankAccountId: 'acc-1010',
+    bankAccountCode: '1010',
+    bankAccountName: 'Commercial Bank Operating (1010)',
+    totalPaymentAmount: 850000,
+    paymentMethod: 'BANK_TRANSFER',
+    allocations: [
+      {
+        billId: 'bill-103',
+        billNumber: 'BILL-2026-003',
+        vendorInvoiceNumber: 'INV-KEL-40112',
+        amountToApply: 850000,
+      },
+    ],
+    notes: 'Direct telegraphic transfer settlement for bulk copper cable shipment',
+    createdAt: '2026-09-28T14:30:00Z',
+  },
+];
+
 class AccountsPayableService {
+  private payments: SupplierPaymentRecord[] = [];
+
+  assertCanManagePayments(role?: string) {
+    if (role === 'PURCHASING_OFFICER' || role === 'PURCHASING_MANAGER') {
+      throw new Error(
+        `Unauthorized: Role '${role}' has view-only access to supplier payments and cannot create, modify, or post disbursements.`
+      );
+    }
+  }
+
+  getSupplierPayments(filter?: { supplierId?: string }): SupplierPaymentRecord[] {
+    if (!filter?.supplierId) return [...this.payments];
+    const q = filter.supplierId.toLowerCase();
+    return this.payments.filter(
+      (p) => p.supplierId.toLowerCase() === q || p.supplierName.toLowerCase().includes(q)
+    );
+  }
+
+  getSupplierPaymentById(id: string): SupplierPaymentRecord | null {
+    return this.payments.find((p) => p.id === id) || null;
+  }
+
   private bills: VendorBill[] = [];
   private grnStatuses: Record<string, 'COSTED' | 'SUBMITTED' | 'APPROVED' | 'PRICED'> = {};
   private advances: SupplierAdvance[] = [];
@@ -327,16 +427,26 @@ class AccountsPayableService {
 
         const storedDebitNotes = localStorage.getItem(AP_DEBIT_NOTES_STORAGE_KEY);
         this.debitNotes = storedDebitNotes ? JSON.parse(storedDebitNotes) : JSON.parse(JSON.stringify(INITIAL_DEBIT_NOTES));
+
+        const storedPayments = localStorage.getItem(AP_PAYMENTS_STORAGE_KEY);
+        this.payments = storedPayments ? JSON.parse(storedPayments) : JSON.parse(JSON.stringify(INITIAL_PAYMENTS));
       } else {
         this.bills = JSON.parse(JSON.stringify(INITIAL_BILLS));
         this.advances = JSON.parse(JSON.stringify(INITIAL_ADVANCES));
         this.debitNotes = JSON.parse(JSON.stringify(INITIAL_DEBIT_NOTES));
+        this.payments = JSON.parse(JSON.stringify(INITIAL_PAYMENTS));
       }
     } catch {
       this.bills = JSON.parse(JSON.stringify(INITIAL_BILLS));
       this.advances = JSON.parse(JSON.stringify(INITIAL_ADVANCES));
       this.debitNotes = JSON.parse(JSON.stringify(INITIAL_DEBIT_NOTES));
+      this.payments = JSON.parse(JSON.stringify(INITIAL_PAYMENTS));
     }
+  }
+
+  // Alias for backward compatibility
+  getBills(): VendorBill[] {
+    return this.getAllBills();
   }
 
   private save() {
@@ -346,6 +456,7 @@ class AccountsPayableService {
         localStorage.setItem(GRN_STATUS_STORAGE_KEY, JSON.stringify(this.grnStatuses));
         localStorage.setItem(AP_ADVANCES_STORAGE_KEY, JSON.stringify(this.advances));
         localStorage.setItem(AP_DEBIT_NOTES_STORAGE_KEY, JSON.stringify(this.debitNotes));
+        localStorage.setItem(AP_PAYMENTS_STORAGE_KEY, JSON.stringify(this.payments));
       }
     } catch {
       // fallback
@@ -513,14 +624,31 @@ class AccountsPayableService {
    * 3. Selling price strategy assigned -> APPROVED
    */
   getAvailableGRNs(): GRN[] {
-    const list = JSON.parse(JSON.stringify(MOCK_GRNS)) as GRN[];
-    return list.map((g) => {
-      const overrideStatus = this.grnStatuses[g.id];
-      if (overrideStatus) {
-        return { ...g, status: overrideStatus === 'PRICED' ? 'APPROVED' : overrideStatus };
+    const repoList = MockGRNRepository.getInstance().getAllSync();
+    const existingIds = new Set(repoList.map((g) => g.id));
+    const combined = [...repoList];
+    for (const mg of MOCK_GRNS) {
+      if (!existingIds.has(mg.id)) {
+        combined.push(mg as GRN);
       }
-      return g;
-    });
+    }
+
+    return combined
+      .map((g) => {
+        const overrideStatus = this.grnStatuses[g.id];
+        if (overrideStatus) {
+          return { ...g, status: overrideStatus === 'PRICED' ? 'APPROVED' : overrideStatus };
+        }
+        return g;
+      })
+      .filter((g) => {
+        return (
+          g.status !== 'PENDING_STOCK_MANAGER_APPROVAL' &&
+          g.status !== 'STOCK_MANAGER_REJECTED' &&
+          g.status !== 'REJECTED' &&
+          g.status !== 'DRAFT'
+        );
+      });
   }
 
   getGRNById(grnId: string): GRN | null {
@@ -815,7 +943,9 @@ class AccountsPayableService {
     paymentReference: string;
     totalPaymentAmount: number;
     allocations: { billId: string; amountToApply: number }[];
+    userRole?: string;
   }): Promise<void> {
+    this.assertCanManagePayments(params.userRole);
     const totalApplied = params.allocations.reduce((sum, a) => sum + (a.amountToApply || 0), 0);
 
     if (Math.abs(totalApplied - params.totalPaymentAmount) > 0.01) {
@@ -900,7 +1030,7 @@ class AccountsPayableService {
    */
   async postSupplierAdvance(params: {
     supplierId: string;
-    supplierName: string;
+    supplierName?: string;
     paymentDate: string;
     bankAccountId: string;
     bankAccountCode?: string;
@@ -909,7 +1039,9 @@ class AccountsPayableService {
     purchaseOrderId?: string;
     purchaseOrderNumber?: string;
     notes?: string;
+    userRole?: string;
   }): Promise<SupplierAdvance> {
+    this.assertCanManagePayments(params.userRole);
     if (params.amount <= 0) {
       throw new Error('Advance payment amount must be greater than zero.');
     }
@@ -942,7 +1074,7 @@ class AccountsPayableService {
           credit: 0,
           description: `Prepayment deposit to ${params.supplierName}`,
           supplierId: params.supplierId,
-          supplierName: params.supplierName,
+          supplierName: params.supplierName || 'Unknown Supplier',
         },
         {
           accountId: bankAcc.id,

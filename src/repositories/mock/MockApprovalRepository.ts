@@ -6,7 +6,15 @@ import { MOCK_APPROVALS } from '../../mock/mockApprovals';
 const APPROVALS_STORAGE_KEY = 'dns_erp_approval_requests';
 
 export class MockApprovalRepository implements IApprovalRepository {
+  private static instance: MockApprovalRepository | null = null;
   private approvals: ApprovalRequest[] = [];
+
+  public static getInstance(): MockApprovalRepository {
+    if (!MockApprovalRepository.instance) {
+      MockApprovalRepository.instance = new MockApprovalRepository();
+    }
+    return MockApprovalRepository.instance;
+  }
 
   constructor() {
     this.init();
@@ -47,9 +55,42 @@ export class MockApprovalRepository implements IApprovalRepository {
     if (!userRole || userRole === 'DIRECTOR') {
       return [...this.approvals];
     }
-    return this.approvals.filter(
-      (a) => a.currentApproverRole === userRole || a.status !== 'PENDING'
-    );
+    return this.approvals.filter((a) => {
+      // Direct approver
+      if (a.currentApproverRole === userRole) return true;
+      // Creator/initiator
+      if (a.initiatorRole === userRole) return true;
+      // Involved in history
+      if (a.history.some((h) => h.actorRole === userRole)) return true;
+      // Domain-specific visibility for Purchasing
+      if (
+        (userRole === 'PURCHASING_MANAGER' || userRole === 'PURCHASING_OFFICER') &&
+        a.documentType === 'PURCHASE_ORDER'
+      ) {
+        return true;
+      }
+      // Domain-specific visibility for Sales
+      if (
+        (userRole === 'SALES_MANAGER' || userRole === 'SALES_REP' || userRole === 'AREA_MANAGER') &&
+        (a.documentType === 'SPECIAL_SALES_ORDER' || a.documentType === 'QUOTATION_DISCOUNT')
+      ) {
+        return true;
+      }
+      // Domain-specific visibility for Finance
+      if (
+        (userRole === 'FINANCE_MANAGER' || userRole === 'CASHIER') &&
+        (a.documentType === 'PAYMENT_RECEIPT' ||
+          a.documentType === 'CUSTOMER_CREATION' ||
+          a.documentType === 'EXPENSE_CLAIM')
+      ) {
+        return true;
+      }
+      // General Manager sees pending and managed departmental requests
+      if (userRole === 'MANAGER') {
+        return true;
+      }
+      return false;
+    });
   }
 
   async getById(id: string): Promise<ApprovalRequest | null> {
@@ -109,6 +150,24 @@ export class MockApprovalRepository implements IApprovalRepository {
     let newCurrentApprover = app.currentApproverRole;
 
     if (action === 'APPROVE') {
+      if (actorId && app.initiatorId && actorId === app.initiatorId) {
+        throw new Error('Self-approval is strictly prohibited. The creator cannot approve their own request.');
+      }
+      if (
+        app.documentType === 'PURCHASE_ORDER' &&
+        app.initiatorRole === 'PURCHASING_MANAGER' &&
+        actorRole === 'PURCHASING_MANAGER'
+      ) {
+        throw new Error('Self-approval is strictly prohibited. Purchasing Manager cannot approve their own purchase order.');
+      }
+
+      const alreadyApproved = app.history.some(
+        (h) => h.actorId === actorId && h.action === 'APPROVE'
+      );
+      if (alreadyApproved) {
+        throw new Error(`Duplicate approval: User '${actorName}' has already approved this request.`);
+      }
+
       if (
         actorRole &&
         actorRole !== 'DIRECTOR' &&
@@ -119,7 +178,20 @@ export class MockApprovalRepository implements IApprovalRepository {
           `Role '${actorRole}' is not authorized to approve this request. Required role is '${app.currentApproverRole}'.`
         );
       }
-      newStatus = 'APPROVED';
+
+      if (
+        app.documentType === 'PURCHASE_ORDER' &&
+        actorRole === 'PURCHASING_MANAGER' &&
+        app.currentApproverRole === 'PURCHASING_MANAGER'
+      ) {
+        newStatus = 'PENDING';
+        newCurrentApprover =
+          app.targetApproverRole && app.targetApproverRole !== 'PURCHASING_MANAGER'
+            ? app.targetApproverRole
+            : 'MANAGER';
+      } else {
+        newStatus = 'APPROVED';
+      }
     } else if (action === 'REJECT') {
       newStatus = 'REJECTED';
     } else if (action === 'ESCALATE') {
@@ -135,6 +207,13 @@ export class MockApprovalRepository implements IApprovalRepository {
       }
     }
 
+    const isIntermediate =
+      newStatus === 'ESCALATED' ||
+      (action === 'APPROVE' &&
+        app.documentType === 'PURCHASE_ORDER' &&
+        actorRole === 'PURCHASING_MANAGER' &&
+        app.currentApproverRole === 'PURCHASING_MANAGER');
+
     const newHistoryEntry = {
       id: `h-${Date.now().toString().slice(-4)}`,
       stepNumber: app.history.length + 1,
@@ -143,15 +222,15 @@ export class MockApprovalRepository implements IApprovalRepository {
       actorRole,
       action,
       fromStatus,
-      toStatus: newStatus,
+      toStatus: isIntermediate ? 'PENDING' : newStatus,
       comment,
       timestamp: new Date().toISOString(),
     };
 
     const updated: ApprovalRequest = {
       ...app,
-      status: newStatus === 'ESCALATED' ? 'PENDING' : newStatus,
-      currentApproverRole: newCurrentApprover,
+      status: isIntermediate ? 'PENDING' : newStatus,
+      currentApproverRole: action === 'REJECT' ? app.currentApproverRole : newCurrentApprover,
       targetApproverRole: action === 'ESCALATE' ? newCurrentApprover : app.targetApproverRole,
       history: [...app.history, newHistoryEntry],
       updatedAt: new Date().toISOString(),

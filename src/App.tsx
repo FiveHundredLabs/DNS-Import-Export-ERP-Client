@@ -8,6 +8,7 @@ import { CustomerListPage } from './features/customers/CustomerListPage';
 import { CustomerOnboardingPage } from './features/customers/CustomerOnboardingPage';
 import { CustomerDetailPage } from './features/customers/CustomerDetailPage';
 import { ApprovalsPage } from './features/approvals/ApprovalsPage';
+import { StockManagerApprovalHub } from './features/inventory/components/StockManagerApprovalHub';
 import { QuotationListPage } from './features/quotations/QuotationListPage';
 import { QuotationCreateEditPage } from './features/quotations/QuotationCreateEditPage';
 import { QuotationDetailPage } from './features/quotations/QuotationDetailPage';
@@ -89,6 +90,8 @@ import { PurchaseOrderPrintPage } from './features/purchasing/PurchaseOrderPrint
 import { PurchasingGRNListPage } from './features/purchasing/PurchasingGRNListPage';
 import { PurchasingGRNDetailPage } from './features/purchasing/PurchasingGRNDetailPage';
 import { PurchasingReportsPage } from './features/purchasing/PurchasingReportsPage';
+import { PurchasingSupplierPaymentsPage } from './features/purchasing/PurchasingSupplierPaymentsPage';
+import { PurchasingApprovalHub } from './features/purchasing/components/PurchasingApprovalHub';
 import { ProfilePage } from './features/profile/ProfilePage';
 import { SupplierReturnsPage } from './features/purchasing/SupplierReturnsPage';
 
@@ -387,6 +390,14 @@ export function App() {
           }
         />
         <Route
+          path="inventory/approvals"
+          element={
+            <ProtectedRoute>
+              <StockManagerApprovalHub />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="inventory/delivery-notes/:id"
           element={
             <ProtectedRoute>
@@ -641,6 +652,14 @@ export function App() {
           element={
             <ProtectedRoute>
               <PurchasingSuppliersPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="purchasing/payments"
+          element={
+            <ProtectedRoute>
+              <PurchasingSupplierPaymentsPage />
             </ProtectedRoute>
           }
         />

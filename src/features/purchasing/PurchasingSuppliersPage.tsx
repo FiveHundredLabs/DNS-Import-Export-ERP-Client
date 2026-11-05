@@ -4,6 +4,7 @@ import { useFinanceLedger } from '../finance/hooks/useFinanceLedger';
 import { Supplier, CreateSupplierDTO } from '../finance/api/types';
 import { SupplierModal } from '../finance/components/SupplierModal';
 import { usePurchaseOrders } from '../../hooks/usePurchaseOrders';
+import { apService } from '../finance/services/apService';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 import {
   Store,
@@ -96,6 +97,33 @@ export function PurchasingSuppliersPage() {
     if (!inspectedSupplier) return [];
     return purchaseOrders.filter((po) => po.supplierId === inspectedSupplier.id);
   }, [inspectedSupplier, purchaseOrders]);
+
+  // Supplier payments and advances history (View Only)
+  const inspectedSupplierPayments = useMemo(() => {
+    if (!inspectedSupplier) return [];
+    const directPayments = apService.getSupplierPayments({ supplierId: inspectedSupplier.id });
+    const advances = apService.getSupplierAdvances(inspectedSupplier.id);
+    return [
+      ...directPayments.map((p) => ({
+        id: p.id,
+        type: 'SETTLEMENT',
+        ref: p.paymentNumber,
+        paymentRef: p.paymentReference,
+        date: p.paymentDate,
+        amount: p.totalPaymentAmount,
+        status: 'SETTLED',
+      })),
+      ...advances.map((a) => ({
+        id: a.id,
+        type: 'ADVANCE',
+        ref: a.advanceNumber,
+        paymentRef: a.reference,
+        date: a.paymentDate,
+        amount: a.amount,
+        status: a.status,
+      })),
+    ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, [inspectedSupplier]);
 
   const handleOpenCreate = () => {
     setSupplierToEdit(null);
@@ -406,6 +434,7 @@ export function PurchasingSuppliersPage() {
                 </Button>
               </div>
             </div>
+
           )}
         </CardContent>
       </Card>
@@ -545,6 +574,82 @@ export function PurchasingSuppliersPage() {
                             <td className="py-2 px-3 text-center">
                               <Badge variant="outline" className="text-[9px] font-mono">
                                 {po.status}
+                              </Badge>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+
+              {/* Supplier Payment & Prepayment History (View Only) */}
+              <div className="space-y-2 pt-2 border-t border-slate-200/80">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-bold text-slate-900 text-xs flex items-center gap-1.5">
+                    <CreditCard className="h-4 w-4 text-emerald-600" />
+                    <span>Disbursements &amp; Prepayments (View Only)</span>
+                    <Badge variant="secondary" className="text-[10px]">
+                      {inspectedSupplierPayments.length}
+                    </Badge>
+                  </h4>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setDetailModalOpen(false);
+                      navigate('/purchasing/payments');
+                    }}
+                    className="h-7 text-xs gap-1"
+                  >
+                    <span>Payments Register</span>
+                    <ExternalLink className="h-3 w-3" />
+                  </Button>
+                </div>
+
+                {inspectedSupplierPayments.length === 0 ? (
+                  <div className="p-4 bg-slate-50 rounded-lg text-center text-slate-400 text-xs">
+                    No disbursement records or prepayments recorded for this supplier.
+                  </div>
+                ) : (
+                  <div className="border border-slate-200 rounded-lg overflow-x-auto w-full">
+                    <table className="w-full min-w-[500px] text-xs text-left">
+                      <thead className="bg-slate-50 text-[10px] uppercase text-slate-500 border-b border-slate-200">
+                        <tr>
+                          <th className="py-2 px-3">Payment #</th>
+                          <th className="py-2 px-3">Date</th>
+                          <th className="py-2 px-3">Type</th>
+                          <th className="py-2 px-3 text-right">Amount (LKR)</th>
+                          <th className="py-2 px-3 text-center">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {inspectedSupplierPayments.map((pmt) => (
+                          <tr key={pmt.id} className="hover:bg-slate-50/60">
+                            <td className="py-2 px-3 font-mono font-bold text-slate-900">
+                              {pmt.ref}
+                              <div className="text-[10px] text-slate-400 font-mono">Ref: {pmt.paymentRef}</div>
+                            </td>
+                            <td className="py-2 px-3 text-slate-500">{formatDate(pmt.date)}</td>
+                            <td className="py-2 px-3">
+                              <Badge
+                                variant="outline"
+                                className={
+                                  pmt.type === 'SETTLEMENT'
+                                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200 text-[9px]'
+                                    : 'bg-indigo-50 text-indigo-700 border-indigo-200 text-[9px]'
+                                }
+                              >
+                                {pmt.type === 'SETTLEMENT' ? 'Bill Settlement' : 'PO Advance'}
+                              </Badge>
+                            </td>
+                            <td className="py-2 px-3 text-right font-mono font-bold text-slate-900 tabular-nums">
+                              {formatCurrency(pmt.amount)}
+                            </td>
+                            <td className="py-2 px-3 text-center">
+                              <Badge variant="outline" className="text-[9px] font-mono">
+                                {pmt.status}
                               </Badge>
                             </td>
                           </tr>

@@ -1,3 +1,5 @@
+import { StockManagerApprovalHub } from '../inventory/components/StockManagerApprovalHub';
+import { PurchasingApprovalHub } from '../purchasing/components/PurchasingApprovalHub';
 import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useApprovals } from '../../hooks/useApprovals';
@@ -33,11 +35,22 @@ import { cn } from '../../utils/cn';
 
 export function ApprovalsPage() {
   const { currentUser, role } = useAuth();
+
+  // Stock Manager has dedicated physical intake & customer rejection verification workflow
+  if (role === 'STOCK_MANAGER') {
+    return <StockManagerApprovalHub />;
+  }
+
+  // Purchasing Manager & Purchasing Officer dedicated PO Approvals & Supplier Payment Visibility Hub
+  if (role === 'PURCHASING_MANAGER' || role === 'PURCHASING_OFFICER') {
+    return <PurchasingApprovalHub />;
+  }
+
   const { approvals, loading, error, refetch, executeAction } = useApprovals(role);
   const [selectedRequest, setSelectedRequest] = useState<ApprovalRequest | null>(null);
   const [actionDialogOpen, setActionDialogOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState<'ALL' | 'ORDERS' | 'QUOTATIONS' | 'GRN' | 'FINANCE_CUSTOMERS'>('ALL');
+  const [categoryFilter, setCategoryFilter] = useState<'ALL' | 'ORDERS' | 'QUOTATIONS' | 'PURCHASE_ORDERS' | 'GRN' | 'STOCK_VERIFICATIONS' | 'FINANCE_CUSTOMERS'>('ALL');
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'PENDING' | 'APPROVED' | 'ESCALATED' | 'REJECTED'>('ALL');
 
   const canAction = (app: ApprovalRequest) => {
@@ -62,6 +75,7 @@ export function ApprovalsPage() {
       if (statusFilter !== 'ALL' && app.status !== statusFilter) return false;
       if (categoryFilter === 'ORDERS' && app.documentType !== 'SPECIAL_SALES_ORDER') return false;
       if (categoryFilter === 'QUOTATIONS' && app.documentType !== 'QUOTATION_DISCOUNT') return false;
+      if (categoryFilter === 'PURCHASE_ORDERS' && app.documentType !== 'PURCHASE_ORDER') return false;
       if (categoryFilter === 'GRN' && app.documentType !== 'GRN_RECEIPT') return false;
       if (
         categoryFilter === 'FINANCE_CUSTOMERS' &&
@@ -145,7 +159,9 @@ export function ApprovalsPage() {
                 { label: 'All Queue Items', value: 'ALL', icon: Layers },
                 { label: 'Sales Orders & Exceptions', value: 'ORDERS', icon: ShoppingCart },
                 { label: 'Quotations', value: 'QUOTATIONS', icon: FileText },
+                { label: 'Purchase Orders', value: 'PURCHASE_ORDERS', icon: ShoppingCart },
                 { label: 'Inbound GRNs', value: 'GRN', icon: Warehouse },
+                { label: 'Stock Manager Approvals', value: 'STOCK_VERIFICATIONS', icon: ShieldCheck },
                 { label: 'Customers & Finance', value: 'FINANCE_CUSTOMERS', icon: Landmark },
               ] as const
             ).map((cat) => {

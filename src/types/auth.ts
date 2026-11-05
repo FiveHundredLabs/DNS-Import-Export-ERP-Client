@@ -95,4 +95,5 @@ export type Permission =
   | 'purchasing:reports'
   | 'purchasing:returns_view'
   | 'purchasing:returns_create'
-  | 'purchasing:returns_approve';
+  | 'purchasing:returns_approve'
+  | 'purchasing:payments_view';

@@ -16,6 +16,41 @@ export type RejectionReasonCode =
   | 'PACKAGING_DAMAGED'
   | 'OTHER';
 
+export interface RejectedUnitDetail {
+  productId: string;
+  productName: string;
+  sku: string;
+  barcode: string;
+  serialNumber?: string;
+  reason: RejectionReasonCode | string;
+  notes?: string;
+}
+
+export interface DeliveryNoteRejectionApprovalRequest {
+  id: string;
+  deliveryNoteId: string;
+  deliveryNoteNumber: string;
+  customerId: string;
+  customerName: string;
+  submittedBy: string;
+  submittedById?: string;
+  submittedAt: string;
+  status: 'PENDING' | 'APPROVED' | 'DECLINED';
+  totalUnits: number;
+  items: {
+    productId: string;
+    productName: string;
+    sku: string;
+    rejectedBarcodes: string[];
+    reason: RejectionReasonCode | string;
+    notes?: string;
+  }[];
+  reviewedBy?: string;
+  reviewedById?: string;
+  reviewedAt?: string;
+  remarks?: string;
+}
+
 export interface DeliveryNoteItem {
   id: string;
   productId: string;
@@ -65,10 +100,13 @@ export interface DeliveryNote {
   rejectionApprovedBy?: string;
   rejectionApprovedAt?: string;
   rejectionApprovalRemarks?: string;
+  rejectionApprovalRequest?: DeliveryNoteRejectionApprovalRequest;
+  rejectedUnitsDetail?: RejectedUnitDetail[];
   // Customer sign-off
   customerSignatureName?: string;
   customerSignedAt?: string;
   receivedInGoodCondition?: boolean;
+  isLocked?: boolean; // Permanently true once created (non-editable record)
   createdBy: string;
   createdAt: string;
   updatedAt: string;

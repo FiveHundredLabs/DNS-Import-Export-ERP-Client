@@ -56,7 +56,9 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'purchasing:reports',
     'purchasing:returns_view',
     'purchasing:returns_create',
+    'purchasing:payments_view',
     'purchasing:returns_approve',
+    'purchasing:payments_view',
   ],
   MANAGER: [
     'view:manager_dashboard',
@@ -107,7 +109,9 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'purchasing:reports',
     'purchasing:returns_view',
     'purchasing:returns_create',
+    'purchasing:payments_view',
     'purchasing:returns_approve',
+    'purchasing:payments_view',
   ],
   SALES_MANAGER: [
     'view:sales_manager_dashboard',
@@ -224,6 +228,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'purchasing:reports',
     'purchasing:returns_view',
     'purchasing:returns_create',
+    'purchasing:payments_view',
   ],
   PURCHASING_MANAGER: [
     'view:purchasing_dashboard',
@@ -238,7 +243,9 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'purchasing:reports',
     'purchasing:returns_view',
     'purchasing:returns_create',
+    'purchasing:payments_view',
     'purchasing:returns_approve',
+    'purchasing:payments_view',
   ],
 };
 
@@ -346,6 +353,9 @@ export function canAccessRoute(role: UserRole, path: string): boolean {
       }
       if (path.startsWith('/purchasing/reports')) {
         return hasPermission(role, 'purchasing:reports');
+      }
+      if (path.startsWith('/purchasing/payments')) {
+        return hasPermission(role, 'purchasing:payments_view');
       }
       if (path.startsWith('/purchasing/returns')) {
         return true;

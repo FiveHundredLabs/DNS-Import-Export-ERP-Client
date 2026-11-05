@@ -89,8 +89,12 @@ export function DashboardPage() {
         {role === 'STOCK_MANAGER' && (
           <>
             <StatCard title="Stock Items" value="5 SKU Lines" variant="indigo" icon={Package} />
-            <StatCard title="GRNs for Approval" value="2 Pending" trend={{ value: 'Requires Sign-off', isPositive: false }} variant="warning" icon={FileCheck2} />
-            <StatCard title="Rejections to Review" value="1 Request" trend={{ value: 'Quarantine Bay', isPositive: false }} variant="danger" icon={AlertCircle} />
+            <div onClick={() => navigate('/approvals?tab=grn')} className="cursor-pointer">
+              <StatCard title="GRNs for Approval" value="2 Pending" trend={{ value: 'Click to Verify', isPositive: false }} variant="warning" icon={FileCheck2} />
+            </div>
+            <div onClick={() => navigate('/approvals?tab=delivery-notes')} className="cursor-pointer">
+              <StatCard title="Rejections to Review" value="1 Request" trend={{ value: 'Click to Authorize', isPositive: false }} variant="danger" icon={AlertCircle} />
+            </div>
             <StatCard title="Damaged Valuation" value={formatCurrency(458000)} variant="blue" icon={DollarSign} />
           </>
         )}
