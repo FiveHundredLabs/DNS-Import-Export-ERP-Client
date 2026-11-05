@@ -325,7 +325,7 @@ describe('Stock Keeper Delivery Notes Flow', () => {
       // Verify modal opened
       await waitFor(() => {
         expect(screen.getByText('Process Customer Returns & Rejections')).toBeInTheDocument();
-        expect(screen.getByText(/Manager Approval Gating Required/i)).toBeInTheDocument();
+        expect(screen.getByText(/Stock Manager Approval Required/i)).toBeInTheDocument();
       });
 
       // Scan returned unit barcode for Schneider 32A MCB
@@ -340,13 +340,13 @@ describe('Stock Keeper Delivery Notes Flow', () => {
       });
 
       // Submit rejection for approval
-      const submitRejBtn = screen.getByRole('button', { name: /submit 1 rejected unit\(s\) for manager approval/i });
+      const submitRejBtn = screen.getByRole('button', { name: /submit 1 rejected unit\(s\) for.*manager approval/i });
       fireEvent.click(submitRejBtn);
 
       // Verify Delivery Note status updated to REJECTION_PENDING_APPROVAL
       await waitFor(() => {
         expect(screen.getByText(/Rejection Pending Approval/i)).toBeInTheDocument();
-        expect(screen.getByText(/Customer Rejection Submitted — Awaiting Operations Manager Review/i)).toBeInTheDocument();
+        expect(screen.getByText(/Customer Rejection Submitted.*Awaiting.*Manager/i)).toBeInTheDocument();
       });
     });
 
@@ -371,6 +371,12 @@ describe('Stock Keeper Delivery Notes Flow', () => {
       // Manager clicks "Approve Customer Rejection"
       const approveBtn = screen.getByRole('button', { name: /approve customer rejection/i });
       fireEvent.click(approveBtn);
+
+      // Confirm in popup modal
+      const modalConfirmBtn = screen.queryByTestId('confirm-dialog-submit-btn');
+      if (modalConfirmBtn) {
+        fireEvent.click(modalConfirmBtn);
+      }
 
       // Status transitions to REJECTION_APPROVED
       await waitFor(() => {

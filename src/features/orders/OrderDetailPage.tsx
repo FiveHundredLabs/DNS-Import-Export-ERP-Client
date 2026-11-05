@@ -1027,7 +1027,7 @@ export function OrderDetailPage() {
         <div className="border-t border-slate-200 bg-slate-50/50 p-4 sm:p-6 print:hidden">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h4 className="text-sm font-bold text-slate-800 flex items-center gap-1.5">
+              <h4 className="relative text-sm font-bold text-slate-800 flex items-center gap-1.5">
                 <Clock className="h-4 w-4 text-primary" />
                 Order Activity Log &amp; Lifecycle Timeline
                 <span className="sr-only">Approval Timeline & State History</span>

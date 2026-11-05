@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { customerCreditNoteService } from '../../services/customerCreditNoteService';
+import { periodLockService } from '../../services/periodLockService';
 import { CustomerCreditNote, CustomerCreditNoteLineItem } from '../../api/types';
 import { MOCK_CUSTOMERS } from '../../../../mock/mockCustomers';
 import { MOCK_PRODUCTS } from '../../../../mock/mockProducts';
@@ -767,18 +768,24 @@ export function CustomerCreditNotesPage({ hideTopSwitcher = false }: { hideTopSw
 
             {selectedCN.status === 'ISSUED' && (
               <div className="pt-2">
-                <ConfirmButton
-                  variant="outline"
-                  size="sm"
-                  dialogVariant="destructive"
-                  confirmTitle="Void Customer Credit Note"
-                  confirmMessage={`Are you sure you want to void Credit Note ${selectedCN.creditNoteNumber}? This will reverse the General Ledger postings and restore the customer's outstanding Accounts Receivable debt.`}
-                  confirmText="Void Credit Note"
-                  onConfirm={() => handleVoidCreditNote(selectedCN)}
-                  className="w-full border-rose-200 text-rose-600 hover:bg-rose-50 text-xs"
-                >
-                  Void Credit Note & Reverse Entries
-                </ConfirmButton>
+                {periodLockService.isDateLocked(selectedCN.date) ? (
+                  <div className="p-2.5 rounded-md bg-amber-50 border border-amber-200 text-amber-800 text-[11px] flex items-center gap-2">
+                    <span className="font-semibold">Period Closed:</span> Credit Note cannot be voided as its date ({formatDate(selectedCN.date)}) falls within a closed financial period.
+                  </div>
+                ) : (
+                  <ConfirmButton
+                    variant="outline"
+                    size="sm"
+                    dialogVariant="destructive"
+                    confirmTitle="Void Customer Credit Note"
+                    confirmMessage={`Are you sure you want to void Credit Note ${selectedCN.creditNoteNumber}? This will reverse the General Ledger postings and restore the customer's outstanding Accounts Receivable debt.`}
+                    confirmText="Void Credit Note"
+                    onConfirm={() => handleVoidCreditNote(selectedCN)}
+                    className="w-full border-rose-200 text-rose-600 hover:bg-rose-50 text-xs"
+                  >
+                    Void Credit Note & Reverse Entries
+                  </ConfirmButton>
+                )}
               </div>
             )}
           </div>

@@ -607,7 +607,7 @@ export function IncomeDeskPage({ defaultTab }: IncomeDeskPageProps) {
             )}
           >
             <Receipt className="h-3.5 w-3.5 text-primary" />
-            <span>Other Receipts</span>
+            <span>Customer & Other Receipts</span>
             <span className="sr-only">Customer Payment Receipts</span>
             <span className="ml-1 px-1.5 py-0.2 rounded-full text-[10px] bg-muted text-muted-foreground font-mono">
               {receipts.length}
@@ -635,7 +635,7 @@ export function IncomeDeskPage({ defaultTab }: IncomeDeskPageProps) {
             className="h-8 px-3 text-xs bg-primary hover:bg-primary-dark text-white font-semibold gap-1.5 shadow-2xs"
           >
             <Plus className="h-3.5 w-3.5" />
-            <span>+ New Receipt</span>
+            <span><span className="sr-only">+ </span>New Receipt</span>
           </Button>
         </div>
       </div>
@@ -647,15 +647,17 @@ export function IncomeDeskPage({ defaultTab }: IncomeDeskPageProps) {
         <div className="space-y-4">
           {/* Summary Metric Cards */}
           <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-            <Card className="p-3 border-amber-200 bg-amber-50/50 shadow-2xs">
+            <Card className="p-3 border-border bg-card shadow-2xs">
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-semibold text-amber-800">Cash In Transit</span>
-                <Wallet className="h-4 w-4 text-amber-600" />
+                <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Cash In Transit</span>
+                <div className="p-1 rounded-md bg-amber-500/10 text-amber-600">
+                  <Wallet className="h-4 w-4" />
+                </div>
               </div>
-              <div className="mt-1 text-lg font-bold font-mono text-amber-950">
+              <div className="mt-1 text-lg font-bold font-mono text-foreground">
                 {formatCurrency(cashInTransit)}
               </div>
-              <span className="text-[10px] text-amber-700">Held by reps pending approval</span>
+              <span className="text-[10px] text-muted-foreground">Held by reps pending approval</span>
             </Card>
 
             <StatCard
@@ -879,7 +881,7 @@ export function IncomeDeskPage({ defaultTab }: IncomeDeskPageProps) {
             <div>
               <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
                 <Receipt className="h-5 w-5 text-primary" />
-                <span>Other Receipts</span>
+                <span>Customer & Other Receipts</span>
                 <span className="text-muted-foreground font-normal text-xs sm:text-sm">(Customer Cleared Receipts Registry)</span>
               </h2>
               <p className="text-xs text-muted-foreground mt-0.5">
@@ -890,15 +892,17 @@ export function IncomeDeskPage({ defaultTab }: IncomeDeskPageProps) {
 
           {/* Summary Metric Cards (Matching Tab 1 / Handovers) */}
           <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-            <Card className="p-3 border-emerald-200 bg-emerald-50/50 shadow-2xs">
+            <Card className="p-3 border-border bg-card shadow-2xs">
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-semibold text-emerald-800">Total Cleared Value</span>
-                <Wallet className="h-4 w-4 text-emerald-600" />
+                <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Total Cleared Value</span>
+                <div className="p-1 rounded-md bg-emerald-500/10 text-emerald-600">
+                  <Wallet className="h-4 w-4" />
+                </div>
               </div>
-              <div className="mt-1 text-lg font-bold font-mono text-emerald-950">
+              <div className="mt-1 text-lg font-bold font-mono text-foreground">
                 {formatCurrency(totalReceiptsValue)}
               </div>
-              <span className="text-[10px] text-emerald-700">Audit cleared receipts total</span>
+              <span className="text-[10px] text-muted-foreground">Audit cleared receipts total</span>
             </Card>
 
             <StatCard
@@ -941,76 +945,89 @@ export function IncomeDeskPage({ defaultTab }: IncomeDeskPageProps) {
             />
           </div>
 
-          {/* Search & Filter Bar (Matching Tab 1 / Handovers) */}
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-card p-3 rounded-xl border border-border shadow-2xs">
-            <div className="relative flex-1 w-full sm:max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                value={receiptsSearch}
-                onChange={(e) => setReceiptsSearch(e.target.value)}
-                placeholder="Search by receipt #, payer, reference, or account..."
-                className="pl-9 text-xs h-9"
-              />
-            </div>
+          {/* Industrial Single-Row Filter Bar */}
+          <div className="bg-card p-2.5 rounded-xl border border-border shadow-2xs">
+            <div className="flex flex-wrap items-center gap-2.5">
+              {/* Search Bar */}
+              <div className="relative min-w-[220px] flex-1 max-w-sm">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                <Input
+                  value={receiptsSearch}
+                  onChange={(e) => setReceiptsSearch(e.target.value)}
+                  placeholder="Search receipt #, customer, reference, account..."
+                  className="pl-8 text-xs h-8 bg-background"
+                />
+              </div>
 
-            <div className="flex flex-wrap items-center gap-2">
-              <Select
-                value={receiptsMethodFilter}
-                onChange={(e) => setReceiptsMethodFilter(e.target.value as any)}
-                className="h-9 text-xs w-32"
-              >
-                <option value="ALL">All Methods</option>
-                <option value="CASH">Cash (1040)</option>
-                <option value="BANK_TRANSFER">Bank (1010)</option>
-                <option value="CHEQUE">Cheque (1018)</option>
-              </Select>
+              {/* Payment Method Filter */}
+              <div className="w-32 shrink-0">
+                <Select
+                  value={receiptsMethodFilter}
+                  onChange={(e) => setReceiptsMethodFilter(e.target.value as any)}
+                  className="h-8 text-xs bg-background"
+                >
+                  <option value="ALL">All Methods</option>
+                  <option value="CASH">Cash (1040)</option>
+                  <option value="BANK_TRANSFER">Bank (1010)</option>
+                  <option value="CHEQUE">Cheque (1018)</option>
+                </Select>
+              </div>
 
-              <Select
-                value={receiptsStatusFilter}
-                onChange={(e) => setReceiptsStatusFilter(e.target.value)}
-                className="h-9 text-xs w-32"
-              >
-                <option value="ALL">All Status</option>
-                <option value="APPROVED">Cleared</option>
-                <option value="PENDING_APPROVAL">Pending</option>
-              </Select>
+              {/* Clearance Status Filter */}
+              <div className="w-28 shrink-0">
+                <Select
+                  value={receiptsStatusFilter}
+                  onChange={(e) => setReceiptsStatusFilter(e.target.value)}
+                  className="h-8 text-xs bg-background"
+                >
+                  <option value="ALL">All Status</option>
+                  <option value="APPROVED">Cleared</option>
+                  <option value="PENDING_APPROVAL">Pending</option>
+                </Select>
+              </div>
 
-              <div className="flex items-center gap-1">
+              {/* Date Range Group */}
+              <div className="flex items-center gap-1.5 bg-muted/40 px-2 py-0.5 rounded-md border border-border/60 shrink-0">
                 <span className="text-[11px] text-muted-foreground font-medium">From:</span>
                 <Input
                   type="date"
                   value={receiptsDateFrom}
                   onChange={(e) => setReceiptsDateFrom(e.target.value)}
-                  className="h-9 text-xs w-32"
+                  className="h-7 text-xs w-28 bg-background border-border/80"
                 />
-              </div>
-
-              <div className="flex items-center gap-1">
-                <span className="text-[11px] text-muted-foreground font-medium">To:</span>
+                <span className="text-[11px] text-muted-foreground font-medium ml-1">To:</span>
                 <Input
                   type="date"
                   value={receiptsDateTo}
                   onChange={(e) => setReceiptsDateTo(e.target.value)}
-                  className="h-9 text-xs w-32"
+                  className="h-7 text-xs w-28 bg-background border-border/80"
                 />
               </div>
 
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setReceiptsSearch('');
-                  setReceiptsMethodFilter('ALL');
-                  setReceiptsStatusFilter('ALL');
-                  setReceiptsDateFrom('');
-                  setReceiptsDateTo('');
-                }}
-                className="h-9 text-xs text-muted-foreground gap-1.5"
-                title="Reset Filters"
-              >
-                <span>Reset</span>
-              </Button>
+              {/* Reset Filter Button */}
+              {(receiptsSearch || receiptsMethodFilter !== 'ALL' || receiptsStatusFilter !== 'ALL' || receiptsDateFrom || receiptsDateTo) && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setReceiptsSearch('');
+                    setReceiptsMethodFilter('ALL');
+                    setReceiptsStatusFilter('ALL');
+                    setReceiptsDateFrom('');
+                    setReceiptsDateTo('');
+                  }}
+                  className="h-8 text-xs text-muted-foreground hover:text-foreground px-2.5"
+                  title="Reset Filters"
+                >
+                  Reset
+                </Button>
+              )}
+
+              {/* Showing count indicator on far right */}
+              <div className="ml-auto text-xs text-muted-foreground hidden sm:block">
+                Showing <strong className="text-foreground font-mono">{clearedFilteredReceipts.length}</strong> receipt(s)
+              </div>
             </div>
           </div>
 

@@ -20,6 +20,7 @@ import {
   X,
   Star,
   BookOpen,
+  FolderTree,
   FileSpreadsheet,
   Receipt,
   ShoppingCart,
@@ -185,15 +186,6 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   ];
 
   const directorFinanceItems: SidebarItem[] = [
-    { id: 'accounts', name: 'Chart of Accounts', path: '/finance/accounts', icon: BookOpen, category: 'finance' },
-    { id: 'income-desk', name: 'Income & Collections', path: '/finance/income', icon: Banknote, category: 'finance' },
-    { id: 'expense-desk', name: 'Expense & Payables', path: '/finance/expense', icon: CreditCard, category: 'finance' },
-    { id: 'ap-bills', name: 'Vendor Bill Costing (AP)', path: '/finance/ap/bills/new', icon: Receipt, category: 'finance' },
-    { id: 'commercial-notes', name: 'Credit & Debit Notes', path: '/finance/notes', icon: RotateCcw, category: 'finance' },
-    { id: 'journal', name: 'Journal Entry Voucher', path: '/finance/journal/new', icon: Zap, category: 'finance' },
-    { id: 'ar-pdc', name: 'PDC Vault (1018)', path: '/finance/ar/pdc-vault', icon: Clock, category: 'finance' },
-    { id: 'reconciliation', name: 'Bank Reconciliation', path: '/finance/reconciliation', icon: Landmark, category: 'finance' },
-    { id: 'closing', name: 'Period Closing Lock', path: '/finance/settings/closing', icon: Lock, category: 'finance' },
     { id: 'reports-hub', name: 'Financial Reports Hub', path: '/finance/reports', icon: BarChart3, category: 'finance' },
   ];
 
@@ -311,20 +303,20 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     { id: 'delivery-notes', name: 'Delivery Notes', path: '/inventory/delivery-notes', icon: Truck, category: 'inventory' },
     { id: 'products', name: 'Product Master', path: '/products', icon: Package, category: 'inventory', excludedRoles: ['STOCK_KEEPER'] },
     { id: 'damaged-stock', name: 'Damaged Stock & RMA', path: '/inventory/damaged-stock', icon: ShieldAlert, category: 'inventory' },
-    { id: 'inventory-pos', name: 'Showroom POS', path: '/pos', icon: Store, category: 'inventory', allowedRoles: ['STOCK_KEEPER', 'STOCK_MANAGER'] },
   ];
 
   // 4. Finance, Banking & Ledger Core (arranged in logical lifecycle order)
   const financeItems: SidebarItem[] = [
-    { id: 'accounts', name: 'Chart of Accounts', path: '/finance/accounts', icon: BookOpen, category: 'finance' },
-    { id: 'income-desk', name: 'Income & Collections', path: '/finance/income', icon: Banknote, category: 'finance' },
-    { id: 'expense-desk', name: 'Expense & Payables', path: '/finance/expense', icon: CreditCard, category: 'finance' },
-    { id: 'ap-bills', name: 'Vendor Bill Costing (AP)', path: '/finance/ap/bills/new', icon: Receipt, category: 'finance' },
-    { id: 'commercial-notes', name: 'Credit & Debit Notes', path: '/finance/notes', icon: RotateCcw, category: 'finance' },
-    { id: 'journal', name: 'Journal Entry Voucher', path: '/finance/journal/new', icon: Zap, category: 'finance' },
-    { id: 'ar-pdc', name: 'PDC Vault (1018)', path: '/finance/ar/pdc-vault', icon: Clock, category: 'finance' },
-    { id: 'reconciliation', name: 'Bank Reconciliation', path: '/finance/reconciliation', icon: Landmark, category: 'finance' },
-    { id: 'closing', name: 'Period Closing Lock', path: '/finance/settings/closing', icon: Lock, category: 'finance' },
+    { id: 'accounts', name: 'Chart of Accounts', path: '/finance/accounts', icon: BookOpen, category: 'finance', excludedRoles: ['MANAGER', 'DIRECTOR'] },
+    { id: 'categories', name: 'Categories Registry', path: '/finance/categories', icon: FolderTree, category: 'finance', excludedRoles: ['MANAGER', 'DIRECTOR'] },
+    { id: 'income-desk', name: 'Income & Collections', path: '/finance/income', icon: Banknote, category: 'finance', excludedRoles: ['MANAGER', 'DIRECTOR'] },
+    { id: 'expense-desk', name: 'Expense & Payables', path: '/finance/expense', icon: CreditCard, category: 'finance', excludedRoles: ['MANAGER', 'DIRECTOR'] },
+    { id: 'ap-bills', name: 'Vendor Bill Costing (AP)', path: '/finance/ap/bills/new', icon: Receipt, category: 'finance', excludedRoles: ['MANAGER', 'DIRECTOR'] },
+    { id: 'commercial-notes', name: 'Credit & Debit Notes', path: '/finance/notes', icon: RotateCcw, category: 'finance', excludedRoles: ['MANAGER', 'DIRECTOR'] },
+    { id: 'journal', name: 'Journal Entry Voucher', path: '/finance/journal/new', icon: Zap, category: 'finance', excludedRoles: ['MANAGER', 'DIRECTOR'] },
+    { id: 'ar-pdc', name: 'PDC Vault (1018)', path: '/finance/ar/pdc-vault', icon: Clock, category: 'finance', excludedRoles: ['MANAGER', 'DIRECTOR'] },
+    { id: 'reconciliation', name: 'Bank Reconciliation', path: '/finance/reconciliation', icon: Landmark, category: 'finance', excludedRoles: ['MANAGER', 'DIRECTOR'] },
+    { id: 'closing', name: 'Period Closing Lock', path: '/finance/settings/closing', icon: Lock, category: 'finance', excludedRoles: ['MANAGER', 'DIRECTOR'] },
     { id: 'reports-hub', name: 'Financial Reports Hub', path: '/finance/reports', icon: BarChart3, category: 'finance' },
   ];
 
@@ -332,7 +324,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const adminItems: SidebarItem[] = [
     { id: 'teams', name: 'Team Management', path: '/teams', icon: Users, category: 'admin' },
     { id: 'areas', name: 'Area Management', path: '/areas', icon: Compass, category: 'admin' },
-    { id: 'reports', name: 'Enterprise Reports', path: '/reports', icon: BarChart3, category: 'reports', excludedRoles: ['DIRECTOR', 'MANAGER', 'FINANCE_MANAGER', 'SALES_MANAGER', 'AREA_MANAGER'] },
+    { id: 'reports', name: 'Enterprise Reports', path: '/reports', icon: BarChart3, category: 'reports', excludedRoles: ['DIRECTOR', 'MANAGER', 'FINANCE_MANAGER', 'SALES_MANAGER', 'AREA_MANAGER', 'STOCK_MANAGER', 'STOCK_KEEPER'] },
     { id: 'credit-terms-settings', name: 'Default Credit Terms', path: '/?tab=settings&section=credit-terms', icon: CreditCard, category: 'admin', allowedRoles: ['DIRECTOR', 'MANAGER'] },
     { id: 'commissions-config', name: 'Commission Configuration', path: '/commissions', icon: Award, category: 'admin', allowedRoles: ['DIRECTOR', 'MANAGER'] },
     { id: 'tax-settings', name: 'Global Tax Configuration', path: '/?tab=settings&section=tax', icon: Percent, category: 'admin', directorOnly: true },
@@ -384,7 +376,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       if (item.category === 'purchasing' && !canAccessRoute('/purchasing') && !canAccessRoute('/purchasing/orders')) {
         return false;
       }
-      if (item.category === 'inventory' && !canAccessRoute('/inventory') && item.path !== '/pos') {
+      if (item.category === 'inventory' && !canAccessRoute('/inventory')) {
         return false;
       }
       return canAccessRoute(item.path.split('?')[0]);

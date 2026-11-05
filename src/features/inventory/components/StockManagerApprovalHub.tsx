@@ -226,11 +226,11 @@ export const StockManagerApprovalHub: React.FC = () => {
       {/* Page Header */}
       <PageHeader
         title="Stock Manager Verification & Approvals Hub"
-        subtitle="Independent physical stock verification for inbound warehouse goods receipts (prior to Finance landed costing) and customer delivery note rejections."
+        subtitle="Independent physical stock verification for inbound goods receipts (prior to Finance landed costing) and customer delivery note rejections."
         badge={
           <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-amber-500/10 text-amber-800 border border-amber-300 text-xs font-semibold select-none">
-            <Warehouse className="h-3.5 w-3.5 text-amber-700" />
-            <span>Warehouse Approval Engine • Stock Manager</span>
+            <ShieldCheck className="h-3.5 w-3.5 text-amber-700" />
+            <span>Stock Approvals & Verification Hub • Stock Manager</span>
           </div>
         }
         actions={
@@ -431,8 +431,6 @@ export const StockManagerApprovalHub: React.FC = () => {
                               </div>
                               <div className="text-2xs text-slate-500 flex items-center gap-2">
                                 <span><span className="text-slate-400">PO:</span> {g.purchaseOrderNumber || g.poNumber || 'N/A'}</span>
-                                <span>&bull;</span>
-                                <span><span className="text-slate-400">Warehouse:</span> {g.warehouseId || 'WH-MAIN'}</span>
                               </div>
                               <div className="text-2xs text-slate-500">
                                 <span className="text-slate-400">Received By:</span> {g.receivedByName || 'Stock Keeper'}
@@ -529,8 +527,6 @@ export const StockManagerApprovalHub: React.FC = () => {
                               </div>
                               <div className="text-2xs text-slate-500 flex items-center gap-2">
                                 <span><span className="text-slate-400">PO:</span> {g.purchaseOrderNumber || g.poNumber || 'N/A'}</span>
-                                <span>&bull;</span>
-                                <span><span className="text-slate-400">Warehouse:</span> {g.warehouseId || 'WH-MAIN'}</span>
                               </div>
                               <div className="text-2xs text-slate-500">
                                 <span className="text-slate-400">Verified by:</span>{' '}
@@ -613,7 +609,7 @@ export const StockManagerApprovalHub: React.FC = () => {
                         <TableHead className="w-36 py-2.5 px-3">GRN Reference #</TableHead>
                         <TableHead className="py-2.5 px-3">Supplier Name</TableHead>
                         <TableHead className="py-2.5 px-3">Linked PO #</TableHead>
-                        <TableHead className="py-2.5 px-3">Warehouse &amp; Date</TableHead>
+                        <TableHead className="py-2.5 px-3">Date Received</TableHead>
                         <TableHead className="py-2.5 px-3">Verified / Received By</TableHead>
                         <TableHead className="py-2.5 px-3 text-center">Lines &amp; Units</TableHead>
                         <TableHead className="py-2.5 px-3 text-center">Damaged</TableHead>
@@ -651,8 +647,7 @@ export const StockManagerApprovalHub: React.FC = () => {
                                 {g.purchaseOrderNumber || g.poNumber || 'N/A'}
                               </TableCell>
                               <TableCell className="py-3 px-3 text-slate-600">
-                                <div>{g.warehouseId || 'WH-MAIN'}</div>
-                                <div className="text-[10.5px] text-slate-400 font-mono">
+                                <div className="text-[11.5px] text-slate-700 font-mono">
                                   {formatDate(g.receivedDate || g.submittedAt || g.createdAt || new Date().toISOString())}
                                 </div>
                               </TableCell>

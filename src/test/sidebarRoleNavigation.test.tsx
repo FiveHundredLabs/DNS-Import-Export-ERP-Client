@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
+import { DashboardPage } from '../features/dashboard/DashboardPage';
 import { MemoryRouter } from 'react-router-dom';
 import { Sidebar } from '../components/common/Sidebar';
 import { ProtectedRoute } from '../components/common/ProtectedRoute';
@@ -292,6 +293,179 @@ describe('Role-Based Sidebar Navigation & Access Control', () => {
       // Allowed purchasing navigation items are present
       expect(screen.getByText('Purchase Orders')).toBeInTheDocument();
       expect(screen.getByText('Supplier Management')).toBeInTheDocument();
+    });
+
+    it('for DIRECTOR only Financial Reports Hub is visible in Finance navigations and other finance navigations are hidden', () => {
+      setupSidebarForRole('DIRECTOR');
+
+      // Click on Finance rail category
+      const financeRailBtn = screen.getByTitle('Finance');
+      expect(financeRailBtn).toBeInTheDocument();
+      fireEvent.click(financeRailBtn);
+
+      // Financial Reports Hub must be visible
+      expect(screen.getByText('Financial Reports Hub')).toBeInTheDocument();
+
+      // All other finance navigation items must be hidden
+      expect(screen.queryByText('Chart of Accounts')).not.toBeInTheDocument();
+      expect(screen.queryByText('Income & Collections')).not.toBeInTheDocument();
+      expect(screen.queryByText('Expense & Payables')).not.toBeInTheDocument();
+      expect(screen.queryByText('Vendor Bill Costing (AP)')).not.toBeInTheDocument();
+      expect(screen.queryByText('Credit & Debit Notes')).not.toBeInTheDocument();
+      expect(screen.queryByText('Journal Entry Voucher')).not.toBeInTheDocument();
+      expect(screen.queryByText('PDC Vault (1018)')).not.toBeInTheDocument();
+      expect(screen.queryByText('Bank Reconciliation')).not.toBeInTheDocument();
+      expect(screen.queryByText('Period Closing Lock')).not.toBeInTheDocument();
+    });
+
+    it('for MANAGER only Financial Reports Hub is visible in Finance navigations and other finance navigations are hidden', () => {
+      setupSidebarForRole('MANAGER');
+
+      // Click on Finance & Payments rail category
+      const financeRailBtn = screen.getByTitle('Finance & Payments');
+      expect(financeRailBtn).toBeInTheDocument();
+      fireEvent.click(financeRailBtn);
+
+      // Financial Reports Hub must be visible
+      expect(screen.getByText('Financial Reports Hub')).toBeInTheDocument();
+
+      // All other finance navigation items must be hidden
+      expect(screen.queryByText('Chart of Accounts')).not.toBeInTheDocument();
+      expect(screen.queryByText('Income & Collections')).not.toBeInTheDocument();
+      expect(screen.queryByText('Expense & Payables')).not.toBeInTheDocument();
+      expect(screen.queryByText('Vendor Bill Costing (AP)')).not.toBeInTheDocument();
+      expect(screen.queryByText('Credit & Debit Notes')).not.toBeInTheDocument();
+      expect(screen.queryByText('Journal Entry Voucher')).not.toBeInTheDocument();
+      expect(screen.queryByText('PDC Vault (1018)')).not.toBeInTheDocument();
+      expect(screen.queryByText('Bank Reconciliation')).not.toBeInTheDocument();
+      expect(screen.queryByText('Period Closing Lock')).not.toBeInTheDocument();
+    });
+
+    it('for FINANCE_MANAGER all 10 finance navigation items remain visible', () => {
+      setupSidebarForRole('FINANCE_MANAGER');
+
+      // Click on Finance & Payments rail category
+      const financeRailBtn = screen.getByTitle('Finance & Payments');
+      expect(financeRailBtn).toBeInTheDocument();
+      fireEvent.click(financeRailBtn);
+
+      // All 10 finance navigation items must be visible
+      expect(screen.getByText('Chart of Accounts')).toBeInTheDocument();
+      expect(screen.getByText('Income & Collections')).toBeInTheDocument();
+      expect(screen.getByText('Expense & Payables')).toBeInTheDocument();
+      expect(screen.getByText('Vendor Bill Costing (AP)')).toBeInTheDocument();
+      expect(screen.getByText('Credit & Debit Notes')).toBeInTheDocument();
+      expect(screen.getByText('Journal Entry Voucher')).toBeInTheDocument();
+      expect(screen.getByText('PDC Vault (1018)')).toBeInTheDocument();
+      expect(screen.getByText('Bank Reconciliation')).toBeInTheDocument();
+      expect(screen.getByText('Period Closing Lock')).toBeInTheDocument();
+      expect(screen.getByText('Financial Reports Hub')).toBeInTheDocument();
+    });
+  });
+
+  describe('3. Showroom POS Isolation from Stock Keeper and Stock Manager', () => {
+    it('STOCK_KEEPER does not see Showroom POS in sidebar nav and cannot access /pos (including searching & inventory tab)', () => {
+      expect(canAccessRoute('STOCK_KEEPER', '/pos')).toBe(false);
+
+      setupSidebarForRole('STOCK_KEEPER');
+      expect(screen.queryByText('Showroom POS')).not.toBeInTheDocument();
+
+      // In Dashboard search
+      const searchInput = screen.getByPlaceholderText('Search...');
+      fireEvent.change(searchInput, { target: { value: 'POS' } });
+      expect(screen.queryByText('Showroom POS')).not.toBeInTheDocument();
+
+      // In Inventory category
+      fireEvent.change(searchInput, { target: { value: '' } });
+      const inventoryTab = screen.getByRole('button', { name: /^Inventory & Products$/i });
+      fireEvent.click(inventoryTab);
+      expect(screen.queryByText('Showroom POS')).not.toBeInTheDocument();
+    });
+
+    it('STOCK_MANAGER does not see Showroom POS in sidebar nav and cannot access /pos (including searching & inventory tab)', () => {
+      expect(canAccessRoute('STOCK_MANAGER', '/pos')).toBe(false);
+
+      setupSidebarForRole('STOCK_MANAGER');
+      expect(screen.queryByText('Showroom POS')).not.toBeInTheDocument();
+
+      // In Dashboard search
+      const searchInput = screen.getByPlaceholderText('Search...');
+      fireEvent.change(searchInput, { target: { value: 'POS' } });
+      expect(screen.queryByText('Showroom POS')).not.toBeInTheDocument();
+
+      // In Inventory category
+      fireEvent.change(searchInput, { target: { value: '' } });
+      const inventoryTab = screen.getByRole('button', { name: /^Inventory & Products$/i });
+      fireEvent.click(inventoryTab);
+      expect(screen.queryByText('Showroom POS')).not.toBeInTheDocument();
+    });
+
+    it('CASHIER and SHOWROOM_MANAGER still see Showroom POS in sidebar nav and can access /pos', () => {
+      expect(canAccessRoute('CASHIER', '/pos')).toBe(true);
+      expect(canAccessRoute('SHOWROOM_MANAGER', '/pos')).toBe(true);
+
+      const { unmount } = setupSidebarForRole('CASHIER');
+      expect(screen.getByText('Showroom POS')).toBeInTheDocument();
+      unmount();
+
+      setupSidebarForRole('SHOWROOM_MANAGER');
+      expect(screen.getByText('Showroom POS')).toBeInTheDocument();
+    });
+
+    it('DIRECTOR and MANAGER still see Showroom POS in sidebar nav and can access /pos', () => {
+      expect(canAccessRoute('DIRECTOR', '/pos')).toBe(true);
+      expect(canAccessRoute('MANAGER', '/pos')).toBe(true);
+
+      const { unmount } = setupSidebarForRole('DIRECTOR');
+      const salesButton = screen.getByRole('button', { name: /^Sales & Orders$/i });
+      fireEvent.click(salesButton);
+      expect(screen.getByText('Showroom POS')).toBeInTheDocument();
+      unmount();
+
+      const { unmount: unmountManager } = setupSidebarForRole('MANAGER');
+      const managerSalesButton = screen.getByRole('button', { name: /^Sales & Orders$/i });
+      fireEvent.click(managerSalesButton);
+      expect(screen.getByText('Showroom POS')).toBeInTheDocument();
+      unmountManager();
+    });
+
+    it('Dashboard Operational Workspaces hides Showroom POS Terminal for STOCK_KEEPER and STOCK_MANAGER', () => {
+      mockUseAuth.mockReturnValue({
+        role: 'STOCK_KEEPER',
+        currentUser: { id: 'usr-107', name: 'Kamal Stock Keeper', role: 'STOCK_KEEPER' },
+        canAccessRoute: (path: string) => canAccessRoute('STOCK_KEEPER', path),
+        isAuthenticated: true,
+      });
+
+      const { unmount } = render(
+        <MemoryRouter initialEntries={['/']}>
+          <DashboardPage />
+        </MemoryRouter>
+      );
+
+      expect(screen.queryByText('Showroom POS Terminal')).not.toBeInTheDocument();
+      expect(screen.getByText('Inventory Hub')).toBeInTheDocument();
+      expect(screen.getByText('Goods Received Notes')).toBeInTheDocument();
+      expect(screen.getByText('Delivery Notes')).toBeInTheDocument();
+      unmount();
+
+      mockUseAuth.mockReturnValue({
+        role: 'STOCK_MANAGER',
+        currentUser: { id: 'usr-115', name: 'Bandara Stock Manager', role: 'STOCK_MANAGER' },
+        canAccessRoute: (path: string) => canAccessRoute('STOCK_MANAGER', path),
+        isAuthenticated: true,
+      });
+
+      render(
+        <MemoryRouter initialEntries={['/']}>
+          <DashboardPage />
+        </MemoryRouter>
+      );
+
+      expect(screen.queryByText('Showroom POS Terminal')).not.toBeInTheDocument();
+      expect(screen.getByText('Inventory Hub')).toBeInTheDocument();
+      expect(screen.getByText('Goods Received Notes')).toBeInTheDocument();
+      expect(screen.getByText('Delivery Notes')).toBeInTheDocument();
     });
   });
 });

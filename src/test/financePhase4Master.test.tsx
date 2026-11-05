@@ -389,10 +389,10 @@ describe('Phase 4 Master Test Suite: Bank Reconciliation Workspace', () => {
       expect(screen.getByText(/Manual Statement Verification/i)).toBeDefined();
       expect(screen.getByRole('button', { name: /clear all visible/i })).toBeDefined();
 
-      // Check one transaction toggle
-      const verifyBtns = screen.getAllByRole('button', { name: /verify & clear/i });
-      expect(verifyBtns.length).toBeGreaterThan(0);
-      fireEvent.click(verifyBtns[0]);
+      // Check one transaction toggle via checkbox
+      const checkboxes = screen.getAllByRole('checkbox');
+      expect(checkboxes.length).toBeGreaterThan(0);
+      fireEvent.click(checkboxes[0]);
 
       // Click "Clear All Visible"
       fireEvent.click(screen.getByRole('button', { name: /clear all visible/i }));
@@ -414,8 +414,9 @@ describe('Phase 4 Master Test Suite: Bank Reconciliation Workspace', () => {
         </MemoryRouter>
       );
 
-      // Start reconciliation
+      // Start reconciliation and switch to split-pane feed match view
       fireEvent.click(screen.getByRole('button', { name: /start reconciliation/i }));
+      fireEvent.click(screen.getByRole('button', { name: /split-pane feed match/i }));
 
       await waitFor(() => {
         expect(screen.getByRole('button', { name: /auto-match \(heuristic\)/i })).toBeDefined();
@@ -498,8 +499,10 @@ describe('Phase 4 Master Test Suite: Bank Reconciliation Workspace', () => {
         </MemoryRouter>
       );
 
-      // Start reconciliation
+      // Start reconciliation and switch to split-pane feed match view
       fireEvent.click(screen.getByRole('button', { name: /start reconciliation/i }));
+      fireEvent.click(screen.getByRole('button', { name: /split-pane feed match/i }));
+      fireEvent.click(screen.getByRole('button', { name: /split-pane feed match/i }));
 
       // Run auto-match to achieve exact 0.00 balance
       fireEvent.click(screen.getByRole('button', { name: /auto-match \(heuristic\)/i }));
@@ -631,8 +634,9 @@ Date,Chq No,Remarks,Debits,Credits
         </MemoryRouter>
       );
 
-      // Start reconciliation
+      // Start reconciliation and switch to split-pane feed match view
       fireEvent.click(screen.getByRole('button', { name: /start reconciliation/i }));
+      fireEvent.click(screen.getByRole('button', { name: /split-pane feed match/i }));
 
       await waitFor(() => {
         expect(screen.getByRole('button', { name: /upload statement/i })).toBeDefined();

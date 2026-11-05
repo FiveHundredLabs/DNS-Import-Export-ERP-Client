@@ -193,7 +193,7 @@ export function RepPersonalPerformanceView({
         <div className="flex items-center gap-2">
           <Coins className="h-4 w-4 text-slate-500 shrink-0" />
           <span>
-            <strong>Incentive Rule:</strong> You receive <strong>{incentiveRatePercentage}%</strong> cash incentive on all cleared dealer payments. 
+            <strong>Incentive Rule:</strong> You receive <strong>{incentiveRatePercentage}%</strong> cash incentive on all cleared dealer payments.
             {uncollectedCash > 0 ? (
               <span> Collecting the remaining <strong className="text-slate-800">{formatCurrency(uncollectedCash)}</strong> outstanding balance unlocks an additional <strong className="text-emerald-700">+{formatCurrency(potentialIncentiveInPipeline)}</strong> in earned commission.</span>
             ) : (

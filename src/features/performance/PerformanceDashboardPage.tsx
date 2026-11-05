@@ -12,6 +12,7 @@ import {
 import { Card } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
+import { cn } from '../../utils/cn';
 import {
   Award,
   Calendar,
@@ -26,22 +27,41 @@ import {
 export function PerformanceDashboardPage() {
   const { currentUser, role } = useAuth();
 
-  // Current month default in YYYY-MM format
-  const currentMonthStr = new Date().toISOString().slice(0, 7);
+  // Current month in local YYYY-MM format
+  const currentMonthStr = React.useMemo(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  }, []);
+
   const [selectedMonth, setSelectedMonth] = useState<string>(currentMonthStr);
   const [selectedAreaId, setSelectedAreaId] = useState<string>(
     currentUser.areaId || 'area-01'
   );
 
-  // Month navigation helpers
+  // Month navigation helpers with validation preventing future months
   const handleMonthStep = (offset: number) => {
     const [yearStr, monthStr] = selectedMonth.split('-');
     const date = new Date(parseInt(yearStr, 10), parseInt(monthStr, 10) - 1 + offset, 1);
     const newMonthStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+
+    // Disallow future months
+    if (newMonthStr > currentMonthStr) {
+      return;
+    }
     setSelectedMonth(newMonthStr);
   };
 
-  // Generate recent 12 months for dropdown selector
+  const handleSelectMonth = (newMonth: string) => {
+    // Disallow future months
+    if (newMonth > currentMonthStr) {
+      return;
+    }
+    setSelectedMonth(newMonth);
+  };
+
+  const isNextMonthDisabled = selectedMonth >= currentMonthStr;
+
+  // Generate recent 12 months for dropdown selector (all <= current month)
   const availableMonths = React.useMemo(() => {
     const months: { value: string; label: string }[] = [];
     const now = new Date();
@@ -49,10 +69,12 @@ export function PerformanceDashboardPage() {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
       const val = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
       const label = d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-      months.push({ value: val, label });
+      if (val <= currentMonthStr) {
+        months.push({ value: val, label });
+      }
     }
     return months;
-  }, []);
+  }, [currentMonthStr]);
 
   const isSalesRep = role === 'SALES_REP';
   const isAreaManager = role === 'AREA_MANAGER';
@@ -111,7 +133,7 @@ export function PerformanceDashboardPage() {
                 <ChevronLeft className="h-4 w-4" />
               </Button>
 
-              <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+              <Select value={selectedMonth} onValueChange={handleSelectMonth}>
                 <SelectTrigger className="h-8 border-0 text-xs font-semibold min-w-36 bg-transparent text-slate-800 shadow-none focus:ring-0">
                   <Calendar className="h-3.5 w-3.5 mr-1.5 text-indigo-600" />
                   <SelectValue placeholder="Select Month" />
@@ -129,8 +151,14 @@ export function PerformanceDashboardPage() {
                 variant="ghost"
                 size="icon"
                 onClick={() => handleMonthStep(1)}
-                className="h-8 w-8 text-slate-500 hover:text-slate-900 cursor-pointer"
-                title="Next Month"
+                disabled={isNextMonthDisabled}
+                className={cn(
+                  "h-8 w-8 text-slate-500",
+                  isNextMonthDisabled
+                    ? "opacity-30 cursor-not-allowed text-slate-300 hover:bg-transparent"
+                    : "hover:text-slate-900 cursor-pointer"
+                )}
+                title={isNextMonthDisabled ? "Cannot select future months" : "Next Month"}
               >
                 <ChevronRight className="h-4 w-4" />
               </Button>

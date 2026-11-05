@@ -365,4 +365,45 @@ describe('Role-Aware Performance & Incentives UI Module', () => {
       expect(screen.getByText(/2.5% Direct Payout/i)).toBeInTheDocument();
     });
   });
+
+  describe('5. Future Month Selection Validation (/my-performance)', () => {
+    it('disallows selecting future months and disables next month button on current month', async () => {
+      currentUserMock = mockSalesRepUser;
+
+      render(
+        <MemoryRouter initialEntries={['/my-performance']}>
+          <Routes>
+            <Route path="/my-performance" element={<PerformanceDashboardPage />} />
+          </Routes>
+        </MemoryRouter>
+      );
+
+      // On initial load, selected month is the current month
+      // The Next Month button must be disabled
+      const nextMonthBtn = screen.getByTitle('Cannot select future months');
+      expect(nextMonthBtn).toBeInTheDocument();
+      expect(nextMonthBtn).toBeDisabled();
+
+      // Clicking previous month steps back 1 month
+      const prevMonthBtn = screen.getByTitle('Previous Month');
+      fireEvent.click(prevMonthBtn);
+
+      // Now Next Month button should become enabled
+      await waitFor(() => {
+        const enabledNextBtn = screen.getByTitle('Next Month');
+        expect(enabledNextBtn).toBeInTheDocument();
+        expect(enabledNextBtn).not.toBeDisabled();
+      });
+
+      // Stepping forward returns to current month, where Next Month button becomes disabled again
+      const enabledNextBtn = screen.getByTitle('Next Month');
+      fireEvent.click(enabledNextBtn);
+
+      await waitFor(() => {
+        const disabledAgainBtn = screen.getByTitle('Cannot select future months');
+        expect(disabledAgainBtn).toBeInTheDocument();
+        expect(disabledAgainBtn).toBeDisabled();
+      });
+    });
+  });
 });

@@ -53,7 +53,12 @@ interface StockRow {
 export function StockBalancePage() {
   const navigate = useNavigate();
   const { stockBalances, loading, inventoryService } = useInventory();
-  const { user } = useAuth();
+  const { user, role } = useAuth();
+  const isStockStaff =
+    role === 'STOCK_KEEPER' ||
+    role === 'STOCK_MANAGER' ||
+    user?.role === 'STOCK_KEEPER' ||
+    user?.role === 'STOCK_MANAGER';
   const [orders, setOrders] = useState<SalesOrder[]>([]);
 
   useEffect(() => {
@@ -202,8 +207,20 @@ export function StockBalancePage() {
   };
 
   const handleExportCSV = () => {
-    const headers = ['SKU', 'Product Name', 'Category', 'Location', 'Available Stock', 'Reserved (Allocated)', 'Dispatched', 'Delivered', 'Rejected (Damage)', 'Est. Value'];
-    const rows = filteredBalances.map(b => [
+    const headers = isStockStaff
+      ? ['SKU', 'Product Name', 'Category', 'Available Stock', 'Reserved (Allocated)', 'Dispatched', 'Delivered', 'Rejected (Damage)', 'Est. Value']
+      : ['SKU', 'Product Name', 'Category', 'Location', 'Available Stock', 'Reserved (Allocated)', 'Dispatched', 'Delivered', 'Rejected (Damage)', 'Est. Value'];
+    const rows = filteredBalances.map(b => isStockStaff ? [
+      b.sku,
+      b.productName,
+      b.category,
+      b.availableForSale,
+      b.reservedQuantity,
+      b.dispatchedQuantity,
+      b.deliveredQuantity,
+      b.damagedQuantity,
+      (b.availableForSale * b.costPrice).toFixed(2),
+    ] : [
       b.sku,
       b.productName,
       b.category,
@@ -315,20 +332,22 @@ export function StockBalancePage() {
           <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between flex-wrap">
             <div className="flex gap-2 flex-wrap">
               {/* Location Filter */}
-              <Select
-                value={locationFilter}
-                onValueChange={(val) => setLocationFilter(val)}
-              >
-                <SelectTrigger className="h-9 rounded-md border border-input bg-background px-3 text-sm min-w-36">
-                  <SelectValue placeholder="Location" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="All">All Locations</SelectItem>
-                  <SelectItem value="WAREHOUSE">Warehouse</SelectItem>
-                  <SelectItem value="SHOWROOM">Showroom</SelectItem>
-                  <SelectItem value="TRANSIT">Transit</SelectItem>
-                </SelectContent>
-              </Select>
+              {!isStockStaff && (
+                <Select
+                  value={locationFilter}
+                  onValueChange={(val) => setLocationFilter(val)}
+                >
+                  <SelectTrigger className="h-9 rounded-md border border-input bg-background px-3 text-sm min-w-36">
+                    <SelectValue placeholder="Location" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="All">All Locations</SelectItem>
+                    <SelectItem value="WAREHOUSE">Warehouse</SelectItem>
+                    <SelectItem value="SHOWROOM">Showroom</SelectItem>
+                    <SelectItem value="TRANSIT">Transit</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
 
               {/* Category Filter */}
               <Select
@@ -429,9 +448,11 @@ export function StockBalancePage() {
                       </div>
 
                       <div className="flex items-center justify-between pt-1">
-                        <Badge variant="outline" className="text-[11px] font-normal">
-                          Loc: {b.locationType}
-                        </Badge>
+                        {!isStockStaff ? (
+                          <Badge variant="outline" className="text-[11px] font-normal">
+                            Loc: {b.locationType}
+                          </Badge>
+                        ) : <span />}
                         <Button
                           size="sm"
                           variant="outline"
@@ -454,7 +475,7 @@ export function StockBalancePage() {
                       <TableHead className="w-24">SKU</TableHead>
                       <TableHead className="min-w-[180px]">Product Name</TableHead>
                       <TableHead className="w-28">Category</TableHead>
-                      <TableHead className="w-24 text-center">Location</TableHead>
+                      {!isStockStaff && <TableHead className="w-24 text-center">Location</TableHead>}
                       <TableHead className="w-20 text-right font-medium text-slate-700">Physical Stock</TableHead>
                       <TableHead className="w-24 text-right font-semibold text-blue-700">Reserved</TableHead>
                       <TableHead className="w-24 text-right font-bold text-emerald-700">Available Stock</TableHead>
@@ -477,9 +498,11 @@ export function StockBalancePage() {
                             <p className="truncate max-w-[220px] font-semibold text-foreground">{b.productName}</p>
                           </TableCell>
                           <TableCell className="text-xs text-muted-foreground truncate max-w-[120px]">{b.category}</TableCell>
-                          <TableCell className="text-center">
-                            <Badge variant="outline" className="text-[11px] px-1.5 py-0">{b.locationType}</Badge>
-                          </TableCell>
+                          {!isStockStaff && (
+                            <TableCell className="text-center">
+                              <Badge variant="outline" className="text-[11px] px-1.5 py-0">{b.locationType}</Badge>
+                            </TableCell>
+                          )}
                           <TableCell className="text-right font-mono font-medium text-slate-700 text-xs">{b.physicalStock}</TableCell>
                           <TableCell className="text-right font-mono">
                             {b.reservedQuantity > 0 ? (
