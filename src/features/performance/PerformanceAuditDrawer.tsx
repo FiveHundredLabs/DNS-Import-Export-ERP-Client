@@ -36,11 +36,11 @@ export function PerformanceAuditDrawer({
             <UserCheck className="h-5 w-5" />
           </span>
           <div>
-            <DrawerTitle>
-              {repName ? `Audit: ${repName}` : 'Representative Performance Audit'}
+            <DrawerTitle className="text-base font-semibold text-slate-900">
+              {repName ? `Representative Ledger: ${repName}` : 'Representative Performance Ledger'}
             </DrawerTitle>
-            <DrawerDescription>
-              Detailed invoice breakdown, cleared collections, and active incentive tier progression for {month}.
+            <DrawerDescription className="text-xs text-slate-500">
+              Invoice sales breakdown, cash collections, and earned cash incentives for {month}.
             </DrawerDescription>
           </div>
         </div>

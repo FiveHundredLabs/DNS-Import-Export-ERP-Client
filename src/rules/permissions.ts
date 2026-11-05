@@ -253,6 +253,11 @@ export function hasPermission(role: UserRole, permission: Permission): boolean {
 }
 
 export function canAccessRoute(role: UserRole, path: string): boolean {
+  // /my-performance is strictly exclusive to Sales Rep and Area Manager
+  if (path.startsWith('/my-performance')) {
+    return role === 'SALES_REP' || role === 'AREA_MANAGER';
+  }
+
   if (role === 'DIRECTOR') return true;
 
   if (
@@ -315,13 +320,7 @@ export function canAccessRoute(role: UserRole, path: string): boolean {
     return hasPermission(role, 'warranty:view');
   }
   if (path.startsWith('/my-performance')) {
-    return (
-      role === 'SALES_REP' ||
-      role === 'AREA_MANAGER' ||
-      role === 'SALES_MANAGER' ||
-      role === 'DIRECTOR' ||
-      role === 'MANAGER'
-    );
+    return role === 'SALES_REP' || role === 'AREA_MANAGER';
   }
   if (path.startsWith('/commissions')) {
     return hasPermission(role, 'commissions:view');

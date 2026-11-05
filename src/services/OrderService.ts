@@ -1020,6 +1020,24 @@ export class OrderService {
   }
 
   /**
+   * Alias for createFromQuotation
+   */
+  async convertQuotationToOrder(
+    quotationId: string,
+    currentUser: User,
+    options?: {
+      deliveryAddress?: string;
+      deliveryDate?: string;
+      requestedCreditDays?: number;
+      customerPoNumber?: string;
+      notes?: string;
+      saveAsDraft?: boolean;
+    }
+  ): Promise<SalesOrder> {
+    return this.createFromQuotation(quotationId, currentUser, options);
+  }
+
+  /**
    * Convert an APPROVED quotation into a Sales Order.
    * Copies quotation details, preserves immutable snapshots, and creates the Sales Order in repository.
    */
@@ -1152,6 +1170,9 @@ export class OrderService {
       currentApproverRole: evalResult.targetApproverRole,
       approvalHistory: initialHistory,
     });
+
+    // Sync quotation convertedToOrderId to the actual created SalesOrder ID
+    await this.quotationSvc.updateConvertedOrderId(payload.quotationId, order.id, order.orderNumber);
 
     if (!isDraft) {
       const approvalReq = await this.approvalSvc.createApprovalRequest({

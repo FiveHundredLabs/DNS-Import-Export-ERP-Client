@@ -4,6 +4,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { IncomeDeskPage } from '../features/finance/pages/IncomeDeskPage';
 import { ExpenseDeskPage } from '../features/finance/pages/ExpenseDeskPage';
+import { PaymentCollectionPage } from '../features/payments/PaymentCollectionPage';
 import { Sidebar } from '../components/common/Sidebar';
 import { arService } from '../features/finance/services/arService';
 import { apService } from '../features/finance/services/apService';
@@ -136,11 +137,12 @@ describe('Unified Income & Expense Desks & Navigation Grouping Overhaul', () => 
       });
     });
 
-    it('switches to Customer Payment Receipts tab and opens the + New Receipt modal with inline settlement', async () => {
+    it('switches to Customer Payment Receipts tab and redirects to the new receipt page when + New Receipt is clicked', async () => {
       render(
         <MemoryRouter initialEntries={['/finance/income']}>
           <Routes>
             <Route path="/finance/income" element={<IncomeDeskPage />} />
+            <Route path="/finance/receipts/new" element={<PaymentCollectionPage />} />
           </Routes>
         </MemoryRouter>
       );
@@ -153,13 +155,13 @@ describe('Unified Income & Expense Desks & Navigation Grouping Overhaul', () => 
       const newReceiptBtn = screen.getByRole('button', { name: /\+ New Receipt/i });
       expect(newReceiptBtn).toBeInTheDocument();
 
-      // Open + New Receipt modal
+      // Click + New Receipt -> should redirect to new page (not a popup)
       fireEvent.click(newReceiptBtn);
 
       await waitFor(() => {
-        expect(screen.getByText(/Record New Customer Payment Receipt/i)).toBeInTheDocument();
-        expect(screen.getByText(/Open Invoices for Selected Customer/i)).toBeInTheDocument();
-        expect(screen.getByRole('button', { name: /Auto-FIFO Allocate/i })).toBeInTheDocument();
+        expect(screen.getByText(/Record Payment Collection/i)).toBeInTheDocument();
+        expect(screen.getByText('Sales Receipt')).toBeInTheDocument();
+        expect(screen.getByText('Other Receipt')).toBeInTheDocument();
       });
     });
 
@@ -180,42 +182,33 @@ describe('Unified Income & Expense Desks & Navigation Grouping Overhaul', () => 
       expect(screen.queryByText('REC-2026-0491')).not.toBeInTheDocument();
     });
 
-    it('toggles invoice allocation checkbox and calculates Total Applied vs Unallocated on Account', async () => {
+    it('redirects to /finance/receipts/new with Sales Receipt and Other Receipt options and supports double-entry balancing', async () => {
       render(
-        <MemoryRouter initialEntries={['/finance/income?tab=receipts']}>
+        <MemoryRouter initialEntries={['/finance/receipts/new']}>
           <Routes>
-            <Route path="/finance/income" element={<IncomeDeskPage />} />
+            <Route path="/finance/receipts/new" element={<PaymentCollectionPage />} />
           </Routes>
         </MemoryRouter>
       );
 
-      // Open + New Receipt modal
-      const newReceiptBtn = screen.getByRole('button', { name: /\+ New Receipt/i });
-      fireEvent.click(newReceiptBtn);
+      // Verify receipt type switcher has Sales Receipt and Other Receipt
+      const salesBtn = screen.getByRole('button', { name: /Sales Receipt/i });
+      const otherBtn = screen.getByRole('button', { name: /Other Receipt/i });
+      expect(salesBtn).toBeInTheDocument();
+      expect(otherBtn).toBeInTheDocument();
+
+      // Switch to Other Receipt
+      fireEvent.click(otherBtn);
 
       await waitFor(() => {
-        expect(screen.getByText(/Record New Customer Payment Receipt/i)).toBeInTheDocument();
+        expect(screen.getByText(/Selecting Journal Entries/i)).toBeInTheDocument();
+        expect(screen.getByText(/Double-Entry Voucher Balancing/i)).toBeInTheDocument();
       });
-
-      // Enter receipt amount 500,000
-      const amountInputs = screen.getAllByPlaceholderText('0.00');
-      fireEvent.change(amountInputs[0], { target: { value: '500000' } });
-
-      // Find pay checkboxes
-      const checkboxes = screen.getAllByRole('checkbox');
-      expect(checkboxes.length).toBeGreaterThanOrEqual(1);
-
-      // Toggle first checkbox
-      fireEvent.click(checkboxes[0]);
-
-      // Check that Total Applied and Unallocated are computed
-      expect(screen.getByText(/Total Applied to Invoices:/i)).toBeInTheDocument();
-      expect(screen.getByText(/Unallocated on Account/i)).toBeInTheDocument();
     });
   });
 
   describe('2. Unified Expense Desk (/finance/expense)', () => {
-    it('renders the Expense Desk with 2-in-1 Supplier Payment Voucher by default', async () => {
+    it('renders the Expense Desk with streamlined payment voucher switcher without redundant top tabs', async () => {
       render(
         <MemoryRouter initialEntries={['/finance/expense']}>
           <Routes>
@@ -224,20 +217,18 @@ describe('Unified Income & Expense Desks & Navigation Grouping Overhaul', () => 
         </MemoryRouter>
       );
 
-      // Verify top segmented switcher
-      expect(
-        screen.getByRole('button', { name: /Supplier Payment Voucher/i })
-      ).toBeInTheDocument();
-      expect(
-        screen.getByRole('button', { name: /Vendor Bill Costing \(Landed Costs\)/i })
-      ).toBeInTheDocument();
-
-      // Verify 2-in-1 voucher buttons inside Supplier Payment Voucher
+      // Verify streamlined voucher mode switcher buttons
       expect(
         screen.getByRole('button', { name: /Settle Inbound GRN \/ Bill/i })
       ).toBeInTheDocument();
       expect(
         screen.getByRole('button', { name: /Supplier Advance Prepayment/i })
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: /Other payments/i })
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: /All Vouchers History/i })
       ).toBeInTheDocument();
     });
 
@@ -269,7 +260,7 @@ describe('Unified Income & Expense Desks & Navigation Grouping Overhaul', () => 
       });
     });
 
-    it('switches to Vendor Bill Costing (Landed Costs) tab preserving 100% functionality', async () => {
+    it('switches to Other Payments mode and supports journal entry auto-settlement', async () => {
       render(
         <MemoryRouter initialEntries={['/finance/expense']}>
           <Routes>
@@ -278,14 +269,12 @@ describe('Unified Income & Expense Desks & Navigation Grouping Overhaul', () => 
         </MemoryRouter>
       );
 
-      const costingTabBtn = screen.getByRole('button', {
-        name: /Vendor Bill Costing \(Landed Costs\)/i,
-      });
-      fireEvent.click(costingTabBtn);
+      const otherPayBtn = screen.getByRole('button', { name: /Other payments/i });
+      fireEvent.click(otherPayBtn);
 
       await waitFor(() => {
-        // Landed costs costing view
-        expect(screen.getByText(/Vendor Bill Costing/i)).toBeInTheDocument();
+        expect(screen.getByText(/DIRECT EXPENSE SPECIFICATIONS/i)).toBeInTheDocument();
+        expect(screen.getByText(/Select from Open Journal Entries/i)).toBeInTheDocument();
       });
     });
 
@@ -298,7 +287,7 @@ describe('Unified Income & Expense Desks & Navigation Grouping Overhaul', () => 
         </MemoryRouter>
       );
 
-      expect(screen.getByText(/Vendor Bill Costing/i)).toBeInTheDocument();
+      expect(screen.getByText(/Vendor Bill Processing/i)).toBeInTheDocument();
     });
   });
 
