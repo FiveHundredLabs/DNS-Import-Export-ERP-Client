@@ -45,7 +45,7 @@ export function ReportsPage() {
   } = useReports();
 
   const isAreaPerformanceAllowed =
-    user?.role === 'DIRECTOR' || user?.role === 'MANAGER' || user?.role === 'AREA_MANAGER';
+    user?.role === 'DIRECTOR' || user?.role === 'MANAGER';
 
   const tabTitles: Record<ReportTabType, string> = {
     commission: 'Commission Analytics',

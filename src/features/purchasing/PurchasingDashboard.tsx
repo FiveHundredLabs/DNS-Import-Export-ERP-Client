@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Navigate } from 'react-router-dom';
 import { usePurchaseOrders } from '../../hooks/usePurchaseOrders';
 import { useAuth } from '../../hooks/useAuth';
 import { useFinanceLedger } from '../finance/hooks/useFinanceLedger';
@@ -30,6 +30,11 @@ import { TableLoadingSkeleton } from '../../components/common/LoadingSkeleton';
 export function PurchasingDashboard() {
   const navigate = useNavigate();
   const { currentUser } = useAuth();
+
+  if (currentUser?.role === 'MANAGER') {
+    return <Navigate to="/purchasing/orders" replace />;
+  }
+
   const { purchaseOrders, loading } = usePurchaseOrders();
   const { suppliers } = useFinanceLedger();
   const { grns } = useGRN();

@@ -82,7 +82,10 @@ export class MockApprovalRepository implements IApprovalRepository {
       // Domain-specific visibility for Sales
       if (
         (userRole === 'SALES_MANAGER' || userRole === 'SALES_REP' || userRole === 'AREA_MANAGER') &&
-        (a.documentType === 'SPECIAL_SALES_ORDER' || a.documentType === 'QUOTATION_DISCOUNT')
+        (a.documentType === 'SALES_ORDER' ||
+          a.documentType === 'SPECIAL_SALES_ORDER' ||
+          a.documentType === 'QUOTATION_DISCOUNT' ||
+          a.documentType === 'CUSTOMER_CREATION')
       ) {
         return true;
       }
@@ -189,6 +192,7 @@ export class MockApprovalRepository implements IApprovalRepository {
         );
       }
 
+      // ── Purchase Order: 2-stage (Purchasing Manager → Manager) ──────────────
       if (
         app.documentType === 'PURCHASE_ORDER' &&
         actorRole === 'PURCHASING_MANAGER' &&
@@ -199,7 +203,20 @@ export class MockApprovalRepository implements IApprovalRepository {
           app.targetApproverRole && app.targetApproverRole !== 'PURCHASING_MANAGER'
             ? app.targetApproverRole
             : 'MANAGER';
-      } else {
+      }
+      // ── Sales Order (standard path): Area Manager approves → forward to Sales Manager ──
+      else if (
+        (app.documentType === 'SALES_ORDER' || app.documentType === 'SPECIAL_SALES_ORDER') &&
+        actorRole === 'AREA_MANAGER' &&
+        app.currentApproverRole === 'AREA_MANAGER'
+      ) {
+        newStatus = 'PENDING';
+        newCurrentApprover = app.targetApproverRole && app.targetApproverRole !== 'AREA_MANAGER'
+          ? app.targetApproverRole
+          : 'SALES_MANAGER';
+      }
+      // ── All other final approvals ────────────────────────────────────────────
+      else {
         newStatus = 'APPROVED';
       }
     } else if (action === 'REJECT') {
@@ -222,7 +239,11 @@ export class MockApprovalRepository implements IApprovalRepository {
       (action === 'APPROVE' &&
         app.documentType === 'PURCHASE_ORDER' &&
         actorRole === 'PURCHASING_MANAGER' &&
-        app.currentApproverRole === 'PURCHASING_MANAGER');
+        app.currentApproverRole === 'PURCHASING_MANAGER') ||
+      (action === 'APPROVE' &&
+        (app.documentType === 'SALES_ORDER' || app.documentType === 'SPECIAL_SALES_ORDER') &&
+        actorRole === 'AREA_MANAGER' &&
+        app.currentApproverRole === 'AREA_MANAGER');
 
     const newHistoryEntry = {
       id: `h-${Date.now().toString().slice(-4)}`,
