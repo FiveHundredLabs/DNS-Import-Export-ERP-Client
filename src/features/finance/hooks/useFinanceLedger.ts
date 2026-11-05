@@ -194,6 +194,44 @@ export function useFinanceLedger() {
     }
   };
 
+  const correctAndReissueJournalEntry = async (
+    id: string,
+    reason: string
+  ): Promise<{ original: JournalEntry; replacement: JournalEntry }> => {
+    try {
+      const res = await financeRepository.correctAndReissueJournalEntry(id, reason);
+      await Promise.all([fetchJournals(), fetchAccounts()]);
+      toast.success(
+        `Original ${res.original.entryNumber} voided. Draft correction voucher ${res.replacement.entryNumber} created!`
+      );
+      return res;
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to re-correct journal entry';
+      toast.error(msg);
+      throw err;
+    }
+  };
+
+  const createReclassificationEntry = async (params: {
+    originalEntryId: string;
+    lineIndex: number;
+    targetAccountId: string;
+    amount?: number;
+    reason: string;
+    date?: string;
+  }): Promise<JournalEntry> => {
+    try {
+      const entry = await financeRepository.createReclassificationEntry(params);
+      await Promise.all([fetchJournals(), fetchAccounts()]);
+      toast.success(`Reclassification AJE ${entry.entryNumber} posted successfully!`);
+      return entry;
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to create reclassification entry';
+      toast.error(msg);
+      throw err;
+    }
+  };
+
   // Reports
   const getProfitLoss = async (dateRange?: DateRangeFilter): Promise<ProfitLossReport> => {
     return financeRepository.getProfitLossReport(dateRange);
@@ -237,6 +275,8 @@ export function useFinanceLedger() {
     postJournalEntry,
     approveJournalEntry,
     voidJournalEntry,
+    correctAndReissueJournalEntry,
+    createReclassificationEntry,
     getProfitLoss,
     getBalanceSheet,
     getTrialBalance,

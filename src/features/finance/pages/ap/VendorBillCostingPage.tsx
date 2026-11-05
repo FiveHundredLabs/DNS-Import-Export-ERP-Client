@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../../../hooks/useAuth';
 import { apService, VendorBillLineItem, LandedExpenseItem } from '../../services/apService';
+import { periodLockService } from '../../services/periodLockService';
 import { batchInventoryService } from '../../../../services/BatchInventoryService';
 import { productService } from '../../../../services/ProductService';
 import { Button } from '../../../../components/ui/button';
@@ -23,7 +24,6 @@ import {
   ArrowLeft,
   ArrowRight,
   TrendingUp,
-  Percent,
   Layers,
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -120,10 +120,10 @@ export function VendorBillCostingPage() {
   // Step 1: Section A — Additional Landed Expenses (4-Column Grid)
   // ---------------------------------------------------------------------------
   const [apportionMethod, setApportionMethod] = useState<'BY_VALUE' | 'BY_QUANTITY'>('BY_VALUE');
-  const [freightAmount, setFreightAmount] = useState<number>(0);
-  const [portDutyAmount, setPortDutyAmount] = useState<number>(0);
-  const [localTransportAmount, setLocalTransportAmount] = useState<number>(0);
-  const [otherChargesAmount, setOtherChargesAmount] = useState<number>(0);
+  const [freightAmount, setFreightAmount] = useState<number | string>(0);
+  const [portDutyAmount, setPortDutyAmount] = useState<number | string>(0);
+  const [localTransportAmount, setLocalTransportAmount] = useState<number | string>(0);
+  const [otherChargesAmount, setOtherChargesAmount] = useState<number | string>(0);
   const [customExpenses, setCustomExpenses] = useState<LandedExpenseItem[]>([]);
   const [showCustomExpenses, setShowCustomExpenses] = useState(false);
 
@@ -132,10 +132,10 @@ export function VendorBillCostingPage() {
   }, [customExpenses]);
 
   const totalAdditionalLandedCosts = useMemo(() => {
-    const effectiveOther = customExpenses.length > 0 ? customExpensesSum : (otherChargesAmount || 0);
-    return new Decimal(freightAmount || 0)
-      .plus(portDutyAmount || 0)
-      .plus(localTransportAmount || 0)
+    const effectiveOther = customExpenses.length > 0 ? customExpensesSum : (Number(otherChargesAmount) || 0);
+    return new Decimal(Number(freightAmount) || 0)
+      .plus(Number(portDutyAmount) || 0)
+      .plus(Number(localTransportAmount) || 0)
       .plus(effectiveOther)
       .toNumber();
   }, [freightAmount, portDutyAmount, localTransportAmount, customExpenses, customExpensesSum, otherChargesAmount]);
@@ -145,15 +145,15 @@ export function VendorBillCostingPage() {
     setCustomExpenses((prev) => [
       ...prev,
       {
-        id: `exp-${Date.now()}`,
+        id: `exp-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
         category: 'Handling & Offloading',
         description: '',
-        amount: 0,
+        amount: '',
       },
     ]);
   };
 
-  const handleUpdateCustomExpense = (id: string, field: keyof LandedExpenseItem, value: any) => {
+  const handleUpdateCustomExpense = (id: string, field: string, value: any) => {
     setCustomExpenses((prev) =>
       prev.map((e) => (e.id === id ? { ...e, [field]: value } : e))
     );
@@ -428,17 +428,24 @@ export function VendorBillCostingPage() {
     try {
       setSubmitting(true);
 
-      const otherEffective = customExpenses.length > 0 ? customExpenses : (otherChargesAmount > 0 ? [{
-        id: 'exp-other',
-        category: 'Handling & Incidental Charges',
-        description: 'Other Inbound Charges',
-        amount: otherChargesAmount,
-      }] : []);
+      const numFreight = Number(freightAmount) || 0;
+      const numPort = Number(portDutyAmount) || 0;
+      const numTransport = Number(localTransportAmount) || 0;
+      const numOther = customExpenses.length > 0 ? customExpensesSum : (Number(otherChargesAmount) || 0);
+
+      const otherEffective: LandedExpenseItem[] = customExpenses.length > 0
+        ? customExpenses.map((e) => ({ ...e, amount: Number(e.amount) || 0 }))
+        : (numOther > 0 ? [{
+            id: 'exp-other',
+            category: 'Handling & Incidental Charges',
+            description: 'Other Inbound Charges',
+            amount: numOther,
+          }] : []);
 
       const additionalExpensesList: LandedExpenseItem[] = [
-        { id: 'exp-freight', category: 'Shipping / Freight Charges', description: 'Freight / Shipping', amount: freightAmount },
-        { id: 'exp-port', category: 'Port Charges & Demurrage', description: 'Port & Duty', amount: portDutyAmount },
-        { id: 'exp-transport', category: 'Local Transportation & Haulage', description: 'Local Transport', amount: localTransportAmount },
+        { id: 'exp-freight', category: 'Shipping / Freight Charges', description: 'Freight / Shipping', amount: numFreight },
+        { id: 'exp-port', category: 'Port Charges & Demurrage', description: 'Port & Duty', amount: numPort },
+        { id: 'exp-transport', category: 'Local Transportation & Haulage', description: 'Local Transport', amount: numTransport },
         ...otherEffective,
       ];
 
@@ -449,10 +456,10 @@ export function VendorBillCostingPage() {
         productName: r.productName,
         sku: r.sku,
         receivedQuantity: r.receivedQuantity,
-        draftUnitCost: r.supplierUnitCost,
-        unitCost: r.supplierUnitCost,
+        draftUnitCost: Number(r.supplierUnitCost) || 0,
+        unitCost: Number(r.supplierUnitCost) || 0,
         historicalPurchasePrice: r.historicalPurchasePrice,
-        lineDiscount: r.lineDiscount,
+        lineDiscount: Number(r.lineDiscount) || 0,
         vatCode: 'STANDARD_18',
         vatAmount: r.vatAmount,
         lineTotal: r.lineTotal,
@@ -463,14 +470,14 @@ export function VendorBillCostingPage() {
       }));
 
       // 1. Post the Vendor Bill in AP
-      const otherCosts = portDutyAmount + localTransportAmount + (customExpenses.length > 0 ? customExpensesSum : otherChargesAmount);
+      const otherCosts = numPort + numTransport + numOther;
       const bill = await apService.postVendorBill({
         grnId: selectedGRN.id,
         vendorInvoiceNumber: vendorInvoiceNumber.trim(),
         invoiceDate,
         dueDate,
         lineItems,
-        freightCharges: freightAmount,
+        freightCharges: numFreight,
         otherLandingCosts: otherCosts,
         additionalExpenses: additionalExpensesList,
         applyAdvanceId: applyAdvanceEnabled ? selectedAdvanceId : undefined,
@@ -797,22 +804,22 @@ export function VendorBillCostingPage() {
   }
 
   return (
-    <div className="space-y-4 pb-20 max-w-7xl mx-auto">
+    <div className="space-y-4 p-4 pb-24 max-w-7xl mx-auto">
       {/* Top Breadcrumb & Status Row */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-        <div className="flex items-center gap-2">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-1">
+        <div className="flex flex-wrap items-center gap-2.5">
           <Button
             type="button"
             variant="outline"
             size="sm"
             onClick={handleBackToGrnList}
-            className="h-8 text-xs gap-1.5 font-semibold border-slate-300 text-slate-700 hover:bg-slate-100"
+            className="h-8 text-xs gap-1.5 font-semibold border-border text-foreground hover:bg-muted"
           >
             <ArrowLeft className="h-3.5 w-3.5" />
             <span>Back to GRN Selection</span>
           </Button>
 
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">
             Vendor Bill Processing (GRN Costing)
           </h1>
           <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 text-xs font-semibold">
@@ -820,24 +827,24 @@ export function VendorBillCostingPage() {
           </Badge>
 
           {isAuditLocked && (
-            <Badge variant="outline" className="bg-amber-50 text-amber-800 border-amber-300 text-xs font-semibold gap-1">
+            <Badge variant="outline" className="bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20 text-xs font-semibold gap-1">
               <Lock className="h-3 w-3" />
               <span>Audit Lock Active</span>
             </Badge>
           )}
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 self-start sm:self-auto">
           {/* GRN Switcher Dropdown */}
           <div className="flex items-center gap-1.5 text-xs">
-            <span className="font-semibold text-slate-500">GRN:</span>
+            <span className="font-semibold text-muted-foreground">GRN:</span>
             <select
               value={selectedGRNId}
               onChange={(e) => {
                 setSelectedGRNId(e.target.value);
                 navigate(`/finance/ap/bills/new?grnId=${e.target.value}`);
               }}
-              className="h-8 rounded-lg border border-slate-200 bg-white px-2.5 text-xs font-semibold text-slate-800 shadow-2xs"
+              className="h-8 rounded-lg border border-border bg-card px-2.5 text-xs font-semibold text-foreground shadow-2xs"
             >
               {availableGRNs.map((g) => (
                 <option key={g.id} value={g.id}>
@@ -852,9 +859,9 @@ export function VendorBillCostingPage() {
             variant="outline"
             size="sm"
             onClick={() => setIsCostedPrintModalOpen(true)}
-            className="h-8 text-xs gap-1.5 font-medium"
+            className="h-8 text-xs gap-1.5 font-medium border-border text-foreground hover:bg-muted"
           >
-            <Printer className="h-3.5 w-3.5 text-slate-600" />
+            <Printer className="h-3.5 w-3.5 text-muted-foreground" />
             <span>Print Sheet</span>
           </Button>
         </div>
@@ -863,37 +870,37 @@ export function VendorBillCostingPage() {
       {/* ========================================================================= */}
       {/* 1. Persistent Context Bar & Top Invoice Bar (Single Strip)                */}
       {/* ========================================================================= */}
-      <div className="rounded-xl border border-slate-200/90 bg-white p-3.5 shadow-xs">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-center">
-          {/* Left (Read-only context): GRN Ref, Supplier, Warehouse, Date */}
-          <div className="lg:col-span-5 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs border-b lg:border-b-0 lg:border-r border-slate-100 pb-3 lg:pb-0 lg:pr-4">
+      <div className="rounded-xl border border-border bg-card p-4 shadow-2xs">
+        <div className="grid grid-cols-1 xl:grid-cols-12 gap-4 items-center">
+          {/* Left Context: 4 clean columns */}
+          <div className="xl:col-span-5 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs border-b xl:border-b-0 xl:border-r border-border pb-3 xl:pb-0 xl:pr-4">
             <div>
-              <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">GRN Reference</span>
+              <span className="text-[10px] uppercase font-bold text-muted-foreground block tracking-wider">GRN Ref</span>
               <span className="font-mono font-bold text-primary text-sm">{selectedGRN.grnNumber}</span>
             </div>
 
-            <div className="min-w-0 flex-1">
-              <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Supplier Name</span>
-              <span className="font-bold text-slate-800 text-sm truncate block" title={selectedGRN.supplierName}>
+            <div className="min-w-0">
+              <span className="text-[10px] uppercase font-bold text-muted-foreground block tracking-wider">Supplier</span>
+              <span className="font-bold text-foreground text-xs truncate block" title={selectedGRN.supplierName}>
                 {selectedGRN.supplierName}
               </span>
             </div>
 
             <div>
-              <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Warehouse</span>
-              <span className="font-mono font-semibold text-slate-700 text-xs">{selectedGRN.warehouseId}</span>
+              <span className="text-[10px] uppercase font-bold text-muted-foreground block tracking-wider">Warehouse</span>
+              <span className="font-mono font-semibold text-foreground text-xs">{selectedGRN.warehouseId}</span>
             </div>
 
             <div>
-              <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Received Date</span>
-              <span className="text-slate-700 text-xs">{formatDate(selectedGRN.submittedAt)}</span>
+              <span className="text-[10px] uppercase font-bold text-muted-foreground block tracking-wider">Received Date</span>
+              <span className="text-muted-foreground text-xs">{formatDate(selectedGRN.submittedAt)}</span>
             </div>
           </div>
 
-          {/* Right (Inputs): Vendor Invoice #, Invoice Date, Due Date */}
-          <div className="lg:col-span-7 grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {/* Right Inputs: Vendor Invoice #, Invoice Date, Due Date */}
+          <div className="xl:col-span-7 grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
-              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-700 mb-1">
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-foreground mb-1">
                 Vendor Invoice # <span className="text-rose-500">*</span>
               </label>
               <Input
@@ -901,12 +908,12 @@ export function VendorBillCostingPage() {
                 onChange={(e) => setVendorInvoiceNumber(e.target.value)}
                 placeholder="e.g. INV-SCH-90214"
                 disabled={isAuditLocked}
-                className="h-8 text-xs font-mono font-semibold bg-white"
+                className="h-8 text-xs font-mono font-semibold bg-background border-border"
               />
             </div>
 
             <div>
-              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-700 mb-1">
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-foreground mb-1">
                 Invoice Date <span className="text-rose-500">*</span>
               </label>
               <Input
@@ -914,12 +921,12 @@ export function VendorBillCostingPage() {
                 value={invoiceDate}
                 onChange={(e) => setInvoiceDate(e.target.value)}
                 disabled={isAuditLocked}
-                className="h-8 text-xs bg-white"
+                className="h-8 text-xs bg-background border-border"
               />
             </div>
 
             <div>
-              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-700 mb-1">
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-foreground mb-1">
                 Due Date <span className="text-rose-500">*</span>
               </label>
               <Input
@@ -927,7 +934,7 @@ export function VendorBillCostingPage() {
                 value={dueDate}
                 onChange={(e) => setDueDate(e.target.value)}
                 disabled={isAuditLocked}
-                className="h-8 text-xs bg-white"
+                className="h-8 text-xs bg-background border-border"
               />
             </div>
           </div>
@@ -937,27 +944,27 @@ export function VendorBillCostingPage() {
       {/* ========================================================================= */}
       {/* 2-Step Navigation Pill Bar                                                */}
       {/* ========================================================================= */}
-      <div className="flex items-center gap-2 p-1.5 bg-slate-100 rounded-xl border border-slate-200/80">
+      <div className="flex items-center gap-2 p-1.5 bg-muted/60 rounded-xl border border-border shadow-2xs">
         <button
           type="button"
           onClick={() => setCurrentStep(1)}
           className={cn(
             'flex-1 flex items-center justify-center gap-2.5 py-2 px-4 rounded-lg text-xs font-semibold transition-all cursor-pointer select-none',
             currentStep === 1
-              ? 'bg-white text-slate-900 shadow-xs border border-slate-200/80'
-              : 'text-slate-600 hover:text-slate-900'
+              ? 'bg-background text-foreground shadow-xs border border-border/60'
+              : 'text-muted-foreground hover:text-foreground'
           )}
         >
           <span
             className={cn(
               'flex items-center justify-center w-5 h-5 rounded-full text-[11px] font-bold',
-              currentStep === 1 ? 'bg-primary text-white' : 'bg-slate-200 text-slate-700'
+              currentStep === 1 ? 'bg-primary text-white' : 'bg-muted text-muted-foreground'
             )}
           >
             1
           </span>
           <span className="font-bold">Step 1: Invoice & Landed Costing</span>
-          <span className="text-[11px] text-slate-400 font-normal hidden sm:inline">
+          <span className="text-[11px] text-muted-foreground font-normal hidden sm:inline">
             — Supplier bill, landed expenses & true cost
           </span>
         </button>
@@ -968,20 +975,20 @@ export function VendorBillCostingPage() {
           className={cn(
             'flex-1 flex items-center justify-center gap-2.5 py-2 px-4 rounded-lg text-xs font-semibold transition-all cursor-pointer select-none',
             currentStep === 2
-              ? 'bg-white text-slate-900 shadow-xs border border-slate-200/80'
-              : 'text-slate-600 hover:text-slate-900'
+              ? 'bg-background text-foreground shadow-xs border border-border/60'
+              : 'text-muted-foreground hover:text-foreground'
           )}
         >
           <span
             className={cn(
               'flex items-center justify-center w-5 h-5 rounded-full text-[11px] font-bold',
-              currentStep === 2 ? 'bg-primary text-white' : 'bg-slate-200 text-slate-700'
+              currentStep === 2 ? 'bg-primary text-white' : 'bg-muted text-muted-foreground'
             )}
           >
             2
           </span>
           <span className="font-bold">Step 2: Selling Price & Margin Setup</span>
-          <span className="text-[11px] text-slate-400 font-normal hidden sm:inline">
+          <span className="text-[11px] text-muted-foreground font-normal hidden sm:inline">
             — Commercial selling price & batch margin rules
           </span>
         </button>
@@ -993,14 +1000,14 @@ export function VendorBillCostingPage() {
       {currentStep === 1 && (
         <div className="space-y-4">
           {/* Section A: Additional Landed Costs Card (Clean 4-Column Grid) */}
-          <div className="rounded-xl border border-slate-200/90 bg-white p-4 shadow-xs space-y-3">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-2.5">
+          <div className="rounded-xl border border-border bg-card p-4 shadow-2xs space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border/80 pb-2.5">
               <div>
-                <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                <h3 className="text-xs font-bold text-foreground uppercase tracking-wider flex items-center gap-1.5">
                   <TrendingUp className="h-4 w-4 text-primary" />
                   <span>Additional Landed Costs (Inbound Logistics & Customs)</span>
                 </h3>
-                <p className="text-[11px] text-slate-500 mt-0.5">
+                <p className="text-[11px] text-muted-foreground mt-0.5">
                   Apportion freight, port duty, and transport across inbound goods to establish True Landed Unit Cost.
                 </p>
               </div>
@@ -1008,10 +1015,10 @@ export function VendorBillCostingPage() {
               <div className="flex flex-wrap items-center gap-3">
                 {/* Allocation Toggle: By Value vs By Quantity */}
                 <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 whitespace-nowrap">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground whitespace-nowrap">
                     Apportion By:
                   </span>
-                  <div className="inline-flex rounded-lg border border-slate-200 bg-slate-100 p-0.5 text-xs font-medium">
+                  <div className="inline-flex rounded-lg border border-border bg-muted/60 p-0.5 text-xs font-medium">
                     <button
                       type="button"
                       onClick={() => setApportionMethod('BY_VALUE')}
@@ -1019,8 +1026,8 @@ export function VendorBillCostingPage() {
                       className={cn(
                         'rounded-md px-2.5 py-1 transition-all text-xs font-semibold cursor-pointer',
                         apportionMethod === 'BY_VALUE'
-                          ? 'bg-white text-slate-900 shadow-2xs'
-                          : 'text-slate-600 hover:text-slate-900'
+                          ? 'bg-background text-foreground shadow-2xs'
+                          : 'text-muted-foreground hover:text-foreground'
                       )}
                     >
                       By Net Value
@@ -1032,8 +1039,8 @@ export function VendorBillCostingPage() {
                       className={cn(
                         'rounded-md px-2.5 py-1 transition-all text-xs font-semibold cursor-pointer',
                         apportionMethod === 'BY_QUANTITY'
-                          ? 'bg-white text-slate-900 shadow-2xs'
-                          : 'text-slate-600 hover:text-slate-900'
+                          ? 'bg-background text-foreground shadow-2xs'
+                          : 'text-muted-foreground hover:text-foreground'
                       )}
                     >
                       By Quantity
@@ -1042,11 +1049,11 @@ export function VendorBillCostingPage() {
                 </div>
 
                 {/* Total Additional Landed Cost Summary Badge */}
-                <div className="bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-1 text-right">
-                  <span className="text-[10px] font-bold uppercase text-emerald-800 block tracking-wider">
+                <div className="border border-border bg-muted/40 rounded-lg px-3.5 py-1.5 text-right">
+                  <span className="text-[10px] font-bold uppercase text-muted-foreground block tracking-wider">
                     Total Additional Landed Cost
                   </span>
-                  <span className="font-mono font-extrabold text-emerald-900 text-sm">
+                  <span className="font-mono font-bold text-foreground text-sm">
                     {formatCurrency(totalAdditionalLandedCosts)}
                   </span>
                 </div>
@@ -1055,57 +1062,57 @@ export function VendorBillCostingPage() {
 
             {/* Clean 4-Column Grid of Landed Expenses */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-              <div className="p-2.5 rounded-lg border border-slate-200/80 bg-slate-50/50 space-y-1">
-                <label className="block text-[11px] font-semibold text-slate-700">
+              <div className="p-2.5 rounded-lg border border-border bg-muted/30 space-y-1">
+                <label className="block text-[11px] font-semibold text-foreground">
                   Freight / Shipping (LKR)
                 </label>
                 <Input
                   type="number"
                   min="0"
                   step="any"
-                  value={freightAmount || ''}
-                  onChange={(e) => setFreightAmount(Number(e.target.value) || 0)}
+                  value={freightAmount}
+                  onChange={(e) => setFreightAmount(e.target.value)}
                   placeholder="0.00"
                   disabled={isAuditLocked}
-                  className="h-8 text-xs font-mono text-right bg-white"
+                  className="h-8 text-xs font-mono font-semibold text-right bg-background border-border"
                 />
               </div>
 
-              <div className="p-2.5 rounded-lg border border-slate-200/80 bg-slate-50/50 space-y-1">
-                <label className="block text-[11px] font-semibold text-slate-700">
+              <div className="p-2.5 rounded-lg border border-border bg-muted/30 space-y-1">
+                <label className="block text-[11px] font-semibold text-foreground">
                   Port & Duty (LKR)
                 </label>
                 <Input
                   type="number"
                   min="0"
                   step="any"
-                  value={portDutyAmount || ''}
-                  onChange={(e) => setPortDutyAmount(Number(e.target.value) || 0)}
+                  value={portDutyAmount}
+                  onChange={(e) => setPortDutyAmount(e.target.value)}
                   placeholder="0.00"
                   disabled={isAuditLocked}
-                  className="h-8 text-xs font-mono text-right bg-white"
+                  className="h-8 text-xs font-mono font-semibold text-right bg-background border-border"
                 />
               </div>
 
-              <div className="p-2.5 rounded-lg border border-slate-200/80 bg-slate-50/50 space-y-1">
-                <label className="block text-[11px] font-semibold text-slate-700">
+              <div className="p-2.5 rounded-lg border border-border bg-muted/30 space-y-1">
+                <label className="block text-[11px] font-semibold text-foreground">
                   Local Transport (LKR)
                 </label>
                 <Input
                   type="number"
                   min="0"
                   step="any"
-                  value={localTransportAmount || ''}
-                  onChange={(e) => setLocalTransportAmount(Number(e.target.value) || 0)}
+                  value={localTransportAmount}
+                  onChange={(e) => setLocalTransportAmount(e.target.value)}
                   placeholder="0.00"
                   disabled={isAuditLocked}
-                  className="h-8 text-xs font-mono text-right bg-white"
+                  className="h-8 text-xs font-mono font-semibold text-right bg-background border-border"
                 />
               </div>
 
-              <div className="p-2.5 rounded-lg border border-slate-200/80 bg-slate-50/50 space-y-1">
+              <div className="p-2.5 rounded-lg border border-border bg-muted/30 space-y-1">
                 <div className="flex items-center justify-between">
-                  <label className="block text-[11px] font-semibold text-slate-700">
+                  <label className="block text-[11px] font-semibold text-foreground">
                     Other Charges (LKR)
                   </label>
                   <button
@@ -1121,87 +1128,144 @@ export function VendorBillCostingPage() {
                   type="number"
                   min="0"
                   step="any"
-                  value={customExpenses.length > 0 ? (customExpensesSum || '') : (otherChargesAmount || '')}
+                  value={customExpenses.length > 0 ? customExpensesSum : otherChargesAmount}
                   onChange={(e) => {
-                    if (customExpenses.length > 0) {
-                      // custom breakdown active
-                    } else {
-                      setOtherChargesAmount(Number(e.target.value) || 0);
+                    if (customExpenses.length === 0) {
+                      setOtherChargesAmount(e.target.value);
                     }
                   }}
                   placeholder="0.00"
                   disabled={isAuditLocked || customExpenses.length > 0}
-                  className="h-8 text-xs font-mono text-right bg-white"
+                  className="h-8 text-xs font-mono font-semibold text-right bg-background border-border"
                 />
               </div>
             </div>
 
-            {/* Optional Custom Expenses detail list */}
+            {/* Custom Landed Expenses Breakdown Table */}
             {showCustomExpenses && customExpenses.length > 0 && (
-              <div className="mt-2 pt-2.5 border-t border-slate-100 space-y-2">
+              <div className="mt-3 pt-3 border-t border-border space-y-2.5">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-slate-700">Custom Landed Expense Lines</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold uppercase tracking-wider text-foreground">
+                      Custom Landed Expense Lines
+                    </span>
+                    <Badge variant="outline" className="text-[10px] font-mono font-semibold bg-muted">
+                      {customExpenses.length} line(s)
+                    </Badge>
+                  </div>
                   <Button
                     type="button"
                     variant="ghost"
                     size="sm"
                     onClick={handleAddExpense}
-                    className="h-6 text-xs text-primary gap-1"
+                    disabled={isAuditLocked}
+                    className="h-7 text-xs text-primary font-semibold gap-1 hover:bg-primary/10 cursor-pointer"
                   >
-                    <Plus className="h-3 w-3" />
+                    <Plus className="h-3.5 w-3.5" />
                     <span>Add Additional Landed Expense</span>
                   </Button>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-                  {customExpenses.map((exp) => (
-                    <div key={exp.id} className="flex items-center gap-1.5 p-1.5 bg-slate-50 border border-slate-200 rounded-md">
-                      <Input
-                        placeholder="e.g. carrier, wharfage, haulage details"
-                        value={exp.description}
-                        onChange={(e) => handleUpdateCustomExpense(exp.id, 'description', e.target.value)}
-                        className="h-7 text-xs bg-white flex-1"
-                      />
-                      <Input
-                        type="number"
-                        placeholder="0.00"
-                        value={exp.amount || ''}
-                        onChange={(e) => handleUpdateCustomExpense(exp.id, 'amount', Number(e.target.value) || 0)}
-                        className="h-7 w-24 text-xs font-mono text-right bg-white"
-                      />
-                      <button
-                        type="button"
-                        title="Remove expense line"
-                        onClick={() => handleRemoveCustomExpense(exp.id)}
-                        className="text-slate-400 hover:text-rose-600 p-1 cursor-pointer"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
-                  ))}
+
+                <div className="overflow-hidden rounded-lg border border-border bg-card shadow-2xs">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-muted/60 border-b border-border text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      <tr>
+                        <th className="py-2.5 px-3 w-48">Expense Category</th>
+                        <th className="py-2.5 px-3">Description / Carrier Reference</th>
+                        <th className="py-2.5 px-3 text-right w-44">Amount (LKR)</th>
+                        <th className="py-2.5 px-3 text-center w-14">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border/60 bg-card">
+                      {customExpenses.map((exp) => (
+                        <tr key={exp.id} className="hover:bg-muted/40 transition-colors">
+                          <td className="py-2 px-3">
+                            <select
+                              value={exp.category}
+                              onChange={(e) => handleUpdateCustomExpense(exp.id, 'category', e.target.value)}
+                              disabled={isAuditLocked}
+                              className="h-8 w-full rounded-md border border-border bg-background px-2 text-xs font-medium text-foreground focus:outline-hidden"
+                            >
+                              <option value="Handling & Offloading">Handling & Offloading</option>
+                              <option value="Customs Brokerage">Customs Brokerage</option>
+                              <option value="Wharfage & Demurrage">Wharfage & Demurrage</option>
+                              <option value="Cargo Insurance">Cargo Insurance</option>
+                              <option value="Inspection & Lab Testing">Inspection & Lab Testing</option>
+                              <option value="Port Terminal Handling">Port Terminal Handling</option>
+                              <option value="Other Inbound Logistics">Other Inbound Logistics</option>
+                            </select>
+                          </td>
+                          <td className="py-2 px-3">
+                            <Input
+                              placeholder="e.g. carrier, wharfage, haulage details"
+                              value={exp.description}
+                              onChange={(e) => handleUpdateCustomExpense(exp.id, 'description', e.target.value)}
+                              disabled={isAuditLocked}
+                              className="h-8 text-xs bg-background border-border"
+                            />
+                          </td>
+                          <td className="py-2 px-3 text-right">
+                            <Input
+                              type="number"
+                              min="0"
+                              step="any"
+                              placeholder="0.00"
+                              value={exp.amount}
+                              onChange={(e) => handleUpdateCustomExpense(exp.id, 'amount', e.target.value)}
+                              disabled={isAuditLocked}
+                              className="h-8 w-full text-xs font-mono font-bold text-right bg-background border-border"
+                            />
+                          </td>
+                          <td className="py-2 px-3 text-center">
+                            <button
+                              type="button"
+                              title="Remove expense line"
+                              onClick={() => handleRemoveCustomExpense(exp.id)}
+                              disabled={isAuditLocked}
+                              className="text-muted-foreground hover:text-rose-600 p-1.5 rounded-md hover:bg-rose-50 dark:hover:bg-rose-950/30 cursor-pointer transition-colors"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot className="bg-muted/40 border-t border-border font-semibold text-xs">
+                      <tr>
+                        <td colSpan={2} className="py-2 px-3 text-muted-foreground text-right">
+                          Total Custom Breakdown:
+                        </td>
+                        <td className="py-2 px-3 text-right font-mono font-bold text-foreground">
+                          {formatCurrency(customExpensesSum)}
+                        </td>
+                        <td></td>
+                      </tr>
+                    </tfoot>
+                  </table>
                 </div>
               </div>
             )}
           </div>
 
           {/* Section B: Landed Costing Table (6 Spacious Columns — Zero Horizontal Scroll) */}
-          <div className="rounded-xl border border-slate-200/90 bg-white shadow-xs overflow-hidden">
-            <div className="flex items-center justify-between p-3.5 bg-slate-50 border-b border-slate-200">
+          <div className="rounded-xl border border-border bg-card shadow-2xs overflow-hidden">
+            <div className="flex items-center justify-between p-3.5 bg-muted/30 border-b border-border">
               <div className="flex items-center gap-2">
-                <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+                <h2 className="text-xs font-bold text-foreground uppercase tracking-wider">
                   Inbound Inventory Line Items & Landed Costing
                 </h2>
-                <Badge variant="outline" className="text-xs font-mono font-bold bg-white text-slate-700">
+                <Badge variant="outline" className="text-xs font-mono font-bold bg-background text-foreground">
                   {computedRows.length} Products
                 </Badge>
               </div>
-              <span className="text-[11px] text-slate-500">
+              <span className="text-[11px] text-muted-foreground">
                 Verify supplier invoice rates and review calculated True Landed Cost.
               </span>
             </div>
 
-            <div className="w-full">
-              <table className="w-full text-left text-xs tabular-nums">
-                <thead className="bg-slate-900 text-white uppercase text-[11px] font-bold tracking-wider">
+            <div className="w-full overflow-x-auto">
+              <table className="w-full text-left text-xs tabular-nums min-w-[900px]">
+                <thead className="bg-muted/60 border-b border-border text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                   <tr>
                     <th className="px-4 py-3">Product Name</th>
                     <th className="px-3 py-3 text-center w-28">Received Qty</th>
@@ -1211,19 +1275,19 @@ export function VendorBillCostingPage() {
                     <th className="px-4 py-3 text-right w-48">True Landed Cost & Line Total</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 bg-white">
+                <tbody className="divide-y divide-border/60 bg-card">
                   {computedRows.map((row, idx) => (
-                    <tr key={row.id} className="hover:bg-slate-50/70 transition-colors">
-                      {/* 1. Product Name (Full title, no truncation, comfortable py-3.5) */}
+                    <tr key={row.id} className="hover:bg-muted/40 transition-colors">
+                      {/* 1. Product Name */}
                       <td className="px-4 py-3.5">
-                        <div className="font-semibold text-slate-900 text-sm leading-snug">
+                        <div className="font-semibold text-foreground text-sm leading-snug">
                           {row.productName}
                         </div>
                       </td>
 
-                      {/* 2. Received Qty (Clean read-only text with subtle damaged pill) */}
+                      {/* 2. Received Qty */}
                       <td className="px-3 py-3.5 text-center">
-                        <span className="font-mono font-semibold text-slate-800 text-xs">
+                        <span className="font-mono font-semibold text-foreground text-xs">
                           {row.receivedQuantity} units
                         </span>
                         {row.damagedQuantity > 0 && (
@@ -1243,13 +1307,13 @@ export function VendorBillCostingPage() {
                             min="0"
                             step="any"
                             value={row.supplierUnitCost || ''}
-                            onChange={(e) => updateProductRow(idx, 'supplierUnitCost', Number(e.target.value) || 0)}
+                            onChange={(e) => updateProductRow(idx, 'supplierUnitCost', e.target.value)}
                             disabled={isAuditLocked}
-                            className="h-8 w-36 text-xs font-mono font-semibold text-right bg-white"
+                            className="h-8 w-36 text-xs font-mono font-semibold text-right bg-background border-border"
                           />
                         </div>
                         {row.historicalPurchasePrice && row.historicalPurchasePrice > 0 ? (
-                          <span className="text-[10px] text-slate-400 block font-mono mt-1 text-right">
+                          <span className="text-[10px] text-muted-foreground block font-mono mt-1 text-right">
                             Last Historical Price: {formatCurrency(row.historicalPurchasePrice)}
                           </span>
                         ) : null}
@@ -1263,29 +1327,26 @@ export function VendorBillCostingPage() {
                             min="0"
                             step="any"
                             value={row.lineDiscount || ''}
-                            onChange={(e) => updateProductRow(idx, 'lineDiscount', Number(e.target.value) || 0)}
+                            onChange={(e) => updateProductRow(idx, 'lineDiscount', e.target.value)}
                             placeholder="0.00"
                             disabled={isAuditLocked}
-                            className="h-8 w-28 text-xs font-mono text-right bg-white text-slate-600"
+                            className="h-8 w-28 text-xs font-mono text-right bg-background border-border text-muted-foreground"
                           />
                         </div>
                       </td>
 
                       {/* 5. Allocated Landed / Unit */}
-                      <td className="px-3 py-3.5 text-right font-mono font-medium text-slate-600 text-xs">
+                      <td className="px-3 py-3.5 text-right font-mono font-medium text-muted-foreground text-xs">
                         + {formatCurrency(row.allocatedPerUnit)}
                       </td>
 
                       {/* 6. True Landed Unit Cost & Line Total */}
                       <td className="px-4 py-3.5 text-right">
-                        <div
-                          className="font-mono font-extrabold text-slate-900 text-sm text-right"
-                          title="Landed Cost per Unit"
-                        >
-                          {formatCurrency(row.trueLandedCost)} <span className="text-xs font-normal text-slate-500">/ unit</span>
+                        <div className="font-mono font-extrabold text-foreground text-sm text-right">
+                          {formatCurrency(row.trueLandedCost)} <span className="text-xs font-normal text-muted-foreground">/ unit</span>
                         </div>
                         <span className="sr-only">Landed Cost per Unit</span>
-                        <div className="text-[11px] font-mono text-slate-400 mt-0.5 text-right">
+                        <div className="text-[11px] font-mono text-muted-foreground mt-0.5 text-right">
                           Line Total: {formatCurrency(row.lineTotal)}
                         </div>
                       </td>
@@ -1297,55 +1358,55 @@ export function VendorBillCostingPage() {
           </div>
 
           {/* Step 1 Bottom Summary Bar */}
-          <div className="sticky bottom-3 z-30 rounded-xl border border-slate-200/90 bg-white/95 backdrop-blur-md p-3.5 shadow-xl">
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+          <div className="sticky bottom-3 z-30 rounded-xl border border-border bg-card/95 backdrop-blur-md p-3.5 shadow-xl">
+            <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-3">
               {/* Financial Indicators */}
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
+              <div className="flex flex-wrap items-center gap-x-3.5 gap-y-2 text-xs">
                 <div>
-                  <span className="text-[10px] uppercase font-bold text-slate-400 block">Goods Subtotal</span>
-                  <span className="font-mono font-semibold text-slate-700">{formatCurrency(goodsSubtotal)}</span>
+                  <span className="text-[10px] uppercase font-bold text-muted-foreground block">Goods Subtotal</span>
+                  <span className="font-mono font-semibold text-foreground text-xs">{formatCurrency(goodsSubtotal)}</span>
                 </div>
 
-                <span className="text-slate-300 hidden sm:inline">+</span>
+                <span className="text-border hidden sm:inline">+</span>
 
                 <div>
-                  <span className="text-[10px] uppercase font-bold text-slate-400 block">Additional Landed Costs</span>
-                  <span className="font-mono font-semibold text-slate-700">{formatCurrency(totalAdditionalLandedCosts)}</span>
+                  <span className="text-[10px] uppercase font-bold text-muted-foreground block">Additional Landed</span>
+                  <span className="font-mono font-semibold text-foreground text-xs">{formatCurrency(totalAdditionalLandedCosts)}</span>
                 </div>
 
-                <span className="text-slate-300 hidden sm:inline">=</span>
+                <span className="text-border hidden sm:inline">=</span>
 
                 <div>
-                  <span className="text-[10px] uppercase font-bold text-slate-400 block">
-                    Total Inventory Capitalized (Total Landed Cost)
+                  <span className="text-[10px] uppercase font-bold text-muted-foreground block">
+                    Capitalized Inventory (Total Landed Cost)
                   </span>
-                  <span className="font-mono font-bold text-slate-900">{formatCurrency(totalInventoryCapitalized)}</span>
+                  <span className="font-mono font-bold text-foreground text-xs">{formatCurrency(totalInventoryCapitalized)}</span>
                 </div>
 
-                <span className="text-slate-300 hidden sm:inline">|</span>
+                <span className="text-border hidden sm:inline">+</span>
 
                 <div>
-                  <span className="text-[10px] uppercase font-bold text-slate-400 block">Input VAT (18%)</span>
-                  <span className="font-mono font-semibold text-slate-700">{formatCurrency(vatTotal)}</span>
+                  <span className="text-[10px] uppercase font-bold text-muted-foreground block">Input VAT (18%)</span>
+                  <span className="font-mono font-semibold text-foreground text-xs">{formatCurrency(vatTotal)}</span>
                 </div>
 
-                <span className="text-slate-300 hidden sm:inline">|</span>
+                <div className="h-7 w-px bg-border mx-1 hidden md:block" />
 
-                <div className="rounded-lg bg-emerald-50 border border-emerald-200 px-2.5 py-1">
-                  <span className="text-[10px] uppercase font-bold text-emerald-800 block">Total AP Commitment</span>
-                  <span className="font-mono font-extrabold text-emerald-900 text-sm">
+                <div className="rounded-lg border border-border bg-muted/50 px-3.5 py-1.5">
+                  <span className="text-[10px] uppercase font-bold text-muted-foreground block tracking-wider">Total AP Commitment</span>
+                  <span className="font-mono font-extrabold text-foreground text-sm">
                     {formatCurrency(grandTotal)}
                   </span>
                 </div>
               </div>
 
               {/* Primary Action Button: Continue to Pricing (Step 2) */}
-              <div className="flex items-center gap-2 justify-end shrink-0">
+              <div className="flex items-center gap-2 justify-end shrink-0 pt-1 xl:pt-0">
                 <Button
                   type="button"
                   size="default"
                   onClick={() => setCurrentStep(2)}
-                  className="gap-2 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs h-10 px-6 shadow-sm cursor-pointer"
+                  className="gap-2 bg-primary hover:bg-primary-hover text-white font-semibold text-xs h-9 px-5 shadow-xs cursor-pointer"
                 >
                   <span>Continue to Pricing (Step 2)</span>
                   <ArrowRight className="h-4 w-4" />
@@ -1361,20 +1422,20 @@ export function VendorBillCostingPage() {
       {/* ========================================================================= */}
       {currentStep === 2 && (
         <div className="space-y-4">
-          <div className="rounded-xl border border-slate-200/90 bg-white shadow-xs overflow-hidden">
+          <div className="rounded-xl border border-border bg-card shadow-2xs overflow-hidden">
             {/* Table Header Bar with Rule Toggle */}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 bg-slate-50 border-b border-slate-200">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 bg-muted/30 border-b border-border">
               <div>
                 <div className="flex items-center gap-2">
-                  <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+                  <h2 className="text-sm font-bold text-foreground uppercase tracking-wider flex items-center gap-1.5">
                     <Layers className="h-4 w-4 text-primary" />
                     <span>Commercial Price & Margin Assignment</span>
                   </h2>
-                  <Badge variant="outline" className="text-xs font-mono font-bold bg-white text-slate-700">
+                  <Badge variant="outline" className="text-xs font-mono font-bold bg-background text-foreground">
                     {computedRows.length} Products
                   </Badge>
                 </div>
-                <p className="text-[11px] text-slate-500 mt-1">
+                <p className="text-[11px] text-muted-foreground mt-1">
                   {globalPricingScope === 'BATCH_ONLY'
                     ? 'Rule: Preserves existing inventory batches at their current prices; only this incoming batch receives the new price.'
                     : 'Rule: Updates catalog selling price and standardizes all existing active inventory batches in stock.'}
@@ -1384,8 +1445,8 @@ export function VendorBillCostingPage() {
               {/* Global Default Rule Toggle */}
               <div className="flex flex-col sm:items-end gap-1 text-xs">
                 <div className="flex items-center gap-2">
-                  <span className="font-bold text-slate-600">Apply New Prices To:</span>
-                  <div className="inline-flex rounded-lg border border-slate-200 bg-white p-0.5 shadow-2xs font-medium">
+                  <span className="font-bold text-muted-foreground">Apply New Prices To:</span>
+                  <div className="inline-flex rounded-lg border border-border bg-muted/60 p-0.5 shadow-2xs font-medium">
                     <button
                       type="button"
                       onClick={() => handleGlobalPricingScopeChange('BATCH_ONLY')}
@@ -1393,8 +1454,8 @@ export function VendorBillCostingPage() {
                       className={cn(
                         'rounded-md px-2.5 py-1 transition-all text-xs font-semibold cursor-pointer',
                         globalPricingScope === 'BATCH_ONLY'
-                          ? 'bg-slate-900 text-white shadow-2xs'
-                          : 'text-slate-600 hover:text-slate-900'
+                          ? 'bg-background text-foreground shadow-2xs'
+                          : 'text-muted-foreground hover:text-foreground'
                       )}
                     >
                       Incoming Batch Only (FIFO)
@@ -1406,8 +1467,8 @@ export function VendorBillCostingPage() {
                       className={cn(
                         'rounded-md px-2.5 py-1 transition-all text-xs font-semibold cursor-pointer',
                         globalPricingScope === 'ALL_STOCK'
-                          ? 'bg-slate-900 text-white shadow-2xs'
-                          : 'text-slate-600 hover:text-slate-900'
+                          ? 'bg-background text-foreground shadow-2xs'
+                          : 'text-muted-foreground hover:text-foreground'
                       )}
                     >
                       Standardize All Stock
@@ -1418,9 +1479,9 @@ export function VendorBillCostingPage() {
             </div>
 
             {/* Pricing & Margin Table (6 Spacious Columns — Zero Horizontal Scroll) */}
-            <div className="w-full">
-              <table className="w-full text-left text-xs tabular-nums">
-                <thead className="bg-slate-900 text-white uppercase text-[11px] font-bold tracking-wider">
+            <div className="w-full overflow-x-auto">
+              <table className="w-full text-left text-xs tabular-nums min-w-[900px]">
+                <thead className="bg-muted/60 border-b border-border text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                   <tr>
                     <th className="px-4 py-3">Product Name & Inbound Qty</th>
                     <th className="px-3 py-3 text-right w-36">True Landed Cost</th>
@@ -1430,19 +1491,18 @@ export function VendorBillCostingPage() {
                     <th className="px-3 py-3 text-center w-36">Batch Application Rule</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 bg-white">
+                <tbody className="divide-y divide-border/60 bg-card">
                   {computedRows.map((row, idx) => {
                     const isLoss = row.profitPerUnit < 0;
-                    const isGoodMargin = row.marginPercent >= 20;
 
                     return (
-                      <tr key={row.id} className="hover:bg-slate-50/70 transition-colors">
+                      <tr key={row.id} className="hover:bg-muted/40 transition-colors">
                         {/* 1. Product Name & Inbound Qty */}
                         <td className="px-4 py-3.5">
-                          <div className="font-semibold text-slate-900 text-sm leading-snug">
+                          <div className="font-semibold text-foreground text-sm leading-snug">
                             {row.productName}
                           </div>
-                          <div className="text-[11px] font-mono text-slate-400 mt-0.5">
+                          <div className="text-[11px] font-mono text-muted-foreground mt-0.5">
                             {row.receivedQuantity} units inbound
                           </div>
                         </td>
@@ -1451,14 +1511,14 @@ export function VendorBillCostingPage() {
                         <td className="px-3 py-3.5 text-right">
                           <Badge
                             variant="outline"
-                            className="font-mono font-bold bg-slate-50 text-slate-800 text-xs px-2.5 py-1 border-slate-300"
+                            className="font-mono font-bold bg-muted/60 text-foreground text-xs px-2.5 py-1 border-border"
                           >
                             {formatCurrency(row.trueLandedCost)}
                           </Badge>
                         </td>
 
                         {/* 3. Current Catalog Price */}
-                        <td className="px-3 py-3.5 text-right font-mono text-slate-500 text-xs">
+                        <td className="px-3 py-3.5 text-right font-mono text-muted-foreground text-xs">
                           {formatCurrency(row.currentSellingPrice)}
                         </td>
 
@@ -1470,21 +1530,21 @@ export function VendorBillCostingPage() {
                               min="0"
                               step="any"
                               value={row.newSellingPrice || ''}
-                              onChange={(e) => updateProductRow(idx, 'newSellingPrice', Number(e.target.value) || 0)}
+                              onChange={(e) => updateProductRow(idx, 'newSellingPrice', e.target.value)}
                               disabled={isAuditLocked}
-                              className="h-8 w-40 text-xs font-mono font-bold text-right bg-white text-slate-900 border-slate-300 focus:border-primary"
+                              className="h-8 w-40 text-xs font-mono font-bold text-right bg-background text-foreground border-border focus:border-primary"
                             />
                           </div>
                           {/* Quick markup pills */}
                           {!isAuditLocked && (
                             <div className="flex items-center justify-end gap-1 mt-1 text-[10px]">
-                              <span className="text-slate-400 mr-0.5">Markup:</span>
+                              <span className="text-muted-foreground mr-0.5">Markup:</span>
                               {[20, 30, 40, 50].map((pct) => (
                                 <button
                                   key={pct}
                                   type="button"
                                   onClick={() => applyMarkupPreset(idx, pct)}
-                                  className="px-1.5 py-0.5 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 font-mono font-semibold cursor-pointer"
+                                  className="px-1.5 py-0.5 rounded bg-muted hover:bg-muted/80 text-foreground font-mono font-semibold cursor-pointer"
                                   title={`Set selling price to +${pct}% above True Landed Cost`}
                                 >
                                   +{pct}%
@@ -1494,24 +1554,24 @@ export function VendorBillCostingPage() {
                           )}
                         </td>
 
-                        {/* 5. Gross Margin & Unit Profit (Full-Width Pill Badge) */}
+                        {/* 5. Gross Margin & Unit Profit (Clean Neutral ERP Badge) */}
                         <td className="px-4 py-3.5 text-center">
-                          <Badge
-                            variant="outline"
-                            className={cn(
-                              'text-xs font-mono font-semibold py-1 px-3 whitespace-nowrap inline-flex items-center gap-1.5 shadow-2xs',
-                              isLoss
-                                ? 'bg-rose-50 text-rose-700 border-rose-300'
-                                : isGoodMargin
-                                ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
-                                : 'bg-amber-50 text-amber-800 border-amber-300'
-                            )}
-                          >
-                            <Percent className="h-3 w-3 shrink-0" />
-                            <span>{row.marginPercent.toFixed(1)}% Margin</span>
-                            <span className="text-slate-300">•</span>
-                            <span>{row.profitPerUnit >= 0 ? `+${formatCurrency(row.profitPerUnit)}` : formatCurrency(row.profitPerUnit)} / unit</span>
-                          </Badge>
+                          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md border border-border bg-muted/40 font-mono text-xs shadow-2xs">
+                            <span
+                              className={cn(
+                                'font-bold',
+                                isLoss
+                                  ? 'text-rose-600 dark:text-rose-400'
+                                  : 'text-foreground'
+                              )}
+                            >
+                              {row.marginPercent.toFixed(1)}% Margin
+                            </span>
+                            <span className="text-muted-foreground/40">•</span>
+                            <span className="text-muted-foreground font-semibold">
+                              {row.profitPerUnit >= 0 ? `+${formatCurrency(row.profitPerUnit)}` : formatCurrency(row.profitPerUnit)} / unit
+                            </span>
+                          </div>
                         </td>
 
                         {/* 6. Batch Application Rule (Clean Per-Row Pill Selector) */}
@@ -1520,7 +1580,7 @@ export function VendorBillCostingPage() {
                             value={row.priceScope}
                             onChange={(e) => updateProductRow(idx, 'priceScope', e.target.value)}
                             disabled={isAuditLocked}
-                            className="h-8 rounded-lg border border-slate-200 bg-white px-2.5 text-xs font-semibold text-slate-700 shadow-2xs focus:outline-hidden"
+                            className="h-8 rounded-lg border border-border bg-background px-2.5 text-xs font-semibold text-foreground shadow-2xs focus:outline-hidden"
                           >
                             <option value="BATCH_ONLY">Batch Only</option>
                             <option value="ALL_STOCK">All Stock</option>
@@ -1535,7 +1595,7 @@ export function VendorBillCostingPage() {
           </div>
 
           {/* Step 2 Bottom Summary Bar */}
-          <div className="sticky bottom-3 z-30 rounded-xl border border-slate-200/90 bg-white/95 backdrop-blur-md p-3.5 shadow-xl">
+          <div className="sticky bottom-3 z-30 rounded-xl border border-border bg-card/95 backdrop-blur-md p-3.5 shadow-xl">
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
               {/* Back to Step 1 Button */}
               <div className="flex items-center gap-2">
@@ -1544,7 +1604,7 @@ export function VendorBillCostingPage() {
                   variant="outline"
                   size="default"
                   onClick={() => setCurrentStep(1)}
-                  className="gap-2 h-10 px-4 text-xs font-bold border-slate-300 text-slate-700 hover:bg-slate-100 cursor-pointer"
+                  className="gap-2 h-10 px-4 text-xs font-bold border-border text-foreground hover:bg-muted cursor-pointer"
                 >
                   <ArrowLeft className="h-4 w-4" />
                   <span>Back to Costing (Step 1)</span>
@@ -1554,43 +1614,43 @@ export function VendorBillCostingPage() {
               {/* Financial Breakdown */}
               <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
                 <div>
-                  <span className="text-[10px] uppercase font-bold text-slate-400 block">Goods Subtotal</span>
-                  <span className="font-mono font-semibold text-slate-700">{formatCurrency(goodsSubtotal)}</span>
+                  <span className="text-[10px] uppercase font-bold text-muted-foreground block">Goods Subtotal</span>
+                  <span className="font-mono font-semibold text-foreground">{formatCurrency(goodsSubtotal)}</span>
                 </div>
 
-                <span className="text-slate-300 hidden sm:inline">+</span>
+                <span className="text-border hidden sm:inline">+</span>
 
                 <div>
-                  <span className="text-[10px] uppercase font-bold text-slate-400 block">Additional Landed</span>
-                  <span className="font-mono font-semibold text-slate-700">{formatCurrency(totalAdditionalLandedCosts)}</span>
+                  <span className="text-[10px] uppercase font-bold text-muted-foreground block">Additional Landed</span>
+                  <span className="font-mono font-semibold text-foreground">{formatCurrency(totalAdditionalLandedCosts)}</span>
                 </div>
 
-                <span className="text-slate-300 hidden sm:inline">=</span>
+                <span className="text-border hidden sm:inline">=</span>
 
                 <div>
-                  <span className="text-[10px] uppercase font-bold text-slate-400 block">Total Inventory Capitalized</span>
-                  <span className="font-mono font-bold text-slate-900">{formatCurrency(totalInventoryCapitalized)}</span>
+                  <span className="text-[10px] uppercase font-bold text-muted-foreground block">Total Inventory Capitalized</span>
+                  <span className="font-mono font-bold text-foreground">{formatCurrency(totalInventoryCapitalized)}</span>
                 </div>
 
-                <span className="text-slate-300 hidden sm:inline">|</span>
+                <div className="h-7 w-px bg-border mx-1 hidden md:block" />
 
-                <div className="rounded-lg bg-emerald-50 border border-emerald-200 px-2.5 py-1">
-                  <span className="text-[10px] uppercase font-bold text-emerald-800 block">Total AP Commitment</span>
-                  <span className="font-mono font-extrabold text-emerald-900 text-sm">
+                <div className="rounded-lg border border-border bg-muted/50 px-3.5 py-1.5">
+                  <span className="text-[10px] uppercase font-bold text-muted-foreground block tracking-wider">Total AP Commitment</span>
+                  <span className="font-mono font-extrabold text-foreground text-sm">
                     {formatCurrency(grandTotal)}
                   </span>
                 </div>
 
                 {/* Optional Supplier Advance Offset Toggle */}
                 {unappliedAdvances.length > 0 && !isAuditLocked && (
-                  <label className="flex items-center gap-1.5 ml-2 cursor-pointer bg-slate-50 border border-slate-200 rounded-lg px-2 py-1">
+                  <label className="flex items-center gap-1.5 ml-2 cursor-pointer bg-muted/40 border border-border rounded-lg px-2.5 py-1">
                     <input
                       type="checkbox"
                       checked={applyAdvanceEnabled}
                       onChange={(e) => setApplyAdvanceEnabled(e.target.checked)}
                       className="rounded text-primary focus:ring-primary h-3.5 w-3.5"
                     />
-                    <span className="text-[11px] font-semibold text-slate-700">
+                    <span className="text-[11px] font-semibold text-foreground">
                       Offset Advance ({formatCurrency(advanceAmountToApply)})
                     </span>
                   </label>
@@ -1598,25 +1658,30 @@ export function VendorBillCostingPage() {
               </div>
 
               {/* Primary Action Button: Post Bill & Apply Prices */}
-              <div className="flex items-center gap-2 justify-end shrink-0">
+              <div className="flex items-center gap-2 justify-end shrink-0 pt-1 xl:pt-0">
                 {isAuditLocked ? (
                   <div className="flex items-center gap-2">
-                    <Badge className="bg-emerald-50 text-emerald-800 border-emerald-300 font-bold px-3 py-1.5 text-xs gap-1.5 shadow-2xs">
-                      <Lock className="h-3.5 w-3.5 text-emerald-600" />
+                    <Badge className="bg-muted text-foreground border-border font-bold px-3 py-1.5 text-xs gap-1.5 shadow-2xs">
+                      <Lock className="h-3.5 w-3.5 text-primary" />
                       <span>Bill Costed & Approved</span>
                     </Badge>
-                    {isAuthorizedForVoid && (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={handleVoidVendorBill}
-                        disabled={submitting}
-                        className="h-9 text-xs text-rose-600 border-rose-200 hover:bg-rose-50 cursor-pointer"
-                      >
-                        Void Bill
-                      </Button>
-                    )}
+                    {isAuthorizedForVoid && (() => {
+                      const billDate = existingBill?.invoiceDate || selectedGRN.receivedDate;
+                      const isLocked = periodLockService.isDateLocked(billDate);
+                      return (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={handleVoidVendorBill}
+                          disabled={submitting || isLocked}
+                          title={isLocked ? 'Period Closed: Cannot void past transactions in closed period' : undefined}
+                          className="h-9 text-xs text-rose-600 border-rose-200 hover:bg-rose-50 cursor-pointer disabled:opacity-50"
+                        >
+                          {isLocked ? 'Period Closed (Void Blocked)' : 'Void / Reverse Vendor Bill'}
+                        </Button>
+                      );
+                    })()}
                   </div>
                 ) : (
                   <Button
@@ -1624,7 +1689,7 @@ export function VendorBillCostingPage() {
                     size="default"
                     onClick={handlePostBillAndApplyPrices}
                     disabled={!isFormValid || submitting}
-                    className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs h-10 px-6 shadow-sm cursor-pointer disabled:opacity-50"
+                    className="gap-2 bg-primary hover:bg-primary-hover text-white font-semibold text-xs h-9 px-6 shadow-xs cursor-pointer disabled:opacity-50"
                   >
                     <CheckCircle2 className="h-4 w-4" />
                     <span>{submitting ? 'Posting & Applying...' : 'Post Bill & Apply Prices'}</span>

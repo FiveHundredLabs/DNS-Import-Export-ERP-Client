@@ -147,4 +147,10 @@ describe('LoginPage and Example Users For Each Role', () => {
     expect(screen.queryByPlaceholderText('user@dnserp.com')).toBeNull();
     expect(screen.queryByRole('button', { name: /Sign In to ERP Portal/i })).toBeNull();
   });
+
+  it('ensures every user role has defaultPath configured as dashboard ("/")', () => {
+    UNIQUE_DEMO_ROLES.forEach((item) => {
+      expect(item.defaultPath).toBe('/');
+    });
+  });
 });

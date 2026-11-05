@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { DirectorDashboard } from './DirectorDashboard';
 import { SalesRepDashboard } from './SalesRepDashboard';
@@ -30,6 +30,7 @@ import { formatCurrency } from '../../utils/formatters';
 
 export function DashboardPage() {
   const { currentUser, role } = useAuth();
+  const navigate = useNavigate();
 
   if (role === 'DIRECTOR' || role === 'MANAGER') {
     return <DirectorDashboard />;
@@ -193,6 +194,48 @@ export function DashboardPage() {
                 </div>
               </div>
               <ArrowRight className="h-4 w-4 text-slate-400 group-hover:text-amber-600 transition-colors" />
+            </Link>
+          </div>
+        </div>
+      )}
+
+      {/* Showroom & Cashier Quick Actions */}
+      {(role === 'SHOWROOM_MANAGER' || role === 'CASHIER') && (
+        <div className="space-y-3">
+          <h2 className="text-sm font-bold text-slate-800 uppercase tracking-wide">
+            POS Operational Workspaces
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <Link
+              to="/pos"
+              className="flex items-center justify-between p-3.5 rounded-xl border border-slate-200 bg-white hover:border-primary hover:shadow-xs transition-all group"
+            >
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-lg bg-primary-light text-primary group-hover:bg-primary group-hover:text-white transition-colors">
+                  <Store className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-xs text-slate-900">Showroom POS Hub</h3>
+                  <p className="text-[11px] text-slate-500">Terminal sessions & sales</p>
+                </div>
+              </div>
+              <ArrowRight className="h-4 w-4 text-slate-400 group-hover:text-primary transition-colors" />
+            </Link>
+
+            <Link
+              to="/pos/terminal"
+              className="flex items-center justify-between p-3.5 rounded-xl border border-slate-200 bg-white hover:border-primary hover:shadow-xs transition-all group"
+            >
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-lg bg-emerald-50 text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white transition-colors">
+                  <Monitor className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-xs text-slate-900">POS Register Terminal</h3>
+                  <p className="text-[11px] text-slate-500">Counter checkout screen</p>
+                </div>
+              </div>
+              <ArrowRight className="h-4 w-4 text-slate-400 group-hover:text-emerald-600 transition-colors" />
             </Link>
           </div>
         </div>

@@ -142,7 +142,6 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'view:finance_dashboard',
     'customers:view',
     'invoices:view',
-    'invoices:create',
     'payments:view',
     'payments:create',
     'payments:approve',

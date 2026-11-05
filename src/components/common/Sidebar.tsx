@@ -20,6 +20,7 @@ import {
   X,
   Star,
   BookOpen,
+  FolderTree,
   FileSpreadsheet,
   Receipt,
   ShoppingCart,
@@ -185,15 +186,6 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   ];
 
   const directorFinanceItems: SidebarItem[] = [
-    { id: 'accounts', name: 'Chart of Accounts', path: '/finance/accounts', icon: BookOpen, category: 'finance' },
-    { id: 'income-desk', name: 'Income & Collections', path: '/finance/income', icon: Banknote, category: 'finance' },
-    { id: 'expense-desk', name: 'Expense & Payables', path: '/finance/expense', icon: CreditCard, category: 'finance' },
-    { id: 'ap-bills', name: 'Vendor Bill Costing (AP)', path: '/finance/ap/bills/new', icon: Receipt, category: 'finance' },
-    { id: 'commercial-notes', name: 'Credit & Debit Notes', path: '/finance/notes', icon: RotateCcw, category: 'finance' },
-    { id: 'journal', name: 'Journal Entry Voucher', path: '/finance/journal/new', icon: Zap, category: 'finance' },
-    { id: 'ar-pdc', name: 'PDC Vault (1018)', path: '/finance/ar/pdc-vault', icon: Clock, category: 'finance' },
-    { id: 'reconciliation', name: 'Bank Reconciliation', path: '/finance/reconciliation', icon: Landmark, category: 'finance' },
-    { id: 'closing', name: 'Period Closing Lock', path: '/finance/settings/closing', icon: Lock, category: 'finance' },
     { id: 'reports-hub', name: 'Financial Reports Hub', path: '/finance/reports', icon: BarChart3, category: 'finance' },
   ];
 
@@ -316,15 +308,16 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
 
   // 4. Finance, Banking & Ledger Core (arranged in logical lifecycle order)
   const financeItems: SidebarItem[] = [
-    { id: 'accounts', name: 'Chart of Accounts', path: '/finance/accounts', icon: BookOpen, category: 'finance' },
-    { id: 'income-desk', name: 'Income & Collections', path: '/finance/income', icon: Banknote, category: 'finance' },
-    { id: 'expense-desk', name: 'Expense & Payables', path: '/finance/expense', icon: CreditCard, category: 'finance' },
-    { id: 'ap-bills', name: 'Vendor Bill Costing (AP)', path: '/finance/ap/bills/new', icon: Receipt, category: 'finance' },
-    { id: 'commercial-notes', name: 'Credit & Debit Notes', path: '/finance/notes', icon: RotateCcw, category: 'finance' },
-    { id: 'journal', name: 'Journal Entry Voucher', path: '/finance/journal/new', icon: Zap, category: 'finance' },
-    { id: 'ar-pdc', name: 'PDC Vault (1018)', path: '/finance/ar/pdc-vault', icon: Clock, category: 'finance' },
-    { id: 'reconciliation', name: 'Bank Reconciliation', path: '/finance/reconciliation', icon: Landmark, category: 'finance' },
-    { id: 'closing', name: 'Period Closing Lock', path: '/finance/settings/closing', icon: Lock, category: 'finance' },
+    { id: 'accounts', name: 'Chart of Accounts', path: '/finance/accounts', icon: BookOpen, category: 'finance', excludedRoles: ['MANAGER', 'DIRECTOR'] },
+    { id: 'categories', name: 'Categories Registry', path: '/finance/categories', icon: FolderTree, category: 'finance', excludedRoles: ['MANAGER', 'DIRECTOR'] },
+    { id: 'income-desk', name: 'Income & Collections', path: '/finance/income', icon: Banknote, category: 'finance', excludedRoles: ['MANAGER', 'DIRECTOR'] },
+    { id: 'expense-desk', name: 'Expense & Payables', path: '/finance/expense', icon: CreditCard, category: 'finance', excludedRoles: ['MANAGER', 'DIRECTOR'] },
+    { id: 'ap-bills', name: 'Vendor Bill Costing (AP)', path: '/finance/ap/bills/new', icon: Receipt, category: 'finance', excludedRoles: ['MANAGER', 'DIRECTOR'] },
+    { id: 'commercial-notes', name: 'Credit & Debit Notes', path: '/finance/notes', icon: RotateCcw, category: 'finance', excludedRoles: ['MANAGER', 'DIRECTOR'] },
+    { id: 'journal', name: 'Journal Entry Voucher', path: '/finance/journal/new', icon: Zap, category: 'finance', excludedRoles: ['MANAGER', 'DIRECTOR'] },
+    { id: 'ar-pdc', name: 'PDC Vault (1018)', path: '/finance/ar/pdc-vault', icon: Clock, category: 'finance', excludedRoles: ['MANAGER', 'DIRECTOR'] },
+    { id: 'reconciliation', name: 'Bank Reconciliation', path: '/finance/reconciliation', icon: Landmark, category: 'finance', excludedRoles: ['MANAGER', 'DIRECTOR'] },
+    { id: 'closing', name: 'Period Closing Lock', path: '/finance/settings/closing', icon: Lock, category: 'finance', excludedRoles: ['MANAGER', 'DIRECTOR'] },
     { id: 'reports-hub', name: 'Financial Reports Hub', path: '/finance/reports', icon: BarChart3, category: 'finance' },
   ];
 
