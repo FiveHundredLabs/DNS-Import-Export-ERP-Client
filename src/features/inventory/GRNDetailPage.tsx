@@ -402,7 +402,7 @@ export function GRNDetailPage({ backUrl, backTitle }: GRNDetailPageProps = {}) {
       return;
     }
     try {
-      await grnService.rejectGRN(id, user.id, comment);
+      await grnService.rejectGRN(id, comment, user.id, user.name || 'Finance Officer', user.role);
       toast.error('GRN rejected and returned for inspection resolution.');
       fetchGRN();
     } catch (err: any) {
@@ -621,7 +621,7 @@ export function GRNDetailPage({ backUrl, backTitle }: GRNDetailPageProps = {}) {
                   className="gap-1.5 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs"
                 >
                   <CheckCircle2 className="h-3.5 w-3.5" />
-                  Approve GRN
+                  Approve &amp; Forward to Finance
                 </ConfirmButton>
                 <ConfirmButton
                   variant="outline"
@@ -661,7 +661,7 @@ export function GRNDetailPage({ backUrl, backTitle }: GRNDetailPageProps = {}) {
                   className="gap-1.5 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs"
                 >
                   <CheckCircle2 className="h-3.5 w-3.5" />
-                  Approve GRN
+                  Finance Approval &amp; Post to Inventory
                 </ConfirmButton>
                 <ConfirmButton
                   variant="outline"

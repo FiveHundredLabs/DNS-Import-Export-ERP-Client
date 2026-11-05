@@ -163,7 +163,7 @@ export const GRNStockManagerVerificationPanel: React.FC<GRNStockManagerVerificat
             </div>
             <div>
               <CardTitle className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                <span>Warehouse Goods Receipt (Stock Manager Verification)</span>
+                <span>Goods Receipt Verification (Stock Manager)</span>
                 {isPendingApproval && (
                   <Badge className="bg-amber-100 text-amber-800 text-[10px] font-semibold border-amber-300">
                     AWAITING VERIFICATION
@@ -217,10 +217,10 @@ export const GRNStockManagerVerificationPanel: React.FC<GRNStockManagerVerificat
             </div>
             <div>
               <span className="text-slate-400 block text-[10px] font-semibold uppercase">
-                Received Warehouse
+                Intake Method
               </span>
               <span className="font-semibold text-slate-800">
-                {grn.warehouseId || 'WH-MAIN'}
+                Standard Receiving
               </span>
             </div>
             <div>

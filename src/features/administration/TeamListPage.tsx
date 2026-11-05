@@ -27,8 +27,8 @@ export function TeamListPage() {
   const filteredTeamUsers = useMemo(() => {
     return teamUsers.filter(u => {
       const matchesArea = selectedAreaFilter === 'ALL' || u.areaId === selectedAreaFilter;
-      const matchesSearch = !search.trim() || 
-        u.name.toLowerCase().includes(search.toLowerCase()) || 
+      const matchesSearch = !search.trim() ||
+        u.name.toLowerCase().includes(search.toLowerCase()) ||
         u.email.toLowerCase().includes(search.toLowerCase()) ||
         (u.areaName && u.areaName.toLowerCase().includes(search.toLowerCase()));
       return matchesArea && matchesSearch;

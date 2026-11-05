@@ -303,7 +303,6 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     { id: 'delivery-notes', name: 'Delivery Notes', path: '/inventory/delivery-notes', icon: Truck, category: 'inventory' },
     { id: 'products', name: 'Product Master', path: '/products', icon: Package, category: 'inventory', excludedRoles: ['STOCK_KEEPER'] },
     { id: 'damaged-stock', name: 'Damaged Stock & RMA', path: '/inventory/damaged-stock', icon: ShieldAlert, category: 'inventory' },
-    { id: 'inventory-pos', name: 'Showroom POS', path: '/pos', icon: Store, category: 'inventory', allowedRoles: ['STOCK_KEEPER', 'STOCK_MANAGER'] },
   ];
 
   // 4. Finance, Banking & Ledger Core (arranged in logical lifecycle order)
@@ -325,7 +324,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const adminItems: SidebarItem[] = [
     { id: 'teams', name: 'Team Management', path: '/teams', icon: Users, category: 'admin' },
     { id: 'areas', name: 'Area Management', path: '/areas', icon: Compass, category: 'admin' },
-    { id: 'reports', name: 'Enterprise Reports', path: '/reports', icon: BarChart3, category: 'reports', excludedRoles: ['DIRECTOR', 'MANAGER', 'FINANCE_MANAGER', 'SALES_MANAGER', 'AREA_MANAGER'] },
+    { id: 'reports', name: 'Enterprise Reports', path: '/reports', icon: BarChart3, category: 'reports', excludedRoles: ['DIRECTOR', 'MANAGER', 'FINANCE_MANAGER', 'SALES_MANAGER', 'AREA_MANAGER', 'STOCK_MANAGER', 'STOCK_KEEPER'] },
     { id: 'credit-terms-settings', name: 'Default Credit Terms', path: '/?tab=settings&section=credit-terms', icon: CreditCard, category: 'admin', allowedRoles: ['DIRECTOR', 'MANAGER'] },
     { id: 'commissions-config', name: 'Commission Configuration', path: '/commissions', icon: Award, category: 'admin', allowedRoles: ['DIRECTOR', 'MANAGER'] },
     { id: 'tax-settings', name: 'Global Tax Configuration', path: '/?tab=settings&section=tax', icon: Percent, category: 'admin', directorOnly: true },
@@ -377,7 +376,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       if (item.category === 'purchasing' && !canAccessRoute('/purchasing') && !canAccessRoute('/purchasing/orders')) {
         return false;
       }
-      if (item.category === 'inventory' && !canAccessRoute('/inventory') && item.path !== '/pos') {
+      if (item.category === 'inventory' && !canAccessRoute('/inventory')) {
         return false;
       }
       return canAccessRoute(item.path.split('?')[0]);

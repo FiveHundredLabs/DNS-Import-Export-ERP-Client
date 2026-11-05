@@ -116,7 +116,9 @@ export function ProductDetailPage() {
             <History className="h-3.5 w-3.5" />
             <span>Price History ({priceHistory.length})</span>
           </TabsTrigger>
-          <TabsTrigger value="inventory">Location Stock</TabsTrigger>
+          {role !== 'STOCK_MANAGER' && (
+            <TabsTrigger value="inventory">Location Stock</TabsTrigger>
+          )}
           <TabsTrigger value="warranty">Warranty Terms</TabsTrigger>
         </TabsList>
 
@@ -478,31 +480,33 @@ export function ProductDetailPage() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="inventory">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm">Warehouse Locations</CardTitle>
-            </CardHeader>
-            <CardContent className="text-xs">
-              <div className="space-y-2">
-                <div className="flex justify-between items-center p-2.5 bg-slate-50 rounded border border-slate-100">
-                  <div>
-                    <div className="font-semibold text-slate-900">Main Central Warehouse (Colombo)</div>
-                    <div className="text-xs text-slate-500">Rack B-14, Bay 02</div>
+        {role !== 'STOCK_MANAGER' && (
+          <TabsContent value="inventory">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm">Warehouse Locations</CardTitle>
+              </CardHeader>
+              <CardContent className="text-xs">
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center p-2.5 bg-slate-50 rounded border border-slate-100">
+                    <div>
+                      <div className="font-semibold text-slate-900">Main Central Warehouse (Colombo)</div>
+                      <div className="text-xs text-slate-500">Rack B-14, Bay 02</div>
+                    </div>
+                    <span className="font-semibold tabular-nums text-slate-900">{Math.floor(product.stockOnHand * 0.8)} {product.uomCode}</span>
                   </div>
-                  <span className="font-semibold tabular-nums text-slate-900">{Math.floor(product.stockOnHand * 0.8)} {product.uomCode}</span>
-                </div>
-                <div className="flex justify-between items-center p-2.5 bg-slate-50 rounded border border-slate-100">
-                  <div>
-                    <div className="font-semibold text-slate-900">Kotte Brand Showroom & Store</div>
-                    <div className="text-xs text-slate-500">Showroom POS Inventory</div>
+                  <div className="flex justify-between items-center p-2.5 bg-slate-50 rounded border border-slate-100">
+                    <div>
+                      <div className="font-semibold text-slate-900">Kotte Brand Showroom & Store</div>
+                      <div className="text-xs text-slate-500">Showroom POS Inventory</div>
+                    </div>
+                    <span className="font-semibold tabular-nums text-slate-900">{Math.ceil(product.stockOnHand * 0.2)} {product.uomCode}</span>
                   </div>
-                  <span className="font-semibold tabular-nums text-slate-900">{Math.ceil(product.stockOnHand * 0.2)} {product.uomCode}</span>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
 
         <TabsContent value="warranty">
           <Card>

@@ -43,7 +43,7 @@ export function PerformanceDashboardPage() {
     const [yearStr, monthStr] = selectedMonth.split('-');
     const date = new Date(parseInt(yearStr, 10), parseInt(monthStr, 10) - 1 + offset, 1);
     const newMonthStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-    
+
     // Disallow future months
     if (newMonthStr > currentMonthStr) {
       return;

@@ -11,6 +11,7 @@ import { BarcodeVisual } from '../../components/common/BarcodeVisual';
 import { BarcodeSticker } from '../../components/common/BarcodeSticker';
 import { printerService } from '../../services/PrinterService';
 import { UnitBarcodeModal } from '../../components/inventory/UnitBarcodeModal';
+import { ConfirmDialog } from '../../components/ui/confirm-button';
 import { PrintableGRN } from './PrintableGRN';
 import { PaginationControls } from '../../components/common/PaginationControls';
 import { useGRN } from '../../hooks/useGRN';
@@ -117,6 +118,7 @@ export function GRNCreateEditPage() {
   // Line items
   const [items, setItems] = useState<LineItem[]>([]);
   const [submitting, setSubmitting] = useState<boolean>(false);
+  const [submitConfirmOpen, setSubmitConfirmOpen] = useState<boolean>(false);
 
   // Manual intake: One-by-one product + quantity selection state
   const [manualProductId, setManualProductId] = useState<string>('');
@@ -1077,6 +1079,11 @@ export function GRNCreateEditPage() {
       }
     }
 
+    if (status === 'SUBMITTED') {
+      setSubmitConfirmOpen(true);
+      return;
+    }
+
     await executeSave(status);
   };
 
@@ -1085,7 +1092,7 @@ export function GRNCreateEditPage() {
     setItems(updated);
     setUnlabeledPromptOpen(false);
     toast.success('Confirmed all physical unit barcode stickers affixed in receiving bay.');
-    await executeSave('SUBMITTED', updated);
+    setSubmitConfirmOpen(true);
   };
 
   // Stepper definition metadata (5-step workflow)
@@ -2830,6 +2837,22 @@ export function GRNCreateEditPage() {
           onOpenChange={setIsPrintPreviewOpen}
         />
       )}
+
+      {/* ── Confirmation Popup Modal for Submitting GRN ── */}
+      <ConfirmDialog
+        open={submitConfirmOpen}
+        onOpenChange={setSubmitConfirmOpen}
+        dialogVariant="success"
+        confirmTitle={isStockKeeper ? "Submit GRN for Stock Manager Approval" : "Submit GRN for Finance Approval"}
+        confirmMessage={
+          isStockKeeper
+            ? "You are about to submit this Goods Received Note for Stock Manager verification. The Stock Manager will inspect physical quantities, barcodes, and serial numbers before passing to Finance."
+            : "You are about to submit this Goods Received Note directly to Finance for landed costing and ledger posting."
+        }
+        confirmText="Yes, Submit for Approval"
+        cancelText="Cancel"
+        onConfirm={() => executeSave('SUBMITTED')}
+      />
     </div>
   );
 }

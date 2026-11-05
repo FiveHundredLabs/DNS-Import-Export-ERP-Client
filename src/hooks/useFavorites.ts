@@ -6,7 +6,7 @@ const DEFAULT_ROLE_FAVORITES: Record<string, string[]> = {
   SALES_REP: ['quotations', 'orders', 'customers', 'warranty'],
   SALES_MANAGER: ['orders', 'quotations', 'customers', 'approvals', 'sales-reports'],
   AREA_MANAGER: ['orders', 'quotations', 'customers', 'approvals'],
-  STOCK_KEEPER: ['inventory', 'grn', 'delivery-notes', 'pos', 'inventory-pos', 'damaged-stock', 'products'],
+  STOCK_KEEPER: ['inventory', 'grn', 'delivery-notes', 'damaged-stock', 'products'],
   STOCK_MANAGER: ['inventory', 'grn', 'delivery-notes', 'damaged-stock', 'products', 'approvals'],
   CASHIER: ['pos'],
   SHOWROOM_MANAGER: ['pos', 'products'],

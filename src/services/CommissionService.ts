@@ -286,7 +286,7 @@ export class CommissionService {
       const charCode = salesRepId.charCodeAt(salesRepId.length - 1) || 65;
       const monthNum = parseInt(selectedMonth.replace('-', ''), 10) || 202610;
       const seedBase = (charCode + (monthNum % 19)) % 100;
-      
+
       // Each rep gets their own distinct portfolio profile
       const repSeed = Math.abs((charCode * 11 + salesRepId.length * 7) % 4);
       const repProfiles = [

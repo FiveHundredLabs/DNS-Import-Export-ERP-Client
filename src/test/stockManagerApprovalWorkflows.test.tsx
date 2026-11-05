@@ -218,7 +218,7 @@ describe('Stock Manager Workflow-Specific Approval System', () => {
       );
 
       // Verify UI reference panel elements
-      expect(screen.getByText('Warehouse Goods Receipt (Stock Manager Verification)')).toBeInTheDocument();
+      expect(screen.getByText('Goods Receipt Verification (Stock Manager)')).toBeInTheDocument();
       expect(screen.getByText('AWAITING VERIFICATION')).toBeInTheDocument();
       expect(screen.getByText('Schneider Electric Lanka (Pvt) Ltd')).toBeInTheDocument();
       expect(screen.getByText('Damaged Units')).toBeInTheDocument();
@@ -542,7 +542,7 @@ describe('Stock Manager Workflow-Specific Approval System', () => {
       // Verify dedicated Stock Manager Hub is rendered instead of generic Approvals Engine
       await waitFor(() => {
         expect(screen.getByText('Stock Manager Verification & Approvals Hub')).toBeInTheDocument();
-        expect(screen.getByText('Warehouse Approval Engine • Stock Manager')).toBeInTheDocument();
+        expect(screen.getByText('Stock Approvals & Verification Hub • Stock Manager')).toBeInTheDocument();
       });
 
       // Verify tabs
