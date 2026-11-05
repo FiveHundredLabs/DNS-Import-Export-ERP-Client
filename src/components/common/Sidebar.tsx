@@ -315,7 +315,6 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     { id: 'delivery-notes', name: 'Delivery Notes', path: '/inventory/delivery-notes', icon: Truck, category: 'inventory' },
     { id: 'products', name: 'Product Master', path: '/products', icon: Package, category: 'inventory', excludedRoles: ['STOCK_KEEPER'] },
     { id: 'damaged-stock', name: 'Damaged Stock & RMA', path: '/inventory/damaged-stock', icon: ShieldAlert, category: 'inventory' },
-    { id: 'inventory-pos', name: 'Showroom POS', path: '/pos', icon: Store, category: 'inventory', allowedRoles: ['STOCK_KEEPER', 'STOCK_MANAGER'] },
   ];
 
   // 4. Finance, Banking & Ledger Core (arranged in logical lifecycle order)
@@ -409,7 +408,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       if (item.category === 'purchasing' && !canAccessRoute('/purchasing') && !canAccessRoute('/purchasing/orders')) {
         return false;
       }
-      if (item.category === 'inventory' && !canAccessRoute('/inventory') && item.path !== '/pos') {
+      if (item.category === 'inventory' && !canAccessRoute('/inventory')) {
         return false;
       }
       return canAccessRoute(item.path.split('?')[0]);

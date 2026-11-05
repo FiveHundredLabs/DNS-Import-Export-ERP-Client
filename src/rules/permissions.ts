@@ -190,7 +190,6 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'inventory:grn_create',
     'inventory:pick_issue',
     'inventory:damaged_recover',
-    'pos:operate',
   ],
   STOCK_MANAGER: [
     'view:stock_keeper_dashboard',
@@ -201,7 +200,6 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'inventory:grn_approve',
     'inventory:pick_issue',
     'inventory:damaged_recover',
-    'pos:operate',
   ],
   CASHIER: [
     'view:cashier_dashboard',

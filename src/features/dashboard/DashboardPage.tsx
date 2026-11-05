@@ -130,23 +130,7 @@ export function DashboardPage() {
           <h2 className="text-sm font-bold text-slate-800 uppercase tracking-wide">
             Operational Workspaces
           </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-            <Link
-              to="/pos"
-              className="flex items-center justify-between p-3.5 rounded-xl border border-slate-200 bg-white hover:border-primary hover:shadow-xs transition-all group"
-            >
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-lg bg-primary-light text-primary group-hover:bg-primary group-hover:text-white transition-colors">
-                  <Store className="h-5 w-5" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-xs text-slate-900">Showroom POS Terminal</h3>
-                  <p className="text-[11px] text-slate-500">Retail counter checkout</p>
-                </div>
-              </div>
-              <ArrowRight className="h-4 w-4 text-slate-400 group-hover:text-primary transition-colors" />
-            </Link>
-
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             <Link
               to="/inventory"
               className="flex items-center justify-between p-3.5 rounded-xl border border-slate-200 bg-white hover:border-primary hover:shadow-xs transition-all group"

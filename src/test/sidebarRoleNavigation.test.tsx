@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
+import { DashboardPage } from '../features/dashboard/DashboardPage';
 import { MemoryRouter } from 'react-router-dom';
 import { Sidebar } from '../components/common/Sidebar';
 import { ProtectedRoute } from '../components/common/ProtectedRoute';
@@ -200,6 +201,112 @@ describe('Role-Based Sidebar Navigation & Access Control', () => {
       expect(canAccessRoute('MANAGER', '/inventory/delivery-notes')).toBe(true);
       expect(canAccessRoute('MANAGER', '/inventory/delivery-notes/new')).toBe(true);
       expect(canAccessRoute('MANAGER', '/payments')).toBe(true);
+    });
+  });
+
+  describe('3. Showroom POS Isolation from Stock Keeper and Stock Manager', () => {
+    it('STOCK_KEEPER does not see Showroom POS in sidebar nav and cannot access /pos (including searching & inventory tab)', () => {
+      expect(canAccessRoute('STOCK_KEEPER', '/pos')).toBe(false);
+
+      setupSidebarForRole('STOCK_KEEPER');
+      expect(screen.queryByText('Showroom POS')).not.toBeInTheDocument();
+
+      // In Dashboard search
+      const searchInput = screen.getByPlaceholderText('Search...');
+      fireEvent.change(searchInput, { target: { value: 'POS' } });
+      expect(screen.queryByText('Showroom POS')).not.toBeInTheDocument();
+
+      // In Inventory category
+      fireEvent.change(searchInput, { target: { value: '' } });
+      const inventoryTab = screen.getByRole('button', { name: /^Inventory & Products$/i });
+      fireEvent.click(inventoryTab);
+      expect(screen.queryByText('Showroom POS')).not.toBeInTheDocument();
+    });
+
+    it('STOCK_MANAGER does not see Showroom POS in sidebar nav and cannot access /pos (including searching & inventory tab)', () => {
+      expect(canAccessRoute('STOCK_MANAGER', '/pos')).toBe(false);
+
+      setupSidebarForRole('STOCK_MANAGER');
+      expect(screen.queryByText('Showroom POS')).not.toBeInTheDocument();
+
+      // In Dashboard search
+      const searchInput = screen.getByPlaceholderText('Search...');
+      fireEvent.change(searchInput, { target: { value: 'POS' } });
+      expect(screen.queryByText('Showroom POS')).not.toBeInTheDocument();
+
+      // In Inventory category
+      fireEvent.change(searchInput, { target: { value: '' } });
+      const inventoryTab = screen.getByRole('button', { name: /^Inventory & Products$/i });
+      fireEvent.click(inventoryTab);
+      expect(screen.queryByText('Showroom POS')).not.toBeInTheDocument();
+    });
+
+    it('CASHIER and SHOWROOM_MANAGER still see Showroom POS in sidebar nav and can access /pos', () => {
+      expect(canAccessRoute('CASHIER', '/pos')).toBe(true);
+      expect(canAccessRoute('SHOWROOM_MANAGER', '/pos')).toBe(true);
+
+      const { unmount } = setupSidebarForRole('CASHIER');
+      expect(screen.getByText('Showroom POS')).toBeInTheDocument();
+      unmount();
+
+      setupSidebarForRole('SHOWROOM_MANAGER');
+      expect(screen.getByText('Showroom POS')).toBeInTheDocument();
+    });
+
+    it('DIRECTOR and MANAGER still see Showroom POS in sidebar nav and can access /pos', () => {
+      expect(canAccessRoute('DIRECTOR', '/pos')).toBe(true);
+      expect(canAccessRoute('MANAGER', '/pos')).toBe(true);
+
+      const { unmount } = setupSidebarForRole('DIRECTOR');
+      const salesButton = screen.getByRole('button', { name: /^Sales & Orders$/i });
+      fireEvent.click(salesButton);
+      expect(screen.getByText('Showroom POS')).toBeInTheDocument();
+      unmount();
+
+      const { unmount: unmountManager } = setupSidebarForRole('MANAGER');
+      const managerSalesButton = screen.getByRole('button', { name: /^Sales & Orders$/i });
+      fireEvent.click(managerSalesButton);
+      expect(screen.getByText('Showroom POS')).toBeInTheDocument();
+      unmountManager();
+    });
+
+    it('Dashboard Operational Workspaces hides Showroom POS Terminal for STOCK_KEEPER and STOCK_MANAGER', () => {
+      mockUseAuth.mockReturnValue({
+        role: 'STOCK_KEEPER',
+        currentUser: { id: 'usr-107', name: 'Kamal Stock Keeper', role: 'STOCK_KEEPER' },
+        canAccessRoute: (path: string) => canAccessRoute('STOCK_KEEPER', path),
+        isAuthenticated: true,
+      });
+
+      const { unmount } = render(
+        <MemoryRouter initialEntries={['/']}>
+          <DashboardPage />
+        </MemoryRouter>
+      );
+
+      expect(screen.queryByText('Showroom POS Terminal')).not.toBeInTheDocument();
+      expect(screen.getByText('Inventory Hub')).toBeInTheDocument();
+      expect(screen.getByText('Goods Received Notes')).toBeInTheDocument();
+      expect(screen.getByText('Delivery Notes')).toBeInTheDocument();
+      unmount();
+
+      mockUseAuth.mockReturnValue({
+        role: 'STOCK_MANAGER',
+        currentUser: { id: 'usr-115', name: 'Bandara Stock Manager', role: 'STOCK_MANAGER' },
+        canAccessRoute: (path: string) => canAccessRoute('STOCK_MANAGER', path),
+        isAuthenticated: true,
+      });
+
+      render(
+        <MemoryRouter initialEntries={['/']}>
+          <DashboardPage />
+        </MemoryRouter>
+      );
+
+      expect(screen.queryByText('Showroom POS Terminal')).not.toBeInTheDocument();
+      expect(screen.getByText('Inventory Hub')).toBeInTheDocument();
+      expect(screen.getByText('Goods Received Notes')).toBeInTheDocument();
+      expect(screen.getByText('Delivery Notes')).toBeInTheDocument();
     });
   });
 });
