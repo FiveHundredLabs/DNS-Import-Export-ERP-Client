@@ -142,7 +142,6 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'view:finance_dashboard',
     'customers:view',
     'invoices:view',
-    'invoices:create',
     'payments:view',
     'payments:create',
     'payments:approve',
@@ -217,7 +216,6 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'view:purchasing_dashboard',
     'products:view',
     'purchasing:suppliers_view',
-    'purchasing:suppliers_manage',
     'purchasing:po_view',
     'purchasing:po_create',
     'purchasing:po_edit',
@@ -252,6 +250,11 @@ export function hasPermission(role: UserRole, permission: Permission): boolean {
 }
 
 export function canAccessRoute(role: UserRole, path: string): boolean {
+  // /my-performance is strictly exclusive to Sales Rep and Area Manager
+  if (path.startsWith('/my-performance')) {
+    return role === 'SALES_REP' || role === 'AREA_MANAGER';
+  }
+
   if (role === 'DIRECTOR') return true;
 
   if (
@@ -275,8 +278,7 @@ export function canAccessRoute(role: UserRole, path: string): boolean {
       role === 'SALES_MANAGER' ||
       role === 'FINANCE_MANAGER' ||
       role === 'STOCK_MANAGER' ||
-      role === 'PURCHASING_MANAGER' ||
-      role === 'PURCHASING_OFFICER'
+      role === 'PURCHASING_MANAGER'
     );
   }
   if (path.startsWith('/quotations')) {
@@ -313,6 +315,9 @@ export function canAccessRoute(role: UserRole, path: string): boolean {
   }
   if (path.startsWith('/warranty')) {
     return hasPermission(role, 'warranty:view');
+  }
+  if (path.startsWith('/my-performance')) {
+    return role === 'SALES_REP' || role === 'AREA_MANAGER';
   }
   if (path.startsWith('/commissions')) {
     return hasPermission(role, 'commissions:view');

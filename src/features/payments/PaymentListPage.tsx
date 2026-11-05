@@ -72,6 +72,7 @@ export function PaymentListPage() {
   const { role, currentUser } = useAuth();
 
   const isManager = ['SALES_MANAGER', 'AREA_MANAGER', 'MANAGER', 'DIRECTOR', 'FINANCE_MANAGER', 'ADMIN'].includes(role);
+  const isFinanceManager = role === 'FINANCE_MANAGER';
 
   const [viewMode, setViewMode] = useState<'REPS' | 'INVOICE_LEDGER' | 'HANDOVERS' | 'RECEIPTS' | 'CUSTOMERS'>(
     searchParams.get('tab') === 'handovers'
@@ -367,6 +368,19 @@ export function PaymentListPage() {
             </Button>
           )}
 
+          {isFinanceManager && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => navigate('/finance/income')}
+              className="text-xs gap-1.5 rounded-xl border-primary/30 text-primary hover:bg-primary/10 font-semibold"
+              title="Open Unified Income & Collections Desk"
+            >
+              <Banknote className="h-3.5 w-3.5" />
+              <span>Unified Income Desk</span>
+            </Button>
+          )}
+
           <Button
             variant="outline"
             size="sm"
@@ -382,113 +396,6 @@ export function PaymentListPage() {
           </Button>
         </div>
       </div>
-
-      {/* 4 Payments Dashboard KPI Cards (rendered on Receipts/Handovers view or for Sales Rep) */}
-      {(viewMode === 'RECEIPTS' || viewMode === 'HANDOVERS' || !isManager) && (
-        <>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
-            {/* 1. Today's Total Collections */}
-            <div className="rounded-2xl border border-slate-200/90 bg-white p-3.5 sm:p-4 shadow-xs hover:shadow-sm transition-all flex flex-col justify-between">
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-xs font-bold text-slate-700 truncate">
-                  Today's Collections
-                </span>
-                <div className="h-8 w-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
-                  <CreditCard className="h-4 w-4" />
-                </div>
-              </div>
-              <div className="mt-3 text-base sm:text-xl font-extrabold text-slate-900 tracking-tight font-mono truncate">
-                {formatCurrency(dailyMetrics.todayTotalCollected)}
-              </div>
-            </div>
-
-            {/* 2. Pending Handover */}
-            <div className="rounded-2xl border border-slate-200/90 bg-white p-3.5 sm:p-4 shadow-xs hover:shadow-sm transition-all flex flex-col justify-between">
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-xs font-bold text-slate-700 truncate">
-                  Pending Handover
-                </span>
-                <div className="h-8 w-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
-                  <Clock className="h-4 w-4" />
-                </div>
-              </div>
-              <div className="mt-3 text-base sm:text-xl font-extrabold text-amber-900 tracking-tight font-mono truncate">
-                {formatCurrency(dailyMetrics.pendingHandover)}
-              </div>
-              <div className="mt-1 flex items-center justify-between text-[10px] text-amber-700 font-semibold">
-                <span>Wallet / Cash in Hand</span>
-                {overdue24hList.length > 0 && (
-                  <span className="text-[9.5px] font-bold text-rose-700 bg-rose-50 px-1.5 py-0.2 rounded border border-rose-200">
-                    {overdue24hList.length} &gt;24h Overdue
-                  </span>
-                )}
-              </div>
-            </div>
-
-            {/* 3. Handed Over */}
-            <div className="rounded-2xl border border-slate-200/90 bg-white p-3.5 sm:p-4 shadow-xs hover:shadow-sm transition-all flex flex-col justify-between">
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-xs font-bold text-slate-700 truncate">
-                  Handed Over
-                </span>
-                <div className="h-8 w-8 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center shrink-0">
-                  <Send className="h-4 w-4" />
-                </div>
-              </div>
-              <div className="mt-3 text-base sm:text-xl font-extrabold text-slate-900 tracking-tight font-mono truncate">
-                {formatCurrency(dailyMetrics.handedOver)}
-              </div>
-            </div>
-
-            {/* 4. Approved by Finance */}
-            <div className="rounded-2xl border border-slate-200/90 bg-white p-3.5 sm:p-4 shadow-xs hover:shadow-sm transition-all flex flex-col justify-between">
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-xs font-bold text-slate-700 truncate">
-                  Approved by Finance
-                </span>
-                <div className="h-8 w-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
-                  <ShieldCheck className="h-4 w-4" />
-                </div>
-              </div>
-              <div className="mt-3 text-base sm:text-xl font-extrabold text-emerald-900 tracking-tight font-mono truncate">
-                {formatCurrency(dailyMetrics.approvedByFinance)}
-              </div>
-            </div>
-          </div>
-
-          {/* 24-Hour Handover Compliance Alert Banner */}
-          {overdue24hList.length > 0 && (
-            <div className="rounded-2xl border-2 border-rose-300 bg-rose-50/90 p-3.5 sm:p-4 text-rose-950 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
-              <div className="flex items-center gap-2.5">
-                <div className="h-9 w-9 rounded-xl bg-rose-200/80 text-rose-800 flex items-center justify-center shrink-0 font-bold">
-                  <AlertCircle className="h-5 w-5 text-rose-700" />
-                </div>
-                <div>
-                  <div className="text-xs sm:text-sm font-bold flex items-center gap-2">
-                    <span>Overdue Cash Handover Alert (&gt;24 Hours)</span>
-                    <span className="text-[10px] bg-rose-600 text-white px-2 py-0.5 rounded-full font-bold">
-                      {overdue24hList.length} Overdue
-                    </span>
-                  </div>
-                  <p className="text-[11px] sm:text-xs text-rose-800 mt-0.5">
-                    All customer cash payments must be physically handed over to a Finance Officer within 24 hours of collection. {overdue24hList.length} payment(s) exceed this limit.
-                  </p>
-                </div>
-              </div>
-              <Button
-                size="sm"
-                onClick={() => {
-                  setTargetHandoverPaymentId(undefined);
-                  setCashHandoverModalOpen(true);
-                }}
-                className="h-8 px-3.5 text-xs font-bold bg-rose-700 hover:bg-rose-800 text-white rounded-xl shadow-xs shrink-0 gap-1.5"
-              >
-                <Banknote className="h-3.5 w-3.5" /> Hand Over to Finance Now
-              </Button>
-            </div>
-          )}
-        </>
-      )}
 
       {/* View Switcher / Tab Navigation */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
@@ -623,6 +530,113 @@ export function PaymentListPage() {
           )}
         </div>
       </div>
+
+      {/* 4 Payments Dashboard KPI Cards (rendered on Receipts/Handovers view or for Sales Rep) */}
+      {(viewMode === 'RECEIPTS' || viewMode === 'HANDOVERS' || !isManager) && (
+        <>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
+            {/* 1. Today's Total Collections */}
+            <div className="rounded-2xl border border-slate-200/90 bg-white p-3.5 sm:p-4 shadow-xs hover:shadow-sm transition-all flex flex-col justify-between">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-bold text-slate-700 truncate">
+                  Today's Collections
+                </span>
+                <div className="h-8 w-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                  <CreditCard className="h-4 w-4" />
+                </div>
+              </div>
+              <div className="mt-3 text-base sm:text-xl font-extrabold text-slate-900 tracking-tight font-mono truncate">
+                {formatCurrency(dailyMetrics.todayTotalCollected)}
+              </div>
+            </div>
+
+            {/* 2. Pending Handover */}
+            <div className="rounded-2xl border border-slate-200/90 bg-white p-3.5 sm:p-4 shadow-xs hover:shadow-sm transition-all flex flex-col justify-between">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-bold text-slate-700 truncate">
+                  Pending Handover
+                </span>
+                <div className="h-8 w-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+                  <Clock className="h-4 w-4" />
+                </div>
+              </div>
+              <div className="mt-3 text-base sm:text-xl font-extrabold text-amber-900 tracking-tight font-mono truncate">
+                {formatCurrency(dailyMetrics.pendingHandover)}
+              </div>
+              <div className="mt-1 flex items-center justify-between text-[10px] text-amber-700 font-semibold">
+                <span>Wallet / Cash in Hand</span>
+                {overdue24hList.length > 0 && (
+                  <span className="text-[9.5px] font-bold text-rose-700 bg-rose-50 px-1.5 py-0.2 rounded border border-rose-200">
+                    {overdue24hList.length} &gt;24h Overdue
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* 3. Handed Over */}
+            <div className="rounded-2xl border border-slate-200/90 bg-white p-3.5 sm:p-4 shadow-xs hover:shadow-sm transition-all flex flex-col justify-between">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-bold text-slate-700 truncate">
+                  Handed Over
+                </span>
+                <div className="h-8 w-8 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center shrink-0">
+                  <Send className="h-4 w-4" />
+                </div>
+              </div>
+              <div className="mt-3 text-base sm:text-xl font-extrabold text-slate-900 tracking-tight font-mono truncate">
+                {formatCurrency(dailyMetrics.handedOver)}
+              </div>
+            </div>
+
+            {/* 4. Approved by Finance */}
+            <div className="rounded-2xl border border-slate-200/90 bg-white p-3.5 sm:p-4 shadow-xs hover:shadow-sm transition-all flex flex-col justify-between">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-bold text-slate-700 truncate">
+                  Approved by Finance
+                </span>
+                <div className="h-8 w-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                  <ShieldCheck className="h-4 w-4" />
+                </div>
+              </div>
+              <div className="mt-3 text-base sm:text-xl font-extrabold text-emerald-900 tracking-tight font-mono truncate">
+                {formatCurrency(dailyMetrics.approvedByFinance)}
+              </div>
+            </div>
+          </div>
+
+          {/* 24-Hour Handover Compliance Alert Banner */}
+          {overdue24hList.length > 0 && (
+            <div className="rounded-2xl border-2 border-rose-300 bg-rose-50/90 p-3.5 sm:p-4 text-rose-950 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+              <div className="flex items-center gap-2.5">
+                <div className="h-9 w-9 rounded-xl bg-rose-200/80 text-rose-800 flex items-center justify-center shrink-0 font-bold">
+                  <AlertCircle className="h-5 w-5 text-rose-700" />
+                </div>
+                <div>
+                  <div className="text-xs sm:text-sm font-bold flex items-center gap-2">
+                    <span>Overdue Cash Handover Alert (&gt;24 Hours)</span>
+                    <span className="text-[10px] bg-rose-600 text-white px-2 py-0.5 rounded-full font-bold">
+                      {overdue24hList.length} Overdue
+                    </span>
+                  </div>
+                  <p className="text-[11px] sm:text-xs text-rose-800 mt-0.5">
+                    All customer cash payments must be physically handed over to a Finance Officer within 24 hours of collection. {overdue24hList.length} payment(s) exceed this limit.
+                  </p>
+                </div>
+              </div>
+              <Button
+                size="sm"
+                onClick={() => {
+                  setTargetHandoverPaymentId(undefined);
+                  setCashHandoverModalOpen(true);
+                }}
+                className="h-8 px-3.5 text-xs font-bold bg-rose-700 hover:bg-rose-800 text-white rounded-xl shadow-xs shrink-0 gap-1.5"
+              >
+                <Banknote className="h-3.5 w-3.5" /> Hand Over to Finance Now
+              </Button>
+            </div>
+          )}
+        </>
+      )}
 
       {isManager && viewMode === 'REPS' ? (
         <SalesRepCashManagementView

@@ -851,6 +851,7 @@ export class MockFinanceRepository implements IFinanceRepository {
     };
 
     this.suppliers.push(newSupplier);
+    this.saveToStorage();
     return newSupplier;
   }
 
@@ -862,8 +863,18 @@ export class MockFinanceRepository implements IFinanceRepository {
     }
 
     const current = this.suppliers[index];
+    if (dto.code && dto.code.trim().toUpperCase() !== current.code) {
+      const codeExists = this.suppliers.find(
+        (s) => s.id !== id && s.code.toLowerCase() === dto.code!.trim().toLowerCase()
+      );
+      if (codeExists) {
+        throw new Error(`Supplier with code ${dto.code} already exists`);
+      }
+    }
+
     const updated: Supplier = {
       ...current,
+      code: dto.code ? dto.code.trim().toUpperCase() : current.code,
       name: dto.name?.trim() ?? current.name,
       contactPerson: dto.contactPerson?.trim() ?? current.contactPerson,
       email: dto.email?.trim() ?? current.email,
@@ -877,10 +888,12 @@ export class MockFinanceRepository implements IFinanceRepository {
       bankAccountNumber: dto.bankAccountNumber !== undefined ? dto.bankAccountNumber.trim() : current.bankAccountNumber,
       bankSwiftCode: dto.bankSwiftCode !== undefined ? dto.bankSwiftCode.trim() : current.bankSwiftCode,
       paymentTerms: dto.paymentTerms?.trim() ?? current.paymentTerms,
+      status: dto.status ?? current.status,
       updatedAt: new Date().toISOString(),
     };
 
     this.suppliers[index] = updated;
+    this.saveToStorage();
     return updated;
   }
 
@@ -891,6 +904,7 @@ export class MockFinanceRepository implements IFinanceRepository {
       throw new Error('Supplier not found');
     }
     this.suppliers.splice(index, 1);
+    this.saveToStorage();
   }
 
   // JOURNAL ENTRIES
@@ -1014,6 +1028,9 @@ export class MockFinanceRepository implements IFinanceRepository {
       totalCredit,
       createdBy: 'Finance Desk User',
       createdAt: new Date().toISOString(),
+      correctionOf: dto.correctionOf,
+      correctionReason: dto.correctionReason,
+      correctionType: dto.correctionType,
     };
 
     // Apply ledger mutations to accounts only if status is POSTED
@@ -1204,6 +1221,169 @@ export class MockFinanceRepository implements IFinanceRepository {
 
   async reverseJournalEntry(id: string, reason?: string): Promise<JournalEntry> {
     return this.voidJournalEntry(id, reason);
+  }
+
+  async correctAndReissueJournalEntry(id: string, reason: string): Promise<{ original: JournalEntry; replacement: JournalEntry }> {
+    await this.delay();
+    let original = this.journals.find((j) => j.id === id);
+    if (!original) {
+      throw new Error(`Journal entry ${id} not found`);
+    }
+
+    if (original.status === 'VOIDED') {
+      throw new Error(`Journal entry ${original.entryNumber} is already voided.`);
+    }
+
+    if (original.reference?.trim().toUpperCase() === 'SETUP-OB-INIT') {
+      throw new Error('Opening balance initiation voucher (SETUP-OB-INIT) is permanently locked and cannot be re-corrected or voided.');
+    }
+
+    // Determine replacement effective date: if original date is locked, roll to today
+    const isLocked = periodLockService.isDateLocked(original.date, 'FINANCE_MANAGER');
+    const today = new Date().toISOString().slice(0, 10);
+    const effectiveDate = isLocked ? today : original.date;
+
+    // Void the original entry (inverts account balances in GL)
+    const voidedOriginal = await this.voidJournalEntry(id, `Voided for re-correction: ${reason}`);
+
+    // Clone into a fresh draft replacement voucher
+    const replacementEntryNumber = `JE-${this.nextJournalSeq++}`;
+    const replacementLines = original.lines.map((l, index) => ({
+      id: `jel-${Date.now()}-${index}`,
+      accountId: l.accountId,
+      accountCode: l.accountCode,
+      accountName: l.accountName,
+      debit: l.debit,
+      credit: l.credit,
+      description: l.description,
+      customerId: l.customerId,
+      customerName: l.customerName,
+      supplierId: l.supplierId,
+      supplierName: l.supplierName,
+    }));
+
+    const replacement: JournalEntry = {
+      id: `je-${Date.now()}`,
+      entryNumber: replacementEntryNumber,
+      date: effectiveDate,
+      description: `Correction of ${original.entryNumber}: ${original.description}`,
+      reference: original.reference ? `Correction of ${original.entryNumber} (${original.reference})` : `Correction of ${original.entryNumber}`,
+      source: original.source || 'MANUAL',
+      status: 'DRAFT',
+      lines: replacementLines,
+      totalDebit: original.totalDebit,
+      totalCredit: original.totalCredit,
+      createdBy: 'Finance Desk User',
+      createdAt: new Date().toISOString(),
+      correctionOf: original.entryNumber,
+      correctionReason: reason,
+      correctionType: 'REISSUE',
+    };
+
+    voidedOriginal.correctedBy = replacement.entryNumber;
+    this.journals.unshift(replacement);
+    this.saveToStorage();
+
+    return { original: voidedOriginal, replacement };
+  }
+
+  async createReclassificationEntry(params: {
+    originalEntryId: string;
+    lineIndex: number;
+    targetAccountId: string;
+    amount?: number;
+    reason: string;
+    date?: string;
+  }): Promise<JournalEntry> {
+    await this.delay();
+    const original = this.journals.find((j) => j.id === params.originalEntryId);
+    if (!original) {
+      throw new Error(`Original journal entry ${params.originalEntryId} not found`);
+    }
+
+    if (params.lineIndex < 0 || params.lineIndex >= original.lines.length) {
+      throw new Error(`Invalid line item index ${params.lineIndex}`);
+    }
+
+    const sourceLine = original.lines[params.lineIndex];
+    const sourceAccount = this.accounts.find((a) => a.id === sourceLine.accountId);
+    const targetAccount = this.accounts.find((a) => a.id === params.targetAccountId);
+
+    if (!sourceAccount) throw new Error(`Source account not found`);
+    if (!targetAccount) throw new Error(`Target account not found`);
+    if (sourceAccount.id === targetAccount.id) {
+      throw new Error('Target account must be different from source account for reclassification.');
+    }
+
+    const lineVal = sourceLine.debit > 0 ? sourceLine.debit : sourceLine.credit;
+    const reclassAmount = params.amount && params.amount > 0 ? params.amount : lineVal;
+    if (reclassAmount <= 0) {
+      throw new Error('Reclassification amount must be greater than zero.');
+    }
+
+    const isDr = sourceLine.debit > 0;
+    const reclassLines: CreateJournalLineDTO[] = isDr
+      ? [
+          {
+            accountId: targetAccount.id,
+            debit: reclassAmount,
+            credit: 0,
+            description: `Reclassification to ${targetAccount.name}: ${params.reason}`,
+            customerId: sourceLine.customerId,
+            customerName: sourceLine.customerName,
+            supplierId: sourceLine.supplierId,
+            supplierName: sourceLine.supplierName,
+          },
+          {
+            accountId: sourceAccount.id,
+            debit: 0,
+            credit: reclassAmount,
+            description: `Reclassification from ${sourceAccount.name}: ${params.reason}`,
+            customerId: sourceLine.customerId,
+            customerName: sourceLine.customerName,
+            supplierId: sourceLine.supplierId,
+            supplierName: sourceLine.supplierName,
+          },
+        ]
+      : [
+          {
+            accountId: sourceAccount.id,
+            debit: reclassAmount,
+            credit: 0,
+            description: `Reclassification from ${sourceAccount.name}: ${params.reason}`,
+            customerId: sourceLine.customerId,
+            customerName: sourceLine.customerName,
+            supplierId: sourceLine.supplierId,
+            supplierName: sourceLine.supplierName,
+          },
+          {
+            accountId: targetAccount.id,
+            debit: 0,
+            credit: reclassAmount,
+            description: `Reclassification to ${targetAccount.name}: ${params.reason}`,
+            customerId: sourceLine.customerId,
+            customerName: sourceLine.customerName,
+            supplierId: sourceLine.supplierId,
+            supplierName: sourceLine.supplierName,
+          },
+        ];
+
+    const today = new Date().toISOString().slice(0, 10);
+    const dateToUse = params.date || today;
+
+    const aje = await this.createJournalEntry({
+      date: dateToUse,
+      description: `Reclassification AJE: ${sourceAccount.code} -> ${targetAccount.code} (${original.entryNumber})`,
+      reference: `Reclass of ${original.entryNumber} L#${params.lineIndex + 1}`,
+      source: 'MANUAL',
+      status: 'POSTED',
+      lines: reclassLines,
+      correctionOf: original.entryNumber,
+      correctionReason: params.reason,
+      correctionType: 'RECLASSIFICATION',
+    });
+
+    return aje;
   }
 
   // REPORTS

@@ -248,6 +248,17 @@ export function ThermalReceiptModal({
               </>
             )}
 
+            {/* Notes / Ledger reference if present */}
+            {payment.notes && (
+              <>
+                <div className="border-t border-dashed border-black my-2" />
+                <div className="text-[10.5px] text-black text-left">
+                  <span className="font-bold">Reference / Ledger:</span>{' '}
+                  <span className="text-neutral-800 break-words">{payment.notes}</span>
+                </div>
+              </>
+            )}
+
             {/* Remaining Ledger Balance Due */}
             {customerBalance !== undefined && (
               <>

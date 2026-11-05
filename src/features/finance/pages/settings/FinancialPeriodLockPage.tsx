@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { periodLockService } from '../../services/periodLockService';
 import { yearEndCloseService, YearEndClosePreview } from '../../services/yearEndCloseService';
 import { Button } from '../../../../components/ui/button';
@@ -17,9 +17,11 @@ import {
   AlertTriangle,
   RotateCcw,
   Sparkles,
-  ArrowRight,
   ShieldCheck,
-  UserCheck,
+  Ban,
+  Clock,
+  History,
+  Check,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -32,9 +34,30 @@ export function FinancialPeriodLockPage() {
     () => periodLockService.getConfig().adminLockDate || periodLockService.getConfig().lockDate || '2026-10-15'
   );
 
+  // Financial Year Lock state
+  const [fyLockEnabled, setFyLockEnabled] = useState<boolean>(
+    () => !!periodLockService.getConfig().financialYearLockEnabled
+  );
+  const [fyLockDate, setFyLockDate] = useState<string>(
+    () => periodLockService.getConfig().financialYearLockDate || '2025-12-31'
+  );
+  const [lockedYears, setLockedYears] = useState<number[]>(
+    () => periodLockService.getConfig().lockedFiscalYears || [2024]
+  );
+
+  // Monthly Period Quick Selector Helper state
+  const [selectedMonth, setSelectedMonth] = useState<number>(() => {
+    const cur = new Date();
+    return cur.getMonth() + 1; // 1-12
+  });
+  const [selectedYear, setSelectedYear] = useState<number>(() => {
+    return new Date().getFullYear();
+  });
+
   // Simulation state
   const [testDate, setTestDate] = useState<string>('2026-10-20');
   const [testRole, setTestRole] = useState<'CLERK' | 'FINANCE_MANAGER'>('CLERK');
+  const [testAction, setTestAction] = useState<'POST' | 'EDIT_VOID'>('EDIT_VOID');
   const [testResult, setTestResult] = useState<{ allowed: boolean; message: string } | null>(null);
 
   // Year-End Close Wizard state
@@ -49,14 +72,48 @@ export function FinancialPeriodLockPage() {
     setEnabled(cfg.enabled);
     if (cfg.standardLockDate) setStandardLockDate(cfg.standardLockDate);
     if (cfg.adminLockDate) setAdminLockDate(cfg.adminLockDate);
+    setFyLockEnabled(!!cfg.financialYearLockEnabled);
+    if (cfg.financialYearLockDate) setFyLockDate(cfg.financialYearLockDate);
+    if (cfg.lockedFiscalYears) setLockedYears(cfg.lockedFiscalYears);
   }, []);
+
+  // Quick Monthly Cut-off helpers
+  const handleSetEndOfLastMonth = () => {
+    const now = new Date();
+    // First day of current month minus 1 day = last day of previous month
+    const lastDayPrevMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+    const dateStr = lastDayPrevMonth.toISOString().slice(0, 10);
+    setStandardLockDate(dateStr);
+    // Set admin lock date to 15 days prior or same
+    const adminDate = new Date(now.getFullYear(), now.getMonth() - 1, 15);
+    setAdminLockDate(adminDate.toISOString().slice(0, 10));
+    toast.info(`Set monthly closing cut-off to ${formatDate(dateStr)}`);
+  };
+
+  const handleApplySelectedMonthEnd = () => {
+    // Last day of selectedMonth in selectedYear
+    const lastDay = new Date(selectedYear, selectedMonth, 0);
+    const dateStr = lastDay.toISOString().slice(0, 10);
+    setStandardLockDate(dateStr);
+    const midMonth = new Date(selectedYear, selectedMonth - 1, 15);
+    setAdminLockDate(midMonth.toISOString().slice(0, 10));
+    toast.info(`Configured period closing for ${selectedYear}-${String(selectedMonth).padStart(2, '0')}: Cut-off is ${dateStr}`);
+  };
 
   const handleSave = () => {
     periodLockService.setConfig(
       enabled,
       enabled ? standardLockDate : null,
-      enabled ? adminLockDate : null
+      enabled ? adminLockDate : null,
+      fyLockEnabled ? fyLockDate : null,
+      lockedYears
     );
+    periodLockService.setFinancialYearLock(
+      fyLockEnabled,
+      fyLockEnabled ? fyLockDate : null,
+      lockedYears
+    );
+
     toast.success(
       enabled
         ? `Dual period locks activated. Standard cut-off: ${formatDate(standardLockDate)} | Admin cut-off: ${formatDate(adminLockDate)}.`
@@ -64,13 +121,34 @@ export function FinancialPeriodLockPage() {
     );
   };
 
+  const handleToggleLockFiscalYear = (year: number) => {
+    if (lockedYears.includes(year)) {
+      periodLockService.unlockFiscalYear(year);
+      setLockedYears((prev) => prev.filter((y) => y !== year));
+      toast.success(`Fiscal Year ${year} has been unlocked for authorized adjustments.`);
+    } else {
+      periodLockService.lockFiscalYear(year, `${year}-12-31`);
+      setLockedYears((prev) => [...prev, year].sort());
+      setFyLockEnabled(true);
+      toast.success(`Fiscal Year ${year} has been permanently locked against edits, voids, and backdated postings.`);
+    }
+  };
+
   const handleRunSimulation = () => {
     try {
-      periodLockService.assertNotLocked(testDate, testRole === 'FINANCE_MANAGER' ? 'FINANCE_MANAGER' : undefined);
-      setTestResult({
-        allowed: true,
-        message: `Transaction date (${formatDate(testDate)}) is within an open financial period for role [${testRole}]. Posting is allowed.`,
-      });
+      if (testAction === 'EDIT_VOID') {
+        periodLockService.assertCanEditOrVoid(testDate, testRole === 'FINANCE_MANAGER' ? 'FINANCE_MANAGER' : undefined);
+        setTestResult({
+          allowed: true,
+          message: `Transaction date (${formatDate(testDate)}) is within an open financial period for role [${testRole}]. Editing and voiding are allowed.`,
+        });
+      } else {
+        periodLockService.assertNotLocked(testDate, testRole === 'FINANCE_MANAGER' ? 'FINANCE_MANAGER' : undefined);
+        setTestResult({
+          allowed: true,
+          message: `Transaction date (${formatDate(testDate)}) is within an open financial period for role [${testRole}]. Posting is allowed.`,
+        });
+      }
     } catch (err: unknown) {
       setTestResult({
         allowed: false,
@@ -106,10 +184,15 @@ export function FinancialPeriodLockPage() {
         lockPeriodAfterClose: true,
       });
 
+      // Update locked fiscal years state
+      const closedYear = result.preview.fiscalYear;
+      setLockedYears((prev) => Array.from(new Set([...prev, closedYear])).sort());
+      setFyLockEnabled(true);
+
       setCloseSuccessMessage(
-        `Year-End Close executed successfully! Voucher ${result.journalEntry.entryNumber} created with ${result.journalEntry.lines.length} lines. Net profit/loss swept into 3010 Retained Earnings.`
+        `Year-End Close executed successfully! Voucher ${result.journalEntry.entryNumber} created with ${result.journalEntry.lines.length} lines. Net profit/loss swept into 3010 Retained Earnings and FY ${closedYear} locked.`
       );
-      toast.success(`Fiscal year ${result.preview.fiscalYear} successfully closed!`);
+      toast.success(`Fiscal year ${result.preview.fiscalYear} successfully closed and locked!`);
       // Refresh preview to show updated zeroed balances
       const updatedPreview = await yearEndCloseService.previewClose(fiscalYearEnd);
       setClosingPreview(updatedPreview);
@@ -119,6 +202,21 @@ export function FinancialPeriodLockPage() {
       setExecutingClose(false);
     }
   };
+
+  const fiscalYearsList = useMemo(() => {
+    const currentYear = new Date().getFullYear();
+    const years = [currentYear - 2, currentYear - 1, currentYear, currentYear + 1];
+    return years.map((y) => {
+      const isLocked = lockedYears.includes(y);
+      const isCurrent = y === currentYear;
+      return {
+        year: y,
+        range: `01 Jan ${y} — 31 Dec ${y}`,
+        isLocked,
+        isCurrent,
+      };
+    });
+  }, [lockedYears]);
 
   return (
     <div className="space-y-6 w-full">
@@ -133,8 +231,8 @@ export function FinancialPeriodLockPage() {
               Period Closing Controls
             </Badge>
           </div>
-          <p className="text-sm text-slate-500 mt-1">
-            Enforce audit boundary protection by locking books as of specified cut-off dates to prevent retrospective modifications.
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Configure monthly financial period closing dates, audit-lock past transactions against edits and voids, and manage financial year locks.
           </p>
         </div>
 
@@ -147,7 +245,7 @@ export function FinancialPeriodLockPage() {
         </Button>
       </div>
 
-      {/* Main Lock Settings Card */}
+      {/* Main Lock Settings Card: Monthly Period Closing */}
       <Card className="p-6 border-slate-200 shadow-xs bg-white space-y-6">
         <div className="flex items-center justify-between border-b border-slate-100 pb-4">
           <div className="flex items-center gap-3">
@@ -164,7 +262,7 @@ export function FinancialPeriodLockPage() {
               </h2>
               <p className="text-xs text-slate-500">
                 {enabled
-                  ? `Active: Standard ops locked &le; ${formatDate(standardLockDate)} | Finance Managers locked &le; ${formatDate(adminLockDate)}`
+                  ? `Active: Standard ops locked \u2264 ${formatDate(standardLockDate)} | Finance Managers locked \u2264 ${formatDate(adminLockDate)}`
                   : 'Inactive: All past dates remain open for adjustments'}
               </p>
             </div>
@@ -184,13 +282,72 @@ export function FinancialPeriodLockPage() {
           </div>
         </div>
 
+        {/* Quick Month-End Cut-off Helper Toolbar */}
+        <div className="bg-slate-50/80 p-3.5 rounded-lg border border-slate-200 flex flex-wrap items-center justify-between gap-3 text-xs">
+          <div className="flex items-center gap-2 text-slate-700 font-semibold">
+            <Clock className="h-4 w-4 text-primary" />
+            <span>Monthly Period Closing Quick Presets:</span>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleSetEndOfLastMonth}
+              disabled={!enabled}
+              className="h-8 text-xs bg-white text-slate-700 hover:bg-slate-100"
+            >
+              End of Last Month
+            </Button>
+
+            <div className="flex items-center gap-1.5 border-l border-slate-300 pl-2">
+              <select
+                value={selectedMonth}
+                onChange={(e) => setSelectedMonth(Number(e.target.value))}
+                disabled={!enabled}
+                className="h-8 text-xs rounded border border-slate-300 bg-white px-2 text-slate-700"
+              >
+                {[
+                  'January', 'February', 'March', 'April', 'May', 'June',
+                  'July', 'August', 'September', 'October', 'November', 'December'
+                ].map((name, i) => (
+                  <option key={i + 1} value={i + 1}>{name}</option>
+                ))}
+              </select>
+
+              <select
+                value={selectedYear}
+                onChange={(e) => setSelectedYear(Number(e.target.value))}
+                disabled={!enabled}
+                className="h-8 text-xs rounded border border-slate-300 bg-white px-2 text-slate-700"
+              >
+                {[2024, 2025, 2026, 2027].map((y) => (
+                  <option key={y} value={y}>{y}</option>
+                ))}
+              </select>
+
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleApplySelectedMonthEnd}
+                disabled={!enabled}
+                className="h-8 text-xs bg-primary/10 text-primary hover:bg-primary/20 border-primary/30 font-medium"
+              >
+                Set Month Cut-Off
+              </Button>
+            </div>
+          </div>
+        </div>
+
         {/* Dual Lock Date Picker Inputs */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* 1. standardLockDate */}
           <div className="rounded-lg border border-slate-200 p-4 space-y-2 bg-slate-50/50">
             <div className="flex items-center justify-between">
               <label className="block text-xs font-bold text-slate-900">
-                Standard Lock Date (Operational Cut-Off) <span className="text-rose-500">*</span>
+                Standard Lock Date (Operational Cut-Off / Monthly Closing Date) <span className="text-rose-500">*</span>
               </label>
               <Badge variant="outline" className="text-[10px] bg-white">
                 Sales / Warehouse / AP Clerks
@@ -204,7 +361,7 @@ export function FinancialPeriodLockPage() {
               className="h-9 text-xs bg-white"
             />
             <p className="text-[11px] text-slate-500 leading-relaxed">
-              Blocks operational clerks (Sales Reps, POS Cashiers, Storekeepers, and AP clerks) from posting invoices or GRNs on or prior to {standardLockDate}.
+              Blocks operational clerks (Sales Reps, POS Cashiers, Storekeepers, and AP clerks) from posting invoices, GRNs, or voiding past entries on or prior to {standardLockDate}.
             </p>
           </div>
 
@@ -226,7 +383,18 @@ export function FinancialPeriodLockPage() {
               className="h-9 text-xs bg-white"
             />
             <p className="text-[11px] text-slate-500 leading-relaxed">
-              Allows Finance Managers extra days after month-end to post adjusting entries. Any attempt by anyone to post on or before {adminLockDate} is rejected.
+              Allows Finance Managers extra days after month-end to finalize accruals and audit journals. Any attempt by anyone to post, edit, or void on or before {adminLockDate} is rejected.
+            </p>
+          </div>
+        </div>
+
+        {/* Edit & Void Prohibited Notice */}
+        <div className="rounded-lg border border-rose-200 bg-rose-50/70 p-4 text-xs text-rose-950 flex items-start gap-3">
+          <Ban className="h-5 w-5 text-rose-600 shrink-0 mt-0.5" />
+          <div className="space-y-1">
+            <p className="font-bold text-rose-900">Past Transactions Editing & Voiding Restrictions</p>
+            <p className="text-rose-800 text-[11px] leading-relaxed">
+              Transactions dated on or prior to the closing date are <strong>strictly locked</strong>: users cannot edit line items, modify pricing, alter quantities, or void posted journal entries, vendor bills, receipts, or customer credit notes. All retrospective modifications must be recorded as adjusting counter-entries in the current open financial period.
             </p>
           </div>
         </div>
@@ -242,6 +410,156 @@ export function FinancialPeriodLockPage() {
         </div>
       </Card>
 
+      {/* FINANCIAL YEAR LOCKING CARD */}
+      <Card className="p-6 border-slate-200 shadow-xs bg-white space-y-6">
+        <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+          <div className="flex items-center gap-3">
+            <div className={`p-2.5 rounded-lg text-white ${fyLockEnabled ? 'bg-indigo-600' : 'bg-slate-400'}`}>
+              <ShieldCheck className="h-5 w-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-base font-bold text-slate-900">
+                  Financial Year Locking & Audit Sealing
+                </h2>
+                <Badge className="bg-indigo-50 text-indigo-700 border-indigo-200 text-[10px]">
+                  Annual Governance
+                </Badge>
+              </div>
+              <p className="text-xs text-slate-500">
+                Lock entire fiscal years to prevent all transactions, retrospective edits, adjustments, and voids across closed accounting years.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <label className="text-xs font-bold text-slate-700 cursor-pointer">
+              Enable Financial Year Locking
+            </label>
+            <input
+              type="checkbox"
+              checked={fyLockEnabled}
+              onChange={(e) => setFyLockEnabled(e.target.checked)}
+              className="h-5 w-5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+            />
+          </div>
+        </div>
+
+        {/* Fiscal Year Hard Cut-off Date */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="rounded-lg border border-slate-200 p-4 bg-slate-50/50 space-y-2">
+            <label className="block text-xs font-bold text-slate-900">
+              Fiscal Year Lock Cut-Off Date
+            </label>
+            <Input
+              type="date"
+              value={fyLockDate}
+              onChange={(e) => setFyLockDate(e.target.value)}
+              disabled={!fyLockEnabled}
+              className="h-9 text-xs bg-white"
+            />
+            <p className="text-[11px] text-slate-500">
+              Transactions on or before this annual date are frozen permanently for audit review.
+            </p>
+          </div>
+
+          <div className="rounded-lg border border-slate-200 p-4 bg-slate-50/50 flex flex-col justify-between">
+            <div>
+              <span className="text-xs font-bold text-slate-900">Currently Locked Fiscal Years</span>
+              <p className="text-[11px] text-slate-500 mt-1">
+                {lockedYears.length > 0
+                  ? `FY ${lockedYears.join(', FY ')} are completely sealed.`
+                  : 'No individual fiscal years explicitly sealed.'}
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-1.5 mt-2">
+              {lockedYears.map((yr) => (
+                <Badge key={yr} variant="outline" className="bg-white text-indigo-700 border-indigo-300 text-xs gap-1">
+                  <Lock className="h-3 w-3" /> FY {yr}
+                </Badge>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Fiscal Year Register Table */}
+        <div className="border border-slate-200 rounded-lg overflow-hidden">
+          <div className="bg-slate-100/80 px-4 py-2.5 flex justify-between items-center text-xs font-bold text-slate-700">
+            <span>Fiscal Year Lock Register</span>
+            <span className="text-[11px] text-slate-500 font-normal">Audit-grade annual protection</span>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-semibold">
+                <tr>
+                  <th className="px-4 py-2.5">Fiscal Year</th>
+                  <th className="px-4 py-2.5">Accounting Period</th>
+                  <th className="px-4 py-2.5">Lock Status</th>
+                  <th className="px-4 py-2.5">Audit Protection</th>
+                  <th className="px-4 py-2.5 text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 text-slate-700">
+                {fiscalYearsList.map((row) => (
+                  <tr key={row.year} className="hover:bg-slate-50/50">
+                    <td className="px-4 py-3 font-bold font-mono text-slate-900">FY {row.year}</td>
+                    <td className="px-4 py-3 text-slate-600">{row.range}</td>
+                    <td className="px-4 py-3">
+                      {row.isLocked ? (
+                        <Badge className="bg-rose-50 text-rose-700 border-rose-200 gap-1 text-[11px]">
+                          <Lock className="h-3 w-3" /> Locked & Sealed
+                        </Badge>
+                      ) : row.isCurrent ? (
+                        <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 gap-1 text-[11px]">
+                          <Check className="h-3 w-3" /> Current Active
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-slate-600 text-[11px]">
+                          Open
+                        </Badge>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-slate-500 text-[11px]">
+                      {row.isLocked
+                        ? 'Edits, voids, and backdating blocked'
+                        : 'Transactions and journals permitted'}
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      {row.isLocked ? (
+                        <ConfirmButton
+                          variant="outline"
+                          size="sm"
+                          confirmTitle={`Unlock Fiscal Year ${row.year}?`}
+                          confirmMessage={`Unlocking FY ${row.year} will allow authorized adjustments to be made to sealed accounts. Ensure all changes are properly audited.`}
+                          confirmText="Confirm Unlock"
+                          onConfirm={() => handleToggleLockFiscalYear(row.year)}
+                          className="h-7 text-[11px] text-amber-700 border-amber-300 hover:bg-amber-50"
+                        >
+                          <Unlock className="h-3 w-3 mr-1" /> Unlock FY
+                        </ConfirmButton>
+                      ) : (
+                        <ConfirmButton
+                          variant="outline"
+                          size="sm"
+                          confirmTitle={`Lock Fiscal Year ${row.year}?`}
+                          confirmMessage={`Locking FY ${row.year} will permanently block all creation, editing, and voiding of transactions dated in ${row.year}. Proceed?`}
+                          confirmText="Lock Financial Year"
+                          onConfirm={() => handleToggleLockFiscalYear(row.year)}
+                          className="h-7 text-[11px] text-rose-700 border-rose-300 hover:bg-rose-50 font-medium"
+                        >
+                          <Lock className="h-3 w-3 mr-1" /> Lock FY
+                        </ConfirmButton>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </Card>
+
       {/* Dual Lock Simulation Tester */}
       <Card className="p-6 border-slate-200 shadow-xs bg-white space-y-4">
         <div className="flex items-center gap-2 text-slate-900 font-bold text-sm">
@@ -249,7 +567,7 @@ export function FinancialPeriodLockPage() {
           <span>Audit Policy Simulation Tester</span>
         </div>
         <p className="text-xs text-slate-500">
-          Simulate a transaction posting date against the current dual period lock configuration to verify role-based enforcement.
+          Simulate a transaction date against the current monthly period closing and financial year lock configuration to verify role-based enforcement for posting, editing, and voiding.
         </p>
 
         <div className="flex flex-wrap items-center gap-3">
@@ -263,6 +581,20 @@ export function FinancialPeriodLockPage() {
               onChange={(e) => setTestDate(e.target.value)}
               className="h-9 text-xs w-44"
             />
+          </div>
+
+          <div>
+            <label className="block text-[11px] font-semibold text-slate-500 mb-1">
+              Action to Verify:
+            </label>
+            <select
+              value={testAction}
+              onChange={(e) => setTestAction(e.target.value as 'POST' | 'EDIT_VOID')}
+              className="h-9 text-xs rounded-md border border-slate-300 bg-white px-3 text-slate-800 focus:outline-hidden focus:ring-1 focus:ring-primary"
+            >
+              <option value="EDIT_VOID">Edit or Void Past Transaction</option>
+              <option value="POST">Post New Transaction</option>
+            </select>
           </div>
 
           <div>
@@ -321,7 +653,7 @@ export function FinancialPeriodLockPage() {
                 Fiscal Year-End Close Wizard
               </h2>
               <p className="text-xs text-slate-500">
-                Automated statutory routine executed on the final day of the fiscal year. Zeroes out all 4000 Revenue and 5000/6000 Expense accounts, sweeping net profit/loss into 3010 Retained Earnings.
+                Automated statutory routine executed on the final day of the fiscal year. Zeroes out all 4000 Revenue and 5000/6000 Expense accounts, sweeping net profit/loss into 3010 Retained Earnings and locking the fiscal year.
               </p>
             </div>
           </div>
@@ -456,7 +788,7 @@ export function FinancialPeriodLockPage() {
               <ConfirmButton
                 type="button"
                 confirmTitle={`Execute Year-End Close (${fiscalYearEnd})?`}
-                confirmMessage="This will balance all temporary revenue and expense accounts to Retained Earnings, record closing journal entries, and advance lock dates. This action cannot be undone."
+                confirmMessage="This will balance all temporary revenue and expense accounts to Retained Earnings, record closing journal entries, and lock the closed fiscal year. This action cannot be undone."
                 confirmLabel="Confirm & Execute Close"
                 variant="destructive"
                 onConfirm={handleExecuteYearEndClose}

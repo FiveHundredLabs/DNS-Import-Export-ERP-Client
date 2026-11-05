@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../../../hooks/useAuth';
 import { useFinanceLedger } from '../../hooks/useFinanceLedger';
 import { financeRepository } from '../../api';
+import { periodLockService } from '../../services/periodLockService';
 import { JournalEntry, JournalEntryStatus } from '../../api/types';
 import { CurrencyInput } from '../../components/CurrencyInput';
 import { DoubleEntryHoverBadge } from '../../components/DoubleEntryHoverBadge';
@@ -48,6 +49,8 @@ import {
   UserCheck,
   ChevronRight,
   ChevronLeft,
+  FileText,
+  Layers,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -208,11 +211,25 @@ export function ManualJournalPage() {
     postJournalEntry,
     approveJournalEntry,
     voidJournalEntry,
+    correctAndReissueJournalEntry,
+    createReclassificationEntry,
     fetchAccounts,
   } = useFinanceLedger();
 
   const journalIdParam = searchParams.get('id');
   const [loadedJournal, setLoadedJournal] = useState<JournalEntry | null>(null);
+
+  // Re-correction & Reissue Dialog State
+  const [reissueDialogOpen, setReissueDialogOpen] = useState(false);
+  const [reissueReason, setReissueReason] = useState('');
+
+  // Reclassification Dialog State
+  const [reclassifyDialogOpen, setReclassifyDialogOpen] = useState(false);
+  const [reclassifyLineIndex, setReclassifyLineIndex] = useState<number | null>(null);
+  const [reclassifyTargetAccountId, setReclassifyTargetAccountId] = useState('');
+  const [reclassifyAmount, setReclassifyAmount] = useState<number | ''>('');
+  const [reclassifyReason, setReclassifyReason] = useState('');
+  const [reclassifyDate, setReclassifyDate] = useState(() => new Date().toISOString().slice(0, 10));
 
   // Header Inputs: Journal Date, Reference Number, Memo/Description
   const [journalDate, setJournalDate] = useState<string>(
@@ -251,6 +268,17 @@ export function ManualJournalPage() {
   // Role Governance: Only Finance Managers, Managers, and Directors can approve/post directly
   const isFinanceManager =
     !currentUser || ['FINANCE_MANAGER', 'MANAGER', 'DIRECTOR'].includes(currentUser.role);
+
+  // Period lock validations: past transactions in closed period cannot be edited or voided
+  const isPeriodClosedForLoadedJournal = useMemo(() => {
+    if (!loadedJournal?.date) return false;
+    return periodLockService.isDateLocked(loadedJournal.date, currentUser?.role);
+  }, [loadedJournal?.date, currentUser?.role]);
+
+  const isJournalDateInClosedPeriod = useMemo(() => {
+    if (!journalDate) return false;
+    return periodLockService.isDateLocked(journalDate, currentUser?.role);
+  }, [journalDate, currentUser?.role]);
 
   // Load existing journal if ID is passed
   useEffect(() => {
@@ -811,12 +839,122 @@ export function ManualJournalPage() {
     if (!loadedJournal) return;
     try {
       setSubmitting(true);
+      periodLockService.assertCanEditOrVoid(loadedJournal.date, currentUser?.role);
       await voidJournalEntry(loadedJournal.id);
       handleResetForm();
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : 'Failed to void journal entry');
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  // Re-Correction & Reissue Handler
+  const handleCorrectAndReissue = async () => {
+    if (!loadedJournal) return;
+    if (!reissueReason.trim()) {
+      toast.error('Please enter a reason for re-correcting this voucher.');
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      const res = await correctAndReissueJournalEntry(loadedJournal.id, reissueReason.trim());
+      setReissueDialogOpen(false);
+      setReissueReason('');
+
+      // Immediately load the replacement voucher into the editor
+      setLoadedJournal(res.replacement);
+      setJournalDate(res.replacement.date);
+      setReferenceNumber(res.replacement.reference || '');
+      setMemo(res.replacement.description);
+      setLines(
+        res.replacement.lines.map((l) => ({
+          id: l.id,
+          accountId: l.accountId,
+          description: l.description || '',
+          debit: l.debit,
+          credit: l.credit,
+          customerId: l.customerId,
+          customerName: l.customerName,
+          supplierId: l.supplierId,
+          supplierName: l.supplierName,
+        }))
+      );
+      navigate(`/finance/journal?id=${res.replacement.id}`);
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Failed to re-correct voucher');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // Reclassification Handlers
+  const handleOpenReclassify = (index: number) => {
+    const line = lines[index];
+    if (!line || !line.accountId) return;
+    setReclassifyLineIndex(index);
+    const lineAmt = line.debit > 0 ? line.debit : line.credit;
+    setReclassifyAmount(lineAmt);
+    setReclassifyReason('');
+    setReclassifyDate(new Date().toISOString().slice(0, 10));
+    const otherAcc = activeAccounts.find((a) => a.id !== line.accountId);
+    setReclassifyTargetAccountId(otherAcc?.id || '');
+    setReclassifyDialogOpen(true);
+  };
+
+  const handlePostReclassification = async () => {
+    if (!loadedJournal || reclassifyLineIndex === null) return;
+    if (!reclassifyTargetAccountId) {
+      toast.error('Please select a target account to reclassify to.');
+      return;
+    }
+    if (!reclassifyReason.trim()) {
+      toast.error('Please specify a reason for this reclassification.');
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      await createReclassificationEntry({
+        originalEntryId: loadedJournal.id,
+        lineIndex: reclassifyLineIndex,
+        targetAccountId: reclassifyTargetAccountId,
+        amount: typeof reclassifyAmount === 'number' ? reclassifyAmount : undefined,
+        reason: reclassifyReason.trim(),
+        date: reclassifyDate,
+      });
+
+      setReclassifyDialogOpen(false);
+      setReclassifyLineIndex(null);
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Failed to post reclassification');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleLoadSpecificJournal = (entryNumberOrId: string) => {
+    const found = journals.find((j) => j.id === entryNumberOrId || j.entryNumber === entryNumberOrId);
+    if (found) {
+      setLoadedJournal(found);
+      setJournalDate(found.date);
+      setReferenceNumber(found.reference || '');
+      setMemo(found.description);
+      setLines(
+        found.lines.map((l) => ({
+          id: l.id,
+          accountId: l.accountId,
+          description: l.description || '',
+          debit: l.debit,
+          credit: l.credit,
+          customerId: l.customerId,
+          customerName: l.customerName,
+          supplierId: l.supplierId,
+          supplierName: l.supplierName,
+        }))
+      );
+      navigate(`/finance/journal?id=${found.id}`);
     }
   };
 
@@ -867,8 +1005,8 @@ export function ManualJournalPage() {
               </Badge>
             )}
           </div>
-          <p className="text-sm text-slate-500 mt-1">
-            Universal double-entry voucher screen for manual adjustments, accruals, overheads, and Maker-Checker approvals.
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Manual adjustments, accruals, overheads, and Maker-Checker double-entry postings.
           </p>
         </div>
 
@@ -974,6 +1112,57 @@ export function ManualJournalPage() {
         </Card>
       )}
 
+      {/* Correction Lineage Banners */}
+      {loadedJournal?.correctionOf && (
+        <div className="rounded-lg bg-indigo-50 border border-indigo-200 p-3.5 text-indigo-900 flex items-center justify-between text-xs">
+          <div className="flex items-center gap-2.5">
+            <FileText className="h-4 w-4 text-indigo-600 shrink-0" />
+            <div>
+              <span className="font-bold">Corrected Replacement Voucher:</span>
+              <span className="ml-1 text-slate-700">This transaction is a corrected re-issue of</span>
+              <button
+                type="button"
+                onClick={() => handleLoadSpecificJournal(loadedJournal.correctionOf!)}
+                className="font-mono font-bold text-indigo-700 underline ml-1 hover:text-indigo-900 cursor-pointer"
+              >
+                {loadedJournal.correctionOf}
+              </button>
+              {loadedJournal.correctionReason && (
+                <span className="ml-2 text-indigo-700 italic font-sans">— &quot;{loadedJournal.correctionReason}&quot;</span>
+              )}
+            </div>
+          </div>
+          <Badge variant="outline" className="bg-indigo-100 text-indigo-800 border-indigo-300 text-[10px] uppercase font-bold tracking-wider">
+            {loadedJournal.correctionType || 'CORRECTION'}
+          </Badge>
+        </div>
+      )}
+
+      {loadedJournal?.correctedBy && (
+        <div className="rounded-lg bg-rose-50 border border-rose-200 p-3.5 text-rose-900 flex items-center justify-between text-xs">
+          <div className="flex items-center gap-2.5">
+            <AlertTriangle className="h-4 w-4 text-rose-600 shrink-0" />
+            <div>
+              <span className="font-bold">Voided & Superseded:</span>
+              <span className="ml-1 text-slate-700">This voucher was superseded. Corrected replacement voucher:</span>
+              <button
+                type="button"
+                onClick={() => handleLoadSpecificJournal(loadedJournal.correctedBy!)}
+                className="font-mono font-bold text-rose-700 underline ml-1 hover:text-rose-900 cursor-pointer"
+              >
+                {loadedJournal.correctedBy}
+              </button>
+              {loadedJournal.voidReason && (
+                <span className="ml-2 text-rose-700 italic font-sans">— &quot;{loadedJournal.voidReason}&quot;</span>
+              )}
+            </div>
+          </div>
+          <Badge variant="outline" className="bg-rose-100 text-rose-800 border-rose-300 text-[10px] uppercase font-bold tracking-wider">
+            SUPERSEDED
+          </Badge>
+        </div>
+      )}
+
       {/* Audit Lock Warning Banner */}
       {isAuditLocked && (
         <div className="rounded-lg bg-amber-50 border border-amber-200 p-4 text-amber-800 flex items-center justify-between">
@@ -985,12 +1174,31 @@ export function ManualJournalPage() {
               </span>
               <span className="text-xs text-amber-700">
                 Posted financial transactions are permanently locked against direct editing to safeguard the general ledger audit trail.
-                {loadedJournal?.status === 'POSTED' && ' Authorized personnel may void/reverse this entry.'}
+                {isPeriodClosedForLoadedJournal ? (
+                  <strong className="text-rose-600 block mt-0.5">
+                    ⛔ Financial Period Closed: Cannot void past transactions in this closed period.
+                  </strong>
+                ) : (
+                  loadedJournal?.status === 'POSTED' && ' Authorized personnel may void/reverse or re-correct this entry.'
+                )}
               </span>
             </div>
           </div>
           {loadedJournal?.status === 'POSTED' && isAuthorizedForVoid && (
             <div className="flex items-center gap-2 shrink-0">
+              {/* Correct & Reissue Button */}
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => setReissueDialogOpen(true)}
+                disabled={submitting || isPeriodClosedForLoadedJournal}
+                className="gap-1.5 text-xs bg-amber-600 hover:bg-amber-700 text-white font-semibold shadow-xs cursor-pointer"
+                title="Void original entry and create an editable replacement draft voucher pre-populated with all lines"
+              >
+                <RotateCcw className="h-3.5 w-3.5" />
+                <span>Correct & Reissue</span>
+              </Button>
+
               <ConfirmButton
                 variant="destructive"
                 size="sm"
@@ -998,11 +1206,11 @@ export function ManualJournalPage() {
                 confirmMessage={`Are you sure you want to void posted journal entry ${loadedJournal?.entryNumber}? Counter-entries will be generated to reverse ledger account balances.`}
                 confirmText="Void & Reverse Entry"
                 onConfirm={handleVoidJournal}
-                disabled={submitting}
+                disabled={submitting || isPeriodClosedForLoadedJournal}
                 className="gap-1.5 text-xs shadow-xs"
               >
-                <RotateCcw className="h-3.5 w-3.5" />
-                <span>Void / Reverse</span>
+                <Trash2 className="h-3.5 w-3.5" />
+                <span>{isPeriodClosedForLoadedJournal ? 'Period Closed (Cannot Void)' : 'Void / Reverse'}</span>
               </ConfirmButton>
               {reversalImpactLines.length > 0 && (
                 <DoubleEntryHoverBadge
@@ -1074,9 +1282,15 @@ export function ManualJournalPage() {
                   value={journalDate}
                   onChange={(e) => setJournalDate(e.target.value)}
                   disabled={isAuditLocked}
-                  className="h-9 text-xs"
+                  className={cn("h-9 text-xs", isJournalDateInClosedPeriod && "border-rose-400 bg-rose-50/30 text-rose-900")}
                   required
                 />
+                {isJournalDateInClosedPeriod && !isAuditLocked && (
+                  <span className="text-[10px] text-rose-600 font-medium flex items-center gap-1 mt-1">
+                    <AlertTriangle className="h-3 w-3 shrink-0" />
+                    Date falls in a closed financial period. Posting will be blocked.
+                  </span>
+                )}
               </div>
 
               <div>
@@ -1290,19 +1504,32 @@ export function ManualJournalPage() {
                           </div>
                         </td>
 
-                        {/* Remove Action */}
+                        {/* Action Column */}
                         <td className="py-2 px-2 text-center align-top pt-2.5">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            type="button"
-                            onClick={() => handleRemoveLine(line.id)}
-                            disabled={lines.length <= 2 || isAuditLocked}
-                            className="h-7 w-7 p-0 text-slate-400 hover:text-rose-600 hover:bg-rose-50 disabled:opacity-30"
-                            title="Remove line"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
+                          {isAuditLocked && loadedJournal?.status === 'POSTED' && isFinanceManager ? (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              type="button"
+                              onClick={() => handleOpenReclassify(idx)}
+                              className="h-7 px-2 text-[10px] font-semibold text-primary border-primary/30 hover:bg-primary/5 cursor-pointer shadow-2xs whitespace-nowrap"
+                              title="Reclassify this line item into another GL account via an Adjusting Journal Entry"
+                            >
+                              Reclassify
+                            </Button>
+                          ) : (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              type="button"
+                              onClick={() => handleRemoveLine(line.id)}
+                              disabled={lines.length <= 2 || isAuditLocked}
+                              className="h-7 w-7 p-0 text-slate-400 hover:text-rose-600 hover:bg-rose-50 disabled:opacity-30"
+                              title="Remove line"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          )}
                         </td>
                       </tr>
                     );
@@ -1420,17 +1647,34 @@ export function ManualJournalPage() {
                 {isAuditLocked ? (
                   loadedJournal?.status === 'POSTED' && isAuthorizedForVoid ? (
                     <div className="flex items-center gap-2">
+                      <Button
+                        type="button"
+                        onClick={() => setReissueDialogOpen(true)}
+                        disabled={submitting || isPeriodClosedForLoadedJournal}
+                        className="font-semibold gap-1.5 shadow-xs bg-amber-600 hover:bg-amber-700 text-white cursor-pointer h-9 text-xs"
+                        title="Void original and create a replacement draft voucher pre-populated with all lines"
+                      >
+                        <RotateCcw className="h-3.5 w-3.5" />
+                        <span>Correct & Reissue</span>
+                      </Button>
+
                       <ConfirmButton
                         variant="destructive"
                         confirmTitle="Void / Reverse Journal Entry"
                         confirmMessage={`Are you sure you want to void posted journal entry ${loadedJournal?.entryNumber}? Counter-entries will be generated to reverse ledger account balances.`}
                         confirmText="Void & Reverse Entry"
                         onConfirm={handleVoidJournal}
-                        disabled={submitting}
+                        disabled={submitting || isPeriodClosedForLoadedJournal}
                         className="font-semibold gap-1.5 shadow-xs"
                       >
                         <RotateCcw className="h-4 w-4" />
-                        <span>{submitting ? 'Voiding...' : 'Void / Reverse Journal'}</span>
+                        <span>
+                          {submitting
+                            ? 'Voiding...'
+                            : isPeriodClosedForLoadedJournal
+                            ? 'Period Closed (Cannot Void)'
+                            : 'Void / Reverse Journal'}
+                        </span>
                       </ConfirmButton>
                       {reversalImpactLines.length > 0 && (
                         <DoubleEntryHoverBadge
@@ -1811,6 +2055,16 @@ export function ManualJournalPage() {
                           {je.status === 'PENDING_APPROVAL' && <Clock className="h-3 w-3 text-amber-500" />}
                           <span>{je.entryNumber}</span>
                         </button>
+                        {je.correctionOf && (
+                          <span className="inline-block mt-0.5 text-[9px] font-mono px-1 py-0.2 rounded bg-indigo-50 text-indigo-700 border border-indigo-200">
+                            Corr of {je.correctionOf}
+                          </span>
+                        )}
+                        {je.correctedBy && (
+                          <span className="inline-block mt-0.5 text-[9px] font-mono px-1 py-0.2 rounded bg-rose-50 text-rose-700 border border-rose-200">
+                            Superseded by {je.correctedBy}
+                          </span>
+                        )}
                       </td>
                       <td className="px-4 py-3 text-slate-600">{formatDate(je.date)}</td>
                       <td className="px-4 py-3">
@@ -2057,6 +2311,190 @@ export function ManualJournalPage() {
           >
             <Check className="h-3.5 w-3.5" />
             Save Template
+          </Button>
+        </DialogFooter>
+      </Dialog>
+
+      {/* Re-Correction & Reissue Dialog Modal */}
+      <Dialog open={reissueDialogOpen} onOpenChange={setReissueDialogOpen}>
+        <DialogHeader>
+          <div className="flex items-center gap-2">
+            <RotateCcw className="h-5 w-5 text-amber-600" />
+            <DialogTitle>Correct & Reissue Journal Voucher</DialogTitle>
+          </div>
+          <DialogDescription>
+            Audit-compliant re-correction workflow: void the erroneous posted voucher (posting reversal counter-entries) and clone all lines into an editable replacement draft voucher.
+          </DialogDescription>
+        </DialogHeader>
+
+        <DialogContent className="space-y-4">
+          <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-900 space-y-1.5">
+            <div className="font-bold flex items-center gap-1.5">
+              <Lock className="h-3.5 w-3.5 text-amber-700" />
+              <span>Audit Trail Integrity & Lineage</span>
+            </div>
+            <p className="text-[11px] text-amber-800 leading-relaxed">
+              Original voucher <strong>{loadedJournal?.entryNumber}</strong> will be marked <code className="font-bold">VOIDED</code> and its account balances reversed in the General Ledger. A new draft replacement voucher will be created with pre-filled lines and cross-referenced in the audit lineage.
+            </p>
+          </div>
+
+          <div>
+            <label className="text-xs font-bold text-slate-800 uppercase tracking-wider block mb-1">
+              Reason for Correction <span className="text-rose-500">*</span>
+            </label>
+            <textarea
+              rows={3}
+              placeholder="e.g. Corrected line 2 utility expense account and updated invoice reference number"
+              value={reissueReason}
+              onChange={(e) => setReissueReason(e.target.value)}
+              className="w-full rounded-md border border-slate-200 bg-white p-2.5 text-xs text-slate-900 focus:outline-hidden focus:ring-1 focus:ring-amber-500"
+              required
+              data-testid="reissue-reason-input"
+            />
+          </div>
+        </DialogContent>
+
+        <DialogFooter className="gap-2 sm:gap-0">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setReissueDialogOpen(false)}
+            className="text-xs"
+          >
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            onClick={handleCorrectAndReissue}
+            disabled={submitting || !reissueReason.trim()}
+            className="text-xs bg-amber-600 hover:bg-amber-700 text-white font-bold gap-1.5 cursor-pointer"
+            data-testid="confirm-reissue-button"
+          >
+            <RotateCcw className="h-3.5 w-3.5" />
+            <span>{submitting ? 'Re-issuing...' : 'Proceed with Reissue'}</span>
+          </Button>
+        </DialogFooter>
+      </Dialog>
+
+      {/* Reclassification / Rectification Dialog Modal */}
+      <Dialog open={reclassifyDialogOpen} onOpenChange={setReclassifyDialogOpen}>
+        <DialogHeader>
+          <div className="flex items-center gap-2">
+            <Layers className="h-5 w-5 text-primary" />
+            <DialogTitle>Reclassify Line Item (Adjusting Journal Entry)</DialogTitle>
+          </div>
+          <DialogDescription>
+            Post a 2-line Adjusting Journal Entry (AJE) to transfer an amount from one General Ledger account to another without voiding the parent voucher.
+          </DialogDescription>
+        </DialogHeader>
+
+        <DialogContent className="space-y-4">
+          {reclassifyLineIndex !== null && lines[reclassifyLineIndex] && (
+            <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg text-xs space-y-1">
+              <div className="flex items-center justify-between text-slate-600">
+                <span>Voucher Reference:</span>
+                <span className="font-mono font-bold text-slate-900">{loadedJournal?.entryNumber} (Line #{reclassifyLineIndex + 1})</span>
+              </div>
+              <div className="flex items-center justify-between text-slate-600">
+                <span>Source Account:</span>
+                <span className="font-mono font-bold text-slate-900">
+                  {accounts.find(a => a.id === lines[reclassifyLineIndex].accountId)?.code} - {accounts.find(a => a.id === lines[reclassifyLineIndex].accountId)?.name}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-slate-600">
+                <span>Line Direction:</span>
+                <span className="font-bold text-primary font-mono">
+                  {lines[reclassifyLineIndex].debit > 0 ? `DEBIT (${formatCurrency(lines[reclassifyLineIndex].debit)})` : `CREDIT (${formatCurrency(lines[reclassifyLineIndex].credit)})`}
+                </span>
+              </div>
+            </div>
+          )}
+
+          <div className="space-y-3">
+            <div>
+              <label className="text-xs font-bold text-slate-800 uppercase tracking-wider block mb-1">
+                Target Reclassification Account <span className="text-rose-500">*</span>
+              </label>
+              <select
+                value={reclassifyTargetAccountId}
+                onChange={(e) => setReclassifyTargetAccountId(e.target.value)}
+                className="flex h-9 w-full rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-900 shadow-2xs focus:outline-hidden focus:ring-1 focus:ring-primary"
+              >
+                <option value="">Select target GL account...</option>
+                {activeAccounts
+                  .filter((a) => reclassifyLineIndex === null || a.id !== lines[reclassifyLineIndex]?.accountId)
+                  .map((a) => (
+                    <option key={a.id} value={a.id}>
+                      {a.code} - {a.name} ({a.accountClass})
+                    </option>
+                  ))}
+              </select>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs font-bold text-slate-800 uppercase tracking-wider block mb-1">
+                  Amount to Reclassify (LKR) <span className="text-rose-500">*</span>
+                </label>
+                <Input
+                  type="number"
+                  min="0.01"
+                  step="any"
+                  value={reclassifyAmount}
+                  onChange={(e) => setReclassifyAmount(Number(e.target.value) || '')}
+                  className="h-9 text-xs font-mono font-bold text-right"
+                  placeholder="0.00"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-slate-800 uppercase tracking-wider block mb-1">
+                  Effective Date <span className="text-rose-500">*</span>
+                </label>
+                <Input
+                  type="date"
+                  value={reclassifyDate}
+                  onChange={(e) => setReclassifyDate(e.target.value)}
+                  className="h-9 text-xs"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="text-xs font-bold text-slate-800 uppercase tracking-wider block mb-1">
+                Reason / Audit Note <span className="text-rose-500">*</span>
+              </label>
+              <Input
+                placeholder="e.g. Corrected misclassification of marketing expenses"
+                value={reclassifyReason}
+                onChange={(e) => setReclassifyReason(e.target.value)}
+                className="h-9 text-xs"
+              />
+            </div>
+          </div>
+        </DialogContent>
+
+        <DialogFooter className="gap-2 sm:gap-0">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setReclassifyDialogOpen(false)}
+            className="text-xs"
+          >
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            onClick={handlePostReclassification}
+            disabled={submitting || !reclassifyTargetAccountId || !reclassifyReason.trim()}
+            className="text-xs bg-primary hover:bg-primary-hover text-white font-bold gap-1.5 cursor-pointer"
+          >
+            <Check className="h-3.5 w-3.5" />
+            <span>{submitting ? 'Posting AJE...' : 'Post Reclassification AJE'}</span>
           </Button>
         </DialogFooter>
       </Dialog>

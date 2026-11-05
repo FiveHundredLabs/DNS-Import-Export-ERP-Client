@@ -66,7 +66,7 @@ export function ReportHubLayout({
       </div>
 
       {/* Search Toolbar */}
-      <div className="flex items-center justify-between gap-4 rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
           <Input
@@ -252,7 +252,7 @@ export function ReportFilterBar({ dateRange, onChange, extraFilters, onExportCsv
     <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 rounded-lg border border-slate-200 bg-white p-3 shadow-sm print:hidden">
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-xs font-semibold text-slate-500">Period:</span>
-        <div className="flex rounded-md border border-slate-200 bg-slate-50 p-0.5 text-xs">
+        <div className="flex flex-wrap sm:flex-nowrap overflow-x-auto rounded-md border border-slate-200 bg-slate-50 p-0.5 text-xs max-w-full">
           {(['TODAY', 'THIS_MONTH', 'THIS_QUARTER', 'THIS_YEAR', 'CUSTOM'] as const).map((p) => (
             <button
               key={p}

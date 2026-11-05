@@ -60,6 +60,10 @@ export function InvoiceListPage() {
   const { role, currentUser } = useAuth();
   const activeRole = currentUser?.role || role;
   const isSalesManager = ['SALES_MANAGER', 'MANAGER', 'DIRECTOR', 'ADMIN'].includes(activeRole);
+  const isAreaManager = activeRole === 'AREA_MANAGER';
+  const isFinanceManager = activeRole === 'FINANCE_MANAGER';
+  const shouldHideDrafts = isAreaManager || isFinanceManager;
+  const shouldHideCreateInvoice = isAreaManager || isFinanceManager;
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [customerIdFilter, setCustomerIdFilter] = useState(searchParams.get('customerId') || '');
@@ -77,6 +81,12 @@ export function InvoiceListPage() {
   const [previewInvoice, setPreviewInvoice] = useState<Invoice | null>(null);
   const [previewModalOpen, setPreviewModalOpen] = useState(false);
   const [createModalOpen, setCreateModalOpen] = useState(false);
+
+  useEffect(() => {
+    if (shouldHideDrafts && statusFilter === 'DRAFT') {
+      setStatusFilter('ALL');
+    }
+  }, [shouldHideDrafts, statusFilter]);
 
   useEffect(() => {
     async function loadCustomers() {
@@ -112,10 +122,28 @@ export function InvoiceListPage() {
           salesRepId: isRep ? currentUser?.id : undefined,
         }),
       ]);
-      setInvoices(res.data);
-      setTotalPages(res.totalPages);
-      setTotalCount(res.total);
-      setAllInvoicesForCounts(allRes.data);
+      let resData = res.data;
+      let allResData = allRes.data;
+      let total = res.total;
+      let totalPages = res.totalPages;
+
+      if (shouldHideDrafts) {
+        resData = resData.filter((inv) => inv.status !== 'DRAFT');
+        allResData = allResData.filter((inv) => inv.status !== 'DRAFT');
+        if (statusFilter === 'DRAFT') {
+          total = 0;
+          totalPages = 1;
+        } else if (statusFilter === 'ALL') {
+          const draftCount = allRes.data.filter((inv) => inv.status === 'DRAFT').length;
+          total = Math.max(0, total - draftCount);
+          totalPages = Math.max(1, Math.ceil(total / 50));
+        }
+      }
+
+      setInvoices(resData);
+      setTotalPages(totalPages);
+      setTotalCount(total);
+      setAllInvoicesForCounts(allResData);
     } catch (err) {
       console.error('Failed to load invoices:', err);
     } finally {
@@ -139,7 +167,11 @@ export function InvoiceListPage() {
     let settled = 0;
     let draft = 0;
 
-    for (const inv of allInvoicesForCounts) {
+    const sourceInvoices = shouldHideDrafts
+      ? allInvoicesForCounts.filter((inv) => inv.status !== 'DRAFT')
+      : allInvoicesForCounts;
+
+    for (const inv of sourceInvoices) {
       if (inv.status === 'DRAFT') draft++;
       const uncollected = Math.max(0, inv.balanceAmount - (inv.collectedAmount || 0));
       const [y, m, d] = inv.dueDate.split('-').map(Number);
@@ -161,7 +193,7 @@ export function InvoiceListPage() {
     }
 
     return {
-      all: allInvoicesForCounts.length,
+      all: sourceInvoices.length,
       draft,
       outstanding,
       overdue,
@@ -169,15 +201,19 @@ export function InvoiceListPage() {
       pendingCollection,
       settled,
     };
-  }, [allInvoicesForCounts]);
+  }, [allInvoicesForCounts, shouldHideDrafts]);
 
   const selectedCustomer = customers.find((c) => c.id === customerIdFilter);
 
+  const displayedInvoices = useMemo(() => {
+    return shouldHideDrafts ? invoices.filter((i) => i.status !== 'DRAFT') : invoices;
+  }, [invoices, shouldHideDrafts]);
+
   // Aggregate metrics
-  const totalReceivables = invoices.reduce((acc, inv) => acc + inv.balanceAmount, 0);
-  const overdueAmount = invoices.filter((i) => i.status === 'OVERDUE').reduce((acc, inv) => acc + inv.balanceAmount, 0);
-  const overdueCount = invoices.filter((i) => i.status === 'OVERDUE').length;
-  const paidCount = invoices.filter((i) => i.status === 'PAID').length;
+  const totalReceivables = displayedInvoices.reduce((acc, inv) => acc + inv.balanceAmount, 0);
+  const overdueAmount = displayedInvoices.filter((i) => i.status === 'OVERDUE').reduce((acc, inv) => acc + inv.balanceAmount, 0);
+  const overdueCount = displayedInvoices.filter((i) => i.status === 'OVERDUE').length;
+  const paidCount = displayedInvoices.filter((i) => i.status === 'PAID').length;
 
   return (
     <div className="space-y-4 sm:space-y-5 pb-24 md:pb-6">
@@ -197,14 +233,16 @@ export function InvoiceListPage() {
               <RefreshCw className="h-3.5 w-3.5" />
               <span>Refresh</span>
             </Button>
-            <Button
-              size="sm"
-              onClick={() => setCreateModalOpen(true)}
-              className="h-9 px-3.5 bg-primary hover:bg-primary-hover text-white text-xs font-semibold gap-1.5 shadow-xs flex-1 sm:flex-initial justify-center cursor-pointer"
-            >
-              <Plus className="h-4 w-4" />
-              <span>Create Invoice</span>
-            </Button>
+            {!shouldHideCreateInvoice && (
+              <Button
+                size="sm"
+                onClick={() => setCreateModalOpen(true)}
+                className="h-9 px-3.5 bg-primary hover:bg-primary-hover text-white text-xs font-semibold gap-1.5 shadow-xs flex-1 sm:flex-initial justify-center cursor-pointer"
+              >
+                <Plus className="h-4 w-4" />
+                <span>Create Invoice</span>
+              </Button>
+            )}
             <Button
               variant="outline"
               size="sm"
@@ -347,7 +385,9 @@ export function InvoiceListPage() {
                 { label: 'Pending Collection', value: 'PENDING_COLLECTION', count: counts.pendingCollection, icon: ShieldCheck },
                 { label: 'Fully Settled', value: 'FULLY_SETTLED', count: counts.settled, icon: CheckCircle },
               ] as const
-            ).map((st) => {
+            )
+              .filter((st) => !shouldHideDrafts || st.value !== 'DRAFT')
+              .map((st) => {
               const Icon = st.icon;
               const isActive = statusFilter === st.value;
               return (
@@ -385,7 +425,7 @@ export function InvoiceListPage() {
         <CardContent className="p-0">
           {loading ? (
             <TableLoadingSkeleton />
-          ) : invoices.length === 0 ? (
+          ) : displayedInvoices.length === 0 ? (
             <div className="p-8">
               <EmptyState
                 icon={Receipt}
@@ -401,7 +441,7 @@ export function InvoiceListPage() {
             <>
               {/* 1. Mobile Cards View (Visible on small screens, hidden on md+) */}
               <div className="block md:hidden p-2.5 sm:p-3 space-y-2.5 sm:space-y-3">
-                {invoices.map((inv) => {
+                {displayedInvoices.map((inv) => {
                   const isOverdue = inv.status === 'OVERDUE';
                   return (
                     <div
@@ -571,7 +611,7 @@ export function InvoiceListPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {invoices.map((inv) => (
+                    {displayedInvoices.map((inv) => (
                       <TableRow
                         key={inv.id}
                         className={cn(
@@ -738,7 +778,7 @@ export function InvoiceListPage() {
           {totalPages > 1 && (
             <div className="flex items-center justify-between p-3.5 border-t border-slate-100 text-xs">
               <span className="text-slate-500">
-                Showing {invoices.length} of {totalCount} records
+                Showing {displayedInvoices.length} of {totalCount} records
               </span>
               <div className="flex items-center gap-2">
                 <Button
@@ -776,13 +816,15 @@ export function InvoiceListPage() {
       />
 
       {/* Create Commercial Sales Invoice Modal */}
-      <CreateInvoiceModal
-        isOpen={createModalOpen}
-        onClose={() => {
-          setCreateModalOpen(false);
-          fetchInvoices();
-        }}
-      />
+      {!shouldHideCreateInvoice && (
+        <CreateInvoiceModal
+          isOpen={createModalOpen}
+          onClose={() => {
+            setCreateModalOpen(false);
+            fetchInvoices();
+          }}
+        />
+      )}
     </div>
   );
 }

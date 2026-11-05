@@ -21,6 +21,9 @@ export interface ARReceiptItem {
   glJournalId?: string;
   depositAccountId?: string;
   depositAccountCode?: string; // e.g. '1010', '1018', '1040'
+  incomeAccountId?: string; // Respective Income/A/R credit account e.g. 4010, 4020, 1020
+  incomeAccountCode?: string;
+  remarks?: string;
   // Cheque details for PDC Vault
   chequeNumber?: string;
   drawerBank?: string;
@@ -343,6 +346,80 @@ class ARCollectionService {
   }
 
   /**
+   * Create new customer payment receipt with inline open invoice settlement:
+   * 1. Creates receipt record in queue
+   * 2. If autoApprove, posts GL double-entry, settles open invoices, restores customer credit
+   */
+  async createReceipt(params: {
+    customerId: string;
+    customerName: string;
+    customerCode: string;
+    collectorName?: string;
+    collectedAt?: string;
+    paymentMethod: 'CASH' | 'CHEQUE' | 'BANK_TRANSFER';
+    amount: number;
+    depositAccountId?: string;
+    incomeAccountId?: string;
+    incomeAccountCode?: string;
+    remarks?: string;
+    chequeNumber?: string;
+    drawerBank?: string;
+    chequeDate?: string;
+    attachmentUrl?: string;
+    allocations?: Record<string, number>;
+    autoApprove?: boolean;
+  }): Promise<ARReceiptItem> {
+    if (params.amount <= 0) {
+      throw new Error('Receipt amount must be greater than zero');
+    }
+
+    const seq = String(this.receipts.length + 1).padStart(4, '0');
+    const receiptNumber = `REC-${new Date().getFullYear()}-${seq}`;
+    const newReceipt: ARReceiptItem = {
+      id: `rcpt-${Date.now()}`,
+      receiptNumber,
+      customerId: params.customerId,
+      customerName: params.customerName,
+      customerCode: params.customerCode,
+      collectorName: params.collectorName || 'Direct Counter / Finance Office',
+      collectedAt: params.collectedAt || new Date().toISOString(),
+      paymentMethod: params.paymentMethod,
+      amount: params.amount,
+      status: 'PENDING_APPROVAL',
+      depositAccountId: params.depositAccountId,
+      incomeAccountId: params.incomeAccountId,
+      incomeAccountCode: params.incomeAccountCode,
+      remarks: params.remarks,
+      chequeNumber: params.chequeNumber,
+      drawerBank: params.drawerBank,
+      chequeDate: params.chequeDate,
+      attachmentUrl: params.attachmentUrl,
+      allocations: params.allocations,
+    };
+
+    this.receipts.unshift(newReceipt);
+    this.save();
+
+    if (params.autoApprove !== false) {
+      return await this.approveReceipt(newReceipt.id, {
+        depositAccountId: params.depositAccountId,
+        allocations: params.allocations,
+        autoFIFO: !params.allocations || Object.keys(params.allocations).length === 0,
+        chequeDetails:
+          params.paymentMethod === 'CHEQUE'
+            ? {
+                chequeNumber: params.chequeNumber || 'CHQ-89012',
+                drawerBank: params.drawerBank || 'Commercial Bank of Ceylon',
+                chequeDate: params.chequeDate || new Date().toISOString().slice(0, 10),
+              }
+            : undefined,
+      });
+    }
+
+    return newReceipt;
+  }
+
+  /**
    * Approve Receipt:
    * 1. If CHEQUE:
    *    Stop recognizing un-cleared cheques as 1010 Bank cash!
@@ -408,10 +485,18 @@ class ARCollectionService {
       lineDesc = `Funds received via ${receipt.paymentMethod} from ${receipt.customerName}`;
     }
 
-    // Trigger Double-Entry GL entry (Dr Deposit Account / Cr A/R)
+    // Credit leg: use selected income account (e.g. 4010, 4020) or default to 1020 A/R
+    const creditAcc = receipt.incomeAccountId
+      ? accounts.find((a) => a.id === receipt.incomeAccountId) || arAcc
+      : arAcc;
+    const isDirectIncome = creditAcc.accountClass === 'INCOME';
+
+    // Trigger Double-Entry GL entry (Dr Deposit Account / Cr Income or A/R)
     const journal = await financeRepository.createJournalEntry({
       date: new Date().toISOString().slice(0, 10),
-      description: entryDesc,
+      description: isDirectIncome
+        ? `Direct Income Receipt: ${receipt.receiptNumber} (${receipt.customerName} - ${creditAcc.name})`
+        : entryDesc,
       reference: receipt.receiptNumber,
       source: 'PAYMENT',
       lines: [
@@ -422,12 +507,14 @@ class ARCollectionService {
           description: lineDesc,
         },
         {
-          accountId: arAcc.id,
+          accountId: creditAcc.id,
           debit: 0,
           credit: receipt.amount,
           customerId: receipt.customerId,
           customerName: receipt.customerName,
-          description: `Clear customer Accounts Receivable for ${receipt.customerName}`,
+          description: isDirectIncome
+            ? `Recognize revenue (${creditAcc.code} - ${creditAcc.name}) from ${receipt.customerName}`
+            : `Clear customer Accounts Receivable for ${receipt.customerName}`,
         },
       ],
     });
@@ -437,6 +524,8 @@ class ARCollectionService {
     receipt.glJournalId = journal.id;
     receipt.depositAccountId = depositAcc.id;
     receipt.depositAccountCode = depositAcc.code;
+    receipt.incomeAccountId = creditAcc.id;
+    receipt.incomeAccountCode = creditAcc.code;
 
     // Register with PDC Vault if CHEQUE
     if (receipt.paymentMethod === 'CHEQUE') {

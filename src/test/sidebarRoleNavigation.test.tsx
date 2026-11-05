@@ -195,12 +195,171 @@ describe('Role-Based Sidebar Navigation & Access Control', () => {
       expect(canAccessRoute('DIRECTOR', '/')).toBe(true);
     });
 
+    it('at /payments/collect, only Customer Collections is highlighted and Cash in Hand is not highlighted', () => {
+      mockUseAuth.mockReturnValue({
+        role: 'DIRECTOR',
+        currentUser: {
+          id: 'user-director',
+          name: 'Director User',
+          role: 'DIRECTOR',
+          email: 'director@dns.lk',
+          phone: '0771234567',
+          status: 'ACTIVE',
+        },
+        canAccessRoute: (path: string) => canAccessRoute('DIRECTOR', path),
+        hasPermission: () => true,
+        isAuthenticated: true,
+      });
+
+      render(
+        <MemoryRouter initialEntries={['/payments/collect']}>
+          <Sidebar isOpen={true} onClose={() => {}} />
+        </MemoryRouter>
+      );
+
+      const customerCollectionsItem = screen.getByText('Customer Collections').closest('div');
+      const cashInHandItem = screen.getByText('Cash in Hand (Wallet)').closest('div');
+
+      expect(customerCollectionsItem).toHaveClass('bg-slate-100');
+      expect(cashInHandItem).not.toHaveClass('bg-slate-100');
+    });
+
+    it('at /payments, only Cash in Hand is highlighted and Customer Collections is not highlighted', () => {
+      mockUseAuth.mockReturnValue({
+        role: 'DIRECTOR',
+        currentUser: {
+          id: 'user-director',
+          name: 'Director User',
+          role: 'DIRECTOR',
+          email: 'director@dns.lk',
+          phone: '0771234567',
+          status: 'ACTIVE',
+        },
+        canAccessRoute: (path: string) => canAccessRoute('DIRECTOR', path),
+        hasPermission: () => true,
+        isAuthenticated: true,
+      });
+
+      render(
+        <MemoryRouter initialEntries={['/payments']}>
+          <Sidebar isOpen={true} onClose={() => {}} />
+        </MemoryRouter>
+      );
+
+      const customerCollectionsItem = screen.getByText('Customer Collections').closest('div');
+      const cashInHandItem = screen.getByText('Cash in Hand (Wallet)').closest('div');
+
+      expect(cashInHandItem).toHaveClass('bg-slate-100');
+      expect(customerCollectionsItem).not.toHaveClass('bg-slate-100');
+    });
+
     it('MANAGER has full permissions for GRN creation and delivery notes, cash in hand, but excluded from global tax/theme config', () => {
       expect(canAccessRoute('MANAGER', '/inventory/grn')).toBe(true);
       expect(canAccessRoute('MANAGER', '/inventory/grn/new')).toBe(true);
       expect(canAccessRoute('MANAGER', '/inventory/delivery-notes')).toBe(true);
       expect(canAccessRoute('MANAGER', '/inventory/delivery-notes/new')).toBe(true);
       expect(canAccessRoute('MANAGER', '/payments')).toBe(true);
+    });
+
+    it('removes Purchasing Dashboard and Purchase Reports from navigation bar for PURCHASING_OFFICER', () => {
+      setupSidebarForRole('PURCHASING_OFFICER');
+
+      // Purchasing & Procurement is visible
+      expect(screen.getByTitle('Purchasing & Procurement')).toBeInTheDocument();
+
+      // Navigation bar must NOT include Purchasing Dashboard, Purchase Reports, or Approvals
+      expect(screen.queryByText('Purchasing Dashboard')).not.toBeInTheDocument();
+      expect(screen.queryByText('Purchase Reports')).not.toBeInTheDocument();
+      expect(screen.queryByText('PO Approvals')).not.toBeInTheDocument();
+      expect(screen.queryByText('Approvals Engine')).not.toBeInTheDocument();
+      expect(screen.queryByText('Purchasing Approvals')).not.toBeInTheDocument();
+      expect(canAccessRoute('PURCHASING_OFFICER', '/approvals')).toBe(false);
+
+      // Allowed purchasing navigation items are present
+      expect(screen.getByText('Purchase Orders')).toBeInTheDocument();
+      expect(screen.getByText('Supplier Management')).toBeInTheDocument();
+    });
+
+    it('removes Purchasing Dashboard and Purchase Reports from navigation bar for PURCHASING_MANAGER', () => {
+      setupSidebarForRole('PURCHASING_MANAGER');
+
+      // Purchasing & Procurement is visible
+      expect(screen.getByTitle('Purchasing & Procurement')).toBeInTheDocument();
+
+      // Navigation bar must NOT include Purchasing Dashboard or Purchase Reports
+      expect(screen.queryByText('Purchasing Dashboard')).not.toBeInTheDocument();
+      expect(screen.queryByText('Purchase Reports')).not.toBeInTheDocument();
+
+      // Allowed purchasing navigation items are present
+      expect(screen.getByText('Purchase Orders')).toBeInTheDocument();
+      expect(screen.getByText('Supplier Management')).toBeInTheDocument();
+    });
+
+    it('for DIRECTOR only Financial Reports Hub is visible in Finance navigations and other finance navigations are hidden', () => {
+      setupSidebarForRole('DIRECTOR');
+
+      // Click on Finance rail category
+      const financeRailBtn = screen.getByTitle('Finance');
+      expect(financeRailBtn).toBeInTheDocument();
+      fireEvent.click(financeRailBtn);
+
+      // Financial Reports Hub must be visible
+      expect(screen.getByText('Financial Reports Hub')).toBeInTheDocument();
+
+      // All other finance navigation items must be hidden
+      expect(screen.queryByText('Chart of Accounts')).not.toBeInTheDocument();
+      expect(screen.queryByText('Income & Collections')).not.toBeInTheDocument();
+      expect(screen.queryByText('Expense & Payables')).not.toBeInTheDocument();
+      expect(screen.queryByText('Vendor Bill Costing (AP)')).not.toBeInTheDocument();
+      expect(screen.queryByText('Credit & Debit Notes')).not.toBeInTheDocument();
+      expect(screen.queryByText('Journal Entry Voucher')).not.toBeInTheDocument();
+      expect(screen.queryByText('PDC Vault (1018)')).not.toBeInTheDocument();
+      expect(screen.queryByText('Bank Reconciliation')).not.toBeInTheDocument();
+      expect(screen.queryByText('Period Closing Lock')).not.toBeInTheDocument();
+    });
+
+    it('for MANAGER only Financial Reports Hub is visible in Finance navigations and other finance navigations are hidden', () => {
+      setupSidebarForRole('MANAGER');
+
+      // Click on Finance & Payments rail category
+      const financeRailBtn = screen.getByTitle('Finance & Payments');
+      expect(financeRailBtn).toBeInTheDocument();
+      fireEvent.click(financeRailBtn);
+
+      // Financial Reports Hub must be visible
+      expect(screen.getByText('Financial Reports Hub')).toBeInTheDocument();
+
+      // All other finance navigation items must be hidden
+      expect(screen.queryByText('Chart of Accounts')).not.toBeInTheDocument();
+      expect(screen.queryByText('Income & Collections')).not.toBeInTheDocument();
+      expect(screen.queryByText('Expense & Payables')).not.toBeInTheDocument();
+      expect(screen.queryByText('Vendor Bill Costing (AP)')).not.toBeInTheDocument();
+      expect(screen.queryByText('Credit & Debit Notes')).not.toBeInTheDocument();
+      expect(screen.queryByText('Journal Entry Voucher')).not.toBeInTheDocument();
+      expect(screen.queryByText('PDC Vault (1018)')).not.toBeInTheDocument();
+      expect(screen.queryByText('Bank Reconciliation')).not.toBeInTheDocument();
+      expect(screen.queryByText('Period Closing Lock')).not.toBeInTheDocument();
+    });
+
+    it('for FINANCE_MANAGER all 10 finance navigation items remain visible', () => {
+      setupSidebarForRole('FINANCE_MANAGER');
+
+      // Click on Finance & Payments rail category
+      const financeRailBtn = screen.getByTitle('Finance & Payments');
+      expect(financeRailBtn).toBeInTheDocument();
+      fireEvent.click(financeRailBtn);
+
+      // All 10 finance navigation items must be visible
+      expect(screen.getByText('Chart of Accounts')).toBeInTheDocument();
+      expect(screen.getByText('Income & Collections')).toBeInTheDocument();
+      expect(screen.getByText('Expense & Payables')).toBeInTheDocument();
+      expect(screen.getByText('Vendor Bill Costing (AP)')).toBeInTheDocument();
+      expect(screen.getByText('Credit & Debit Notes')).toBeInTheDocument();
+      expect(screen.getByText('Journal Entry Voucher')).toBeInTheDocument();
+      expect(screen.getByText('PDC Vault (1018)')).toBeInTheDocument();
+      expect(screen.getByText('Bank Reconciliation')).toBeInTheDocument();
+      expect(screen.getByText('Period Closing Lock')).toBeInTheDocument();
+      expect(screen.getByText('Financial Reports Hub')).toBeInTheDocument();
     });
   });
 

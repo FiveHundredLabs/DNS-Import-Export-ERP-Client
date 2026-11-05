@@ -107,7 +107,7 @@ export function DirectorDashboard() {
       <div className="space-y-6">
         {/* Top Header & Tab Controls */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl w-fit flex-wrap">
+          <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl w-fit max-w-full overflow-x-auto flex-wrap no-scrollbar">
             <button
               onClick={() => handleTabChange('overview')}
               className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 transition-all cursor-pointer"
@@ -165,7 +165,7 @@ export function DirectorDashboard() {
       <div className="space-y-6">
         {/* Top Header & Tab Controls */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl w-fit flex-wrap">
+          <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl w-fit max-w-full overflow-x-auto flex-wrap no-scrollbar">
             <button
               onClick={() => handleTabChange('overview')}
               className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 transition-all cursor-pointer"
@@ -240,7 +240,7 @@ export function DirectorDashboard() {
       {/* Top Header & Tab Controls for Director / Manager */}
       {canAccessSettings && (
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl w-fit flex-wrap">
+          <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl w-fit max-w-full overflow-x-auto flex-wrap no-scrollbar">
             <button
               onClick={() => handleTabChange('overview')}
               className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold bg-white text-slate-900 shadow-xs transition-all cursor-pointer"

@@ -12,6 +12,7 @@ import { Card, CardContent } from '../../../../components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../../../../components/ui/dialog';
 import { Textarea } from '../../../../components/ui/textarea';
 import { formatCurrency, formatDate, formatDateTime } from '../../../../utils/formatters';
+import { cn } from '../../../../utils/cn';
 import { printerService } from '../../../../services/PrinterService';
 import { pdfService } from '../../../../services/PdfService';
 import { whatsAppService } from '../../../../services/WhatsAppService';
@@ -37,6 +38,8 @@ import {
   User,
   CreditCard,
   RotateCcw,
+  Receipt,
+  Banknote,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -45,6 +48,9 @@ export function ReceiptApprovalQueuePage() {
   const [receipts, setReceipts] = useState<ARReceiptItem[]>(() => arService.getReceipts());
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED' | 'ALL'>('PENDING_APPROVAL');
+  // 2-Tab Desk Switcher: Rep Handovers & Approvals (Queue) vs Customer Receipts (Settlement Desk)
+  const [deskTab, setDeskTab] = useState<'HANDOVERS_QUEUE' | 'CUSTOMER_RECEIPTS'>('HANDOVERS_QUEUE');
+  const [selectedReceiptForSettlementId, setSelectedReceiptForSettlementId] = useState<string>('');
 
   // Selected item for Detailed Cash Receipt Inspection Modal (aligned with Sales Rep view)
   const [selectedReceipt, setSelectedReceipt] = useState<ARReceiptItem | null>(null);
@@ -92,6 +98,15 @@ export function ReceiptApprovalQueuePage() {
     if (!approvingItem) return [];
     return arService.getOpenInvoicesForCustomer(approvingItem.customerId);
   }, [approvingItem]);
+
+  const activeSettlementReceipt = useMemo(() => {
+    return receipts.find((r) => r.id === selectedReceiptForSettlementId) || receipts[0] || null;
+  }, [receipts, selectedReceiptForSettlementId]);
+
+  const settlementOpenInvoices = useMemo(() => {
+    if (!activeSettlementReceipt) return [];
+    return arService.getOpenInvoicesForCustomer(activeSettlementReceipt.customerId);
+  }, [activeSettlementReceipt]);
 
   const totalAllocated = useMemo(() => {
     return Object.values(customAllocations).reduce((sum, v) => sum + (Number(v) || 0), 0);
@@ -228,6 +243,16 @@ export function ReceiptApprovalQueuePage() {
         actions={
           <div className="flex items-center gap-2">
             <Button
+              size="sm"
+              onClick={() => navigate('/finance/income')}
+              className="text-xs h-8 gap-1.5 font-semibold bg-primary hover:bg-primary-dark text-white shadow-2xs"
+              title="Switch to Unified Income & Collections Desk"
+            >
+              <Banknote className="h-3.5 w-3.5" />
+              <span>Unified Income Desk</span>
+            </Button>
+
+            <Button
               variant="outline"
               size="sm"
               onClick={() => navigate('/finance/ar/pdc-vault')}
@@ -260,163 +285,385 @@ export function ReceiptApprovalQueuePage() {
         }
       />
 
-      {/* Queue Metric Cards & Tabs */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {[
-          { id: 'PENDING_APPROVAL', label: 'Pending Approval', count: pendingCount, icon: Clock, variant: 'amber' as const },
-          { id: 'APPROVED', label: 'Approved & Cleared', count: approvedCount, icon: CheckCircle2, variant: 'emerald' as const },
-          { id: 'REJECTED', label: 'Rejected / Returned', count: rejectedCount, icon: AlertCircle, variant: 'rose' as const },
-          { id: 'ALL', label: 'All Receipts', count: receipts.length, icon: FileText, variant: 'indigo' as const },
-        ].map((tab) => (
-          <StatCard
-            key={tab.id}
-            title={tab.label}
-            value={tab.count}
-            icon={tab.icon}
-            variant={tab.variant}
-            selected={statusFilter === tab.id}
-            onClick={() => setStatusFilter(tab.id as any)}
-          />
-        ))}
-      </div>
-
-      {/* Filter and Search Bar */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs">
-        <div className="relative flex-1 w-full sm:max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-          <Input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search receipt #, customer name, collector..."
-            className="pl-9 text-xs h-9"
-          />
+      {/* Al Akleel-Style Clean 2-Tab Segmented Desk Control */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-1 border-b border-border/60">
+        <div className="flex items-center p-1 bg-muted/60 rounded-xl border border-border/80">
+          <button
+            type="button"
+            onClick={() => setDeskTab('HANDOVERS_QUEUE')}
+            className={cn(
+              'flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all',
+              deskTab === 'HANDOVERS_QUEUE'
+                ? 'bg-background text-foreground shadow-xs border border-border/50'
+                : 'text-muted-foreground hover:text-foreground'
+            )}
+          >
+            <Clock className="h-3.5 w-3.5 text-amber-600" />
+            <span>Rep Handovers & Approvals (Queue)</span>
+            <span className="ml-1 px-1.5 py-0.2 rounded-full text-[10px] bg-amber-100 text-amber-800 font-mono">
+              {pendingCount}
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setDeskTab('CUSTOMER_RECEIPTS')}
+            className={cn(
+              'flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all',
+              deskTab === 'CUSTOMER_RECEIPTS'
+                ? 'bg-background text-foreground shadow-xs border border-border/50'
+                : 'text-muted-foreground hover:text-foreground'
+            )}
+          >
+            <Receipt className="h-3.5 w-3.5 text-primary" />
+            <span>Customer Receipts</span>
+            <span className="ml-1 px-1.5 py-0.2 rounded-full text-[10px] bg-muted text-muted-foreground font-mono">
+              {receipts.length}
+            </span>
+          </button>
         </div>
 
-        <div className="text-xs text-slate-500 font-medium">
-          Showing <span className="font-semibold text-slate-800">{filteredReceipts.length}</span> receipt(s)
+        {/* Clean Protocol Hint */}
+        <div className="text-xs text-muted-foreground hidden lg:flex items-center gap-1.5">
+          <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
+          <span>Workflow: Sales Rep Field Collection → Physical Handover → Finance Approval</span>
         </div>
       </div>
+      {/* TAB 1: SALES REP HANDOVERS & APPROVALS QUEUE */}
+      {deskTab === 'HANDOVERS_QUEUE' && (
+        <div className="space-y-4">
+          {/* Queue Metric Cards & Tabs */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {[
+              { id: 'PENDING_APPROVAL', label: 'Pending Approval', count: pendingCount, icon: Clock, variant: 'amber' as const },
+              { id: 'APPROVED', label: 'Approved & Cleared', count: approvedCount, icon: CheckCircle2, variant: 'emerald' as const },
+              { id: 'REJECTED', label: 'Rejected / Returned', count: rejectedCount, icon: AlertCircle, variant: 'rose' as const },
+              { id: 'ALL', label: 'All Receipts', count: receipts.length, icon: FileText, variant: 'indigo' as const },
+            ].map((tab) => (
+              <StatCard
+                key={tab.id}
+                title={tab.label}
+                value={tab.count}
+                icon={tab.icon}
+                variant={tab.variant}
+                selected={statusFilter === tab.id}
+                onClick={() => setStatusFilter(tab.id as any)}
+              />
+            ))}
+          </div>
 
-      {/* Standardized Industrial Receipts Table */}
-      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xs">
-        <div className="overflow-x-auto w-full">
-          <table className="w-full min-w-[1000px] text-left text-xs tabular-nums">
-            <thead className="bg-slate-50 border-b border-slate-200 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-              <tr>
-                <th className="py-3 px-4">Receipt Number</th>
-                <th className="py-3 px-4">Customer</th>
-                <th className="py-3 px-3">Sales Rep</th>
-                <th className="py-3 px-3">Payment Method</th>
-                <th className="py-3 px-4 text-right">Amount (LKR)</th>
-                <th className="py-3 px-3 text-center">Status</th>
-                <th className="py-3 px-4 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {filteredReceipts.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="py-12 text-center text-xs text-slate-400">
-                    No receipts found matching your criteria.
-                  </td>
-                </tr>
-              ) : (
-                filteredReceipts.map((receipt) => {
-                  const isPending = receipt.status === 'PENDING_APPROVAL';
+          {/* Filter and Search Bar */}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs">
+            <div className="relative flex-1 w-full sm:max-w-md">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+              <Input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search receipt #, customer name, collector..."
+                className="pl-9 text-xs h-9"
+              />
+            </div>
 
-                  return (
-                    <tr
-                      key={receipt.id}
-                      onClick={() => setSelectedReceipt(receipt)}
-                      className="hover:bg-slate-50/70 transition-colors cursor-pointer"
-                    >
-                      <td className="py-3 px-4 font-mono font-bold text-slate-900">
-                        {receipt.receiptNumber}
-                      </td>
-                      <td className="py-3 px-4">
-                        <div className="font-semibold text-slate-900">{receipt.customerName}</div>
-                        <span className="font-mono text-[11px] text-slate-400">{receipt.customerCode}</span>
-                      </td>
-                      <td className="py-3 px-3 text-slate-600">
-                        {receipt.collectorName}
-                      </td>
-                      <td className="py-3 px-3">
-                        <div className="flex items-center gap-1.5">
-                          <Badge
-                            variant="outline"
-                            className={`text-[10px] font-mono font-semibold ${
-                              receipt.paymentMethod === 'CHEQUE'
-                                ? 'border-amber-300 bg-amber-50 text-amber-800'
-                                : receipt.paymentMethod === 'CASH'
-                                ? 'border-emerald-300 bg-emerald-50 text-emerald-800'
-                                : 'border-blue-300 bg-blue-50 text-blue-800'
-                            }`}
-                          >
-                            {receipt.paymentMethod}
-                          </Badge>
-                          {receipt.paymentMethod === 'CHEQUE' && (
-                            <span className="text-[10px] text-amber-700 font-medium font-mono">PDC 1018</span>
-                          )}
-                        </div>
-                      </td>
-                      <td className="py-3 px-4 text-right font-mono font-bold text-slate-900 text-sm">
-                        {formatCurrency(receipt.amount)}
-                      </td>
-                      <td className="py-3 px-3 text-center">
-                        <StatusBadge
-                          status={receipt.status}
-                          label={
-                            receipt.status === 'PENDING_APPROVAL'
-                              ? 'Pending Approval'
-                              : receipt.status === 'APPROVED'
-                              ? 'Approved'
-                              : 'Rejected'
-                          }
-                        />
-                      </td>
-                      <td className="py-3 px-4 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
-                        <div className="inline-flex items-center gap-1.5 justify-end">
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => setSelectedReceipt(receipt)}
-                            className="h-7 text-xs px-2.5 text-slate-600 hover:text-slate-900 font-medium gap-1"
-                            title="Inspect high-detail cash receipt"
-                          >
-                            <span>Inspect</span>
-                            <ChevronRight className="h-3 w-3" />
-                          </Button>
+            <div className="text-xs text-slate-500 font-medium">
+              Showing <span className="font-semibold text-slate-800">{filteredReceipts.length}</span> receipt(s)
+            </div>
+          </div>
 
-                          {isPending && (
-                            <>
-                              <Button
-                                size="sm"
-                                onClick={() => handleOpenApprove(receipt)}
-                                disabled={processingId === receipt.id}
-                                className="h-7 px-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold gap-1 shadow-2xs"
-                              >
-                                <CheckCircle2 className="h-3.5 w-3.5" />
-                                <span>Approve</span>
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleOpenReject(receipt)}
-                                className="h-7 px-2 text-rose-600 hover:bg-rose-50 border-rose-200 text-xs font-medium"
-                              >
-                                Reject
-                              </Button>
-                            </>
-                          )}
-                        </div>
+          {/* Standardized Industrial Receipts Table */}
+          <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xs">
+            <div className="overflow-x-auto w-full">
+              <table className="w-full min-w-[1000px] text-left text-xs tabular-nums">
+                <thead className="bg-slate-50 border-b border-slate-200 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                  <tr>
+                    <th className="py-3 px-4">Receipt Number</th>
+                    <th className="py-3 px-4">Customer</th>
+                    <th className="py-3 px-3">Sales Rep</th>
+                    <th className="py-3 px-3">Payment Method</th>
+                    <th className="py-3 px-4 text-right">Amount (LKR)</th>
+                    <th className="py-3 px-3 text-center">Status</th>
+                    <th className="py-3 px-4 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {filteredReceipts.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="py-12 text-center text-xs text-slate-400">
+                        No receipts found matching your criteria.
                       </td>
                     </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
+                  ) : (
+                    filteredReceipts.map((receipt) => {
+                      const isPending = receipt.status === 'PENDING_APPROVAL';
+
+                      return (
+                        <tr
+                          key={receipt.id}
+                          onClick={() => setSelectedReceipt(receipt)}
+                          className="hover:bg-slate-50/70 transition-colors cursor-pointer"
+                        >
+                          <td className="py-3 px-4 font-mono font-bold text-slate-900">
+                            {receipt.receiptNumber}
+                          </td>
+                          <td className="py-3 px-4">
+                            <div className="font-semibold text-slate-900">{receipt.customerName}</div>
+                            <span className="font-mono text-[11px] text-slate-400">{receipt.customerCode}</span>
+                          </td>
+                          <td className="py-3 px-3 text-slate-600">
+                            {receipt.collectorName}
+                          </td>
+                          <td className="py-3 px-3">
+                            <div className="flex items-center gap-1.5">
+                              <Badge
+                                variant="outline"
+                                className={`text-[10px] font-mono font-semibold ${
+                                  receipt.paymentMethod === 'CHEQUE'
+                                    ? 'border-amber-300 bg-amber-50 text-amber-800'
+                                    : receipt.paymentMethod === 'CASH'
+                                    ? 'border-emerald-300 bg-emerald-50 text-emerald-800'
+                                    : 'border-blue-300 bg-blue-50 text-blue-800'
+                                }`}
+                              >
+                                {receipt.paymentMethod}
+                              </Badge>
+                              {receipt.paymentMethod === 'CHEQUE' && (
+                                <span className="text-[10px] text-amber-700 font-medium font-mono">PDC 1018</span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="py-3 px-4 text-right font-mono font-bold text-slate-900 text-sm">
+                            {formatCurrency(receipt.amount)}
+                          </td>
+                          <td className="py-3 px-3 text-center">
+                            <StatusBadge
+                              status={receipt.status}
+                              label={
+                                receipt.status === 'PENDING_APPROVAL'
+                                  ? 'Pending Approval'
+                                  : receipt.status === 'APPROVED'
+                                  ? 'Approved'
+                                  : 'Rejected'
+                              }
+                            />
+                          </td>
+                          <td className="py-3 px-4 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                            <div className="inline-flex items-center gap-1.5 justify-end">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => setSelectedReceipt(receipt)}
+                                className="h-7 text-xs px-2.5 text-slate-600 hover:text-slate-900 font-medium gap-1"
+                                title="Inspect high-detail cash receipt"
+                              >
+                                <span>Inspect</span>
+                                <ChevronRight className="h-3 w-3" />
+                              </Button>
+
+                              {isPending && (
+                                <>
+                                  <Button
+                                    size="sm"
+                                    onClick={() => handleOpenApprove(receipt)}
+                                    disabled={processingId === receipt.id}
+                                    className="h-7 px-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold gap-1 shadow-2xs"
+                                  >
+                                    <CheckCircle2 className="h-3.5 w-3.5" />
+                                    <span>Approve</span>
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => handleOpenReject(receipt)}
+                                    className="h-7 px-2 text-rose-600 hover:bg-rose-50 border-rose-200 text-xs font-medium"
+                                  >
+                                    Reject
+                                  </Button>
+                                </>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
-      </div>
+      )}
+
+      {/* TAB 2: CUSTOMER RECEIPTS WITH INLINE UNPAID INVOICE SETTLEMENT TABLE */}
+      {deskTab === 'CUSTOMER_RECEIPTS' && (
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+            {/* Left 6 cols: Customer Receipts List */}
+            <div className="lg:col-span-6 space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
+                  <Receipt className="h-4 w-4 text-primary" />
+                  <span>Customer Receipts Registry ({receipts.length})</span>
+                </h3>
+                <span className="text-[11px] text-muted-foreground">Select receipt to view unpaid invoices</span>
+              </div>
+
+              <div className="overflow-hidden rounded-xl border border-border bg-card shadow-xs">
+                <div className="overflow-x-auto w-full max-h-[480px]">
+                  <table className="w-full text-left text-xs tabular-nums">
+                    <thead className="bg-muted/60 border-b border-border text-[11px] font-semibold uppercase tracking-wider text-muted-foreground sticky top-0 z-10">
+                      <tr>
+                        <th className="py-2.5 px-3">Receipt</th>
+                        <th className="py-2.5 px-3">Customer</th>
+                        <th className="py-2.5 px-3 text-right">Amount</th>
+                        <th className="py-2.5 px-3 text-center">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border/60">
+                      {receipts.map((r) => {
+                        const isSelected = activeSettlementReceipt?.id === r.id;
+                        return (
+                          <tr
+                            key={r.id}
+                            onClick={() => setSelectedReceiptForSettlementId(r.id)}
+                            className={cn(
+                              'cursor-pointer transition-colors',
+                              isSelected ? 'bg-primary/10 border-l-3 border-primary' : 'hover:bg-muted/40'
+                            )}
+                          >
+                            <td className="py-2.5 px-3 font-mono font-bold text-foreground">
+                              {r.receiptNumber}
+                              <div className="text-[10px] text-muted-foreground font-normal">{r.paymentMethod}</div>
+                            </td>
+                            <td className="py-2.5 px-3">
+                              <div className="font-semibold text-foreground truncate max-w-[150px]">{r.customerName}</div>
+                              <div className="text-[10px] text-muted-foreground">{r.collectorName}</div>
+                            </td>
+                            <td className="py-2.5 px-3 text-right font-mono font-bold text-foreground">
+                              {formatCurrency(r.amount)}
+                            </td>
+                            <td className="py-2.5 px-3 text-center">
+                              <Badge
+                                variant="outline"
+                                className={cn(
+                                  'text-[10px] font-semibold py-0',
+                                  r.status === 'APPROVED' && 'border-emerald-300 bg-emerald-50 text-emerald-800',
+                                  r.status === 'PENDING_APPROVAL' && 'border-amber-300 bg-amber-50 text-amber-800',
+                                  r.status === 'REJECTED' && 'border-rose-300 bg-rose-50 text-rose-800'
+                                )}
+                              >
+                                {r.status === 'APPROVED' ? 'Approved' : r.status === 'PENDING_APPROVAL' ? 'Pending' : 'Rejected'}
+                              </Badge>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            {/* Right 6 cols: Inline Unpaid Invoice Settlement Table */}
+            <div className="lg:col-span-6 space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-bold text-foreground flex items-center gap-1.5">
+                    <SlidersHorizontal className="h-4 w-4 text-primary" />
+                    <span>Open Unpaid Invoices: {activeSettlementReceipt?.customerName || 'Selected Customer'}</span>
+                  </h3>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">
+                    Customer outstanding receivables and settlement breakdown
+                  </p>
+                </div>
+                {activeSettlementReceipt && activeSettlementReceipt.status === 'PENDING_APPROVAL' && (
+                  <Button
+                    size="sm"
+                    onClick={() => handleOpenApprove(activeSettlementReceipt)}
+                    className="text-xs h-7 px-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold gap-1"
+                  >
+                    <CheckCircle2 className="h-3 w-3" />
+                    <span>Approve & Settle</span>
+                  </Button>
+                )}
+              </div>
+
+              <div className="overflow-hidden rounded-xl border border-border bg-card shadow-xs">
+                <div className="overflow-x-auto w-full max-h-[480px]">
+                  <table className="w-full text-left text-xs tabular-nums">
+                    <thead className="bg-muted/60 border-b border-border text-[11px] font-semibold uppercase tracking-wider text-muted-foreground sticky top-0 z-10">
+                      <tr>
+                        <th className="py-2.5 px-3">Invoice #</th>
+                        <th className="py-2.5 px-3">Date / Due</th>
+                        <th className="py-2.5 px-3 text-right">Invoice Total</th>
+                        <th className="py-2.5 px-3 text-right">Balance Due</th>
+                        <th className="py-2.5 px-3 text-center">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border/60">
+                      {settlementOpenInvoices.length === 0 ? (
+                        <tr>
+                          <td colSpan={5} className="py-8 text-center text-xs text-muted-foreground">
+                            {activeSettlementReceipt
+                              ? 'No unpaid invoices found for this customer. All invoices are settled.'
+                              : 'Select a receipt on the left to inspect customer unpaid invoices.'}
+                          </td>
+                        </tr>
+                      ) : (
+                        settlementOpenInvoices.map((inv) => (
+                          <tr key={inv.id} className="hover:bg-muted/30 transition-colors">
+                            <td className="py-2.5 px-3 font-mono font-bold text-primary">
+                              {inv.invoiceNumber}
+                            </td>
+                            <td className="py-2.5 px-3 text-muted-foreground text-[11px]">
+                              <div>{formatDate(inv.issueDate)}</div>
+                              <div className="text-[10px] text-slate-400">Due {formatDate(inv.dueDate)}</div>
+                            </td>
+                            <td className="py-2.5 px-3 text-right font-mono text-foreground">
+                              {formatCurrency(inv.totalAmount)}
+                            </td>
+                            <td className="py-2.5 px-3 text-right font-mono font-bold text-rose-600">
+                              {formatCurrency(inv.balanceDue)}
+                            </td>
+                            <td className="py-2.5 px-3 text-center">
+                              <Badge
+                                variant="outline"
+                                className="text-[10px] font-mono border-amber-300 text-amber-800 bg-amber-50 py-0"
+                              >
+                                {inv.balanceDue < inv.totalAmount ? 'PARTIAL' : 'UNPAID'}
+                              </Badge>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Settlement summary banner */}
+              {activeSettlementReceipt && (
+                <div className="rounded-xl border border-border/80 bg-muted/40 p-3 flex items-center justify-between text-xs">
+                  <div>
+                    <span className="font-semibold text-foreground block">
+                      Receipt Amount: <span className="font-mono text-primary">{formatCurrency(activeSettlementReceipt.amount)}</span>
+                    </span>
+                    <span className="text-[11px] text-muted-foreground">
+                      Customer Total Open Balance: <span className="font-mono">{formatCurrency(settlementOpenInvoices.reduce((s, i) => s + i.balanceDue, 0))}</span>
+                    </span>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => navigate('/finance/ar/allocate')}
+                    className="text-xs h-7 px-2.5"
+                  >
+                    <span>Open Batch Allocator</span>
+                    <ArrowRight className="h-3 w-3 ml-1" />
+                  </Button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* High-Detail Cash Receipt Inspection Dialog (Aligned with Sales Rep Cash Receipt) */}
       <Dialog
@@ -427,6 +674,7 @@ export function ReceiptApprovalQueuePage() {
         {selectedReceipt && (
           <div className="space-y-6">
             <DialogHeader>
+              <DialogTitle className="sr-only">Receipt Verification Detail</DialogTitle>
               <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 border-b border-slate-200 pb-4">
                 <div>
                   <div className="flex items-center gap-2">
@@ -645,7 +893,7 @@ export function ReceiptApprovalQueuePage() {
                     className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold gap-1.5 shadow-xs"
                   >
                     <ShieldCheck className="h-4 w-4" />
-                    Verify & Settle Invoices
+                    Confirm Bank Clearing & Restore Credit
                   </Button>
                 </div>
               )}

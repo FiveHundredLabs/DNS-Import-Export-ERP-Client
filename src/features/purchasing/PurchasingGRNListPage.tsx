@@ -163,7 +163,84 @@ export function PurchasingGRNListPage() {
       {/* GRN Table */}
       <Card className="border-slate-200 shadow-2xs overflow-hidden">
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
+          {/* Mobile Card List (block md:hidden) */}
+          <div className="block md:hidden p-3 space-y-3">
+            {paginatedGRNs.length === 0 ? (
+              <div className="py-8 text-center text-slate-400 text-xs">
+                No Goods Received Notes found matching your criteria.
+              </div>
+            ) : (
+              paginatedGRNs.map((grn) => {
+                const totalAccepted =
+                  grn.items?.reduce(
+                    (sum, item) => sum + (item.receivedQuantity - (item.damagedQuantity || 0)),
+                    0
+                  ) || 0;
+
+                const totalValue =
+                  grn.totalValue ||
+                  grn.items?.reduce(
+                    (sum, item) =>
+                      sum +
+                      (item.receivedQuantity - (item.damagedQuantity || 0)) *
+                        (item.unitCostSnapshot || 0),
+                    0
+                  ) ||
+                  0;
+
+                return (
+                  <div
+                    key={grn.id}
+                    onClick={() => navigate(`/purchasing/grn/${grn.id}`)}
+                    className="rounded-2xl border border-slate-200/90 bg-white p-3.5 shadow-xs hover:border-primary/50 transition-all cursor-pointer active:scale-[0.99] space-y-3"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-mono text-xs font-bold text-slate-900 truncate">
+                        {grn.grnNumber || grn.id}
+                      </span>
+                      <div className="shrink-0" onClick={(e) => e.stopPropagation()}>
+                        {getStatusBadge(grn.status)}
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="font-semibold text-xs text-slate-900 truncate">{grn.supplierName}</div>
+                      <div className="text-[10px] text-slate-400 font-mono mt-0.5">Location: {grn.warehouseId || 'WH-MAIN'}</div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 bg-slate-50 p-2.5 rounded-xl border border-slate-100 text-xs">
+                      <div>
+                        <span className="text-[10px] text-slate-400 block">Accepted Units</span>
+                        <span className="font-mono font-bold text-slate-900 text-sm">{totalAccepted} units</span>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-[10px] text-slate-400 block">Total Value</span>
+                        <span className="font-mono font-bold text-slate-900 text-sm">
+                          {formatCurrency(totalValue)}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="pt-2 border-t border-slate-100 flex items-center justify-between" onClick={(e) => e.stopPropagation()}>
+                      <span className="text-[11px] text-slate-400">Inward Shipment</span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => navigate(`/purchasing/grn/${grn.id}`)}
+                        className="h-8 px-3 text-xs gap-1 text-slate-700"
+                      >
+                        <Eye className="h-3.5 w-3.5" />
+                        <span>Inspect</span>
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+
+          {/* Desktop Table View (hidden md:block) */}
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-xs text-left text-slate-600 min-w-[850px]">
               <thead className="bg-slate-50/80 text-[11px] uppercase tracking-wider text-slate-500 border-b border-slate-200">
                 <tr>

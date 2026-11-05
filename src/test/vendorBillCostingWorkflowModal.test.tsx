@@ -1,19 +1,18 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { VendorBillCostingPage } from '../features/finance/pages/ap/VendorBillCostingPage';
 import { apService } from '../features/finance/services/apService';
 import { financeRepository } from '../features/finance/api';
-import { batchInventoryService } from '../services/BatchInventoryService';
 
-describe('Vendor Bill Costing Workflow: Selling Price Modal & Redirection Prevention', () => {
+describe('Vendor Bill 2-Step Guided Workflow: Costing to Pricing & Redirection Prevention', () => {
   beforeEach(async () => {
     localStorage.clear();
     await financeRepository.resetToDefaults();
     apService.reset();
   });
 
-  it('1. Triggers FinancePricingModal after posting bill, and does NOT redirect to dashboard on modal dismiss', async () => {
+  it('1. Navigates seamlessly from Step 1 to Step 2 and posts bill without kicking user to dashboard', async () => {
     render(
       <MemoryRouter initialEntries={['/finance/ap/bills/new']}>
         <Routes>
@@ -23,84 +22,71 @@ describe('Vendor Bill Costing Workflow: Selling Price Modal & Redirection Preven
       </MemoryRouter>
     );
 
-    // Verify initial render on bills/new
+    // Verify initial render on Step 1
     expect(screen.getByText(/Vendor Bill Processing \(GRN Costing\)/i)).toBeDefined();
+    expect(screen.getByText(/Step 1: Invoice & Landed Costing/i)).toBeDefined();
+    expect(screen.getByText(/Step 2: Selling Price & Margin Setup/i)).toBeDefined();
 
-    // Fill in required vendor invoice number
+    // Fill in required vendor invoice number in persistent top header
     const invInput = screen.getByPlaceholderText(/e\.g\. INV-SCH-90214/i);
     fireEvent.change(invInput, { target: { value: 'INV-TEST-PRICE-01' } });
 
-    const postBillBtn = screen.getByRole('button', { name: /post vendor bill/i });
+    // Click Continue to Pricing (Step 2)
+    const continueBtn = screen.getByRole('button', { name: /continue to pricing \(step 2\)/i });
+    fireEvent.click(continueBtn);
+
+    // Verify Step 2 is active
     await waitFor(() => {
-      expect(postBillBtn.hasAttribute('disabled')).toBe(false);
+      expect(screen.getByText(/Commercial Price & Margin Assignment/i)).toBeDefined();
     });
+
+    // Check that Post Bill & Apply Prices button is enabled and works
+    const postBillBtn = screen.getByRole('button', { name: /post bill & apply prices/i });
+    expect(postBillBtn.hasAttribute('disabled')).toBe(false);
     fireEvent.click(postBillBtn);
 
-    // Selling-Price Strategy Decision Modal should trigger and be open
+    // Verify bill is posted and audit lock is active
     await waitFor(() => {
-      expect(screen.getByText(/GRN Post-Costing Price Assignment/i)).toBeDefined();
-      expect(screen.getAllByText(/Strategy 1: Preserve Existing Batch Prices/i).length).toBeGreaterThan(0);
-      expect(screen.getAllByText(/Strategy 2: Standardize Under One Price/i).length).toBeGreaterThan(0);
+      expect(screen.getByText(/Audit Lock Active/i)).toBeDefined();
+      expect(screen.getByText(/Bill Costed & Approved/i)).toBeDefined();
     });
 
-    // Close or Skip the modal
-    const skipBtn = screen.getByRole('button', { name: /skip \/ keep defaults/i });
-    fireEvent.click(skipBtn);
-
-    // Verify modal is closed
-    await waitFor(() => {
-      expect(screen.queryByText(/GRN Post-Costing Price Assignment/i)).toBeNull();
-    });
-
-    // CRITICAL: Ensure page did NOT prematurely redirect to /finance/dashboard!
+    // CRITICAL: Ensure user remains on page and was not prematurely redirected to dashboard
     expect(screen.queryByTestId('finance-dashboard')).toBeNull();
-    // User remains on the vendor bill costing page
-    expect(screen.getByText(/Vendor Bill Processing \(GRN Costing\)/i)).toBeDefined();
-    // Audit Lock banner with action button is present
-    expect(screen.getByText(/Audit Lock Active/i)).toBeDefined();
-    expect(screen.getAllByRole('button', { name: /set.*selling prices/i }).length).toBeGreaterThan(0);
   });
 
-  it('2. Completes selling price strategy assignment and releases inventory without kicking user to dashboard', async () => {
+  it('2. Switches rules between Incoming Batch Only (FIFO) and Standardize All Stock in Step 2', async () => {
     render(
       <MemoryRouter initialEntries={['/finance/ap/bills/new']}>
         <Routes>
           <Route path="/finance/ap/bills/new" element={<VendorBillCostingPage />} />
-          <Route path="/finance/dashboard" element={<div data-testid="finance-dashboard">Dashboard</div>} />
         </Routes>
       </MemoryRouter>
     );
 
-    // Fill in required invoice number
-    const invInput = screen.getByPlaceholderText(/e\.g\. INV-SCH-90214/i);
-    fireEvent.change(invInput, { target: { value: 'INV-TEST-PRICE-02' } });
+    // Click step 2 pill tab directly
+    const step2Tab = screen.getByRole('button', { name: /Step 2: Selling Price & Margin Setup/i });
+    fireEvent.click(step2Tab);
 
-    // Post bill
-    const postBillBtn = screen.getByRole('button', { name: /post vendor bill/i });
     await waitFor(() => {
-      expect(postBillBtn.hasAttribute('disabled')).toBe(false);
-    });
-    fireEvent.click(postBillBtn);
-
-    // Modal appears
-    await waitFor(() => {
-      expect(screen.getByText(/GRN Post-Costing Price Assignment/i)).toBeDefined();
+      expect(screen.getByText(/Commercial Price & Margin Assignment/i)).toBeDefined();
     });
 
-    // Confirm & Apply Selling Price Strategy
-    const applyBtn = screen.getByRole('button', { name: /confirm & apply selling price strategy/i });
-    fireEvent.click(applyBtn);
+    // Toggle global rule to Standardize All Stock
+    const standardizeBtn = screen.getByRole('button', { name: /standardize all stock/i });
+    fireEvent.click(standardizeBtn);
 
-    // Modal should close
     await waitFor(() => {
-      expect(screen.queryByText(/GRN Post-Costing Price Assignment/i)).toBeNull();
+      expect(screen.getByText(/Updates catalog selling price and standardizes all existing active inventory batches/i)).toBeDefined();
     });
 
-    // Verify user is NOT kicked to dashboard
-    expect(screen.queryByTestId('finance-dashboard')).toBeNull();
+    // Toggle back to Incoming Batch Only
+    const batchOnlyBtn = screen.getByRole('button', { name: /incoming batch only \(fifo\)/i });
+    fireEvent.click(batchOnlyBtn);
 
-    // Verify success banner is displayed
-    expect(screen.getByText(/Selling Price Strategy Assigned & Inventory Released/i)).toBeDefined();
+    await waitFor(() => {
+      expect(screen.getByText(/Preserves existing inventory batches at their current prices/i)).toBeDefined();
+    });
   });
 
   it('3. Selects the GRN automatically when grnId query parameter is provided in URL', async () => {
@@ -119,89 +105,7 @@ describe('Vendor Bill Costing Workflow: Selling Price Modal & Redirection Preven
     });
   });
 
-  it('4. Allows Finance to open Selling Price setting modal anytime on an already costed GRN', async () => {
-    // First, cost GRN-2025-001
-    const available = apService.getAvailableGRNs();
-    const grn = available[0];
-    await apService.postVendorBill({
-      grnId: grn.id,
-      vendorInvoiceNumber: 'INV-PRECOSTED-99',
-      invoiceDate: '2026-10-01',
-      dueDate: '2026-11-01',
-      lineItems: [
-        {
-          id: 'li-test',
-          productId: grn.items[0].productId,
-          productName: grn.items[0].productNameSnapshot,
-          sku: grn.items[0].skuSnapshot,
-          receivedQuantity: grn.items[0].receivedQuantity,
-          draftUnitCost: grn.items[0].unitCostSnapshot,
-          unitCost: grn.items[0].unitCostSnapshot,
-          lineDiscount: 0,
-          vatCode: 'STANDARD_18',
-          vatAmount: 0,
-          lineTotal: 1000,
-        },
-      ],
-      freightCharges: 0,
-      otherLandingCosts: 0,
-    });
-
-    render(
-      <MemoryRouter initialEntries={['/finance/ap/bills/new']}>
-        <Routes>
-          <Route path="/finance/ap/bills/new" element={<VendorBillCostingPage />} />
-          <Route path="/finance/dashboard" element={<div data-testid="finance-dashboard">Dashboard</div>} />
-        </Routes>
-      </MemoryRouter>
-    );
-
-    // Audit Lock is active
-    await waitFor(() => {
-      expect(screen.getByText(/Audit Lock Active/i)).toBeDefined();
-    });
-
-    // Click "Set Selling Prices" button in header
-    const setPricesButtons = screen.getAllByRole('button', { name: /set.*selling prices/i });
-    expect(setPricesButtons.length).toBeGreaterThan(0);
-    fireEvent.click(setPricesButtons[0]);
-
-    // Modal/inline section opens cleanly without dialog popup
-    await waitFor(() => {
-      expect(screen.getByText(/GRN Post-Costing Price Assignment/i)).toBeDefined();
-    });
-    // Verify NOT inside role="dialog"
-    expect(screen.queryByRole('dialog')).toBeNull();
-  });
-
-  it('5. Confirms removal of Costing Summary ribbon and verifies Step 4 tab dismissal returns to all sections', async () => {
-    // Post bill for first GRN
-    const available = apService.getAvailableGRNs();
-    const grn = available[0];
-    await apService.postVendorBill({
-      grnId: grn.id,
-      vendorInvoiceNumber: 'INV-PRECOSTED-100',
-      invoiceDate: '2026-10-01',
-      dueDate: '2026-11-01',
-      lineItems: [
-        {
-          id: 'li-test-1',
-          productId: grn.items[0].productId,
-          productName: grn.items[0].productNameSnapshot,
-          sku: grn.items[0].skuSnapshot,
-          receivedQuantity: grn.items[0].receivedQuantity,
-          draftUnitCost: grn.items[0].unitCostSnapshot,
-          unitCost: grn.items[0].unitCostSnapshot,
-          lineDiscount: 0,
-          vatCode: 'STANDARD_18',
-          vatAmount: 0,
-          lineTotal: 1000,
-        },
-      ],
-      freightCharges: 0,
-      otherLandingCosts: 0,
-    });
-
+  it('4. Allows user to navigate back and forth between Step 1 and Step 2 using the bottom buttons', async () => {
     render(
       <MemoryRouter initialEntries={['/finance/ap/bills/new']}>
         <Routes>
@@ -210,32 +114,24 @@ describe('Vendor Bill Costing Workflow: Selling Price Modal & Redirection Preven
       </MemoryRouter>
     );
 
-    // Verify Costing Summary ribbon is completely removed
-    expect(screen.queryByText(/Supplier Base:/i)).toBeNull();
-    expect(screen.queryByText(/AP Commitment \(Cr 2010\):/i)).toBeNull();
-    expect(screen.queryByText(/True Landed \(Dr 1100\):/i)).toBeNull();
+    // Click Continue to Step 2
+    const continueBtn = screen.getByRole('button', { name: /continue to pricing \(step 2\)/i });
+    fireEvent.click(continueBtn);
 
-    // Click "Step 4: Selling Prices" tab in navigation bar
-    const step4Tab = await screen.findByRole('button', { name: /Step 4: Selling Prices/i });
-    expect(step4Tab).toBeInTheDocument();
-    fireEvent.click(step4Tab);
-
-    // Verify Step 4 section is active
-    expect(screen.getByText(/GRN Post-Costing Price Assignment/i)).toBeInTheDocument();
-
-    // Click "Skip / Keep Defaults"
-    const skipBtn = screen.getByRole('button', { name: /skip \/ keep defaults/i });
-    fireEvent.click(skipBtn);
-
-    // Verify Step 4 section closes and resets
     await waitFor(() => {
-      expect(screen.queryByText(/GRN Post-Costing Price Assignment/i)).toBeNull();
+      expect(screen.getByText(/Commercial Price & Margin Assignment/i)).toBeDefined();
     });
-    // Active view returns to all sections
-    expect(screen.getByText(/Step 1: Inbound & Invoice Items/i)).toBeInTheDocument();
+
+    // Click Back to Costing (Step 1)
+    const backBtn = screen.getByRole('button', { name: /back to costing \(step 1\)/i });
+    fireEvent.click(backBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Additional Landed Costs \(Inbound Logistics & Customs\)/i)).toBeDefined();
+    });
   });
 
-  it('6. Synchronizes approvals engine and updates status to APPROVED after applying strategy', async () => {
+  it('5. Synchronizes approvals engine and updates status to APPROVED after posting bill and prices', async () => {
     // Seed pending approval for GRN-2025-005 in localStorage
     localStorage.setItem(
       'dns_erp_approval_requests',
@@ -263,11 +159,12 @@ describe('Vendor Bill Costing Workflow: Selling Price Modal & Redirection Preven
     const invInput = screen.getByPlaceholderText(/e\.g\. INV-SCH-90214/i);
     fireEvent.change(invInput, { target: { value: 'INV-TEST-SYNC-05' } });
 
-    // Post bill
-    const postBillBtn = screen.getByRole('button', { name: /post vendor bill/i });
-    await waitFor(() => {
-      expect(postBillBtn.hasAttribute('disabled')).toBe(false);
-    });
+    // Navigate to Step 2
+    const continueBtn = screen.getByRole('button', { name: /continue to pricing \(step 2\)/i });
+    fireEvent.click(continueBtn);
+
+    // Post bill & apply prices
+    const postBillBtn = await screen.findByRole('button', { name: /post bill & apply prices/i });
     fireEvent.click(postBillBtn);
 
     // Verify localStorage approval was marked APPROVED
@@ -276,10 +173,6 @@ describe('Vendor Bill Costing Workflow: Selling Price Modal & Redirection Preven
       const req = stored.find((r: any) => r.documentId === 'GRN-2025-005');
       expect(req?.status).toBe('APPROVED');
     });
-
-    // Apply strategy in inline pricing
-    const applyBtn = await screen.findByRole('button', { name: /confirm & apply selling price strategy/i });
-    fireEvent.click(applyBtn);
 
     // Verify GRN status updated to APPROVED
     await waitFor(() => {

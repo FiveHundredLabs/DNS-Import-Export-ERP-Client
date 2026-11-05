@@ -29,6 +29,7 @@ import {
   Wallet,
   Clock,
   Check,
+  CreditCard,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { PurchaseOrderSelector } from '../../../../components/selectors/PurchaseOrderSelector';
@@ -266,12 +267,21 @@ export function SupplierAdvancePaymentsPage() {
               Accounts Payable
             </Badge>
           </div>
-          <p className="text-sm text-slate-500 mt-1">
-            Disburse advance deposits to suppliers prior to billing (Dr 1050 Advance to Suppliers, Cr Bank) and map them to finalized inbound GRNs.
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Supplier prepayment deposits and inbound GRN settlements.
           </p>
         </div>
 
         <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            onClick={() => navigate('/finance/expense')}
+            className="text-xs bg-primary hover:bg-primary-hover text-white font-semibold gap-1.5 shadow-2xs"
+            title="Switch to Unified Expense & Payables Desk"
+          >
+            <CreditCard className="h-3.5 w-3.5" />
+            <span>Unified Expense Desk</span>
+          </Button>
           <Button
             variant={activeTab === 'REGISTRY' ? 'default' : 'outline'}
             size="sm"

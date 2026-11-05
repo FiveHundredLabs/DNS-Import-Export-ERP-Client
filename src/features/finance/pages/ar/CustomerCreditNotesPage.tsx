@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { customerCreditNoteService } from '../../services/customerCreditNoteService';
+import { periodLockService } from '../../services/periodLockService';
 import { CustomerCreditNote, CustomerCreditNoteLineItem } from '../../api/types';
 import { MOCK_CUSTOMERS } from '../../../../mock/mockCustomers';
 import { MOCK_PRODUCTS } from '../../../../mock/mockProducts';
@@ -34,10 +35,11 @@ import {
   SlidersHorizontal,
   X,
   FileText,
+  Undo2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
-export function CustomerCreditNotesPage() {
+export function CustomerCreditNotesPage({ hideTopSwitcher = false }: { hideTopSwitcher?: boolean } = {}) {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
@@ -340,6 +342,31 @@ export function CustomerCreditNotesPage() {
 
   return (
     <div className="space-y-6">
+      {!hideTopSwitcher && (
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-2 border-b border-border/60">
+          <div className="flex items-center p-1 bg-muted/60 rounded-xl border border-border/80">
+            <button
+              type="button"
+              className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-background text-foreground shadow-xs border border-border/50"
+            >
+              <RotateCcw className="h-3.5 w-3.5 text-primary" />
+              <span>Customer Credit Notes (AR)</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate('/finance/notes?tab=debit')}
+              className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold text-muted-foreground hover:text-foreground transition-all"
+            >
+              <Undo2 className="h-3.5 w-3.5 text-amber-600" />
+              <span>Supplier Debit Notes (AP)</span>
+            </button>
+          </div>
+          <span className="text-xs text-muted-foreground hidden sm:inline">
+            Unified Commercial Notes Desk
+          </span>
+        </div>
+      )}
+
       {/* Header */}
       <PageHeader
         title="Customer Credit Notes"
@@ -741,18 +768,24 @@ export function CustomerCreditNotesPage() {
 
             {selectedCN.status === 'ISSUED' && (
               <div className="pt-2">
-                <ConfirmButton
-                  variant="outline"
-                  size="sm"
-                  dialogVariant="destructive"
-                  confirmTitle="Void Customer Credit Note"
-                  confirmMessage={`Are you sure you want to void Credit Note ${selectedCN.creditNoteNumber}? This will reverse the General Ledger postings and restore the customer's outstanding Accounts Receivable debt.`}
-                  confirmText="Void Credit Note"
-                  onConfirm={() => handleVoidCreditNote(selectedCN)}
-                  className="w-full border-rose-200 text-rose-600 hover:bg-rose-50 text-xs"
-                >
-                  Void Credit Note & Reverse Entries
-                </ConfirmButton>
+                {periodLockService.isDateLocked(selectedCN.date) ? (
+                  <div className="p-2.5 rounded-md bg-amber-50 border border-amber-200 text-amber-800 text-[11px] flex items-center gap-2">
+                    <span className="font-semibold">Period Closed:</span> Credit Note cannot be voided as its date ({formatDate(selectedCN.date)}) falls within a closed financial period.
+                  </div>
+                ) : (
+                  <ConfirmButton
+                    variant="outline"
+                    size="sm"
+                    dialogVariant="destructive"
+                    confirmTitle="Void Customer Credit Note"
+                    confirmMessage={`Are you sure you want to void Credit Note ${selectedCN.creditNoteNumber}? This will reverse the General Ledger postings and restore the customer's outstanding Accounts Receivable debt.`}
+                    confirmText="Void Credit Note"
+                    onConfirm={() => handleVoidCreditNote(selectedCN)}
+                    className="w-full border-rose-200 text-rose-600 hover:bg-rose-50 text-xs"
+                  >
+                    Void Credit Note & Reverse Entries
+                  </ConfirmButton>
+                )}
               </div>
             )}
           </div>

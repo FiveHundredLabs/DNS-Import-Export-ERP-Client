@@ -20,6 +20,7 @@ import {
   X,
   Star,
   BookOpen,
+  FolderTree,
   FileSpreadsheet,
   Receipt,
   ShoppingCart,
@@ -109,7 +110,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         p.startsWith('/quotations') ||
         p.startsWith('/orders') ||
         p.startsWith('/invoices') ||
-        p.startsWith('/payments/collect') ||
+        p.startsWith('/payments') ||
         p.startsWith('/pos')
       ) {
         setActiveCategory('sales');
@@ -118,10 +119,11 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         p.startsWith('/purchasing/suppliers') ||
         p.startsWith('/teams') ||
         p.startsWith('/areas')
-      ) {        setActiveCategory('users');
+      ) {
+        setActiveCategory('users');
       } else if (p.startsWith('/inventory') || p.startsWith('/products')) {
         setActiveCategory('inventory');
-      } else if (p.startsWith('/finance') || p === '/payments') {
+      } else if (p.startsWith('/finance')) {
         setActiveCategory('finance');
       } else if (p.startsWith('/approvals') || p.startsWith('/warranty')) {
         setActiveCategory('approvals');
@@ -184,22 +186,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   ];
 
   const directorFinanceItems: SidebarItem[] = [
-    { id: 'accounts', name: 'Chart of Accounts', path: '/finance/accounts', icon: BookOpen, category: 'finance' },
-    { id: 'ap-bills', name: 'Vendor Bill Costing (AP)', path: '/finance/ap/bills/new', icon: Receipt, category: 'finance' },
-    { id: 'ap-advances', name: 'Supplier Advance Prepayments', path: '/finance/ap/advances', icon: Coins, category: 'finance' },
-    { id: 'ap-payments', name: 'Batch Supplier Payments', path: '/finance/ap/payments/new', icon: CreditCard, category: 'finance' },
-    { id: 'ap-debit-notes', name: 'Supplier Debit Notes', path: '/finance/ap/debit-notes', icon: Undo2, category: 'finance' },
-    { id: 'ar-handovers', name: 'Sales Rep Cash Handovers', path: '/payments', icon: Banknote, category: 'finance' },
-    { id: 'ar-approvals', name: 'Receipt Approval Queue (AR)', path: '/finance/ar/approvals', icon: CheckCircle2, category: 'finance' },
-    { id: 'ar-pdc', name: 'PDC Vault (Cheques in Hand)', path: '/finance/ar/pdc-vault', icon: Clock, category: 'finance' },
-    { id: 'ar-allocate', name: 'AR Collection Allocation', path: '/finance/ar/allocate', icon: SlidersHorizontal, category: 'finance' },
-    { id: 'ar-credit-notes', name: 'Customer Credit Notes', path: '/finance/ar/credit-notes', icon: RotateCcw, category: 'finance' },
-    { id: 'journal', name: 'Journal Entry Voucher', path: '/finance/journal/new', icon: Zap, category: 'finance' },
-    { id: 'cash-book', name: 'Cash Book & Vouchers', path: '/finance/cash-book', icon: Coins, category: 'finance' },
-    { id: 'reconciliation', name: 'Bank Reconciliation', path: '/finance/reconciliation', icon: Landmark, category: 'finance' },
-    { id: 'closing', name: 'Period Closing Lock', path: '/finance/settings/closing', icon: Lock, category: 'finance' },
     { id: 'reports-hub', name: 'Financial Reports Hub', path: '/finance/reports', icon: BarChart3, category: 'finance' },
-    { id: 'monthly-audit', name: 'Monthly Audit & Double Entry', path: '/finance/reports/monthly-audit', icon: Layers, category: 'finance' },
   ];
 
   const directorApprovalItems: SidebarItem[] = [
@@ -252,13 +239,13 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
 
   // 0. Purchasing & Procurement Module
   const purchasingItems: SidebarItem[] = [
-    { id: 'purchasing-dashboard', name: 'Purchasing Dashboard', path: '/purchasing', icon: LayoutGrid, category: 'purchasing', exact: true, excludedRoles: ['MANAGER'] },
+    { id: 'purchasing-dashboard', name: 'Purchasing Dashboard', path: '/purchasing', icon: LayoutGrid, category: 'purchasing', exact: true, excludedRoles: ['MANAGER', 'PURCHASING_OFFICER', 'PURCHASING_MANAGER'] },
     { id: 'purchasing-suppliers', name: 'Supplier Management', path: '/purchasing/suppliers', icon: Store, category: 'purchasing', excludedRoles: ['MANAGER'] },
     { id: 'purchasing-orders', name: 'Purchase Orders', path: '/purchasing/orders', icon: ShoppingCart, category: 'purchasing' },
-    { id: 'purchasing-approvals', name: 'PO Approvals', path: '/approvals', icon: ShieldCheck, category: 'purchasing' },
+    { id: 'purchasing-approvals', name: 'PO Approvals', path: '/approvals', icon: ShieldCheck, category: 'purchasing', excludedRoles: ['PURCHASING_OFFICER'] },
     { id: 'purchasing-payments', name: 'Supplier Payments (View Only)', path: '/purchasing/payments', icon: CreditCard, category: 'purchasing' },
     { id: 'purchasing-grn', name: 'Goods Received Notes (View Only)', path: '/purchasing/grn', icon: Boxes, category: 'purchasing' },
-    { id: 'purchasing-reports', name: 'Purchase Reports', path: '/purchasing/reports', icon: BarChart3, category: 'purchasing', excludedRoles: ['MANAGER'] },
+    { id: 'purchasing-reports', name: 'Purchase Reports', path: '/purchasing/reports', icon: BarChart3, category: 'purchasing', excludedRoles: ['MANAGER', 'PURCHASING_OFFICER', 'PURCHASING_MANAGER'] },
     { id: 'purchasing-returns', name: 'Supplier Returns & RMA', path: '/purchasing/returns', icon: RotateCcw, category: 'purchasing' },
   ];
 
@@ -271,7 +258,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       name:
         role === 'STOCK_MANAGER'
           ? 'Stock Manager Approvals'
-          : role === 'PURCHASING_MANAGER' || role === 'PURCHASING_OFFICER'
+          : role === 'PURCHASING_MANAGER'
           ? 'Purchasing Approvals'
           : role === 'AREA_MANAGER'
           ? 'Order Approvals'
@@ -281,7 +268,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       path: '/approvals',
       icon: role === 'STOCK_MANAGER' || role === 'PURCHASING_MANAGER' ? ShieldCheck : CheckCircle,
       category: 'approvals',
-      excludedRoles: ['SHOWROOM_MANAGER', 'SALES_REP', 'STOCK_KEEPER', 'CASHIER'],
+      excludedRoles: ['SHOWROOM_MANAGER', 'SALES_REP', 'STOCK_KEEPER', 'CASHIER', 'PURCHASING_OFFICER'],
     },
     {
       id: 'my-approvals',
@@ -303,6 +290,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     { id: 'customers', name: 'Customer Master', path: '/customers', icon: Users2, category: 'customers', excludedRoles: ['CASHIER', 'SHOWROOM_MANAGER'] },
     { id: 'customer-onboarding', name: 'Customer Onboarding', path: '/customers/onboarding', icon: UserPlus, category: 'customers', excludedRoles: ['CASHIER', 'SHOWROOM_MANAGER', 'STOCK_KEEPER', 'FINANCE_MANAGER', 'PURCHASING_OFFICER'] },
     { id: 'invoices', name: 'Invoices', path: '/invoices', icon: Receipt, category: 'sales', excludedRoles: ['CASHIER', 'SHOWROOM_MANAGER'] },
+    { id: 'my-performance', name: 'Performance & Incentives', path: '/my-performance', icon: Award, category: 'sales', allowedRoles: ['SALES_REP', 'AREA_MANAGER'] },
     { id: 'pos', name: 'Showroom POS', path: '/pos', icon: Store, category: 'sales', excludedRoles: ['STOCK_KEEPER', 'STOCK_MANAGER'] },
     { id: 'showroom-sales-report', name: 'Showroom Sales Report', path: '/reports/sales/showroom', icon: Store, category: 'sales', allowedRoles: ['SHOWROOM_MANAGER'] },
   ];
@@ -319,37 +307,17 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
 
   // 4. Finance, Banking & Ledger Core (arranged in logical lifecycle order)
   const financeItems: SidebarItem[] = [
-    // 1. Foundation & Master Data
-    { id: 'accounts', name: 'Chart of Accounts', path: '/finance/accounts', icon: BookOpen, category: 'finance' },
-    { id: 'suppliers', name: 'Suppliers', path: '/finance/suppliers', icon: Store, category: 'finance' },
-
-    // 2. Procurement & Accounts Payable (AP)
-    { id: 'ap-bills', name: 'Vendor Bill Costing (AP)', path: '/finance/ap/bills/new', icon: Receipt, category: 'finance' },
-    { id: 'ap-advances', name: 'Supplier Advance Prepayments', path: '/finance/ap/advances', icon: Coins, category: 'finance' },
-    { id: 'ap-payments', name: 'Batch Supplier Payments', path: '/finance/ap/payments/new', icon: CreditCard, category: 'finance' },
-    { id: 'ap-debit-notes', name: 'Supplier Debit Notes', path: '/finance/ap/debit-notes', icon: Undo2, category: 'finance' },
-
-    // 3. Sales & Accounts Receivable (AR)
-    { id: 'ar-handovers', name: 'Sales Rep Cash Handovers', path: '/payments', icon: Banknote, category: 'finance', allowedRoles: ['DIRECTOR', 'MANAGER', 'FINANCE_MANAGER'] },
-    { id: 'ar-approvals', name: 'Receipt Approval Queue (AR)', path: '/finance/ar/approvals', icon: CheckCircle2, category: 'finance' },
-    { id: 'ar-pdc', name: 'PDC Vault (Cheques in Hand)', path: '/finance/ar/pdc-vault', icon: Clock, category: 'finance' },
-    { id: 'ar-allocate', name: 'AR Collection Allocation', path: '/finance/ar/allocate', icon: SlidersHorizontal, category: 'finance' },
-    { id: 'ar-credit-notes', name: 'Customer Credit Notes', path: '/finance/ar/credit-notes', icon: RotateCcw, category: 'finance' },
-
-    // 4. Core Universal Journal & Adjustments
-    { id: 'journal', name: 'Journal Entry Voucher', path: '/finance/journal/new', icon: Zap, category: 'finance' },
-
-    // 5. Banking & Cash Book (BR-09)
-    { id: 'cash-book', name: 'Cash Book & Vouchers', path: '/finance/cash-book', icon: Coins, category: 'finance' },
-    { id: 'reconciliation', name: 'Bank Reconciliation', path: '/finance/reconciliation', icon: Landmark, category: 'finance' },
-
-    // 6. Period Control & Year-End Close
-    { id: 'closing', name: 'Period Closing Lock', path: '/finance/settings/closing', icon: Lock, category: 'finance' },
-
-    // 7. Statutory Reports & Compliance
+    { id: 'accounts', name: 'Chart of Accounts', path: '/finance/accounts', icon: BookOpen, category: 'finance', excludedRoles: ['MANAGER', 'DIRECTOR'] },
+    { id: 'categories', name: 'Categories Registry', path: '/finance/categories', icon: FolderTree, category: 'finance', excludedRoles: ['MANAGER', 'DIRECTOR'] },
+    { id: 'income-desk', name: 'Income & Collections', path: '/finance/income', icon: Banknote, category: 'finance', excludedRoles: ['MANAGER', 'DIRECTOR'] },
+    { id: 'expense-desk', name: 'Expense & Payables', path: '/finance/expense', icon: CreditCard, category: 'finance', excludedRoles: ['MANAGER', 'DIRECTOR'] },
+    { id: 'ap-bills', name: 'Vendor Bill Costing (AP)', path: '/finance/ap/bills/new', icon: Receipt, category: 'finance', excludedRoles: ['MANAGER', 'DIRECTOR'] },
+    { id: 'commercial-notes', name: 'Credit & Debit Notes', path: '/finance/notes', icon: RotateCcw, category: 'finance', excludedRoles: ['MANAGER', 'DIRECTOR'] },
+    { id: 'journal', name: 'Journal Entry Voucher', path: '/finance/journal/new', icon: Zap, category: 'finance', excludedRoles: ['MANAGER', 'DIRECTOR'] },
+    { id: 'ar-pdc', name: 'PDC Vault (1018)', path: '/finance/ar/pdc-vault', icon: Clock, category: 'finance', excludedRoles: ['MANAGER', 'DIRECTOR'] },
+    { id: 'reconciliation', name: 'Bank Reconciliation', path: '/finance/reconciliation', icon: Landmark, category: 'finance', excludedRoles: ['MANAGER', 'DIRECTOR'] },
+    { id: 'closing', name: 'Period Closing Lock', path: '/finance/settings/closing', icon: Lock, category: 'finance', excludedRoles: ['MANAGER', 'DIRECTOR'] },
     { id: 'reports-hub', name: 'Financial Reports Hub', path: '/finance/reports', icon: BarChart3, category: 'finance' },
-    { id: 'monthly-audit', name: 'Monthly Audit & Double Entry', path: '/finance/reports/monthly-audit', icon: Layers, category: 'finance' },
-    { id: 'commissions', name: 'Sales Commission', path: '/commissions', icon: Award, category: 'finance', allowedRoles: ['DIRECTOR', 'MANAGER', 'FINANCE_MANAGER', 'SALES_MANAGER', 'AREA_MANAGER'] },
   ];
 
   // 5. Administration, Field Management & Intelligence
@@ -544,6 +512,10 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     if (item.path === '/customers' && location.pathname.startsWith('/customers/onboarding')) {
       return false;
     }
+    // Prevent Cash in Hand (/payments) from highlighting when on Customer Collections (/payments/collect) or customer ledger routes
+    if (item.path === '/payments' && (location.pathname.startsWith('/payments/collect') || location.pathname.startsWith('/payments/customer'))) {
+      return false;
+    }
     return location.pathname === item.path || location.pathname.startsWith(item.path + '/');
   };
 
@@ -553,6 +525,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     const itemIsFav = isFavorite(item.id);
     const active = isItemActive(item);
     const isCustomerMasterExempt = item.path === '/customers' && location.pathname.startsWith('/customers/onboarding');
+    const isCashInHandExempt = item.path === '/payments' && (location.pathname.startsWith('/payments/collect') || location.pathname.startsWith('/payments/customer'));
 
     return (
       <div
@@ -567,7 +540,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         {/* Left: Slate Gray Menu Item Icon (Small: h-3.5 w-3.5) + Item Name */}
         <NavLink
           to={item.path}
-          end={item.exact || isCustomerMasterExempt}
+          end={item.exact || isCustomerMasterExempt || isCashInHandExempt}
           onClick={onClose}
           className="flex items-center gap-2 min-w-0 flex-1 px-2 py-1.5 focus:outline-none"
         >

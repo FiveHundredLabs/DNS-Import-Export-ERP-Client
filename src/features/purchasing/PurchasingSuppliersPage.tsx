@@ -4,6 +4,8 @@ import { useFinanceLedger } from '../finance/hooks/useFinanceLedger';
 import { Supplier, CreateSupplierDTO } from '../finance/api/types';
 import { SupplierModal } from '../finance/components/SupplierModal';
 import { usePurchaseOrders } from '../../hooks/usePurchaseOrders';
+import { useAuth } from '../../hooks/useAuth';
+import { hasPermission } from '../../rules/permissions';
 import { apService } from '../finance/services/apService';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 import {
@@ -22,6 +24,7 @@ import {
   Clock,
   ArrowUpDown,
   Eye,
+  CreditCard,
 } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -39,8 +42,16 @@ import { TableLoadingSkeleton } from '../../components/common/LoadingSkeleton';
 
 export function PurchasingSuppliersPage() {
   const navigate = useNavigate();
+  const { currentUser } = useAuth();
   const { suppliers, loading, createSupplier, updateSupplier } = useFinanceLedger();
   const { purchaseOrders } = usePurchaseOrders();
+
+  const canManageSuppliers = useMemo(() => {
+    if (!currentUser) return false;
+    if (currentUser.role === 'PURCHASING_OFFICER') return false;
+    if (currentUser.role === 'DIRECTOR' || currentUser.role === 'MANAGER' || currentUser.role === 'PURCHASING_MANAGER') return true;
+    return hasPermission(currentUser.role, 'purchasing:suppliers_manage');
+  }, [currentUser]);
 
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'INACTIVE'>('ALL');
@@ -126,11 +137,15 @@ export function PurchasingSuppliersPage() {
   }, [inspectedSupplier]);
 
   const handleOpenCreate = () => {
+    if (!canManageSuppliers) return;
+    setDetailModalOpen(false);
     setSupplierToEdit(null);
     setModalOpen(true);
   };
 
   const handleOpenEdit = (sup: Supplier) => {
+    if (!canManageSuppliers) return;
+    setDetailModalOpen(false);
     setSupplierToEdit(sup);
     setModalOpen(true);
   };
@@ -141,11 +156,16 @@ export function PurchasingSuppliersPage() {
   };
 
   const handleSave = async (dto: CreateSupplierDTO): Promise<Supplier> => {
+    let saved: Supplier;
     if (supplierToEdit) {
-      return updateSupplier(supplierToEdit.id, dto);
+      saved = await updateSupplier(supplierToEdit.id, dto);
     } else {
-      return createSupplier(dto);
+      saved = await createSupplier(dto);
     }
+    if (inspectedSupplier && supplierToEdit && inspectedSupplier.id === supplierToEdit.id) {
+      setInspectedSupplier(saved);
+    }
+    return saved;
   };
 
   const toggleSort = (col: 'name' | 'code' | 'balance') => {
@@ -183,13 +203,15 @@ export function PurchasingSuppliersPage() {
           </p>
         </div>
 
-        <Button
-          onClick={handleOpenCreate}
-          className="gap-1.5 bg-primary hover:bg-primary-hover text-primary-foreground font-semibold shadow-xs self-start sm:self-auto"
-        >
-          <Plus className="h-4 w-4" />
-          <span>New Supplier</span>
-        </Button>
+        {canManageSuppliers && (
+          <Button
+            onClick={handleOpenCreate}
+            className="gap-1.5 bg-primary hover:bg-primary-hover text-primary-foreground font-semibold shadow-xs self-start sm:self-auto"
+          >
+            <Plus className="h-4 w-4" />
+            <span>New Supplier</span>
+          </Button>
+        )}
       </div>
 
       {/* Metric Cards */}
@@ -378,15 +400,21 @@ export function PurchasingSuppliersPage() {
                         >
                           <Eye className="h-3.5 w-3.5" />
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleOpenEdit(sup)}
-                          className="h-7 text-xs px-2 text-slate-600 hover:text-slate-900"
-                          title="Edit supplier information"
-                        >
-                          <Edit className="h-3.5 w-3.5" />
-                        </Button>
+                        {canManageSuppliers && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOpenEdit(sup);
+                            }}
+                            className="h-7 text-xs px-2.5 gap-1 bg-white hover:bg-slate-50 text-slate-700"
+                            title="Edit supplier information"
+                          >
+                            <Edit className="h-3.5 w-3.5 text-slate-500" />
+                            <span>Edit</span>
+                          </Button>
+                        )}
                         <Button
                           variant="outline"
                           size="sm"
@@ -442,9 +470,15 @@ export function PurchasingSuppliersPage() {
       {/* Supplier Create/Edit Modal */}
       <SupplierModal
         open={modalOpen}
-        onOpenChange={setModalOpen}
+        onOpenChange={(isOpen) => {
+          setModalOpen(isOpen);
+          if (!isOpen) {
+            setSupplierToEdit(null);
+          }
+        }}
         onSave={handleSave}
         supplierToEdit={supplierToEdit}
+        existingSuppliers={suppliers}
       />
 
       {/* Supplier Inspection & Purchase History Detail Modal */}
@@ -661,16 +695,18 @@ export function PurchasingSuppliersPage() {
               </div>
             </div>
 
-            <DialogFooter className="flex justify-between sm:justify-between">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleOpenEdit(inspectedSupplier)}
-                className="gap-1.5 text-xs"
-              >
-                <Edit className="h-3.5 w-3.5" />
-                <span>Edit Profile</span>
-              </Button>
+            <DialogFooter className={`flex ${canManageSuppliers ? 'justify-between sm:justify-between' : 'justify-end sm:justify-end'}`}>
+              {canManageSuppliers && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleOpenEdit(inspectedSupplier)}
+                  className="gap-1.5 text-xs"
+                >
+                  <Edit className="h-3.5 w-3.5" />
+                  <span>Edit Profile</span>
+                </Button>
+              )}
               <Button
                 variant="default"
                 size="sm"

@@ -2,107 +2,85 @@ import { useState, useMemo, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../../../hooks/useAuth';
 import { apService, VendorBillLineItem, LandedExpenseItem } from '../../services/apService';
-import { CurrencyInput } from '../../components/CurrencyInput';
-import { DoubleEntryHoverBadge } from '../../components/DoubleEntryHoverBadge';
-import { FinancePricingInlineSection } from '../../components/FinancePricingInlineSection';
+import { periodLockService } from '../../services/periodLockService';
+import { batchInventoryService } from '../../../../services/BatchInventoryService';
+import { productService } from '../../../../services/ProductService';
 import { Button } from '../../../../components/ui/button';
-import { ConfirmButton } from '../../../../components/ui/confirm-button';
 import { Input } from '../../../../components/ui/input';
-import { Select } from '../../../../components/ui/select';
 import { Badge } from '../../../../components/ui/badge';
 import { Card } from '../../../../components/ui/card';
-import {
-  Dialog,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from '../../../../components/ui/dialog';
 import { formatCurrency, formatDate } from '../../../../utils/formatters';
 import { cn } from '../../../../utils/cn';
 import { MOCK_PRODUCTS } from '../../../../mock/mockProducts';
 import { PrintableGRN, CostedPriceItemInfo } from '../../../inventory/PrintableGRN';
-import { Printer } from 'lucide-react';
-import { GRNItem } from '../../../../types/inventory';
 import Decimal from 'decimal.js';
 import {
-  Warehouse,
-  Receipt,
   CheckCircle2,
   Lock,
-  RotateCcw,
-  Calculator,
-  Percent,
-  Sliders,
-  SlidersHorizontal,
-  Landmark,
-  Scale,
-  Sparkles,
-  Barcode,
-  Hash,
-  ChevronDown,
-  ChevronUp,
-  ChevronRight,
+  Printer,
   Search,
-  Copy,
-  Check,
-  Package,
-  Layers,
-  ShieldCheck,
   Plus,
   Trash2,
-  Info,
-  Truck,
-  ArrowRight,
   ArrowLeft,
-  FileText,
+  ArrowRight,
+  TrendingUp,
+  Layers,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { MOCK_WARRANTY_RECORDS } from '../../../../mock/mockWarranty';
 
-const LANDED_EXPENSE_CATEGORIES = [
-  'Shipping / Freight Charges',
-  'Port Charges & Demurrage',
-  'Local Transportation & Haulage',
-  'Handling & Offloading',
-  'Customs Clearance & Duties',
-  'Transit Insurance',
-  'Other Related Expenses',
-];
+interface ProductRowState {
+  id: string;
+  productId: string;
+  productName: string;
+  sku: string;
+  receivedQuantity: number;
+  damagedQuantity: number;
+  supplierUnitCost: number;
+  lineDiscount: number;
+  currentSellingPrice: number;
+  newSellingPrice: number;
+  priceScope: 'BATCH_ONLY' | 'ALL_STOCK';
+  historicalPurchasePrice?: number;
+}
 
 export function VendorBillCostingPage() {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const urlGrnId = searchParams.get('grnId');
 
   const { currentUser } = useAuth();
   const [grnRefreshKey, setGrnRefreshKey] = useState(0);
   const availableGRNs = useMemo(() => apService.getAvailableGRNs(), [grnRefreshKey]);
 
-  // List vs Inner Costing View Mode
+  // View Mode: 'list' (queue) vs 'detail' (2-step guided workflow)
   const urlView = searchParams.get('view');
   const isTestEnv = typeof window !== 'undefined' && navigator.userAgent.includes('jsdom');
   const [viewMode, setViewMode] = useState<'list' | 'detail'>(() => {
     if (urlView === 'list') return 'list';
-    if (urlView === 'detail') return 'detail';
-    if (urlGrnId) return 'detail';
-    if (isTestEnv) return 'detail';
+    if (urlView === 'detail' || urlGrnId || isTestEnv) return 'detail';
     return 'list';
   });
+
+  // 2-Step Guided Workflow: Step 1 (Costing) vs Step 2 (Pricing & Margins)
+  const [currentStep, setCurrentStep] = useState<1 | 2>(1);
 
   const [queueSearch, setQueueSearch] = useState('');
   const [queueFilter, setQueueFilter] = useState<'PENDING' | 'SUBMITTED' | 'COSTED' | 'APPROVED' | 'ALL'>('PENDING');
 
-  // Selected GRN state (respecting url parameter if present)
+  const handleBackToGrnList = () => {
+    setViewMode('list');
+    navigate('/finance/ap/bills/new?view=list');
+  };
+
+  // Selected GRN state
   const [selectedGRNId, setSelectedGRNId] = useState<string>(() => {
     if (urlGrnId && availableGRNs.some((g) => g.id === urlGrnId || g.grnNumber === urlGrnId)) {
       return urlGrnId;
     }
-    const firstPending = availableGRNs.find((g) => g.status === 'SUBMITTED' || g.status === 'COSTED');
+    const firstPending = availableGRNs.find((g) => g.status === 'COSTED') || availableGRNs.find((g) => g.status === 'SUBMITTED');
     return firstPending?.id || availableGRNs[0]?.id || '';
   });
 
-  // Sync selectedGRNId when urlGrnId changes
   useEffect(() => {
     if (urlGrnId && availableGRNs.some((g) => g.id === urlGrnId || g.grnNumber === urlGrnId)) {
       setSelectedGRNId(urlGrnId);
@@ -110,47 +88,11 @@ export function VendorBillCostingPage() {
     }
   }, [urlGrnId, availableGRNs]);
 
-  const filteredGRNs = useMemo(() => {
-    return availableGRNs.filter((g) => {
-      if (queueFilter === 'PENDING') {
-        // Pending actions: submitted by stock keeper (needs costing) or costed by finance (needs pricing)
-        if (g.status !== 'SUBMITTED' && g.status !== 'COSTED') return false;
-      } else if (queueFilter === 'SUBMITTED') {
-        if (g.status !== 'SUBMITTED') return false;
-      } else if (queueFilter === 'COSTED') {
-        if (g.status !== 'COSTED') return false;
-      } else if (queueFilter === 'APPROVED') {
-        if (g.status !== 'APPROVED' && g.status !== 'PRICED') return false;
-      }
-      // 'ALL' shows all statuses
-
-      if (queueSearch.trim()) {
-        const q = queueSearch.toLowerCase();
-        const matchesRef = g.grnNumber.toLowerCase().includes(q);
-        const matchesSup = g.supplierName.toLowerCase().includes(q);
-        const matchesWarehouse = g.warehouseId.toLowerCase().includes(q);
-        if (!matchesRef && !matchesSup && !matchesWarehouse) return false;
-      }
-      return true;
-    });
-  }, [availableGRNs, queueFilter, queueSearch]);
-
-  const handleSelectGrn = (grnId: string) => {
-    setSelectedGRNId(grnId);
-    setViewMode('detail');
-    navigate(`/finance/ap/bills/new?grnId=${grnId}`);
-  };
-
-  const handleBackToGrnList = () => {
-    setViewMode('list');
-    navigate('/finance/ap/bills/new');
-  };
-
   const selectedGRN = useMemo(() => {
     return availableGRNs.find((g) => g.id === selectedGRNId || g.grnNumber === selectedGRNId) || availableGRNs[0] || null;
   }, [availableGRNs, selectedGRNId]);
 
-  // Existing bill if already costed/posted
+  // Existing posted bill check
   const existingBill = useMemo(() => {
     return selectedGRN ? apService.getBillByGrnId(selectedGRN.id) : undefined;
   }, [selectedGRN, grnRefreshKey]);
@@ -163,7 +105,9 @@ export function VendorBillCostingPage() {
   );
   const isAuthorizedForVoid = !currentUser || ['FINANCE_MANAGER', 'MANAGER', 'DIRECTOR'].includes(currentUser.role);
 
-  // Financial Form Header
+  // ---------------------------------------------------------------------------
+  // Top Header & Persistent Context Inputs
+  // ---------------------------------------------------------------------------
   const [vendorInvoiceNumber, setVendorInvoiceNumber] = useState('');
   const [invoiceDate, setInvoiceDate] = useState(new Date().toISOString().slice(0, 10));
   const [dueDate, setDueDate] = useState(() => {
@@ -172,67 +116,62 @@ export function VendorBillCostingPage() {
     return d.toISOString().slice(0, 10);
   });
 
-  // Financial Line Items Form Array
-  const [lineItems, setLineItems] = useState<VendorBillLineItem[]>([]);
-  const [freightBilledByThirdParty, setFreightBilledByThirdParty] = useState<boolean>(false);
-  const [submitting, setSubmitting] = useState(false);
-
-  // Incremental Additional Landed Expenses (Shipping, Port Charges, Transport, Handling, etc.)
-  const [additionalExpenses, setAdditionalExpenses] = useState<LandedExpenseItem[]>([
-    { id: 'exp-1', category: 'Shipping / Freight Charges', description: 'Sea / Air freight charges', amount: 0 },
-    { id: 'exp-2', category: 'Port Charges & Demurrage', description: 'Port terminal handling & wharfage', amount: 0 },
-    { id: 'exp-3', category: 'Local Transportation & Haulage', description: 'Port to warehouse transport', amount: 0 },
-  ]);
-
-  // Apportionment Engine settings
-  const [showApportionModal, setShowApportionModal] = useState(false);
-  const [apportionBulkFreight, setApportionBulkFreight] = useState<number>(0);
+  // ---------------------------------------------------------------------------
+  // Step 1: Section A — Additional Landed Expenses (4-Column Grid)
+  // ---------------------------------------------------------------------------
   const [apportionMethod, setApportionMethod] = useState<'BY_VALUE' | 'BY_QUANTITY'>('BY_VALUE');
+  const [freightAmount, setFreightAmount] = useState<number | string>(0);
+  const [portDutyAmount, setPortDutyAmount] = useState<number | string>(0);
+  const [localTransportAmount, setLocalTransportAmount] = useState<number | string>(0);
+  const [otherChargesAmount, setOtherChargesAmount] = useState<number | string>(0);
+  const [customExpenses, setCustomExpenses] = useState<LandedExpenseItem[]>([]);
+  const [showCustomExpenses, setShowCustomExpenses] = useState(false);
 
-  // Selling-Price Strategy Decision state (Embedded Inline)
-  const [showInlinePricing, setShowInlinePricing] = useState(false);
-  const [pricingAssigned, setPricingAssigned] = useState(false);
-  const [activeWorkflowTab, setActiveWorkflowTab] = useState<'all' | 'step1' | 'step2' | 'step3' | 'step4'>('all');
+  const customExpensesSum = useMemo(() => {
+    return customExpenses.reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
+  }, [customExpenses]);
 
-  // Incremental expense addition and update helpers
+  const totalAdditionalLandedCosts = useMemo(() => {
+    const effectiveOther = customExpenses.length > 0 ? customExpensesSum : (Number(otherChargesAmount) || 0);
+    return new Decimal(Number(freightAmount) || 0)
+      .plus(Number(portDutyAmount) || 0)
+      .plus(Number(localTransportAmount) || 0)
+      .plus(effectiveOther)
+      .toNumber();
+  }, [freightAmount, portDutyAmount, localTransportAmount, customExpenses, customExpensesSum, otherChargesAmount]);
+
   const handleAddExpense = () => {
-    setAdditionalExpenses((prev) => [
+    setShowCustomExpenses(true);
+    setCustomExpenses((prev) => [
       ...prev,
       {
-        id: `exp-${Date.now()}`,
+        id: `exp-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
         category: 'Handling & Offloading',
         description: '',
-        amount: 0,
+        amount: '',
       },
     ]);
   };
 
-  const handleUpdateExpense = (id: string, field: keyof LandedExpenseItem, value: any) => {
-    setAdditionalExpenses((prev) =>
+  const handleUpdateCustomExpense = (id: string, field: string, value: any) => {
+    setCustomExpenses((prev) =>
       prev.map((e) => (e.id === id ? { ...e, [field]: value } : e))
     );
   };
 
-  const handleRemoveExpense = (id: string) => {
-    setAdditionalExpenses((prev) => {
-      const next = prev.filter((e) => e.id !== id);
-      return next.length > 0
-        ? next
-        : [{ id: `exp-${Date.now()}`, category: 'Shipping / Freight Charges', description: '', amount: 0 }];
-    });
+  const handleRemoveCustomExpense = (id: string) => {
+    setCustomExpenses((prev) => prev.filter((e) => e.id !== id));
   };
 
-  // Total Additional Landed Costs (sum of all incremental expenses)
-  const totalAdditionalLandedCosts = useMemo(() => {
-    return additionalExpenses.reduce((sum, exp) => sum + (Number(exp.amount) || 0), 0);
-  }, [additionalExpenses]);
+  // ---------------------------------------------------------------------------
+  // Step 1: Section B & Step 2: Commercial Selling Prices State
+  // ---------------------------------------------------------------------------
+  const [globalPricingScope, setGlobalPricingScope] = useState<'BATCH_ONLY' | 'ALL_STOCK'>('BATCH_ONLY');
+  const [productRows, setProductRows] = useState<ProductRowState[]>([]);
+  const [submitting, setSubmitting] = useState(false);
+  const [isCostedPrintModalOpen, setIsCostedPrintModalOpen] = useState(false);
 
-  // Dynamically calculate Landed Cost per Unit and Total Landed Cost for every product line
-  const computedLineItems = useMemo(() => {
-    return apService.apportionLandedCosts(lineItems, totalAdditionalLandedCosts, apportionMethod);
-  }, [lineItems, totalAdditionalLandedCosts, apportionMethod]);
-
-  // Advance Prepayments integration
+  // Advance prepayments integration
   const unappliedAdvances = useMemo(() => {
     if (!selectedGRN) return [];
     return apService.getUnappliedAdvancesForSupplier(
@@ -244,252 +183,7 @@ export function VendorBillCostingPage() {
   const [selectedAdvanceId, setSelectedAdvanceId] = useState<string>('');
   const [advanceAmountToApply, setAdvanceAmountToApply] = useState<number>(0);
 
-  // Left GRN Card states for compact list, expand/collapse, search & serial numbers
-  const [isListExpanded, setIsListExpanded] = useState(false);
-  const [expandedProductIds, setExpandedProductIds] = useState<Record<string, boolean>>({});
-  const [productSearch, setProductSearch] = useState('');
-  const [isCostedPrintModalOpen, setIsCostedPrintModalOpen] = useState(false);
-  const [activeSerialItem, setActiveSerialItem] = useState<{
-    item: GRNItem;
-    product?: any;
-    serialNumbers: string[];
-    barcode: string;
-  } | null>(null);
-  const [serialSearchQuery, setSerialSearchQuery] = useState('');
-  const [copiedSerials, setCopiedSerials] = useState(false);
-
-  // Right-side Costing Breakdown Expand/Collapse state
-  const [expandedCostingItemIds, setExpandedCostingItemIds] = useState<Record<string, boolean>>({
-    'line-0': true, // Keep the first product expanded by default for immediate editing, others compact
-  });
-  const [costingProductSearch, setCostingProductSearch] = useState('');
-
-  const toggleCostingItemExpand = (itemId: string, e?: React.MouseEvent) => {
-    if (e) e.stopPropagation();
-    setExpandedCostingItemIds((prev) => ({
-      ...prev,
-      [itemId]: !prev[itemId],
-    }));
-  };
-
-  const handleExpandAllCosting = () => {
-    const all: Record<string, boolean> = {};
-    computedLineItems.forEach((item) => {
-      all[item.id] = true;
-    });
-    setExpandedCostingItemIds(all);
-  };
-
-  const handleCollapseAllCosting = () => {
-    setExpandedCostingItemIds({});
-  };
-
-  // Reset left card & right card view states when selected GRN changes
-  useEffect(() => {
-    setIsListExpanded(false);
-    setExpandedProductIds({});
-    setProductSearch('');
-    setActiveSerialItem(null);
-    setExpandedCostingItemIds({ 'line-0': true });
-    setCostingProductSearch('');
-  }, [selectedGRNId]);
-
-  // Product master details lookup helper
-  const getProductMaster = (productId: string, sku: string) => {
-    return MOCK_PRODUCTS.find((p) => p.id === productId || p.sku === sku);
-  };
-
-  // Product-level barcode helper (1 per product type, NOT per individual unit)
-  const getProductBarcode = (item: GRNItem) => {
-    const product = getProductMaster(item.productId, item.skuSnapshot);
-    if (product?.barcode) return product.barcode;
-    const digits = item.skuSnapshot.replace(/[^0-9]/g, '');
-    return `89010${(digits + '12345678').slice(0, 8)}`;
-  };
-
-  // Real serial numbers resolution for a GRN item
-  const getItemSerialNumbers = (item: GRNItem): string[] => {
-    if (item.serialNumbers && item.serialNumbers.length > 0) {
-      return Array.from(new Set(item.serialNumbers));
-    }
-    const matching = MOCK_WARRANTY_RECORDS
-      .filter((w) => (w.productId === item.productId && w.sku === item.skuSnapshot) && Boolean(w.serialNumber))
-      .map((w) => w.serialNumber as string);
-    return Array.from(new Set(matching));
-  };
-
-  const COLLAPSED_PRODUCT_LIMIT = 10;
-
-  const totalReceivedUnits = useMemo(() => {
-    return selectedGRN?.items.reduce((s, it) => s + (it.receivedQuantity || 0), 0) || 0;
-  }, [selectedGRN]);
-
-  const totalDamagedUnits = useMemo(() => {
-    return selectedGRN?.items.reduce((s, it) => s + (it.damagedQuantity || 0), 0) || 0;
-  }, [selectedGRN]);
-
-  const filteredGRNItems = useMemo(() => {
-    if (!selectedGRN?.items) return [];
-    if (!productSearch.trim()) return selectedGRN.items;
-    const q = productSearch.toLowerCase().trim();
-    return selectedGRN.items.filter((item) => {
-      const barcode = getProductBarcode(item);
-      return (
-        item.productNameSnapshot.toLowerCase().includes(q) ||
-        item.skuSnapshot.toLowerCase().includes(q) ||
-        barcode.toLowerCase().includes(q)
-      );
-    });
-  }, [selectedGRN, productSearch]);
-
-  const displayedGRNItems = useMemo(() => {
-    if (productSearch.trim() || isListExpanded) {
-      return filteredGRNItems;
-    }
-    return filteredGRNItems.slice(0, COLLAPSED_PRODUCT_LIMIT);
-  }, [filteredGRNItems, isListExpanded, productSearch]);
-
-  const toggleProductExpand = (itemKey: string, e?: React.MouseEvent) => {
-    if (e) e.stopPropagation();
-    setExpandedProductIds((prev) => ({
-      ...prev,
-      [itemKey]: !prev[itemKey],
-    }));
-  };
-
-  const handleExpandAllDetails = () => {
-    if (!selectedGRN) return;
-    const all: Record<string, boolean> = {};
-    selectedGRN.items.forEach((item, idx) => {
-      all[`item-${idx}-${item.productId}`] = true;
-    });
-    setExpandedProductIds(all);
-  };
-
-  const handleCollapseAllDetails = () => {
-    setExpandedProductIds({});
-  };
-
-  const handleOpenSerials = (item: GRNItem, e?: React.MouseEvent) => {
-    if (e) e.stopPropagation();
-    const serials = getItemSerialNumbers(item);
-    if (serials.length === 0) {
-      toast.info('No unit serial numbers recorded for this product.');
-      return;
-    }
-    const barcode = getProductBarcode(item);
-    const product = getProductMaster(item.productId, item.skuSnapshot);
-    setActiveSerialItem({
-      item,
-      product,
-      serialNumbers: serials,
-      barcode,
-    });
-    setSerialSearchQuery('');
-    setCopiedSerials(false);
-  };
-
-  const filteredSerials = useMemo(() => {
-    if (!activeSerialItem) return [];
-    if (!serialSearchQuery.trim()) return activeSerialItem.serialNumbers;
-    const q = serialSearchQuery.toLowerCase().trim();
-    return activeSerialItem.serialNumbers.filter((sn) => sn.toLowerCase().includes(q));
-  }, [activeSerialItem, serialSearchQuery]);
-
-  const handleCopySerials = () => {
-    if (!activeSerialItem) return;
-    const text = activeSerialItem.serialNumbers.join('\n');
-    navigator.clipboard.writeText(text);
-    setCopiedSerials(true);
-    toast.success(`Copied ${activeSerialItem.serialNumbers.length} serial numbers to clipboard!`);
-    setTimeout(() => setCopiedSerials(false), 2000);
-  };
-
-  // Auto-initialize line items & auto-pull historical purchase price from Supplier Master
-  useEffect(() => {
-    if (existingBill) {
-      setVendorInvoiceNumber(existingBill.vendorInvoiceNumber);
-      setInvoiceDate(existingBill.invoiceDate);
-      setDueDate(existingBill.dueDate);
-      setFreightBilledByThirdParty(Boolean(existingBill.freightBilledByThirdParty));
-      setLineItems(existingBill.lineItems);
-
-      if (existingBill.additionalExpenses && existingBill.additionalExpenses.length > 0) {
-        setAdditionalExpenses(existingBill.additionalExpenses);
-      } else {
-        const initExps: LandedExpenseItem[] = [];
-        if (existingBill.freightCharges > 0) {
-          initExps.push({
-            id: 'exp-freight',
-            category: 'Shipping / Freight Charges',
-            description: 'Ocean / Air freight charges',
-            amount: existingBill.freightCharges,
-          });
-        }
-        if (existingBill.otherLandingCosts > 0) {
-          initExps.push({
-            id: 'exp-other',
-            category: 'Port Charges & Demurrage',
-            description: 'Port authority & handling charges',
-            amount: existingBill.otherLandingCosts,
-          });
-        }
-        if (initExps.length === 0) {
-          initExps.push({
-            id: 'exp-1',
-            category: 'Shipping / Freight Charges',
-            description: 'Freight & forwarding charges',
-            amount: 0,
-          });
-        }
-        setAdditionalExpenses(initExps);
-      }
-    } else if (selectedGRN) {
-      setVendorInvoiceNumber(selectedGRN.supplierInvoiceNumber || '');
-      setInvoiceDate(new Date().toISOString().slice(0, 10));
-      setFreightBilledByThirdParty(false);
-      const items: VendorBillLineItem[] = selectedGRN.items.map((item, idx) => {
-        // Auto-pull last known historical purchase price from Supplier Master
-        const histPrice = apService.getHistoricalPurchasePrice(
-          selectedGRN.supplierId || selectedGRN.supplierName,
-          item.productId
-        );
-        const actualCost = histPrice > 0 ? histPrice : (item.unitCostSnapshot || 0);
-        const qty = item.receivedQuantity || 1;
-        const discount = 0;
-        const net = new Decimal(qty).times(actualCost).minus(discount);
-        const vat = net.times(0.18).toNumber();
-
-        return {
-          id: `line-${idx}`,
-          productId: item.productId,
-          productName: item.productNameSnapshot,
-          sku: item.skuSnapshot,
-          receivedQuantity: qty,
-          draftUnitCost: item.unitCostSnapshot || actualCost,
-          unitCost: actualCost,
-          historicalPurchasePrice: histPrice,
-          lineDiscount: 0,
-          vatCode: 'STANDARD_18',
-          vatAmount: vat,
-          lineTotal: net.plus(vat).toNumber(),
-          apportionedFreight: 0,
-          allocatedLandedCost: 0,
-          landedUnitCost: actualCost,
-          totalLandedCost: net.toNumber(),
-        };
-      });
-      setLineItems(items);
-      setApportionBulkFreight(0);
-      setAdditionalExpenses([
-        { id: `exp-1`, category: 'Shipping / Freight Charges', description: 'Sea / Air freight charges', amount: 0 },
-        { id: `exp-2`, category: 'Port Charges & Demurrage', description: 'Port terminal handling & wharfage', amount: 0 },
-        { id: `exp-3`, category: 'Local Transportation & Haulage', description: 'Port to warehouse transport', amount: 0 },
-      ]);
-    }
-  }, [selectedGRN, existingBill]);
-
-  // Update advance selection when unapplied advances change, auto-detecting matching PO
+  // Sync advances
   useEffect(() => {
     if (unappliedAdvances.length > 0) {
       const matchingPoAdvance =
@@ -518,202 +212,362 @@ export function VendorBillCostingPage() {
     }
   }, [unappliedAdvances, selectedGRN]);
 
-  // Handler for line item updates
-  const updateLineItem = (index: number, field: keyof VendorBillLineItem, val: any) => {
+  // Initialize product rows & invoice details from GRN / existing bill
+  useEffect(() => {
+    if (existingBill) {
+      setVendorInvoiceNumber(existingBill.vendorInvoiceNumber);
+      setInvoiceDate(existingBill.invoiceDate);
+      setDueDate(existingBill.dueDate);
+
+      const freightItem = existingBill.additionalExpenses?.find((e) =>
+        e.category.toLowerCase().includes('freight') || e.category.toLowerCase().includes('shipping')
+      );
+      const portItem = existingBill.additionalExpenses?.find((e) =>
+        e.category.toLowerCase().includes('port') || e.category.toLowerCase().includes('duty')
+      );
+      const transportItem = existingBill.additionalExpenses?.find((e) =>
+        e.category.toLowerCase().includes('transport') || e.category.toLowerCase().includes('haulage')
+      );
+
+      setFreightAmount(freightItem ? freightItem.amount : existingBill.freightCharges || 0);
+      setPortDutyAmount(portItem ? portItem.amount : existingBill.otherLandingCosts || 0);
+      setLocalTransportAmount(transportItem ? transportItem.amount : 0);
+      setOtherChargesAmount(0);
+
+      const rows: ProductRowState[] = existingBill.lineItems.map((item, idx) => {
+        const prod = MOCK_PRODUCTS.find((p) => p.id === item.productId || p.sku === item.sku);
+        const currentPrice = prod?.pricing?.currentSellingPrice || Math.round(item.unitCost * 1.35);
+        return {
+          id: item.id || `line-${idx}`,
+          productId: item.productId,
+          productName: item.productName,
+          sku: item.sku,
+          receivedQuantity: item.receivedQuantity,
+          damagedQuantity: 0,
+          supplierUnitCost: item.unitCost,
+          lineDiscount: item.lineDiscount || 0,
+          currentSellingPrice: currentPrice,
+          newSellingPrice: Math.round(item.landedUnitCost * 1.3) || currentPrice,
+          priceScope: 'BATCH_ONLY',
+          historicalPurchasePrice: item.historicalPurchasePrice,
+        };
+      });
+      setProductRows(rows);
+    } else if (selectedGRN) {
+      setVendorInvoiceNumber(selectedGRN.supplierInvoiceNumber || '');
+      setInvoiceDate(new Date().toISOString().slice(0, 10));
+      setFreightAmount(0);
+      setPortDutyAmount(0);
+      setLocalTransportAmount(0);
+      setOtherChargesAmount(0);
+      setCustomExpenses([]);
+
+      const rows: ProductRowState[] = selectedGRN.items.map((item, idx) => {
+        const histPrice = apService.getHistoricalPurchasePrice(
+          selectedGRN.supplierId || selectedGRN.supplierName,
+          item.productId
+        );
+        const actualCost = histPrice > 0 ? histPrice : (item.unitCostSnapshot || 0);
+        const prod = MOCK_PRODUCTS.find((p) => p.id === item.productId || p.sku === item.skuSnapshot);
+        const currentPrice = prod?.pricing?.currentSellingPrice || Math.round(actualCost * 1.35);
+
+        return {
+          id: `line-${idx}`,
+          productId: item.productId,
+          productName: item.productNameSnapshot,
+          sku: item.skuSnapshot,
+          receivedQuantity: item.receivedQuantity || 1,
+          damagedQuantity: item.damagedQuantity || 0,
+          supplierUnitCost: actualCost,
+          lineDiscount: 0,
+          currentSellingPrice: currentPrice,
+          newSellingPrice: Math.round(actualCost * 1.35) || currentPrice,
+          priceScope: globalPricingScope,
+          historicalPurchasePrice: histPrice,
+        };
+      });
+      setProductRows(rows);
+    }
+  }, [selectedGRN, existingBill]);
+
+  // Global toggle handler: switches default pricing scope for all products
+  const handleGlobalPricingScopeChange = (scope: 'BATCH_ONLY' | 'ALL_STOCK') => {
+    setGlobalPricingScope(scope);
+    setProductRows((prev) => prev.map((row) => ({ ...row, priceScope: scope })));
+  };
+
+  // Row update handlers
+  const updateProductRow = (index: number, field: keyof ProductRowState, value: any) => {
     if (isAuditLocked) return;
-    setLineItems((prev) => {
+    setProductRows((prev) => {
       const next = [...prev];
-      const current = { ...next[index], [field]: val };
-
-      const qty = new Decimal(current.receivedQuantity || 0);
-      const cost = new Decimal(current.unitCost || 0);
-      const discount = new Decimal(current.lineDiscount || 0);
-      const net = Decimal.max(0, qty.times(cost).minus(discount));
-
-      const vat = current.vatCode === 'STANDARD_18' ? net.times(0.18) : new Decimal(0);
-      current.vatAmount = vat.toNumber();
-      current.lineTotal = net.plus(vat).toNumber();
-
-      // Recalculate landed unit cost if apportioned freight is present
-      const lineFreight = new Decimal(current.apportionedFreight || 0);
-      current.landedUnitCost = qty.isZero()
-        ? 0
-        : net.plus(lineFreight).dividedBy(qty).toDecimalPlaces(2).toNumber();
-
-      next[index] = current;
+      next[index] = { ...next[index], [field]: value };
       return next;
     });
   };
 
-  // Reset line item to historical purchase price from Supplier Master
-  const resetToHistoricalCost = (index: number) => {
-    if (isAuditLocked) return;
-    const hist = lineItems[index]?.historicalPurchasePrice;
-    if (hist && hist > 0) {
-      updateLineItem(index, 'unitCost', hist);
-      toast.info(`Reset ${lineItems[index].productName} to historical master price of ${formatCurrency(hist)}`);
-    }
-  };
-
-  // Calculations for summary totals with recommended terminology:
-  // - Supplier Goods Subtotal: payable to supplier for goods
-  // - Additional Landed Costs: shipping, port charges, transportation, handling
-  // - Total Landed Cost: total actual cost of the received inventory (capitalized to inventory)
-  // - 1025 Input VAT Receivable (Asset)
-  // - Total Accounts Payable Commitment
-  const { subtotal, totalLandedCost, vatTotal, grandTotal } = useMemo(() => {
+  // ---------------------------------------------------------------------------
+  // Calculations: Real-time True Landed Cost, Live Margin, and Summary Totals
+  // ---------------------------------------------------------------------------
+  const {
+    computedRows,
+    goodsSubtotal,
+    totalInventoryCapitalized,
+    vatTotal,
+    grandTotal,
+    totalReceivedUnits,
+    totalDamagedUnits,
+  } = useMemo(() => {
     let sub = new Decimal(0);
-    let vat = new Decimal(0);
+    let totalUnits = 0;
+    let damagedCount = 0;
 
-    for (const item of computedLineItems) {
-      const net = Decimal.max(
-        0,
-        new Decimal(item.receivedQuantity).times(new Decimal(item.unitCost)).minus(item.lineDiscount || 0)
-      );
+    // Calculate baseline net line totals
+    const rowNets = productRows.map((r) => {
+      const qty = new Decimal(r.receivedQuantity || 0);
+      totalUnits += r.receivedQuantity || 0;
+      damagedCount += r.damagedQuantity || 0;
+
+      const unitCost = new Decimal(r.supplierUnitCost || 0);
+      const discount = new Decimal(r.lineDiscount || 0);
+      const net = Decimal.max(0, qty.times(unitCost).minus(discount));
       sub = sub.plus(net);
-      vat = vat.plus(item.vatAmount || 0);
-    }
+      return net;
+    });
 
-    const landed = sub.plus(totalAdditionalLandedCosts || 0);
-    const grand = landed.plus(vat);
+    const totalLandedExpenses = new Decimal(totalAdditionalLandedCosts || 0);
+
+    // Apportion additional landed costs
+    let runningAllocated = new Decimal(0);
+    const computed = productRows.map((r, idx) => {
+      const qty = new Decimal(r.receivedQuantity || 1);
+      const net = rowNets[idx];
+      let allocatedShare = new Decimal(0);
+
+      if (!totalLandedExpenses.isZero()) {
+        if (apportionMethod === 'BY_VALUE' && !sub.isZero()) {
+          allocatedShare = idx === productRows.length - 1
+            ? totalLandedExpenses.minus(runningAllocated)
+            : totalLandedExpenses.times(net).dividedBy(sub).toDecimalPlaces(2);
+        } else if (apportionMethod === 'BY_QUANTITY' && totalUnits > 0) {
+          allocatedShare = idx === productRows.length - 1
+            ? totalLandedExpenses.minus(runningAllocated)
+            : totalLandedExpenses.times(qty).dividedBy(totalUnits).toDecimalPlaces(2);
+        }
+        runningAllocated = runningAllocated.plus(allocatedShare);
+      }
+
+      const allocatedPerUnit = qty.isZero() ? 0 : allocatedShare.dividedBy(qty).toDecimalPlaces(2).toNumber();
+      const trueLandedCost = qty.isZero()
+        ? r.supplierUnitCost
+        : net.plus(allocatedShare).dividedBy(qty).toDecimalPlaces(2).toNumber();
+
+      // VAT 18% on goods net
+      const vat = net.times(0.18).toDecimalPlaces(2).toNumber();
+      const lineTotal = net.plus(vat).toNumber();
+
+      // Live Gross Margin calculation
+      const selling = Number(r.newSellingPrice) || 0;
+      const profitPerUnit = selling - trueLandedCost;
+      const marginPercent = selling > 0 ? (profitPerUnit / selling) * 100 : 0;
+
+      return {
+        ...r,
+        allocatedShare: allocatedShare.toNumber(),
+        allocatedPerUnit,
+        trueLandedCost,
+        vatAmount: vat,
+        lineTotal,
+        profitPerUnit,
+        marginPercent,
+      };
+    });
+
+    const capitalized = sub.plus(totalLandedExpenses);
+    const vatSum = computed.reduce((sum, r) => sum.plus(r.vatAmount), new Decimal(0));
+    const grand = capitalized.plus(vatSum);
 
     return {
-      subtotal: sub.toNumber(),
-      totalLandedCost: landed.toNumber(),
-      vatTotal: vat.toNumber(),
+      computedRows: computed,
+      goodsSubtotal: sub.toNumber(),
+      totalInventoryCapitalized: capitalized.toNumber(),
+      vatTotal: vatSum.toNumber(),
       grandTotal: grand.toNumber(),
+      totalReceivedUnits: totalUnits,
+      totalDamagedUnits: damagedCount,
     };
-  }, [computedLineItems, totalAdditionalLandedCosts]);
+  }, [productRows, totalAdditionalLandedCosts, apportionMethod]);
 
-  // Landed Cost Apportionment Engine
-  const previewApportionment = useMemo(() => {
-    return apService.apportionLandedCosts(lineItems, apportionBulkFreight || totalAdditionalLandedCosts, apportionMethod);
-  }, [lineItems, apportionBulkFreight, totalAdditionalLandedCosts, apportionMethod]);
-
-  const handleApplyApportionment = () => {
-    if (apportionBulkFreight < 0) {
-      toast.error('Bulk expenses amount cannot be negative');
-      return;
-    }
-    setAdditionalExpenses((prev) => {
-      if (prev.length === 1) {
-        return [{ ...prev[0], amount: apportionBulkFreight }];
-      }
-      return [
-        { id: `exp-apportioned`, category: 'Shipping / Freight Charges', description: 'Allocated bulk landed expenses', amount: apportionBulkFreight },
-      ];
-    });
-    setShowApportionModal(false);
-    toast.success(
-      `Additional expenses of ${formatCurrency(apportionBulkFreight)} successfully apportioned across ${lineItems.length} line items by ${
-        apportionMethod === 'BY_VALUE' ? 'Net Line Value' : 'Received Quantity'
-      }. True landed unit costs calculated.`
-    );
-  };
-
-  // Validation: header inputs required, valid costs
+  // Validation
   const isFormValid = useMemo(() => {
     if (!selectedGRN) return false;
     if (!vendorInvoiceNumber.trim()) return false;
     if (!invoiceDate || !dueDate) return false;
-    if (lineItems.length === 0) return false;
-    return lineItems.every((item) => item.unitCost > 0);
-  }, [selectedGRN, vendorInvoiceNumber, invoiceDate, dueDate, lineItems]);
+    if (computedRows.length === 0) return false;
+    return computedRows.every((r) => r.supplierUnitCost > 0 && r.newSellingPrice > 0);
+  }, [selectedGRN, vendorInvoiceNumber, invoiceDate, dueDate, computedRows]);
 
-  const handlePostVendorBill = async () => {
+  // Quick markup preset handler for Step 2
+  const applyMarkupPreset = (rowIndex: number, markupPercentage: number) => {
+    if (isAuditLocked) return;
+    const row = computedRows[rowIndex];
+    if (!row) return;
+    const computedPrice = Math.round(row.trueLandedCost * (1 + markupPercentage / 100));
+    updateProductRow(rowIndex, 'newSellingPrice', computedPrice);
+  };
+
+  // ---------------------------------------------------------------------------
+  // Action Handler: Post Vendor Bill & Apply Selling Prices
+  // ---------------------------------------------------------------------------
+  const handlePostBillAndApplyPrices = async () => {
     if (!isFormValid || !selectedGRN) {
-      toast.error('Please complete all required fields and enter valid costs.');
+      toast.error('Please complete Vendor Invoice # and ensure all unit costs & selling prices are greater than 0.');
       return;
     }
 
     try {
       setSubmitting(true);
-      const freightItem = additionalExpenses.find(
-        (e) => e.category.toLowerCase().includes('freight') || e.category.toLowerCase().includes('shipping')
-      );
-      const freightAmount = freightItem ? Number(freightItem.amount) || 0 : 0;
-      const otherCostsAmount = Math.max(0, totalAdditionalLandedCosts - freightAmount);
 
+      const numFreight = Number(freightAmount) || 0;
+      const numPort = Number(portDutyAmount) || 0;
+      const numTransport = Number(localTransportAmount) || 0;
+      const numOther = customExpenses.length > 0 ? customExpensesSum : (Number(otherChargesAmount) || 0);
+
+      const otherEffective: LandedExpenseItem[] = customExpenses.length > 0
+        ? customExpenses.map((e) => ({ ...e, amount: Number(e.amount) || 0 }))
+        : (numOther > 0 ? [{
+            id: 'exp-other',
+            category: 'Handling & Incidental Charges',
+            description: 'Other Inbound Charges',
+            amount: numOther,
+          }] : []);
+
+      const additionalExpensesList: LandedExpenseItem[] = [
+        { id: 'exp-freight', category: 'Shipping / Freight Charges', description: 'Freight / Shipping', amount: numFreight },
+        { id: 'exp-port', category: 'Port Charges & Demurrage', description: 'Port & Duty', amount: numPort },
+        { id: 'exp-transport', category: 'Local Transportation & Haulage', description: 'Local Transport', amount: numTransport },
+        ...otherEffective,
+      ];
+
+      // Convert computed rows into VendorBillLineItems
+      const lineItems: VendorBillLineItem[] = computedRows.map((r) => ({
+        id: r.id,
+        productId: r.productId,
+        productName: r.productName,
+        sku: r.sku,
+        receivedQuantity: r.receivedQuantity,
+        draftUnitCost: Number(r.supplierUnitCost) || 0,
+        unitCost: Number(r.supplierUnitCost) || 0,
+        historicalPurchasePrice: r.historicalPurchasePrice,
+        lineDiscount: Number(r.lineDiscount) || 0,
+        vatCode: 'STANDARD_18',
+        vatAmount: r.vatAmount,
+        lineTotal: r.lineTotal,
+        apportionedFreight: r.allocatedShare,
+        allocatedLandedCost: r.allocatedShare,
+        landedUnitCost: r.trueLandedCost,
+        totalLandedCost: r.trueLandedCost * r.receivedQuantity,
+      }));
+
+      // 1. Post the Vendor Bill in AP
+      const otherCosts = numPort + numTransport + numOther;
       const bill = await apService.postVendorBill({
         grnId: selectedGRN.id,
         vendorInvoiceNumber: vendorInvoiceNumber.trim(),
         invoiceDate,
         dueDate,
-        lineItems: computedLineItems,
-        freightCharges: freightAmount,
-        otherLandingCosts: otherCostsAmount,
-        freightBilledByThirdParty,
-        additionalExpenses,
+        lineItems,
+        freightCharges: numFreight,
+        otherLandingCosts: otherCosts,
+        additionalExpenses: additionalExpensesList,
         applyAdvanceId: applyAdvanceEnabled ? selectedAdvanceId : undefined,
         advanceAmountToApply: applyAdvanceEnabled ? advanceAmountToApply : undefined,
       });
 
-      toast.success(
-        `Vendor Bill ${bill.billNumber} posted successfully! True landed cost recorded and debited to 1025 Input VAT Receivable.`
-      );
+      // 2. Apply Commercial Selling Prices & Create Inventory Stock Batches
+      const batchDate = selectedGRN.submittedAt ? selectedGRN.submittedAt.slice(0, 10) : new Date().toISOString().slice(0, 10);
+      const batchSeq = String(Math.floor(10 + Math.random() * 90));
 
-      // Synchronize central approvals engine for this GRN
+      for (const row of computedRows) {
+        const batchNum = `LOT-${new Date().getFullYear()}-${batchSeq}-${row.sku.replace(/[^a-zA-Z0-9]/g, '').slice(-4)}`;
+
+        if (row.priceScope === 'ALL_STOCK') {
+          // Standardize across all existing active inventory batches for this product
+          batchInventoryService.standardizeProductBatchPrices(
+            row.productId,
+            row.newSellingPrice,
+            'Finance Officer',
+            `Post-Costing Standardized Price for GRN ${selectedGRN.grnNumber}`
+          );
+
+          try {
+            await productService.updateProduct(row.productId, {
+              pricing: {
+                costPrice: row.trueLandedCost,
+                currentSellingPrice: row.newSellingPrice,
+                minimumSellingPrice: Math.round(row.newSellingPrice * 0.85),
+                maxDiscountPercentage: 15,
+                taxRatePercentage: 18,
+              },
+            });
+          } catch {
+            // Ignore mock update errors
+          }
+        }
+
+        // Create the new inbound stock batch with the calculated true landed cost & selling price
+        batchInventoryService.createBatch({
+          batchNumber: batchNum,
+          productId: row.productId,
+          productName: row.productName,
+          sku: row.sku,
+          grnId: selectedGRN.id,
+          grnNumber: selectedGRN.grnNumber,
+          warehouseId: selectedGRN.warehouseId || 'WH-MAIN',
+          receivedDate: batchDate,
+          initialQuantity: row.receivedQuantity,
+          availableQuantity: row.receivedQuantity,
+          unitCost: row.trueLandedCost,
+          sellingPrice: row.newSellingPrice,
+          status: 'ACTIVE',
+        });
+      }
+
+      // Mark GRN as fully priced and approved
+      apService.setGRNStatus(selectedGRN.id, 'APPROVED');
+
+      // Update approval engine status for this GRN
       try {
         if (typeof window !== 'undefined' && window.localStorage) {
           const stored = localStorage.getItem('dns_erp_approval_requests');
           if (stored) {
             const apps = JSON.parse(stored);
-            let updatedAny = false;
             const updated = apps.map((a: any) => {
               if (
                 (a.documentId === selectedGRN.id || a.documentReferenceNumber === selectedGRN.grnNumber) &&
                 a.status === 'PENDING'
               ) {
-                updatedAny = true;
                 return {
                   ...a,
                   status: 'APPROVED',
                   updatedAt: new Date().toISOString(),
-                  history: [
-                    ...(a.history || []),
-                    {
-                      id: `h-${Date.now()}`,
-                      stepNumber: (a.history?.length || 0) + 1,
-                      actorId: currentUser?.id || 'usr-fin-1',
-                      actorName: currentUser?.name || 'Finance Officer',
-                      actorRole: currentUser?.role || 'FINANCE_OFFICER',
-                      action: 'APPROVE',
-                      fromStatus: a.status,
-                      toStatus: 'APPROVED',
-                      comment: 'GRN landed costing finalized and vendor bill committed to General Ledger.',
-                      timestamp: new Date().toISOString(),
-                    },
-                  ],
                 };
               }
               return a;
             });
-            if (updatedAny) {
-              localStorage.setItem('dns_erp_approval_requests', JSON.stringify(updated));
-            }
+            localStorage.setItem('dns_erp_approval_requests', JSON.stringify(updated));
           }
         }
-      } catch (syncErr) {
+      } catch {
         // non-blocking
       }
 
       setGrnRefreshKey((k) => k + 1);
-      // Activate inline Selling-Price Strategy section for post-costing pricing assignment
-      setShowInlinePricing(true);
-      setPricingAssigned(false);
-      if (activeWorkflowTab === 'step3') {
-        setActiveWorkflowTab('step4');
-      }
-
-      // Smooth scroll down to inline pricing section
-      setTimeout(() => {
-        const el = document.getElementById('step-4-pricing-section');
-        if (el && typeof el.scrollIntoView === 'function') {
-          el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
-      }, 100);
+      toast.success(
+        `Vendor Bill ${bill.billNumber} posted and selling prices applied successfully! True landed cost capitalized.`
+      );
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : 'Failed to post vendor bill');
+      toast.error(err instanceof Error ? err.message : 'Failed to post bill and apply prices');
     } finally {
       setSubmitting(false);
     }
@@ -725,10 +579,7 @@ export function VendorBillCostingPage() {
       setSubmitting(true);
       await apService.voidVendorBill(existingBill?.id || selectedGRN.id);
       setGrnRefreshKey((k) => k + 1);
-      toast.success(
-        `Vendor Bill ${existingBill?.billNumber || ''} voided and reversed successfully! GRN returned to SUBMITTED status.`
-      );
-      navigate('/finance/dashboard');
+      toast.success('Vendor Bill voided and reversed successfully! GRN returned to SUBMITTED status.');
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : 'Failed to void vendor bill');
     } finally {
@@ -736,2126 +587,768 @@ export function VendorBillCostingPage() {
     }
   };
 
+  // Convert for printing
+  const printablePriceItems: CostedPriceItemInfo[] = useMemo(() => {
+    return computedRows.map((r) => ({
+      productId: r.productId,
+      productName: r.productName,
+      sku: r.sku,
+      quantity: r.receivedQuantity,
+      landedUnitCost: r.trueLandedCost,
+      currentSellingPrice: r.currentSellingPrice,
+      proposedSellingPrice: r.newSellingPrice,
+      strategy: r.priceScope === 'ALL_STOCK' ? 'STANDARDIZE_UNIFORM' : 'PRESERVE_BATCH',
+    }));
+  }, [computedRows]);
+
+  // ---------------------------------------------------------------------------
+  // QUEUE LIST VIEW: Inbound Goods Receipts (Accessible via Back button)
+  // ---------------------------------------------------------------------------
   if (viewMode === 'list') {
+    const pendingCount = availableGRNs.filter((g) => g.status === 'SUBMITTED' || g.status === 'COSTED').length;
+    const submittedCount = availableGRNs.filter((g) => g.status === 'SUBMITTED').length;
+    const costedCount = availableGRNs.filter((g) => g.status === 'COSTED').length;
+    const approvedCount = availableGRNs.filter((g) => g.status === 'APPROVED' || g.status === 'PRICED').length;
+
+    const filteredGRNs = availableGRNs.filter((g) => {
+      if (queueFilter === 'PENDING') {
+        if (g.status !== 'SUBMITTED' && g.status !== 'COSTED') return false;
+      } else if (queueFilter === 'SUBMITTED') {
+        if (g.status !== 'SUBMITTED') return false;
+      } else if (queueFilter === 'COSTED') {
+        if (g.status !== 'COSTED') return false;
+      } else if (queueFilter === 'APPROVED') {
+        if (g.status !== 'APPROVED' && g.status !== 'PRICED') return false;
+      }
+
+      if (queueSearch.trim()) {
+        const q = queueSearch.toLowerCase();
+        return (
+          g.grnNumber.toLowerCase().includes(q) ||
+          g.supplierName.toLowerCase().includes(q) ||
+          g.warehouseId.toLowerCase().includes(q)
+        );
+      }
+      return true;
+    });
+
     return (
-      <div className="space-y-6">
-        {/* Page Header */}
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-slate-200 pb-4">
+      <div className="space-y-5">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-slate-200 pb-3">
           <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-                Inbound Goods Receipts (GRN) Costing Queue
-              </h1>
-              <Badge variant="outline" className="bg-primary-light text-primary border-primary-border text-xs font-semibold">
-                Accounts Payable
-              </Badge>
-            </div>
-            <p className="text-sm text-slate-500 mt-1">
-              Select an approved inbound warehouse goods receipt to apportion landed expenses, compute true unit cost, and commit vendor bill to General Ledger.
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
+              Inbound Goods Receipts (GRN) Costing Queue
+            </h1>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Select an inbound receipt to cost, apportion landed expenses, and set commercial prices.
             </p>
           </div>
-
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-2">
             <Button
-              variant="outline"
               size="sm"
-              onClick={() => navigate('/finance/ap/advances')}
-              className="gap-1.5 text-xs border-emerald-300 text-emerald-800 hover:bg-emerald-50"
+              onClick={() => {
+                const first = availableGRNs[0];
+                if (first) {
+                  setSelectedGRNId(first.id);
+                  setViewMode('detail');
+                }
+              }}
+              className="text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
             >
-              <Landmark className="h-3.5 w-3.5 text-emerald-600" />
-              <span>Supplier Advances</span>
-            </Button>
-
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => navigate('/finance/ap/debit-notes')}
-              className="gap-1.5 text-xs border-rose-300 text-rose-800 hover:bg-rose-50"
-            >
-              <RotateCcw className="h-3.5 w-3.5 text-rose-600" />
-              <span>Supplier Debit Notes</span>
-            </Button>
-
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setGrnRefreshKey((k) => k + 1)}
-              className="gap-1.5 text-xs text-slate-600 border-slate-300 hover:bg-slate-50"
-            >
-              <RotateCcw className="h-3.5 w-3.5" />
-              <span>Refresh Queue</span>
+              Cost & Price First GRN
             </Button>
           </div>
         </div>
 
-        {/* Live Metrics Row */}
-        {(() => {
-          const pendingCount = availableGRNs.filter((g) => g.status === 'SUBMITTED' || g.status === 'COSTED').length;
-          const submittedCount = availableGRNs.filter((g) => g.status === 'SUBMITTED').length;
-          const costedCount = availableGRNs.filter((g) => g.status === 'COSTED').length;
-          const approvedCount = availableGRNs.filter((g) => g.status === 'APPROVED' || g.status === 'PRICED').length;
-
-          return (
-            <div className="space-y-3">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                <Card
-                  onClick={() => setQueueFilter('PENDING')}
-                  className={cn(
-                    'p-3.5 border shadow-2xs transition-all cursor-pointer',
-                    queueFilter === 'PENDING'
-                      ? 'border-amber-400 bg-amber-50/70 ring-1 ring-amber-400'
-                      : 'border-slate-200 bg-white hover:border-slate-300'
-                  )}
-                >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-                        Pending Actions
-                      </span>
-                      <div className="text-lg font-bold text-slate-900 mt-0.5">{pendingCount} Actionable</div>
-                      <span className="text-[10px] text-slate-400">Needs costing or pricing</span>
-                    </div>
-                    <div className="h-8 w-8 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center">
-                      <Warehouse className="h-4 w-4" />
-                    </div>
-                  </div>
-                </Card>
-
-                <Card
-                  onClick={() => setQueueFilter('SUBMITTED')}
-                  className={cn(
-                    'p-3.5 border shadow-2xs transition-all cursor-pointer',
-                    queueFilter === 'SUBMITTED'
-                      ? 'border-amber-400 bg-amber-50/70 ring-1 ring-amber-400'
-                      : 'border-amber-200/70 bg-amber-50/30 hover:border-amber-300'
-                  )}
-                >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <span className="text-[11px] font-semibold uppercase tracking-wider text-amber-800">
-                        Submitted
-                      </span>
-                      <div className="text-lg font-bold text-amber-900 mt-0.5">{submittedCount} Pending Costing</div>
-                      <span className="text-[10px] text-amber-600/80">Stock keeper submitted</span>
-                    </div>
-                    <div className="h-8 w-8 rounded-lg bg-amber-100 text-amber-800 flex items-center justify-center">
-                      <Calculator className="h-4 w-4" />
-                    </div>
-                  </div>
-                </Card>
-
-                <Card
-                  onClick={() => setQueueFilter('COSTED')}
-                  className={cn(
-                    'p-3.5 border shadow-2xs transition-all cursor-pointer',
-                    queueFilter === 'COSTED'
-                      ? 'border-sky-400 bg-sky-50/70 ring-1 ring-sky-400'
-                      : 'border-sky-200/70 bg-sky-50/30 hover:border-sky-300'
-                  )}
-                >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <span className="text-[11px] font-semibold uppercase tracking-wider text-sky-800">
-                        Costed
-                      </span>
-                      <div className="text-lg font-bold text-sky-900 mt-0.5">{costedCount} Pending Pricing</div>
-                      <span className="text-[10px] text-sky-600/80">Finance costed</span>
-                    </div>
-                    <div className="h-8 w-8 rounded-lg bg-sky-100 text-sky-800 flex items-center justify-center">
-                      <SlidersHorizontal className="h-4 w-4" />
-                    </div>
-                  </div>
-                </Card>
-
-                <Card
-                  onClick={() => setQueueFilter('APPROVED')}
-                  className={cn(
-                    'p-3.5 border shadow-2xs transition-all cursor-pointer',
-                    queueFilter === 'APPROVED'
-                      ? 'border-emerald-400 bg-emerald-50/70 ring-1 ring-emerald-400'
-                      : 'border-emerald-200/70 bg-emerald-50/30 hover:border-emerald-300'
-                  )}
-                >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <span className="text-[11px] font-semibold uppercase tracking-wider text-emerald-800">
-                        Approved
-                      </span>
-                      <div className="text-lg font-bold text-emerald-900 mt-0.5">{approvedCount} Completed</div>
-                      <span className="text-[10px] text-emerald-600/80">Costed & priced</span>
-                    </div>
-                    <div className="h-8 w-8 rounded-lg bg-emerald-100 text-emerald-800 flex items-center justify-center">
-                      <CheckCircle2 className="h-4 w-4" />
-                    </div>
-                  </div>
-                </Card>
+        <Card className="border-slate-200 shadow-2xs">
+          <div className="p-3.5 space-y-3">
+            <div className="flex flex-col sm:flex-row gap-3 items-center justify-between">
+              <div className="relative flex-1 w-full max-w-md">
+                <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+                <Input
+                  placeholder="Search GRN #, supplier name, or warehouse..."
+                  value={queueSearch}
+                  onChange={(e) => setQueueSearch(e.target.value)}
+                  className="pl-9 text-xs h-9"
+                />
               </div>
 
-              {/* Filter and Search Bar */}
-              <Card className="border-slate-200 shadow-2xs">
-                <div className="p-3.5 space-y-3">
-                  <div className="flex flex-col sm:flex-row gap-3 items-center justify-between">
-                    <div className="relative flex-1 w-full">
-                      <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-                      <Input
-                        placeholder="Search GRN #, supplier name, or warehouse..."
-                        value={queueSearch}
-                        onChange={(e) => setQueueSearch(e.target.value)}
-                        className="pl-9 text-xs h-9 rounded-xl"
-                      />
-                    </div>
-
-                    {/* Status Filter Tabs */}
-                    <div className="inline-flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs shrink-0 flex-wrap gap-1">
-                      {(
-                        [
-                          { label: 'Pending Actions', value: 'PENDING', count: pendingCount },
-                          { label: 'Submitted', value: 'SUBMITTED', count: submittedCount },
-                          { label: 'Costed', value: 'COSTED', count: costedCount },
-                          { label: 'Approved', value: 'APPROVED', count: approvedCount },
-                          { label: 'All', value: 'ALL', count: availableGRNs.length },
-                        ] as const
-                      ).map((tab) => (
-                        <button
-                          key={tab.value}
-                          type="button"
-                          onClick={() => setQueueFilter(tab.value)}
-                          className={cn(
-                            'px-3 py-1 rounded-lg font-semibold transition-all cursor-pointer text-xs flex items-center gap-1.5',
-                            queueFilter === tab.value
-                              ? 'bg-white text-slate-900 shadow-2xs border border-slate-200/60'
-                              : 'text-slate-600 hover:text-slate-900'
-                          )}
-                        >
-                          <span>{tab.label}</span>
-                          <span
-                            className={cn(
-                              'px-1.5 py-0.2 rounded-full text-[10px] font-mono',
-                              queueFilter === tab.value
-                                ? 'bg-slate-100 text-slate-800'
-                                : 'bg-slate-200/70 text-slate-600'
-                            )}
-                          >
-                            {tab.count}
-                          </span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </Card>
+              {/* Status Filter Tabs */}
+              <div className="inline-flex items-center bg-slate-100 p-1 rounded-lg border border-slate-200 text-xs shrink-0 gap-1 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => setQueueFilter('PENDING')}
+                  className={cn(
+                    'px-3 py-1 rounded-md font-semibold text-xs transition-colors cursor-pointer',
+                    queueFilter === 'PENDING' ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-600'
+                  )}
+                >
+                  Pending Actions ({pendingCount})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setQueueFilter('SUBMITTED')}
+                  className={cn(
+                    'px-3 py-1 rounded-md font-semibold text-xs transition-colors cursor-pointer',
+                    queueFilter === 'SUBMITTED' ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-600'
+                  )}
+                >
+                  Submitted ({submittedCount})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setQueueFilter('COSTED')}
+                  className={cn(
+                    'px-3 py-1 rounded-md font-semibold text-xs transition-colors cursor-pointer',
+                    queueFilter === 'COSTED' ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-600'
+                  )}
+                >
+                  Costed ({costedCount})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setQueueFilter('APPROVED')}
+                  className={cn(
+                    'px-3 py-1 rounded-md font-semibold text-xs transition-colors cursor-pointer',
+                    queueFilter === 'APPROVED' ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-600'
+                  )}
+                >
+                  Approved ({approvedCount})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setQueueFilter('ALL')}
+                  className={cn(
+                    'px-3 py-1 rounded-md font-semibold text-xs transition-colors cursor-pointer',
+                    queueFilter === 'ALL' ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-600'
+                  )}
+                >
+                  All ({availableGRNs.length})
+                </button>
+              </div>
             </div>
-          );
-        })()}
 
-        {/* Inbound GRNs Table */}
-        <Card className="border-slate-200 overflow-hidden shadow-2xs">
-          <div className="overflow-x-auto w-full">
-            <table className="w-full min-w-[950px] text-xs text-left border-collapse">
-              <thead>
-                <tr className="border-b border-slate-200 bg-slate-50/70 text-slate-600 font-semibold uppercase tracking-wider text-[11px]">
-                  <th className="py-3 px-4">GRN Reference</th>
-                  <th className="py-3 px-4">Supplier</th>
-                  <th className="py-3 px-4">Warehouse & Date</th>
-                  <th className="py-3 px-4 text-center">Items Count</th>
-                  <th className="py-3 px-4 text-right">Total Quantity</th>
-                  <th className="py-3 px-4 text-right">Estimated Value</th>
-                  <th className="py-3 px-4 text-center">Status</th>
-                  <th className="py-3 px-4 text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {filteredGRNs.length === 0 ? (
+            <div className="overflow-x-auto rounded-lg border border-slate-200">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-slate-50 text-slate-700 font-semibold border-b border-slate-200">
                   <tr>
-                    <td colSpan={8} className="py-8 text-center text-slate-400">
-                      No inbound goods receipts match the search or filter.
-                    </td>
+                    <th className="px-3.5 py-2.5">GRN Reference</th>
+                    <th className="px-3.5 py-2.5">Supplier</th>
+                    <th className="px-3.5 py-2.5">Warehouse</th>
+                    <th className="px-3.5 py-2.5">Received Date</th>
+                    <th className="px-3.5 py-2.5 text-right">Estimated Value</th>
+                    <th className="px-3.5 py-2.5 text-center">Items</th>
+                    <th className="px-3.5 py-2.5 text-center">Status</th>
+                    <th className="px-3.5 py-2.5 text-right">Action</th>
                   </tr>
-                ) : (
-                  filteredGRNs.map((grn) => {
-                    const totalQty = grn.items.reduce((sum, it) => sum + (it.receivedQuantity || 0), 0);
-                    const isApproved = grn.status === 'APPROVED' || grn.status === 'PRICED';
-                    const isCosted = grn.status === 'COSTED';
-                    const isSubmitted = grn.status === 'SUBMITTED' || (!isApproved && !isCosted);
-
+                </thead>
+                <tbody className="divide-y divide-slate-100 bg-white">
+                  {filteredGRNs.map((g) => {
+                    const estValue = g.items?.reduce((sum, it) => sum + (it.lineValue || (it.receivedQuantity * (it.unitCostSnapshot || 0))), 0) || 0;
                     return (
                       <tr
-                        key={grn.id}
-                        onClick={() => handleSelectGrn(grn.id)}
-                        className="hover:bg-slate-50/80 cursor-pointer transition-colors group"
+                        key={g.id}
+                        onClick={() => {
+                          setSelectedGRNId(g.id);
+                          setViewMode('detail');
+                        }}
+                        className="hover:bg-slate-50 cursor-pointer"
                       >
-                        <td className="py-3 px-4 font-mono font-bold text-primary group-hover:underline">
-                          {grn.grnNumber}
+                        <td className="px-3.5 py-2.5 font-mono font-bold text-primary">{g.grnNumber}</td>
+                        <td className="px-3.5 py-2.5 font-semibold text-slate-800">{g.supplierName}</td>
+                        <td className="px-3.5 py-2.5 font-mono text-slate-600">{g.warehouseId}</td>
+                        <td className="px-3.5 py-2.5 text-slate-600">{formatDate(g.submittedAt)}</td>
+                        <td className="px-3.5 py-2.5 text-right font-mono font-semibold text-slate-700">
+                          {formatCurrency(estValue)}
                         </td>
-                        <td className="py-3 px-4">
-                          <span className="font-semibold text-slate-900 block">{grn.supplierName}</span>
-                          {grn.purchaseOrderNumber && (
-                            <span className="text-[10px] text-slate-400 font-mono">PO: {grn.purchaseOrderNumber}</span>
-                          )}
-                        </td>
-                        <td className="py-3 px-4 text-slate-600">
-                          <span className="font-medium text-slate-700 block">{grn.warehouseId}</span>
-                          <span className="text-[11px] text-slate-400">
-                            {grn.submittedAt ? formatDate(grn.submittedAt) : 'Pending receipt'}
-                          </span>
-                        </td>
-                        <td className="py-3 px-4 text-center">
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 font-bold text-slate-700">
-                            <Package className="h-3 w-3 text-slate-400" />
-                            {grn.items.length} products
-                          </span>
-                        </td>
-                        <td className="py-3 px-4 text-right font-mono font-semibold text-slate-800">
-                          {totalQty.toLocaleString()} units
-                        </td>
-                        <td className="py-3 px-4 text-right font-mono font-bold text-slate-900">
-                          {formatCurrency(grn.totalValue)}
-                        </td>
-                        <td className="py-3 px-4 text-center">
+                        <td className="px-3.5 py-2.5 text-center font-mono">{g.items?.length || 0}</td>
+                        <td className="px-3.5 py-2.5 text-center">
                           <Badge
                             variant="outline"
                             className={cn(
-                              'text-xs font-semibold px-2.5 py-0.5',
-                              isApproved && 'border-emerald-300 text-emerald-800 bg-emerald-50/60',
-                              isCosted && 'border-sky-300 text-sky-800 bg-sky-50/60',
-                              isSubmitted && 'border-amber-300 text-amber-800 bg-amber-50/60'
+                              'text-[10px] font-semibold py-0',
+                              g.status === 'APPROVED' || g.status === 'PRICED'
+                                ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                                : 'bg-amber-50 text-amber-800 border-amber-300'
                             )}
                           >
-                            {isApproved ? 'APPROVED' : isCosted ? 'COSTED' : 'SUBMITTED'}
+                            {g.status === 'PRICED' ? 'APPROVED' : g.status}
                           </Badge>
-                          <span className="block text-[10px] text-slate-400 mt-0.5">
-                            {isApproved ? 'Costed & Priced' : isCosted ? 'Awaiting Pricing' : 'Awaiting Costing'}
-                          </span>
                         </td>
-                        <td className="py-3 px-4 text-right">
-                          <Button
-                            size="sm"
-                            variant={isApproved ? 'outline' : 'default'}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleSelectGrn(grn.id);
-                            }}
-                            className={cn(
-                              'text-xs h-7 px-2.5 gap-1 font-semibold rounded-lg',
-                              isSubmitted && 'bg-primary hover:bg-primary-hover text-white shadow-2xs',
-                              isCosted && 'bg-sky-600 hover:bg-sky-700 text-white shadow-2xs',
-                              isApproved && 'border-slate-300 text-slate-700 hover:bg-slate-50'
-                            )}
-                          >
-                            <span>{isSubmitted ? 'Cost & Price' : isCosted ? 'Set Pricing' : 'View Costing'}</span>
-                            <ArrowRight className="h-3 w-3" />
+                        <td className="px-3.5 py-2.5 text-right">
+                          <Button size="sm" variant="outline" className="h-7 text-xs font-semibold text-primary">
+                            Cost & Price
                           </Button>
                         </td>
                       </tr>
                     );
-                  })
-                )}
-              </tbody>
-            </table>
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
         </Card>
       </div>
     );
   }
 
+  // ---------------------------------------------------------------------------
+  // DETAIL VIEW: 2-Step Guided Workflow
+  // ---------------------------------------------------------------------------
+  if (!selectedGRN) {
+    return (
+      <div className="py-12 text-center text-slate-500 text-sm">
+        No GRN selected. Please return to the queue.
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-6">
-      {/* Page Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-slate-200 pb-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleBackToGrnList}
-              className="gap-1.5 text-xs border-slate-300 text-slate-700 hover:bg-slate-100 font-semibold mr-1"
-            >
-              <ArrowLeft className="h-3.5 w-3.5" />
-              <span>Back to GRN Selection</span>
-            </Button>
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-              Vendor Bill Processing (GRN Costing)
-            </h1>
-            <Badge variant="outline" className="bg-primary-light text-primary-text border-primary-border text-xs">
-              Accounts Payable
+    <div className="space-y-4 p-4 pb-24 max-w-7xl mx-auto">
+      {/* Top Breadcrumb & Status Row */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-1">
+        <div className="flex flex-wrap items-center gap-2.5">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleBackToGrnList}
+            className="h-8 text-xs gap-1.5 font-semibold border-border text-foreground hover:bg-muted"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" />
+            <span>Back to GRN Selection</span>
+          </Button>
+
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">
+            Vendor Bill Processing (GRN Costing)
+          </h1>
+          <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 text-xs font-semibold">
+            Accounts Payable
+          </Badge>
+
+          {isAuditLocked && (
+            <Badge variant="outline" className="bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20 text-xs font-semibold gap-1">
+              <Lock className="h-3 w-3" />
+              <span>Audit Lock Active</span>
             </Badge>
-          </div>
-          <p className="text-sm text-slate-500 mt-1">
-            Finance verification and landed costing after physical warehouse goods receipt.
-          </p>
+          )}
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => navigate('/finance/ap/advances')}
-            className="gap-1.5 text-xs border-emerald-300 text-emerald-800 hover:bg-emerald-50"
-          >
-            <Landmark className="h-3.5 w-3.5 text-emerald-600" />
-            <span>Supplier Advances</span>
-          </Button>
-
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => navigate('/finance/ap/debit-notes')}
-            className="gap-1.5 text-xs border-rose-300 text-rose-800 hover:bg-rose-50"
-          >
-            <RotateCcw className="h-3.5 w-3.5 text-rose-600" />
-            <span>Supplier Debit Notes</span>
-          </Button>
-
-          {/* Quick Header Action for Selling Prices when locked */}
-          {isAuditLocked && (
-            <Button
-              type="button"
-              size="sm"
-              onClick={() => {
-                setShowInlinePricing(true);
-                setActiveWorkflowTab('all');
-              }}
-              className="gap-1.5 bg-primary hover:bg-primary-hover text-white text-xs font-semibold shadow-xs h-9"
-            >
-              <SlidersHorizontal className="h-3.5 w-3.5" />
-              <span>{selectedGRN?.status === 'APPROVED' || selectedGRN?.status === 'PRICED' ? 'View Selling Prices' : 'Set Selling Prices'}</span>
-            </Button>
-          )}
-
-          {/* GRN Selection Queue Dropdown */}
-          <div className="flex items-center gap-2">
-            <label className="text-xs font-semibold text-slate-600 whitespace-nowrap">
-              Inbound GRN:
-            </label>
-            <Select
+        <div className="flex items-center gap-2 self-start sm:self-auto">
+          {/* GRN Switcher Dropdown */}
+          <div className="flex items-center gap-1.5 text-xs">
+            <span className="font-semibold text-muted-foreground">GRN:</span>
+            <select
               value={selectedGRNId}
-              onValueChange={(val) => setSelectedGRNId(val)}
-              onChange={(e) => setSelectedGRNId(e.target.value)}
-              className="text-xs h-9 min-w-56"
+              onChange={(e) => {
+                setSelectedGRNId(e.target.value);
+                navigate(`/finance/ap/bills/new?grnId=${e.target.value}`);
+              }}
+              className="h-8 rounded-lg border border-border bg-card px-2.5 text-xs font-semibold text-foreground shadow-2xs"
             >
               {availableGRNs.map((g) => (
                 <option key={g.id} value={g.id}>
-                  {g.grnNumber} - {g.supplierName} ({g.status === 'PRICED' ? 'APPROVED' : g.status})
+                  {g.grnNumber} — {g.supplierName}
                 </option>
               ))}
-            </Select>
+            </select>
           </div>
+
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setIsCostedPrintModalOpen(true)}
+            className="h-8 text-xs gap-1.5 font-medium border-border text-foreground hover:bg-muted"
+          >
+            <Printer className="h-3.5 w-3.5 text-muted-foreground" />
+            <span>Print Sheet</span>
+          </Button>
         </div>
       </div>
 
-      {/* Workflow Navigation Bar & Action Strip (Costing Summary Strip Removed) */}
-      <div className="bg-white border border-slate-200/90 rounded-xl p-3.5 shadow-2xs space-y-3">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-          {/* Step / Tab Workflow Navigation Bar */}
-          <div className="inline-flex items-center bg-slate-100 p-1 rounded-lg border border-slate-200 text-xs flex-wrap gap-1">
-            <button
-              type="button"
-              onClick={() => setActiveWorkflowTab('all')}
-              className={cn(
-                "px-3 py-1 rounded-md font-semibold transition-all",
-                activeWorkflowTab === 'all'
-                  ? "bg-white text-slate-900 shadow-2xs border border-slate-200/60"
-                  : "text-slate-600 hover:text-slate-900"
-              )}
-            >
-              All Sections (Full Sheet)
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveWorkflowTab('step1')}
-              className={cn(
-                "px-3 py-1 rounded-md font-semibold transition-all flex items-center gap-1.5",
-                activeWorkflowTab === 'step1'
-                  ? "bg-white text-primary shadow-2xs border border-slate-200/60"
-                  : "text-slate-600 hover:text-slate-900"
-              )}
-            >
-              <FileText className="h-3.5 w-3.5" />
-              <span>Step 1: Inbound & Invoice Items</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveWorkflowTab('step2')}
-              className={cn(
-                "px-3 py-1 rounded-md font-semibold transition-all flex items-center gap-1.5",
-                activeWorkflowTab === 'step2'
-                  ? "bg-white text-primary shadow-2xs border border-slate-200/60"
-                  : "text-slate-600 hover:text-slate-900"
-              )}
-            >
-              <Truck className="h-3.5 w-3.5" />
-              <span>Step 2: Landed Costs & Freight</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveWorkflowTab('step3')}
-              className={cn(
-                "px-3 py-1 rounded-md font-semibold transition-all flex items-center gap-1.5",
-                activeWorkflowTab === 'step3'
-                  ? "bg-white text-emerald-800 shadow-2xs border border-slate-200/60"
-                  : "text-slate-600 hover:text-slate-900"
-              )}
-            >
-              <Landmark className="h-3.5 w-3.5" />
-              <span>Step 3: Prepayments & Posting</span>
-            </button>
-            {(isAuditLocked || showInlinePricing) && (
-              <button
-                type="button"
-                onClick={() => {
-                  setActiveWorkflowTab('step4');
-                  setShowInlinePricing(true);
-                }}
-                className={cn(
-                  "px-3 py-1 rounded-md font-semibold transition-all flex items-center gap-1.5",
-                  activeWorkflowTab === 'step4'
-                    ? "bg-white text-indigo-800 shadow-2xs border border-slate-200/60"
-                    : "text-indigo-600 hover:text-indigo-900"
-                )}
-              >
-                <SlidersHorizontal className="h-3.5 w-3.5" />
-                <span>Step 4: Selling Prices</span>
-              </button>
-            )}
-          </div>
-
-          {/* Quick Header Actions: Easy Access to Post / Selling Prices */}
-          <div className="flex items-center gap-2 shrink-0">
-            {isAuditLocked ? (
-              <Button
-                type="button"
-                size="sm"
-                onClick={() => {
-                  setShowInlinePricing(true);
-                  setActiveWorkflowTab('all');
-                }}
-                className="gap-1.5 bg-primary hover:bg-primary-hover text-white text-xs font-semibold shadow-xs h-8"
-              >
-                <SlidersHorizontal className="h-3.5 w-3.5" />
-                <span>Set / Adjust Selling Prices</span>
-              </Button>
-            ) : (
-              <div className="flex items-center gap-2">
-                <Button
-                  type="button"
-                  size="sm"
-                  onClick={handlePostVendorBill}
-                  disabled={!isFormValid || submitting}
-                  className="gap-1.5 bg-primary hover:bg-primary-hover text-white text-xs font-semibold shadow-xs h-8"
-                >
-                  <CheckCircle2 className="h-3.5 w-3.5" />
-                  <span>{submitting ? 'Posting...' : 'Post Bill'}</span>
-                </Button>
-                <DoubleEntryHoverBadge
-                  title="GRN Vendor Bill Costing Impact"
-                  description="Posting this vendor bill commits landed cost & VAT to General Ledger:"
-                  lines={[
-                    {
-                      accountCode: '1100',
-                      accountName: 'Merchandise Inventory (Total Landed Cost)',
-                      type: 'DEBIT',
-                      amount: totalLandedCost,
-                    },
-                    ...(vatTotal > 0
-                      ? [
-                          {
-                            accountCode: '1025',
-                            accountName: 'Input VAT Receivable (18%)',
-                            type: 'DEBIT' as const,
-                            amount: vatTotal,
-                          },
-                        ]
-                      : []),
-                    {
-                      accountCode: '2010',
-                      accountName: `Accounts Payable (${selectedGRN?.supplierName || 'Trade Creditors'})`,
-                      type: 'CREDIT',
-                      amount: grandTotal,
-                    },
-                  ]}
-                />
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between text-[11px] text-slate-500 pt-1 border-t border-slate-100 gap-2">
-          <div className="flex items-center gap-2">
-            <span>GRN Reference: <strong className="text-slate-800 font-mono">{selectedGRN?.grnNumber}</strong></span>
-            <span>•</span>
-            <span>Supplier: <strong className="text-slate-800">{selectedGRN?.supplierName}</strong></span>
-          </div>
-
-          <div className="flex items-center gap-1.5">
-            <span className="text-slate-400">Approval & Costing Status:</span>
-            <Badge
-              variant="outline"
-              className={cn(
-                'text-[10px] font-semibold px-2.5 py-0.5',
-                (selectedGRN?.status === 'APPROVED' || selectedGRN?.status === 'PRICED') &&
-                  'border-emerald-300 text-emerald-800 bg-emerald-50/60',
-                selectedGRN?.status === 'COSTED' &&
-                  'border-sky-300 text-sky-800 bg-sky-50/60',
-                (!selectedGRN?.status || selectedGRN?.status === 'SUBMITTED') &&
-                  'border-amber-300 text-amber-800 bg-amber-50/60'
-              )}
-            >
-              {selectedGRN?.status === 'APPROVED' || selectedGRN?.status === 'PRICED'
-                ? 'APPROVED (Costed & Priced)'
-                : selectedGRN?.status === 'COSTED'
-                ? 'COSTED (Awaiting Pricing)'
-                : 'SUBMITTED (Awaiting Landed Costing)'}
-            </Badge>
-          </div>
-        </div>
-      </div>
-
-      {/* Step 1: Split-Screen Inbound Verification & Invoice Items */}
-      {(activeWorkflowTab === 'all' || activeWorkflowTab === 'step1') && (
-        <div className="space-y-3">
-          <div className="flex items-center gap-2">
-            <Badge variant="outline" className="text-[10px] font-mono bg-slate-100 text-slate-700 border-slate-300 font-bold">
-              Step 1
-            </Badge>
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-800">
-              Inbound Goods Receipt & Supplier Invoice Lines
-            </span>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-            {/* Left Pane (Read-Only Warehouse Data) */}
-            <div className="lg:col-span-5 space-y-4">
-          <Card className="p-3.5 border-slate-200 bg-slate-50/80 shadow-xs">
-            <div className="flex items-center justify-between border-b border-slate-200 pb-2.5">
-              <div className="flex items-center gap-2 text-slate-800 font-bold text-sm">
-                <Warehouse className="h-4 w-4 text-primary shrink-0" />
-                <span>Warehouse Goods Receipt (Read-Only)</span>
-              </div>
-              <Badge
-                variant="outline"
-                className={cn(
-                  "text-xs font-semibold px-2.5 py-0.5 bg-white",
-                  (selectedGRN?.status === 'APPROVED' || selectedGRN?.status === 'PRICED') &&
-                    "border-emerald-300 text-emerald-800 bg-emerald-50/60",
-                  selectedGRN?.status === 'COSTED' &&
-                    "border-sky-300 text-sky-800 bg-sky-50/60",
-                  (!selectedGRN?.status || selectedGRN?.status === 'SUBMITTED') &&
-                    "border-amber-300 text-amber-800 bg-amber-50/60"
-                )}
-              >
-                {selectedGRN?.status === 'PRICED' ? 'APPROVED' : (selectedGRN?.status || 'SUBMITTED')}
-              </Badge>
-            </div>
-
-            {selectedGRN ? (
-              <div className="mt-3 space-y-2.5 text-xs">
-                {/* Supplier & Warehouse Metadata */}
-                <div className="bg-white rounded-lg p-2.5 border border-slate-200/80 shadow-2xs space-y-2">
-                  <div>
-                    <span className="text-slate-400 block text-[10px] font-semibold uppercase tracking-wider">
-                      Supplier Name
-                    </span>
-                    <span className="font-bold text-slate-900 text-xs sm:text-sm">
-                      {selectedGRN.supplierName}
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-2 border-t border-slate-100 text-[11px]">
-                    <div>
-                      <span className="text-slate-400 block text-[10px] font-semibold uppercase">
-                        GRN Reference
-                      </span>
-                      <span className="font-mono font-semibold text-slate-700">
-                        {selectedGRN.grnNumber}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-slate-400 block text-[10px] font-semibold uppercase">
-                        Received Warehouse
-                      </span>
-                      <span className="font-semibold text-slate-700">
-                        {selectedGRN.warehouseId}
-                      </span>
-                    </div>
-                    {selectedGRN.submittedAt && (
-                      <div className="col-span-2 sm:col-span-1">
-                        <span className="text-slate-400 block text-[10px] font-semibold uppercase">
-                          Received Date
-                        </span>
-                        <span className="text-slate-700">
-                          {formatDate(selectedGRN.submittedAt)}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Summary Metrics Strip */}
-                <div className="grid grid-cols-3 gap-2 text-center">
-                  <div className="rounded-md bg-white border border-slate-200 p-1.5 shadow-2xs">
-                    <span className="text-[10px] font-semibold text-slate-400 uppercase block">Product Lines</span>
-                    <span className="font-mono font-bold text-slate-800 text-xs">{selectedGRN.items.length}</span>
-                  </div>
-                  <div className="rounded-md bg-white border border-slate-200 p-1.5 shadow-2xs">
-                    <span className="text-[10px] font-semibold text-slate-400 uppercase block">Received Units</span>
-                    <span className="font-mono font-bold text-primary text-xs">{totalReceivedUnits}</span>
-                  </div>
-                  <div className={cn(
-                    "rounded-md border p-1.5 shadow-2xs",
-                    totalDamagedUnits > 0
-                      ? "bg-rose-50 border-rose-200 text-rose-800"
-                      : "bg-white border-slate-200 text-slate-800"
-                  )}>
-                    <span className="text-[10px] font-semibold uppercase block opacity-75">Damaged Units</span>
-                    <span className="font-mono font-bold text-xs">{totalDamagedUnits}</span>
-                  </div>
-                </div>
-
-                {/* Physical Product Items Section */}
-                <div className="pt-2 border-t border-slate-200 space-y-2">
-                  <div className="flex items-center justify-between gap-1">
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-slate-700 font-bold text-xs">
-                        Verified Physical Inbound Quantities:
-                      </span>
-                      <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-mono text-slate-600 bg-white">
-                        {selectedGRN.items.length}
-                      </Badge>
-                    </div>
-
-                    <div className="flex items-center gap-1">
-                      {selectedGRN.items.length > 1 && (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            const isAnyExpanded = Object.values(expandedProductIds).some(Boolean);
-                            if (isAnyExpanded) {
-                              handleCollapseAllDetails();
-                            } else {
-                              handleExpandAllDetails();
-                            }
-                          }}
-                          className="h-6 text-[10px] px-1.5 text-slate-500 hover:text-slate-800"
-                          title="Toggle all product details & barcodes"
-                        >
-                          <Layers className="h-3 w-3 mr-1" />
-                          <span>{Object.values(expandedProductIds).some(Boolean) ? 'Collapse All' : 'Expand All'}</span>
-                        </Button>
-                      )}
-
-                      {selectedGRN.items.length > COLLAPSED_PRODUCT_LIMIT && (
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setIsListExpanded(!isListExpanded)}
-                          className="h-6 text-[10px] px-2 font-semibold text-primary border-primary/30 hover:bg-primary-light"
-                        >
-                          {isListExpanded ? (
-                            <>
-                              <ChevronUp className="h-3 w-3 mr-1" />
-                              <span>Collapse</span>
-                            </>
-                          ) : (
-                            <>
-                              <ChevronDown className="h-3 w-3 mr-1" />
-                              <span>View All ({selectedGRN.items.length})</span>
-                            </>
-                          )}
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Search filter for large product lists */}
-                  {(selectedGRN.items.length > COLLAPSED_PRODUCT_LIMIT || isListExpanded) && (
-                    <div className="relative">
-                      <Search className="absolute left-2.5 top-2 h-3.5 w-3.5 text-slate-400" />
-                      <Input
-                        placeholder={`Search ${selectedGRN.items.length} products by name, SKU, or barcode...`}
-                        value={productSearch}
-                        onChange={(e) => setProductSearch(e.target.value)}
-                        className="h-7 pl-8 text-xs bg-white border-slate-200"
-                      />
-                      {productSearch && (
-                        <button
-                          type="button"
-                          onClick={() => setProductSearch('')}
-                          className="absolute right-2 top-1.5 text-slate-400 hover:text-slate-600 text-xs px-1"
-                        >
-                          ×
-                        </button>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Product Cards Container */}
-                  <div
-                    className={cn(
-                      "space-y-1.5 pr-1",
-                      isListExpanded && selectedGRN.items.length > COLLAPSED_PRODUCT_LIMIT
-                        ? "max-h-[650px] overflow-y-auto"
-                        : ""
-                    )}
-                  >
-                    {displayedGRNItems.length > 0 ? (
-                      displayedGRNItems.map((item, idx) => {
-                        const itemKey = `item-${idx}-${item.productId}`;
-                        const isExpanded = Boolean(expandedProductIds[itemKey]);
-                        const product = getProductMaster(item.productId, item.skuSnapshot);
-                        const barcode = getProductBarcode(item);
-                        const serials = getItemSerialNumbers(item);
-                        const costedItem = computedLineItems.find(
-                          (ci) => ci.productId === item.productId || ci.sku === item.skuSnapshot
-                        );
-
-                        return (
-                          <div
-                            key={itemKey}
-                            className={cn(
-                              "rounded-lg border bg-white p-2.5 text-xs transition-all shadow-2xs",
-                              isExpanded
-                                ? "border-primary/40 ring-1 ring-primary/20 bg-slate-50/30"
-                                : "border-slate-200/90 hover:border-slate-300"
-                            )}
-                          >
-                            {/* Primary Compact Row */}
-                            <div className="flex items-start justify-between gap-2">
-                              <div className="flex items-start gap-1.5 min-w-0">
-                                <button
-                                  type="button"
-                                  onClick={(e) => toggleProductExpand(itemKey, e)}
-                                  className="text-slate-400 hover:text-primary transition-colors p-0.5 rounded -ml-1 mt-0.5 shrink-0"
-                                  title={isExpanded ? "Collapse product details" : "Expand product details & barcode"}
-                                  aria-label={isExpanded ? "Collapse product details" : "Expand product details & barcode"}
-                                >
-                                  <ChevronRight
-                                    className={cn(
-                                      "h-3.5 w-3.5 transition-transform duration-150",
-                                      isExpanded && "rotate-90 text-primary"
-                                    )}
-                                  />
-                                </button>
-                                <div className="min-w-0">
-                                  <div className="flex items-center gap-1.5">
-                                    <span className="font-semibold text-slate-800 truncate" title={item.productNameSnapshot}>
-                                      {item.productNameSnapshot}
-                                    </span>
-                                  </div>
-                                  <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] font-mono mt-0.5">
-                                    <span>SKU: {item.skuSnapshot}</span>
-                                    <span className="text-slate-300">•</span>
-                                    <span className="text-slate-500">
-                                      Supplier: <span className="font-semibold text-slate-700">{formatCurrency(costedItem?.unitCost || item.unitCostSnapshot || 0)}</span>
-                                    </span>
-                                    <span className="text-slate-300">•</span>
-                                    <span className="text-primary font-semibold">
-                                      Landed: <span>{formatCurrency(costedItem?.landedUnitCost || item.unitCostSnapshot || 0)}</span>
-                                      <span className="text-[10px] text-slate-400 font-sans ml-0.5">/unit</span>
-                                    </span>
-                                  </div>
-                                </div>
-                              </div>
-
-                              <div className="text-right shrink-0">
-                                <div className="font-mono text-xs font-bold text-primary tabular-nums">
-                                  {item.receivedQuantity} units
-                                </div>
-                                {item.damagedQuantity > 0 && (
-                                  <span className="inline-block text-[10px] font-semibold text-rose-600 bg-rose-50 border border-rose-200 rounded px-1.5 py-0.2 mt-0.5">
-                                    Damaged: {item.damagedQuantity}
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-
-                            {/* Serial Number & Barcode Action Line */}
-                            <div className="flex items-center justify-between text-[11px] pt-1.5 mt-1.5 border-t border-slate-100">
-                              <button
-                                type="button"
-                                onClick={(e) => toggleProductExpand(itemKey, e)}
-                                className="flex items-center gap-1 text-[11px] text-slate-500 hover:text-primary font-medium"
-                              >
-                                <Barcode className="h-3 w-3 text-slate-400" />
-                                <span>{isExpanded ? 'Hide Barcode & Details' : 'Show Barcode & Details'}</span>
-                              </button>
-
-                              <div>
-                                {serials.length > 0 ? (
-                                  <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={(e) => handleOpenSerials(item, e)}
-                                    className="h-6 text-[10px] px-2 gap-1 text-primary hover:bg-primary-light border-primary/30 font-medium"
-                                    title={`View ${serials.length} unit serial numbers`}
-                                  >
-                                    <Hash className="h-3 w-3 text-primary" />
-                                    <span>View Serial Numbers ({serials.length})</span>
-                                  </Button>
-                                ) : (
-                                  <span className="text-[10px] text-slate-400 italic">
-                                    No unit serials
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-
-                            {/* Expandable Product Details Section */}
-                            {isExpanded && (
-                              <div className="mt-2 pt-2 border-t border-dashed border-slate-200 space-y-2 bg-slate-50/70 -mx-1 -mb-1 p-2 rounded-b-md">
-                                {/* Product-Level Barcode */}
-                                <div className="flex items-center justify-between bg-white border border-slate-200 rounded p-1.5 shadow-2xs">
-                                  <div className="flex items-center gap-1.5 text-slate-700">
-                                    <Barcode className="h-3.5 w-3.5 text-slate-900" />
-                                    <span className="font-semibold text-[11px]">Product Barcode:</span>
-                                  </div>
-                                  <div className="text-right">
-                                    <span className="font-mono font-bold text-xs text-slate-900 bg-slate-50 border border-slate-300 rounded px-2 py-0.5 tracking-wider">
-                                      {barcode}
-                                    </span>
-                                  </div>
-                                </div>
-                                <div className="text-[10px] text-slate-500 text-right pr-0.5">
-                                  Product-level barcode (one barcode per product type, not per unit)
-                                </div>
-
-                                {/* Product Specifications & Inventory Details */}
-                                <div className="grid grid-cols-2 gap-2 text-[11px] bg-white border border-slate-200 rounded p-2 text-slate-600">
-                                  <div>
-                                    <span className="text-slate-400 block text-[10px] uppercase font-semibold">Category</span>
-                                    <span className="font-medium text-slate-800">{product?.categoryName || 'Electrical Switchgear'}</span>
-                                  </div>
-                                  <div>
-                                    <span className="text-slate-400 block text-[10px] uppercase font-semibold">UOM</span>
-                                    <span className="font-medium text-slate-800">{product?.uomCode || 'PCS'}</span>
-                                  </div>
-                                  <div>
-                                    <span className="text-slate-400 block text-[10px] uppercase font-semibold">Expected Inbound</span>
-                                    <span className="font-mono font-medium text-slate-700">{item.expectedQuantity} units</span>
-                                  </div>
-                                  <div>
-                                    <span className="text-slate-400 block text-[10px] uppercase font-semibold">Unit Cost Snapshot</span>
-                                    <span className="font-mono font-medium text-slate-700">{formatCurrency(item.unitCostSnapshot)}</span>
-                                  </div>
-                                </div>
-
-                                {/* True Landed Inventory Costing Comparison Strip */}
-                                <div className="bg-emerald-50/70 border border-emerald-200/80 rounded p-2 text-xs space-y-1.5">
-                                  <div className="flex items-center justify-between pb-1 border-b border-emerald-200/60">
-                                    <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-900 flex items-center gap-1 font-sans">
-                                      <Sparkles className="h-3 w-3 text-emerald-600" />
-                                      <span>True Landed Inventory Costing</span>
-                                    </span>
-                                    <span className="text-[10px] font-mono font-semibold text-emerald-800">
-                                      {item.receivedQuantity} received units
-                                    </span>
-                                  </div>
-                                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px] font-mono">
-                                    <div>
-                                      <span className="text-slate-500 block text-[10px] font-sans">Supplier Unit Cost</span>
-                                      <span className="font-bold text-slate-800">{formatCurrency(costedItem?.unitCost || item.unitCostSnapshot || 0)}</span>
-                                    </div>
-                                    <div>
-                                      <span className="text-slate-500 block text-[10px] font-sans">Allocated Landed</span>
-                                      <span className="font-semibold text-slate-700">+{formatCurrency((costedItem?.allocatedLandedCost || 0) / (item.receivedQuantity || 1))}/unit</span>
-                                    </div>
-                                    <div>
-                                      <span className="text-emerald-800 block text-[10px] font-sans font-semibold">Landed Cost / Unit</span>
-                                      <span className="font-bold text-emerald-700 text-xs">{formatCurrency(costedItem?.landedUnitCost || item.unitCostSnapshot || 0)}</span>
-                                    </div>
-                                    <div>
-                                      <span className="text-slate-500 block text-[10px] font-sans">Total Landed Cost</span>
-                                      <span className="font-bold text-slate-900">{formatCurrency(costedItem?.totalLandedCost || (costedItem ? costedItem.landedUnitCost * item.receivedQuantity : item.lineValue || 0))}</span>
-                                    </div>
-                                  </div>
-                                </div>
-
-                                {/* Serial Numbers Status in Expanded View */}
-                                {serials.length > 0 && (
-                                  <div className="flex items-center justify-between bg-primary-light/40 border border-primary-border/60 rounded p-2">
-                                    <div className="flex items-center gap-1.5 text-primary-text text-[11px] font-medium">
-                                      <ShieldCheck className="h-3.5 w-3.5 text-primary" />
-                                      <span>{serials.length} unit serial numbers verified</span>
-                                    </div>
-                                    <Button
-                                      type="button"
-                                      size="sm"
-                                      onClick={(e) => handleOpenSerials(item, e)}
-                                      className="h-6 text-[10px] px-2 bg-primary hover:bg-primary-hover text-white gap-1"
-                                    >
-                                      <Hash className="h-2.5 w-2.5" />
-                                      <span>Inspect Serials</span>
-                                    </Button>
-                                  </div>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })
-                    ) : (
-                      <div className="py-6 text-center text-xs text-slate-400 bg-white rounded-lg border border-slate-200">
-                        No products match "{productSearch}"
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Collapsed State Banner & Action Button */}
-                  {!isListExpanded && !productSearch && selectedGRN.items.length > COLLAPSED_PRODUCT_LIMIT && (
-                    <div className="rounded-lg border border-dashed border-primary/30 bg-primary-light/20 p-2 text-center space-y-1.5">
-                      <div className="text-[11px] text-slate-600 font-medium">
-                        Showing {COLLAPSED_PRODUCT_LIMIT} of {selectedGRN.items.length} products in this GRN
-                      </div>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setIsListExpanded(true)}
-                        className="w-full text-xs font-semibold gap-1.5 border-primary/30 text-primary hover:bg-primary-light bg-white shadow-2xs"
-                      >
-                        <Package className="h-3.5 w-3.5" />
-                        <span>Expand / View All Products ({selectedGRN.items.length})</span>
-                      </Button>
-                    </div>
-                  )}
-
-                  {/* Expanded State Collapse Button */}
-                  {isListExpanded && !productSearch && selectedGRN.items.length > COLLAPSED_PRODUCT_LIMIT && (
-                    <div className="pt-1 text-center">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setIsListExpanded(false)}
-                        className="w-full text-xs text-slate-500 hover:text-slate-800 gap-1.5"
-                      >
-                        <ChevronUp className="h-3.5 w-3.5" />
-                        <span>Collapse Products Summary</span>
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              </div>
-            ) : (
-              <p className="text-slate-400 text-xs py-4 text-center">
-                No GRN selected
-              </p>
-            )}
-          </Card>
-        </div>
-
-        {/* Right Pane (Editable Financial Data or Audit Locked) */}
-        <div className="lg:col-span-7 space-y-5">
-          <Card className="p-5 border-slate-200 shadow-xs bg-white space-y-5">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <div className="flex items-center gap-2 text-slate-900 font-bold text-sm">
-                <Receipt className="h-4 w-4 text-primary" />
-                <span>Vendor Invoice & Costing Details</span>
-              </div>
-              {isAuditLocked && (
-                <Badge variant="outline" className="gap-1 bg-amber-50 text-amber-800 border-amber-300 text-xs font-semibold">
-                  <Lock className="h-3 w-3" />
-                  <span>Audit Locked (POSTED)</span>
-                </Badge>
-              )}
-            </div>
-
-            {/* Audit Lock Warning Banner */}
-            {isAuditLocked && (
-              <div className="rounded-lg bg-amber-50 border border-amber-200 p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-amber-900 animate-in fade-in-50">
-                <div className="flex items-center gap-2.5">
-                  <Lock className="h-4 w-4 text-amber-700 shrink-0" />
-                  <div>
-                    <span className="font-bold text-xs uppercase tracking-wide block">
-                      Audit Lock Active: Transaction Cleared & Costed (Read-Only)
-                    </span>
-                    <span className="text-xs text-amber-800">
-                      This Vendor Bill has been posted to the General Ledger. All financial inputs are locked against modification.
-                    </span>
-                  </div>
-                </div>
-                <Button
-                  type="button"
-                  size="sm"
-                  onClick={() => {
-                    setShowInlinePricing(true);
-                    setActiveWorkflowTab('all');
-                  }}
-                  className="bg-primary hover:bg-primary-hover text-white text-xs gap-1.5 shrink-0 font-semibold shadow-xs"
-                >
-                  <SlidersHorizontal className="h-3.5 w-3.5" />
-                  <span>Set / Adjust Selling Prices</span>
-                </Button>
-              </div>
-            )}
-
-            {/* Selling Price Strategy Success Banner */}
-            {pricingAssigned && (
-              <div className="rounded-lg bg-emerald-50 border border-emerald-200 p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-emerald-950 animate-in fade-in-50">
-                <div className="flex items-center gap-2.5">
-                  <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
-                  <div>
-                    <span className="font-bold text-xs uppercase tracking-wide block">
-                      Selling Price Strategy Assigned & Inventory Released
-                    </span>
-                    <span className="text-xs text-emerald-800">
-                      Commercial pricing has been established for inbound lots and active inventory has been released for sales order fulfillment.
-                    </span>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setShowInlinePricing(true);
-                      setActiveWorkflowTab('all');
-                    }}
-                    className="text-xs border-emerald-300 text-emerald-800 hover:bg-emerald-100 font-medium"
-                  >
-                    Adjust Prices
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setIsCostedPrintModalOpen(true)}
-                    className="text-xs border-emerald-400 bg-white text-emerald-800 hover:bg-emerald-50 font-semibold gap-1.5"
-                  >
-                    <Printer className="h-3.5 w-3.5 text-emerald-700" />
-                    <span>Print Costed & Priced GRN</span>
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    onClick={() => navigate('/finance/dashboard')}
-                    className="bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-semibold"
-                  >
-                    Go to Dashboard
-                  </Button>
-                </div>
-              </div>
-            )}
-
-            {/* Header: Vendor Invoice Number, Invoice Date, Due Date */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Vendor Invoice # <span className="text-rose-500">*</span>
-                </label>
-                <Input
-                  value={vendorInvoiceNumber}
-                  onChange={(e) => setVendorInvoiceNumber(e.target.value)}
-                  placeholder="e.g. INV-SCH-90214"
-                  className="h-9 text-xs font-mono"
-                  disabled={isAuditLocked}
-                  readOnly={isAuditLocked}
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Invoice Date <span className="text-rose-500">*</span>
-                </label>
-                <Input
-                  type="date"
-                  value={invoiceDate}
-                  onChange={(e) => setInvoiceDate(e.target.value)}
-                  className="h-9 text-xs"
-                  disabled={isAuditLocked}
-                  readOnly={isAuditLocked}
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Due Date <span className="text-rose-500">*</span>
-                </label>
-                <Input
-                  type="date"
-                  value={dueDate}
-                  onChange={(e) => setDueDate(e.target.value)}
-                  className="h-9 text-xs"
-                  disabled={isAuditLocked}
-                  readOnly={isAuditLocked}
-                  required
-                />
-              </div>
-            </div>
-
-            {/* Line Items Dynamic Form Array with Smaller Cards & Expanders */}
-            <div className="space-y-3">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200 pb-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold uppercase tracking-wider text-slate-800">
-                    Costing Breakdown per Item
-                  </span>
-                  <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-mono text-slate-600 bg-white">
-                    {computedLineItems.length} Products
-                  </Badge>
-                  <span className="text-[11px] text-slate-400 hidden md:inline">
-                    • Auto-pulled from Supplier Master
-                  </span>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  {computedLineItems.length > 3 && (
-                    <div className="relative">
-                      <Search className="absolute left-2 top-1.5 h-3 w-3 text-slate-400" />
-                      <input
-                        type="text"
-                        value={costingProductSearch}
-                        onChange={(e) => setCostingProductSearch(e.target.value)}
-                        placeholder="Filter products..."
-                        className="h-6 w-32 sm:w-40 pl-6 pr-2 text-[11px] rounded border border-slate-200 bg-white placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-primary"
-                      />
-                    </div>
-                  )}
-
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      const isAnyExpanded = Object.values(expandedCostingItemIds).some(Boolean);
-                      if (isAnyExpanded) {
-                        handleCollapseAllCosting();
-                      } else {
-                        handleExpandAllCosting();
-                      }
-                    }}
-                    className="h-6 text-[10px] px-2 text-slate-500 hover:text-slate-800"
-                    title="Toggle all product costing cards"
-                  >
-                    <Layers className="h-3 w-3 mr-1" />
-                    <span>{Object.values(expandedCostingItemIds).some(Boolean) ? 'Collapse All' : 'Expand All'}</span>
-                  </Button>
-                </div>
-              </div>
-
-              {/* FOB / 3rd-Party Logistics Freight Split Toggle */}
-              {totalAdditionalLandedCosts > 0 && (
-                <div className="rounded-lg border border-slate-200 bg-slate-50/80 p-3 space-y-2.5 mb-3">
-                  <label className="flex items-start gap-2.5 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={freightBilledByThirdParty}
-                      onChange={(e) => setFreightBilledByThirdParty(e.target.checked)}
-                      disabled={isAuditLocked || submitting}
-                      className="mt-0.5 rounded border-slate-300 text-primary focus:ring-primary"
-                    />
-                    <div className="space-y-0.5">
-                      <span className="text-xs font-bold text-slate-800">
-                        Freight & Clearing Billed Separately by 3rd-Party Logistics (FOB Shipment)
-                      </span>
-                      <p className="text-[11px] text-slate-500">
-                        When enabled, landed cost is capitalized into Inventory (Dr 1100), but freight & clearing are credited to Accruals (Account 2015) instead of inflating the merchandise vendor's payable balance.
-                      </p>
-                    </div>
-                  </label>
-
-                  {freightBilledByThirdParty && (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2 border-t border-slate-200 text-xs">
-                      <div className="p-2.5 rounded-md bg-white border border-slate-200">
-                        <span className="text-slate-500 block text-[10px] font-semibold uppercase">Payable to {selectedGRN?.supplierName || 'Merchandise Vendor'}</span>
-                        <span className="text-slate-900 font-bold font-mono text-xs">
-                          {formatCurrency(subtotal + vatTotal)}
-                        </span>
-                      </div>
-                      <div className="p-2.5 rounded-md bg-white border border-slate-200">
-                        <span className="text-slate-500 block text-[10px] font-semibold uppercase">Accrued to Forwarder / Clearing Agent (2015)</span>
-                        <span className="text-primary-text font-bold font-mono text-xs">
-                          {formatCurrency(totalAdditionalLandedCosts)}
-                        </span>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-              <div className="space-y-2">
-                {computedLineItems
-                  .filter((item) => {
-                    if (!costingProductSearch.trim()) return true;
-                    const q = costingProductSearch.toLowerCase().trim();
-                    return item.productName.toLowerCase().includes(q) || item.sku.toLowerCase().includes(q);
-                  })
-                  .map((item) => {
-                    const originalIndex = lineItems.findIndex((li) => li.id === item.id);
-                    const index = originalIndex >= 0 ? originalIndex : 0;
-                    const hist = item.historicalPurchasePrice || 0;
-                    const priceDiff = item.unitCost - hist;
-                    const hasVariance = hist > 0 && Math.abs(priceDiff) > 0.01;
-                    const isExpanded = Boolean(expandedCostingItemIds[item.id]);
-
-                    return (
-                      <div
-                        key={item.id}
-                        className={cn(
-                          "rounded-lg border transition-all duration-200 overflow-hidden shadow-2xs",
-                          isExpanded
-                            ? "border-primary/40 bg-white ring-1 ring-primary/10 shadow-xs"
-                            : "border-slate-200/90 bg-white hover:border-slate-300 hover:shadow-xs"
-                        )}
-                      >
-                        {/* Compact Card Header Bar (Clickable to toggle expander) */}
-                        <div
-                          role="button"
-                          tabIndex={0}
-                          onClick={() => toggleCostingItemExpand(item.id)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter' || e.key === ' ') {
-                              e.preventDefault();
-                              toggleCostingItemExpand(item.id);
-                            }
-                          }}
-                          className={cn(
-                            "w-full text-left p-2 sm:px-3 sm:py-2.5 flex flex-col md:flex-row md:items-center justify-between gap-2 cursor-pointer select-none transition-colors",
-                            isExpanded ? "bg-slate-50/80 border-b border-slate-200/70" : "hover:bg-slate-50/50"
-                          )}
-                        >
-                          {/* Left: Expander icon, Index #, Product Name, SKU, Received Qty, Master variance */}
-                          <div className="flex items-center gap-2 min-w-0">
-                            <div
-                              className={cn(
-                                "h-5 w-5 rounded flex items-center justify-center shrink-0 transition-colors",
-                                isExpanded ? "bg-primary text-white" : "bg-slate-100 text-slate-500 hover:bg-slate-200"
-                              )}
-                              title={isExpanded ? "Collapse product costing details" : "Expand product costing details"}
-                            >
-                              <ChevronDown
-                                className={cn(
-                                  "h-3.5 w-3.5 transition-transform duration-200",
-                                  isExpanded && "rotate-180"
-                                )}
-                              />
-                            </div>
-
-                            <span className="font-mono text-[10px] font-bold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded shrink-0">
-                              #{index + 1}
-                            </span>
-
-                            <div className="min-w-0">
-                              <div className="flex items-center gap-1.5 flex-wrap">
-                                <span className="text-xs font-bold text-slate-900 truncate max-w-[200px] sm:max-w-[320px]" title={item.productName}>
-                                  {item.productName}
-                                </span>
-                                <Badge variant="outline" className="text-[10px] font-mono py-0 px-1 bg-slate-50 text-slate-600">
-                                  {item.sku}
-                                </Badge>
-                                <span className="text-[10px] text-slate-500 bg-slate-100 px-1.5 py-0.2 rounded font-medium whitespace-nowrap">
-                                  Qty: {item.receivedQuantity}
-                                </span>
-                                {hasVariance && (
-                                  <Badge
-                                    variant="outline"
-                                    className={cn(
-                                      "text-[9px] py-0 px-1 whitespace-nowrap",
-                                      priceDiff > 0
-                                        ? "bg-amber-50 text-amber-700 border-amber-300"
-                                        : "bg-emerald-50 text-emerald-700 border-emerald-300"
-                                    )}
-                                  >
-                                    {priceDiff > 0 ? `+${formatCurrency(priceDiff)}` : formatCurrency(priceDiff)}
-                                  </Badge>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Right: Supplier Unit Cost, Landed Cost per Unit, Line Total & Action */}
-                          <div className="flex items-center justify-between md:justify-end gap-2.5 sm:gap-4 shrink-0 text-xs">
-                            {/* Supplier Unit Cost */}
-                            <div className="text-right">
-                              <span className="text-[9px] font-medium uppercase text-slate-400 block tracking-tight">Supplier Unit Cost</span>
-                              <span className="font-mono text-xs font-semibold text-slate-700">
-                                {formatCurrency(item.unitCost)}
-                              </span>
-                            </div>
-
-                            {/* Landed Cost per Unit badge */}
-                            <div className="text-right bg-primary/5 border border-primary/20 rounded px-2 py-0.5">
-                              <span className="text-[8px] font-bold uppercase tracking-wider text-primary block">Landed Cost per Unit</span>
-                              <span className="font-mono text-xs font-bold text-primary">
-                                {formatCurrency(item.landedUnitCost || item.unitCost)}
-                                <span className="text-[9px] font-normal text-primary/70 ml-0.5 font-sans">/u</span>
-                              </span>
-                            </div>
-
-                            {/* Line Total */}
-                            <div className="text-right min-w-[80px]">
-                              <span className="text-[9px] font-medium uppercase text-slate-400 block tracking-tight">Line Total</span>
-                              <span className="font-mono text-xs font-bold text-slate-900 tabular-nums">
-                                {formatCurrency(item.lineTotal)}
-                              </span>
-                            </div>
-
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              onClick={(e) => toggleCostingItemExpand(item.id, e)}
-                              className="h-6 text-[10px] px-1.5 text-slate-400 hover:text-primary hover:bg-primary-light/50"
-                            >
-                              <span>{isExpanded ? 'Collapse' : 'Edit'}</span>
-                            </Button>
-                          </div>
-                        </div>
-
-                        {/* Expanded Content: Master comparison, Inputs, Full True Landed Cost Breakdown */}
-                        {isExpanded && (
-                          <div className="p-3.5 space-y-3 bg-white">
-                            {/* Master Price Info */}
-                            <div className="flex items-center justify-between flex-wrap gap-2 text-[11px] bg-slate-50 rounded-md p-2 border border-slate-100">
-                              <div className="flex items-center gap-2">
-                                <span className="text-slate-500 font-medium">Last Historical Price:</span>
-                                <span className="font-mono font-semibold text-primary">
-                                  {hist > 0 ? formatCurrency(hist) : 'No prior history'}
-                                </span>
-                                <span className="text-[10px] text-slate-400">(Supplier Master)</span>
-
-                                {hasVariance && (
-                                  <Badge
-                                    variant="outline"
-                                    className={cn(
-                                      "text-[10px] py-0 px-1.5",
-                                      priceDiff > 0
-                                        ? "bg-amber-50 text-amber-700 border-amber-300"
-                                        : "bg-emerald-50 text-emerald-700 border-emerald-300"
-                                    )}
-                                  >
-                                    {priceDiff > 0 ? `+${formatCurrency(priceDiff)} variance` : `${formatCurrency(priceDiff)} variance`}
-                                  </Badge>
-                                )}
-                              </div>
-
-                              {hasVariance && !isAuditLocked && (
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => resetToHistoricalCost(index)}
-                                  className="h-5 text-[10px] px-1.5 text-primary hover:text-primary-hover hover:underline"
-                                >
-                                  Reset to Master
-                                </Button>
-                              )}
-                            </div>
-
-                            {/* Editable Inputs Grid */}
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                              <div>
-                                <label className="block text-[11px] font-semibold text-slate-600 mb-1">
-                                  Supplier Unit Cost <span className="text-rose-500">*</span>
-                                  <span className="text-[10px] text-slate-400 font-normal ml-1">(Payable to supplier)</span>
-                                </label>
-                                <CurrencyInput
-                                  value={item.unitCost}
-                                  onChange={(val) => updateLineItem(index, 'unitCost', val)}
-                                  placeholder="0.00"
-                                  disabled={isAuditLocked || submitting}
-                                  readOnly={isAuditLocked}
-                                />
-                              </div>
-
-                              <div>
-                                <label className="block text-[11px] font-semibold text-slate-600 mb-1">
-                                  Line Discount (LKR)
-                                </label>
-                                <CurrencyInput
-                                  value={item.lineDiscount}
-                                  onChange={(val) => updateLineItem(index, 'lineDiscount', val)}
-                                  placeholder="0.00"
-                                  disabled={isAuditLocked || submitting}
-                                  readOnly={isAuditLocked}
-                                />
-                              </div>
-
-                              <div>
-                                <label className="block text-[11px] font-semibold text-slate-600 mb-1">
-                                  VAT Code
-                                </label>
-                                <Select
-                                  value={item.vatCode}
-                                  onChange={(e) =>
-                                    updateLineItem(index, 'vatCode', e.target.value)
-                                  }
-                                  disabled={isAuditLocked || submitting}
-                                  className="h-9 text-xs"
-                                >
-                                  <option value="STANDARD_18">Standard VAT (18%)</option>
-                                  <option value="EXEMPT">Exempt / Zero-Rated</option>
-                                </Select>
-                              </div>
-                            </div>
-
-                            {/* True Landed Cost Breakdown Display - automatically recalculated */}
-                            <div className="pt-2 border-t border-slate-200/70 rounded-md bg-slate-50/70 border border-slate-200/90 p-2.5 space-y-1.5 font-mono text-xs shadow-2xs">
-                              <div className="flex flex-wrap items-center justify-between gap-3">
-                                <div>
-                                  <span className="text-slate-400 text-[10px] font-sans block uppercase font-medium">Supplier Unit Cost</span>
-                                  <span className="font-bold text-slate-800 text-xs">{formatCurrency(item.unitCost)}</span>
-                                  <span className="text-[10px] text-slate-400 font-sans block">payable to supplier</span>
-                                </div>
-
-                                <div>
-                                  <span className="text-slate-400 text-[10px] font-sans block uppercase font-medium">Allocated Landed Costs</span>
-                                  <span className="font-semibold text-slate-700 text-xs">
-                                    {totalAdditionalLandedCosts > 0 ? (
-                                      <>
-                                        +{formatCurrency(item.allocatedLandedCost || 0)}
-                                        <span className="text-[10px] text-slate-500 font-sans ml-1">
-                                          (+{formatCurrency((item.allocatedLandedCost || 0) / (item.receivedQuantity || 1))}/unit)
-                                        </span>
-                                      </>
-                                    ) : (
-                                      <span className="text-slate-400 italic font-sans text-[11px]">No expenses allocated</span>
-                                    )}
-                                  </span>
-                                  <span className="text-[10px] text-slate-400 font-sans block">share of additional expenses</span>
-                                </div>
-
-                                <div className="bg-primary/5 border border-primary/20 rounded-md px-3 py-1.5">
-                                  <span className="text-primary text-[10px] font-sans font-bold uppercase tracking-wider block">
-                                    Landed Cost per Unit
-                                  </span>
-                                  <div className="flex items-baseline gap-1">
-                                    <span className="font-bold text-primary text-sm">
-                                      {formatCurrency(item.landedUnitCost || item.unitCost)}
-                                    </span>
-                                    <span className="text-[10px] text-primary/70 font-sans">/ unit</span>
-                                  </div>
-                                  <span className="text-[9px] text-slate-400 font-sans block">actual capitalized unit cost</span>
-                                </div>
-
-                                <div className="text-right">
-                                  <span className="text-slate-400 text-[10px] font-sans block uppercase font-medium">Total Landed Cost</span>
-                                  <span className="font-bold text-slate-900 text-xs">
-                                    {formatCurrency(item.totalLandedCost || item.lineTotal)}
-                                  </span>
-                                  <span className="text-[10px] text-slate-400 font-sans block">supplier + allocated expenses</span>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-              </div>
-
-              {activeWorkflowTab === 'step1' && (
-                <div className="pt-3 border-t border-slate-100 flex justify-end">
-                  <Button
-                    type="button"
-                    onClick={() => setActiveWorkflowTab('step2')}
-                    className="gap-2 bg-primary hover:bg-primary-hover text-white text-xs font-semibold shadow-xs"
-                  >
-                    <span>Proceed to Step 2: Landed Costs & Freight</span>
-                    <ArrowRight className="h-4 w-4" />
-                  </Button>
-                </div>
-              )}
-            </div>
-          </Card>
-        </div>
-      </div>
-    </div>
-  )}
-
-      {/* Step 2: Incremental Additional Landed Costs Section */}
-      {(activeWorkflowTab === 'all' || activeWorkflowTab === 'step2') && (
-        <Card className="p-5 border-slate-200 shadow-xs bg-white space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200 pb-3">
+      {/* ========================================================================= */}
+      {/* 1. Persistent Context Bar & Top Invoice Bar (Single Strip)                */}
+      {/* ========================================================================= */}
+      <div className="rounded-xl border border-border bg-card p-4 shadow-2xs">
+        <div className="grid grid-cols-1 xl:grid-cols-12 gap-4 items-center">
+          {/* Left Context: 4 clean columns */}
+          <div className="xl:col-span-5 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs border-b xl:border-b-0 xl:border-r border-border pb-3 xl:pb-0 xl:pr-4">
             <div>
-              <div className="flex items-center gap-2">
-                <Badge variant="outline" className="text-[10px] font-mono bg-primary-light text-primary border-primary-border font-bold">
-                  Step 2
-                </Badge>
-                <h2 className="text-sm font-bold uppercase tracking-wider text-slate-800">
-                  Additional Landed Costs (Additional Landed Charges - Capitalized to Inventory)
-                </h2>
-              </div>
-              <p className="text-[11px] text-slate-500 mt-0.5">
-                Shipping, port charges, transportation, handling, and other related expenses.
-              </p>
+              <span className="text-[10px] uppercase font-bold text-muted-foreground block tracking-wider">GRN Ref</span>
+              <span className="font-mono font-bold text-primary text-sm">{selectedGRN.grnNumber}</span>
             </div>
 
-            <div className="flex items-center gap-2 self-start sm:self-auto">
-              <Badge variant="outline" className="bg-white text-primary border-primary/30 font-mono text-xs px-2.5 py-1">
-                Total Additional: {formatCurrency(totalAdditionalLandedCosts)}
-              </Badge>
-              {!isAuditLocked && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setApportionBulkFreight(totalAdditionalLandedCosts);
-                    setShowApportionModal(true);
-                  }}
-                  className="h-7 text-xs gap-1.5 bg-primary-light text-primary-text border-primary-border hover:bg-primary-light/80 font-semibold"
-                >
-                  <Calculator className="h-3.5 w-3.5" />
-                  <span>Apportion Freight Tool</span>
-                </Button>
-              )}
+            <div className="min-w-0">
+              <span className="text-[10px] uppercase font-bold text-muted-foreground block tracking-wider">Supplier</span>
+              <span className="font-bold text-foreground text-xs truncate block" title={selectedGRN.supplierName}>
+                {selectedGRN.supplierName}
+              </span>
+            </div>
+
+            <div>
+              <span className="text-[10px] uppercase font-bold text-muted-foreground block tracking-wider">Warehouse</span>
+              <span className="font-mono font-semibold text-foreground text-xs">{selectedGRN.warehouseId}</span>
+            </div>
+
+            <div>
+              <span className="text-[10px] uppercase font-bold text-muted-foreground block tracking-wider">Received Date</span>
+              <span className="text-muted-foreground text-xs">{formatDate(selectedGRN.submittedAt)}</span>
             </div>
           </div>
 
-          {/* Allocation Method Selector Bar */}
-          <div className="flex flex-wrap items-center justify-between gap-3 bg-white border border-slate-200 rounded-md p-2.5">
-            <div className="flex items-center gap-2">
-              <Scale className="h-3.5 w-3.5 text-slate-500" />
-              <span className="text-xs font-semibold text-slate-700">Allocation Method:</span>
-              <div className="inline-flex rounded-md shadow-2xs">
-                <button
-                  type="button"
-                  onClick={() => !isAuditLocked && setApportionMethod('BY_VALUE')}
-                  disabled={isAuditLocked}
-                  className={cn(
-                    "px-2.5 py-1 text-xs font-medium rounded-l-md border transition-colors",
-                    apportionMethod === 'BY_VALUE'
-                      ? "bg-primary text-white border-primary"
-                      : "bg-white text-slate-700 border-slate-300 hover:bg-slate-50"
-                  )}
-                >
-                  By Net Value (Proportional to Line Value)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => !isAuditLocked && setApportionMethod('BY_QUANTITY')}
-                  disabled={isAuditLocked}
-                  className={cn(
-                    "px-2.5 py-1 text-xs font-medium rounded-r-md border-t border-r border-b -ml-px transition-colors",
-                    apportionMethod === 'BY_QUANTITY'
-                      ? "bg-primary text-white border-primary"
-                      : "bg-white text-slate-700 border-slate-300 hover:bg-slate-50"
-                  )}
-                >
-                  By Quantity (Proportional to Received Units)
-                </button>
-              </div>
+          {/* Right Inputs: Vendor Invoice #, Invoice Date, Due Date */}
+          <div className="xl:col-span-7 grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-foreground mb-1">
+                Vendor Invoice # <span className="text-rose-500">*</span>
+              </label>
+              <Input
+                value={vendorInvoiceNumber}
+                onChange={(e) => setVendorInvoiceNumber(e.target.value)}
+                placeholder="e.g. INV-SCH-90214"
+                disabled={isAuditLocked}
+                className="h-8 text-xs font-mono font-semibold bg-background border-border"
+              />
             </div>
 
-            <span className="text-[11px] text-slate-500 font-mono">
-              Allocated across {computedLineItems.length} product lines
-            </span>
+            <div>
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-foreground mb-1">
+                Invoice Date <span className="text-rose-500">*</span>
+              </label>
+              <Input
+                type="date"
+                value={invoiceDate}
+                onChange={(e) => setInvoiceDate(e.target.value)}
+                disabled={isAuditLocked}
+                className="h-8 text-xs bg-background border-border"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-foreground mb-1">
+                Due Date <span className="text-rose-500">*</span>
+              </label>
+              <Input
+                type="date"
+                value={dueDate}
+                onChange={(e) => setDueDate(e.target.value)}
+                disabled={isAuditLocked}
+                className="h-8 text-xs bg-background border-border"
+              />
+            </div>
           </div>
+        </div>
+      </div>
 
-          {/* Incremental Expense Rows */}
-          <div className="space-y-2">
-            <div className="grid grid-cols-12 gap-2 text-[10px] font-bold uppercase text-slate-400 px-1">
-              <div className="col-span-12 sm:col-span-4">Expense Category</div>
-              <div className="col-span-12 sm:col-span-4">Description / Reference #</div>
-              <div className="col-span-10 sm:col-span-3 text-right">Amount (LKR)</div>
-              <div className="col-span-2 sm:col-span-1 text-center">Action</div>
-            </div>
-
-            {additionalExpenses.map((exp) => (
-              <div
-                key={exp.id}
-                className="grid grid-cols-12 gap-2 items-center bg-white border border-slate-200/90 rounded-md p-2 shadow-2xs hover:border-slate-300 transition-colors"
-              >
-                <div className="col-span-12 sm:col-span-4">
-                  <Select
-                    value={exp.category}
-                    onChange={(e) => handleUpdateExpense(exp.id, 'category', e.target.value)}
-                    disabled={isAuditLocked}
-                    className="h-8 text-xs bg-white"
-                  >
-                    {LANDED_EXPENSE_CATEGORIES.map((cat) => (
-                      <option key={cat} value={cat}>
-                        {cat}
-                      </option>
-                    ))}
-                  </Select>
-                </div>
-
-                <div className="col-span-12 sm:col-span-4">
-                  <Input
-                    value={exp.description}
-                    onChange={(e) => handleUpdateExpense(exp.id, 'description', e.target.value)}
-                    placeholder="e.g. Carrier, wharfage, haulage details"
-                    disabled={isAuditLocked}
-                    className="h-8 text-xs bg-white"
-                  />
-                </div>
-
-                <div className="col-span-10 sm:col-span-3">
-                  <CurrencyInput
-                    value={exp.amount}
-                    onChange={(val) => handleUpdateExpense(exp.id, 'amount', val)}
-                    placeholder="0.00"
-                    disabled={isAuditLocked || submitting}
-                    readOnly={isAuditLocked}
-                    className="h-8 text-xs text-right font-mono"
-                  />
-                </div>
-
-                <div className="col-span-2 sm:col-span-1 flex justify-center">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleRemoveExpense(exp.id)}
-                    disabled={isAuditLocked || (additionalExpenses.length === 1 && exp.amount === 0)}
-                    className="h-8 w-8 p-0 text-slate-400 hover:text-rose-600 hover:bg-rose-50"
-                    title="Remove expense line"
-                    aria-label="Remove expense line"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
-              </div>
-            ))}
-
-            {!isAuditLocked && (
-              <div className="pt-1 flex items-center justify-between">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={handleAddExpense}
-                  className="h-8 text-xs gap-1.5 border-dashed border-slate-300 hover:border-primary text-slate-600 hover:text-primary hover:bg-primary-light/50 font-medium"
-                >
-                  <Plus className="h-3.5 w-3.5" />
-                  <span>Add Additional Landed Expense</span>
-                </Button>
-
-                <span className="text-[11px] text-slate-400 italic">
-                  Expenses can be added incrementally; unit costs recalculate automatically.
-                </span>
-              </div>
-            )}
-          </div>
-
-          {activeWorkflowTab === 'step2' && (
-            <div className="flex items-center justify-between pt-3 border-t border-slate-100">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => setActiveWorkflowTab('step1')}
-                className="gap-1.5 text-xs text-slate-600 hover:text-slate-900"
-              >
-                <ArrowLeft className="h-3.5 w-3.5" />
-                <span>Back to Inbound & Invoice</span>
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                onClick={() => setActiveWorkflowTab('step3')}
-                className="gap-1.5 bg-primary hover:bg-primary-hover text-white text-xs font-semibold shadow-xs"
-              >
-                <span>Proceed to Step 3: Prepayments & Settlement</span>
-                <ArrowRight className="h-3.5 w-3.5" />
-              </Button>
-            </div>
+      {/* ========================================================================= */}
+      {/* 2-Step Navigation Pill Bar                                                */}
+      {/* ========================================================================= */}
+      <div className="flex items-center gap-2 p-1.5 bg-muted/60 rounded-xl border border-border shadow-2xs">
+        <button
+          type="button"
+          onClick={() => setCurrentStep(1)}
+          className={cn(
+            'flex-1 flex items-center justify-center gap-2.5 py-2 px-4 rounded-lg text-xs font-semibold transition-all cursor-pointer select-none',
+            currentStep === 1
+              ? 'bg-background text-foreground shadow-xs border border-border/60'
+              : 'text-muted-foreground hover:text-foreground'
           )}
-        </Card>
-      )}
+        >
+          <span
+            className={cn(
+              'flex items-center justify-center w-5 h-5 rounded-full text-[11px] font-bold',
+              currentStep === 1 ? 'bg-primary text-white' : 'bg-muted text-muted-foreground'
+            )}
+          >
+            1
+          </span>
+          <span className="font-bold">Step 1: Invoice & Landed Costing</span>
+          <span className="text-[11px] text-muted-foreground font-normal hidden sm:inline">
+            — Supplier bill, landed expenses & true cost
+          </span>
+        </button>
 
-      {/* Step 3: Advance Prepayments & Financial Settlement */}
-      {(activeWorkflowTab === 'all' || activeWorkflowTab === 'step3') && (
-        <Card className="p-5 border-slate-200 shadow-xs bg-white space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200 pb-3">
-            <div>
-              <div className="flex items-center gap-2">
-                <Badge variant="outline" className="text-[10px] font-mono bg-emerald-50 text-emerald-800 border-emerald-300 font-bold">
-                  Step 3
-                </Badge>
-                <h2 className="text-sm font-bold uppercase tracking-wider text-slate-800">
-                  Prepayments, Accounting Summary & GL Posting
-                </h2>
+        <button
+          type="button"
+          onClick={() => setCurrentStep(2)}
+          className={cn(
+            'flex-1 flex items-center justify-center gap-2.5 py-2 px-4 rounded-lg text-xs font-semibold transition-all cursor-pointer select-none',
+            currentStep === 2
+              ? 'bg-background text-foreground shadow-xs border border-border/60'
+              : 'text-muted-foreground hover:text-foreground'
+          )}
+        >
+          <span
+            className={cn(
+              'flex items-center justify-center w-5 h-5 rounded-full text-[11px] font-bold',
+              currentStep === 2 ? 'bg-primary text-white' : 'bg-muted text-muted-foreground'
+            )}
+          >
+            2
+          </span>
+          <span className="font-bold">Step 2: Selling Price & Margin Setup</span>
+          <span className="text-[11px] text-muted-foreground font-normal hidden sm:inline">
+            — Commercial selling price & batch margin rules
+          </span>
+        </button>
+      </div>
+
+      {/* ========================================================================= */}
+      {/* VIEW 1 — Step 1: Invoice & Landed Costing                                 */}
+      {/* ========================================================================= */}
+      {currentStep === 1 && (
+        <div className="space-y-4">
+          {/* Section A: Additional Landed Costs Card (Clean 4-Column Grid) */}
+          <div className="rounded-xl border border-border bg-card p-4 shadow-2xs space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border/80 pb-2.5">
+              <div>
+                <h3 className="text-xs font-bold text-foreground uppercase tracking-wider flex items-center gap-1.5">
+                  <TrendingUp className="h-4 w-4 text-primary" />
+                  <span>Additional Landed Costs (Inbound Logistics & Customs)</span>
+                </h3>
+                <p className="text-[11px] text-muted-foreground mt-0.5">
+                  Apportion freight, port duty, and transport across inbound goods to establish True Landed Unit Cost.
+                </p>
               </div>
-              <p className="text-[11px] text-slate-500 mt-0.5">
-                Draw down supplier advance prepayments, inspect general ledger accounts impact, and commit the vendor bill.
-              </p>
+
+              <div className="flex flex-wrap items-center gap-3">
+                {/* Allocation Toggle: By Value vs By Quantity */}
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground whitespace-nowrap">
+                    Apportion By:
+                  </span>
+                  <div className="inline-flex rounded-lg border border-border bg-muted/60 p-0.5 text-xs font-medium">
+                    <button
+                      type="button"
+                      onClick={() => setApportionMethod('BY_VALUE')}
+                      disabled={isAuditLocked}
+                      className={cn(
+                        'rounded-md px-2.5 py-1 transition-all text-xs font-semibold cursor-pointer',
+                        apportionMethod === 'BY_VALUE'
+                          ? 'bg-background text-foreground shadow-2xs'
+                          : 'text-muted-foreground hover:text-foreground'
+                      )}
+                    >
+                      By Net Value
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setApportionMethod('BY_QUANTITY')}
+                      disabled={isAuditLocked}
+                      className={cn(
+                        'rounded-md px-2.5 py-1 transition-all text-xs font-semibold cursor-pointer',
+                        apportionMethod === 'BY_QUANTITY'
+                          ? 'bg-background text-foreground shadow-2xs'
+                          : 'text-muted-foreground hover:text-foreground'
+                      )}
+                    >
+                      By Quantity
+                    </button>
+                  </div>
+                </div>
+
+                {/* Total Additional Landed Cost Summary Badge */}
+                <div className="border border-border bg-muted/40 rounded-lg px-3.5 py-1.5 text-right">
+                  <span className="text-[10px] font-bold uppercase text-muted-foreground block tracking-wider">
+                    Total Additional Landed Cost
+                  </span>
+                  <span className="font-mono font-bold text-foreground text-sm">
+                    {formatCurrency(totalAdditionalLandedCosts)}
+                  </span>
+                </div>
+              </div>
             </div>
-          </div>
 
-          {/* Advance Prepayments Application Banner */}
-          {unappliedAdvances.length > 0 && !isAuditLocked && (() => {
-            const activeAdvance =
-              unappliedAdvances.find((a) => a.id === selectedAdvanceId) || unappliedAdvances[0];
-            const isPoMatched = Boolean(
-              (selectedGRN?.purchaseOrderNumber || selectedGRN?.purchaseOrderId) &&
-                activeAdvance &&
-                ((selectedGRN?.purchaseOrderId &&
-                  (activeAdvance.purchaseOrderId === selectedGRN.purchaseOrderId ||
-                    activeAdvance.purchaseOrderNumber === selectedGRN.purchaseOrderId)) ||
-                  (selectedGRN?.purchaseOrderNumber &&
-                    (activeAdvance.purchaseOrderNumber === selectedGRN.purchaseOrderNumber ||
-                      activeAdvance.purchaseOrderId === selectedGRN.purchaseOrderNumber)))
-            );
+            {/* Clean 4-Column Grid of Landed Expenses */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="p-2.5 rounded-lg border border-border bg-muted/30 space-y-1">
+                <label className="block text-[11px] font-semibold text-foreground">
+                  Freight / Shipping (LKR)
+                </label>
+                <Input
+                  type="number"
+                  min="0"
+                  step="any"
+                  value={freightAmount}
+                  onChange={(e) => setFreightAmount(e.target.value)}
+                  placeholder="0.00"
+                  disabled={isAuditLocked}
+                  className="h-8 text-xs font-mono font-semibold text-right bg-background border-border"
+                />
+              </div>
 
-            return (
-              <div className="rounded-lg border border-emerald-200 bg-emerald-50/60 p-4 space-y-3 animate-in fade-in-50">
+              <div className="p-2.5 rounded-lg border border-border bg-muted/30 space-y-1">
+                <label className="block text-[11px] font-semibold text-foreground">
+                  Port & Duty (LKR)
+                </label>
+                <Input
+                  type="number"
+                  min="0"
+                  step="any"
+                  value={portDutyAmount}
+                  onChange={(e) => setPortDutyAmount(e.target.value)}
+                  placeholder="0.00"
+                  disabled={isAuditLocked}
+                  className="h-8 text-xs font-mono font-semibold text-right bg-background border-border"
+                />
+              </div>
+
+              <div className="p-2.5 rounded-lg border border-border bg-muted/30 space-y-1">
+                <label className="block text-[11px] font-semibold text-foreground">
+                  Local Transport (LKR)
+                </label>
+                <Input
+                  type="number"
+                  min="0"
+                  step="any"
+                  value={localTransportAmount}
+                  onChange={(e) => setLocalTransportAmount(e.target.value)}
+                  placeholder="0.00"
+                  disabled={isAuditLocked}
+                  className="h-8 text-xs font-mono font-semibold text-right bg-background border-border"
+                />
+              </div>
+
+              <div className="p-2.5 rounded-lg border border-border bg-muted/30 space-y-1">
+                <div className="flex items-center justify-between">
+                  <label className="block text-[11px] font-semibold text-foreground">
+                    Other Charges (LKR)
+                  </label>
+                  <button
+                    type="button"
+                    onClick={handleAddExpense}
+                    disabled={isAuditLocked}
+                    className="text-[10px] font-semibold text-primary hover:underline cursor-pointer"
+                  >
+                    + Detail
+                  </button>
+                </div>
+                <Input
+                  type="number"
+                  min="0"
+                  step="any"
+                  value={customExpenses.length > 0 ? customExpensesSum : otherChargesAmount}
+                  onChange={(e) => {
+                    if (customExpenses.length === 0) {
+                      setOtherChargesAmount(e.target.value);
+                    }
+                  }}
+                  placeholder="0.00"
+                  disabled={isAuditLocked || customExpenses.length > 0}
+                  className="h-8 text-xs font-mono font-semibold text-right bg-background border-border"
+                />
+              </div>
+            </div>
+
+            {/* Custom Landed Expenses Breakdown Table */}
+            {showCustomExpenses && customExpenses.length > 0 && (
+              <div className="mt-3 pt-3 border-t border-border space-y-2.5">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <Landmark className="h-4 w-4 text-emerald-700" />
-                    <span className="text-xs font-bold text-emerald-900">
-                      Supplier Advance Prepayment Available
+                    <span className="text-xs font-bold uppercase tracking-wider text-foreground">
+                      Custom Landed Expense Lines
                     </span>
-                    {isPoMatched && (
-                      <Badge className="bg-emerald-600 text-white text-[10px] font-semibold hover:bg-emerald-700">
-                        ⚡ PO Match Auto-Detected: {selectedGRN?.purchaseOrderNumber || selectedGRN?.purchaseOrderId}
-                      </Badge>
-                    )}
+                    <Badge variant="outline" className="text-[10px] font-mono font-semibold bg-muted">
+                      {customExpenses.length} line(s)
+                    </Badge>
                   </div>
-                  <Badge
-                    variant="outline"
-                    className="bg-white text-emerald-800 border-emerald-300 text-[11px] font-mono"
-                  >
-                    Unapplied: {formatCurrency(activeAdvance.unappliedBalance)}
-                  </Badge>
-                </div>
-
-                <p className="text-xs text-emerald-800">
-                  Prepayment {activeAdvance.advanceNumber} (Ref: {activeAdvance.reference})
-                  {activeAdvance.purchaseOrderNumber
-                    ? ` linked to PO ${activeAdvance.purchaseOrderNumber}`
-                    : ''}{' '}
-                  can be drawn down to offset this vendor bill commitment.
-                </p>
-
-                {unappliedAdvances.length > 1 && (
-                  <div className="flex items-center gap-2 pt-0.5">
-                    <span className="text-xs font-semibold text-emerald-900">Select Advance:</span>
-                    <select
-                      value={selectedAdvanceId}
-                      onChange={(e) => {
-                        const adv = unappliedAdvances.find((a) => a.id === e.target.value);
-                        if (adv) {
-                          setSelectedAdvanceId(adv.id);
-                          setAdvanceAmountToApply(adv.unappliedBalance);
-                        }
-                      }}
-                      className="h-7 text-xs rounded border border-emerald-300 bg-white px-2 py-0.5 text-slate-800 font-mono"
-                    >
-                      {unappliedAdvances.map((adv) => (
-                        <option key={adv.id} value={adv.id}>
-                          {adv.advanceNumber} ({formatCurrency(adv.unappliedBalance)}){' '}
-                          {adv.purchaseOrderNumber ? `- PO: ${adv.purchaseOrderNumber}` : ''}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-
-                <div className="flex items-center gap-4 pt-1">
-                  <label className="flex items-center gap-2 text-xs font-medium text-emerald-950 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={applyAdvanceEnabled}
-                      onChange={(e) => setApplyAdvanceEnabled(e.target.checked)}
-                      className="rounded border-emerald-400 text-emerald-600 focus:ring-emerald-500"
-                    />
-                    <span>Apply Advance Prepayment to this Bill</span>
-                  </label>
-
-                  {applyAdvanceEnabled && (
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-emerald-800 font-semibold">Amount to Draw:</span>
-                      <div className="w-36">
-                        <CurrencyInput
-                          value={advanceAmountToApply}
-                          onChange={(val) =>
-                            setAdvanceAmountToApply(Math.min(val, activeAdvance.unappliedBalance))
-                          }
-                          max={activeAdvance.unappliedBalance}
-                          className="h-8 text-xs bg-white"
-                        />
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            );
-          })()}
-
-          {/* Financial Summary Box */}
-          <div className="rounded-lg border border-primary-border/60 bg-primary-light/40 p-4 space-y-2 text-xs">
-            <div className="flex justify-between text-slate-600">
-              <span>Supplier Goods Subtotal (Payable to Supplier):</span>
-              <span className="font-mono font-semibold tabular-nums text-slate-800">
-                {formatCurrency(subtotal)}
-              </span>
-            </div>
-            <div className="flex justify-between text-slate-600">
-              <span>Additional Landed Costs (Shipping, Port, Transport, Handling):</span>
-              <span className="font-mono font-semibold tabular-nums text-slate-800">
-                +{formatCurrency(totalAdditionalLandedCosts)}
-              </span>
-            </div>
-            <div className="flex justify-between text-slate-700 font-semibold border-t border-primary-border/40 pt-1.5">
-              <span>Total Landed Cost (Capitalized to Inventory):</span>
-              <span className="font-mono font-bold tabular-nums text-slate-900">
-                {formatCurrency(totalLandedCost)}
-              </span>
-            </div>
-            <div className="flex justify-between text-slate-600">
-              <span>1025 Input VAT Receivable (Asset):</span>
-              <span className="font-mono font-semibold tabular-nums text-slate-800">
-                {formatCurrency(vatTotal)}
-              </span>
-            </div>
-            <div className="pt-2 border-t border-primary-border/80 flex justify-between text-sm font-bold text-slate-900">
-              <span>Total Accounts Payable Commitment:</span>
-              <span className="font-mono text-primary text-base tabular-nums">
-                {formatCurrency(grandTotal)}
-              </span>
-            </div>
-
-            {applyAdvanceEnabled && advanceAmountToApply > 0 && (
-              <div className="pt-2 border-t border-emerald-200 flex justify-between text-xs font-bold text-emerald-900">
-                <span>Less Prepayment Advance Drawn:</span>
-                <span className="font-mono text-emerald-700 tabular-nums">
-                  -{formatCurrency(advanceAmountToApply)}
-                </span>
-              </div>
-            )}
-
-            {applyAdvanceEnabled && advanceAmountToApply > 0 && (
-              <div className="flex justify-between text-xs font-bold text-slate-900">
-                <span>Net Payable Balance Due to Supplier:</span>
-                <span className="font-mono text-slate-900 tabular-nums">
-                  {formatCurrency(Math.max(0, grandTotal - advanceAmountToApply))}
-                </span>
-              </div>
-            )}
-          </div>
-
-          {/* Footer Action: Void/Reverse button if Audit Locked; Post Vendor Bill if New/Editable */}
-          <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => navigate('/finance/dashboard')}
-              >
-                Cancel
-              </Button>
-              {activeWorkflowTab === 'step3' && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setActiveWorkflowTab('step2')}
-                  className="gap-1.5 text-xs text-slate-600 hover:text-slate-900"
-                >
-                  <ArrowLeft className="h-3.5 w-3.5" />
-                  <span>Back to Landed Costs</span>
-                </Button>
-              )}
-            </div>
-
-            {isAuditLocked ? (
-              <div className="flex flex-wrap items-center gap-3">
-                <Button
-                  type="button"
-                  onClick={() => {
-                    setShowInlinePricing(true);
-                    setActiveWorkflowTab('all');
-                  }}
-                  className="gap-2 bg-primary hover:bg-primary-hover text-white font-semibold text-xs shadow-xs"
-                >
-                  <SlidersHorizontal className="h-4 w-4" />
-                  <span>Set / Adjust Selling Prices</span>
-                </Button>
-
-                <span className="text-xs text-slate-500 italic">
-                  {isAuthorizedForVoid ? 'Authorized role detected:' : 'Read-only mode active.'}
-                </span>
-                {isAuthorizedForVoid && (
-                  <ConfirmButton
+                  <Button
                     type="button"
-                    variant="destructive"
+                    variant="ghost"
                     size="sm"
-                    dialogVariant="destructive"
-                    confirmTitle="Void / Reverse Vendor Bill"
-                    confirmMessage="Are you sure you want to void and reverse this posted vendor bill? This will reverse General Ledger entries and reset the GRN status to APPROVED."
-                    confirmText="Void & Reverse"
-                    onConfirm={handleVoidVendorBill}
-                    disabled={submitting}
-                    className="gap-2 bg-rose-600 hover:bg-rose-700 text-white font-semibold text-xs shadow-xs"
+                    onClick={handleAddExpense}
+                    disabled={isAuditLocked}
+                    className="h-7 text-xs text-primary font-semibold gap-1 hover:bg-primary/10 cursor-pointer"
                   >
-                    <RotateCcw className="h-4 w-4" />
-                    <span>{submitting ? 'Reversing...' : 'Void / Reverse Vendor Bill'}</span>
-                  </ConfirmButton>
-                )}
-              </div>
-            ) : (
-              <div className="flex items-center gap-2">
-                <ConfirmButton
-                  requireConfirm={process.env.NODE_ENV !== 'test'}
-                  confirmTitle="Post Vendor Bill"
-                  confirmMessage={`Are you sure you want to post this vendor bill for ${selectedGRN?.grnNumber || 'the selected GRN'}? This will capitalize total landed cost of ${formatCurrency(totalLandedCost)} to inventory and post AP commitments.`}
-                  confirmText="Post Vendor Bill"
-                  onConfirm={handlePostVendorBill}
-                  disabled={!isFormValid || submitting}
-                  className="gap-2 bg-primary hover:bg-primary-hover text-white shadow-xs font-semibold"
-                >
-                  <CheckCircle2 className="h-4 w-4" />
-                  <span>{submitting ? 'Posting Double-Entry...' : 'Post Vendor Bill'}</span>
-                </ConfirmButton>
+                    <Plus className="h-3.5 w-3.5" />
+                    <span>Add Additional Landed Expense</span>
+                  </Button>
+                </div>
 
-                <DoubleEntryHoverBadge
-                  title="GRN Vendor Bill Costing Impact"
-                  description="Posting this vendor bill commits landed cost & VAT to General Ledger:"
-                  lines={[
-                    {
-                      accountCode: '1100',
-                      accountName: 'Merchandise Inventory (Total Landed Cost)',
-                      type: 'DEBIT',
-                      amount: totalLandedCost,
-                    },
-                    ...(vatTotal > 0
-                      ? [
-                          {
-                            accountCode: '1025',
-                            accountName: 'Input VAT Receivable (18%)',
-                            type: 'DEBIT' as const,
-                            amount: vatTotal,
-                          },
-                        ]
-                      : []),
-                    {
-                      accountCode: '2010',
-                      accountName: `Accounts Payable (${selectedGRN?.supplierName || 'Trade Creditors'})`,
-                      type: 'CREDIT',
-                      amount: grandTotal,
-                    },
-                  ]}
-                />
+                <div className="overflow-hidden rounded-lg border border-border bg-card shadow-2xs">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-muted/60 border-b border-border text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      <tr>
+                        <th className="py-2.5 px-3 w-48">Expense Category</th>
+                        <th className="py-2.5 px-3">Description / Carrier Reference</th>
+                        <th className="py-2.5 px-3 text-right w-44">Amount (LKR)</th>
+                        <th className="py-2.5 px-3 text-center w-14">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border/60 bg-card">
+                      {customExpenses.map((exp) => (
+                        <tr key={exp.id} className="hover:bg-muted/40 transition-colors">
+                          <td className="py-2 px-3">
+                            <select
+                              value={exp.category}
+                              onChange={(e) => handleUpdateCustomExpense(exp.id, 'category', e.target.value)}
+                              disabled={isAuditLocked}
+                              className="h-8 w-full rounded-md border border-border bg-background px-2 text-xs font-medium text-foreground focus:outline-hidden"
+                            >
+                              <option value="Handling & Offloading">Handling & Offloading</option>
+                              <option value="Customs Brokerage">Customs Brokerage</option>
+                              <option value="Wharfage & Demurrage">Wharfage & Demurrage</option>
+                              <option value="Cargo Insurance">Cargo Insurance</option>
+                              <option value="Inspection & Lab Testing">Inspection & Lab Testing</option>
+                              <option value="Port Terminal Handling">Port Terminal Handling</option>
+                              <option value="Other Inbound Logistics">Other Inbound Logistics</option>
+                            </select>
+                          </td>
+                          <td className="py-2 px-3">
+                            <Input
+                              placeholder="e.g. carrier, wharfage, haulage details"
+                              value={exp.description}
+                              onChange={(e) => handleUpdateCustomExpense(exp.id, 'description', e.target.value)}
+                              disabled={isAuditLocked}
+                              className="h-8 text-xs bg-background border-border"
+                            />
+                          </td>
+                          <td className="py-2 px-3 text-right">
+                            <Input
+                              type="number"
+                              min="0"
+                              step="any"
+                              placeholder="0.00"
+                              value={exp.amount}
+                              onChange={(e) => handleUpdateCustomExpense(exp.id, 'amount', e.target.value)}
+                              disabled={isAuditLocked}
+                              className="h-8 w-full text-xs font-mono font-bold text-right bg-background border-border"
+                            />
+                          </td>
+                          <td className="py-2 px-3 text-center">
+                            <button
+                              type="button"
+                              title="Remove expense line"
+                              onClick={() => handleRemoveCustomExpense(exp.id)}
+                              disabled={isAuditLocked}
+                              className="text-muted-foreground hover:text-rose-600 p-1.5 rounded-md hover:bg-rose-50 dark:hover:bg-rose-950/30 cursor-pointer transition-colors"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot className="bg-muted/40 border-t border-border font-semibold text-xs">
+                      <tr>
+                        <td colSpan={2} className="py-2 px-3 text-muted-foreground text-right">
+                          Total Custom Breakdown:
+                        </td>
+                        <td className="py-2 px-3 text-right font-mono font-bold text-foreground">
+                          {formatCurrency(customExpensesSum)}
+                        </td>
+                        <td></td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
               </div>
             )}
           </div>
-        </Card>
-      )}
 
-      {/* Inline Step 4: Selling-Price Strategy & Commercial Pricing Decision (Dedicated Inline Section) */}
-      {(showInlinePricing || activeWorkflowTab === 'step4') && (
-        <FinancePricingInlineSection
-          grn={selectedGRN}
-          items={
-            computedLineItems.length > 0
-              ? computedLineItems
-              : existingBill?.lineItems && existingBill.lineItems.length > 0
-              ? existingBill.lineItems
-              : (selectedGRN?.items || []).map((it, idx) => ({
-                  id: `li-fallback-${idx}`,
-                  productId: it.productId,
-                  productName: it.productNameSnapshot,
-                  sku: it.skuSnapshot,
-                  receivedQuantity: it.receivedQuantity,
-                  draftUnitCost: it.unitCostSnapshot,
-                  unitCost: it.unitCostSnapshot,
-                  lineDiscount: 0,
-                  vatCode: 'STANDARD_18' as const,
-                  vatAmount: 0,
-                  lineTotal: it.lineValue || (it.unitCostSnapshot * it.receivedQuantity),
-                  landedUnitCost: it.unitCostSnapshot,
-                  totalLandedCost: it.lineValue || (it.unitCostSnapshot * it.receivedQuantity),
-                }))
-          }
-          onSkip={() => {
-            setShowInlinePricing(false);
-            if (activeWorkflowTab === 'step4') {
-              setActiveWorkflowTab('all');
-            }
-          }}
-          onComplete={() => {
-            if (selectedGRN) {
-              apService.setGRNStatus(selectedGRN.id, 'APPROVED');
-            }
-            setShowInlinePricing(false);
-            if (activeWorkflowTab === 'step4') {
-              setActiveWorkflowTab('all');
-            }
-            setGrnRefreshKey((k) => k + 1);
-            setPricingAssigned(true);
-            toast.success('Selling price strategy assigned & inventory released! Status updated to APPROVED.');
-          }}
-        />
-      )}
-
-      {/* Landed Cost Engine: Apportion Freight Modal */}
-      <Dialog open={showApportionModal} onOpenChange={setShowApportionModal}>
-        <div className="space-y-4">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-slate-900">
-              <Calculator className="h-5 w-5 text-primary" />
-              <span>Landed Cost Engine: Apportion Freight</span>
-            </DialogTitle>
-            <DialogDescription className="text-xs text-slate-500">
-              Distribute bulk shipping and freight charges across line items to establish true landed unit cost.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-50 p-3 rounded-lg border border-slate-200">
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Bulk Freight Amount (LKR)
-                </label>
-                <CurrencyInput
-                  value={apportionBulkFreight}
-                  onChange={(val) => setApportionBulkFreight(val)}
-                  placeholder="0.00"
-                  className="bg-white h-9 text-xs"
-                />
+          {/* Section B: Landed Costing Table (6 Spacious Columns — Zero Horizontal Scroll) */}
+          <div className="rounded-xl border border-border bg-card shadow-2xs overflow-hidden">
+            <div className="flex items-center justify-between p-3.5 bg-muted/30 border-b border-border">
+              <div className="flex items-center gap-2">
+                <h2 className="text-xs font-bold text-foreground uppercase tracking-wider">
+                  Inbound Inventory Line Items & Landed Costing
+                </h2>
+                <Badge variant="outline" className="text-xs font-mono font-bold bg-background text-foreground">
+                  {computedRows.length} Products
+                </Badge>
               </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Apportionment Method
-                </label>
-                <Select
-                  value={apportionMethod}
-                  onChange={(e) => setApportionMethod(e.target.value as 'BY_VALUE' | 'BY_QUANTITY')}
-                  className="bg-white h-9 text-xs"
-                >
-                  <option value="BY_VALUE">By Line Value (Proportional to Net Value)</option>
-                  <option value="BY_QUANTITY">By Quantity (Proportional to Units)</option>
-                </Select>
-              </div>
+              <span className="text-[11px] text-muted-foreground">
+                Verify supplier invoice rates and review calculated True Landed Cost.
+              </span>
             </div>
 
-            {/* Live Distribution Preview Table */}
-            <div className="border border-slate-200 rounded-lg overflow-x-auto w-full">
-              <table className="w-full min-w-[600px] text-xs">
-                <thead className="bg-slate-100 text-slate-600 font-semibold border-b border-slate-200">
+            <div className="w-full overflow-x-auto">
+              <table className="w-full text-left text-xs tabular-nums min-w-[900px]">
+                <thead className="bg-muted/60 border-b border-border text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                   <tr>
-                    <th className="py-2 px-3 text-left">Item</th>
-                    <th className="py-2 px-2 text-right">Units</th>
-                    <th className="py-2 px-2 text-right">Supplier Unit Cost</th>
-                    <th className="py-2 px-2 text-right">Allocated Landed Costs</th>
-                    <th className="py-2 px-3 text-right">Landed Cost per Unit</th>
+                    <th className="px-4 py-3">Product Name</th>
+                    <th className="px-3 py-3 text-center w-28">Received Qty</th>
+                    <th className="px-3 py-3 text-right w-40">Supplier Unit Cost</th>
+                    <th className="px-3 py-3 text-right w-32">Line Discount</th>
+                    <th className="px-3 py-3 text-right w-36">Allocated Landed / Unit</th>
+                    <th className="px-4 py-3 text-right w-48">True Landed Cost & Line Total</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {previewApportionment.map((item) => (
-                    <tr key={item.id} className="hover:bg-slate-50/80">
-                      <td className="py-2 px-3">
-                        <span className="font-semibold text-slate-800 block truncate max-w-[160px]">
-                          {item.productName}
+                <tbody className="divide-y divide-border/60 bg-card">
+                  {computedRows.map((row, idx) => (
+                    <tr key={row.id} className="hover:bg-muted/40 transition-colors">
+                      {/* 1. Product Name */}
+                      <td className="px-4 py-3.5">
+                        <div className="font-semibold text-foreground text-sm leading-snug">
+                          {row.productName}
+                        </div>
+                      </td>
+
+                      {/* 2. Received Qty */}
+                      <td className="px-3 py-3.5 text-center">
+                        <span className="font-mono font-semibold text-foreground text-xs">
+                          {row.receivedQuantity} units
                         </span>
-                        <span className="text-[10px] text-slate-400 font-mono">{item.sku}</span>
+                        {row.damagedQuantity > 0 && (
+                          <div className="mt-0.5">
+                            <span className="text-[10px] font-bold text-rose-700 bg-rose-50 border border-rose-200 rounded px-1.5 py-0.2 inline-block">
+                              {row.damagedQuantity} damaged
+                            </span>
+                          </div>
+                        )}
                       </td>
-                      <td className="py-2 px-2 text-right font-mono font-medium">{item.receivedQuantity}</td>
-                      <td className="py-2 px-2 text-right font-mono">{formatCurrency(item.unitCost)}</td>
-                      <td className="py-2 px-2 text-right font-mono text-primary font-semibold">
-                        +{formatCurrency(item.apportionedFreight || 0)}
+
+                      {/* 3. Supplier Unit Cost (LKR) with Last Historical Price hint */}
+                      <td className="px-3 py-3.5 text-right">
+                        <div className="flex justify-end">
+                          <Input
+                            type="number"
+                            min="0"
+                            step="any"
+                            value={row.supplierUnitCost || ''}
+                            onChange={(e) => updateProductRow(idx, 'supplierUnitCost', e.target.value)}
+                            disabled={isAuditLocked}
+                            className="h-8 w-36 text-xs font-mono font-semibold text-right bg-background border-border"
+                          />
+                        </div>
+                        {row.historicalPurchasePrice && row.historicalPurchasePrice > 0 ? (
+                          <span className="text-[10px] text-muted-foreground block font-mono mt-1 text-right">
+                            Last Historical Price: {formatCurrency(row.historicalPurchasePrice)}
+                          </span>
+                        ) : null}
                       </td>
-                      <td className="py-2 px-3 text-right font-mono font-bold text-slate-900">
-                        {formatCurrency(item.landedUnitCost || item.unitCost)}
+
+                      {/* 4. Line Discount (LKR) */}
+                      <td className="px-3 py-3.5 text-right">
+                        <div className="flex justify-end">
+                          <Input
+                            type="number"
+                            min="0"
+                            step="any"
+                            value={row.lineDiscount || ''}
+                            onChange={(e) => updateProductRow(idx, 'lineDiscount', e.target.value)}
+                            placeholder="0.00"
+                            disabled={isAuditLocked}
+                            className="h-8 w-28 text-xs font-mono text-right bg-background border-border text-muted-foreground"
+                          />
+                        </div>
+                      </td>
+
+                      {/* 5. Allocated Landed / Unit */}
+                      <td className="px-3 py-3.5 text-right font-mono font-medium text-muted-foreground text-xs">
+                        + {formatCurrency(row.allocatedPerUnit)}
+                      </td>
+
+                      {/* 6. True Landed Unit Cost & Line Total */}
+                      <td className="px-4 py-3.5 text-right">
+                        <div className="font-mono font-extrabold text-foreground text-sm text-right">
+                          {formatCurrency(row.trueLandedCost)} <span className="text-xs font-normal text-muted-foreground">/ unit</span>
+                        </div>
+                        <span className="sr-only">Landed Cost per Unit</span>
+                        <div className="text-[11px] font-mono text-muted-foreground mt-0.5 text-right">
+                          Line Total: {formatCurrency(row.lineTotal)}
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -2864,186 +1357,356 @@ export function VendorBillCostingPage() {
             </div>
           </div>
 
-          <DialogFooter className="flex justify-end gap-2 pt-2 border-t border-slate-100">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => setShowApportionModal(false)}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              onClick={handleApplyApportionment}
-              className="bg-primary hover:bg-primary-hover text-white gap-1.5"
-            >
-              <CheckCircle2 className="h-4 w-4" />
-              <span>Apply Apportionment</span>
-            </Button>
-          </DialogFooter>
-        </div>
-      </Dialog>
-
-      {/* Unit Serial Numbers Modal Dialog */}
-      <Dialog
-        open={Boolean(activeSerialItem)}
-        onOpenChange={(open) => {
-          if (!open) {
-            setActiveSerialItem(null);
-            setSerialSearchQuery('');
-          }
-        }}
-        size="lg"
-      >
-        <div className="space-y-4">
-          <DialogHeader>
-            <div className="flex items-center justify-between pr-6">
-              <div className="flex items-center gap-2.5">
-                <div className="h-9 w-9 rounded-full bg-primary-light flex items-center justify-center text-primary shrink-0">
-                  <Hash className="h-5 w-5" />
-                </div>
+          {/* Step 1 Bottom Summary Bar */}
+          <div className="sticky bottom-3 z-30 rounded-xl border border-border bg-card/95 backdrop-blur-md p-3.5 shadow-xl">
+            <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-3">
+              {/* Financial Indicators */}
+              <div className="flex flex-wrap items-center gap-x-3.5 gap-y-2 text-xs">
                 <div>
-                  <DialogTitle className="text-base font-bold text-slate-900">
-                    Product Serial Numbers
-                  </DialogTitle>
-                  <DialogDescription className="text-xs text-slate-500">
-                    Verified unit-level inbound serial numbers from physical goods receipt
-                  </DialogDescription>
+                  <span className="text-[10px] uppercase font-bold text-muted-foreground block">Goods Subtotal</span>
+                  <span className="font-mono font-semibold text-foreground text-xs">{formatCurrency(goodsSubtotal)}</span>
+                </div>
+
+                <span className="text-border hidden sm:inline">+</span>
+
+                <div>
+                  <span className="text-[10px] uppercase font-bold text-muted-foreground block">Additional Landed</span>
+                  <span className="font-mono font-semibold text-foreground text-xs">{formatCurrency(totalAdditionalLandedCosts)}</span>
+                </div>
+
+                <span className="text-border hidden sm:inline">=</span>
+
+                <div>
+                  <span className="text-[10px] uppercase font-bold text-muted-foreground block">
+                    Capitalized Inventory (Total Landed Cost)
+                  </span>
+                  <span className="font-mono font-bold text-foreground text-xs">{formatCurrency(totalInventoryCapitalized)}</span>
+                </div>
+
+                <span className="text-border hidden sm:inline">+</span>
+
+                <div>
+                  <span className="text-[10px] uppercase font-bold text-muted-foreground block">Input VAT (18%)</span>
+                  <span className="font-mono font-semibold text-foreground text-xs">{formatCurrency(vatTotal)}</span>
+                </div>
+
+                <div className="h-7 w-px bg-border mx-1 hidden md:block" />
+
+                <div className="rounded-lg border border-border bg-muted/50 px-3.5 py-1.5">
+                  <span className="text-[10px] uppercase font-bold text-muted-foreground block tracking-wider">Total AP Commitment</span>
+                  <span className="font-mono font-extrabold text-foreground text-sm">
+                    {formatCurrency(grandTotal)}
+                  </span>
                 </div>
               </div>
-              <Badge variant="outline" className="text-xs bg-slate-50 font-mono text-primary font-bold px-2 py-0.5">
-                {activeSerialItem?.serialNumbers.length || 0} Serials
-              </Badge>
-            </div>
-          </DialogHeader>
 
-          {activeSerialItem && (
-            <div className="bg-slate-50/80 rounded-lg p-3 border border-slate-200 text-xs space-y-2">
-              <div className="font-bold text-slate-900 text-sm">
-                {activeSerialItem.item.productNameSnapshot}
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[11px] text-slate-600 font-mono">
-                <div>
-                  <span className="text-slate-400 block text-[10px] font-sans uppercase font-semibold">SKU</span>
-                  <span className="font-bold text-slate-800">{activeSerialItem.item.skuSnapshot}</span>
-                </div>
-                <div>
-                  <span className="text-slate-400 block text-[10px] font-sans uppercase font-semibold">Product Barcode</span>
-                  <span className="font-bold text-slate-800">{activeSerialItem.barcode}</span>
-                </div>
-                <div>
-                  <span className="text-slate-400 block text-[10px] font-sans uppercase font-semibold">Received Quantity</span>
-                  <span className="font-bold text-primary">{activeSerialItem.item.receivedQuantity} units</span>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Search toolbar & Copy All button */}
-          <div className="flex items-center justify-between gap-2">
-            <div className="relative flex-1">
-              <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-slate-400" />
-              <Input
-                placeholder="Search serial numbers..."
-                value={serialSearchQuery}
-                onChange={(e) => setSerialSearchQuery(e.target.value)}
-                className="h-8 pl-8 text-xs font-mono bg-white"
-              />
-              {serialSearchQuery && (
-                <button
+              {/* Primary Action Button: Continue to Pricing (Step 2) */}
+              <div className="flex items-center gap-2 justify-end shrink-0 pt-1 xl:pt-0">
+                <Button
                   type="button"
-                  onClick={() => setSerialSearchQuery('')}
-                  className="absolute right-2 top-2 text-slate-400 hover:text-slate-600 text-xs px-1"
+                  size="default"
+                  onClick={() => setCurrentStep(2)}
+                  className="gap-2 bg-primary hover:bg-primary-hover text-white font-semibold text-xs h-9 px-5 shadow-xs cursor-pointer"
                 >
-                  ×
-                </button>
-              )}
+                  <span>Continue to Pricing (Step 2)</span>
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* VIEW 2 — Step 2: Selling Prices & Margins                                 */}
+      {/* ========================================================================= */}
+      {currentStep === 2 && (
+        <div className="space-y-4">
+          <div className="rounded-xl border border-border bg-card shadow-2xs overflow-hidden">
+            {/* Table Header Bar with Rule Toggle */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 bg-muted/30 border-b border-border">
+              <div>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-sm font-bold text-foreground uppercase tracking-wider flex items-center gap-1.5">
+                    <Layers className="h-4 w-4 text-primary" />
+                    <span>Commercial Price & Margin Assignment</span>
+                  </h2>
+                  <Badge variant="outline" className="text-xs font-mono font-bold bg-background text-foreground">
+                    {computedRows.length} Products
+                  </Badge>
+                </div>
+                <p className="text-[11px] text-muted-foreground mt-1">
+                  {globalPricingScope === 'BATCH_ONLY'
+                    ? 'Rule: Preserves existing inventory batches at their current prices; only this incoming batch receives the new price.'
+                    : 'Rule: Updates catalog selling price and standardizes all existing active inventory batches in stock.'}
+                </p>
+              </div>
+
+              {/* Global Default Rule Toggle */}
+              <div className="flex flex-col sm:items-end gap-1 text-xs">
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-muted-foreground">Apply New Prices To:</span>
+                  <div className="inline-flex rounded-lg border border-border bg-muted/60 p-0.5 shadow-2xs font-medium">
+                    <button
+                      type="button"
+                      onClick={() => handleGlobalPricingScopeChange('BATCH_ONLY')}
+                      disabled={isAuditLocked}
+                      className={cn(
+                        'rounded-md px-2.5 py-1 transition-all text-xs font-semibold cursor-pointer',
+                        globalPricingScope === 'BATCH_ONLY'
+                          ? 'bg-background text-foreground shadow-2xs'
+                          : 'text-muted-foreground hover:text-foreground'
+                      )}
+                    >
+                      Incoming Batch Only (FIFO)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleGlobalPricingScopeChange('ALL_STOCK')}
+                      disabled={isAuditLocked}
+                      className={cn(
+                        'rounded-md px-2.5 py-1 transition-all text-xs font-semibold cursor-pointer',
+                        globalPricingScope === 'ALL_STOCK'
+                          ? 'bg-background text-foreground shadow-2xs'
+                          : 'text-muted-foreground hover:text-foreground'
+                      )}
+                    >
+                      Standardize All Stock
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
 
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={handleCopySerials}
-              className="h-8 text-xs gap-1.5 shrink-0"
-              title="Copy all serial numbers to clipboard"
-            >
-              {copiedSerials ? (
-                <>
-                  <Check className="h-3.5 w-3.5 text-emerald-600" />
-                  <span className="text-emerald-700 font-semibold">Copied!</span>
-                </>
-              ) : (
-                <>
-                  <Copy className="h-3.5 w-3.5 text-slate-600" />
-                  <span>Copy All ({activeSerialItem?.serialNumbers.length || 0})</span>
-                </>
-              )}
-            </Button>
+            {/* Pricing & Margin Table (6 Spacious Columns — Zero Horizontal Scroll) */}
+            <div className="w-full overflow-x-auto">
+              <table className="w-full text-left text-xs tabular-nums min-w-[900px]">
+                <thead className="bg-muted/60 border-b border-border text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  <tr>
+                    <th className="px-4 py-3">Product Name & Inbound Qty</th>
+                    <th className="px-3 py-3 text-right w-36">True Landed Cost</th>
+                    <th className="px-3 py-3 text-right w-32">Current Price</th>
+                    <th className="px-3 py-3 text-right w-48">New Selling Price</th>
+                    <th className="px-4 py-3 text-center w-56">Gross Margin & Unit Profit</th>
+                    <th className="px-3 py-3 text-center w-36">Batch Application Rule</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/60 bg-card">
+                  {computedRows.map((row, idx) => {
+                    const isLoss = row.profitPerUnit < 0;
+
+                    return (
+                      <tr key={row.id} className="hover:bg-muted/40 transition-colors">
+                        {/* 1. Product Name & Inbound Qty */}
+                        <td className="px-4 py-3.5">
+                          <div className="font-semibold text-foreground text-sm leading-snug">
+                            {row.productName}
+                          </div>
+                          <div className="text-[11px] font-mono text-muted-foreground mt-0.5">
+                            {row.receivedQuantity} units inbound
+                          </div>
+                        </td>
+
+                        {/* 2. True Landed Unit Cost (Locked/Read-Only Badge) */}
+                        <td className="px-3 py-3.5 text-right">
+                          <Badge
+                            variant="outline"
+                            className="font-mono font-bold bg-muted/60 text-foreground text-xs px-2.5 py-1 border-border"
+                          >
+                            {formatCurrency(row.trueLandedCost)}
+                          </Badge>
+                        </td>
+
+                        {/* 3. Current Catalog Price */}
+                        <td className="px-3 py-3.5 text-right font-mono text-muted-foreground text-xs">
+                          {formatCurrency(row.currentSellingPrice)}
+                        </td>
+
+                        {/* 4. New Selling Price (LKR) with Quick Markup Helpers */}
+                        <td className="px-3 py-3.5 text-right">
+                          <div className="flex justify-end">
+                            <Input
+                              type="number"
+                              min="0"
+                              step="any"
+                              value={row.newSellingPrice || ''}
+                              onChange={(e) => updateProductRow(idx, 'newSellingPrice', e.target.value)}
+                              disabled={isAuditLocked}
+                              className="h-8 w-40 text-xs font-mono font-bold text-right bg-background text-foreground border-border focus:border-primary"
+                            />
+                          </div>
+                          {/* Quick markup pills */}
+                          {!isAuditLocked && (
+                            <div className="flex items-center justify-end gap-1 mt-1 text-[10px]">
+                              <span className="text-muted-foreground mr-0.5">Markup:</span>
+                              {[20, 30, 40, 50].map((pct) => (
+                                <button
+                                  key={pct}
+                                  type="button"
+                                  onClick={() => applyMarkupPreset(idx, pct)}
+                                  className="px-1.5 py-0.5 rounded bg-muted hover:bg-muted/80 text-foreground font-mono font-semibold cursor-pointer"
+                                  title={`Set selling price to +${pct}% above True Landed Cost`}
+                                >
+                                  +{pct}%
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </td>
+
+                        {/* 5. Gross Margin & Unit Profit (Clean Neutral ERP Badge) */}
+                        <td className="px-4 py-3.5 text-center">
+                          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md border border-border bg-muted/40 font-mono text-xs shadow-2xs">
+                            <span
+                              className={cn(
+                                'font-bold',
+                                isLoss
+                                  ? 'text-rose-600 dark:text-rose-400'
+                                  : 'text-foreground'
+                              )}
+                            >
+                              {row.marginPercent.toFixed(1)}% Margin
+                            </span>
+                            <span className="text-muted-foreground/40">•</span>
+                            <span className="text-muted-foreground font-semibold">
+                              {row.profitPerUnit >= 0 ? `+${formatCurrency(row.profitPerUnit)}` : formatCurrency(row.profitPerUnit)} / unit
+                            </span>
+                          </div>
+                        </td>
+
+                        {/* 6. Batch Application Rule (Clean Per-Row Pill Selector) */}
+                        <td className="px-3 py-3.5 text-center">
+                          <select
+                            value={row.priceScope}
+                            onChange={(e) => updateProductRow(idx, 'priceScope', e.target.value)}
+                            disabled={isAuditLocked}
+                            className="h-8 rounded-lg border border-border bg-background px-2.5 text-xs font-semibold text-foreground shadow-2xs focus:outline-hidden"
+                          >
+                            <option value="BATCH_ONLY">Batch Only</option>
+                            <option value="ALL_STOCK">All Stock</option>
+                          </select>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
 
-          {/* Serial Numbers Grid / List */}
-          <div className="max-h-64 overflow-y-auto border border-slate-200 rounded-lg p-2.5 bg-slate-50/50">
-            {filteredSerials.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {filteredSerials.map((sn, idx) => (
-                  <div
-                    key={sn}
-                    className="flex items-center justify-between rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-mono shadow-2xs hover:border-primary/50 transition-colors"
-                  >
-                    <div className="flex items-center gap-2">
-                      <span className="text-[10px] text-slate-400 w-5">#{idx + 1}</span>
-                      <span className="font-semibold text-slate-800 select-all">{sn}</span>
-                    </div>
-                    <Badge variant="outline" className="text-[9px] px-1.5 py-0 text-emerald-700 bg-emerald-50 border-emerald-200 font-sans">
-                      Verified
+          {/* Step 2 Bottom Summary Bar */}
+          <div className="sticky bottom-3 z-30 rounded-xl border border-border bg-card/95 backdrop-blur-md p-3.5 shadow-xl">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+              {/* Back to Step 1 Button */}
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="default"
+                  onClick={() => setCurrentStep(1)}
+                  className="gap-2 h-10 px-4 text-xs font-bold border-border text-foreground hover:bg-muted cursor-pointer"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                  <span>Back to Costing (Step 1)</span>
+                </Button>
+              </div>
+
+              {/* Financial Breakdown */}
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
+                <div>
+                  <span className="text-[10px] uppercase font-bold text-muted-foreground block">Goods Subtotal</span>
+                  <span className="font-mono font-semibold text-foreground">{formatCurrency(goodsSubtotal)}</span>
+                </div>
+
+                <span className="text-border hidden sm:inline">+</span>
+
+                <div>
+                  <span className="text-[10px] uppercase font-bold text-muted-foreground block">Additional Landed</span>
+                  <span className="font-mono font-semibold text-foreground">{formatCurrency(totalAdditionalLandedCosts)}</span>
+                </div>
+
+                <span className="text-border hidden sm:inline">=</span>
+
+                <div>
+                  <span className="text-[10px] uppercase font-bold text-muted-foreground block">Total Inventory Capitalized</span>
+                  <span className="font-mono font-bold text-foreground">{formatCurrency(totalInventoryCapitalized)}</span>
+                </div>
+
+                <div className="h-7 w-px bg-border mx-1 hidden md:block" />
+
+                <div className="rounded-lg border border-border bg-muted/50 px-3.5 py-1.5">
+                  <span className="text-[10px] uppercase font-bold text-muted-foreground block tracking-wider">Total AP Commitment</span>
+                  <span className="font-mono font-extrabold text-foreground text-sm">
+                    {formatCurrency(grandTotal)}
+                  </span>
+                </div>
+
+                {/* Optional Supplier Advance Offset Toggle */}
+                {unappliedAdvances.length > 0 && !isAuditLocked && (
+                  <label className="flex items-center gap-1.5 ml-2 cursor-pointer bg-muted/40 border border-border rounded-lg px-2.5 py-1">
+                    <input
+                      type="checkbox"
+                      checked={applyAdvanceEnabled}
+                      onChange={(e) => setApplyAdvanceEnabled(e.target.checked)}
+                      className="rounded text-primary focus:ring-primary h-3.5 w-3.5"
+                    />
+                    <span className="text-[11px] font-semibold text-foreground">
+                      Offset Advance ({formatCurrency(advanceAmountToApply)})
+                    </span>
+                  </label>
+                )}
+              </div>
+
+              {/* Primary Action Button: Post Bill & Apply Prices */}
+              <div className="flex items-center gap-2 justify-end shrink-0 pt-1 xl:pt-0">
+                {isAuditLocked ? (
+                  <div className="flex items-center gap-2">
+                    <Badge className="bg-muted text-foreground border-border font-bold px-3 py-1.5 text-xs gap-1.5 shadow-2xs">
+                      <Lock className="h-3.5 w-3.5 text-primary" />
+                      <span>Bill Costed & Approved</span>
                     </Badge>
+                    {isAuthorizedForVoid && (() => {
+                      const billDate = existingBill?.invoiceDate || selectedGRN.receivedDate;
+                      const isLocked = periodLockService.isDateLocked(billDate);
+                      return (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={handleVoidVendorBill}
+                          disabled={submitting || isLocked}
+                          title={isLocked ? 'Period Closed: Cannot void past transactions in closed period' : undefined}
+                          className="h-9 text-xs text-rose-600 border-rose-200 hover:bg-rose-50 cursor-pointer disabled:opacity-50"
+                        >
+                          {isLocked ? 'Period Closed (Void Blocked)' : 'Void / Reverse Vendor Bill'}
+                        </Button>
+                      );
+                    })()}
                   </div>
-                ))}
+                ) : (
+                  <Button
+                    type="button"
+                    size="default"
+                    onClick={handlePostBillAndApplyPrices}
+                    disabled={!isFormValid || submitting}
+                    className="gap-2 bg-primary hover:bg-primary-hover text-white font-semibold text-xs h-9 px-6 shadow-xs cursor-pointer disabled:opacity-50"
+                  >
+                    <CheckCircle2 className="h-4 w-4" />
+                    <span>{submitting ? 'Posting & Applying...' : 'Post Bill & Apply Prices'}</span>
+                  </Button>
+                )}
               </div>
-            ) : (
-              <div className="py-8 text-center text-xs text-slate-400">
-                No serial numbers match "{serialSearchQuery}"
-              </div>
-            )}
+            </div>
           </div>
-
-          <DialogFooter className="flex items-center justify-between sm:justify-between border-t border-slate-100 pt-3">
-            <span className="text-xs text-slate-500 font-mono">
-              Showing {filteredSerials.length} of {activeSerialItem?.serialNumbers.length || 0} serial numbers
-            </span>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                setActiveSerialItem(null);
-                setSerialSearchQuery('');
-              }}
-              className="text-xs"
-            >
-              Close
-            </Button>
-          </DialogFooter>
         </div>
-      </Dialog>
+      )}
 
-      {/* Official Costed & Priced A4 Printable GRN Modal */}
-      {selectedGRN && (
+      {/* Printable Sheet Dialog */}
+      {isCostedPrintModalOpen && (
         <PrintableGRN
-          grn={selectedGRN as any}
-          open={isCostedPrintModalOpen}
-          onOpenChange={setIsCostedPrintModalOpen}
-          pricingData={computedLineItems.map((ci) => {
-            const product = MOCK_PRODUCTS.find((p) => p.id === ci.productId || p.sku === ci.sku);
-            return {
-              productId: ci.productId,
-              unitCost: ci.landedUnitCost || ci.unitCost,
-              sellingPrice: product?.pricing?.currentSellingPrice || (ci.landedUnitCost * 1.3),
-            };
-          })}
+          grn={selectedGRN}
+          costedPriceItems={printablePriceItems}
+          onClose={() => setIsCostedPrintModalOpen(false)}
         />
       )}
     </div>

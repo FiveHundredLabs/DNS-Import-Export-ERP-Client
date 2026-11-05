@@ -30,6 +30,14 @@ import {
   FileText,
   Search,
   History,
+  CheckSquare,
+  Square,
+  LayoutList,
+  Columns2,
+  ArrowDownLeft,
+  ArrowUpRight,
+  Check,
+  Trash2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -225,6 +233,8 @@ export function BankReconciliationPage() {
   const [statementFilter, setStatementFilter] = useState<'ALL' | 'CLEARED' | 'UNCLEARED'>('ALL');
   const [activeHoverId, setActiveHoverId] = useState<string | null>(null);
   const [dateToleranceDays, setDateToleranceDays] = useState<number>(3);
+  const [workspaceViewMode, setWorkspaceViewMode] = useState<'MANUAL' | 'SPLIT'>('MANUAL');
+  const [manualTypeFilter, setManualTypeFilter] = useState<'ALL' | 'DEPOSITS' | 'PAYMENTS'>('ALL');
 
   // Statement Upload Modal State
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
@@ -235,7 +245,10 @@ export function BankReconciliationPage() {
 
   // Inline Adjustment Modal State
   const [isAdjustmentModalOpen, setIsAdjustmentModalOpen] = useState(false);
-  const [adjustmentType, setAdjustmentType] = useState<'FEE' | 'INTEREST'>('FEE');
+  const [adjustmentDirection, setAdjustmentDirection] = useState<'PAYMENT' | 'DEPOSIT'>('PAYMENT');
+  const [adjustmentType, setAdjustmentType] = useState<
+    'FEE' | 'INTEREST' | 'DIRECT_DEPOSIT' | 'DIRECT_PAYMENT'
+  >('FEE');
   const [adjustmentAmount, setAdjustmentAmount] = useState<number>(0);
   const [adjustmentDescription, setAdjustmentDescription] = useState('');
   const [offsetAccountId, setOffsetAccountId] = useState('');
@@ -327,32 +340,61 @@ export function BankReconciliationPage() {
     );
   };
 
-  // Header Status Bar Calculations with decimal.js
-  const { clearedDeposits, clearedPayments, clearedBalance, difference, differenceAbs } =
-    useMemo(() => {
-      let dep = new Decimal(0);
-      let pay = new Decimal(0);
+  // Header Status Bar & Reconciliation Audit Calculations with decimal.js
+  const {
+    clearedDeposits,
+    clearedPayments,
+    clearedBalance,
+    difference,
+    differenceAbs,
+    unclearedDeposits,
+    unclearedPayments,
+    unclearedDepositCount,
+    unclearedPaymentCount,
+    reconciledBookBalance,
+  } = useMemo(() => {
+    let dep = new Decimal(0);
+    let pay = new Decimal(0);
+    let unDep = new Decimal(0);
+    let unPay = new Decimal(0);
+    let unDepCount = 0;
+    let unPayCount = 0;
 
-      for (const t of systemTransactions) {
-        if (t.isCleared) {
-          if (t.debit > 0) dep = dep.plus(new Decimal(t.debit));
-          if (t.credit > 0) pay = pay.plus(new Decimal(t.credit));
+    for (const t of systemTransactions) {
+      if (t.isCleared) {
+        if (t.debit > 0) dep = dep.plus(new Decimal(t.debit));
+        if (t.credit > 0) pay = pay.plus(new Decimal(t.credit));
+      } else {
+        if (t.debit > 0) {
+          unDep = unDep.plus(new Decimal(t.debit));
+          unDepCount++;
+        }
+        if (t.credit > 0) {
+          unPay = unPay.plus(new Decimal(t.credit));
+          unPayCount++;
         }
       }
+    }
 
-      const beg = new Decimal(beginningBalance || 0);
-      const clearedBal = beg.plus(dep).minus(pay);
-      const targetBal = new Decimal(targetStatementBalance || 0);
-      const diff = targetBal.minus(clearedBal);
+    const beg = new Decimal(beginningBalance || 0);
+    const clearedBal = beg.plus(dep).minus(pay);
+    const targetBal = new Decimal(targetStatementBalance || 0);
+    const diff = targetBal.minus(clearedBal);
+    const recBookBal = targetBal.plus(unDep).minus(unPay);
 
-      return {
-        clearedDeposits: dep.toNumber(),
-        clearedPayments: pay.toNumber(),
-        clearedBalance: clearedBal.toNumber(),
-        difference: diff.toNumber(),
-        differenceAbs: diff.abs().toNumber(),
-      };
-    }, [systemTransactions, beginningBalance, targetStatementBalance]);
+    return {
+      clearedDeposits: dep.toNumber(),
+      clearedPayments: pay.toNumber(),
+      clearedBalance: clearedBal.toNumber(),
+      difference: diff.toNumber(),
+      differenceAbs: diff.abs().toNumber(),
+      unclearedDeposits: unDep.toNumber(),
+      unclearedPayments: unPay.toNumber(),
+      unclearedDepositCount: unDepCount,
+      unclearedPaymentCount: unPayCount,
+      reconciledBookBalance: recBookBal.toNumber(),
+    };
+  }, [systemTransactions, beginningBalance, targetStatementBalance]);
 
   // Reconcile Button is STRICTLY disabled unless Difference equals exactly 0.00
   const isReconciled = useMemo(() => {
@@ -534,24 +576,42 @@ export function BankReconciliationPage() {
             name: 'Office Rent & Utilities',
             accountClass: 'EXPENSE' as const,
           } as any;
-        } else {
+        } else if (adjustmentType === 'DIRECT_PAYMENT') {
+          adjAccount = accounts.find((a) => a.code === '6010' || a.accountClass === 'EXPENSE') || {
+            id: 'acc-6010',
+            code: '6010',
+            name: 'General Operating Overheads',
+            accountClass: 'EXPENSE' as const,
+          } as any;
+        } else if (adjustmentType === 'INTEREST') {
           adjAccount = accounts.find((a) => a.code === '4010' || a.accountClass === 'INCOME') || {
             id: 'acc-4010',
             code: '4010',
             name: 'Sales Revenue',
             accountClass: 'INCOME' as const,
           } as any;
+        } else {
+          adjAccount = accounts.find((a) => a.code === '1030' || a.code === '4010' || a.accountClass === 'INCOME') || {
+            id: 'acc-4010',
+            code: '4010',
+            name: 'Direct Customer Remittance / Sales',
+            accountClass: 'INCOME' as const,
+          } as any;
         }
       }
 
       const isFee = adjustmentType === 'FEE';
-      const lines = isFee
+      const isPayment = adjustmentType === 'FEE' || adjustmentType === 'DIRECT_PAYMENT';
+      const fallbackId = isPayment ? 'acc-6030' : 'acc-4010';
+      const resolvedAdjAccountId = adjAccount?.id || fallbackId;
+
+      const lines = isPayment
         ? [
             {
-              accountId: adjAccount.id,
+              accountId: resolvedAdjAccountId,
               debit: adjustmentAmount,
               credit: 0,
-              description: adjustmentDescription || 'Bank Service Charge & Processing Fee',
+              description: adjustmentDescription || (isFee ? 'Bank Service Charge & Processing Fee' : 'Direct Bank Outflow / Standing Order'),
             },
             {
               accountId: selectedBankAccount.id,
@@ -568,16 +628,26 @@ export function BankReconciliationPage() {
               description: 'Credit interest earned',
             },
             {
-              accountId: adjAccount.id,
+              accountId: resolvedAdjAccountId,
               debit: 0,
               credit: adjustmentAmount,
-              description: adjustmentDescription || 'Bank Interest Income Earned',
+              description: adjustmentDescription || (adjustmentType === 'INTEREST' ? 'Bank Interest Income Earned' : 'Direct customer remittance'),
             },
           ];
 
+      const journalDesc = `Bank Reconciliation Adjustment: ${
+        isFee
+          ? 'Bank Fee'
+          : adjustmentType === 'INTEREST'
+          ? 'Interest Income'
+          : adjustmentType === 'DIRECT_DEPOSIT'
+          ? 'Direct Customer Deposit'
+          : 'Direct Bank Payment'
+      }`;
+
       await postJournalEntry({
         date: statementEndingDate,
-        description: `Bank Reconciliation Adjustment: ${isFee ? 'Bank Fee' : 'Interest Income'}`,
+        description: journalDesc,
         reference: `ADJ-REC-${Date.now().toString().slice(-4)}`,
         source: 'MANUAL',
         lines,
@@ -587,16 +657,19 @@ export function BankReconciliationPage() {
       const sysId = `tx-adj-${uniqueId}`;
       const stmtId = `stmt-adj-${uniqueId}`;
 
+      const refCode = isFee ? 'ADJ-FEE' : adjustmentType === 'INTEREST' ? 'ADJ-INT' : adjustmentType === 'DIRECT_DEPOSIT' ? 'ADJ-DEP' : 'ADJ-PMT';
+      const txMemo = adjustmentDescription || (isFee ? 'Bank Fee & Charges' : adjustmentType === 'INTEREST' ? 'Interest Income' : adjustmentType === 'DIRECT_DEPOSIT' ? 'Direct Bank Deposit' : 'Direct Bank Payment');
+
       // Append transaction to system transactions ALREADY CHECKED as Cleared
       const newSysTx: BankStatementTransaction = {
         id: sysId,
         date: statementEndingDate,
-        reference: `ADJ-${isFee ? 'FEE' : 'INT'}`,
-        description: adjustmentDescription || (isFee ? 'Bank Fee & Charges' : 'Interest Income'),
-        type: isFee ? 'PAYMENT' : 'DEPOSIT',
+        reference: refCode,
+        description: txMemo,
+        type: isPayment ? 'PAYMENT' : 'DEPOSIT',
         amount: adjustmentAmount,
-        debit: isFee ? 0 : adjustmentAmount,
-        credit: isFee ? adjustmentAmount : 0,
+        debit: isPayment ? 0 : adjustmentAmount,
+        credit: isPayment ? adjustmentAmount : 0,
         isCleared: true,
         matchedStatementLineId: stmtId,
         matchConfidence: 'EXACT',
@@ -606,12 +679,12 @@ export function BankReconciliationPage() {
       const newStmtRow: BankStatementTransaction = {
         id: stmtId,
         date: statementEndingDate,
-        reference: `ADJ-${isFee ? 'FEE' : 'INT'}`,
-        description: adjustmentDescription || (isFee ? 'Bank Fee & Charges' : 'Interest Income'),
-        type: isFee ? 'PAYMENT' : 'DEPOSIT',
+        reference: refCode,
+        description: txMemo,
+        type: isPayment ? 'PAYMENT' : 'DEPOSIT',
         amount: adjustmentAmount,
-        debit: isFee ? adjustmentAmount : 0,
-        credit: isFee ? 0 : adjustmentAmount,
+        debit: isPayment ? adjustmentAmount : 0,
+        credit: isPayment ? 0 : adjustmentAmount,
         isCleared: true,
         matchedSystemTxId: sysId,
         matchConfidence: 'EXACT',
@@ -633,6 +706,15 @@ export function BankReconciliationPage() {
     }
   };
 
+  const handleDeleteAdjustment = (adjId: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setSystemTransactions((prev) => prev.filter((t) => t.id !== adjId));
+    setStatementTransactions((prev) =>
+      prev.filter((t) => t.matchedSystemTxId !== adjId && t.id !== adjId)
+    );
+    toast.success('Adjustment entry removed.');
+  };
+
   // Filtered lists for System & Statement panes
   const filteredSystemList = useMemo(() => {
     return systemTransactions.filter((tx) => {
@@ -649,6 +731,41 @@ export function BankReconciliationPage() {
       return true;
     });
   }, [systemTransactions, systemFilter, systemSearch]);
+
+  // Full-width manual verification filtered list (includes transaction type tabs: deposits vs payments)
+  const filteredManualSystemList = useMemo(() => {
+    return systemTransactions.filter((tx) => {
+      if (systemFilter === 'CLEARED' && !tx.isCleared) return false;
+      if (systemFilter === 'UNCLEARED' && tx.isCleared) return false;
+      if (manualTypeFilter === 'DEPOSITS' && tx.debit <= 0) return false;
+      if (manualTypeFilter === 'PAYMENTS' && tx.credit <= 0) return false;
+      if (systemSearch.trim()) {
+        const query = systemSearch.toLowerCase();
+        return (
+          tx.reference.toLowerCase().includes(query) ||
+          tx.description.toLowerCase().includes(query) ||
+          tx.amount.toString().includes(query)
+        );
+      }
+      return true;
+    });
+  }, [systemTransactions, systemFilter, manualTypeFilter, systemSearch]);
+
+  const handleMarkAllVisibleCleared = () => {
+    const visibleIds = new Set(filteredManualSystemList.map((t) => t.id));
+    setSystemTransactions((prev) =>
+      prev.map((t) => (visibleIds.has(t.id) ? { ...t, isCleared: true } : t))
+    );
+    toast.success(`Marked ${visibleIds.size} transaction(s) as Cleared.`);
+  };
+
+  const handleUnmarkAllVisible = () => {
+    const visibleIds = new Set(filteredManualSystemList.map((t) => t.id));
+    setSystemTransactions((prev) =>
+      prev.map((t) => (visibleIds.has(t.id) ? { ...t, isCleared: false } : t))
+    );
+    toast.info(`Unmarked ${visibleIds.size} transaction(s).`);
+  };
 
   const filteredStatementList = useMemo(() => {
     return statementTransactions.filter((stmt) => {
@@ -679,8 +796,8 @@ export function BankReconciliationPage() {
               Phase 4 Treasury & Audit Control
             </Badge>
           </div>
-          <p className="text-sm text-slate-500 mt-1">
-            Split-pane electronic bank statement reconciliation with dynamic prior-balance locking and heuristic auto-matching.
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Electronic statement parsing, heuristic auto-matching, and balance reconciliation.
           </p>
         </div>
 
@@ -805,105 +922,146 @@ export function BankReconciliationPage() {
 
       {/* 6.1 Reconciliation Setup Modal / Form */}
       {!isWorkspaceActive ? (
-        <Card className="max-w-2xl mx-auto p-6 border-slate-200 shadow-sm bg-white space-y-6">
-          <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
-            <div className="p-2.5 rounded-lg bg-primary text-white shadow-xs">
-              <Landmark className="h-6 w-6" />
+        <Card className="w-full p-6 sm:p-8 border-slate-200 shadow-sm bg-white space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-slate-100 pb-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-lg bg-primary text-white shadow-xs">
+                <Landmark className="h-6 w-6" />
+              </div>
+              <div>
+                <h2 className="text-base font-bold text-slate-900">
+                  Reconciliation Setup & Statement Opening
+                </h2>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Specify the bank account, cut-off ending date, and closing balance from your physical or electronic statement.
+                </p>
+              </div>
             </div>
-            <div>
-              <h2 className="text-base font-bold text-slate-900">
-                Reconciliation Setup & Statement Opening
-              </h2>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Specify the bank account, cut-off ending date, and closing balance from your physical or electronic statement.
-              </p>
+
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="bg-emerald-50 text-emerald-800 border-emerald-200 text-xs py-1 px-2.5 flex items-center gap-1.5">
+                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+                <span>Manual Verification Ready</span>
+              </Badge>
             </div>
           </div>
 
-          <div className="space-y-4">
-            {/* Bank Account dropdown */}
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Bank Account <span className="text-rose-500">*</span>
-              </label>
-              <Select
-                value={selectedAccountId}
-                onChange={(e) => setSelectedAccountId(e.target.value)}
-                className="h-9 text-xs"
-              >
-                {bankAccounts.map((b) => (
-                  <option key={b.id} value={b.id}>
-                    {b.code} - {b.name} (Live Ledger Balance: {formatCurrency(b.currentBalance)})
-                  </option>
-                ))}
-              </Select>
-            </div>
-
-            {/* Locked Prior Balance Display */}
-            <div className="p-3.5 rounded-lg border border-slate-200 bg-slate-50/70 space-y-1.5">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
-                  <Lock className="h-3.5 w-3.5 text-amber-600" />
-                  Locked Prior Balance (Beginning Balance)
-                </span>
-                {isLockedFromPrior ? (
-                  <Badge variant="outline" className="bg-amber-50 text-amber-800 border-amber-200 text-[10px] font-medium">
-                    Locked to Prior Reconciled Period
-                  </Badge>
-                ) : (
-                  <Badge variant="outline" className="bg-slate-100 text-slate-700 border-slate-200 text-[10px]">
-                    Opening Balance Baseline
-                  </Badge>
-                )}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            {/* Left Column (7 cols): Parameters & Quick Method Info */}
+            <div className="lg:col-span-7 space-y-5">
+              {/* Bank Account dropdown */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Bank Account <span className="text-rose-500">*</span>
+                </label>
+                <Select
+                  value={selectedAccountId}
+                  onChange={(e) => setSelectedAccountId(e.target.value)}
+                  className="h-10 text-xs"
+                >
+                  {bankAccounts.map((b) => (
+                    <option key={b.id} value={b.id}>
+                      {b.code} - {b.name} (Live Ledger Balance: {formatCurrency(b.currentBalance)})
+                    </option>
+                  ))}
+                </Select>
               </div>
-              <div className="flex items-baseline justify-between pt-1">
-                <span className="font-mono text-base font-bold text-slate-900">
-                  {formatCurrency(beginningBalance)}
-                </span>
-                {priorReconciledPeriod && (
-                  <span className="text-[11px] text-slate-500">
-                    As of period ended {formatDate(priorReconciledPeriod.statementEndingDate)} (Reconciled by {priorReconciledPeriod.reconciledBy})
+
+              {/* Statement Ending Date & Target Balance */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Statement Ending Date <span className="text-rose-500">*</span>
+                  </label>
+                  <Input
+                    type="date"
+                    value={statementEndingDate}
+                    onChange={(e) => setStatementEndingDate(e.target.value)}
+                    className="h-10 text-xs"
+                    required
+                  />
+                  <span className="text-[10.5px] text-slate-400 mt-1 block">
+                    Cut-off date printed on your bank statement.
                   </span>
-                )}
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Target Statement Balance (From Physical / Electronic Statement) <span className="text-rose-500">*</span>
+                  </label>
+                  <CurrencyInput
+                    value={targetStatementBalance}
+                    onChange={(val) => setTargetStatementBalance(val)}
+                    placeholder="0.00"
+                  />
+                  <span className="text-[10.5px] text-slate-400 mt-1 block">
+                    Final closing balance from bank statement document.
+                  </span>
+                </div>
               </div>
-              <p className="text-[10.5px] text-slate-500 leading-relaxed">
-                Notice: In accordance with statutory audit controls, the beginning balance dynamically locks to the ending balance of the previously reconciled period and does not fluctuate with live ledger balance.
-              </p>
+
+              {/* Method Explainer Card */}
+              <div className="p-4 rounded-xl border border-primary/20 bg-primary-light/30 space-y-2">
+                <div className="flex items-center gap-2 text-primary font-semibold text-xs">
+                  <Sparkles className="h-4 w-4 text-primary" />
+                  <span>Streamlined Manual Reconciliation (No File Upload Needed)</span>
+                </div>
+                <p className="text-[11.5px] text-slate-600 leading-relaxed">
+                  You can reconcile directly against your physical paper statement or online banking portal. Simply tick the system ledger transactions that have cleared on your statement. The system continuously calculates cleared deposits, payments, and variance in real-time until difference equals exactly 0.00.
+                </p>
+              </div>
             </div>
 
-            {/* Statement Ending Date */}
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Statement Ending Date <span className="text-rose-500">*</span>
-              </label>
-              <Input
-                type="date"
-                value={statementEndingDate}
-                onChange={(e) => setStatementEndingDate(e.target.value)}
-                className="h-9 text-xs"
-                required
-              />
-            </div>
+            {/* Right Column (5 cols): Locked Prior Balance Card */}
+            <div className="lg:col-span-5 space-y-4">
+              <div className="p-4 sm:p-5 rounded-xl border border-slate-200 bg-slate-50/70 space-y-3.5 h-full flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
+                      <Lock className="h-3.5 w-3.5 text-amber-600" />
+                      Locked Prior Balance (Beginning Balance)
+                    </span>
+                    {isLockedFromPrior ? (
+                      <Badge variant="outline" className="bg-amber-50 text-amber-800 border-amber-200 text-[10px] font-medium">
+                        Locked to Prior Reconciled Period
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="bg-slate-100 text-slate-700 border-slate-200 text-[10px]">
+                        Opening Balance Baseline
+                      </Badge>
+                    )}
+                  </div>
+                  <div className="pt-1 pb-1">
+                    <span className="font-mono text-2xl sm:text-3xl font-bold text-slate-900 block tracking-tight">
+                      {formatCurrency(beginningBalance)}
+                    </span>
+                    {priorReconciledPeriod && (
+                      <span className="text-[11px] text-slate-500 block mt-1.5">
+                        As of period ended {formatDate(priorReconciledPeriod.statementEndingDate)} (Reconciled by {priorReconciledPeriod.reconciledBy})
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[11px] text-slate-500 leading-relaxed mt-2.5 border-t border-slate-200/80 pt-2.5">
+                    Notice: In accordance with statutory audit controls, the beginning balance dynamically locks to the ending balance of the previously reconciled period and does not fluctuate with live ledger balance.
+                  </p>
+                </div>
 
-            {/* Target Statement Balance */}
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Target Statement Balance (From Physical / Electronic Statement) <span className="text-rose-500">*</span>
-              </label>
-              <CurrencyInput
-                value={targetStatementBalance}
-                onChange={(val) => setTargetStatementBalance(val)}
-                placeholder="0.00"
-              />
+                <div className="pt-3 flex items-center justify-between text-xs text-slate-500 border-t border-slate-200/60">
+                  <span>Selected Bank Account:</span>
+                  <span className="font-mono font-bold text-slate-800">
+                    {selectedBankAccount?.code} ({selectedBankAccount?.name})
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
 
-          <div className="pt-2 flex items-center justify-between">
+          <div className="pt-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3">
             <Button
               variant="outline"
               size="sm"
               onClick={() => setIsUploadModalOpen(true)}
-              className="text-xs gap-1.5 border-slate-300"
+              className="text-xs gap-1.5 border-slate-300 w-full sm:w-auto"
             >
               <Upload className="h-3.5 w-3.5 text-primary" />
               <span>Upload Statement First (CSV / MT940)</span>
@@ -911,7 +1069,7 @@ export function BankReconciliationPage() {
 
             <Button
               onClick={handleStartReconciliation}
-              className="bg-primary hover:bg-primary-hover text-white shadow-xs font-semibold gap-1.5"
+              className="bg-primary hover:bg-primary-hover text-white shadow-xs font-semibold gap-1.5 w-full sm:w-auto px-6 h-10 text-xs"
             >
               <span>Start Reconciliation</span>
               <ArrowRight className="h-4 w-4" />
@@ -987,84 +1145,139 @@ export function BankReconciliationPage() {
 
           {/* De-cluttered Matching Control Toolbar */}
           <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 bg-white p-3 rounded-lg border border-slate-200 shadow-2xs">
-            {/* Left Cluster: Matching Tools & Statement Import */}
+            {/* Left Cluster: View Switcher (and optional feed tools only when in SPLIT mode) */}
             <div className="flex flex-wrap items-center gap-2">
-              <div className="flex items-center bg-slate-50 p-1 rounded-md border border-slate-200 gap-1.5">
-                <Button
-                  size="sm"
-                  onClick={handleRunAutoMatch}
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white gap-1.5 text-xs font-semibold h-7 px-2.5 shadow-2xs"
+              {/* Workspace View Mode Selector */}
+              <div className="flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200 text-xs">
+                <button
+                  type="button"
+                  onClick={() => setWorkspaceViewMode('MANUAL')}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md font-semibold transition-all ${
+                    workspaceViewMode === 'MANUAL'
+                      ? 'bg-white text-primary shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
                 >
-                  <Sparkles className="h-3.5 w-3.5" />
-                  <span>Auto-Match (Heuristic)</span>
-                </Button>
-
-                <div className="flex items-center gap-1 text-xs text-slate-600 px-1.5">
-                  <span className="text-[10px] font-medium text-slate-400 uppercase">Window:</span>
-                  <Select
-                    value={dateToleranceDays.toString()}
-                    onChange={(e) => setDateToleranceDays(parseInt(e.target.value, 10))}
-                    className="h-6 text-xs border-0 bg-transparent py-0 px-1 font-semibold text-slate-700 focus:ring-0"
-                  >
-                    <option value="0">±0d Exact</option>
-                    <option value="1">±1d</option>
-                    <option value="3">±3d Standard</option>
-                    <option value="7">±7d Relaxed</option>
-                  </Select>
-                </div>
-
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleResetMatches}
-                  className="h-7 px-2 text-[11px] text-slate-500 hover:text-slate-800"
+                  <LayoutList className="h-3.5 w-3.5" />
+                  <span>Manual Verification (Full Width)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setWorkspaceViewMode('SPLIT')}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md font-semibold transition-all ${
+                    workspaceViewMode === 'SPLIT'
+                      ? 'bg-white text-primary shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
                 >
-                  Reset
-                </Button>
+                  <Columns2 className="h-3.5 w-3.5" />
+                  <span>Split-Pane Feed Match</span>
+                </button>
               </div>
 
-              {/* Upload Statement Button */}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setIsUploadModalOpen(true)}
-                className="gap-1.5 text-xs text-slate-700 border-slate-300 h-8"
-              >
-                <Upload className="h-3.5 w-3.5 text-primary" />
-                <span>Upload Statement</span>
-              </Button>
+              {/* Electronic Feed Tools (ONLY shown when user switches to Split-Pane Feed Match mode) */}
+              {workspaceViewMode === 'SPLIT' && (
+                <>
+                  <div className="flex items-center bg-slate-50 p-1 rounded-md border border-slate-200 gap-1.5">
+                    <Button
+                      size="sm"
+                      onClick={handleRunAutoMatch}
+                      className="bg-indigo-600 hover:bg-indigo-700 text-white gap-1.5 text-xs font-semibold h-7 px-2.5 shadow-2xs"
+                    >
+                      <Sparkles className="h-3.5 w-3.5" />
+                      <span>Auto-Match (Heuristic)</span>
+                    </Button>
+
+                    <div className="flex items-center gap-1 text-xs text-slate-600 px-1.5">
+                      <span className="text-[10px] font-medium text-slate-400 uppercase">Window:</span>
+                      <Select
+                        value={dateToleranceDays.toString()}
+                        onChange={(e) => setDateToleranceDays(parseInt(e.target.value, 10))}
+                        className="h-6 text-xs border-0 bg-transparent py-0 px-1 font-semibold text-slate-700 focus:ring-0"
+                      >
+                        <option value="0">±0d Exact</option>
+                        <option value="1">±1d</option>
+                        <option value="3">±3d Standard</option>
+                        <option value="7">±7d Relaxed</option>
+                      </Select>
+                    </div>
+
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleResetMatches}
+                      className="h-7 px-2 text-[11px] text-slate-500 hover:text-slate-800"
+                    >
+                      Reset
+                    </Button>
+                  </div>
+
+                  {/* Upload Statement Button */}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsUploadModalOpen(true)}
+                    className="gap-1.5 text-xs text-slate-700 border-slate-300 h-8"
+                  >
+                    <Upload className="h-3.5 w-3.5 text-primary" />
+                    <span>Upload Statement</span>
+                  </Button>
+                </>
+              )}
             </div>
 
             {/* Right Cluster: Adjustments & Completion */}
             <div className="flex flex-wrap items-center gap-2">
-              {/* 6.3 Inline Adjustment Tool Button with DoubleEntryHoverBadge */}
+              {/* Direct Debit vs Credit Adjustment Action Buttons */}
               <div className="flex items-center gap-1.5">
-                <DoubleEntryHoverBadge
-                  lines={[
-                    {
-                      accountCode: '6030',
-                      accountName: 'Bank Service Charges & Fees',
-                      type: 'DEBIT',
-                      amount: 500,
-                    },
-                    {
-                      accountCode: selectedBankAccount?.code || '1010',
-                      accountName: selectedBankAccount?.name || 'Bank Account',
-                      type: 'CREDIT',
-                      amount: 500,
-                    },
-                  ]}
-                  title="Fee Adjustment Preview: Dr 6030 / Cr 1010"
-                />
+                {/* 1. Deposit / Money In (DEBIT Bank) */}
                 <Button
                   size="sm"
                   variant="outline"
-                  onClick={() => setIsAdjustmentModalOpen(true)}
-                  className="gap-1.5 text-xs text-primary border-primary-border hover:bg-primary-light h-8"
+                  onClick={() => {
+                    setAdjustmentDirection('DEPOSIT');
+                    setAdjustmentType('DIRECT_DEPOSIT');
+                    setIsAdjustmentModalOpen(true);
+                  }}
+                  className="gap-1.5 text-xs text-emerald-800 bg-emerald-50 border-emerald-300 hover:bg-emerald-100 h-8 font-semibold shadow-2xs"
                 >
-                  <Plus className="h-3.5 w-3.5" />
-                  <span>+ Add Adjustment (Fee/Interest)</span>
+                  <ArrowDownLeft className="h-3.5 w-3.5 text-emerald-600" />
+                  <span>+ Deposit / Money In (DEBIT)</span>
                 </Button>
+
+                {/* 2. Payment / Outflow (CREDIT Bank) */}
+                <div className="flex items-center gap-1">
+                  <DoubleEntryHoverBadge
+                    lines={[
+                      {
+                        accountCode: '6030',
+                        accountName: 'Bank Service Charges & Fees',
+                        type: 'DEBIT',
+                        amount: 500,
+                      },
+                      {
+                        accountCode: selectedBankAccount?.code || '1010',
+                        accountName: selectedBankAccount?.name || 'Bank Account',
+                        type: 'CREDIT',
+                        amount: 500,
+                      },
+                    ]}
+                    title="Fee Adjustment Preview: Dr 6030 / Cr 1010"
+                  />
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      setAdjustmentDirection('PAYMENT');
+                      setAdjustmentType('FEE');
+                      setIsAdjustmentModalOpen(true);
+                    }}
+                    className="gap-1.5 text-xs text-amber-900 bg-amber-50 border-amber-300 hover:bg-amber-100 h-8 font-semibold shadow-2xs"
+                  >
+                    <ArrowUpRight className="h-3.5 w-3.5 text-amber-600" />
+                    <span>+ Add Adjustment: Payment / Outflow (CREDIT)</span>
+                  </Button>
+                </div>
               </div>
 
               {/* Completion Action Button: Strictly disabled unless Difference === 0.00 */}
@@ -1099,8 +1312,336 @@ export function BankReconciliationPage() {
             </div>
           </div>
 
+          {/* FULL-WIDTH MANUAL RECONCILIATION TABLE */}
+          {workspaceViewMode === 'MANUAL' && (
+            <Card className="border-slate-200 shadow-2xs overflow-hidden w-full bg-white space-y-0">
+              {/* Guidance Callout: Explains Unrealized vs Unrecognized categories */}
+              <div className="p-3.5 bg-sky-50/70 border-b border-sky-200 flex flex-col lg:flex-row lg:items-center justify-between gap-3 text-xs">
+                <div className="flex items-start gap-3">
+                  <div className="p-2 rounded-lg bg-sky-100 text-sky-800 shrink-0">
+                    <FileText className="h-4 w-4" />
+                  </div>
+                  <div className="text-xs space-y-1">
+                    <span className="font-bold text-sky-950 block">Two Core Reconciliation Categories:</span>
+                    <div className="text-sky-800 text-[11.5px] leading-relaxed flex flex-col sm:flex-row sm:items-center gap-x-4 gap-y-1">
+                      <span>
+                        1. <strong>Unrealized by Bank (In ERP, not in Bank):</strong> Unpresented cheques & in-transit deposits. <em>Leave unchecked; they automatically carry forward.</em>
+                      </span>
+                      <span>
+                        2. <strong>Unrecognized in ERP (On Bank Statement, not in ERP):</strong> Bank fees, interest, direct deposits. <em>Use the &quot;+ Add Adjustment&quot; button above to post into ERP.</em>
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Table Subheader & Filters */}
+              <div className="p-3.5 bg-white border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-3">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-sm text-slate-900">
+                      System Records (GL {selectedBankAccount?.code}) — Manual Statement Verification
+                    </span>
+                    <Badge variant="outline" className="text-xs bg-slate-50 text-slate-700 font-semibold">
+                      {systemTransactions.length} lines total
+                    </Badge>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Click any transaction row or checkbox to verify. Difference continuously calculates to 0.00.
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  {/* Transaction Inflow/Outflow Type Tabs */}
+                  <div className="flex items-center bg-slate-50 p-0.5 rounded-lg border border-slate-200 text-xs">
+                    <button
+                      type="button"
+                      onClick={() => setManualTypeFilter('ALL')}
+                      className={`px-2.5 py-1 rounded font-medium transition-colors ${
+                        manualTypeFilter === 'ALL'
+                          ? 'bg-slate-900 text-white'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      All ({systemTransactions.length})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setManualTypeFilter('DEPOSITS')}
+                      className={`px-2.5 py-1 rounded font-medium transition-colors ${
+                        manualTypeFilter === 'DEPOSITS'
+                          ? 'bg-primary text-white'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      Deposits (Dr) ({systemTransactions.filter((t) => t.debit > 0).length})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setManualTypeFilter('PAYMENTS')}
+                      className={`px-2.5 py-1 rounded font-medium transition-colors ${
+                        manualTypeFilter === 'PAYMENTS'
+                          ? 'bg-emerald-700 text-white'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      Payments (Cr) ({systemTransactions.filter((t) => t.credit > 0).length})
+                    </button>
+                  </div>
+
+                  {/* Status Pills */}
+                  <div className="flex items-center bg-slate-50 p-0.5 rounded-lg border border-slate-200 text-xs">
+                    <button
+                      type="button"
+                      onClick={() => setSystemFilter('ALL')}
+                      className={`px-2.5 py-1 rounded font-medium ${
+                        systemFilter === 'ALL' ? 'bg-primary text-white' : 'text-slate-600'
+                      }`}
+                    >
+                      All
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSystemFilter('UNCLEARED')}
+                      className={`px-2.5 py-1 rounded font-medium ${
+                        systemFilter === 'UNCLEARED' ? 'bg-amber-600 text-white' : 'text-slate-600'
+                      }`}
+                    >
+                      Open ({systemTransactions.filter((t) => !t.isCleared).length})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSystemFilter('CLEARED')}
+                      className={`px-2.5 py-1 rounded font-medium ${
+                        systemFilter === 'CLEARED' ? 'bg-emerald-600 text-white' : 'text-slate-600'
+                      }`}
+                    >
+                      Cleared ({systemTransactions.filter((t) => t.isCleared).length})
+                    </button>
+                  </div>
+
+                  {/* Batch Tools */}
+                  <div className="flex items-center gap-1.5 pl-2 border-l border-slate-200">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleMarkAllVisibleCleared}
+                      className="text-xs h-7 px-2.5 text-emerald-700 border-emerald-300 hover:bg-emerald-50"
+                    >
+                      <CheckSquare className="h-3.5 w-3.5 mr-1" />
+                      <span>Clear All Visible</span>
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleUnmarkAllVisible}
+                      className="text-xs h-7 px-2 text-slate-500 hover:text-slate-800"
+                    >
+                      <Square className="h-3.5 w-3.5 mr-1" />
+                      <span>Unmark</span>
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Search Bar */}
+              <div className="p-2 border-b border-slate-100 bg-white">
+                <div className="relative">
+                  <Search className="h-4 w-4 absolute left-3 top-2.5 text-slate-400" />
+                  <Input
+                    placeholder="Search reference (DEP/CHQ), memo description, or amount..."
+                    value={systemSearch}
+                    onChange={(e) => setSystemSearch(e.target.value)}
+                    className="h-9 pl-9 text-xs border-slate-200 w-full"
+                  />
+                </div>
+              </div>
+
+              {/* Full Width Transactions Table */}
+              <div className="overflow-x-auto w-full">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-slate-50 border-b border-slate-200 text-[11px] font-bold uppercase tracking-wider text-slate-600">
+                    <tr>
+                      <th className="px-4 py-3 w-16 text-center">Verify</th>
+                      <th className="px-4 py-3 whitespace-nowrap">Date</th>
+                      <th className="px-4 py-3 whitespace-nowrap">Reference / Cheque</th>
+                      <th className="px-4 py-3">Description / Payee</th>
+                      <th className="px-4 py-3 text-center">Type</th>
+                      <th className="px-4 py-3 text-right">Inflow / Deposit (Dr)</th>
+                      <th className="px-4 py-3 text-right">Outflow / Payment (Cr)</th>
+                      <th className="px-4 py-3 text-center">Reconciliation Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {filteredManualSystemList.map((tx) => {
+                      return (
+                        <tr
+                          key={tx.id}
+                          onClick={() => handleToggleSystemCleared(tx.id)}
+                          className={`transition-colors cursor-pointer ${
+                            tx.isCleared
+                              ? 'bg-emerald-50/50 hover:bg-emerald-50/80'
+                              : 'hover:bg-slate-50/80'
+                          }`}
+                        >
+                          <td className="px-4 py-3 text-center" onClick={(e) => e.stopPropagation()}>
+                            <input
+                              type="checkbox"
+                              checked={tx.isCleared}
+                              onChange={() => handleToggleSystemCleared(tx.id)}
+                              className="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary cursor-pointer"
+                            />
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap text-slate-600 font-mono text-xs">
+                            {formatDate(tx.date)}
+                          </td>
+                          <td className="px-4 py-3 font-mono font-bold text-slate-900 whitespace-nowrap">
+                            <div className="flex items-center gap-1.5">
+                              <span>{tx.reference}</span>
+                              {tx.reference.startsWith('ADJ-') && (
+                                <DoubleEntryHoverBadge
+                                  lines={
+                                    tx.type === 'PAYMENT'
+                                      ? [
+                                          {
+                                            accountCode: '6030',
+                                            accountName: 'Bank Fee Expense',
+                                            type: 'DEBIT',
+                                            amount: tx.amount,
+                                          },
+                                          {
+                                            accountCode: selectedBankAccount?.code || '1010',
+                                            accountName: selectedBankAccount?.name || 'Bank Account',
+                                            type: 'CREDIT',
+                                            amount: tx.amount,
+                                          },
+                                        ]
+                                      : [
+                                          {
+                                            accountCode: selectedBankAccount?.code || '1010',
+                                            accountName: selectedBankAccount?.name || 'Bank Account',
+                                            type: 'DEBIT',
+                                            amount: tx.amount,
+                                          },
+                                          {
+                                            accountCode: '4010',
+                                            accountName: 'Interest Income',
+                                            type: 'CREDIT',
+                                            amount: tx.amount,
+                                          },
+                                        ]
+                                  }
+                                  title="Bank Adjustment GL Posting"
+                                />
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 text-slate-800 font-medium">
+                            {tx.description}
+                          </td>
+                          <td className="px-4 py-3 text-center whitespace-nowrap">
+                            {tx.debit > 0 ? (
+                              <Badge variant="outline" className="bg-primary-light text-primary-text border-primary-border text-[10px] gap-1 font-semibold">
+                                <ArrowDownLeft className="h-3 w-3 text-primary" />
+                                <span>Deposit</span>
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="bg-slate-100 text-slate-700 border-slate-200 text-[10px] gap-1 font-semibold">
+                                <ArrowUpRight className="h-3 w-3 text-slate-500" />
+                                <span>Payment</span>
+                              </Badge>
+                            )}
+                          </td>
+                          <td className="px-4 py-3 text-right font-mono font-bold text-primary text-sm whitespace-nowrap">
+                            {tx.debit > 0 ? formatCurrency(tx.debit) : '—'}
+                          </td>
+                          <td className="px-4 py-3 text-right font-mono font-bold text-emerald-700 text-sm whitespace-nowrap">
+                            {tx.credit > 0 ? formatCurrency(tx.credit) : '—'}
+                          </td>
+                          <td className="px-4 py-3 text-center whitespace-nowrap">
+                            <div className="flex items-center justify-center gap-1.5">
+                              {tx.isCleared ? (
+                                <Badge variant="outline" className="bg-emerald-50 text-emerald-800 border-emerald-300 text-[11px] font-semibold gap-1 px-2.5 py-0.5">
+                                  <Check className="h-3 w-3 text-emerald-600" />
+                                  <span>CLEARED (On Statement)</span>
+                                </Badge>
+                              ) : (
+                                <Badge variant="outline" className="bg-amber-50 text-amber-800 border-amber-300 text-[11px] font-semibold px-2.5 py-0.5">
+                                  <span>OUTSTANDING (In-Transit)</span>
+                                </Badge>
+                              )}
+                              {tx.id.startsWith('tx-adj-') && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => handleDeleteAdjustment(tx.id, e)}
+                                  title="Delete accidental adjustment"
+                                  className="p-1 rounded text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                    {filteredManualSystemList.length === 0 && (
+                      <tr>
+                        <td colSpan={8} className="px-4 py-10 text-center text-xs text-slate-400">
+                          No transactions found matching your criteria.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Comprehensive Bank Reconciliation Statement Breakdown Footer */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 bg-slate-50 border-t border-slate-200 text-xs">
+                <div>
+                  <span className="text-slate-400 block text-[10px] font-semibold uppercase">
+                    Bank Statement Ending Target
+                  </span>
+                  <span className="text-sm font-bold font-mono text-slate-900">
+                    {formatCurrency(targetStatementBalance)}
+                  </span>
+                  <span className="text-[10px] text-slate-500 block mt-0.5">From bank document</span>
+                </div>
+                <div>
+                  <span className="text-slate-400 block text-[10px] font-semibold uppercase">
+                    + Deposits in Transit ({unclearedDepositCount})
+                  </span>
+                  <span className="text-sm font-bold font-mono text-primary">
+                    +{formatCurrency(unclearedDeposits)}
+                  </span>
+                  <span className="text-[10px] text-slate-500 block mt-0.5">Not yet credited by bank</span>
+                </div>
+                <div>
+                  <span className="text-slate-400 block text-[10px] font-semibold uppercase">
+                    - Outstanding Cheques ({unclearedPaymentCount})
+                  </span>
+                  <span className="text-sm font-bold font-mono text-emerald-700">
+                    -{formatCurrency(unclearedPayments)}
+                  </span>
+                  <span className="text-[10px] text-slate-500 block mt-0.5">Unpresented by suppliers</span>
+                </div>
+                <div className="border-l border-slate-200 pl-4">
+                  <span className="text-slate-400 block text-[10px] font-semibold uppercase">
+                    = Reconciled Book Balance
+                  </span>
+                  <span className="text-sm font-bold font-mono text-slate-900">
+                    {formatCurrency(reconciledBookBalance)}
+                  </span>
+                  <span className="text-[10px] text-emerald-700 font-semibold block mt-0.5">
+                    Live ERP General Ledger Position
+                  </span>
+                </div>
+              </div>
+            </Card>
+          )}
+
           {/* Split-Pane Grid: Left = System Records, Right = Bank Statement */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className={workspaceViewMode === 'SPLIT' ? 'grid grid-cols-1 lg:grid-cols-2 gap-6' : 'hidden'}>
             {/* LEFT PANE: System General Ledger Transactions */}
             <div className="space-y-3">
               <Card className="border-slate-200 shadow-2xs overflow-hidden">
@@ -1428,7 +1969,7 @@ export function BankReconciliationPage() {
         </div>
       )}
 
-      {/* 6.3 Inline Adjustment Tool Modal */}
+      {/* 6.3 Inline Adjustment Tool Modal: Record Missing Bank Statement Entries */}
       <Dialog
         open={isAdjustmentModalOpen}
         onOpenChange={(open) => !open && setIsAdjustmentModalOpen(false)}
@@ -1436,7 +1977,7 @@ export function BankReconciliationPage() {
         <DialogHeader>
           <DialogTitle>Add Bank Reconciliation Adjustment</DialogTitle>
           <DialogDescription>
-            Post an immediate GL entry for bank charges, merchant fees, or interest income. The offset will lock to {selectedBankAccount?.name}.
+            Record transactions that appear on your physical/online bank statement but have not yet been booked in the ERP. This immediately posts to the General Ledger and marks as Cleared.
           </DialogDescription>
         </DialogHeader>
 
@@ -1444,32 +1985,128 @@ export function BankReconciliationPage() {
           {/* Locked Offset Bank Account */}
           <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg">
             <span className="text-[11px] font-semibold text-slate-500 uppercase block">
-              Locked Bank Account Offset
+              Reconciling Bank Account (Locked)
             </span>
             <span className="font-mono font-bold text-slate-900">
               {selectedBankAccount?.code} - {selectedBankAccount?.name}
             </span>
           </div>
 
-          {/* Adjustment Type */}
+          {/* 1. Transaction Direction Selector: Debit vs Credit */}
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+              Transaction Direction <span className="text-rose-500">*</span>
+            </label>
+            <div className="grid grid-cols-2 gap-3">
+              {/* Debit / Inflow Option */}
+              <button
+                type="button"
+                onClick={() => {
+                  setAdjustmentDirection('DEPOSIT');
+                  if (adjustmentType === 'FEE' || adjustmentType === 'DIRECT_PAYMENT') {
+                    setAdjustmentType('DIRECT_DEPOSIT');
+                  }
+                }}
+                className={`p-3 rounded-xl border text-left transition-all ${
+                  adjustmentDirection === 'DEPOSIT'
+                    ? 'bg-emerald-50 border-emerald-400 ring-2 ring-emerald-500/20 shadow-xs'
+                    : 'bg-white border-slate-200 hover:bg-slate-50 opacity-70 hover:opacity-100'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <div
+                    className={`p-1.5 rounded-lg ${
+                      adjustmentDirection === 'DEPOSIT'
+                        ? 'bg-emerald-600 text-white'
+                        : 'bg-slate-100 text-slate-600'
+                    }`}
+                  >
+                    <ArrowDownLeft className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <span className="font-bold text-xs text-slate-900 block">
+                      Money In / Deposit (DEBIT)
+                    </span>
+                    <span className="text-[10px] text-emerald-700 font-semibold block">
+                      + Dr Bank 1010 (Inflow)
+                    </span>
+                  </div>
+                </div>
+                <p className="text-[10px] text-slate-500 mt-1.5 leading-normal">
+                  Adds to Inflow (Dr). E.g. Customer direct wire, bank interest income.
+                </p>
+              </button>
+
+              {/* Credit / Outflow Option */}
+              <button
+                type="button"
+                onClick={() => {
+                  setAdjustmentDirection('PAYMENT');
+                  if (adjustmentType === 'DIRECT_DEPOSIT' || adjustmentType === 'INTEREST') {
+                    setAdjustmentType('FEE');
+                  }
+                }}
+                className={`p-3 rounded-xl border text-left transition-all ${
+                  adjustmentDirection === 'PAYMENT'
+                    ? 'bg-amber-50 border-amber-400 ring-2 ring-amber-500/20 shadow-xs'
+                    : 'bg-white border-slate-200 hover:bg-slate-50 opacity-70 hover:opacity-100'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <div
+                    className={`p-1.5 rounded-lg ${
+                      adjustmentDirection === 'PAYMENT'
+                        ? 'bg-amber-600 text-white'
+                        : 'bg-slate-100 text-slate-600'
+                    }`}
+                  >
+                    <ArrowUpRight className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <span className="font-bold text-xs text-slate-900 block">
+                      Money Out / Payment (CREDIT)
+                    </span>
+                    <span className="text-[10px] text-amber-700 font-semibold block">
+                      - Cr Bank 1010 (Outflow)
+                    </span>
+                  </div>
+                </div>
+                <p className="text-[10px] text-slate-500 mt-1.5 leading-normal">
+                  Adds to Outflow (Cr). E.g. Bank charges, standing orders, direct debit.
+                </p>
+              </button>
+            </div>
+          </div>
+
+          {/* Adjustment / Statement Transaction Type */}
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Adjustment Type
+                Statement Entry Type <span className="text-rose-500">*</span>
               </label>
               <Select
                 value={adjustmentType}
-                onChange={(e) => setAdjustmentType(e.target.value as any)}
+                onChange={(e) => {
+                  const val = e.target.value as any;
+                  setAdjustmentType(val);
+                  if (val === 'FEE' || val === 'DIRECT_PAYMENT') {
+                    setAdjustmentDirection('PAYMENT');
+                  } else {
+                    setAdjustmentDirection('DEPOSIT');
+                  }
+                }}
                 className="h-9 text-xs"
               >
-                <option value="FEE">Bank Fee / Charge (Expense)</option>
-                <option value="INTEREST">Interest Earned (Income)</option>
+                <option value="FEE">Bank Fee / Charge (Money Out - Expense)</option>
+                <option value="DIRECT_PAYMENT">Direct Debit / Standing Order / Tax (Money Out)</option>
+                <option value="DIRECT_DEPOSIT">Direct Customer Wire / Deposit (Money In)</option>
+                <option value="INTEREST">Interest Earned (Money In - Revenue)</option>
               </Select>
             </div>
 
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Adjustment Amount (LKR) <span className="text-rose-500">*</span>
+                Amount (LKR) <span className="text-rose-500">*</span>
               </label>
               <CurrencyInput
                 value={adjustmentAmount}
@@ -1482,23 +2119,35 @@ export function BankReconciliationPage() {
           {/* Offsetting GL Account Selector */}
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1">
-              {adjustmentType === 'FEE' ? 'Expense Account' : 'Income Account'}
+              {adjustmentType === 'FEE' || adjustmentType === 'DIRECT_PAYMENT'
+                ? 'Offsetting Expense / Payable Account'
+                : 'Offsetting Income / Customer Account'}
             </label>
             <Select
               value={offsetAccountId}
               onChange={(e) => setOffsetAccountId(e.target.value)}
               className="h-9 text-xs"
             >
-              <option value="">Default ({adjustmentType === 'FEE' ? '6030 Operating Overheads' : '4010 Sales / Income'})</option>
+              <option value="">
+                Default (
+                {adjustmentType === 'FEE'
+                  ? '6030 Bank Service Charges & Overheads'
+                  : adjustmentType === 'DIRECT_PAYMENT'
+                  ? '6010 Operating Overheads'
+                  : adjustmentType === 'INTEREST'
+                  ? '4010 Interest Revenue'
+                  : '4010 Direct Sales / Customer Remittance'}
+                )
+              </option>
               {accounts
                 .filter((a) =>
-                  adjustmentType === 'FEE'
-                    ? a.accountClass === 'EXPENSE'
-                    : a.accountClass === 'INCOME'
+                  adjustmentType === 'FEE' || adjustmentType === 'DIRECT_PAYMENT'
+                    ? a.accountClass === 'EXPENSE' || a.accountClass === 'LIABILITY'
+                    : a.accountClass === 'INCOME' || a.accountClass === 'ASSET'
                 )
                 .map((a) => (
                   <option key={a.id} value={a.id}>
-                    {a.code} - {a.name}
+                    {a.code} - {a.name} ({a.accountClass})
                   </option>
                 ))}
             </Select>
@@ -1507,7 +2156,7 @@ export function BankReconciliationPage() {
           {/* Description */}
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1">
-              Description / Memo
+              Description / Bank Narration Memo
             </label>
             <Input
               value={adjustmentDescription}
@@ -1529,11 +2178,11 @@ export function BankReconciliationPage() {
           <div className="flex items-center gap-2">
             <DoubleEntryHoverBadge
               lines={
-                adjustmentType === 'FEE'
+                adjustmentType === 'FEE' || adjustmentType === 'DIRECT_PAYMENT'
                   ? [
                       {
                         accountCode: accounts.find((a) => a.id === offsetAccountId)?.code || '6030',
-                        accountName: accounts.find((a) => a.id === offsetAccountId)?.name || 'Bank Service Charge Expense',
+                        accountName: accounts.find((a) => a.id === offsetAccountId)?.name || 'Offsetting Expense Account',
                         type: 'DEBIT',
                         amount: adjustmentAmount || 0,
                       },
@@ -1553,7 +2202,7 @@ export function BankReconciliationPage() {
                       },
                       {
                         accountCode: accounts.find((a) => a.id === offsetAccountId)?.code || '4010',
-                        accountName: accounts.find((a) => a.id === offsetAccountId)?.name || 'Interest Income',
+                        accountName: accounts.find((a) => a.id === offsetAccountId)?.name || 'Offsetting Income Account',
                         type: 'CREDIT',
                         amount: adjustmentAmount || 0,
                       },
