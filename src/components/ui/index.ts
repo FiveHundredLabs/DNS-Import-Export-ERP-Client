@@ -1,6 +1,6 @@
 /**
  * ==============================================================================
- * DNS DISTRIBUTION ERP — UI PRIMITIVES HUB
+ * DNS IMPORT & EXPORT ERP — UI PRIMITIVES HUB
  * ==============================================================================
  * Central barrel export for all Shadcn / Radix UI primitive components.
  * UI developers can import all standard design system components from `@/components/ui`.

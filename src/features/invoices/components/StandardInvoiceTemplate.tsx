@@ -24,7 +24,7 @@ export function StandardInvoiceTemplate({ invoice }: StandardInvoiceTemplateProp
               </div>
               <div>
                 <h1 className="text-lg font-bold tracking-tight text-slate-900 leading-none">
-                  DNS DISTRIBUTION (PVT) LTD
+                  DNS IMPORT & EXPORT (PVT) LTD
                 </h1>
                 <p className="text-[11px] font-medium text-slate-500 mt-0.5">
                   Authorized Wholesale Electrical, Automation & Industrial Switchgear Solutions
@@ -153,7 +153,7 @@ export function StandardInvoiceTemplate({ invoice }: StandardInvoiceTemplateProp
                 Remittance Advice & Banking Details
               </span>
               <p className="text-slate-600">Bank: Commercial Bank of Ceylon | Branch: City Office</p>
-              <p className="text-slate-600">Account Name: DNS Distribution (Pvt) Ltd</p>
+              <p className="text-slate-600">Account Name: DNS Import & Export (Pvt) Ltd</p>
               <p className="font-mono font-bold text-primary">Account No: 1000984721</p>
               <p className="text-[10px] text-slate-500 pt-0.5">
                 Please quote Invoice Number <strong>{invoice.invoiceNumber}</strong> upon remitting funds.

@@ -301,7 +301,7 @@ describe('Purchase Order Multi-Page A4 Printing & Document Architecture', () => 
       const po = generateMockPO(15);
       const html = pdfService.generatePurchaseOrderHtml(po);
 
-      expect(html).toContain('DNS DISTRIBUTION (PVT) LTD');
+      expect(html).toContain('DNS IMPORT & EXPORT (PVT) LTD');
       expect(html).toContain(po.poNumber);
       expect(html).toContain('PURCHASE ORDER');
       expect(html).toContain('@page {');

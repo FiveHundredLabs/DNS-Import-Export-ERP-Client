@@ -363,7 +363,7 @@ export function QuotationDetailPage() {
           {/* Document Header */}
           <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 border-b border-slate-200 pb-6">
             <div>
-              <h2 className="text-2xl font-semibold text-slate-900 tracking-tight">DNS DISTRIBUTION (PVT) LTD</h2>
+              <h2 className="text-2xl font-semibold text-slate-900 tracking-tight">DNS IMPORT & EXPORT (PVT) LTD</h2>
               <p className="text-xs text-slate-500 font-medium mt-0.5">
                 Authorized Electrical, Automation & Industrial Wholesale Distributor
               </p>

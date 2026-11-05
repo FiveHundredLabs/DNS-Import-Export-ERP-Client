@@ -34,7 +34,7 @@ export function IrdTaxInvoiceTemplate({ invoice }: IrdTaxInvoiceTemplateProps) {
                 </div>
                 <div>
                   <h1 className="text-base font-extrabold tracking-tight text-slate-950 uppercase">
-                    DNS DISTRIBUTION (PVT) LTD
+                    DNS IMPORT & EXPORT (PVT) LTD
                   </h1>
                   <p className="text-[10px] text-slate-600 font-medium">
                     142 First Cross Street, Colombo 11, Sri Lanka
@@ -221,7 +221,7 @@ export function IrdTaxInvoiceTemplate({ invoice }: IrdTaxInvoiceTemplateProps) {
                 "I/We hereby certify that the particulars given in this Tax Invoice are true and correct and that the value of supply and the tax charged herein comply with the Value Added Tax Act No. 14 of 2002 and amendments thereto."
               </p>
               <p className="text-[9.5px] text-slate-500">
-                Payment Terms: {invoice.paymentTerms || '30 Days Net'}. Remit strictly to DNS Distribution (Pvt) Ltd A/C No: 1000984721 at Commercial Bank of Ceylon.
+                Payment Terms: {invoice.paymentTerms || '30 Days Net'}. Remit strictly to DNS Import & Export (Pvt) Ltd A/C No: 1000984721 at Commercial Bank of Ceylon.
               </p>
             </div>
           </div>
@@ -284,7 +284,7 @@ export function IrdTaxInvoiceTemplate({ invoice }: IrdTaxInvoiceTemplateProps) {
             <div className="border-t border-dashed border-slate-400 w-36 mx-auto pt-1 text-[10px] uppercase font-bold text-slate-700">
               Authorized Signatory
             </div>
-            <p className="text-[9px] text-slate-500">For DNS Distribution (Pvt) Ltd</p>
+            <p className="text-[9px] text-slate-500">For DNS Import & Export (Pvt) Ltd</p>
           </div>
 
           <div className="space-y-1">

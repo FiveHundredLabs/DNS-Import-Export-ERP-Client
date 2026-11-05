@@ -342,7 +342,7 @@ export function LoginPage() {
             </div>
             <div>
               <div className="font-bold text-white tracking-tight text-base sm:text-lg flex items-center gap-2">
-                <span>DNS DISTRIBUTION ERP</span>
+                <span>DNS IMPORT & EXPORT ERP</span>
                 <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-primary-light/20 text-primary border border-primary/30">
                   ENTERPRISE v1.0
                 </span>
@@ -552,7 +552,7 @@ export function LoginPage() {
       {/* Standard Footer */}
       <footer className="relative z-10 border-t border-slate-800/80 bg-slate-900/90 py-3.5 px-6 text-center text-xs text-slate-400">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
-          <div>DNS Distribution ERP &bull; Role-Based Access Control Architecture (RBAC)</div>
+          <div>DNS Import & Export (Pvt) Ltd ERP &bull; Role-Based Access Control Architecture (RBAC)</div>
           <div className="flex items-center gap-4 text-2xs text-slate-400">
             <span>Enterprise 256-bit Encrypted Session</span>
             <span>&bull;</span>

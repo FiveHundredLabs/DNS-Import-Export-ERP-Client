@@ -145,7 +145,7 @@ function POFirstPageHeader({
             </div>
             <div>
               <h1 className="text-lg font-bold tracking-tight text-slate-900 leading-none">
-                DNS DISTRIBUTION (PVT) LTD
+                DNS IMPORT & EXPORT (PVT) LTD
               </h1>
               <p className="text-[11px] font-medium text-slate-500 mt-0.5">
                 Authorized Wholesale Electrical, Automation & Industrial Switchgear Solutions
@@ -247,7 +247,7 @@ function POContinuationHeader({
           DNS
         </div>
         <div>
-          <span className="font-bold text-slate-900 text-xs">DNS DISTRIBUTION (PVT) LTD</span>
+          <span className="font-bold text-slate-900 text-xs">DNS IMPORT & EXPORT (PVT) LTD</span>
           <span className="text-[10px] text-slate-500 ml-2 hidden sm:inline">
             VAT: 109847291-7000 | Procurement
           </span>
@@ -452,7 +452,7 @@ function POPageFooter({ page }: { page: POPageData }) {
   return (
     <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-[9px] text-slate-400">
       <span>
-        DNS Distribution (Pvt) Ltd • Official Purchase Order • Non-Transferable
+        DNS Import & Export (Pvt) Ltd • Official Purchase Order • Non-Transferable
       </span>
       <span className="font-bold text-slate-500 font-mono">
         Page {page.pageNumber} of {page.totalPages}

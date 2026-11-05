@@ -301,7 +301,7 @@ export function POSPaymentModal({
                 />
               </div>
               <div className="text-[11px] text-slate-500">
-                Showroom Account: Commercial Bank DNS Trading (A/C: 10008892110)
+                Showroom Account: Commercial Bank DNS Import & Export (Pvt) Ltd (A/C: 10008892110)
               </div>
             </div>
           )}

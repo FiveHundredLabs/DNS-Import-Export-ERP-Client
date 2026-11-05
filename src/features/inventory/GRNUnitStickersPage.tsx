@@ -183,7 +183,7 @@ export function GRNUnitStickersPage() {
     toast.info(`Preparing thermal print job for ${filteredStickers.length} stickers...`);
     printerService.printBarcodeStickers(
       filteredStickers.map((s) => ({
-        companyName: 'DNS Import and Export (Pvt) Ltd',
+        companyName: 'DNS Import & Export (Pvt) Ltd',
         productName: s.productName,
         sku: s.sku,
         unitBarcode: s.unitBarcode,
@@ -433,7 +433,7 @@ export function GRNUnitStickersPage() {
 
                     {/* Standard 50mm x 30mm Code-128 Physical Barcode Sticker */}
                     <BarcodeSticker
-                      companyName="DNS Import and Export (Pvt) Ltd"
+                      companyName="DNS Import & Export (Pvt) Ltd"
                       productName={sticker.productName}
                       sku={sticker.sku}
                       unitBarcode={sticker.unitBarcode}

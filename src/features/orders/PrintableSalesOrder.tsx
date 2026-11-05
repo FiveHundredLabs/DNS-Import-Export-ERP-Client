@@ -111,7 +111,7 @@ export function PrintableSalesOrder({ order, open, onOpenChange }: PrintableSale
               <div className="flex justify-between items-start">
                 <div>
                   <h1 className="text-2xl font-black tracking-tight text-slate-900 uppercase">
-                    DNS Distribution (Pvt) Ltd
+                    DNS Import & Export (Pvt) Ltd
                   </h1>
                   <p className="text-xs text-slate-600 font-semibold mt-0.5">
                     Authorized Electrical, Industrial Switchgear &amp; Automation Importers
@@ -343,7 +343,7 @@ export function PrintableSalesOrder({ order, open, onOpenChange }: PrintableSale
               </div>
 
               <div className="mt-8 text-center text-[10px] text-slate-400">
-                This Sales Order Confirmation is generated via DNS Distribution ERP. Goods remain property of DNS Distribution (Pvt) Ltd until full settlement.
+                This Sales Order Confirmation is generated via DNS Import & Export ERP. Goods remain property of DNS Import & Export (Pvt) Ltd until full settlement.
                 <br />Printed: {new Date().toLocaleString()} • Form ERP-SO-01 Rev 2
               </div>
             </div>

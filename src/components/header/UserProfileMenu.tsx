@@ -141,7 +141,7 @@ export function UserProfileMenu({ className }: UserProfileMenuProps) {
             <div className="mt-2.5 pt-2 border-t border-slate-200/60 flex items-center justify-between text-[10.5px] text-slate-500">
               <span className="flex items-center gap-1">
                 <Building className="h-3 w-3 text-slate-400" />
-                DNS Distribution LK
+                DNS Import & Export (Pvt) Ltd
               </span>
               <span className="font-mono text-slate-400">ID: EMP-{currentUser.id.slice(-4).toUpperCase()}</span>
             </div>

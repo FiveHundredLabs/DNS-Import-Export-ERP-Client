@@ -47,7 +47,7 @@ export function ThermalReceiptModal({
 
   const handleShareWhatsApp = () => {
     const lines = [
-      `*DNS DISTRIBUTION (PVT) LTD*`,
+      `*DNS IMPORT & EXPORT (PVT) LTD*`,
       `*COLLECTION ACKNOWLEDGEMENT*`,
       `---------------------------------`,
       `*Receipt No:* ${payment.receiptNumber}`,
@@ -132,7 +132,7 @@ export function ThermalReceiptModal({
                   D
                 </span>
                 <span className="font-extrabold text-sm sm:text-base tracking-wide text-black">
-                  DNS DISTRIBUTION (PVT) LTD
+                  DNS IMPORT & EXPORT (PVT) LTD
                 </span>
               </div>
               <div className="text-[10px] text-neutral-700 font-sans font-medium">

@@ -37,7 +37,7 @@ describe('Phase 8 — POS UI Components & Terminal Experience', () => {
       />
     );
 
-    expect(screen.getAllByText('DNS DISTRIBUTION (PVT) LTD').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('DNS IMPORT & EXPORT (PVT) LTD').length).toBeGreaterThan(0);
     expect(screen.getByText('Showroom Sales Outlet')).toBeInTheDocument();
     expect(screen.getByText(tx.receiptNumber)).toBeInTheDocument();
     expect(screen.getByText(tx.cashierName)).toBeInTheDocument();

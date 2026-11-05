@@ -27,7 +27,7 @@ export class WhatsAppService {
     totalAmount: number;
     downloadUrl: string;
   }): void {
-    const text = `Dear ${params.customerName},\n\nPlease find your official ${params.documentType} (${params.documentNumber}) amounting to LKR ${params.totalAmount.toLocaleString()} from DNS Distribution.\n\nYou can view and download your document here:\n${params.downloadUrl}\n\nThank you for choosing DNS Distribution.`;
+    const text = `Dear ${params.customerName},\n\nPlease find your official ${params.documentType} (${params.documentNumber}) amounting to LKR ${params.totalAmount.toLocaleString()} from DNS Import & Export.\n\nYou can view and download your document here:\n${params.downloadUrl}\n\nThank you for choosing DNS Import & Export.`;
     const url = this.generateShareUrl(params.phoneNumber, text);
     window.open(url, '_blank', 'noopener,noreferrer');
   }
@@ -42,7 +42,7 @@ export class WhatsAppService {
       .join('\n');
 
     const message =
-      `*DNS DISTRIBUTION (PVT) LTD*\n` +
+      `*DNS IMPORT & EXPORT (PVT) LTD*\n` +
       `*Official Quotation: ${quotation.quotationNumber}*\n\n` +
       `*Customer:* ${quotation.customerNameSnapshot} (${quotation.customerCodeSnapshot})\n` +
       `*Date:* ${new Date(quotation.createdAt).toLocaleDateString()}\n` +
@@ -57,7 +57,7 @@ export class WhatsAppService {
       `*GRAND TOTAL:* LKR ${quotation.totalAmount.toLocaleString()}\n\n` +
       `View or download your quotation:\n` +
       `https://portal.dnserp.com/quotations/${quotation.quotationNumber}\n\n` +
-      `Thank you for choosing DNS Distribution!`;
+      `Thank you for choosing DNS Import & Export!`;
 
     const url = this.generateShareUrl(phone, message);
     window.open(url, '_blank', 'noopener,noreferrer');
@@ -73,7 +73,7 @@ export class WhatsAppService {
       .join('\n');
 
     const message =
-      `*DNS DISTRIBUTION (PVT) LTD*\n` +
+      `*DNS IMPORT & EXPORT (PVT) LTD*\n` +
       `*Commercial Tax Invoice: ${invoice.invoiceNumber}*\n\n` +
       `*Customer:* ${invoice.customerName} (${invoice.customerCode})\n` +
       `*Order Ref:* ${invoice.orderNumber}\n` +
@@ -104,7 +104,7 @@ export class WhatsAppService {
       .join('\n');
 
     const message =
-      `*DNS DISTRIBUTION (PVT) LTD*\n` +
+      `*DNS IMPORT & EXPORT (PVT) LTD*\n` +
       `*Payment Collection Receipt: ${payment.receiptNumber}*\n\n` +
       `*Customer:* ${payment.customerName}\n` +
       `*Date:* ${new Date(payment.collectedAt).toLocaleDateString()}\n` +
