@@ -550,10 +550,13 @@ describe('Stock Manager Workflow-Specific Approval System', () => {
       expect(screen.getByRole('button', { name: /Delivery Note Customer Rejections/i })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /Verification Audit Log & History/i })).toBeInTheDocument();
 
-      // Wait for data load and verify pending GRN table renders cleanly
+      // Wait for data load and verify pending GRN sections render cleanly
       await waitFor(() => {
         expect(
-          screen.getByText('Inbound Goods Receipts Pending Approval')
+          screen.getByText('GRNs Pending Stock Manager Approval')
+        ).toBeInTheDocument();
+        expect(
+          screen.getByText('GRNs Pending Finance Manager Approval')
         ).toBeInTheDocument();
       });
 
@@ -637,7 +640,7 @@ describe('Stock Manager Workflow-Specific Approval System', () => {
       expect(screen.getByRole('button', { name: /Decline Rejection/i })).toBeInTheDocument();
     });
 
-    it('shows ONLY GRNs that are pending approval and navigates to the full GRN document when clicked', async () => {
+    it('shows two sections for Stage 1 (Stock Manager) and Stage 2 (Finance Manager) approvals and navigates to the full GRN document when clicked', async () => {
       authService.switchRole('STOCK_MANAGER');
 
       render(
@@ -646,28 +649,28 @@ describe('Stock Manager Workflow-Specific Approval System', () => {
         </MemoryRouter>
       );
 
-      // Wait for data load
+      // Wait for data load and verify both approval stages are displayed
       await waitFor(() => {
-        expect(screen.getByText('Inbound Goods Receipts Pending Approval')).toBeInTheDocument();
+        expect(screen.getByText('GRNs Pending Stock Manager Approval')).toBeInTheDocument();
+        expect(screen.getByText('GRNs Pending Finance Manager Approval')).toBeInTheDocument();
       });
 
-      // Verify GRN Queue shows strictly Pending Approval count
-      expect(screen.getByText(/Pending Approval \(/i)).toBeInTheDocument();
+      // Verify Active Queues filter button is present
+      expect(screen.getByRole('button', { name: /Active Queues/i })).toBeInTheDocument();
 
-      // Non-pending status filter buttons ('Verified / Forwarded', 'All GRNs') should NOT exist
-      expect(screen.queryByRole('button', { name: 'Verified / Forwarded' })).not.toBeInTheDocument();
-      expect(screen.queryByRole('button', { name: 'All GRNs' })).not.toBeInTheDocument();
-
-      // Verify pending GRNs are displayed (e.g. GRN-2025-007, GRN-2025-008)
+      // Verify pending Stage 1 GRNs are displayed (e.g. GRN-2025-007, GRN-2025-008)
       expect(screen.getAllByText('GRN-2025-007').length).toBeGreaterThan(0);
       expect(screen.getAllByText('GRN-2025-008').length).toBeGreaterThan(0);
 
-      // Verify already approved GRN-2025-001 is NOT listed in the pending approvals table
-      expect(screen.queryByText('GRN-2025-001')).not.toBeInTheDocument();
+      // Verify pending Stage 2 GRNs are displayed (e.g. GRN-2025-004, GRN-2025-005)
+      expect(screen.getAllByText('GRN-2025-004').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('GRN-2025-005').length).toBeGreaterThan(0);
 
-      // Verify "Inspect Full GRN Document" action button is available on the pending GRN rows
-      const inspectButtons = screen.getAllByRole('button', { name: /Inspect Full GRN Document/i });
+      // Verify action buttons exist for both stages
+      const inspectButtons = screen.getAllByRole('button', { name: /Inspect & Verify/i });
       expect(inspectButtons.length).toBeGreaterThan(0);
+      const viewDetailsButtons = screen.getAllByRole('button', { name: /View Details/i });
+      expect(viewDetailsButtons.length).toBeGreaterThan(0);
     });
 
     it('Stock Manager approval forwards GRN to Finance and DOES NOT post to inventory; only Finance approval posts stock', async () => {

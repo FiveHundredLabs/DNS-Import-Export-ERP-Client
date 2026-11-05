@@ -70,7 +70,7 @@ export const StockManagerApprovalHub: React.FC = () => {
   
   // Filters & Search
   const [searchQuery, setSearchQuery] = useState('');
-  const [grnStatusFilter, setGrnStatusFilter] = useState<'ALL' | 'PENDING' | 'SUBMITTED' | 'REJECTED'>('ALL');
+  const [grnStatusFilter, setGrnStatusFilter] = useState<'PENDING' | 'AUTHORIZED' | 'REJECTED' | 'ALL'>('PENDING');
   const [dnStatusFilter, setDnStatusFilter] = useState<'ALL' | 'PENDING' | 'APPROVED' | 'DECLINED'>('ALL');
 
   // Decision panel state
@@ -96,10 +96,6 @@ export const StockManagerApprovalHub: React.FC = () => {
       ]);
       setGrns(allGrns);
       setDeliveryNotes(allDns);
-
-      
-
-      
     } catch (err: any) {
       toast.error('Failed to load approval queues: ' + err.message);
     } finally {
@@ -117,18 +113,8 @@ export const StockManagerApprovalHub: React.FC = () => {
     setSearchParams({ tab });
   };
 
-  // Pending counts
-  const pendingGRNCount = useMemo(
-    () => grns.filter((g) => g.status === 'PENDING_STOCK_MANAGER_APPROVAL').length,
-    [grns]
-  );
-  const pendingRejectionCount = useMemo(
-    () => deliveryNotes.filter((d) => d.status === 'REJECTION_PENDING_APPROVAL').length,
-    [deliveryNotes]
-  );
-
-  // Filtered GRN list - Show ONLY GRNs that are pending approval
-  const filteredGrns = useMemo(() => {
+  // Stage 1: GRNs Pending Stock Manager Approval
+  const stage1PendingGrns = useMemo(() => {
     return grns.filter((g) => {
       const isPending =
         g.status === 'PENDING_STOCK_MANAGER_APPROVAL' ||
@@ -141,11 +127,72 @@ export const StockManagerApprovalHub: React.FC = () => {
         const matchesSup = g.supplierName.toLowerCase().includes(q);
         const matchesPo = (g.purchaseOrderNumber || g.poNumber || '').toLowerCase().includes(q);
         const matchesWh = (g.warehouseId || '').toLowerCase().includes(q);
-        if (!matchesRef && !matchesSup && !matchesPo && !matchesWh) return false;
+        const matchesBy = (g.receivedByName || '').toLowerCase().includes(q);
+        if (!matchesRef && !matchesSup && !matchesPo && !matchesWh && !matchesBy) return false;
       }
       return true;
     });
   }, [grns, searchQuery]);
+
+  // Stage 2: GRNs Pending Finance Manager Approval (Stock Manager has approved, awaiting Finance landed costing)
+  const stage2PendingFinanceGrns = useMemo(() => {
+    return grns.filter((g) => {
+      const isStage2 =
+        g.status === 'SUBMITTED' ||
+        (g.stockManagerApproval?.status === 'APPROVED' &&
+          g.status !== 'APPROVED' &&
+          g.status !== 'COSTED' &&
+          g.status !== 'PRICED' &&
+          g.status !== 'REJECTED' &&
+          g.status !== 'STOCK_MANAGER_REJECTED');
+      if (!isStage2) return false;
+
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase().trim();
+        const matchesRef = g.grnNumber.toLowerCase().includes(q);
+        const matchesSup = g.supplierName.toLowerCase().includes(q);
+        const matchesPo = (g.purchaseOrderNumber || g.poNumber || '').toLowerCase().includes(q);
+        const matchesWh = (g.warehouseId || '').toLowerCase().includes(q);
+        const matchesBy = (g.receivedByName || g.stockManagerApproval?.approvedByName || '').toLowerCase().includes(q);
+        if (!matchesRef && !matchesSup && !matchesPo && !matchesWh && !matchesBy) return false;
+      }
+      return true;
+    });
+  }, [grns, searchQuery]);
+
+  // Table GRNs when a non-pending filter is selected
+  const tableFilteredGrns = useMemo(() => {
+    return grns.filter((g) => {
+      if (grnStatusFilter === 'AUTHORIZED') {
+        const isAuth = g.status === 'APPROVED' || g.status === 'COSTED' || g.status === 'PRICED';
+        if (!isAuth) return false;
+      } else if (grnStatusFilter === 'REJECTED') {
+        const isRej =
+          g.status === 'STOCK_MANAGER_REJECTED' ||
+          g.status === 'REJECTED' ||
+          g.stockManagerApproval?.status === 'REJECTED';
+        if (!isRej) return false;
+      }
+
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase().trim();
+        const matchesRef = g.grnNumber.toLowerCase().includes(q);
+        const matchesSup = g.supplierName.toLowerCase().includes(q);
+        const matchesPo = (g.purchaseOrderNumber || g.poNumber || '').toLowerCase().includes(q);
+        const matchesWh = (g.warehouseId || '').toLowerCase().includes(q);
+        const matchesBy = (g.receivedByName || g.stockManagerApproval?.approvedByName || '').toLowerCase().includes(q);
+        if (!matchesRef && !matchesSup && !matchesPo && !matchesWh && !matchesBy) return false;
+      }
+      return true;
+    });
+  }, [grns, grnStatusFilter, searchQuery]);
+
+  // Pending counts
+  const pendingGRNCount = stage1PendingGrns.length;
+  const pendingRejectionCount = useMemo(
+    () => deliveryNotes.filter((d) => d.status === 'REJECTION_PENDING_APPROVAL').length,
+    [deliveryNotes]
+  );
 
   // Pending and Rejected Distribution Notes list
   const pendingAndRejectedDns = useMemo(() => {
@@ -265,82 +312,331 @@ export const StockManagerApprovalHub: React.FC = () => {
       </div>
 
       {/* ═══════════════════════════════════════════════════════════════════════ */}
-      {/* TAB 1: GRN PHYSICAL INTAKE VERIFICATIONS (SPLIT LAYOUT)               */}
+      {/* TAB 1: GRN PHYSICAL INTAKE VERIFICATIONS (TWO-STAGE APPROVAL WORKFLOW)  */}
       {/* ═══════════════════════════════════════════════════════════════════════ */}
       {activeTab === 'grn' && (
         <div className="space-y-4">
-          {/* GRN Queue Bar - Showing ONLY GRNs that are pending approval */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50/80 p-3 rounded-xl border border-slate-200">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-xs font-bold text-slate-700">GRN Queue:</span>
-              <Badge className="bg-amber-100 text-amber-800 border-amber-300 font-semibold px-2.5 py-1 text-xs">
-                Pending Approval ({filteredGrns.length})
-              </Badge>
-              <span className="text-2xs text-slate-400 font-medium hidden sm:inline">
-                (Showing only inbound receipts awaiting Stock Manager verification)
-              </span>
-            </div>
+          {/* SEARCH & STATUS FILTER TOOLBAR */}
+          <Card className="border-slate-200 shadow-2xs bg-white">
+            <CardContent className="p-3">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                  <Input
+                    placeholder="Search by GRN #, supplier name, or warehouse..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-9 h-8 text-xs bg-slate-50/50 border-slate-200 focus-visible:bg-white"
+                  />
+                </div>
 
-            
-          </div>
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 shrink-0">
+                  <Button
+                    variant={grnStatusFilter === 'PENDING' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setGrnStatusFilter('PENDING')}
+                    className="h-7 text-xs font-semibold whitespace-nowrap"
+                  >
+                    Active Queues (Pending SM &amp; Finance)
+                  </Button>
+                  <Button
+                    variant={grnStatusFilter === 'AUTHORIZED' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setGrnStatusFilter('AUTHORIZED')}
+                    className="h-7 text-xs font-semibold whitespace-nowrap"
+                  >
+                    Authorized / Costed
+                  </Button>
+                  <Button
+                    variant={grnStatusFilter === 'REJECTED' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setGrnStatusFilter('REJECTED')}
+                    className="h-7 text-xs font-semibold whitespace-nowrap"
+                  >
+                    Rejected
+                  </Button>
+                  <Button
+                    variant={grnStatusFilter === 'ALL' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setGrnStatusFilter('ALL')}
+                    className="h-7 text-xs font-semibold whitespace-nowrap"
+                  >
+                    All Requests
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
           {loading ? (
             <TableLoadingSkeleton />
-          ) : filteredGrns.length === 0 ? (
-            <Card className="p-12 text-center border-dashed border-slate-200 bg-white">
-              <Warehouse className="h-10 w-10 text-slate-300 mx-auto mb-2" />
-              <h3 className="text-sm font-bold text-slate-700">No GRNs Pending Approval</h3>
-              <p className="text-xs text-slate-500 mt-1">
-                All inbound goods receipts have been verified and forwarded to Finance.
-              </p>
-            </Card>
-          ) : (
-            <Card className="border-slate-200 shadow-2xs overflow-hidden bg-white mb-4">
-                <CardHeader className="bg-slate-50/70 border-b border-slate-200/80 p-3.5 sm:p-4">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+          ) : grnStatusFilter === 'PENDING' ? (
+            /* TWO SECTIONS FOR STOCK MANAGER:
+               1. GRNs Pending Stock Manager Approval
+               2. GRNs Pending Finance Manager Approval */
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-stretch">
+              {/* SECTION 1: GRNs Pending Stock Manager Approval */}
+              <Card className="border-slate-200 shadow-2xs bg-white flex flex-col h-full">
+                <CardHeader className="bg-amber-50/70 border-b border-amber-200/70 px-4 py-3 shrink-0">
+                  <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <div className="p-1.5 rounded-md bg-amber-500/10 text-amber-600">
-                        <Warehouse className="h-4 w-4" />
-                      </div>
-                      <div>
-                        <CardTitle className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                          <span>Inbound Goods Receipts Pending Approval</span>
-                          <Badge variant="outline" className="text-2xs font-mono font-semibold bg-white text-amber-800 border-amber-300">
-                            {filteredGrns.length} Pending
-                          </Badge>
-                        </CardTitle>
-                        <p className="text-xs text-slate-500 mt-0.5">
-                          Click any pending GRN to open its full physical verification document with serialization, barcode audit, and approval controls.
-                        </p>
-                      </div>
+                      <Warehouse className="h-4 w-4 text-amber-600" />
+                      <CardTitle className="text-sm font-bold text-slate-900">
+                        GRNs Pending Stock Manager Approval
+                      </CardTitle>
+                    </div>
+                    <Badge variant="outline" className="bg-amber-100 text-amber-800 border-amber-300 font-mono text-xs font-bold">
+                      {stage1PendingGrns.length} Awaiting SM
+                    </Badge>
+                  </div>
+                  <p className="text-2xs text-slate-500 mt-0.5">
+                    Stage 1: Inbound goods receipts submitted by Stock Keepers awaiting Stock Manager physical verification.
+                  </p>
+                </CardHeader>
+                <CardContent className="p-3 space-y-2.5 flex-1 flex flex-col justify-start">
+                  {stage1PendingGrns.length === 0 ? (
+                    <div className="flex-1 flex flex-col items-center justify-center py-8 text-center text-slate-400 text-xs min-h-[160px]">
+                      <CheckCircle2 className="h-6 w-6 text-emerald-400 mx-auto mb-1 opacity-70" />
+                      <p className="font-semibold text-slate-600">No GRNs Pending Stock Manager Approval</p>
+                      <p className="text-2xs">All inbound receipts have been verified or no receipts are currently in Stage 1.</p>
+                    </div>
+                  ) : (
+                    stage1PendingGrns.map((g) => {
+                      const totalDamaged = (g.items || []).reduce((sum, item) => sum + (item.damagedQuantity || 0), 0);
+                      const totalReceived = (g.items || []).reduce((sum, item) => sum + (item.receivedQuantity || 0), 0);
+                      return (
+                        <div
+                          key={g.id}
+                          onClick={() => navigate(`/inventory/grn/${g.id}`)}
+                          className="p-3 rounded-xl border border-slate-200 bg-white hover:border-amber-400 hover:bg-amber-50/40 text-xs cursor-pointer transition-all space-y-2 shadow-2xs group"
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="space-y-1 min-w-0 flex-1">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="font-mono font-bold text-slate-900 text-xs group-hover:text-amber-800">
+                                  {g.grnNumber}
+                                </span>
+                                <Badge variant="outline" className="bg-amber-100 text-amber-800 border-amber-300 text-2xs font-semibold">
+                                  Pending SM Approval
+                                </Badge>
+                                {totalDamaged > 0 && (
+                                  <Badge variant="outline" className="bg-rose-100 text-rose-800 border-rose-300 text-2xs font-bold">
+                                    {totalDamaged} Damaged
+                                  </Badge>
+                                )}
+                              </div>
+                              <div className="text-2xs text-slate-600 truncate">
+                                <span className="text-slate-400">Supplier:</span>{' '}
+                                <span className="font-semibold text-slate-700">{g.supplierName}</span>
+                              </div>
+                              <div className="text-2xs text-slate-500 flex items-center gap-2">
+                                <span><span className="text-slate-400">PO:</span> {g.purchaseOrderNumber || g.poNumber || 'N/A'}</span>
+                                <span>&bull;</span>
+                                <span><span className="text-slate-400">Warehouse:</span> {g.warehouseId || 'WH-MAIN'}</span>
+                              </div>
+                              <div className="text-2xs text-slate-500">
+                                <span className="text-slate-400">Received By:</span> {g.receivedByName || 'Stock Keeper'}
+                              </div>
+                            </div>
+
+                            <div className="text-right shrink-0">
+                              <div className="font-mono font-bold text-slate-900 text-xs">
+                                {formatCurrency(g.totalValue || 0)}
+                              </div>
+                              <div className="text-2xs text-slate-400 mt-1">
+                                {formatDate(g.submittedAt || g.createdAt || new Date().toISOString())}
+                              </div>
+                              <div className="text-2xs text-slate-500 font-mono mt-0.5">
+                                {g.items?.length || 0} lines &bull; {totalReceived} units
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
+                            <span className="text-2xs text-slate-500">Stage 1: Physical Verification</span>
+                            <Button
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                navigate(`/inventory/grn/${g.id}`);
+                              }}
+                              className="h-6 text-2xs font-semibold gap-1 bg-amber-600 hover:bg-amber-700 text-white shadow-2xs"
+                            >
+                              <span>Inspect &amp; Verify</span>
+                              <ExternalLink className="h-2.5 w-2.5" />
+                            </Button>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* SECTION 2: GRNs Pending Finance Manager Approval */}
+              <Card className="border-slate-200 shadow-2xs bg-white flex flex-col h-full">
+                <CardHeader className="bg-blue-50/70 border-b border-blue-200/70 px-4 py-3 shrink-0">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <ShieldCheck className="h-4 w-4 text-blue-600" />
+                      <CardTitle className="text-sm font-bold text-slate-900">
+                        GRNs Pending Finance Manager Approval
+                      </CardTitle>
+                    </div>
+                    <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-300 font-mono text-xs font-bold">
+                      {stage2PendingFinanceGrns.length} Awaiting Finance
+                    </Badge>
+                  </div>
+                  <p className="text-2xs text-slate-500 mt-0.5">
+                    Stage 2: Stock-verified GRNs awaiting Finance landed costing and inventory posting.
+                  </p>
+                </CardHeader>
+                <CardContent className="p-3 space-y-2.5 flex-1 flex flex-col justify-start">
+                  {stage2PendingFinanceGrns.length === 0 ? (
+                    <div className="flex-1 flex flex-col items-center justify-center py-8 text-center text-slate-400 text-xs min-h-[160px]">
+                      <Clock className="h-6 w-6 text-slate-300 mx-auto mb-1 opacity-70" />
+                      <p className="font-semibold text-slate-600">No GRNs Pending Finance Approval</p>
+                      <p className="text-2xs">No verified inbound receipts are currently awaiting Finance landed costing.</p>
+                    </div>
+                  ) : (
+                    stage2PendingFinanceGrns.map((g) => {
+                      const totalDamaged = (g.items || []).reduce((sum, item) => sum + (item.damagedQuantity || 0), 0);
+                      const totalReceived = (g.items || []).reduce((sum, item) => sum + (item.receivedQuantity || 0), 0);
+                      return (
+                        <div
+                          key={g.id}
+                          onClick={() => navigate(`/inventory/grn/${g.id}`)}
+                          className="p-3 rounded-xl border border-slate-200 bg-white hover:border-blue-400 hover:bg-blue-50/40 text-xs cursor-pointer transition-all space-y-2 shadow-2xs group"
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="space-y-1 min-w-0 flex-1">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="font-mono font-bold text-slate-900 text-xs group-hover:text-blue-800">
+                                  {g.grnNumber}
+                                </span>
+                                <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-300 text-2xs font-semibold">
+                                  Awaiting Finance
+                                </Badge>
+                                {totalDamaged > 0 && (
+                                  <Badge variant="outline" className="bg-rose-100 text-rose-800 border-rose-300 text-2xs font-bold">
+                                    {totalDamaged} Damaged
+                                  </Badge>
+                                )}
+                              </div>
+                              <div className="text-2xs text-slate-600 truncate">
+                                <span className="text-slate-400">Supplier:</span>{' '}
+                                <span className="font-semibold text-slate-700">{g.supplierName}</span>
+                              </div>
+                              <div className="text-2xs text-slate-500 flex items-center gap-2">
+                                <span><span className="text-slate-400">PO:</span> {g.purchaseOrderNumber || g.poNumber || 'N/A'}</span>
+                                <span>&bull;</span>
+                                <span><span className="text-slate-400">Warehouse:</span> {g.warehouseId || 'WH-MAIN'}</span>
+                              </div>
+                              <div className="text-2xs text-slate-500">
+                                <span className="text-slate-400">Verified by:</span>{' '}
+                                <span className="font-semibold text-slate-700">
+                                  {g.stockManagerApproval?.approvedByName || g.verifiedByName || 'Stock Manager'}
+                                </span>
+                              </div>
+                            </div>
+
+                            <div className="text-right shrink-0">
+                              <div className="font-mono font-bold text-slate-900 text-xs">
+                                {formatCurrency(g.totalValue || 0)}
+                              </div>
+                              <div className="text-2xs text-slate-400 mt-1">
+                                {formatDate(g.stockManagerApproval?.approvedAt || g.submittedAt || new Date().toISOString())}
+                              </div>
+                              <div className="text-2xs text-slate-500 font-mono mt-0.5">
+                                {g.items?.length || 0} lines &bull; {totalReceived} units
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
+                            <span className="text-2xs text-slate-500">
+                              {role === 'STOCK_MANAGER'
+                                ? 'Awaiting Finance (View-Only)'
+                                : 'Awaiting Finance Landed Costing'}
+                            </span>
+                            <Button
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                navigate(`/inventory/grn/${g.id}`);
+                              }}
+                              className="h-6 text-2xs font-semibold gap-1 bg-blue-600 hover:bg-blue-700 text-white shadow-2xs"
+                            >
+                              <span>
+                                {role === 'STOCK_MANAGER'
+                                  ? 'View Details (View-Only)'
+                                  : 'Review & Costing'}
+                              </span>
+                              <ExternalLink className="h-2.5 w-2.5" />
+                            </Button>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          ) : (
+            /* NON-PENDING FILTERED GRNS TABLE */
+            <Card className="border-slate-200 shadow-2xs overflow-hidden bg-white mb-4">
+              <CardHeader className="bg-slate-50/70 border-b border-slate-200/80 p-3.5 sm:p-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                  <div className="flex items-center gap-2">
+                    <div className="p-1.5 rounded-md bg-amber-500/10 text-amber-600">
+                      <Warehouse className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                        <span>Inbound Goods Receipts Records</span>
+                        <Badge variant="outline" className="text-2xs font-mono font-semibold bg-white text-slate-700 border-slate-300">
+                          {tableFilteredGrns.length} Records
+                        </Badge>
+                      </CardTitle>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        Inbound warehouse receipts matching the selected status filter.
+                      </p>
                     </div>
                   </div>
-                </CardHeader>
-                <CardContent className="p-0">
-                  <div className="overflow-x-auto">
-                    <Table className="text-xs">
-                      <TableHeader className="bg-slate-100/70 border-b border-slate-200 text-slate-600 font-semibold text-2xs uppercase tracking-wider">
+                </div>
+              </CardHeader>
+              <CardContent className="p-0">
+                <div className="overflow-x-auto">
+                  <Table className="text-xs">
+                    <TableHeader className="bg-slate-100/70 border-b border-slate-200 text-slate-600 font-semibold text-2xs uppercase tracking-wider">
+                      <TableRow>
+                        <TableHead className="w-36 py-2.5 px-3">GRN Reference #</TableHead>
+                        <TableHead className="py-2.5 px-3">Supplier Name</TableHead>
+                        <TableHead className="py-2.5 px-3">Linked PO #</TableHead>
+                        <TableHead className="py-2.5 px-3">Warehouse &amp; Date</TableHead>
+                        <TableHead className="py-2.5 px-3">Verified / Received By</TableHead>
+                        <TableHead className="py-2.5 px-3 text-center">Lines &amp; Units</TableHead>
+                        <TableHead className="py-2.5 px-3 text-center">Damaged</TableHead>
+                        <TableHead className="py-2.5 px-3 text-center">Status</TableHead>
+                        <TableHead className="py-2.5 px-3 text-right">Action</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody className="divide-y divide-slate-100 font-sans">
+                      {tableFilteredGrns.length === 0 ? (
                         <TableRow>
-                          <TableHead className="w-36 py-2.5 px-3">GRN Reference #</TableHead>
-                          <TableHead className="py-2.5 px-3">Supplier Name</TableHead>
-                          <TableHead className="py-2.5 px-3">Linked PO #</TableHead>
-                          <TableHead className="py-2.5 px-3">Warehouse &amp; Date</TableHead>
-                          <TableHead className="py-2.5 px-3">Submitted By</TableHead>
-                          <TableHead className="py-2.5 px-3 text-center">Lines &amp; Units</TableHead>
-                          <TableHead className="py-2.5 px-3 text-center">Damaged</TableHead>
-                          <TableHead className="py-2.5 px-3 text-center">Status</TableHead>
-                          <TableHead className="py-2.5 px-3 text-right">Action</TableHead>
+                          <TableCell colSpan={9} className="py-8 text-center text-slate-400">
+                            No goods receipts found matching this filter.
+                          </TableCell>
                         </TableRow>
-                      </TableHeader>
-                      <TableBody className="divide-y divide-slate-100 font-sans">
-                        {filteredGrns.map((g) => {
+                      ) : (
+                        tableFilteredGrns.map((g) => {
                           const totalDamaged = (g.items || []).reduce((sum, item) => sum + (item.damagedQuantity || 0), 0);
                           const totalReceived = (g.items || []).reduce((sum, item) => sum + (item.receivedQuantity || 0), 0);
                           return (
                             <TableRow
                               key={g.id}
                               onClick={() => navigate(`/inventory/grn/${g.id}`)}
-                              className="cursor-pointer hover:bg-amber-50/50 transition-colors"
+                              className="cursor-pointer hover:bg-slate-50/70 transition-colors"
                             >
                               <TableCell className="py-3 px-3 font-mono font-bold text-primary">
                                 <div className="flex items-center gap-1.5">
@@ -352,19 +648,19 @@ export const StockManagerApprovalHub: React.FC = () => {
                                 {g.supplierName}
                               </TableCell>
                               <TableCell className="py-3 px-3 font-mono text-slate-700">
-                                {g.purchaseOrderNumber || g.poNumber || 'PO-2025-001'}
+                                {g.purchaseOrderNumber || g.poNumber || 'N/A'}
                               </TableCell>
                               <TableCell className="py-3 px-3 text-slate-600">
                                 <div>{g.warehouseId || 'WH-MAIN'}</div>
                                 <div className="text-[10.5px] text-slate-400 font-mono">
-                                  {formatDate(g.receivedDate || g.submittedAt || new Date().toISOString())}
+                                  {formatDate(g.receivedDate || g.submittedAt || g.createdAt || new Date().toISOString())}
                                 </div>
                               </TableCell>
                               <TableCell className="py-3 px-3 text-slate-700">
-                                {g.receivedByName || 'Stock Keeper (Amal Perera)'}
+                                {g.stockManagerApproval?.approvedByName || g.receivedByName || 'Stock Personnel'}
                               </TableCell>
                               <TableCell className="py-3 px-3 text-center font-mono font-semibold">
-                                {g.items?.length || 0} lines • {totalReceived} units
+                                {g.items?.length || 0} lines &bull; {totalReceived} units
                               </TableCell>
                               <TableCell className="py-3 px-3 text-center font-mono">
                                 {totalDamaged > 0 ? (
@@ -376,8 +672,17 @@ export const StockManagerApprovalHub: React.FC = () => {
                                 )}
                               </TableCell>
                               <TableCell className="py-3 px-3 text-center">
-                                <Badge className="bg-amber-100 text-amber-800 border-amber-300 text-[10px] font-semibold py-0.5 px-2">
-                                  PENDING APPROVAL
+                                <Badge
+                                  className={cn(
+                                    'text-[10px] font-semibold py-0.5 px-2',
+                                    g.status === 'APPROVED' || g.status === 'COSTED' || g.status === 'PRICED'
+                                      ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                                      : g.status === 'STOCK_MANAGER_REJECTED' || g.status === 'REJECTED'
+                                      ? 'bg-rose-100 text-rose-800 border-rose-300'
+                                      : 'bg-blue-100 text-blue-800 border-blue-300'
+                                  )}
+                                >
+                                  {g.status.replace(/_/g, ' ')}
                                 </Badge>
                               </TableCell>
                               <TableCell className="py-3 px-3 text-right">
@@ -390,17 +695,18 @@ export const StockManagerApprovalHub: React.FC = () => {
                                   className="h-7 text-xs font-semibold gap-1.5 bg-primary hover:bg-primary-hover text-white shadow-2xs"
                                 >
                                   <ExternalLink className="h-3 w-3" />
-                                  <span>Inspect Full GRN Document</span>
+                                  <span>Inspect Full Document</span>
                                 </Button>
                               </TableCell>
                             </TableRow>
                           );
-                        })}
-                      </TableBody>
-                    </Table>
-                  </div>
-                </CardContent>
-              </Card>
+                        })
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
           )}
         </div>
       )}

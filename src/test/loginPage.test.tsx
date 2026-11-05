@@ -10,24 +10,26 @@ describe('LoginPage and Example Users For Each Role', () => {
     authService.logout();
   });
 
-  it('renders all 5 modules in exact specified order with 12 unique roles and zero duplicates', () => {
+  it('renders all modules in exact specified order with 12 unique roles and zero duplicates', () => {
     render(
       <MemoryRouter initialEntries={['/login']}>
         <LoginPage />
       </MemoryRouter>
     );
 
-    // Verify 5 modules in exact order
+    // Verify modules in exact order
     expect(DEMO_MODULES[0].name).toBe('Administrator');
     expect(DEMO_MODULES[1].name).toBe('Sales Module');
     expect(DEMO_MODULES[2].name).toBe('Purchasing Module');
-    expect(DEMO_MODULES[3].name).toBe('Finance Module');
-    expect(DEMO_MODULES[4].name).toBe('Showroom POS');
+    expect(DEMO_MODULES[3].name).toBe('Inventory Management Module');
+    expect(DEMO_MODULES[4].name).toBe('Finance Module');
+    expect(DEMO_MODULES[5].name).toBe('Showroom POS');
 
     // Verify module headers are in the document
     expect(screen.getAllByText('Administrator').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Sales Module').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Purchasing Module').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Inventory Management Module').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Finance Module').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Showroom POS').length).toBeGreaterThan(0);
 
@@ -54,18 +56,20 @@ describe('LoginPage and Example Users For Each Role', () => {
     expect(screen.getAllByText('Cashier').length).toBeGreaterThan(0);
   });
 
-  it('allows clicking an example user card to prefill the email input in the standard login form', () => {
+  it('allows clicking an example user card to log in directly as that user', async () => {
     render(
       <MemoryRouter initialEntries={['/login']}>
         <LoginPage />
       </MemoryRouter>
     );
 
-    const emailInput = screen.getByPlaceholderText('user@dnserp.com') as HTMLInputElement;
-
-    // Click card to select user
+    // Click card to login as Dilani Fernando (Finance Manager)
     fireEvent.click(screen.getByText('Dilani Fernando'));
-    expect(emailInput.value).toBe('finance@dnserp.com');
+
+    await waitFor(() => {
+      expect(authService.getCurrentUser()?.email).toBe('finance@dnserp.com');
+      expect(authService.getCurrentUser()?.role).toBe('FINANCE_MANAGER');
+    });
   });
 
   it('allows 1-click login as Cashier and updates authService', async () => {
