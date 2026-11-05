@@ -90,9 +90,7 @@ export function ShowroomManagerHub() {
   // -------------------------------------------------------------
   const [isTokenModalOpen, setIsTokenModalOpen] = useState(false);
   const [tokenOpType, setTokenOpType] = useState<POSManagerTokenType>('DISCOUNT');
-  const [tokenTargetRef, setTokenTargetRef] = useState('');
-  const [tokenDiscountPct, setTokenDiscountPct] = useState<number>(10);
-  const [tokenReason, setTokenReason] = useState('');
+  const tokenDiscountPct = 10;
   const [tokenValidityMins, setTokenValidityMins] = useState<number>(15);
   const [generatedTokenResult, setGeneratedTokenResult] = useState<POSManagerToken | null>(null);
 
@@ -202,16 +200,12 @@ export function ShowroomManagerHub() {
   };
 
   const handleGenerateToken = async () => {
-    if (!tokenReason.trim()) {
-      toast.error('A reason is mandatory for token generation.');
-      return;
-    }
     try {
       const result = await generateManagerToken({
         operationType: tokenOpType,
-        targetReference: tokenTargetRef.trim() || undefined,
+        targetReference: undefined,
         approvedDiscountPercentage: tokenOpType === 'DISCOUNT' ? tokenDiscountPct : undefined,
-        reason: tokenReason.trim(),
+        reason: `Showroom manager authorized ${tokenOpType.toLowerCase()} operation`,
         validityMinutes: tokenValidityMins,
       });
       setGeneratedTokenResult(result);
@@ -1305,28 +1299,32 @@ export function ShowroomManagerHub() {
               <Key className="h-4 w-4 text-amber-600" />
               <span>Issue Manager Authorization Token</span>
             </DialogTitle>
-            <DialogDescription className="text-xs text-slate-500">
-              Generate a temporary, single-use verification token to authorize an exceptional cashier action.
-            </DialogDescription>
           </DialogHeader>
 
           {generatedTokenResult ? (
             <div className="space-y-4 py-2">
-              <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-center space-y-2">
-                <CheckCircle2 className="h-8 w-8 text-emerald-600 mx-auto" />
-                <div className="text-xs font-semibold text-emerald-900">Authorization Token Ready</div>
-                <div className="bg-slate-900 text-amber-400 p-3 rounded-lg font-mono font-extrabold text-xl tracking-widest flex items-center justify-center gap-3">
-                  <span>{generatedTokenResult.token}</span>
-                  <button
-                    onClick={() => handleCopyToken(generatedTokenResult.token)}
-                    className="text-slate-400 hover:text-white"
-                  >
-                    <Copy className="h-5 w-5" />
-                  </button>
+              <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
+                <div className="flex items-center justify-between gap-3 text-xs">
+                  <span className="font-semibold text-slate-600">Operation Type</span>
+                  <span className="font-bold text-slate-900">{generatedTokenResult.operationType}</span>
                 </div>
-                <div className="text-[11px] text-emerald-700">
-                  Single-use only &bull; Expires at{' '}
-                  {new Date(generatedTokenResult.expiresAt).toLocaleTimeString()}
+                <div className="space-y-1">
+                  <label className="block text-xs font-semibold text-slate-600">Authorization Token</label>
+                  <div className="flex items-center justify-between gap-3 rounded-lg bg-slate-900 p-3 font-mono text-lg font-extrabold tracking-widest text-amber-400">
+                    <span>{generatedTokenResult.token}</span>
+                    <button
+                      type="button"
+                      onClick={() => handleCopyToken(generatedTokenResult.token)}
+                      className="text-slate-400 hover:text-white"
+                      aria-label="Copy authorization token"
+                    >
+                      <Copy className="h-5 w-5" />
+                    </button>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between gap-3 text-xs">
+                  <span className="font-semibold text-slate-600">Token Validity Duration</span>
+                  <span className="font-bold text-slate-900">{tokenValidityMins} minutes</span>
                 </div>
               </div>
 
@@ -1345,8 +1343,8 @@ export function ShowroomManagerHub() {
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
                   Operation Type <span className="text-rose-500">*</span>
                 </label>
-                <div className="grid grid-cols-3 gap-2">
-                  {(['DISCOUNT', 'REFUND', 'VOID'] as POSManagerTokenType[]).map((op) => (
+                <div className="grid grid-cols-2 gap-2">
+                  {(['DISCOUNT', 'REFUND', 'VOID', 'CASH_MOVEMENT'] as POSManagerTokenType[]).map((op) => (
                     <button
                       key={op}
                       type="button"
@@ -1362,49 +1360,6 @@ export function ShowroomManagerHub() {
                     </button>
                   ))}
                 </div>
-              </div>
-
-              {tokenOpType === 'DISCOUNT' && (
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Approved Discount Ceiling (%)
-                  </label>
-                  <Input
-                    type="number"
-                    value={tokenDiscountPct}
-                    onChange={(e) => setTokenDiscountPct(Number(e.target.value))}
-                    min={1}
-                    max={30}
-                    className="text-xs h-9"
-                  />
-                  <span className="text-[10px] text-slate-400">
-                    Cashier cannot apply more than this approved percentage.
-                  </span>
-                </div>
-              )}
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Target Product SKU / Receipt # (Optional)
-                </label>
-                <Input
-                  value={tokenTargetRef}
-                  onChange={(e) => setTokenTargetRef(e.target.value)}
-                  placeholder="e.g. DNS-MAK-AG-18V or POS-REC-..."
-                  className="text-xs h-9 font-mono"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Authorization Reason <span className="text-rose-500">*</span>
-                </label>
-                <Input
-                  value={tokenReason}
-                  onChange={(e) => setTokenReason(e.target.value)}
-                  placeholder="e.g. Customer purchasing 10 units contractor package"
-                  className="text-xs h-9"
-                />
               </div>
 
               <div>

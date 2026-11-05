@@ -106,7 +106,7 @@ export function DashboardPage() {
         )}
         {role === 'SHOWROOM_MANAGER' && (
           <>
-            <StatCard title="Active Terminals" value="3 Online" variant="success" icon={Monitor} />
+            <StatCard title="Active Terminals" value="1 Online" variant="success" icon={Monitor} />
             <StatCard title="Drawer Float Total" value={formatCurrency(125000)} variant="blue" icon={DollarSign} />
             <StatCard title="Pending Shift Closings" value="1 Review" variant="warning" icon={Clock} />
             <StatCard title="Today's Showroom Sales" value={formatCurrency(485000)} trend={{ value: '18.4%', isPositive: true }} variant="indigo" icon={Store} />
