@@ -139,4 +139,3 @@ export interface AreaTerritoryPerformanceData {
   managerBreakdown: CommissionCalculationBreakdown;
   subordinateReps: SubordinateRepPerformanceItem[];
 }
-

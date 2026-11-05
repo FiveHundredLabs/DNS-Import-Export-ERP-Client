@@ -6,7 +6,6 @@ import { useFinanceLedger } from '../../hooks/useFinanceLedger';
 import { useAuth } from '../../../../hooks/useAuth';
 import { CurrencyInput } from '../../components/CurrencyInput';
 import { DoubleEntryHoverBadge } from '../../components/DoubleEntryHoverBadge';
-import { PurchaseOrderSelector } from '../../../../components/selectors/PurchaseOrderSelector';
 import { PaymentVouchersRegistry } from '../../components/PaymentVouchersRegistry';
 import { Button } from '../../../../components/ui/button';
 import { ConfirmButton } from '../../../../components/ui/confirm-button';
@@ -38,6 +37,7 @@ import {
   ShoppingCart,
   Check,
   Sparkles,
+  X,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { PrintablePaymentVoucher } from '../../components/PrintablePaymentVoucher';
@@ -76,7 +76,7 @@ export function BatchSupplierPaymentPage({
   );
   const [selectedVoucherForPrint, setSelectedVoucherForPrint] = useState<PaymentVoucher | null>(null);
 
-  // Active desk mode
+  // Active desk mode (retains unified top switcher in ALL modes)
   const [deskMode, setDeskMode] = useState<PaymentDeskMode>(
     initialMode || 'SETTLE_BILLS'
   );
@@ -121,7 +121,7 @@ export function BatchSupplierPaymentPage({
   const [submitting, setSubmitting] = useState(false);
 
   // =========================================================================
-  // Supplier Advance State
+  // Supplier Advance State (Manual PO Selection & Any Custom Amount)
   // =========================================================================
   const [purchaseOrderNumber, setPurchaseOrderNumber] = useState<string>('');
   const [advanceAmount, setAdvanceAmount] = useState<number>(0);
@@ -170,7 +170,6 @@ export function BatchSupplierPaymentPage({
     financeRepository
       .getJournalEntries()
       .then((entries) => {
-        // Filter relevant journal entries (expenses, accruals, standard entries)
         const relevant = (entries || []).filter(
           (j) => j.status === 'POSTED' && j.source !== 'PAYMENT'
         );
@@ -254,7 +253,7 @@ export function BatchSupplierPaymentPage({
     return unappliedAdvances.reduce((acc, a) => acc + (a.unappliedBalance || 0), 0);
   }, [unappliedAdvances]);
 
-  // POs for selected supplier
+  // POs for selected supplier with prior advance and balance remaining
   const supplierPurchaseOrders = useMemo(() => {
     if (!selectedSupplierId) return [];
     const supName = selectedSupplier?.name?.toLowerCase() || '';
@@ -505,10 +504,8 @@ export function BatchSupplierPaymentPage({
         )} successfully posted and allocated to bills!`
       );
 
-      // Prompt printable voucher
       handleTriggerPrint();
 
-      // Reset form
       setAllocations({});
       setPaymentReference('');
       setTotalPaymentAmount(0);
@@ -629,7 +626,6 @@ export function BatchSupplierPaymentPage({
         throw new Error('Selected accounts not found');
       }
 
-      // Create GL Journal Entry
       await financeRepository.createJournalEntry({
         date: otherPaymentDate,
         description: `Direct Payment to ${otherPayee.trim()} - ${otherNarration.trim() || debitAcc.name}`,
@@ -651,7 +647,6 @@ export function BatchSupplierPaymentPage({
         ],
       });
 
-      // Create Voucher in CashBook
       const createdVoucher = await cashBookService.createVoucher(
         {
           voucherType: 'PAYMENT',
@@ -678,7 +673,6 @@ export function BatchSupplierPaymentPage({
 
       setSelectedVoucherForPrint(createdVoucher);
 
-      // Reset other payment form
       setOtherAmount(0);
       setOtherPaymentRef('');
       setOtherNarration('');
@@ -698,7 +692,6 @@ export function BatchSupplierPaymentPage({
     setOtherPaymentRef(`PV-${je.entryNumber}`);
     setOtherNarration(`Settlement of ${je.entryNumber}: ${je.description}`);
 
-    // If there is a debit line in the journal, pick its account
     const debitLine = je.lines.find((l) => (l.debit || 0) > 0);
     if (debitLine) {
       const matchAcc = accounts.find(
@@ -764,28 +757,9 @@ export function BatchSupplierPaymentPage({
     toast.info(`Payment Voucher draft #${currentVoucherNum} reset.`);
   };
 
-  // If REGISTRY mode is selected, render the Payment Vouchers Registry view
-  if (deskMode === 'REGISTRY') {
-    return (
-      <div className="space-y-4">
-        <PaymentVouchersRegistry
-          onNewVoucher={() => setDeskMode('SETTLE_BILLS')}
-          onSelectVoucher={(v) => {
-            if (v.rawVoucher) setSelectedVoucherForPrint(v.rawVoucher);
-          }}
-        />
-        <PrintablePaymentVoucher
-          voucher={selectedVoucherForPrint}
-          open={Boolean(selectedVoucherForPrint)}
-          onOpenChange={(open) => !open && setSelectedVoucherForPrint(null)}
-        />
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-4">
-      {/* Document Action Bar matching Image 1 */}
+      {/* Top Document Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 border-b border-border/80 pb-3">
         <div className="flex items-center gap-3">
           <Button
@@ -811,7 +785,7 @@ export function BatchSupplierPaymentPage({
               </span>
               <span className="sr-only">Batch Supplier Payment Desk</span>
               <Badge variant="outline" className="text-[10px] font-mono font-semibold py-0">
-                DRAFT
+                {deskMode === 'REGISTRY' ? 'AUDIT REGISTRY' : 'DRAFT'}
               </Badge>
             </div>
           </div>
@@ -819,76 +793,83 @@ export function BatchSupplierPaymentPage({
 
         <div className="flex items-center gap-2 flex-wrap">
           <Button
-            variant="outline"
+            variant={deskMode === 'REGISTRY' ? 'default' : 'outline'}
             size="sm"
             type="button"
             onClick={() => setDeskMode('REGISTRY')}
-            className="text-xs h-8 gap-1.5"
+            className={cn(
+              'text-xs h-8 gap-1.5',
+              deskMode === 'REGISTRY' && 'bg-primary text-white font-semibold'
+            )}
           >
             <FileText className="h-3.5 w-3.5" />
             <span>All Vouchers</span>
           </Button>
 
-          <Button
-            variant="outline"
-            size="sm"
-            type="button"
-            onClick={handleTriggerPrint}
-            className="text-xs h-8 gap-1.5"
-          >
-            <Printer className="h-3.5 w-3.5" />
-            <span>Download PDF</span>
-          </Button>
+          {deskMode !== 'REGISTRY' && (
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                type="button"
+                onClick={handleTriggerPrint}
+                className="text-xs h-8 gap-1.5"
+              >
+                <Printer className="h-3.5 w-3.5" />
+                <span>Download PDF</span>
+              </Button>
 
-          <Button
-            variant="outline"
-            size="sm"
-            type="button"
-            onClick={handleDeleteDraft}
-            className="text-xs h-8 gap-1.5 text-rose-600 border-rose-200 hover:bg-rose-50"
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-            <span>Delete</span>
-          </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                type="button"
+                onClick={handleDeleteDraft}
+                className="text-xs h-8 gap-1.5 text-rose-600 border-rose-200 hover:bg-rose-50"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                <span>Delete</span>
+              </Button>
 
-          <Button
-            variant="outline"
-            size="sm"
-            type="button"
-            onClick={handleSaveDraft}
-            className="text-xs h-8 gap-1.5"
-          >
-            <FileCheck className="h-3.5 w-3.5 text-primary" />
-            <span>Save</span>
-          </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                type="button"
+                onClick={handleSaveDraft}
+                className="text-xs h-8 gap-1.5"
+              >
+                <FileCheck className="h-3.5 w-3.5 text-primary" />
+                <span>Save</span>
+              </Button>
 
-          <Button
-            variant="default"
-            size="sm"
-            type="button"
-            onClick={
-              deskMode === 'SETTLE_BILLS'
-                ? handlePostPayment
-                : deskMode === 'ADVANCE_PREPAYMENT'
-                ? handlePostAdvance
-                : handlePostOtherPayment
-            }
-            disabled={
-              deskMode === 'SETTLE_BILLS'
-                ? !isFormValid || submitting
-                : deskMode === 'ADVANCE_PREPAYMENT'
-                ? advanceAmount <= 0 || !paymentReference.trim() || submitting
-                : otherAmount <= 0 || !otherPayee.trim() || submitting
-            }
-            className="text-xs h-8 gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-xs"
-          >
-            <CheckCircle2 className="h-3.5 w-3.5" />
-            <span>{submitting ? 'Posting...' : 'Complete Payment'}</span>
-          </Button>
+              <Button
+                variant="default"
+                size="sm"
+                type="button"
+                onClick={
+                  deskMode === 'SETTLE_BILLS'
+                    ? handlePostPayment
+                    : deskMode === 'ADVANCE_PREPAYMENT'
+                    ? handlePostAdvance
+                    : handlePostOtherPayment
+                }
+                disabled={
+                  deskMode === 'SETTLE_BILLS'
+                    ? !isFormValid || submitting
+                    : deskMode === 'ADVANCE_PREPAYMENT'
+                    ? advanceAmount <= 0 || !paymentReference.trim() || submitting
+                    : otherAmount <= 0 || !otherPayee.trim() || submitting
+                }
+                className="text-xs h-8 gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-xs"
+              >
+                <CheckCircle2 className="h-3.5 w-3.5" />
+                <span>{submitting ? 'Posting...' : 'Complete Payment'}</span>
+              </Button>
+            </>
+          )}
         </div>
       </div>
 
-      {/* Industrial Multi-Mode Switcher */}
+      {/* Industrial Multi-Mode Switcher (Remains visible across all 4 modes) */}
       <div className="flex flex-wrap items-center justify-between gap-3 pb-1 border-b border-border/40">
         <div className="flex items-center p-1 bg-muted/60 rounded-xl border border-border/80">
           <button
@@ -936,7 +917,12 @@ export function BatchSupplierPaymentPage({
           <button
             type="button"
             onClick={() => setDeskMode('REGISTRY')}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold text-muted-foreground hover:text-foreground transition-all"
+            className={cn(
+              'flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all',
+              deskMode === 'REGISTRY'
+                ? 'bg-background text-foreground shadow-xs border border-border/50'
+                : 'text-muted-foreground hover:text-foreground'
+            )}
           >
             <FileText className="h-3.5 w-3.5 text-slate-600" />
             <span>All Vouchers History</span>
@@ -947,8 +933,9 @@ export function BatchSupplierPaymentPage({
           <Sparkles className="h-3.5 w-3.5 text-primary" />
           <span>
             {deskMode === 'SETTLE_BILLS' && 'Disburse vendor bill payments with advance deduction'}
-            {deskMode === 'ADVANCE_PREPAYMENT' && 'Issue advance supplier prepayments with PO linkage'}
+            {deskMode === 'ADVANCE_PREPAYMENT' && 'Issue advance supplier prepayments with manual PO linkage'}
             {deskMode === 'OTHER_PAYMENTS' && 'Pay utilities, rent, services, or settle journal entries'}
+            {deskMode === 'REGISTRY' && 'Audit registry with 1-click approvals & print preview'}
           </span>
         </div>
       </div>
@@ -999,7 +986,6 @@ export function BatchSupplierPaymentPage({
       {/* ===================================================================== */}
       {deskMode === 'SETTLE_BILLS' && (
         <div className="space-y-4">
-          {/* LEDGER ACCOUNTS & PAYMENT DETAILS */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {/* LEDGER ACCOUNTS */}
             <Card className="p-4 border-border shadow-xs bg-card space-y-3">
@@ -1318,11 +1304,10 @@ export function BatchSupplierPaymentPage({
       )}
 
       {/* ===================================================================== */}
-      {/* VIEW 2: SUPPLIER ADVANCE PAYMENT VOUCHER (Industrial ERP Layout)      */}
+      {/* VIEW 2: SUPPLIER ADVANCE PAYMENT VOUCHER (Manual PO & Custom Amount)  */}
       {/* ===================================================================== */}
       {deskMode === 'ADVANCE_PREPAYMENT' && (
         <div className="space-y-4">
-          {/* Top 2 Cards: LEDGER ACCOUNTS & PAYMENT DETAILS */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {/* LEDGER ACCOUNTS */}
             <Card className="p-4 border-border shadow-xs bg-card space-y-3">
@@ -1457,15 +1442,28 @@ export function BatchSupplierPaymentPage({
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                   <div>
-                    <label className="block text-xs font-semibold text-foreground mb-1">
-                      Linked Purchase Order (Optional)
-                    </label>
-                    <Input
-                      value={purchaseOrderNumber}
-                      onChange={(e) => setPurchaseOrderNumber(e.target.value)}
-                      placeholder="e.g. PO-2026-0001 (or select from table below)"
-                      className="h-9 text-xs font-mono"
-                    />
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-xs font-semibold text-foreground">
+                        Linked Purchase Order
+                      </label>
+                      {purchaseOrderNumber && (
+                        <button
+                          type="button"
+                          onClick={() => setPurchaseOrderNumber('')}
+                          className="text-[10px] text-rose-600 hover:underline flex items-center gap-0.5 cursor-pointer"
+                        >
+                          <X className="h-3 w-3" /> Clear Link
+                        </button>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <Input
+                        value={purchaseOrderNumber}
+                        onChange={(e) => setPurchaseOrderNumber(e.target.value)}
+                        placeholder="Click [Select PO] below or type PO number..."
+                        className="h-9 text-xs font-mono flex-1"
+                      />
+                    </div>
                   </div>
 
                   <div>
@@ -1475,7 +1473,7 @@ export function BatchSupplierPaymentPage({
                     <Input
                       value={advanceNotes}
                       onChange={(e) => setAdvanceNotes(e.target.value)}
-                      placeholder="e.g. 30% upfront manufacturing deposit..."
+                      placeholder="e.g. Upfront advance payment per supply agreement..."
                       className="h-9 text-xs"
                     />
                   </div>
@@ -1484,24 +1482,43 @@ export function BatchSupplierPaymentPage({
             </Card>
           </div>
 
-          {/* Open Purchase Orders for Selected Supplier (Table) */}
+          {/* Open Purchase Orders Table with Manual Select and Custom Amount */}
           <div className="rounded-xl border border-border bg-card shadow-xs overflow-hidden">
-            <div className="p-4 border-b border-border/80 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <div className="p-4 border-b border-border/80 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <div className="flex items-center gap-2">
                 <ShoppingCart className="h-4 w-4 text-emerald-600" />
                 <h3 className="text-sm font-bold text-foreground">
-                  Open Purchase Orders for Selected Supplier ({supplierPurchaseOrders.length})
+                  Purchase Orders for Selected Supplier ({supplierPurchaseOrders.length})
                 </h3>
               </div>
-              <span className="text-xs text-muted-foreground">
-                Click quick actions to link PO and allocate advance percentage.
-              </span>
+
+              <div className="flex items-center gap-2">
+                <Button
+                  variant={!purchaseOrderNumber ? 'default' : 'outline'}
+                  size="sm"
+                  type="button"
+                  onClick={() => {
+                    setPurchaseOrderNumber('');
+                    setAdvanceNotes(`General upfront advance deposit to ${selectedSupplier?.name}`);
+                  }}
+                  className={cn(
+                    'h-7 text-xs font-semibold',
+                    !purchaseOrderNumber && 'bg-primary text-white'
+                  )}
+                >
+                  <span>General Advance (No PO Linked)</span>
+                </Button>
+                <span className="text-xs text-muted-foreground hidden md:inline">
+                  Select a PO manually to link advance and enter any payment amount.
+                </span>
+              </div>
             </div>
 
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs tabular-nums">
                 <thead className="bg-muted/50 text-muted-foreground border-b border-border font-semibold">
                   <tr>
+                    <th className="px-3.5 py-2.5 w-12 text-center">Select</th>
                     <th className="px-3.5 py-2.5">PO Number</th>
                     <th className="px-3.5 py-2.5">PO Date</th>
                     <th className="px-3.5 py-2.5">Expected Delivery</th>
@@ -1509,14 +1526,15 @@ export function BatchSupplierPaymentPage({
                     <th className="px-3.5 py-2.5 text-right">Prior Advances Paid</th>
                     <th className="px-3.5 py-2.5 text-right">Remaining Balance</th>
                     <th className="px-3.5 py-2.5 text-center">Status</th>
-                    <th className="px-3.5 py-2.5 text-right w-64">Quick Advance Action</th>
+                    <th className="px-3.5 py-2.5 text-right w-44">Amount to Advance (LKR)</th>
+                    <th className="px-3.5 py-2.5 text-center w-28">Quick Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/60">
                   {supplierPurchaseOrders.length === 0 ? (
                     <tr>
-                      <td colSpan={8} className="py-8 text-center text-xs text-muted-foreground">
-                        No purchase orders on file for {selectedSupplier?.name}. You can record a General Unlinked Advance Prepayment.
+                      <td colSpan={10} className="py-8 text-center text-xs text-muted-foreground">
+                        No purchase orders on file for {selectedSupplier?.name}. You can record a General Advance Prepayment above.
                       </td>
                     </tr>
                   ) : (
@@ -1527,11 +1545,26 @@ export function BatchSupplierPaymentPage({
                           key={po.id}
                           className={cn(
                             'hover:bg-muted/30 transition-colors',
-                            isLinked && 'bg-emerald-50/50'
+                            isLinked && 'bg-emerald-50/60 font-medium'
                           )}
                         >
+                          <td className="px-3.5 py-2.5 text-center">
+                            <input
+                              type="radio"
+                              name="selected_po_radio"
+                              checked={isLinked}
+                              onChange={() => {
+                                setPurchaseOrderNumber(po.poNumber);
+                                if (advanceAmount === 0) {
+                                  setAdvanceAmount(po.balanceDue);
+                                }
+                                setAdvanceNotes(`Advance prepayment for PO #${po.poNumber}`);
+                              }}
+                              className="h-4 w-4 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                            />
+                          </td>
                           <td className="px-3.5 py-2.5 font-mono font-bold text-primary flex items-center gap-1.5">
-                            {isLinked && <Check className="h-3.5 w-3.5 text-emerald-600" />}
+                            {isLinked && <Check className="h-3.5 w-3.5 text-emerald-600 shrink-0" />}
                             <span>{po.poNumber}</span>
                           </td>
                           <td className="px-3.5 py-2.5 text-muted-foreground">
@@ -1555,48 +1588,47 @@ export function BatchSupplierPaymentPage({
                             </Badge>
                           </td>
                           <td className="px-3.5 py-2.5 text-right">
-                            <div className="flex items-center justify-end gap-1.5">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                type="button"
-                                onClick={() => {
-                                  setPurchaseOrderNumber(po.poNumber);
-                                  const thirtyPct = Math.round(po.grandTotal * 0.3);
-                                  setAdvanceAmount(thirtyPct);
-                                  setAdvanceNotes(`30% upfront manufacturing deposit for PO #${po.poNumber}`);
-                                }}
-                                className="h-7 text-[11px] px-2 border-emerald-300 text-emerald-800 hover:bg-emerald-50"
-                              >
-                                30% Adv
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                type="button"
-                                onClick={() => {
-                                  setPurchaseOrderNumber(po.poNumber);
-                                  const fiftyPct = Math.round(po.grandTotal * 0.5);
-                                  setAdvanceAmount(fiftyPct);
-                                  setAdvanceNotes(`50% advance deposit for PO #${po.poNumber}`);
-                                }}
-                                className="h-7 text-[11px] px-2 border-emerald-300 text-emerald-800 hover:bg-emerald-50"
-                              >
-                                50% Adv
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                type="button"
-                                onClick={() => {
-                                  setPurchaseOrderNumber(po.poNumber);
-                                  setAdvanceAmount(po.balanceDue);
-                                  setAdvanceNotes(`Full prepayment settlement for PO #${po.poNumber}`);
-                                }}
-                                className="h-7 text-[11px] px-2 text-primary hover:bg-primary-light font-semibold"
-                              >
-                                Pay Full
-                              </Button>
+                            <CurrencyInput
+                              value={isLinked ? advanceAmount : 0}
+                              onChange={(val) => {
+                                setPurchaseOrderNumber(po.poNumber);
+                                setAdvanceAmount(val);
+                                setAdvanceNotes(`Advance prepayment for PO #${po.poNumber}`);
+                              }}
+                              placeholder="Type any amount..."
+                              className="h-8 text-xs text-right font-mono"
+                            />
+                          </td>
+                          <td className="px-3.5 py-2.5 text-center">
+                            <div className="flex items-center justify-center gap-1">
+                              {isLinked ? (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  type="button"
+                                  onClick={() => {
+                                    setAdvanceAmount(po.balanceDue);
+                                    setAdvanceNotes(`Full balance prepayment for PO #${po.poNumber}`);
+                                  }}
+                                  className="h-7 text-[11px] text-primary hover:bg-primary-light font-semibold px-2"
+                                >
+                                  Full Balance
+                                </Button>
+                              ) : (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  type="button"
+                                  onClick={() => {
+                                    setPurchaseOrderNumber(po.poNumber);
+                                    setAdvanceAmount(po.balanceDue);
+                                    setAdvanceNotes(`Advance prepayment for PO #${po.poNumber}`);
+                                  }}
+                                  className="h-7 text-[11px] text-emerald-800 border-emerald-300 hover:bg-emerald-50 px-2 font-semibold"
+                                >
+                                  Select PO
+                                </Button>
+                              )}
                             </div>
                           </td>
                         </tr>
@@ -1685,7 +1717,6 @@ export function BatchSupplierPaymentPage({
       {/* ===================================================================== */}
       {deskMode === 'OTHER_PAYMENTS' && (
         <div className="space-y-4">
-          {/* Top 2 Cards: LEDGER ACCOUNTS & PAYMENT DETAILS */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {/* LEDGER ACCOUNTS */}
             <Card className="p-4 border-border shadow-xs bg-card space-y-3">
@@ -2037,11 +2068,28 @@ export function BatchSupplierPaymentPage({
         </div>
       )}
 
+      {/* ===================================================================== */}
+      {/* VIEW 4: ALL VOUCHERS HISTORY / AUDIT REGISTRY                         */}
+      {/* (Unified inside desk container with the same top switcher)            */}
+      {/* ===================================================================== */}
+      {deskMode === 'REGISTRY' && (
+        <div className="space-y-4 pt-1">
+          <PaymentVouchersRegistry
+            hideHeader={true}
+            onNewVoucher={() => setDeskMode('SETTLE_BILLS')}
+            onSelectVoucher={(v) => {
+              if (v.rawVoucher) setSelectedVoucherForPrint(v.rawVoucher);
+            }}
+          />
+        </div>
+      )}
+
       {/* Printable Payment Voucher Modal */}
       <PrintablePaymentVoucher
         voucher={selectedVoucherForPrint}
         open={Boolean(selectedVoucherForPrint)}
         onOpenChange={(open) => !open && setSelectedVoucherForPrint(null)}
+        canApprove={true}
       />
     </div>
   );

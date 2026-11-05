@@ -342,9 +342,10 @@ export class YearEndCloseService {
       // If already posted, continue
     }
 
-    // Optionally set or advance period lock
+    // Optionally set or advance period lock and lock the closed fiscal year
     if (params.lockPeriodAfterClose) {
       periodLockService.setConfig(true, cutOff, cutOff);
+      periodLockService.lockFiscalYear(fiscalYear, cutOff);
     }
 
     return {

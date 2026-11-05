@@ -61,6 +61,9 @@ export function InvoiceListPage() {
   const activeRole = currentUser?.role || role;
   const isSalesManager = ['SALES_MANAGER', 'MANAGER', 'DIRECTOR', 'ADMIN'].includes(activeRole);
   const isAreaManager = activeRole === 'AREA_MANAGER';
+  const isFinanceManager = activeRole === 'FINANCE_MANAGER';
+  const shouldHideDrafts = isAreaManager || isFinanceManager;
+  const shouldHideCreateInvoice = isAreaManager || isFinanceManager;
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [customerIdFilter, setCustomerIdFilter] = useState(searchParams.get('customerId') || '');
@@ -80,10 +83,10 @@ export function InvoiceListPage() {
   const [createModalOpen, setCreateModalOpen] = useState(false);
 
   useEffect(() => {
-    if (isAreaManager && statusFilter === 'DRAFT') {
+    if (shouldHideDrafts && statusFilter === 'DRAFT') {
       setStatusFilter('ALL');
     }
-  }, [isAreaManager, statusFilter]);
+  }, [shouldHideDrafts, statusFilter]);
 
   useEffect(() => {
     async function loadCustomers() {
@@ -124,7 +127,7 @@ export function InvoiceListPage() {
       let total = res.total;
       let totalPages = res.totalPages;
 
-      if (isAreaManager) {
+      if (shouldHideDrafts) {
         resData = resData.filter((inv) => inv.status !== 'DRAFT');
         allResData = allResData.filter((inv) => inv.status !== 'DRAFT');
         if (statusFilter === 'DRAFT') {
@@ -164,7 +167,7 @@ export function InvoiceListPage() {
     let settled = 0;
     let draft = 0;
 
-    const sourceInvoices = isAreaManager
+    const sourceInvoices = shouldHideDrafts
       ? allInvoicesForCounts.filter((inv) => inv.status !== 'DRAFT')
       : allInvoicesForCounts;
 
@@ -198,13 +201,13 @@ export function InvoiceListPage() {
       pendingCollection,
       settled,
     };
-  }, [allInvoicesForCounts, isAreaManager]);
+  }, [allInvoicesForCounts, shouldHideDrafts]);
 
   const selectedCustomer = customers.find((c) => c.id === customerIdFilter);
 
   const displayedInvoices = useMemo(() => {
-    return isAreaManager ? invoices.filter((i) => i.status !== 'DRAFT') : invoices;
-  }, [invoices, isAreaManager]);
+    return shouldHideDrafts ? invoices.filter((i) => i.status !== 'DRAFT') : invoices;
+  }, [invoices, shouldHideDrafts]);
 
   // Aggregate metrics
   const totalReceivables = displayedInvoices.reduce((acc, inv) => acc + inv.balanceAmount, 0);
@@ -230,7 +233,7 @@ export function InvoiceListPage() {
               <RefreshCw className="h-3.5 w-3.5" />
               <span>Refresh</span>
             </Button>
-            {!isAreaManager && (
+            {!shouldHideCreateInvoice && (
               <Button
                 size="sm"
                 onClick={() => setCreateModalOpen(true)}
@@ -383,7 +386,7 @@ export function InvoiceListPage() {
                 { label: 'Fully Settled', value: 'FULLY_SETTLED', count: counts.settled, icon: CheckCircle },
               ] as const
             )
-              .filter((st) => !isAreaManager || st.value !== 'DRAFT')
+              .filter((st) => !shouldHideDrafts || st.value !== 'DRAFT')
               .map((st) => {
               const Icon = st.icon;
               const isActive = statusFilter === st.value;
@@ -813,7 +816,7 @@ export function InvoiceListPage() {
       />
 
       {/* Create Commercial Sales Invoice Modal */}
-      {!isAreaManager && (
+      {!shouldHideCreateInvoice && (
         <CreateInvoiceModal
           isOpen={createModalOpen}
           onClose={() => {

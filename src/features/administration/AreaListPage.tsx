@@ -39,23 +39,31 @@ export function AreaListPage() {
   };
 
   const handleSave = async () => {
+    if (!formData.name.trim() || !formData.code.trim()) {
+      return;
+    }
     const selectedManager = areaManagers.find(u => u.id === formData.areaManagerId);
     let finalManagerName = 'Unassigned';
+    let finalManagerId = '';
     if (selectedManager) {
       finalManagerName = selectedManager.name;
+      finalManagerId = selectedManager.id;
     } else if (formData.areaManagerId) {
       const allUsersMatch = users.find(u => u.id === formData.areaManagerId);
       finalManagerName = allUsersMatch ? allUsersMatch.name : (editingArea?.areaManagerName || 'Unassigned');
+      finalManagerId = formData.areaManagerId;
     }
     
     if (editingArea) {
       await updateArea(editingArea.id, {
         ...formData,
+        areaManagerId: finalManagerId,
         areaManagerName: finalManagerName,
       });
     } else {
       await createArea({ 
         ...formData, 
+        areaManagerId: finalManagerId,
         areaManagerName: finalManagerName,
         salesManagerId: 'usr-103', 
         salesManagerName: 'Kamal Perera',
@@ -193,28 +201,25 @@ export function AreaListPage() {
               />
             </div>
             <div className="space-y-1.5">
-              <label className="text-sm font-semibold text-slate-700 flex items-center gap-1.5">
-                <Briefcase className="h-3.5 w-3.5 text-slate-400" /> Area Manager
+              <label className="text-sm font-semibold text-slate-700 flex items-center justify-between">
+                <span className="flex items-center gap-1.5">
+                  <Briefcase className="h-3.5 w-3.5 text-slate-400" /> Area Manager
+                </span>
+                <span className="text-xs font-normal text-slate-400">Optional</span>
               </label>
               <Select 
                 value={formData.areaManagerId} 
                 onChange={e => setFormData({...formData, areaManagerId: e.target.value})}
                 className="focus-visible:ring-indigo-500"
               >
-                <option value="">-- Select Area Manager --</option>
-                {usersLoading ? (
-                  <option value="" disabled>Loading managers...</option>
-                ) : (
-                  <>
-                    {areaManagers.map(mgr => (
-                      <option key={mgr.id} value={mgr.id}>{mgr.name}</option>
-                    ))}
-                    {formData.areaManagerId && !areaManagers.some(m => m.id === formData.areaManagerId) && (
-                      <option key={formData.areaManagerId} value={formData.areaManagerId}>
-                        {editingArea?.areaManagerName || 'Unknown'} (Role Changed)
-                      </option>
-                    )}
-                  </>
+                <option value="">-- No Area Manager (Optional) --</option>
+                {areaManagers.map(mgr => (
+                  <option key={mgr.id} value={mgr.id}>{mgr.name}</option>
+                ))}
+                {formData.areaManagerId && !areaManagers.some(m => m.id === formData.areaManagerId) && (
+                  <option key={formData.areaManagerId} value={formData.areaManagerId}>
+                    {editingArea?.areaManagerName || 'Unknown'} (Role Changed)
+                  </option>
                 )}
               </Select>
             </div>

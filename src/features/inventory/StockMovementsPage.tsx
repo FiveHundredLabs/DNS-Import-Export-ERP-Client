@@ -111,7 +111,63 @@ export function StockMovementsPage() {
               No stock movements found matching criteria.
             </div>
           ) : (
-            <Table>
+            <>
+              {/* Mobile Card View (block md:hidden) */}
+              <div className="block md:hidden space-y-3 pb-2">
+                {filteredMovements.map((m: any) => {
+                  const product = MOCK_PRODUCTS.find(p => p.id === m.productId);
+                  return (
+                    <div
+                      key={m.id}
+                      className="rounded-2xl border border-slate-200/90 bg-white p-3.5 shadow-2xs space-y-2.5"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-[11px] font-mono text-slate-500 font-medium">
+                          {formatDate(m.timestamp)}
+                        </span>
+                        <Badge
+                          variant="outline"
+                          className={`${getMovementColor(m.movementType ?? m.type)} text-[10px] font-mono font-semibold uppercase tracking-wider rounded-md px-2 py-0.5`}
+                        >
+                          {(m.movementType ?? m.type)?.replace(/_/g, ' ')}
+                        </Badge>
+                      </div>
+
+                      <div>
+                        <div className="font-semibold text-xs text-slate-900 truncate">
+                          {product?.name || m.productId}
+                        </div>
+                        <div className="text-[10px] text-slate-400 font-mono mt-0.5">
+                          Ref: {m.referenceId || m.referenceDocument || '-'}
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-2 bg-slate-50 p-2 rounded-xl text-xs border border-slate-100">
+                        <div>
+                          <span className="text-[10px] text-slate-400 block">From</span>
+                          <span className="font-medium text-slate-700 truncate block">{m.fromLocationId || '-'}</span>
+                        </div>
+                        <div>
+                          <span className="text-[10px] text-slate-400 block">To</span>
+                          <span className="font-medium text-slate-700 truncate block">{m.toLocationId || '-'}</span>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-[10px] text-slate-400 block">Quantity</span>
+                          <span className="font-mono font-bold text-slate-900">{m.quantity}</span>
+                        </div>
+                      </div>
+
+                      <div className="text-[11px] text-slate-400 flex items-center justify-between pt-1 border-t border-slate-100">
+                        <span>By: {m.performedByName || 'System'}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Desktop Table View (hidden md:block) */}
+              <div className="hidden md:block overflow-x-auto [scrollbar-width:thin]">
+                <Table className="min-w-[760px]">
               <TableHeader>
                 <TableRow>
                   <TableHead>Date</TableHead>
@@ -148,7 +204,9 @@ export function StockMovementsPage() {
                   );
                 })}
               </TableBody>
-            </Table>
+                </Table>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>

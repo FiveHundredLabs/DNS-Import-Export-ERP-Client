@@ -78,7 +78,7 @@ interface FlatGRNStockItem {
 
 export function InventoryDashboardPage() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, role } = useAuth();
   const { grns, loading: grnsLoading } = useGRN();
   const [orders, setOrders] = useState<SalesOrder[]>([]);
 
@@ -573,7 +573,7 @@ function isPowerToolItem(item: { productId?: string; sku?: string; categoryName?
 
       {/* ── Navigation Tabs ── */}
       <div className="flex items-center justify-between border-b border-slate-200">
-        <div className="flex items-center gap-2 overflow-x-auto">
+        <div className="flex items-center gap-2 overflow-x-auto w-full max-w-full no-scrollbar">
           <button
             type="button"
             onClick={() => setActiveTab('LEDGER')}
@@ -1111,7 +1111,9 @@ function isPowerToolItem(item: { productId?: string; sku?: string; categoryName?
                     <TableHead className="text-right text-rose-600 font-bold">Damaged Qty</TableHead>
                     <TableHead className="text-right">Unit Landed Cost</TableHead>
                     <TableHead className="text-right text-rose-700 font-bold">Quarantined Value</TableHead>
-                    <TableHead className="text-center">Quarantine Location</TableHead>
+                    {role !== 'STOCK_KEEPER' && role !== 'STOCK_MANAGER' && (
+                      <TableHead className="text-center">Quarantine Location</TableHead>
+                    )}
                     <TableHead className="text-right">Action</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -1135,11 +1137,13 @@ function isPowerToolItem(item: { productId?: string; sku?: string; categoryName?
                       <TableCell className="text-right font-mono font-bold text-rose-700">
                         {formatCurrency(item.damagedQuantity * item.unitCost)}
                       </TableCell>
-                      <TableCell className="text-center">
-                        <Badge variant="outline" className="border-rose-300 text-rose-800 bg-rose-50 font-mono text-[10.5px]">
-                          Quarantine Bay Q-01
-                        </Badge>
-                      </TableCell>
+                      {role !== 'STOCK_KEEPER' && role !== 'STOCK_MANAGER' && (
+                        <TableCell className="text-center">
+                          <Badge variant="outline" className="border-rose-300 text-rose-800 bg-rose-50 font-mono text-[10.5px]">
+                            Quarantine Bay Q-01
+                          </Badge>
+                        </TableCell>
+                      )}
                       <TableCell className="text-right">
                         <Link to={`/inventory/grn/${item.grnId}`}>
                           <Button variant="outline" size="sm" className="h-7 text-xs border-rose-300 text-rose-800 hover:bg-rose-100">
@@ -1179,8 +1183,10 @@ function isPowerToolItem(item: { productId?: string; sku?: string; categoryName?
                     <TableHead className="min-w-[200px]">Product Name</TableHead>
                     <TableHead className="min-w-[120px]">SKU</TableHead>
                     <TableHead className="min-w-[130px]">Inward GRN</TableHead>
-                    <TableHead className="min-w-[120px]">Bin Location</TableHead>
-                    <TableHead className="text-center min-w-[120px]">Warehouse Status</TableHead>
+                    {role !== 'STOCK_KEEPER' && role !== 'STOCK_MANAGER' && (
+                      <TableHead className="min-w-[120px]">Bin Location</TableHead>
+                    )}
+                    <TableHead className="text-center min-w-[120px]">{role === 'STOCK_KEEPER' || role === 'STOCK_MANAGER' ? 'Status' : 'Warehouse Status'}</TableHead>
                     <TableHead className="text-right min-w-[110px]">Received Date</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -1199,7 +1205,9 @@ function isPowerToolItem(item: { productId?: string; sku?: string; categoryName?
                           '—'
                         )}
                       </TableCell>
-                      <TableCell className="text-slate-600">{sn.binLocation || 'Warehouse Shelf'}</TableCell>
+                      {role !== 'STOCK_KEEPER' && role !== 'STOCK_MANAGER' && (
+                        <TableCell className="text-slate-600">{sn.binLocation || 'Warehouse Shelf'}</TableCell>
+                      )}
                       <TableCell className="text-center">
                         <Badge
                           className={cn(

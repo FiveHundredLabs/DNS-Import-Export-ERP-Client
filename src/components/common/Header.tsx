@@ -31,7 +31,7 @@ const ROUTE_TITLES: Record<string, string> = {
   '/orders': 'Sales Orders',
   '/invoices': 'Invoice Management',
   '/payments': 'Payment Collections',
-  '/inventory': 'Inventory & Warehouse Hub',
+  '/inventory': 'Inventory Hub',
   '/pos': 'Showroom POS Terminal',
   '/finance': 'Finance & Double-Entry Ledger',
   '/finance/cash-book': 'Cash Book & Payment Vouchers',

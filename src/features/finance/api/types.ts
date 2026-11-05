@@ -210,6 +210,12 @@ export interface JournalEntry {
   voidedAt?: string;
   voidedBy?: string;
   voidReason?: string;
+  correctionOf?: string;
+  correctedBy?: string;
+  reversalOf?: string;
+  reversedBy?: string;
+  correctionReason?: string;
+  correctionType?: 'REISSUE' | 'RECLASSIFICATION' | 'ADJUSTMENT';
 }
 
 export interface CreateAccountDTO {
@@ -260,6 +266,9 @@ export interface CreateJournalEntryDTO {
   source?: JournalSource;
   status?: JournalEntryStatus;
   lines: CreateJournalLineDTO[];
+  correctionOf?: string;
+  correctionReason?: string;
+  correctionType?: 'REISSUE' | 'RECLASSIFICATION' | 'ADJUSTMENT';
 }
 
 export interface DateRangeFilter {
@@ -435,6 +444,9 @@ export const createJournalEntrySchema = z.object({
   source: z.enum(['MANUAL', 'PAYMENT', 'GRN', 'SALES', 'COMMISSION', 'SYSTEM']).default('MANUAL'),
   status: z.enum(['DRAFT', 'PENDING_APPROVAL', 'POSTED', 'VOIDED', 'CLEARED']).optional(),
   lines: z.array(journalLineSchema).min(2, 'A journal entry must contain at least 2 lines'),
+  correctionOf: z.string().optional(),
+  correctionReason: z.string().optional(),
+  correctionType: z.enum(['REISSUE', 'RECLASSIFICATION', 'ADJUSTMENT']).optional(),
 }).refine((data) => {
   const totalDebit = Math.round(data.lines.reduce((sum, l) => sum + (l.debit || 0), 0) * 100);
   const totalCredit = Math.round(data.lines.reduce((sum, l) => sum + (l.credit || 0), 0) * 100);

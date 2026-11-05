@@ -293,13 +293,13 @@ describe('Phase 12 — Role Security & Permission Boundary Testing (Section 83)'
       ).rejects.toThrow(/Role STOCK_KEEPER is not authorized to approve payments/i);
     });
 
-    it('cannot access restricted modules (/customers, /finance, /approvals, /commissions, /settings) but can access POS & Inventory', () => {
-      const restrictedRoutes = ['/customers', '/finance', '/approvals', '/commissions', '/settings'];
+    it('cannot access restricted modules (/customers, /finance, /approvals, /commissions, /settings, /pos) but can access Inventory', () => {
+      const restrictedRoutes = ['/customers', '/finance', '/approvals', '/commissions', '/settings', '/pos'];
       for (const route of restrictedRoutes) {
         expect(canAccessRoute('STOCK_KEEPER', route)).toBe(false);
       }
       expect(canAccessRoute('STOCK_KEEPER', '/inventory')).toBe(true);
-      expect(canAccessRoute('STOCK_KEEPER', '/pos')).toBe(true);
+      expect(canAccessRoute('STOCK_KEEPER', '/pos')).toBe(false);
     });
 
     it('cannot modify customer credit or discount terms', async () => {

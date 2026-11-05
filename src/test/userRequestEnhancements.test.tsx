@@ -245,7 +245,8 @@ describe('User Request 5-Point Enhancements', () => {
       expect(hasPermission('STOCK_MANAGER', 'inventory:pick_issue')).toBe(true);
       expect(hasPermission('STOCK_MANAGER', 'inventory:damaged_recover')).toBe(true);
       expect(hasPermission('STOCK_MANAGER', 'products:view')).toBe(true);
-      expect(hasPermission('STOCK_MANAGER', 'pos:operate')).toBe(true);
+      expect(hasPermission('STOCK_MANAGER', 'pos:operate')).toBe(false);
+      expect(hasPermission('STOCK_KEEPER', 'pos:operate')).toBe(false);
 
       // GRN Approval: Stock Manager has it, Stock Keeper DOES NOT
       expect(hasPermission('STOCK_MANAGER', 'inventory:grn_approve')).toBe(true);

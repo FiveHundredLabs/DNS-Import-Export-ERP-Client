@@ -45,6 +45,12 @@ export const DeliveryNoteDetailPage: React.FC = () => {
   const [showRejectionModal, setShowRejectionModal] = useState(false);
   const [showBarcodeModal, setShowBarcodeModal] = useState(false);
   const [showConfirmDeliveryModal, setShowConfirmDeliveryModal] = useState(false);
+  const [showApproveRejectionModal, setShowApproveRejectionModal] = useState(false);
+  const [showDeclineRejectionModal, setShowDeclineRejectionModal] = useState(false);
+  const [approvalRemarks, setApprovalRemarks] = useState(
+    'Rejection verified. Return damaged units to Quarantine Bay Q-01.'
+  );
+  const [declineRemarks, setDeclineRemarks] = useState('');
   const [barcodeFilterProduct, setBarcodeFilterProduct] = useState<string>('ALL');
   const [barcodeSingleCode, setBarcodeSingleCode] = useState<string | undefined>(undefined);
 
@@ -150,12 +156,6 @@ export const DeliveryNoteDetailPage: React.FC = () => {
   // Manager Approval Actions
   const handleApproveRejection = async () => {
     if (!note) return;
-    const remarks = window.prompt(
-      'Enter Manager Approval Remarks (e.g., Return rejected units to Quarantine Bay Q-01):',
-      'Rejection verified. Return damaged units to Quarantine Bay Q-01.'
-    );
-    if (remarks === null) return;
-
     try {
       const approver = currentUser || {
         id: 'usr-115',
@@ -165,12 +165,13 @@ export const DeliveryNoteDetailPage: React.FC = () => {
       const updated = await deliveryNoteService.approveRejection(
         note.id,
         approver as any,
-        remarks
+        approvalRemarks.trim() || 'Rejection verified. Return damaged units to Quarantine Bay Q-01.'
       );
       setNote(updated);
       toast.success(
         `Customer rejection approved! ${note.totalRejectedUnits} unit(s) logged for warehouse quarantine.`
       );
+      setShowApproveRejectionModal(false);
     } catch (err: any) {
       toast.error('Failed to approve rejection: ' + err.message);
     }
@@ -178,22 +179,26 @@ export const DeliveryNoteDetailPage: React.FC = () => {
 
   const handleDeclineRejection = async () => {
     if (!note) return;
-    const remarks = window.prompt('Enter reason for declining rejection:');
-    if (remarks === null) return;
+    if (!declineRemarks.trim() || declineRemarks.trim().length < 3) {
+      toast.error('Decline requires a reason (minimum 3 characters)');
+      return;
+    }
 
     try {
       const approver = currentUser || {
-        id: 'mgr-01',
-        name: 'Sunil Weerasinghe',
-        role: 'Operations Manager',
+        id: 'usr-115',
+        name: 'Bandara Jayasinghe',
+        role: role || 'STOCK_MANAGER',
       };
       const updated = await deliveryNoteService.declineRejection(
         note.id,
         approver as any,
-        remarks
+        declineRemarks.trim()
       );
       setNote(updated);
       toast.info('Rejection declined. Re-inspection required.');
+      setShowDeclineRejectionModal(false);
+      setDeclineRemarks('');
     } catch (err: any) {
       toast.error('Failed to decline rejection: ' + err.message);
     }
@@ -360,7 +365,7 @@ export const DeliveryNoteDetailPage: React.FC = () => {
                 </div>
                 <div>
                   <h3 className="text-sm font-bold text-amber-950 flex items-center gap-2">
-                    Customer Rejection Submitted — Awaiting Operations Manager Review
+                    Customer Rejection Submitted — Awaiting Stock Manager Approval
                   </h3>
                   <p className="text-xs text-amber-900 mt-1 leading-relaxed">
                     Submitted by: <strong>{note.rejectionSubmittedBy}</strong> • Total Rejected Units:{' '}
@@ -380,18 +385,18 @@ export const DeliveryNoteDetailPage: React.FC = () => {
                   <Button
                     size="sm"
                     variant="outline"
-                    onClick={handleDeclineRejection}
+                    onClick={() => setShowDeclineRejectionModal(true)}
                     className="text-xs text-rose-700 border-rose-300 hover:bg-rose-50 font-semibold"
                   >
                     Decline Rejection
                   </Button>
                   <Button
                     size="sm"
-                    onClick={handleApproveRejection}
+                    onClick={() => setShowApproveRejectionModal(true)}
                     className="gap-1.5 text-xs font-bold bg-amber-600 hover:bg-amber-700 text-white shadow-xs"
                   >
                     <ShieldCheck className="h-4 w-4" />
-                    Approve Customer Rejection
+                    Approve Customer Rejection as Stock Manager
                   </Button>
                 </div>
               ) : (
@@ -797,6 +802,68 @@ export const DeliveryNoteDetailPage: React.FC = () => {
           confirmText="Yes, Confirm Delivered"
           cancelText="Cancel"
           onConfirm={handleConfirmFullDelivery}
+        />
+      )}
+
+      {/* ── Confirmation Popup Modal for Approving Customer Rejection ── */}
+      {note && (
+        <ConfirmDialog
+          open={showApproveRejectionModal}
+          onOpenChange={setShowApproveRejectionModal}
+          dialogVariant="success"
+          confirmTitle="Approve Customer Rejection"
+          confirmMessage={`Approve the customer rejection for ${note.totalRejectedUnits} unit(s)? Rejected units will be logged for warehouse quarantine.`}
+          confirmText="Approve Customer Rejection"
+          cancelText="Cancel"
+          confirmContent={
+            <div className="space-y-1.5 pt-2">
+              <label className="text-xs font-semibold text-slate-700 block">
+                Approval Remarks
+              </label>
+              <Textarea
+                rows={2}
+                value={approvalRemarks}
+                onChange={(e) => setApprovalRemarks(e.target.value)}
+                className="text-xs"
+                placeholder="Enter remarks..."
+              />
+            </div>
+          }
+          onConfirm={handleApproveRejection}
+        />
+      )}
+
+      {/* ── Confirmation Popup Modal for Declining Customer Rejection ── */}
+      {note && (
+        <ConfirmDialog
+          open={showDeclineRejectionModal}
+          onOpenChange={(open) => {
+            setShowDeclineRejectionModal(open);
+            if (!open) setDeclineRemarks('');
+          }}
+          dialogVariant="destructive"
+          confirmTitle="Decline Customer Rejection"
+          confirmMessage="Declining this customer rejection will mark it as Rejection Declined and require physical re-inspection."
+          confirmText="Reject Customer Rejection"
+          cancelText="Cancel"
+          confirmContent={
+            <div className="space-y-1.5 pt-2">
+              <label className="text-xs font-semibold text-slate-700 block">
+                Reason for Declining <span className="text-rose-500">*</span>
+              </label>
+              <Textarea
+                rows={2}
+                placeholder="e.g. Physical counts do not match reported customer rejections..."
+                value={declineRemarks}
+                onChange={(e) => setDeclineRemarks(e.target.value)}
+                className="text-xs"
+              />
+              {declineRemarks.trim().length > 0 && declineRemarks.trim().length < 3 && (
+                <p className="text-[11px] text-rose-600">Reason must be at least 3 characters.</p>
+              )}
+            </div>
+          }
+          onConfirm={handleDeclineRejection}
         />
       )}
     </div>

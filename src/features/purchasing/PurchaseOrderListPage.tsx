@@ -190,7 +190,120 @@ export function PurchaseOrderListPage() {
       {/* Purchase Orders Table */}
       <Card className="border-slate-200 shadow-2xs overflow-hidden">
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
+          {/* Mobile Card List (block md:hidden) */}
+          <div className="block md:hidden p-3 space-y-3">
+            {paginatedOrders.length === 0 ? (
+              <div className="py-8 text-center text-slate-400 text-xs">
+                No Purchase Orders found matching your criteria.
+              </div>
+            ) : (
+              paginatedOrders.map((po) => (
+                <div
+                  key={po.id}
+                  onClick={() => navigate(`/purchasing/orders/${po.id}`)}
+                  className="rounded-2xl border border-slate-200/90 bg-white p-3.5 shadow-xs hover:border-primary/50 transition-all cursor-pointer active:scale-[0.99] space-y-3"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <span className="font-mono text-xs font-bold text-slate-900 truncate">
+                        {po.poNumber}
+                      </span>
+                      <span className="text-[10px] text-slate-400 font-mono shrink-0">
+                        • {po.items.length} {po.items.length === 1 ? 'item' : 'items'}
+                      </span>
+                    </div>
+                    <div className="shrink-0" onClick={(e) => e.stopPropagation()}>
+                      <PurchaseOrderStatusBadge status={po.status} />
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="font-semibold text-xs text-slate-900 truncate">{po.supplierName}</div>
+                    <div className="text-[10px] text-slate-400 font-mono mt-0.5">Vendor: {po.supplierCode}</div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 bg-slate-50 p-2.5 rounded-xl border border-slate-100 text-xs">
+                    <div>
+                      <span className="text-[10px] text-slate-400 block">Order Date</span>
+                      <span className="font-medium text-slate-700">{formatDate(po.orderDate)}</span>
+                      <span className="text-[10px] text-slate-400 block mt-0.5">Due: {formatDate(po.expectedDeliveryDate)}</span>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-[10px] text-slate-400 block">Grand Total</span>
+                      <span className="font-mono font-bold text-slate-900 text-sm">
+                        {formatCurrency(po.grandTotal, po.currency)}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-1" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => navigate(`/purchasing/orders/${po.id}`)}
+                        className="h-8 px-2.5 text-xs text-slate-700 gap-1"
+                      >
+                        <Eye className="h-3.5 w-3.5" />
+                        <span>View</span>
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => navigate(`/purchasing/orders/${po.id}/print`)}
+                        className="h-8 px-2 text-xs text-slate-600"
+                        title="Print PO"
+                      >
+                        <Printer className="h-3.5 w-3.5" />
+                      </Button>
+                      {(po.status === 'DRAFT' || po.status === 'REJECTED') && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => navigate(`/purchasing/orders/${po.id}/edit`)}
+                          className="h-8 px-2 text-xs text-slate-600"
+                          title="Edit PO"
+                        >
+                          <Edit className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
+                    </div>
+                    {po.status === 'DRAFT' && (
+                      <div className="flex items-center gap-1">
+                        <ConfirmButton
+                          variant="outline"
+                          size="xs"
+                          dialogVariant="warning"
+                          confirmTitle="Submit Purchase Order"
+                          confirmMessage={`Submit Purchase Order ${po.poNumber} for management approval?`}
+                          confirmText="Submit"
+                          onConfirm={() => handleSubmitDraft(po.id)}
+                          className="text-amber-800 border-amber-300 hover:bg-amber-50 font-medium h-7 text-[11px]"
+                        >
+                          Submit
+                        </ConfirmButton>
+                        <ConfirmButton
+                          variant="ghost"
+                          size="icon-sm"
+                          dialogVariant="destructive"
+                          confirmTitle="Delete Draft Purchase Order"
+                          confirmMessage={`Are you sure you want to permanently delete draft Purchase Order ${po.poNumber}? This cannot be undone.`}
+                          confirmText="Delete"
+                          onConfirm={() => handleDeleteDraft(po.id)}
+                          className="text-rose-500 hover:text-rose-700 h-7 w-7 p-0"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </ConfirmButton>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          {/* Desktop Table View (hidden md:block) */}
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-xs text-left text-slate-600 min-w-[850px]">
               <thead className="bg-slate-50/80 text-[11px] uppercase tracking-wider text-slate-500 border-b border-slate-200">
                 <tr>

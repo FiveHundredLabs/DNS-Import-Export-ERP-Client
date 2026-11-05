@@ -467,7 +467,7 @@ export function CustomerHubView({ customer: initialCustomer }: { customer: Custo
 
       {/* 360-Degree Master Hub Tabs */}
       <Tabs defaultValue="overview">
-        <TabsList className="bg-slate-100/90 p-1 rounded-xl border border-slate-200/80">
+        <TabsList className="bg-slate-100/90 p-1 rounded-xl border border-slate-200/80 w-full max-w-full overflow-x-auto justify-start no-scrollbar flex">
           <TabsTrigger value="overview">Overview & Terms</TabsTrigger>
           <TabsTrigger value="invoices">Invoices ({customerInvoices.length})</TabsTrigger>
           <TabsTrigger value="orders">Orders ({customerOrders.length})</TabsTrigger>

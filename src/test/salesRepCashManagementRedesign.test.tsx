@@ -181,4 +181,79 @@ describe('Redesigned Cash in Hand & Collections Management UI', () => {
       expect(screen.getByText('Kasun Wickramasinghe')).toBeInTheDocument();
     });
   });
+
+  it('shows Unified Income Desk button only for FINANCE_MANAGER and hides it for other roles', async () => {
+    // 1. Finance Manager - button MUST be visible
+    currentTestUser = {
+      id: 'usr-fin-mgr',
+      name: 'Frank Finance Manager',
+      email: 'finance@dnserp.com',
+      role: 'FINANCE_MANAGER',
+      phone: '+94 77 999 8888',
+      isActive: true,
+    };
+
+    const { unmount: unmountFin } = render(
+      <MemoryRouter initialEntries={['/payments']}>
+        <PaymentListPage />
+      </MemoryRouter>
+    );
+
+    expect(screen.getByText('Unified Income Desk')).toBeInTheDocument();
+    unmountFin();
+
+    // 2. Director - button must NOT be visible
+    currentTestUser = mockDirector;
+    const { unmount: unmountDir } = render(
+      <MemoryRouter initialEntries={['/payments']}>
+        <PaymentListPage />
+      </MemoryRouter>
+    );
+    expect(screen.queryByText('Unified Income Desk')).not.toBeInTheDocument();
+    unmountDir();
+
+    // 3. Sales Manager - button must NOT be visible
+    currentTestUser = mockSalesManager;
+    const { unmount: unmountSM } = render(
+      <MemoryRouter initialEntries={['/payments']}>
+        <PaymentListPage />
+      </MemoryRouter>
+    );
+    expect(screen.queryByText('Unified Income Desk')).not.toBeInTheDocument();
+    unmountSM();
+
+    // 4. Area Manager - button must NOT be visible
+    currentTestUser = {
+      id: 'usr-104',
+      name: 'Nimal Jayawardena',
+      email: 'area.manager@dnserp.com',
+      role: 'AREA_MANAGER',
+      phone: '+94 77 456 7890',
+      isActive: true,
+    };
+    const { unmount: unmountAM } = render(
+      <MemoryRouter initialEntries={['/payments']}>
+        <PaymentListPage />
+      </MemoryRouter>
+    );
+    expect(screen.queryByText('Unified Income Desk')).not.toBeInTheDocument();
+    unmountAM();
+
+    // 5. General Manager - button must NOT be visible
+    currentTestUser = {
+      id: 'usr-102',
+      name: 'Sunil Silva',
+      email: 'manager@dnserp.com',
+      role: 'MANAGER',
+      phone: '+94 77 234 5678',
+      isActive: true,
+    };
+    const { unmount: unmountMgr } = render(
+      <MemoryRouter initialEntries={['/payments']}>
+        <PaymentListPage />
+      </MemoryRouter>
+    );
+    expect(screen.queryByText('Unified Income Desk')).not.toBeInTheDocument();
+    unmountMgr();
+  });
 });
