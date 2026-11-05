@@ -388,7 +388,7 @@ export const DeliveryNoteDetailPage: React.FC = () => {
                     onClick={() => setShowDeclineRejectionModal(true)}
                     className="text-xs text-rose-700 border-rose-300 hover:bg-rose-50 font-semibold"
                   >
-                    Reject Customer Rejection
+                    Decline Rejection
                   </Button>
                   <Button
                     size="sm"
