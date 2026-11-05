@@ -1,9 +1,8 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { LoginPage } from '../features/auth/LoginPage';
+import { LoginPage, DEMO_MODULES, UNIQUE_DEMO_ROLES } from '../features/auth/LoginPage';
 import { authService } from '../services/AuthService';
-import { MOCK_USERS } from '../mock/mockUsers';
 
 describe('LoginPage and Example Users For Each Role', () => {
   beforeEach(() => {
@@ -11,32 +10,51 @@ describe('LoginPage and Example Users For Each Role', () => {
     authService.logout();
   });
 
-  it('renders all 8 example user roles on the login page', () => {
+  it('renders all 5 modules in exact specified order with 12 unique roles and zero duplicates', () => {
     render(
       <MemoryRouter initialEntries={['/login']}>
         <LoginPage />
       </MemoryRouter>
     );
 
-    // Verify all 8 mock users are displayed by name
-    MOCK_USERS.forEach((user) => {
-      expect(screen.getAllByText(user.name).length).toBeGreaterThan(0);
-      expect(screen.getAllByText(user.email).length).toBeGreaterThan(0);
+    // Verify 5 modules in exact order
+    expect(DEMO_MODULES[0].name).toBe('Administrator');
+    expect(DEMO_MODULES[1].name).toBe('Sales Module');
+    expect(DEMO_MODULES[2].name).toBe('Purchasing Module');
+    expect(DEMO_MODULES[3].name).toBe('Finance Module');
+    expect(DEMO_MODULES[4].name).toBe('Showroom POS');
+
+    // Verify module headers are in the document
+    expect(screen.getAllByText('Administrator').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Sales Module').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Purchasing Module').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Finance Module').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Showroom POS').length).toBeGreaterThan(0);
+
+    // Verify all 12 unique demo roles are displayed
+    expect(UNIQUE_DEMO_ROLES.length).toBe(12);
+    UNIQUE_DEMO_ROLES.forEach((item) => {
+      expect(screen.getAllByText(item.name).length).toBeGreaterThan(0);
+      expect(screen.getAllByText(item.email).length).toBeGreaterThan(0);
+      expect(screen.getAllByText(item.title).length).toBeGreaterThan(0);
     });
 
-    // Check specific role badges
+    // Check specific role titles
     expect(screen.getAllByText('Director').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Operations Manager').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Manager').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Sales Manager').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Finance Manager').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Area Manager').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Sales Representative').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Stock Keeper').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Showroom Cashier').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Purchasing Manager').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Purchasing Officer').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Stock Manager').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Stock Keeper').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Finance Manager').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Showroom Manager').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Cashier').length).toBeGreaterThan(0);
   });
 
-  it('allows clicking an example user card to prefill the email input', () => {
+  it('allows clicking an example user card to prefill the email input in the standard login form', () => {
     render(
       <MemoryRouter initialEntries={['/login']}>
         <LoginPage />
@@ -57,7 +75,7 @@ describe('LoginPage and Example Users For Each Role', () => {
       </MemoryRouter>
     );
 
-    const cashierLoginBtn = screen.getByRole('button', { name: /Login as Showroom Cashier/i });
+    const cashierLoginBtn = screen.getByRole('button', { name: /Login as Cashier/i });
     expect(cashierLoginBtn).toBeDefined();
 
     fireEvent.click(cashierLoginBtn);
@@ -86,24 +104,24 @@ describe('LoginPage and Example Users For Each Role', () => {
     });
   });
 
-  it('filters role cards when category tabs or search input is used', () => {
+  it('filters role cards when module tabs or search input is used', () => {
     render(
       <MemoryRouter initialEntries={['/login']}>
         <LoginPage />
       </MemoryRouter>
     );
 
-    // Click "Executive & Management"
-    const mgmtTab = screen.getByRole('button', { name: /Executive & Management/i });
-    fireEvent.click(mgmtTab);
+    // Click "Administrator" tab
+    const adminTab = screen.getByRole('button', { name: /Administrator/i });
+    fireEvent.click(adminTab);
 
-    // Director, Manager, Sales Manager visible
+    // Director and Manager are visible
     expect(screen.getByText('Saman Jayasuriya')).toBeDefined();
     expect(screen.getByText('Ruwan Wijesinghe')).toBeDefined();
-    expect(screen.getByText('Kamal Perera')).toBeDefined();
 
-    // Cashier should be filtered out from grid
+    // Cashier and Sales Manager should be filtered out from grid
     expect(screen.queryByText('Chathura Alwis')).toBeNull();
+    expect(screen.queryByText('Kamal Perera')).toBeNull();
 
     // Use search box
     const searchInput = screen.getByPlaceholderText('Search role or name...');
@@ -111,5 +129,24 @@ describe('LoginPage and Example Users For Each Role', () => {
 
     expect(screen.getByText('Saman Jayasuriya')).toBeDefined();
     expect(screen.queryByText('Ruwan Wijesinghe')).toBeNull();
+  });
+
+  it('submits standard login form and authenticates with credentials', async () => {
+    render(
+      <MemoryRouter initialEntries={['/login']}>
+        <LoginPage />
+      </MemoryRouter>
+    );
+
+    const emailInput = screen.getByPlaceholderText('user@dnserp.com');
+    const submitBtn = screen.getByRole('button', { name: /Sign In to ERP Portal/i });
+
+    fireEvent.change(emailInput, { target: { value: 'finance@dnserp.com' } });
+    fireEvent.click(submitBtn);
+
+    await waitFor(() => {
+      expect(authService.getCurrentUser()?.email).toBe('finance@dnserp.com');
+      expect(authService.getCurrentUser()?.role).toBe('FINANCE_MANAGER');
+    });
   });
 });

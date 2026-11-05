@@ -543,10 +543,10 @@ export const PurchasingApprovalHub: React.FC = () => {
               1. POs Pending Purchasing Manager Approval
               2. POs Pending Manager Approval */}
           {statusFilter === 'PENDING' && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-stretch">
               {/* SECTION 1: POs Pending Purchasing Manager Approval */}
-              <Card className="border-slate-200 shadow-2xs bg-white">
-                <CardHeader className="bg-amber-50/70 border-b border-amber-200/70 px-4 py-3">
+              <Card className="border-slate-200 shadow-2xs bg-white flex flex-col h-full">
+                <CardHeader className="bg-amber-50/70 border-b border-amber-200/70 px-4 py-3 shrink-0">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <ShoppingCart className="h-4 w-4 text-amber-600" />
@@ -562,9 +562,9 @@ export const PurchasingApprovalHub: React.FC = () => {
                     Stage 1: Purchase Orders submitted by Purchasing Officers awaiting Purchasing Manager verification.
                   </p>
                 </CardHeader>
-                <CardContent className="p-3 space-y-2 max-h-60 overflow-y-auto">
+                <CardContent className="p-3 space-y-2.5 flex-1 flex flex-col justify-start">
                   {filteredPendingPmApprovals.length === 0 ? (
-                    <div className="py-6 text-center text-slate-400 text-xs">
+                    <div className="flex-1 flex flex-col items-center justify-center py-8 text-center text-slate-400 text-xs min-h-[160px]">
                       <CheckCircle2 className="h-6 w-6 text-emerald-400 mx-auto mb-1 opacity-70" />
                       <p className="font-semibold text-slate-600">No POs Pending Purchasing Manager Approval</p>
                       <p className="text-2xs">All submitted POs have been verified or no orders are currently in Stage 1.</p>
@@ -634,8 +634,8 @@ export const PurchasingApprovalHub: React.FC = () => {
               </Card>
 
               {/* SECTION 2: POs Pending Manager Approval */}
-              <Card className="border-slate-200 shadow-2xs bg-white">
-                <CardHeader className="bg-blue-50/70 border-b border-blue-200/70 px-4 py-3">
+              <Card className="border-slate-200 shadow-2xs bg-white flex flex-col h-full">
+                <CardHeader className="bg-blue-50/70 border-b border-blue-200/70 px-4 py-3 shrink-0">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <ShieldCheck className="h-4 w-4 text-blue-600" />
@@ -651,9 +651,9 @@ export const PurchasingApprovalHub: React.FC = () => {
                     Stage 2: Purchase Orders awaiting final authorization from the Manager (System Manager).
                   </p>
                 </CardHeader>
-                <CardContent className="p-3 space-y-2 max-h-60 overflow-y-auto">
+                <CardContent className="p-3 space-y-2.5 flex-1 flex flex-col justify-start">
                   {filteredPendingManagerApprovals.length === 0 ? (
-                    <div className="py-6 text-center text-slate-400 text-xs">
+                    <div className="flex-1 flex flex-col items-center justify-center py-8 text-center text-slate-400 text-xs min-h-[160px]">
                       <Clock className="h-6 w-6 text-slate-300 mx-auto mb-1 opacity-70" />
                       <p className="font-semibold text-slate-600">No POs Pending Manager Approval</p>
                       <p className="text-2xs">No purchase orders are currently awaiting Manager (System Manager) authorization.</p>
