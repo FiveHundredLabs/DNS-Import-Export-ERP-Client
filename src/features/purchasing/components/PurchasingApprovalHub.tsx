@@ -775,7 +775,7 @@ export const PurchasingApprovalHub: React.FC = () => {
                           return (
                             <TableRow
                               key={app.id}
-                              onClick={() => navigate('/purchasing/approvals/' + app.id)}
+                              onClick={() => navigate('/purchasing/approvals/' + app.id, { state: { from: '/purchasing/approvals' } })}
                               className="cursor-pointer hover:bg-slate-50/80 transition-colors"
                             >
                               <TableCell className="font-mono font-bold text-primary py-3 px-3">
@@ -810,7 +810,7 @@ export const PurchasingApprovalHub: React.FC = () => {
                                   size="sm"
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    navigate('/purchasing/approvals/' + app.id);
+                                    navigate('/purchasing/approvals/' + app.id, { state: { from: '/purchasing/approvals' } });
                                   }}
                                   className="h-7 text-xs font-semibold gap-1.5 bg-primary hover:bg-primary-hover text-white shadow-2xs"
                                 >

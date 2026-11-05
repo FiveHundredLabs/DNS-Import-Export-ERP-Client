@@ -40,9 +40,8 @@ import { PaymentCollectionPage } from './features/payments/PaymentCollectionPage
 import { PaymentDetailPage } from './features/payments/PaymentDetailPage';
 import { CustomerPaymentDetailPage } from './features/payments/CustomerPaymentDetailPage';
 import { CustomerPaymentsTab } from './features/payments/CustomerPaymentsTab';
-import { ShowroomPOSTerminal } from './features/pos/ShowroomPOSTerminal';
 import { ShowroomManagerHub } from './features/pos/ShowroomManagerHub';
-import { useAuth } from './hooks/useAuth';
+import { DayEndPOSReportPage } from './features/pos/DayEndPOSReport';
 import { POSTransactionHistoryPage } from './features/pos/POSTransactionHistoryPage';
 import { POSSessionsPage } from './features/pos/POSSessionsPage';
 import { WarrantyHubPage } from './features/warranty/WarrantyHubPage';
@@ -134,36 +133,12 @@ import { PurchasingApprovalHub } from './features/purchasing/components/Purchasi
 import { ProfilePage } from './features/profile/ProfilePage';
 import { SupplierReturnsPage } from './features/purchasing/SupplierReturnsPage';
 
-function POSRouteSwitcher() {
-  const { role } = useAuth();
-  if (role === 'MANAGER' || role === 'DIRECTOR' || role === 'SHOWROOM_MANAGER') {
-    return <ShowroomManagerHub />;
-  }
-  return <ShowroomPOSTerminal />;
-}
-
 export function App() {
   return (
     <>
       <Toaster richColors position="top-right" />
       <Routes>
         <Route path="/login" element={<LoginPage />} />
-        <Route
-          path="/pos/terminal"
-          element={
-            <ProtectedRoute>
-              <ShowroomPOSTerminal fullscreen />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/pos/terminal/:terminalId"
-          element={
-            <ProtectedRoute>
-              <ShowroomPOSTerminal fullscreen />
-            </ProtectedRoute>
-          }
-        />
       <Route path="/" element={<AppLayout />}>
         {/* Standard Single-Column Content Pages */}
         <Route element={<StandardLayout />}>
@@ -541,7 +516,7 @@ export function App() {
           path="pos"
           element={
             <ProtectedRoute>
-              <POSRouteSwitcher />
+              <ShowroomManagerHub />
             </ProtectedRoute>
           }
         />
@@ -666,6 +641,7 @@ export function App() {
         <Route path="reports/sales/outstanding" element={<ProtectedRoute><SalesOutstandingReportPage /></ProtectedRoute>} />
         <Route path="reports/sales/profitability" element={<ProtectedRoute><SalesProfitabilityReportPage /></ProtectedRoute>} />
         <Route path="reports/sales/showroom" element={<ProtectedRoute><ShowroomSalesReportPage /></ProtectedRoute>} />
+        <Route path="reports/sales/pos-day-end" element={<ProtectedRoute><DayEndPOSReportPage /></ProtectedRoute>} />
 
         <Route
           path="reports/purchasing"

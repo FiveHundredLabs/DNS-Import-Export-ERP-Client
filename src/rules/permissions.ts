@@ -203,7 +203,6 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
   CASHIER: [
     'view:cashier_dashboard',
     'products:view',
-    'pos:operate',
   ],
   SHOWROOM_MANAGER: [
     'view:showroom_manager_dashboard',
@@ -322,6 +321,9 @@ export function canAccessRoute(role: UserRole, path: string): boolean {
   if (path.startsWith('/commissions')) {
     return hasPermission(role, 'commissions:view');
   }
+  if (path === '/reports/sales/pos-day-end') {
+    return ['DIRECTOR', 'MANAGER', 'SALES_MANAGER', 'SHOWROOM_MANAGER'].includes(role);
+  }
   if (path.startsWith('/reports')) {
     // Area Manager: NO access to reports
     if (role === 'AREA_MANAGER') {
@@ -329,7 +331,7 @@ export function canAccessRoute(role: UserRole, path: string): boolean {
     }
     // Showroom Manager: ONLY the showroom sales report
     if (role === 'SHOWROOM_MANAGER') {
-      return path === '/reports/sales/showroom';
+      return path === '/reports/sales/showroom' || path === '/reports/sales/pos-day-end';
     }
     // Finance Manager: ONLY finance reports
     if (role === 'FINANCE_MANAGER') {

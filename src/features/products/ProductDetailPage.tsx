@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useSmartBack } from '../../hooks/useSmartBack';
 import { Product } from '../../types/product';
 import { productService } from '../../services/ProductService';
 import { batchInventoryService } from '../../services/BatchInventoryService';
@@ -38,6 +39,7 @@ import { toast } from 'sonner';
 export function ProductDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { role } = useAuth();
+  const goBack = useSmartBack('/products');
   const [product, setProduct] = useState<Product | null>(null);
   const [batches, setBatches] = useState<StockBatch[]>([]);
   const [priceHistory, setPriceHistory] = useState<ProductSellingPriceHistory[]>([]);
@@ -88,11 +90,9 @@ export function ProductDetailPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
-        <Link to="/products">
-          <Button variant="ghost" size="icon">
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-        </Link>
+        <Button variant="ghost" size="icon" onClick={goBack}>
+          <ArrowLeft className="h-4 w-4" />
+        </Button>
         <div>
           <div className="flex items-center gap-2">
             <span className="font-mono text-xs text-slate-500 uppercase">SKU: {product.sku}</span>

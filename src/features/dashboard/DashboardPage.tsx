@@ -27,10 +27,15 @@ import {
   ArrowRight,
 } from 'lucide-react';
 import { formatCurrency } from '../../utils/formatters';
+import { CashierStandaloneNotice } from '../pos/CashierStandaloneNotice';
 
 export function DashboardPage() {
   const { currentUser, role } = useAuth();
   const navigate = useNavigate();
+
+  if (role === 'CASHIER') {
+    return <CashierStandaloneNotice />;
+  }
 
   if (role === 'DIRECTOR' || role === 'MANAGER') {
     return <DirectorDashboard />;
@@ -60,14 +65,19 @@ export function DashboardPage() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-slate-900">
+        <div className="flex items-center gap-3.5">
+          <div className="h-11 w-11 rounded-xl bg-white border border-slate-200 p-1 shadow-2xs flex items-center justify-center overflow-hidden shrink-0 hidden sm:flex">
+            <img src="/logo.png" alt="DNS Logo" className="h-full w-full object-contain" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight text-slate-900">
             {role.replace('_', ' ')} Performance Snap
           </h1>
           <p className="text-xs text-slate-500 mt-0.5">
             Authenticated as <span className="font-semibold text-slate-700">{currentUser.name}</span> • Role workspace & operational analytics
           </p>
         </div>
+      </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -101,7 +111,7 @@ export function DashboardPage() {
         )}
         {role === 'SHOWROOM_MANAGER' && (
           <>
-            <StatCard title="Active Terminals" value="3 Online" variant="success" icon={Monitor} />
+            <StatCard title="Active Terminals" value="1 Online" variant="success" icon={Monitor} />
             <StatCard title="Drawer Float Total" value={formatCurrency(125000)} variant="blue" icon={DollarSign} />
             <StatCard title="Pending Shift Closings" value="1 Review" variant="warning" icon={Clock} />
             <StatCard title="Today's Showroom Sales" value={formatCurrency(485000)} trend={{ value: '18.4%', isPositive: true }} variant="indigo" icon={Store} />
@@ -189,7 +199,7 @@ export function DashboardPage() {
           <h2 className="text-sm font-bold text-slate-800 uppercase tracking-wide">
             POS Operational Workspaces
           </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             <Link
               to="/pos"
               className="flex items-center justify-between p-3.5 rounded-xl border border-slate-200 bg-white hover:border-primary hover:shadow-xs transition-all group"
@@ -206,21 +216,6 @@ export function DashboardPage() {
               <ArrowRight className="h-4 w-4 text-slate-400 group-hover:text-primary transition-colors" />
             </Link>
 
-            <Link
-              to="/pos/terminal"
-              className="flex items-center justify-between p-3.5 rounded-xl border border-slate-200 bg-white hover:border-primary hover:shadow-xs transition-all group"
-            >
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-lg bg-emerald-50 text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white transition-colors">
-                  <Monitor className="h-5 w-5" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-xs text-slate-900">POS Register Terminal</h3>
-                  <p className="text-[11px] text-slate-500">Counter checkout screen</p>
-                </div>
-              </div>
-              <ArrowRight className="h-4 w-4 text-slate-400 group-hover:text-emerald-600 transition-colors" />
-            </Link>
           </div>
         </div>
       )}

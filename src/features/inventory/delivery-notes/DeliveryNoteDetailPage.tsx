@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useSmartBack } from '../../../hooks/useSmartBack';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card';
 import { Button } from '../../../components/ui/button';
 import { Badge } from '../../../components/ui/badge';
@@ -37,6 +38,7 @@ import { toast } from 'sonner';
 export const DeliveryNoteDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const goBack = useSmartBack('/inventory/delivery-notes');
   const { currentUser, role } = useAuth();
 
   const [note, setNote] = useState<DeliveryNote | null>(null);
@@ -258,13 +260,7 @@ export const DeliveryNoteDetailPage: React.FC = () => {
     return (
       <div className="p-8 text-center space-y-3">
         <div className="text-sm font-bold text-slate-800">Delivery Note Not Found</div>
-        <Button size="sm" onClick={() => {
-              if (window.history.length > 1) {
-                navigate(-1);
-              } else {
-                navigate(effectiveRole === 'STOCK_MANAGER' ? '/approvals?tab=delivery-notes' : '/inventory/delivery-notes');
-              }
-            }}>
+        <Button size="sm" onClick={goBack}>
           Back to List
         </Button>
       </div>
@@ -279,7 +275,7 @@ export const DeliveryNoteDetailPage: React.FC = () => {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => navigate('/inventory/delivery-notes')}
+            onClick={goBack}
             className="text-xs mb-1 -ml-2 text-slate-500 hover:text-slate-900 gap-1.5"
           >
             <ArrowLeft className="h-3.5 w-3.5" />

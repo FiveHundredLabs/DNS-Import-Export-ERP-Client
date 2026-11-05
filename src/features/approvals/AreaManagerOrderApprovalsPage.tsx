@@ -213,7 +213,7 @@ export function AreaManagerOrderApprovalsPage() {
                   </div>
                   <Button
                     size="sm"
-                    onClick={() => navigate(`/orders/${app.documentId}`)}
+                    onClick={() => navigate(`/orders/${app.documentId}`, { state: { from: '/approvals' } })}
                     className="text-xs gap-1.5 bg-primary hover:bg-primary-hover text-white font-semibold shadow-xs cursor-pointer"
                   >
                     <span>Inspect Record</span>

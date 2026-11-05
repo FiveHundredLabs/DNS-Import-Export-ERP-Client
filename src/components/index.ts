@@ -1,6 +1,6 @@
 /**
  * ==============================================================================
- * DNS DISTRIBUTION ERP — CENTRAL COMPONENTS DIRECTORY
+ * DNS IMPORT & EXPORT ERP — CENTRAL COMPONENTS DIRECTORY
  * ==============================================================================
  * Single source of truth for all reusable components across the entire ERP.
  * Any UI developer can import primitives, layout components, entity selectors,

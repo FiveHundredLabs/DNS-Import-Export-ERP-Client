@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useSmartBack } from '../../hooks/useSmartBack';
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
@@ -45,6 +46,7 @@ import { toast } from 'sonner';
 export const PurchaseOrderApprovalPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const goBack = useSmartBack('/purchasing/approvals');
   const { currentUser, role } = useAuth();
 
   const { purchaseOrders, loading: poLoading, refetch: refetchPOs } = usePurchaseOrders();
@@ -229,7 +231,7 @@ export const PurchaseOrderApprovalPage: React.FC = () => {
         <Button
           variant="outline"
           size="sm"
-          onClick={() => navigate('/approvals?tab=po-approvals')}
+          onClick={goBack}
           className="gap-2 text-slate-700 bg-white"
         >
           <ArrowLeft className="h-4 w-4" />
@@ -261,13 +263,7 @@ export const PurchaseOrderApprovalPage: React.FC = () => {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => {
-              if (window.history.length > 1) {
-                navigate(-1);
-              } else {
-                navigate('/approvals?tab=po-approvals');
-              }
-            }}
+            onClick={goBack}
             className="text-xs -ml-2 text-slate-500 hover:text-slate-900 gap-1.5 h-7 cursor-pointer"
           >
             <ArrowLeft className="h-3.5 w-3.5" />

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useSmartBack } from '../../hooks/useSmartBack';
 import { Payment } from '../../types/payment';
 import { paymentService } from '../../services/PaymentService';
 import { PaymentStatusBadge } from './PaymentStatusBadge';
@@ -34,6 +35,7 @@ import {
 export function PaymentDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const goBack = useSmartBack('/payments');
   const { role, currentUser } = useAuth();
   const [payment, setPayment] = useState<Payment | null>(null);
   const [loading, setLoading] = useState(true);
@@ -123,11 +125,9 @@ export function PaymentDetailPage() {
     <div className="w-full space-y-5 pb-12">
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <Link to="/payments">
-          <Button variant="ghost" size="sm" className="gap-1.5 text-xs">
+        <Button variant="ghost" size="sm" className="gap-1.5 text-xs" onClick={goBack}>
             <ArrowLeft className="h-4 w-4" /> Back to Payments
           </Button>
-        </Link>
 
         <div className="flex flex-wrap items-center gap-2">
           {isFinanceOrDirector && isPending && (

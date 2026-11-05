@@ -95,7 +95,7 @@ export class PdfService implements IPdfService {
           <table class="header-table">
             <tr>
               <td>
-                <div class="company-brand">DNS DISTRIBUTION (PVT) LTD</div>
+                <div class="company-brand">DNS IMPORT & EXPORT (PVT) LTD</div>
                 <div style="color: #64748b; font-size: 12px; margin-top: 2px;">Authorized Electrical, Automation & Industrial Wholesale Distributor</div>
                 <div style="font-size: 11px; color: #64748b; margin-top: 4px;">142 First Cross Street, Colombo 11, Sri Lanka</div>
                 <div style="font-size: 11px; color: #64748b;">Tel: +94 11 234 5678 | VAT Reg No: 109847291-7000</div>
@@ -123,7 +123,7 @@ export class PdfService implements IPdfService {
                 <div style="font-size: 10px; font-weight: 700; text-transform: uppercase; color: #64748b; letter-spacing: 0.5px;">Prepared By:</div>
                 <div style="font-size: 14px; font-weight: 700; color: #0f172a; margin-top: 2px;">${quotation.salesRepNameSnapshot}</div>
                 <div style="font-size: 11px; color: #64748b;">Sales & Distribution Executive</div>
-                <div style="font-size: 11px; color: #64748b; margin-top: 4px;">DNS Distribution Commercial Division</div>
+                <div style="font-size: 11px; color: #64748b; margin-top: 4px;">DNS Import & Export Commercial Division</div>
               </td>
             </tr>
           </table>
@@ -240,7 +240,7 @@ export class PdfService implements IPdfService {
           <table class="header-table">
             <tr>
               <td>
-                <div class="company-brand">DNS DISTRIBUTION (PVT) LTD</div>
+                <div class="company-brand">DNS IMPORT & EXPORT (PVT) LTD</div>
                 <div style="color: #64748b; font-size: 11px; margin-top: 2px;">Authorized Electrical & Automation Wholesale Distributor</div>
                 <div style="font-size: 10.5px; color: #64748b; margin-top: 3px;">142 First Cross Street, Colombo 11, Sri Lanka</div>
                 <div style="font-size: 10.5px; color: #64748b;">Tel: +94 11 234 5678 | VAT Reg No: 109847291-7000</div>
@@ -320,7 +320,7 @@ export class PdfService implements IPdfService {
 
           <div class="terms-box">
             <strong>Payment Information & Remittance Advice:</strong>
-            <p style="margin: 3px 0;">DNS Distribution (Pvt) Ltd | Commercial Bank of Ceylon | Account No: 1000984721 | City Office</p>
+            <p style="margin: 3px 0;">DNS Import & Export (Pvt) Ltd | Commercial Bank of Ceylon | Account No: 1000984721 | City Office</p>
             <p style="margin: 3px 0;">Please indicate invoice number <strong>${invoice.invoiceNumber}</strong> upon remitting funds.</p>
             ${invoice.notes ? `<p style="margin: 3px 0;"><strong>Notes:</strong> ${invoice.notes}</p>` : ''}
           </div>
@@ -408,7 +408,7 @@ export class PdfService implements IPdfService {
           <table class="header-table">
             <tr>
               <td style="vertical-align: top; width: 60%;">
-                <div style="font-size: 18px; font-weight: 900; color: #0f172a;">DNS DISTRIBUTION (PVT) LTD</div>
+                <div style="font-size: 18px; font-weight: 900; color: #0f172a;">DNS IMPORT & EXPORT (PVT) LTD</div>
                 <div style="font-size: 10.5px; color: #475569;">142 First Cross Street, Colombo 11, Sri Lanka</div>
                 <div style="font-size: 10px; color: #334155; margin-top: 4px;">
                   <strong>TIN:</strong> 109847291 &nbsp;|&nbsp; <strong>VAT Reg No:</strong> 109847291-7000 &nbsp;|&nbsp; <strong>SVAT:</strong> SVAT-004219
@@ -470,7 +470,7 @@ export class PdfService implements IPdfService {
                 <div class="statutory-box">
                   <strong>IRD Statutory Certification under VAT Act No. 14 of 2002:</strong>
                   <p style="margin: 3px 0;">"I/We hereby certify that the particulars given in this Tax Invoice are true and correct and that the value of supply and the tax charged herein comply with Section 20 of the Value Added Tax Act No. 14 of 2002."</p>
-                  <p style="margin: 2px 0; font-size: 9px; color: #64748b;">This is an approved computer-generated Tax Invoice. Title to goods remains with DNS Distribution (Pvt) Ltd until full settlement.</p>
+                  <p style="margin: 2px 0; font-size: 9px; color: #64748b;">This is an approved computer-generated Tax Invoice. Title to goods remains with DNS Import & Export (Pvt) Ltd until full settlement.</p>
                 </div>
               </td>
               <td style="vertical-align: top; width: 45%;">
@@ -503,7 +503,7 @@ export class PdfService implements IPdfService {
           <div class="signatures">
             <div class="sig-box">
               <div class="sig-line">Authorized Signatory</div>
-              <div style="font-size: 9px; color: #64748b;">DNS Distribution (Pvt) Ltd</div>
+              <div style="font-size: 9px; color: #64748b;">DNS Import & Export (Pvt) Ltd</div>
             </div>
             <div class="sig-box">
               <div class="sig-line">Tax Rubber Seal</div>
@@ -554,7 +554,7 @@ export class PdfService implements IPdfService {
         <body>
           <div class="header">
             <div>
-              <div class="company">DNS DISTRIBUTION (PVT) LTD</div>
+              <div class="company">DNS IMPORT & EXPORT (PVT) LTD</div>
               <div style="font-size: 12px; color: #64748b;">Wholesale Electrical & Industrial Switchgear Solutions</div>
               <div style="font-size: 11px; color: #64748b;">142 First Cross Street, Colombo 11 | VAT: 109847291-7000</div>
             </div>
@@ -920,9 +920,9 @@ export class PdfService implements IPdfService {
             <div style="display: flex; justify-content: space-between; border-bottom: 2px solid #0f172a; padding-bottom: 12px; margin-bottom: 14px;">
               <div>
                 <div style="display: flex; align-items: center; gap: 8px;">
-                  <div style="background: #0f172a; color: #fff; width: 32px; height: 32px; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; font-weight: 900; font-size: 13px;">DNS</div>
+                  <div style="background: #ffffff; border: 1px solid #cbd5e1; width: 32px; height: 32px; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; overflow: hidden; padding: 2px; box-sizing: border-box;"><img src="/logo.png" alt="DNS Logo" style="width: 100%; height: 100%; object-fit: contain;" /></div>
                   <div>
-                    <div style="font-size: 17px; font-weight: 800; color: #0f172a; line-height: 1;">DNS DISTRIBUTION (PVT) LTD</div>
+                    <div style="font-size: 17px; font-weight: 800; color: #0f172a; line-height: 1;">DNS IMPORT & EXPORT (PVT) LTD</div>
                     <div style="font-size: 10px; color: #64748b; margin-top: 3px;">Authorized Wholesale Electrical, Automation & Industrial Solutions</div>
                   </div>
                 </div>
@@ -968,8 +968,8 @@ export class PdfService implements IPdfService {
           : `
             <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #0f172a; padding-bottom: 8px; margin-bottom: 12px;">
               <div style="display: flex; align-items: center; gap: 6px;">
-                <div style="background: #0f172a; color: #fff; width: 22px; height: 22px; border-radius: 4px; display: inline-flex; align-items: center; justify-content: center; font-weight: 900; font-size: 10px;">DNS</div>
-                <span style="font-weight: 700; font-size: 12px; color: #0f172a;">DNS DISTRIBUTION (PVT) LTD</span>
+                <div style="background: #ffffff; border: 1px solid #cbd5e1; width: 22px; height: 22px; border-radius: 4px; display: inline-flex; align-items: center; justify-content: center; overflow: hidden; padding: 1px; box-sizing: border-box;"><img src="/logo.png" alt="DNS Logo" style="width: 100%; height: 100%; object-fit: contain;" /></div>
+                <span style="font-weight: 700; font-size: 12px; color: #0f172a;">DNS IMPORT & EXPORT (PVT) LTD</span>
                 <span style="font-size: 10px; color: #64748b; margin-left: 6px;">VAT: 109847291-7000</span>
               </div>
               <div style="display: flex; align-items: center; gap: 8px;">
@@ -1065,7 +1065,7 @@ export class PdfService implements IPdfService {
 
         const footerHtml = `
           <div style="margin-top: auto; padding-top: 10px; border-top: 1px solid #f1f5f9; display: flex; justify-content: space-between; font-size: 9px; color: #94a3b8;">
-            <span>DNS Distribution (Pvt) Ltd • Official Purchase Order • Non-Transferable</span>
+            <span>DNS Import & Export (Pvt) Ltd • Official Purchase Order • Non-Transferable</span>
             <span style="font-weight: 700; font-family: monospace;">Page ${p.pageNumber} of ${p.totalPages}</span>
           </div>
         `;
@@ -1199,7 +1199,7 @@ export class PdfService implements IPdfService {
           <table class="header-table">
             <tr>
               <td style="vertical-align: top;">
-                <div class="brand-name">DNS DISTRIBUTION (PVT) LTD</div>
+                <div class="brand-name">DNS IMPORT & EXPORT (PVT) LTD</div>
                 <div style="color: #475569; font-size: 11px; margin-top: 2px; font-weight: 600;">Authorized Electrical, Industrial Switchgear & Automation Importers</div>
                 <div style="font-size: 10.5px; color: #64748b; margin-top: 3px;">142 First Cross Street, Colombo 11, Sri Lanka</div>
                 <div style="font-size: 10px; color: #64748b;">Hotline: +94 11 234 5678 | Email: sales@dnsdistribution.lk | VAT Reg: 109847291-7000</div>
@@ -1313,7 +1313,7 @@ export class PdfService implements IPdfService {
           </div>
 
           <div class="footer-statutory">
-            This Sales Order Confirmation is generated via DNS Distribution ERP. Goods remain property of DNS Distribution (Pvt) Ltd until full settlement.
+            This Sales Order Confirmation is generated via DNS Import & Export ERP. Goods remain property of DNS Import & Export (Pvt) Ltd until full settlement.
             <br/>Printed: ${new Date().toLocaleString()} • Form ERP-SO-01 Rev 2
           </div>
         </body>
@@ -1676,7 +1676,7 @@ export class PdfService implements IPdfService {
           <table class="header-table">
             <tr>
               <td style="vertical-align: top;">
-                <div class="brand-name">DNS ENGINEERING & ELECTRICALS (PVT) LTD</div>
+                <div class="brand-name">DNS IMPORT & EXPORT (PVT) LTD</div>
                 <div style="font-size: 10.5px; color: #475569; margin-top: 2px;">Industrial Switchgear, Distribution Boards & Automation Importers</div>
                 <div style="font-size: 10px; color: #64748b; margin-top: 2px;">Central Logistics Warehouse • Bay 4, Industrial Zone, Orugodawatta, Sri Lanka</div>
                 <div style="font-size: 10px; color: #64748b;">Hotline: +94 11 234 5600 | Dispatch Desk: +94 11 234 5609 | Email: dispatch@dns.lk</div>

@@ -91,13 +91,13 @@ export function SalesManagerMyApprovalsPage() {
     switch (app.documentType) {
       case 'SALES_ORDER':
       case 'SPECIAL_SALES_ORDER':
-        navigate(`/orders/${app.documentId}`);
+        navigate(`/orders/${app.documentId}`, { state: { from: '/approvals' } });
         break;
       case 'QUOTATION_DISCOUNT':
-        navigate(`/quotations/${app.documentId}`);
+        navigate(`/quotations/${app.documentId}`, { state: { from: '/approvals' } });
         break;
       case 'CUSTOMER_CREATION':
-        navigate(`/customers/onboarding/${app.documentId}`);
+        navigate(`/customers/onboarding/${app.documentId}`, { state: { from: '/approvals' } });
         break;
       default:
         break;

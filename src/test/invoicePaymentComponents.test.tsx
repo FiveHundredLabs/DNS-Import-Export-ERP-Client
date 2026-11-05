@@ -81,7 +81,7 @@ describe('Phase 7 — Invoice & Payment UI Components', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText('DNS DISTRIBUTION (PVT) LTD')).toBeInTheDocument();
+      expect(screen.getByText('DNS IMPORT & EXPORT (PVT) LTD')).toBeInTheDocument();
       expect(screen.getByText('COMMERCIAL TAX INVOICE')).toBeInTheDocument();
       expect(screen.getAllByText(MOCK_INVOICES[0].invoiceNumber).length).toBeGreaterThan(0);
       expect(screen.getByText('Print Invoice')).toBeInTheDocument();
@@ -224,7 +224,7 @@ describe('Phase 7 — Invoice & Payment UI Components', () => {
     );
 
     expect(screen.getByText(/Thermal Receipt Preview/i)).toBeInTheDocument();
-    expect(screen.getAllByText('DNS DISTRIBUTION (PVT) LTD').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('DNS IMPORT & EXPORT (PVT) LTD').length).toBeGreaterThan(0);
     expect(screen.getByText(MOCK_PAYMENTS[0].receiptNumber)).toBeInTheDocument();
     expect(screen.getByText('Print & Handover')).toBeInTheDocument();
   });

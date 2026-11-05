@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useCustomers } from '../../hooks/useCustomers';
 import { CustomerTable } from './CustomerTable';
 import { CustomerCreateModal } from './CustomerCreateModal';
@@ -23,6 +23,7 @@ import { useAuth } from '../../hooks/useAuth';
 
 export function CustomerListPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { hasPermission, role, currentUser } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedType, setSelectedType] = useState('');
@@ -168,7 +169,7 @@ export function CustomerListPage() {
       ) : (
         <CustomerTable
           customers={approvedCustomers}
-          onView={(c) => navigate(`/customers/${c.id}`)}
+          onView={(c) => navigate(`/customers/${c.id}`, { state: { from: location.pathname + location.search } })}
           onEdit={
             canEdit
               ? (c) => {

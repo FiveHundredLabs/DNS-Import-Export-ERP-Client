@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom';
+import { useSmartBack } from '../../hooks/useSmartBack';
 import { Invoice, InvoiceItem } from '../../types/invoice';
 import { Product } from '../../types/product';
 import { Payment } from '../../types/payment';
@@ -68,6 +69,7 @@ export function InvoiceDetailPage() {
   const { id } = useParams<{ id: string }>();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const goBack = useSmartBack('/invoices');
   const { currentUser, role } = useAuth();
 
   const [invoice, setInvoice] = useState<Invoice | null>(null);
@@ -511,11 +513,9 @@ export function InvoiceDetailPage() {
       {/* ── Top Bar: Navigation, View Mode Switcher & Primary Action Buttons ── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <Link to="/invoices">
-            <Button variant="ghost" size="sm" className="gap-1.5 text-xs">
+          <Button variant="ghost" size="sm" className="gap-1.5 text-xs" onClick={goBack}>
               <ArrowLeft className="h-4 w-4" /> Back to Invoices
             </Button>
-          </Link>
 
           {/* View Mode Switcher: System View vs Formal A4 Document */}
           <div className="flex items-center rounded-xl p-1 bg-slate-100 border border-slate-200 shadow-2xs">

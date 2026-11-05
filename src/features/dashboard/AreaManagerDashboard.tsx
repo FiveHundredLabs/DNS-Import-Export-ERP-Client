@@ -128,20 +128,25 @@ export function AreaManagerDashboard() {
       {/* 1. Mobile Header & Territory Banner */}
       <div className="rounded-2xl bg-white text-slate-900 p-4 sm:p-6 shadow-xs border border-slate-200">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold tracking-wide uppercase bg-primary-light text-primary-text border border-primary-border">
-                <MapPin className="h-3 w-3 text-primary" />
-                {currentUser.areaName || 'Kelaniya Area'}
-              </span>
-              <span className="text-[11px] text-slate-500 font-medium">Area Manager Hub</span>
+          <div className="flex items-start gap-3.5">
+            <div className="h-12 w-12 rounded-xl bg-white border border-slate-200 p-1 shadow-2xs flex items-center justify-center overflow-hidden shrink-0 hidden sm:flex">
+              <img src="/logo.png" alt="DNS Logo" className="h-full w-full object-contain" />
             </div>
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 mt-1">
-              {greeting}, {currentUser.name.split(' ')[0]}
-            </h1>
-            <p className="text-xs text-slate-500 mt-0.5">
-              4 Active Route Sectors • 6 Field Officers Deployed
-            </p>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold tracking-wide uppercase bg-primary-light text-primary-text border border-primary-border">
+                  <MapPin className="h-3 w-3 text-primary" />
+                  {currentUser.areaName || 'Kelaniya Area'}
+                </span>
+                <span className="text-[11px] text-slate-500 font-medium">Area Manager Hub</span>
+              </div>
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 mt-1">
+                {greeting}, {currentUser.name.split(' ')[0]}
+              </h1>
+              <p className="text-xs text-slate-500 mt-0.5">
+                4 Active Route Sectors • 6 Field Officers Deployed
+              </p>
+            </div>
           </div>
 
           <div className="flex items-center gap-2 pt-1 sm:pt-0">

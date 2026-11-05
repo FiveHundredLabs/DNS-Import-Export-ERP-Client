@@ -116,7 +116,6 @@ describe('Role-Based Sidebar Navigation & Access Control', () => {
       expect(screen.getByTitle('Sales & Orders')).toBeInTheDocument();
       expect(screen.getByTitle('User Management')).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /^Inventory Hub$/i })).toBeInTheDocument();
-      expect(screen.getByTitle('Finance')).toBeInTheDocument();
       expect(screen.getByTitle('Approval Hub')).toBeInTheDocument();
       expect(screen.getByTitle('Reports')).toBeInTheDocument();
       expect(screen.getByTitle('Administration')).toBeInTheDocument();
@@ -295,50 +294,34 @@ describe('Role-Based Sidebar Navigation & Access Control', () => {
       expect(screen.getByText('Supplier Management')).toBeInTheDocument();
     });
 
-    it('for DIRECTOR only Financial Reports Hub is visible in Finance navigations and other finance navigations are hidden', () => {
+    it('for DIRECTOR Finance rail is removed as Finance Reports are accessible via Reports suite', () => {
       setupSidebarForRole('DIRECTOR');
 
-      // Click on Finance rail category
-      const financeRailBtn = screen.getByTitle('Finance');
-      expect(financeRailBtn).toBeInTheDocument();
-      fireEvent.click(financeRailBtn);
+      // Finance rail item should not be present
+      expect(screen.queryByTitle('Finance')).not.toBeInTheDocument();
 
-      // Financial Reports Hub must be visible
-      expect(screen.getByText('Financial Reports Hub')).toBeInTheDocument();
+      // Click on Reports rail category
+      const reportsRailBtn = screen.getByTitle('Reports');
+      expect(reportsRailBtn).toBeInTheDocument();
+      fireEvent.click(reportsRailBtn);
 
-      // All other finance navigation items must be hidden
-      expect(screen.queryByText('Chart of Accounts')).not.toBeInTheDocument();
-      expect(screen.queryByText('Income & Collections')).not.toBeInTheDocument();
-      expect(screen.queryByText('Expense & Payables')).not.toBeInTheDocument();
-      expect(screen.queryByText('Vendor Bill Costing (AP)')).not.toBeInTheDocument();
-      expect(screen.queryByText('Credit & Debit Notes')).not.toBeInTheDocument();
-      expect(screen.queryByText('Journal Entry Voucher')).not.toBeInTheDocument();
-      expect(screen.queryByText('PDC Vault (1018)')).not.toBeInTheDocument();
-      expect(screen.queryByText('Bank Reconciliation')).not.toBeInTheDocument();
-      expect(screen.queryByText('Period Closing Lock')).not.toBeInTheDocument();
+      // Finance Reports must be accessible under Reports
+      expect(screen.getByText('Finance Reports')).toBeInTheDocument();
     });
 
-    it('for MANAGER only Financial Reports Hub is visible in Finance navigations and other finance navigations are hidden', () => {
+    it('for MANAGER Finance & Payments rail is hidden as Finance Reports are accessible via Reports suite', () => {
       setupSidebarForRole('MANAGER');
 
-      // Click on Finance & Payments rail category
-      const financeRailBtn = screen.getByTitle('Finance & Payments');
-      expect(financeRailBtn).toBeInTheDocument();
-      fireEvent.click(financeRailBtn);
+      // Finance & Payments rail item should not be present because all finance items are excluded
+      expect(screen.queryByTitle('Finance & Payments')).not.toBeInTheDocument();
 
-      // Financial Reports Hub must be visible
-      expect(screen.getByText('Financial Reports Hub')).toBeInTheDocument();
+      // Click on Enterprise Reports rail category
+      const reportsRailBtn = screen.getByTitle('Enterprise Reports');
+      expect(reportsRailBtn).toBeInTheDocument();
+      fireEvent.click(reportsRailBtn);
 
-      // All other finance navigation items must be hidden
-      expect(screen.queryByText('Chart of Accounts')).not.toBeInTheDocument();
-      expect(screen.queryByText('Income & Collections')).not.toBeInTheDocument();
-      expect(screen.queryByText('Expense & Payables')).not.toBeInTheDocument();
-      expect(screen.queryByText('Vendor Bill Costing (AP)')).not.toBeInTheDocument();
-      expect(screen.queryByText('Credit & Debit Notes')).not.toBeInTheDocument();
-      expect(screen.queryByText('Journal Entry Voucher')).not.toBeInTheDocument();
-      expect(screen.queryByText('PDC Vault (1018)')).not.toBeInTheDocument();
-      expect(screen.queryByText('Bank Reconciliation')).not.toBeInTheDocument();
-      expect(screen.queryByText('Period Closing Lock')).not.toBeInTheDocument();
+      // Finance Reports must be accessible under Reports
+      expect(screen.getByText('Finance Reports')).toBeInTheDocument();
     });
 
     it('for FINANCE_MANAGER all 10 finance navigation items remain visible', () => {

@@ -26,8 +26,8 @@ export const CorporateReportHeader: React.FC<CorporateReportHeaderProps> = ({
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         {/* Company Identity */}
         <div className="flex items-center gap-3">
-          <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold text-xl tracking-wider shadow-sm">
-            DNS
+          <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-white border border-slate-200 p-1 shadow-2xs shrink-0 overflow-hidden">
+            <img src="/logo.png" alt="DNS Logo" className="h-full w-full object-contain" />
           </div>
           <div>
             <h1 className="text-xl font-black uppercase tracking-tight text-slate-900">

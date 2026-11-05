@@ -126,7 +126,7 @@ export class ThermalPrinterService implements IPrinterService {
         return `
           <div class="sticker-label">
             <div class="header">
-              <span class="company">${escapeHtml(s.companyName || 'DNS Import and Export (Pvt) Ltd')}</span>
+              <span class="company">${escapeHtml(s.companyName || 'DNS Import & Export (Pvt) Ltd')}</span>
             </div>
 
             <div class="product-info">
@@ -364,7 +364,7 @@ export class ThermalPrinterService implements IPrinterService {
             </style>
           </head>
           <body>
-            <div class="center bold" style="font-size: 14px;">DNS DISTRIBUTION (PVT) LTD</div>
+            <div class="center bold" style="font-size: 14px;">DNS IMPORT & EXPORT (PVT) LTD</div>
             <div class="center">Colombo 11, Sri Lanka</div>
             <div class="center">Tel: +94 11 234 5678</div>
             <div class="center" style="font-size: 10px;">VAT Reg: 109847291-7000</div>
@@ -471,7 +471,7 @@ export class ThermalPrinterService implements IPrinterService {
             </style>
           </head>
           <body>
-            <div class="center bold" style="font-size: 14px;">DNS DISTRIBUTION (PVT) LTD</div>
+            <div class="center bold" style="font-size: 14px;">DNS IMPORT & EXPORT (PVT) LTD</div>
             <div class="center">Showroom Sales Outlet</div>
             <div class="center">142 First Cross Street, Colombo 11</div>
             <div class="center">Tel: +94 11 234 5678</div>
@@ -566,7 +566,7 @@ export class ThermalPrinterService implements IPrinterService {
         <body>
           <div class="header">
             <div>
-              <div class="company">DNS DISTRIBUTION (PVT) LTD</div>
+              <div class="company">DNS IMPORT & EXPORT (PVT) LTD</div>
               <div style="font-size: 12px; color: #64748b;">Authorized Electrical & Automation Distributor</div>
               <div style="font-size: 11px; color: #64748b;">Colombo 11, Sri Lanka | VAT: 109847291-7000</div>
             </div>
@@ -739,7 +739,7 @@ export class ThermalPrinterService implements IPrinterService {
               <table class="header-table">
                 <tr>
                   <td style="vertical-align: top; width: 60%;">
-                    <div style="font-size: 18px; font-weight: 900; color: #0f172a;">DNS DISTRIBUTION (PVT) LTD</div>
+                    <div style="font-size: 18px; font-weight: 900; color: #0f172a;">DNS IMPORT & EXPORT (PVT) LTD</div>
                     <div style="font-size: 10.5px; color: #475569;">142 First Cross Street, Colombo 11, Sri Lanka</div>
                     <div style="font-size: 10px; color: #334155; margin-top: 4px;">
                       <strong>TIN:</strong> 109847291 &nbsp;|&nbsp; <strong>VAT Reg No:</strong> 109847291-7000 &nbsp;|&nbsp; <strong>SVAT:</strong> SVAT-004219
@@ -797,7 +797,7 @@ export class ThermalPrinterService implements IPrinterService {
                     <div class="statutory-box">
                       <strong>IRD Statutory Certification under VAT Act No. 14 of 2002:</strong>
                       <p style="margin: 3px 0;">"I/We hereby certify that the particulars given in this Tax Invoice are true and correct and that the value of supply and the tax charged herein comply with Section 20 of the Value Added Tax Act No. 14 of 2002."</p>
-                      <p style="margin: 2px 0; font-size: 9px; color: #64748b;">This is an approved computer-generated Tax Invoice. Title to goods remains with DNS Distribution (Pvt) Ltd until full settlement.</p>
+                      <p style="margin: 2px 0; font-size: 9px; color: #64748b;">This is an approved computer-generated Tax Invoice. Title to goods remains with DNS Import & Export (Pvt) Ltd until full settlement.</p>
                     </div>
                   </td>
                   <td style="vertical-align: top; width: 45%;">
@@ -830,7 +830,7 @@ export class ThermalPrinterService implements IPrinterService {
               <div class="signatures">
                 <div class="sig-box">
                   <div class="sig-line">Authorized Signatory</div>
-                  <div style="font-size: 9px; color: #64748b;">DNS Distribution (Pvt) Ltd</div>
+                  <div style="font-size: 9px; color: #64748b;">DNS Import & Export (Pvt) Ltd</div>
                 </div>
                 <div class="sig-box">
                   <div class="sig-line">Tax Rubber Seal</div>
@@ -894,7 +894,7 @@ export class ThermalPrinterService implements IPrinterService {
             <body>
               <div class="header">
                 <div>
-                  <div class="company">DNS DISTRIBUTION (PVT) LTD</div>
+                  <div class="company">DNS IMPORT & EXPORT (PVT) LTD</div>
                   <div style="font-size: 11px; color: #64748b;">Wholesale Electrical, Automation & Switchgear Solutions</div>
                   <div style="font-size: 10.5px; color: #64748b;">142 First Cross Street, Colombo 11, Sri Lanka</div>
                   <div style="font-size: 10.5px; color: #64748b;">Tel: +94 11 234 5678 | VAT Reg No: 109847291-7000</div>
@@ -972,7 +972,7 @@ export class ThermalPrinterService implements IPrinterService {
 
               <div class="footer-notes">
                 <strong>Payment Terms & Banking Information:</strong>
-                <p style="margin: 2px 0;">Account Name: DNS Distribution (Pvt) Ltd | Bank: Commercial Bank of Ceylon | Account No: 1000984721 | City Office Branch</p>
+                <p style="margin: 2px 0;">Account Name: DNS Import & Export (Pvt) Ltd | Bank: Commercial Bank of Ceylon | Account No: 1000984721 | City Office Branch</p>
                 <p style="margin: 2px 0;">Please reference Invoice Number <strong>${invoice.invoiceNumber}</strong> upon remitting payment.</p>
                 ${invoice.notes ? `<p style="margin: 2px 0;"><strong>Special Notes:</strong> ${invoice.notes}</p>` : ''}
               </div>

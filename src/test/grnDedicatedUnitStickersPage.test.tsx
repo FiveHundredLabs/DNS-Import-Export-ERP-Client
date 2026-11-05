@@ -111,7 +111,7 @@ describe('GRN Dedicated Unit Stickers Page Workflow', () => {
 
     // Verify first unit sticker is visible with Code-128 SVG barcode and unit details
     expect(screen.getByText(/Unit #1\/450/i)).toBeInTheDocument();
-    expect(screen.getAllByText('DNS Import and Export (Pvt) Ltd').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('DNS Import & Export (Pvt) Ltd').length).toBeGreaterThan(0);
 
     // Search filter works smoothly across the 450 barcodes
     const searchInput = screen.getByPlaceholderText(/Search across 450 barcodes/i);

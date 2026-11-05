@@ -21,7 +21,7 @@ export interface BarcodeStickerProps {
  * Engineered for commercial thermal label printers (203 & 300 DPI) and ERP screen previews.
  *
  * Visual hierarchy:
- * 1. Company Name (DNS Import and Export (Pvt) Ltd)
+ * 1. Company Name (DNS Import & Export (Pvt) Ltd)
  * 2. Product Name (Centered, high legibility)
  * 3. SKU (Center-aligned below Product Name)
  * 4. Code 128 Barcode with quiet zones
@@ -30,7 +30,7 @@ export interface BarcodeStickerProps {
  * 7. Unit Counter (Visible in application preview only; excluded from print)
  */
 export const BarcodeSticker: React.FC<BarcodeStickerProps> = ({
-  companyName = 'DNS Import and Export (Pvt) Ltd',
+  companyName = 'DNS Import & Export (Pvt) Ltd',
   productName,
   sku,
   unitBarcode,

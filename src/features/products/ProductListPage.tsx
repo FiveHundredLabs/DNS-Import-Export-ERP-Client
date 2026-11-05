@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useProducts } from '../../hooks/useProducts';
 import { ProductTable } from './ProductTable';
 import { ProductCreateModal } from './ProductCreateModal';
@@ -23,6 +23,7 @@ import { useAuth } from '../../hooks/useAuth';
 
 export function ProductListPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { hasPermission } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
@@ -134,7 +135,7 @@ export function ProductListPage() {
       ) : (
         <ProductTable
           products={products}
-          onView={(p) => navigate(`/products/${p.id}`)}
+          onView={(p) => navigate(`/products/${p.id}`, { state: { from: location.pathname + location.search } })}
           onProposePrice={(p) => {
             setSelectedProductForProposal(p);
             setProposalModalOpen(true);

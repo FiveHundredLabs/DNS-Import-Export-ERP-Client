@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { useOrders } from '../../hooks/useOrders';
 import { useAuth } from '../../hooks/useAuth';
 import { OrderStatus } from '../../types/order';
@@ -55,6 +55,7 @@ const STATUS_FILTERS: Array<{ label: string; value: OrderStatus | 'ALL' }> = [
 
 export function OrderListPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const { currentUser } = useAuth();
   const initialCustomerId = searchParams.get('customerId') || undefined;
@@ -368,7 +369,7 @@ export function OrderListPage() {
                   return (
                     <div
                       key={order.id}
-                      onClick={() => navigate(`/orders/${order.id}`)}
+                      onClick={() => navigate(`/orders/${order.id}`, { state: { from: location.pathname + location.search } })}
                       className="rounded-2xl border border-slate-200/90 bg-white p-3.5 shadow-xs hover:border-primary/50 transition-all cursor-pointer active:scale-[0.99]"
                     >
                       {/* Top Row: Order # + Status Badge */}
@@ -467,11 +468,11 @@ export function OrderListPage() {
                         key={order.id}
                         className="hover:bg-slate-50/80 cursor-pointer transition-colors focus:outline-hidden focus:bg-slate-50 group"
                         tabIndex={0}
-                        onClick={() => navigate(`/orders/${order.id}`)}
+                        onClick={() => navigate(`/orders/${order.id}`, { state: { from: location.pathname + location.search } })}
                         onKeyDown={(e) => {
                           if (e.key === 'Enter' || e.key === ' ') {
                             e.preventDefault();
-                            navigate(`/orders/${order.id}`);
+                            navigate(`/orders/${order.id}`, { state: { from: location.pathname + location.search } });
                           }
                         }}
                       >
@@ -517,7 +518,7 @@ export function OrderListPage() {
                           <Button
                             variant="ghost"
                             size="xs"
-                            onClick={() => navigate(`/orders/${order.id}`)}
+                            onClick={() => navigate(`/orders/${order.id}`, { state: { from: location.pathname + location.search } })}
                             className="h-7 px-2 text-xs text-slate-600 hover:text-slate-900 font-medium gap-1"
                           >
                             <span>Details</span>
