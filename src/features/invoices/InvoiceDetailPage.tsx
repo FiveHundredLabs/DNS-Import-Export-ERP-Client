@@ -225,6 +225,22 @@ export function InvoiceDetailPage() {
 
   const isDraft = invoice.status === 'DRAFT';
   const activeRole = currentUser?.role || role;
+
+  if (isDraft && activeRole === 'AREA_MANAGER') {
+    return (
+      <div className="p-8 text-center bg-white rounded-2xl border border-slate-200">
+        <AlertTriangle className="h-10 w-10 text-amber-500 mx-auto mb-3" />
+        <h2 className="text-base font-bold text-slate-900">Access Restricted</h2>
+        <p className="text-xs text-slate-500 mt-2">
+          Area Managers are not authorized to view draft invoices.
+        </p>
+        <Link to="/invoices" className="text-primary text-xs font-semibold underline mt-4 block">
+          Return to Invoice Registry
+        </Link>
+      </div>
+    );
+  }
+
   const isSalesManager = ['SALES_MANAGER', 'MANAGER', 'DIRECTOR'].includes(activeRole);
   const isOverdue = invoice.status === 'OVERDUE';
   const previouslyCollected = invoice.collectedAmount || 0;

@@ -887,6 +887,9 @@ export function App() {
 
           {/* Unified Income & Expense Desks (Al Akleel Unified Architecture) */}
           <Route path="income" element={<IncomeDeskPage />} />
+          <Route path="receipts/new" element={<PaymentCollectionPage />} />
+          <Route path="income/receipts/new" element={<Navigate to="/finance/receipts/new" replace />} />
+          <Route path="income/new-receipt" element={<Navigate to="/finance/receipts/new" replace />} />
           <Route path="expense" element={<ExpenseDeskPage />} />
 
           {/* Accounts Payable (AP) Workflows */}

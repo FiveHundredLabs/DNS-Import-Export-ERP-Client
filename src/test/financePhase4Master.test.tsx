@@ -359,6 +359,9 @@ describe('Phase 4 Master Test Suite: Bank Reconciliation Workspace', () => {
       const startBtn = screen.getByRole('button', { name: /start reconciliation/i });
       fireEvent.click(startBtn);
 
+      // Switch to split-pane feed match view
+      fireEvent.click(screen.getByRole('button', { name: /split-pane feed match/i }));
+
       await waitFor(() => {
         expect(screen.getByText(/System Records \(GL 1010\)/i)).toBeDefined();
         expect(screen.getByText(/Bank Statement Lines \(Feed\)/i)).toBeDefined();
@@ -370,6 +373,38 @@ describe('Phase 4 Master Test Suite: Bank Reconciliation Workspace', () => {
       expect(screen.getByRole('button', { name: /auto-match \(heuristic\)/i })).toBeDefined();
       expect(screen.getByRole('button', { name: /upload statement/i })).toBeDefined();
       expect(screen.getByRole('button', { name: /\+ add adjustment/i })).toBeDefined();
+    });
+
+    it('provides full-width manual verification mode allowing direct transaction verification and zero-variance reconciliation without statement upload', async () => {
+      render(
+        <MemoryRouter>
+          <BankReconciliationPage />
+        </MemoryRouter>
+      );
+
+      // Start reconciliation into default full-width manual verification mode
+      fireEvent.click(screen.getByRole('button', { name: /start reconciliation/i }));
+
+      // Expect full-width manual verification table is open
+      expect(screen.getByText(/Manual Statement Verification/i)).toBeDefined();
+      expect(screen.getByRole('button', { name: /clear all visible/i })).toBeDefined();
+
+      // Check one transaction toggle
+      const verifyBtns = screen.getAllByRole('button', { name: /verify & clear/i });
+      expect(verifyBtns.length).toBeGreaterThan(0);
+      fireEvent.click(verifyBtns[0]);
+
+      // Click "Clear All Visible"
+      fireEvent.click(screen.getByRole('button', { name: /clear all visible/i }));
+
+      // Now all 5 items are cleared, balanced to 0.00!
+      await waitFor(() => {
+        expect(screen.getByText(/0\.00 \(Balanced\)/i)).toBeDefined();
+      });
+
+      // Reconcile Account button is enabled
+      const reconcileBtn = screen.getByRole('button', { name: /reconcile account/i });
+      expect(reconcileBtn).not.toBeDisabled();
     });
 
     it('executes Heuristic Auto-Match in the UI and automatically balances to 0.00', async () => {
@@ -412,6 +447,7 @@ describe('Phase 4 Master Test Suite: Bank Reconciliation Workspace', () => {
       );
 
       fireEvent.click(screen.getByRole('button', { name: /start reconciliation/i }));
+      fireEvent.click(screen.getByRole('button', { name: /split-pane feed match/i }));
 
       await waitFor(() => {
         expect(screen.getByRole('button', { name: /\+ add adjustment/i })).toBeDefined();

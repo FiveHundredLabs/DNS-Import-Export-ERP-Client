@@ -7,6 +7,8 @@ import {
   ConvertedOrderPayload,
 } from '../types/quotation';
 import { quotationService } from '../services/QuotationService';
+import { orderService } from '../services/OrderService';
+import { SalesOrder } from '../types/order';
 import { useAuth } from './useAuth';
 
 export function useQuotations(initialFilters?: QuotationFilters) {
@@ -79,10 +81,10 @@ export function useQuotations(initialFilters?: QuotationFilters) {
   const convertToSalesOrder = async (
     id: string,
     details?: { deliveryAddress?: string; deliveryDate?: string; customerPoNumber?: string }
-  ): Promise<ConvertedOrderPayload> => {
-    const orderPayload = await quotationService.convertToSalesOrder(id, currentUser, details);
+  ): Promise<SalesOrder> => {
+    const order = await orderService.convertQuotationToOrder(id, currentUser, details);
     await fetchQuotations();
-    return orderPayload;
+    return order;
   };
 
   const issueQuotation = async (id: string): Promise<Quotation> => {

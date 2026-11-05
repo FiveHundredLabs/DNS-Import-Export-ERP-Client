@@ -208,13 +208,14 @@ export class CommissionService {
     };
 
     const roleConfig = await commissionConfigService.getRoleConfig('SALES_REP');
+    const incentiveRate = roleConfig.collectionConfig?.commissionPercentage || 2.5;
 
     // Retrieve targets or fall back to role configuration target
     const targetObj = await this.repo.getTargetByRep(salesRepId);
     const defaultTarget =
       roleConfig.activeScenario === 'TARGET_BASED'
         ? roleConfig.targetConfig.targetSalesAmount
-        : 50000;
+        : 100000;
     const targetAmount = targetObj?.targetAmount || defaultTarget;
 
     // Fetch invoices and payments
@@ -240,19 +241,42 @@ export class CommissionService {
 
     let qualifyingInvoices: QualifyingInvoiceItem[] = [];
     if (repInvoices.length > 0) {
-      qualifyingInvoices = repInvoices.map((inv: any) => ({
-        id: inv.id,
-        invoiceNumber: inv.invoiceNumber || `INV-${inv.id}`,
-        customerId: inv.customerId,
-        customerName: inv.customerName || 'Authorized Dealer',
-        issueDate: (inv.issueDate || inv.createdAt || '').slice(0, 10),
-        totalAmount: inv.totalAmount || 0,
-        commissionableAmount: inv.totalAmount || 0,
-        commissionEarned: Math.round((inv.totalAmount || 0) * 0.025),
-        status: inv.status || 'ISSUED',
-      }));
+      qualifyingInvoices = repInvoices.map((inv: any) => {
+        const totalAmount = inv.totalAmount || 0;
+        const paidAmount = inv.paidAmount || (inv.status === 'PAID' ? totalAmount : totalAmount * 0.5);
+        const collectedCash = Math.min(totalAmount, Math.round(paidAmount));
+        const outstandingAmount = Math.max(0, totalAmount - collectedCash);
+        const collectionPercentage = totalAmount > 0 ? Math.round((collectedCash / totalAmount) * 100) : 0;
+        const earnedIncentive = Math.round(collectedCash * (incentiveRate / 100));
+        const potentialIncentive = Math.round(outstandingAmount * (incentiveRate / 100));
+        const collectionStatus: 'FULLY_COLLECTED' | 'PARTIALLY_COLLECTED' | 'UNCOLLECTED' =
+          collectedCash >= totalAmount
+            ? 'FULLY_COLLECTED'
+            : collectedCash > 0
+            ? 'PARTIALLY_COLLECTED'
+            : 'UNCOLLECTED';
+
+        return {
+          id: inv.id,
+          invoiceNumber: inv.invoiceNumber || `INV-${inv.id}`,
+          customerId: inv.customerId,
+          customerName: inv.customerName || 'Authorized Dealer',
+          issueDate: (inv.issueDate || inv.createdAt || '').slice(0, 10),
+          totalAmount,
+          commissionableAmount: totalAmount,
+          collectedCash,
+          outstandingAmount,
+          collectionPercentage,
+          incentiveRatePercentage: incentiveRate,
+          commissionEarned: earnedIncentive,
+          earnedIncentive,
+          potentialIncentive,
+          collectionStatus,
+          status: inv.status || (collectedCash >= totalAmount ? 'PAID' : 'PARTIALLY_PAID'),
+        };
+      });
     } else {
-      // Deterministic realistic benchmark so historical/future months have full mock data
+      // Deterministic realistic benchmark uniquely scaled per representative
       const custNames = [
         'Lakbima Hardware & Tools',
         'Ruhunu Engineering Supplies',
@@ -262,18 +286,70 @@ export class CommissionService {
       const charCode = salesRepId.charCodeAt(salesRepId.length - 1) || 65;
       const monthNum = parseInt(selectedMonth.replace('-', ''), 10) || 202610;
       const seedBase = (charCode + (monthNum % 19)) % 100;
-      const mockAmounts = [26500, 19800, 32400, 14200];
-      qualifyingInvoices = mockAmounts.map((amt, idx) => ({
-        id: `mock-inv-${salesRepId}-${selectedMonth}-${idx}`,
-        invoiceNumber: `INV-${selectedMonth.replace('-', '')}-${idx + 1}0${seedBase}`,
-        customerId: `cust-00${idx + 1}`,
-        customerName: custNames[idx % custNames.length],
-        issueDate: `${selectedMonth}-${String(4 + idx * 6).padStart(2, '0')}`,
-        totalAmount: amt,
-        commissionableAmount: amt,
-        commissionEarned: Math.round(amt * 0.025),
-        status: idx === 3 ? 'ISSUED' : 'PAID',
-      }));
+      
+      // Each rep gets their own distinct portfolio profile
+      const repSeed = Math.abs((charCode * 11 + salesRepId.length * 7) % 4);
+      const repProfiles = [
+        [
+          { amt: 56000, collectedRatio: 1.0 },
+          { amt: 39500, collectedRatio: 1.0 },
+          { amt: 48000, collectedRatio: 0.85 },
+          { amt: 24500, collectedRatio: 0.5 },
+        ], // ~168k sales, ~148k collected (~88%)
+        [
+          { amt: 49000, collectedRatio: 1.0 },
+          { amt: 33500, collectedRatio: 0.9 },
+          { amt: 36000, collectedRatio: 0.75 },
+          { amt: 18500, collectedRatio: 0.0 },
+        ], // ~137k sales, ~106k collected (~77%)
+        [
+          { amt: 41000, collectedRatio: 1.0 },
+          { amt: 28500, collectedRatio: 0.8 },
+          { amt: 32000, collectedRatio: 0.6 },
+          { amt: 16500, collectedRatio: 0.0 },
+        ], // ~118k sales, ~83k collected (~70%)
+        [
+          { amt: 35000, collectedRatio: 0.85 },
+          { amt: 25000, collectedRatio: 0.7 },
+          { amt: 27500, collectedRatio: 0.5 },
+          { amt: 14500, collectedRatio: 0.0 },
+        ], // ~102k sales, ~61k collected (~60%)
+      ];
+      const mockInvoiceSpecs = repProfiles[repSeed];
+
+      qualifyingInvoices = mockInvoiceSpecs.map((spec, idx) => {
+        const totalAmount = spec.amt;
+        const collectedCash = Math.round(totalAmount * spec.collectedRatio);
+        const outstandingAmount = totalAmount - collectedCash;
+        const collectionPercentage = Math.round(spec.collectedRatio * 100);
+        const earnedIncentive = Math.round(collectedCash * (incentiveRate / 100));
+        const potentialIncentive = Math.round(outstandingAmount * (incentiveRate / 100));
+        const collectionStatus: 'FULLY_COLLECTED' | 'PARTIALLY_COLLECTED' | 'UNCOLLECTED' =
+          spec.collectedRatio >= 1.0
+            ? 'FULLY_COLLECTED'
+            : spec.collectedRatio > 0
+            ? 'PARTIALLY_COLLECTED'
+            : 'UNCOLLECTED';
+
+        return {
+          id: `mock-inv-${salesRepId}-${selectedMonth}-${idx}`,
+          invoiceNumber: `INV-${selectedMonth.replace('-', '')}-${idx + 1}0${seedBase}`,
+          customerId: `cust-00${idx + 1}`,
+          customerName: custNames[idx % custNames.length],
+          issueDate: `${selectedMonth}-${String(4 + idx * 6).padStart(2, '0')}`,
+          totalAmount,
+          commissionableAmount: totalAmount,
+          collectedCash,
+          outstandingAmount,
+          collectionPercentage,
+          incentiveRatePercentage: incentiveRate,
+          commissionEarned: earnedIncentive,
+          earnedIncentive,
+          potentialIncentive,
+          collectionStatus,
+          status: collectionStatus === 'FULLY_COLLECTED' ? 'PAID' : collectionStatus === 'PARTIALLY_COLLECTED' ? 'PARTIALLY_PAID' : 'PENDING_COLLECTION',
+        };
+      });
     }
 
     const actualSales = qualifyingInvoices.reduce((sum, inv) => sum + inv.totalAmount, 0);
@@ -303,29 +379,42 @@ export class CommissionService {
         'Ruhunu Engineering Supplies',
         'Central Tools & Electric',
       ];
-      const mockPayAmounts = [29000, 26500, 21000];
       const charCode = salesRepId.charCodeAt(salesRepId.length - 1) || 65;
-      clearedCollectionsList = mockPayAmounts.map((amt, idx) => ({
+      const invoiceCollections = qualifyingInvoices.filter((i) => i.collectedCash > 0);
+      clearedCollectionsList = invoiceCollections.map((inv, idx) => ({
         id: `mock-pay-${salesRepId}-${selectedMonth}-${idx}`,
         paymentNumber: `RCP-${selectedMonth.replace('-', '')}-${idx + 1}0${charCode % 50}`,
-        customerId: `cust-00${idx + 1}`,
-        customerName: custNames[idx % custNames.length],
+        customerId: inv.customerId,
+        customerName: inv.customerName,
         collectedAt: `${selectedMonth}-${String(8 + idx * 7).padStart(2, '0')}`,
-        amount: amt,
+        amount: inv.collectedCash,
         paymentMethod: payMethods[idx % payMethods.length],
         status: 'CLEARED',
       }));
     }
 
-    const clearedCollections = clearedCollectionsList.reduce((sum, p) => sum + p.amount, 0);
+    const clearedCollections = qualifyingInvoices.reduce((sum, inv) => sum + inv.collectedCash, 0) ||
+      clearedCollectionsList.reduce((sum, p) => sum + p.amount, 0);
 
-    // Compute commission via CommissionConfigService engine
+    const uncollectedCash = Math.max(0, actualSales - clearedCollections);
+    const cashRealizationPercentage =
+      actualSales > 0 ? Math.round((clearedCollections / actualSales) * 10000) / 100 : 0;
+
+    // Direct Cash-Collected Incentive Calculation
+    const earnedIncentive = Math.round(clearedCollections * (incentiveRate / 100));
+    const potentialIncentiveInPipeline = Math.round(uncollectedCash * (incentiveRate / 100));
+
+    // Also run commission calculation engine breakdown
     const commissionItem = commissionConfigService.calculateCommission(
       user as User,
       selectedMonth,
       actualSales,
       clearedCollections,
-      roleConfig
+      {
+        ...roleConfig,
+        activeScenario: 'COLLECTION_BASED',
+        collectionConfig: { commissionPercentage: incentiveRate },
+      }
     );
 
     const achievementPercentage =
@@ -337,10 +426,17 @@ export class CommissionService {
       month: selectedMonth,
       targetAmount,
       actualSales,
+      totalSales: actualSales,
       achievementPercentage,
       clearedCollections,
-      earnedCommission: commissionItem.commissionEarned,
-      activeScenario: roleConfig.activeScenario,
+      collectedCash: clearedCollections,
+      uncollectedCash,
+      cashRealizationPercentage,
+      incentiveRatePercentage: incentiveRate,
+      earnedCommission: earnedIncentive,
+      earnedIncentive,
+      potentialIncentiveInPipeline,
+      activeScenario: 'COLLECTION_BASED',
       roleConfig,
       breakdown: commissionItem.breakdown,
       qualifyingInvoices,

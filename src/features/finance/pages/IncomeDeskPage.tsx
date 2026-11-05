@@ -28,6 +28,7 @@ import { formatCurrency, formatDate, formatDateTime } from '../../../utils/forma
 import { cn } from '../../../utils/cn';
 import { printerService } from '../../../services/PrinterService';
 import { pdfService } from '../../../services/PdfService';
+import { ThermalReceiptModal } from '../../payments/ThermalReceiptModal';
 import {
   Search,
   ChevronRight,
@@ -311,9 +312,12 @@ export function IncomeDeskPage({ defaultTab }: IncomeDeskPageProps) {
   };
 
   // -------------------------------------------------------------------------
-  // TAB 2: CUSTOMER PAYMENT RECEIPTS & NEW RECEIPT MODAL
+  // TAB 2: OTHER RECEIPTS & CLEARED REGISTRY
   // -------------------------------------------------------------------------
   const [selectedReceiptForView, setSelectedReceiptForView] = useState<ARReceiptItem | null>(null);
+  const [inspectingReceipt, setInspectingReceipt] = useState<ARReceiptItem | null>(null);
+  const [thermalReceiptPayment, setThermalReceiptPayment] = useState<any>(null);
+  const [receiptsMethodFilter, setReceiptsMethodFilter] = useState<'ALL' | 'CASH' | 'BANK_TRANSFER' | 'CHEQUE'>('ALL');
   const [isNewReceiptModalOpen, setIsNewReceiptModalOpen] = useState(false);
 
   // New Receipt Form State
@@ -334,7 +338,23 @@ export function IncomeDeskPage({ defaultTab }: IncomeDeskPageProps) {
   const [receiptsSearch, setReceiptsSearch] = useState('');
   const [receiptsDateFrom, setReceiptsDateFrom] = useState('');
   const [receiptsDateTo, setReceiptsDateTo] = useState('');
-  const [receiptsStatusFilter, setReceiptsStatusFilter] = useState('ALL');
+  const [receiptsStatusFilter, setReceiptsStatusFilter] = useState('APPROVED');
+
+  const totalReceiptsValue = useMemo(() => {
+    return receipts.reduce((sum, r) => sum + (r.amount || 0), 0);
+  }, [receipts]);
+
+  const cashReceiptsCount = useMemo(() => {
+    return receipts.filter((r) => r.paymentMethod === 'CASH').length;
+  }, [receipts]);
+
+  const bankReceiptsCount = useMemo(() => {
+    return receipts.filter((r) => r.paymentMethod === 'BANK_TRANSFER').length;
+  }, [receipts]);
+
+  const chequeReceiptsCount = useMemo(() => {
+    return receipts.filter((r) => r.paymentMethod === 'CHEQUE').length;
+  }, [receipts]);
 
   const creditIncomeAccounts = useMemo(() => {
     return accounts.filter(
@@ -350,23 +370,25 @@ export function IncomeDeskPage({ defaultTab }: IncomeDeskPageProps) {
   }, [creditIncomeAccounts, newReceiptIncomeAccount]);
 
   const clearedFilteredReceipts = useMemo(() => {
-    return receipts
-      .filter((r) => r.status === 'APPROVED')
-      .filter((r) => {
-        if (receiptsDateFrom && r.collectedAt < receiptsDateFrom) return false;
-        if (receiptsDateTo && r.collectedAt > receiptsDateTo) return false;
-        if (receiptsSearch.trim()) {
-          const q = receiptsSearch.toLowerCase();
-          const match =
-            r.receiptNumber.toLowerCase().includes(q) ||
-            r.customerName.toLowerCase().includes(q) ||
-            r.customerCode.toLowerCase().includes(q) ||
-            (r.remarks && r.remarks.toLowerCase().includes(q));
-          if (!match) return false;
-        }
-        return true;
-      });
-  }, [receipts, receiptsSearch, receiptsDateFrom, receiptsDateTo]);
+    return receipts.filter((r) => {
+      if (receiptsStatusFilter !== 'ALL' && r.status !== receiptsStatusFilter) return false;
+      if (receiptsMethodFilter !== 'ALL' && r.paymentMethod !== receiptsMethodFilter) return false;
+      if (receiptsDateFrom && r.collectedAt < receiptsDateFrom) return false;
+      if (receiptsDateTo && r.collectedAt > receiptsDateTo) return false;
+      if (receiptsSearch.trim()) {
+        const q = receiptsSearch.toLowerCase();
+        const match =
+          r.receiptNumber.toLowerCase().includes(q) ||
+          r.customerName.toLowerCase().includes(q) ||
+          (r.customerCode && r.customerCode.toLowerCase().includes(q)) ||
+          (r.remarks && r.remarks.toLowerCase().includes(q)) ||
+          (r.depositAccountCode && r.depositAccountCode.toLowerCase().includes(q)) ||
+          (r.incomeAccountCode && r.incomeAccountCode.toLowerCase().includes(q));
+        if (!match) return false;
+      }
+      return true;
+    });
+  }, [receipts, receiptsSearch, receiptsStatusFilter, receiptsMethodFilter, receiptsDateFrom, receiptsDateTo]);
 
   // Customer Open Invoices for New Receipt Modal
   const customerOpenInvoices: AROpenInvoice[] = useMemo(() => {
@@ -585,29 +607,37 @@ export function IncomeDeskPage({ defaultTab }: IncomeDeskPageProps) {
             )}
           >
             <Receipt className="h-3.5 w-3.5 text-primary" />
-            <span>Customer Payment Receipts</span>
+            <span>Other Receipts</span>
+            <span className="sr-only">Customer Payment Receipts</span>
             <span className="ml-1 px-1.5 py-0.2 rounded-full text-[10px] bg-muted text-muted-foreground font-mono">
               {receipts.length}
             </span>
           </button>
         </div>
 
-        {/* Action Button for New Receipt on Tab 2 */}
-        {deskTab === 'CUSTOMER_RECEIPTS' ? (
+        {/* Action Button: Visible in BOTH tabs */}
+        <div className="flex items-center gap-3">
+          {deskTab === 'HANDOVERS_QUEUE' && (
+            <div className="text-xs text-muted-foreground hidden xl:flex items-center gap-1.5">
+              <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
+              <span>Workflow: Field Collection → Sales Rep Physical Handover → Finance Verification</span>
+            </div>
+          )}
           <Button
             size="sm"
-            onClick={() => setIsNewReceiptModalOpen(true)}
+            onClick={() =>
+              navigate(
+                deskTab === 'CUSTOMER_RECEIPTS'
+                  ? '/finance/receipts/new?type=other'
+                  : '/finance/receipts/new?type=sales'
+              )
+            }
             className="h-8 px-3 text-xs bg-primary hover:bg-primary-dark text-white font-semibold gap-1.5 shadow-2xs"
           >
             <Plus className="h-3.5 w-3.5" />
             <span>+ New Receipt</span>
           </Button>
-        ) : (
-          <div className="text-xs text-muted-foreground hidden lg:flex items-center gap-1.5">
-            <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
-            <span>Workflow: Field Collection → Sales Rep Physical Handover → Finance Verification</span>
-          </div>
-        )}
+        </div>
       </div>
 
       {/* ========================================================================= */}
@@ -840,39 +870,105 @@ export function IncomeDeskPage({ defaultTab }: IncomeDeskPageProps) {
       )}
 
       {/* ========================================================================= */}
-      {/* TAB 2: CUSTOMER PAYMENT RECEIPTS                                          */}
+      {/* TAB 2: OTHER RECEIPTS & CLEARED REGISTRY (LOOKS LIKE TAB 1 / HANDOVERS)   */}
       {/* ========================================================================= */}
       {deskTab === 'CUSTOMER_RECEIPTS' && (
         <div className="space-y-4">
-          {/* Header & Title matching Image 4 */}
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-border/80 pb-3">
+          {/* Header & Title */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-border/80 pb-2">
             <div>
               <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
-                <span>Customer Cleared Receipts Registry</span>
+                <Receipt className="h-5 w-5 text-primary" />
+                <span>Other Receipts</span>
+                <span className="text-muted-foreground font-normal text-xs sm:text-sm">(Customer Cleared Receipts Registry)</span>
               </h2>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Audit registry of cleared customer payments, receipts, and income allocations.
+                Audit registry of cleared customer payments, other receipts, and income allocations.
               </p>
             </div>
           </div>
 
-          {/* Single-Line Filter Bar (Image 4) */}
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border/90 bg-card p-3 shadow-xs">
-            <div className="flex flex-wrap items-center gap-2 flex-1">
-              <div className="relative min-w-[180px] max-w-xs flex-1">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  value={receiptsSearch}
-                  onChange={(e) => setReceiptsSearch(e.target.value)}
-                  placeholder="Search..."
-                  className="pl-8 text-xs h-9"
-                />
+          {/* Summary Metric Cards (Matching Tab 1 / Handovers) */}
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+            <Card className="p-3 border-emerald-200 bg-emerald-50/50 shadow-2xs">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-semibold text-emerald-800">Total Cleared Value</span>
+                <Wallet className="h-4 w-4 text-emerald-600" />
               </div>
+              <div className="mt-1 text-lg font-bold font-mono text-emerald-950">
+                {formatCurrency(totalReceiptsValue)}
+              </div>
+              <span className="text-[10px] text-emerald-700">Audit cleared receipts total</span>
+            </Card>
+
+            <StatCard
+              title="Cash Receipts"
+              value={cashReceiptsCount}
+              icon={Coins}
+              variant="amber"
+              selected={receiptsMethodFilter === 'CASH'}
+              onClick={() => setReceiptsMethodFilter((prev) => (prev === 'CASH' ? 'ALL' : 'CASH'))}
+            />
+
+            <StatCard
+              title="Bank Transfers"
+              value={bankReceiptsCount}
+              icon={Landmark}
+              variant="indigo"
+              selected={receiptsMethodFilter === 'BANK_TRANSFER'}
+              onClick={() => setReceiptsMethodFilter((prev) => (prev === 'BANK_TRANSFER' ? 'ALL' : 'BANK_TRANSFER'))}
+            />
+
+            <StatCard
+              title="Cheques (PDC)"
+              value={chequeReceiptsCount}
+              icon={CreditCard}
+              variant="purple"
+              selected={receiptsMethodFilter === 'CHEQUE'}
+              onClick={() => setReceiptsMethodFilter((prev) => (prev === 'CHEQUE' ? 'ALL' : 'CHEQUE'))}
+            />
+
+            <StatCard
+              title="Total Receipts"
+              value={receipts.length}
+              icon={CheckCircle2}
+              variant="emerald"
+              selected={receiptsMethodFilter === 'ALL' && receiptsStatusFilter === 'ALL'}
+              onClick={() => {
+                setReceiptsMethodFilter('ALL');
+                setReceiptsStatusFilter('ALL');
+              }}
+            />
+          </div>
+
+          {/* Search & Filter Bar (Matching Tab 1 / Handovers) */}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-card p-3 rounded-xl border border-border shadow-2xs">
+            <div className="relative flex-1 w-full sm:max-w-md">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                value={receiptsSearch}
+                onChange={(e) => setReceiptsSearch(e.target.value)}
+                placeholder="Search by receipt #, payer, reference, or account..."
+                className="pl-9 text-xs h-9"
+              />
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <Select
+                value={receiptsMethodFilter}
+                onChange={(e) => setReceiptsMethodFilter(e.target.value as any)}
+                className="h-9 text-xs w-32"
+              >
+                <option value="ALL">All Methods</option>
+                <option value="CASH">Cash (1040)</option>
+                <option value="BANK_TRANSFER">Bank (1010)</option>
+                <option value="CHEQUE">Cheque (1018)</option>
+              </Select>
 
               <Select
                 value={receiptsStatusFilter}
                 onChange={(e) => setReceiptsStatusFilter(e.target.value)}
-                className="h-9 text-xs w-36"
+                className="h-9 text-xs w-32"
               >
                 <option value="ALL">All Status</option>
                 <option value="APPROVED">Cleared</option>
@@ -885,7 +981,7 @@ export function IncomeDeskPage({ defaultTab }: IncomeDeskPageProps) {
                   type="date"
                   value={receiptsDateFrom}
                   onChange={(e) => setReceiptsDateFrom(e.target.value)}
-                  className="h-9 text-xs w-36"
+                  className="h-9 text-xs w-32"
                 />
               </div>
 
@@ -895,7 +991,7 @@ export function IncomeDeskPage({ defaultTab }: IncomeDeskPageProps) {
                   type="date"
                   value={receiptsDateTo}
                   onChange={(e) => setReceiptsDateTo(e.target.value)}
-                  className="h-9 text-xs w-36"
+                  className="h-9 text-xs w-32"
                 />
               </div>
 
@@ -905,6 +1001,7 @@ export function IncomeDeskPage({ defaultTab }: IncomeDeskPageProps) {
                 size="sm"
                 onClick={() => {
                   setReceiptsSearch('');
+                  setReceiptsMethodFilter('ALL');
                   setReceiptsStatusFilter('ALL');
                   setReceiptsDateFrom('');
                   setReceiptsDateTo('');
@@ -912,241 +1009,144 @@ export function IncomeDeskPage({ defaultTab }: IncomeDeskPageProps) {
                 className="h-9 text-xs text-muted-foreground gap-1.5"
                 title="Reset Filters"
               >
-                <span>Refresh</span>
+                <span>Reset</span>
               </Button>
-            </div>
-
-            <div className="text-xs text-muted-foreground font-mono">
-              Total: <span className="font-semibold text-foreground">{clearedFilteredReceipts.length}</span> cleared receipts
             </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-            {/* Left cols: Receipts Registry */}
-            <div className={cn(selectedReceiptForView ? "lg:col-span-7" : "lg:col-span-12", "space-y-3")}>
-              <div className="rounded-lg border border-border overflow-hidden bg-card shadow-xs">
-                <div className="overflow-x-auto w-full max-h-[500px]">
-                  <table className="w-full text-left text-xs tabular-nums">
-                    <thead className="bg-slate-900 text-white text-[11px] font-bold uppercase tracking-wider sticky top-0 z-10">
-                      <tr>
-                        <th className="px-3.5 py-3 w-24">AUDIT #</th>
-                        <th className="px-3.5 py-3 w-32">RECEIPT #</th>
-                        <th className="px-3.5 py-3 w-28">DATE</th>
-                        <th className="px-3.5 py-3">CUSTOMER / PAYER</th>
-                        <th className="px-3.5 py-3 w-36">ACCOUNT</th>
-                        <th className="px-3.5 py-3 w-24 text-center">METHOD</th>
-                        <th className="px-3.5 py-3 text-right w-32">AMOUNT</th>
-                        <th className="px-3.5 py-3 text-center w-24">STATUS</th>
-                        <th className="px-3.5 py-3 text-right w-20">ACTIONS</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-border/60">
-                      {clearedFilteredReceipts.length === 0 ? (
-                        <tr>
-                          <td colSpan={9} className="py-8 text-center text-xs text-muted-foreground">
-                            No cleared customer receipts found.
+          {/* Unified Receipts Table (Full-Width matching Tab 1 / Handovers) */}
+          <div className="overflow-hidden rounded-xl border border-border bg-card shadow-2xs">
+            <div className="overflow-x-auto w-full">
+              <table className="w-full min-w-[1000px] text-left text-xs tabular-nums">
+                <thead className="bg-muted/60 border-b border-border text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  <tr>
+                    <th className="py-3 px-4">Audit #</th>
+                    <th className="py-3 px-4">Receipt #</th>
+                    <th className="py-3 px-4">Date</th>
+                    <th className="py-3 px-4">Payer / Received From</th>
+                    <th className="py-3 px-4">Journal Ledger (Dr / Cr)</th>
+                    <th className="py-3 px-3 text-center">Method</th>
+                    <th className="py-3 px-4 text-right">Amount (LKR)</th>
+                    <th className="py-3 px-3 text-center">Status</th>
+                    <th className="py-3 px-4 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/60">
+                  {clearedFilteredReceipts.length === 0 ? (
+                    <tr>
+                      <td colSpan={9} className="py-12 text-center text-xs text-muted-foreground">
+                        No receipts found matching current filters.
+                      </td>
+                    </tr>
+                  ) : (
+                    clearedFilteredReceipts.map((r, idx) => {
+                      return (
+                        <tr
+                          key={r.id}
+                          onClick={() => setInspectingReceipt(r)}
+                          className="hover:bg-muted/40 transition-colors cursor-pointer"
+                        >
+                          <td className="py-3 px-4 font-mono text-muted-foreground text-[11px]">
+                            AUD-{4000 + idx}
                           </td>
-                        </tr>
-                      ) : (
-                        clearedFilteredReceipts.map((r, idx) => {
-                          const isSelected = selectedReceiptForView?.id === r.id;
-                          return (
-                            <tr
-                              key={r.id}
-                              onClick={() => setSelectedReceiptForView(r)}
+                          <td className="py-3 px-4 font-mono font-bold text-foreground">
+                            {r.receiptNumber}
+                          </td>
+                          <td className="py-3 px-4 text-muted-foreground font-mono text-[11px]">
+                            {formatDate(r.collectedAt)}
+                          </td>
+                          <td className="py-3 px-4">
+                            <div className="font-semibold text-foreground truncate max-w-[220px]">
+                              {r.customerName}
+                            </div>
+                            {r.customerCode && r.customerCode !== 'NON-SALES' && (
+                              <span className="text-[10px] text-muted-foreground font-mono">{r.customerCode}</span>
+                            )}
+                          </td>
+                          <td className="py-3 px-4">
+                            <span className="font-mono text-[11px] bg-muted px-2 py-0.5 rounded border border-border text-muted-foreground">
+                              Dr {r.depositAccountCode || '1040'} / Cr {r.incomeAccountCode || '4010'}
+                            </span>
+                          </td>
+                          <td className="py-3 px-3 text-center">
+                            <Badge
+                              variant="outline"
                               className={cn(
-                                'cursor-pointer transition-colors hover:bg-muted/40',
-                                isSelected && 'bg-primary/10 border-l-3 border-primary'
+                                'text-[10px] font-mono py-0 font-medium',
+                                r.paymentMethod === 'CASH' && 'bg-amber-50 text-amber-700 border-amber-200',
+                                r.paymentMethod === 'BANK_TRANSFER' && 'bg-sky-50 text-sky-700 border-sky-200',
+                                r.paymentMethod === 'CHEQUE' && 'bg-purple-50 text-purple-700 border-purple-200'
                               )}
                             >
-                              <td className="px-3.5 py-3 font-mono text-muted-foreground text-[11px]">
-                                AUD-{4000 + idx}
-                              </td>
-                              <td className="px-3.5 py-3 font-mono font-bold text-foreground">
-                                {r.receiptNumber}
-                              </td>
-                              <td className="px-3.5 py-3 text-muted-foreground font-mono text-[11px]">
-                                {formatDate(r.collectedAt)}
-                              </td>
-                              <td className="px-3.5 py-3">
-                                <div className="font-semibold text-foreground truncate max-w-[160px]">{r.customerName}</div>
-                                <span className="text-[10px] text-muted-foreground">{r.customerCode}</span>
-                              </td>
-                              <td className="px-3.5 py-3">
-                                <span className="font-mono text-[11px] bg-muted px-1.5 py-0.5 rounded border border-border text-muted-foreground">
-                                  {r.incomeAccountCode || '1020'} / {r.depositAccountCode || '1010'}
-                                </span>
-                              </td>
-                              <td className="px-3.5 py-3 text-center">
-                                <Badge
-                                  variant="outline"
-                                  className={cn(
-                                    'text-[10px] font-mono py-0 font-medium',
-                                    r.paymentMethod === 'CASH' && 'bg-amber-50 text-amber-700 border-amber-200',
-                                    r.paymentMethod === 'BANK_TRANSFER' && 'bg-sky-50 text-sky-700 border-sky-200',
-                                    r.paymentMethod === 'CHEQUE' && 'bg-purple-50 text-purple-700 border-purple-200'
-                                  )}
-                                >
-                                  {r.paymentMethod === 'BANK_TRANSFER' ? 'BANK' : r.paymentMethod}
-                                </Badge>
-                              </td>
-                              <td className="px-3.5 py-3 text-right font-mono font-bold text-foreground">
-                                {formatCurrency(r.amount)}
-                              </td>
-                              <td className="px-3.5 py-3 text-center">
-                                <Badge
-                                  variant="outline"
-                                  className="text-[10px] font-semibold py-0 border-emerald-300 bg-emerald-50 text-emerald-800"
-                                >
-                                  Cleared
-                                </Badge>
-                              </td>
-                              <td className="px-3.5 py-3 text-right" onClick={(e) => e.stopPropagation()}>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => setSelectedReceiptForView(r)}
-                                  className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
-                                  title="Inspect Receipt"
-                                >
-                                  <ChevronRight className="h-4 w-4" />
-                                </Button>
-                              </td>
-                            </tr>
-                          );
-                        })
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-
-            {/* Right 5 cols: Selected Receipt & Open Invoices Preview */}
-            <div className="lg:col-span-5 space-y-3">
-              <div className="flex items-center justify-between">
-                <h3 className="text-sm font-bold text-foreground flex items-center gap-1.5">
-                  <SlidersHorizontal className="h-4 w-4 text-primary" />
-                  <span>
-                    {selectedReceiptForView
-                      ? `Invoices: ${selectedReceiptForView.customerName}`
-                      : 'Select a Receipt to Inspect'}
-                  </span>
-                </h3>
-              </div>
-
-              {selectedReceiptForView ? (
-                <Card className="p-4 border-border space-y-3 bg-card shadow-xs">
-                  <div className="flex items-center justify-between border-b border-border/70 pb-2.5">
-                    <div>
-                      <span className="font-mono text-sm font-bold text-primary">
-                        {selectedReceiptForView.receiptNumber}
-                      </span>
-                      <span className="text-xs text-muted-foreground block">
-                        Collected on {formatDate(selectedReceiptForView.collectedAt)}
-                      </span>
-                    </div>
-                    <div className="text-right">
-                      <span className="text-sm font-mono font-bold text-foreground block">
-                        {formatCurrency(selectedReceiptForView.amount)}
-                      </span>
-                      <span className="text-[10px] text-muted-foreground uppercase font-semibold">
-                        {selectedReceiptForView.paymentMethod}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Customer outstanding invoices list */}
-                  <div>
-                    <h4 className="text-xs font-semibold text-foreground mb-1.5">
-                      Customer Open Outstanding Invoices
-                    </h4>
-                    <div className="space-y-1.5 max-h-[220px] overflow-y-auto">
-                      {arService.getOpenInvoicesForCustomer(selectedReceiptForView.customerId).length === 0 ? (
-                        <div className="p-4 text-center text-xs text-muted-foreground bg-muted/30 rounded-lg">
-                          All invoices for this customer are fully settled.
-                        </div>
-                      ) : (
-                        arService
-                          .getOpenInvoicesForCustomer(selectedReceiptForView.customerId)
-                          .map((inv) => (
-                            <div
-                              key={inv.id}
-                              className="flex items-center justify-between p-2 rounded-lg bg-muted/40 text-xs border border-border/60"
+                              {r.paymentMethod === 'BANK_TRANSFER' ? 'BANK' : r.paymentMethod}
+                            </Badge>
+                          </td>
+                          <td className="py-3 px-4 text-right font-mono font-bold text-foreground">
+                            {formatCurrency(r.amount)}
+                          </td>
+                          <td className="py-3 px-3 text-center">
+                            <Badge
+                              variant="outline"
+                              className="text-[10px] font-semibold py-0 border-emerald-300 bg-emerald-50 text-emerald-800"
                             >
-                              <div>
-                                <span className="font-mono font-bold text-primary">{inv.invoiceNumber}</span>
-                                <span className="text-[10px] text-muted-foreground block">Date {formatDate(inv.date)}</span>
-                              </div>
-                              <div className="text-right">
-                                <span className="font-mono font-semibold text-rose-600 block">
-                                  {formatCurrency(inv.balanceDue)}
-                                </span>
-                                <span className="text-[10px] text-muted-foreground">
-                                  of {formatCurrency(inv.originalAmount)}
-                                </span>
-                              </div>
+                              Cleared
+                            </Badge>
+                          </td>
+                          <td className="py-3 px-4 text-right" onClick={(e) => e.stopPropagation()}>
+                            <div className="flex items-center justify-end gap-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() =>
+                                  setThermalReceiptPayment({
+                                    id: r.id,
+                                    receiptNumber: r.receiptNumber,
+                                    customerId: r.customerId,
+                                    customerName: r.customerName,
+                                    customerCode: r.customerCode,
+                                    amount: r.amount,
+                                    paymentMethod: r.paymentMethod as any,
+                                    salesRepId: 'usr-1',
+                                    salesRepName: r.collectorName,
+                                    collectedAt: r.collectedAt,
+                                    status: 'APPROVED',
+                                    chequeNumber: r.chequeNumber,
+                                    bankName: r.drawerBank,
+                                    chequeDate: r.chequeDate,
+                                    invoiceAllocations: r.allocations
+                                      ? Object.entries(r.allocations).map(([invId, amt]) => ({
+                                          invoiceId: invId,
+                                          invoiceNumber: invId,
+                                          allocatedAmount: amt,
+                                        }))
+                                      : [],
+                                    notes: r.remarks,
+                                    createdAt: r.collectedAt,
+                                    updatedAt: r.collectedAt,
+                                  })
+                                }
+                                className="h-7 w-7 p-0 text-muted-foreground hover:text-primary"
+                                title="Generate & Print Thermal Receipt"
+                              >
+                                <Printer className="h-3.5 w-3.5" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setInspectingReceipt(r)}
+                                className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
+                                title="Inspect Receipt Details"
+                              >
+                                <ChevronRight className="h-4 w-4" />
+                              </Button>
                             </div>
-                          ))
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Print & thermal action */}
-                  <div className="flex items-center justify-end gap-2 pt-2 border-t border-border/70">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() =>
-                        printerService.printPaymentReceipt({
-                          id: selectedReceiptForView.id,
-                          receiptNumber: selectedReceiptForView.receiptNumber,
-                          customerId: selectedReceiptForView.customerId,
-                          customerName: selectedReceiptForView.customerName,
-                          customerCode: selectedReceiptForView.customerCode,
-                          amount: selectedReceiptForView.amount,
-                          paymentMethod: selectedReceiptForView.paymentMethod as any,
-                          salesRepId: 'usr-1',
-                          salesRepName: selectedReceiptForView.collectorName,
-                          collectedAt: selectedReceiptForView.collectedAt,
-                          status: 'APPROVED',
-                        } as any)
-                      }
-                      className="text-xs h-7 px-2.5 gap-1"
-                    >
-                      <Printer className="h-3 w-3" />
-                      <span>Print Thermal</span>
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() =>
-                        pdfService.generatePaymentReceiptPdf({
-                          id: selectedReceiptForView.id,
-                          receiptNumber: selectedReceiptForView.receiptNumber,
-                          customerId: selectedReceiptForView.customerId,
-                          customerName: selectedReceiptForView.customerName,
-                          customerCode: selectedReceiptForView.customerCode,
-                          amount: selectedReceiptForView.amount,
-                          paymentMethod: selectedReceiptForView.paymentMethod as any,
-                          salesRepId: 'usr-1',
-                          salesRepName: selectedReceiptForView.collectorName,
-                          collectedAt: selectedReceiptForView.collectedAt,
-                          status: 'APPROVED',
-                        } as any)
-                      }
-                      className="text-xs h-7 px-2.5 gap-1"
-                    >
-                      <Download className="h-3 w-3" />
-                      <span>PDF</span>
-                    </Button>
-                  </div>
-                </Card>
-              ) : (
-                <div className="p-8 text-center border border-dashed border-border rounded-xl text-xs text-muted-foreground">
-                  Select any cleared receipt on the left to inspect customer unpaid invoices and print options.
-                </div>
-              )}
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
@@ -1605,6 +1605,152 @@ export function IncomeDeskPage({ defaultTab }: IncomeDeskPageProps) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* ========================================================================= */}
+      {/* MODAL: INSPECT RECEIPT DETAILS                                            */}
+      {/* ========================================================================= */}
+      <Dialog open={!!inspectingReceipt} onOpenChange={(open) => !open && setInspectingReceipt(null)}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="text-base font-bold flex items-center gap-2">
+              <Receipt className="h-5 w-5 text-primary" />
+              <span>Receipt Inspection: {inspectingReceipt?.receiptNumber}</span>
+            </DialogTitle>
+            <DialogDescription className="text-xs">
+              Complete voucher breakdown, double-entry ledger routing, and print actions.
+            </DialogDescription>
+          </DialogHeader>
+
+          {inspectingReceipt && (
+            <div className="space-y-3 py-2 text-xs">
+              <div className="grid grid-cols-2 gap-3 p-3 bg-muted/40 rounded-xl border border-border">
+                <div>
+                  <span className="text-muted-foreground block text-[10px] uppercase font-semibold">Receipt Number</span>
+                  <span className="font-mono font-bold text-foreground text-sm">{inspectingReceipt.receiptNumber}</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground block text-[10px] uppercase font-semibold">Receipt Date</span>
+                  <span className="font-mono text-foreground">{formatDate(inspectingReceipt.collectedAt)}</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground block text-[10px] uppercase font-semibold">Payer / Source</span>
+                  <span className="font-semibold text-foreground">{inspectingReceipt.customerName}</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground block text-[10px] uppercase font-semibold">Payment Method</span>
+                  <Badge variant="outline" className="font-mono text-[10px] mt-0.5">
+                    {inspectingReceipt.paymentMethod}
+                  </Badge>
+                </div>
+              </div>
+
+              {/* Amount & Double-Entry breakdown */}
+              <div className="p-3 bg-primary/5 rounded-xl border border-primary/20 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-foreground">Total Receipt Amount</span>
+                  <span className="text-base font-mono font-bold text-primary">
+                    {formatCurrency(inspectingReceipt.amount)}
+                  </span>
+                </div>
+
+                <div className="border-t border-primary/10 pt-2 grid grid-cols-2 gap-2 text-[11px]">
+                  <div>
+                    <span className="text-[10px] font-bold text-muted-foreground block uppercase">Debit Account (Asset)</span>
+                    <span className="font-mono font-semibold text-foreground">
+                      {inspectingReceipt.depositAccountCode || '1040'} - Cash / Bank
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-bold text-muted-foreground block uppercase">Credit Account (Income)</span>
+                    <span className="font-mono font-semibold text-foreground">
+                      {inspectingReceipt.incomeAccountCode || '4010'} - Revenue / Income
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Cheque Info if any */}
+              {inspectingReceipt.paymentMethod === 'CHEQUE' && (
+                <div className="p-3 bg-amber-50/60 rounded-xl border border-amber-200/80 space-y-1 text-xs">
+                  <span className="font-bold text-amber-900 block">Cheque Information</span>
+                  <div className="grid grid-cols-3 gap-2 text-[11px] text-amber-950">
+                    <div>
+                      <span className="text-[10px] text-amber-700 block">Cheque No</span>
+                      <span className="font-mono font-semibold">{inspectingReceipt.chequeNumber || 'N/A'}</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-amber-700 block">Drawee Bank</span>
+                      <span>{inspectingReceipt.drawerBank || inspectingReceipt.bankName || 'N/A'}</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-amber-700 block">Due Date</span>
+                      <span>{inspectingReceipt.chequeDate ? formatDate(inspectingReceipt.chequeDate) : 'N/A'}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Remarks if any */}
+              {inspectingReceipt.remarks && (
+                <div className="p-2.5 bg-muted/30 rounded-lg border border-border text-[11px]">
+                  <span className="text-[10px] font-bold text-muted-foreground block uppercase mb-0.5">Remarks / Narration</span>
+                  <span className="text-foreground">{inspectingReceipt.remarks}</span>
+                </div>
+              )}
+            </div>
+          )}
+
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                if (inspectingReceipt) {
+                  setThermalReceiptPayment({
+                    id: inspectingReceipt.id,
+                    receiptNumber: inspectingReceipt.receiptNumber,
+                    customerId: inspectingReceipt.customerId,
+                    customerName: inspectingReceipt.customerName,
+                    customerCode: inspectingReceipt.customerCode,
+                    amount: inspectingReceipt.amount,
+                    paymentMethod: inspectingReceipt.paymentMethod as any,
+                    salesRepId: 'usr-1',
+                    salesRepName: inspectingReceipt.collectorName,
+                    collectedAt: inspectingReceipt.collectedAt,
+                    status: 'APPROVED',
+                    chequeNumber: inspectingReceipt.chequeNumber,
+                    bankName: inspectingReceipt.drawerBank,
+                    chequeDate: inspectingReceipt.chequeDate,
+                    notes: inspectingReceipt.remarks,
+                    createdAt: inspectingReceipt.collectedAt,
+                    updatedAt: inspectingReceipt.collectedAt,
+                  });
+                }
+              }}
+              className="gap-1.5 text-xs"
+            >
+              <Printer className="h-3.5 w-3.5" />
+              <span>Print Thermal</span>
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setInspectingReceipt(null)}
+            >
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Cash / Cleared Receipt Thermal Voucher Modal */}
+      {thermalReceiptPayment && (
+        <ThermalReceiptModal
+          isOpen={!!thermalReceiptPayment}
+          onClose={() => setThermalReceiptPayment(null)}
+          payment={thermalReceiptPayment}
+        />
+      )}
     </div>
   );
 }

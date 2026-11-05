@@ -119,6 +119,15 @@ export function MyApprovalsPage() {
     }
   };
 
+  const isDirectRecordApproval = (app: ApprovalRequest) => {
+    return (
+      app.documentType === 'SALES_ORDER' ||
+      app.documentType === 'SPECIAL_SALES_ORDER' ||
+      app.documentType === 'QUOTATION_DISCOUNT' ||
+      app.documentType === 'CUSTOMER_CREATION'
+    );
+  };
+
   // Explanation helper: why this request reached Director or Manager
   const getExecutiveReason = (app: ApprovalRequest): { title: string; badge: string; color: string } => {
     if (app.documentType === 'PURCHASE_ORDER') {
@@ -366,31 +375,47 @@ export function MyApprovalsPage() {
                       </div>
                     </div>
 
-                    {getDocumentLink(app) && (
-                      <Link to={getDocumentLink(app)!}>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="text-xs gap-1 bg-white hover:bg-slate-50 text-slate-700 shadow-2xs"
-                        >
-                          <span>Inspect Document</span>
-                          <ExternalLink className="h-3 w-3" />
-                        </Button>
-                      </Link>
-                    )}
+                    {isDirectRecordApproval(app) ? (
+                      getDocumentLink(app) && (
+                        <Link to={getDocumentLink(app)!}>
+                          <Button
+                            size="sm"
+                            className="text-xs gap-1.5 bg-primary hover:bg-primary-hover text-white font-semibold shadow-xs cursor-pointer"
+                          >
+                            <span>Inspect Record</span>
+                            <ExternalLink className="h-3.5 w-3.5" />
+                          </Button>
+                        </Link>
+                      )
+                    ) : (
+                      <>
+                        {getDocumentLink(app) && (
+                          <Link to={getDocumentLink(app)!}>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-xs gap-1 bg-white hover:bg-slate-50 text-slate-700 shadow-2xs"
+                            >
+                              <span>Inspect Document</span>
+                              <ExternalLink className="h-3 w-3" />
+                            </Button>
+                          </Link>
+                        )}
 
-                    {isPendingDecision && (
-                      <Button
-                        size="sm"
-                        onClick={() => {
-                          setSelectedRequest(app);
-                          setActionDialogOpen(true);
-                        }}
-                        className="text-xs gap-1.5 bg-primary hover:bg-primary-hover text-white font-semibold shadow-xs"
-                      >
-                        <ShieldCheck className="h-3.5 w-3.5" />
-                        <span>Decide Request</span>
-                      </Button>
+                        {isPendingDecision && (
+                          <Button
+                            size="sm"
+                            onClick={() => {
+                              setSelectedRequest(app);
+                              setActionDialogOpen(true);
+                            }}
+                            className="text-xs gap-1.5 bg-primary hover:bg-primary-hover text-white font-semibold shadow-xs"
+                          >
+                            <ShieldCheck className="h-3.5 w-3.5" />
+                            <span>Decide Request</span>
+                          </Button>
+                        )}
+                      </>
                     )}
                   </div>
                 </CardHeader>

@@ -63,7 +63,7 @@ export function QuotationDetailPage() {
         {
           action: {
             label: 'View Order',
-            onClick: () => navigate(`/orders/${res.convertedToOrderId || res.orderNumber}`),
+            onClick: () => navigate(`/orders/${res.id || res.orderNumber}`),
           },
         }
       );

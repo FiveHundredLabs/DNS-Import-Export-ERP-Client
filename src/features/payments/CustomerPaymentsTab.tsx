@@ -7,6 +7,7 @@ import { invoiceService } from '../../services/InvoiceService';
 import { useAuth } from '../../hooks/useAuth';
 import { useAreas } from '../../hooks/useAreas';
 import { MOCK_USERS } from '../../mock/mockUsers';
+import { MOCK_AREAS } from '../../mock/mockAreas';
 import {
   evaluateCustomerPaymentStatus,
   getDaysOverdue,
@@ -16,7 +17,6 @@ import { formatCurrency, formatDate } from '../../utils/formatters';
 import { Card } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
-import { Input } from '../../components/ui/input';
 import {
   DollarSign,
   AlertCircle,
@@ -34,19 +34,15 @@ import {
   Clock,
   Phone,
   MessageSquare,
-  ArrowUpRight,
   ArrowRight,
   Receipt,
   Download,
   LayoutGrid,
   Table as TableIcon,
-  SlidersHorizontal,
   X,
-  FileSpreadsheet,
-  AlertTriangle,
-  ChevronDown,
-  TrendingUp,
   Percent,
+  ShieldCheck,
+  Target,
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { toast } from 'sonner';
@@ -67,6 +63,18 @@ export function CustomerPaymentsTab({ onSelectCustomer, className }: CustomerPay
   const navigate = useNavigate();
   const { currentUser, role } = useAuth();
   const { areas } = useAreas();
+  const allAreas = useMemo(() => (areas && areas.length > 0 ? areas : MOCK_AREAS), [areas]);
+
+  const isAreaManager = role === 'AREA_MANAGER';
+  const isRep = role === 'SALES_REP';
+
+  // Area Manager's assigned territory
+  const userAssignedAreaId = useMemo(() => {
+    if (currentUser?.areaId) return currentUser.areaId;
+    const matched = allAreas.find((a) => a.areaManagerId === currentUser?.id);
+    if (matched) return matched.id;
+    return 'area-01'; // Default fallback to Kelaniya
+  }, [currentUser, allAreas]);
 
   // Primary data states
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -74,7 +82,12 @@ export function CustomerPaymentsTab({ onSelectCustomer, className }: CustomerPay
   const [loading, setLoading] = useState(true);
 
   // Management Filter states
-  const [selectedAreaId, setSelectedAreaId] = useState<string>('ALL');
+  const [selectedAreaId, setSelectedAreaId] = useState<string>(() => {
+    if (role === 'AREA_MANAGER') {
+      return currentUser?.areaId || 'area-01';
+    }
+    return 'ALL';
+  });
   const [selectedRepId, setSelectedRepId] = useState<string>('ALL');
   const [statusFilter, setStatusFilter] = useState<CollectionStatusFilter>('ALL');
   const [balanceFilter, setBalanceFilter] = useState<BalanceFilter>('ALL');
@@ -89,11 +102,11 @@ export function CustomerPaymentsTab({ onSelectCustomer, className }: CustomerPay
   const loadData = async () => {
     try {
       setLoading(true);
-      const isRep = role === 'SALES_REP';
       const [custRes, invRes] = await Promise.all([
         customerService.listCustomers({
           pageSize: 200,
           assignedRepId: isRep ? currentUser.id : undefined,
+          areaId: isAreaManager ? userAssignedAreaId : undefined,
         }),
         invoiceService.getInvoices({
           pageSize: 300,
@@ -113,14 +126,14 @@ export function CustomerPaymentsTab({ onSelectCustomer, className }: CustomerPay
 
   useEffect(() => {
     loadData();
-  }, [role, currentUser.id]);
+  }, [role, currentUser.id, userAssignedAreaId]);
 
-  // If user is an Area Manager, default filter to their area
+  // If user is an Area Manager, strictly default and lock to their assigned territory
   useEffect(() => {
-    if (role === 'AREA_MANAGER' && currentUser?.areaId && selectedAreaId === 'ALL') {
-      setSelectedAreaId(currentUser.areaId);
+    if (isAreaManager && userAssignedAreaId && selectedAreaId !== userAssignedAreaId) {
+      setSelectedAreaId(userAssignedAreaId);
     }
-  }, [role, currentUser?.areaId]);
+  }, [isAreaManager, userAssignedAreaId, selectedAreaId]);
 
   // When area changes, if current selectedRepId does not belong to the newly selected area, reset rep
   useEffect(() => {
@@ -132,22 +145,41 @@ export function CustomerPaymentsTab({ onSelectCustomer, className }: CustomerPay
     }
   }, [selectedAreaId, selectedRepId]);
 
+  // Visible areas: For Area Manager, strictly only their territory
+  const visibleAreas = useMemo(() => {
+    if (isAreaManager) {
+      const matched = allAreas.filter((a) => a.id === userAssignedAreaId);
+      return matched.length > 0 ? matched : allAreas.slice(0, 1);
+    }
+    return allAreas;
+  }, [isAreaManager, allAreas, userAssignedAreaId]);
+
+  // Derived scoped customers (strictly ensures Area Manager only sees their territory)
+  const scopedCustomers = useMemo(() => {
+    if (isAreaManager) {
+      return customers.filter((c) => c.areaId === userAssignedAreaId);
+    }
+    return customers;
+  }, [isAreaManager, customers, userAssignedAreaId]);
+
   // Derived list of all sales reps in system
   const salesReps = useMemo(() => {
     return MOCK_USERS.filter((u) => u.role === 'SALES_REP' && u.isActive);
   }, []);
 
-  // Filtered sales reps based on selected area
+  const effectiveAreaId = isAreaManager ? userAssignedAreaId : selectedAreaId;
+
+  // Filtered sales reps based on selected area or Area Manager role
   const availableRepsForSelectedArea = useMemo(() => {
-    if (selectedAreaId === 'ALL') return salesReps;
-    return salesReps.filter((r) => r.areaId === selectedAreaId);
-  }, [salesReps, selectedAreaId]);
+    if (effectiveAreaId === 'ALL') return salesReps;
+    return salesReps.filter((r) => r.areaId === effectiveAreaId);
+  }, [salesReps, effectiveAreaId]);
 
   // Selected Area details
   const selectedAreaObj = useMemo(() => {
-    if (selectedAreaId === 'ALL') return null;
-    return areas.find((a) => a.id === selectedAreaId) || null;
-  }, [areas, selectedAreaId]);
+    if (effectiveAreaId === 'ALL') return null;
+    return allAreas.find((a) => a.id === effectiveAreaId) || null;
+  }, [allAreas, effectiveAreaId]);
 
   // Selected Sales Rep details
   const selectedRepObj = useMemo(() => {
@@ -174,7 +206,7 @@ export function CustomerPaymentsTab({ onSelectCustomer, className }: CustomerPay
     );
   };
 
-  // Compute rich ledger metadata for every customer
+  // Compute rich ledger metadata for every customer in active scope
   const customerLedgerMap = useMemo(() => {
     const map = new Map<
       string,
@@ -187,7 +219,7 @@ export function CustomerPaymentsTab({ onSelectCustomer, className }: CustomerPay
       }
     >();
 
-    customers.forEach((c) => {
+    scopedCustomers.forEach((c) => {
       const meta = evaluateCustomerPaymentStatus(c, invoices);
       const cInvoices = invoices.filter(
         (i) => i.customerId === c.id && i.status !== 'CANCELLED' && i.status !== 'DRAFT' && i.balanceAmount > 0
@@ -227,7 +259,7 @@ export function CustomerPaymentsTab({ onSelectCustomer, className }: CustomerPay
     });
 
     return map;
-  }, [customers, invoices]);
+  }, [scopedCustomers, invoices]);
 
   // Top Management Dashboard Overall KPIs
   const globalKPIs = useMemo(() => {
@@ -236,7 +268,7 @@ export function CustomerPaymentsTab({ onSelectCustomer, className }: CustomerPay
     let totalDueSoon = 0;
     let debtorCount = 0;
 
-    customers.forEach((c) => {
+    scopedCustomers.forEach((c) => {
       const data = customerLedgerMap.get(c.id);
       if (data) {
         totalReceivables += data.meta.totalOutstanding;
@@ -246,13 +278,15 @@ export function CustomerPaymentsTab({ onSelectCustomer, className }: CustomerPay
       }
     });
 
-    // Collected amount this month from all paid/partially paid invoices
-    const collectedThisMonth = invoices.reduce((sum, inv) => sum + (inv.paidAmount || 0), 0);
+    // Collected amount this month from scoped customers' paid/partially paid invoices
+    const scopedCustIds = new Set(scopedCustomers.map((c) => c.id));
+    const scopedInvoices = invoices.filter((i) => scopedCustIds.has(i.customerId));
+    const collectedThisMonth = scopedInvoices.reduce((sum, inv) => sum + (inv.paidAmount || 0), 0);
     const totalTarget = totalReceivables + collectedThisMonth;
     const recoveryRate = totalTarget > 0 ? Math.round((collectedThisMonth / totalTarget) * 100) : 100;
 
     return {
-      totalCustomers: customers.length,
+      totalCustomers: scopedCustomers.length,
       debtorCount,
       totalReceivables,
       totalOverdue,
@@ -260,13 +294,13 @@ export function CustomerPaymentsTab({ onSelectCustomer, className }: CustomerPay
       collectedThisMonth,
       recoveryRate,
     };
-  }, [customers, invoices, customerLedgerMap]);
+  }, [scopedCustomers, invoices, customerLedgerMap]);
 
   // Selected Area Metrics
   const areaSpecificKPIs = useMemo(() => {
     if (!selectedAreaObj) return null;
 
-    const areaCustomers = customers.filter((c) => c.areaId === selectedAreaObj.id);
+    const areaCustomers = scopedCustomers.filter((c) => c.areaId === selectedAreaObj.id);
     let areaReceivables = 0;
     let areaOverdue = 0;
     let areaDueSoon = 0;
@@ -297,13 +331,44 @@ export function CustomerPaymentsTab({ onSelectCustomer, className }: CustomerPay
       collected: areaCollected,
       rate,
     };
-  }, [selectedAreaObj, customers, invoices, customerLedgerMap]);
+  }, [selectedAreaObj, scopedCustomers, invoices, customerLedgerMap]);
+
+  // Active Scope KPIs (Adapts when user is Area Manager or specific territory is selected)
+  const activeScopeKPIs = useMemo(() => {
+    if ((isAreaManager || selectedAreaId !== 'ALL') && areaSpecificKPIs) {
+      return {
+        totalReceivables: areaSpecificKPIs.receivables,
+        totalOverdue: areaSpecificKPIs.overdue,
+        totalDueSoon: areaSpecificKPIs.dueSoon,
+        collectedThisMonth: areaSpecificKPIs.collected,
+        recoveryRate: areaSpecificKPIs.rate,
+        totalCustomers: areaSpecificKPIs.totalCustomers,
+        debtorCount: areaSpecificKPIs.debtorCount,
+        scopeTitle: isAreaManager
+          ? `${selectedAreaObj?.name || 'Kelaniya'} Territory Portfolio`
+          : `${selectedAreaObj?.name || 'Area'} Territory`,
+        scopeSubtitle: isAreaManager ? 'Your assigned territory' : 'Active territory focus',
+      };
+    }
+
+    return {
+      totalReceivables: globalKPIs.totalReceivables,
+      totalOverdue: globalKPIs.totalOverdue,
+      totalDueSoon: globalKPIs.totalDueSoon,
+      collectedThisMonth: globalKPIs.collectedThisMonth,
+      recoveryRate: globalKPIs.recoveryRate,
+      totalCustomers: globalKPIs.totalCustomers,
+      debtorCount: globalKPIs.debtorCount,
+      scopeTitle: 'Across all territories',
+      scopeSubtitle: 'Company-wide active portfolio',
+    };
+  }, [isAreaManager, selectedAreaId, areaSpecificKPIs, globalKPIs, selectedAreaObj]);
 
   // Selected Sales Rep Metrics
   const repSpecificKPIs = useMemo(() => {
     if (!selectedRepObj) return null;
 
-    const repCustomers = customers.filter((c) => c.assignedRepId === selectedRepObj.id);
+    const repCustomers = scopedCustomers.filter((c) => c.assignedRepId === selectedRepObj.id);
     let repReceivables = 0;
     let repOverdue = 0;
     let repDueSoon = 0;
@@ -331,16 +396,16 @@ export function CustomerPaymentsTab({ onSelectCustomer, className }: CustomerPay
       collected: repCollected,
       rate,
     };
-  }, [selectedRepObj, customers, invoices, customerLedgerMap]);
+  }, [selectedRepObj, scopedCustomers, invoices, customerLedgerMap]);
 
   // Main Filtering Logic
   const filteredCustomers = useMemo(() => {
-    return customers.filter((customer) => {
+    return scopedCustomers.filter((customer) => {
       const ledger = customerLedgerMap.get(customer.id);
       if (!ledger) return false;
 
-      // 1. Area Filter
-      if (selectedAreaId !== 'ALL' && customer.areaId !== selectedAreaId) {
+      // 1. Area Filter (if not Area Manager who is already scoped)
+      if (!isAreaManager && selectedAreaId !== 'ALL' && customer.areaId !== selectedAreaId) {
         return false;
       }
 
@@ -349,54 +414,38 @@ export function CustomerPaymentsTab({ onSelectCustomer, className }: CustomerPay
         return false;
       }
 
-      // 3. Balance Filter
-      if (balanceFilter === 'OUTSTANDING_ONLY' && ledger.meta.totalOutstanding <= 0) {
-        return false;
-      }
-      if (balanceFilter === 'OVERDUE_ONLY' && ledger.meta.totalOverdue <= 0) {
-        return false;
-      }
-      if (balanceFilter === 'SETTLED_ONLY' && ledger.meta.totalOutstanding > 0) {
-        return false;
-      }
+      // 3. Status Filter
+      if (statusFilter === 'OVERDUE' && ledger.meta.totalOverdue <= 0) return false;
+      if (statusFilter === 'DUE_SOON' && !ledger.meta.isNearDue) return false;
+      if (statusFilter === 'DUE_24H' && !ledger.meta.isDueNext24h) return false;
+      if (statusFilter === 'PENDING' && ledger.meta.pendingCollectionAmount <= 0) return false;
+      if (statusFilter === 'SETTLED' && ledger.meta.totalOutstanding > 0) return false;
 
-      // 4. Status Filter
-      if (statusFilter === 'OVERDUE' && ledger.meta.totalOverdue <= 0) {
-        return false;
-      }
-      if (statusFilter === 'DUE_SOON' && !ledger.meta.isNearDue) {
-        return false;
-      }
-      if (statusFilter === 'DUE_24H' && !ledger.meta.isDueNext24h) {
-        return false;
-      }
-      if (statusFilter === 'PENDING' && ledger.meta.pendingCollectionAmount <= 0) {
-        return false;
-      }
-      if (statusFilter === 'SETTLED' && ledger.meta.totalOutstanding > 0) {
-        return false;
-      }
+      // 4. Balance Filter
+      if (balanceFilter === 'OUTSTANDING_ONLY' && ledger.meta.totalOutstanding <= 0) return false;
+      if (balanceFilter === 'OVERDUE_ONLY' && ledger.meta.totalOverdue <= 0) return false;
+      if (balanceFilter === 'SETTLED_ONLY' && ledger.meta.totalOutstanding > 0) return false;
 
-      // 5. Search Query Filter (Code, Name, Phone, Area, Rep)
+      // 5. Search Query
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase().trim();
-        const codeMatch = customer.code?.toLowerCase().includes(q);
-        const nameMatch = customer.name?.toLowerCase().includes(q);
-        const phoneMatch = customer.phone?.includes(q);
-        const areaMatch = customer.areaName?.toLowerCase().includes(q);
-        const repMatch = customer.assignedRepName?.toLowerCase().includes(q);
-        const contactMatch = customer.contactPerson?.toLowerCase().includes(q);
+        const matchName = customer.name.toLowerCase().includes(q);
+        const matchCode = customer.code.toLowerCase().includes(q);
+        const matchArea = (customer.areaName || '').toLowerCase().includes(q);
+        const matchRep = (customer.assignedRepName || '').toLowerCase().includes(q);
+        const matchContact = (customer.contactPerson || '').toLowerCase().includes(q);
+        const matchPhone = (customer.phone || '').toLowerCase().includes(q);
 
-        if (!codeMatch && !nameMatch && !phoneMatch && !areaMatch && !repMatch && !contactMatch) {
+        if (!matchName && !matchCode && !matchArea && !matchRep && !matchContact && !matchPhone) {
           return false;
         }
       }
 
       return true;
     });
-  }, [customers, customerLedgerMap, selectedAreaId, selectedRepId, balanceFilter, statusFilter, searchQuery]);
+  }, [scopedCustomers, customerLedgerMap, isAreaManager, selectedAreaId, selectedRepId, statusFilter, balanceFilter, searchQuery]);
 
-  // Counts for the status pills
+  // Dynamic counts for status pills
   const statusCounts = useMemo(() => {
     let overdue = 0;
     let dueSoon = 0;
@@ -405,9 +454,9 @@ export function CustomerPaymentsTab({ onSelectCustomer, className }: CustomerPay
     let settled = 0;
     let outstanding = 0;
 
-    customers.forEach((c) => {
+    scopedCustomers.forEach((c) => {
       // Respect area and rep filters when computing badge counts
-      if (selectedAreaId !== 'ALL' && c.areaId !== selectedAreaId) return;
+      if (!isAreaManager && selectedAreaId !== 'ALL' && c.areaId !== selectedAreaId) return;
       if (selectedRepId !== 'ALL' && c.assignedRepId !== selectedRepId) return;
 
       const data = customerLedgerMap.get(c.id);
@@ -422,8 +471,8 @@ export function CustomerPaymentsTab({ onSelectCustomer, className }: CustomerPay
     });
 
     return {
-      all: customers.filter((c) => {
-        if (selectedAreaId !== 'ALL' && c.areaId !== selectedAreaId) return false;
+      all: scopedCustomers.filter((c) => {
+        if (!isAreaManager && selectedAreaId !== 'ALL' && c.areaId !== selectedAreaId) return false;
         if (selectedRepId !== 'ALL' && c.assignedRepId !== selectedRepId) return false;
         return true;
       }).length,
@@ -434,7 +483,7 @@ export function CustomerPaymentsTab({ onSelectCustomer, className }: CustomerPay
       pending,
       settled,
     };
-  }, [customers, customerLedgerMap, selectedAreaId, selectedRepId]);
+  }, [scopedCustomers, customerLedgerMap, isAreaManager, selectedAreaId, selectedRepId]);
 
   // Export filtered customers to CSV
   const handleExportCSV = () => {
@@ -485,25 +534,50 @@ export function CustomerPaymentsTab({ onSelectCustomer, className }: CustomerPay
     toast.success('Collection Ledger exported successfully.');
   };
 
+  const handleResetFilters = () => {
+    if (!isAreaManager) {
+      setSelectedAreaId('ALL');
+    }
+    setSelectedRepId('ALL');
+    setStatusFilter('ALL');
+    setBalanceFilter('ALL');
+    setSearchQuery('');
+  };
+
+  const hasActiveFilters =
+    (!isAreaManager && selectedAreaId !== 'ALL') ||
+    selectedRepId !== 'ALL' ||
+    statusFilter !== 'ALL' ||
+    balanceFilter !== 'ALL' ||
+    Boolean(searchQuery);
+
   return (
-    <div className={cn('space-y-5', className)}>
+    <div className={cn('space-y-5 max-w-[1600px] mx-auto pb-8', className)}>
       {/* ── 1. Page Header & Global Management Controls ── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10.5px] font-bold tracking-wide uppercase bg-primary-light text-primary border border-primary-border">
-              <CreditCard className="h-3 w-3" /> Area & Field Float Management
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10.5px] font-bold tracking-wide uppercase bg-slate-100 text-slate-700 border border-slate-200">
+              <CreditCard className="h-3 w-3 text-slate-500" /> Area & Field Float Management
             </span>
             <span className="text-[11px] text-slate-500 font-medium">Customer Ledger Hub</span>
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-              <Clock className="h-2.5 w-2.5" /> FIFO Auto-Allocation
-            </span>
+            {isAreaManager ? (
+              <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[10.5px] font-semibold gap-1">
+                <ShieldCheck className="h-3 w-3" /> Area Scoped: {selectedAreaObj?.name || 'Kelaniya'}
+              </Badge>
+            ) : (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                <Clock className="h-2.5 w-2.5" /> FIFO Auto-Allocation
+              </span>
+            )}
           </div>
           <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 mt-1">
             Customer Collections & Receivables Desk
           </h2>
           <p className="text-xs text-slate-500 mt-0.5">
-            Area-wise debt monitoring, sales representative collection accountability, and customer ledger settlements.
+            {isAreaManager
+              ? `Debt monitoring, sales representative collection accountability, and dealer settlements for ${selectedAreaObj?.name || 'your assigned territory'}.`
+              : 'Area-wise debt monitoring, sales representative collection accountability, and customer ledger settlements.'}
           </p>
         </div>
 
@@ -541,10 +615,10 @@ export function CustomerPaymentsTab({ onSelectCustomer, className }: CustomerPay
             variant="outline"
             size="sm"
             onClick={handleExportCSV}
-            className="h-9 px-3 gap-1.5 text-xs font-semibold rounded-xl border-slate-200"
+            className="h-9 px-3 gap-1.5 text-xs font-semibold rounded-xl border-slate-200 hover:bg-slate-50 cursor-pointer"
             title="Export CSV"
           >
-            <Download className="h-3.5 w-3.5" /> Export
+            <Download className="h-3.5 w-3.5 text-slate-500" /> Export
           </Button>
 
           <Button
@@ -552,241 +626,286 @@ export function CustomerPaymentsTab({ onSelectCustomer, className }: CustomerPay
             size="sm"
             onClick={loadData}
             disabled={loading}
-            className="h-9 px-3 gap-1.5 text-xs font-semibold rounded-xl border-slate-200"
+            className="h-9 px-3 gap-1.5 text-xs font-semibold rounded-xl border-slate-200 hover:bg-slate-50 cursor-pointer"
             title="Refresh Ledger"
           >
-            <RefreshCw className={cn('h-3.5 w-3.5', loading && 'animate-spin')} /> Refresh
+            <RefreshCw className={cn('h-3.5 w-3.5 text-slate-500', loading && 'animate-spin')} /> Refresh
           </Button>
         </div>
       </div>
 
       {/* ── 2. Top Management Dashboard KPI Cards ── */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3.5">
         {/* KPI 1: Total Receivables */}
-        <div className="p-4 rounded-2xl bg-white border border-slate-200/80 shadow-2xs flex flex-col justify-between">
+        <div className="p-4 rounded-2xl bg-white border border-slate-200/90 shadow-2xs flex flex-col justify-between">
           <div className="flex items-center justify-between text-xs text-slate-500 font-medium">
             <span>Total Receivables</span>
-            <DollarSign className="h-4 w-4 text-primary" />
-          </div>
-          <div className="mt-2">
-            <div className="text-base sm:text-lg font-bold font-mono text-slate-900">
-              {formatCurrency(globalKPIs.totalReceivables)}
+            <div className="p-1.5 rounded-lg bg-slate-50 border border-slate-200/60">
+              <DollarSign className="h-3.5 w-3.5 text-slate-700" />
             </div>
-            <div className="text-[11px] text-slate-500 mt-0.5">Across all territories</div>
+          </div>
+          <div className="mt-2.5">
+            <div className="text-base sm:text-lg font-bold font-mono text-slate-900">
+              {formatCurrency(activeScopeKPIs.totalReceivables)}
+            </div>
+            <div className="text-[11px] text-slate-500 mt-0.5 truncate" title={activeScopeKPIs.scopeTitle}>
+              {activeScopeKPIs.scopeTitle}
+            </div>
           </div>
         </div>
 
         {/* KPI 2: Total Overdue */}
-        <div className="p-4 rounded-2xl bg-white border border-rose-200/80 shadow-2xs flex flex-col justify-between">
+        <div className="p-4 rounded-2xl bg-white border border-rose-200/90 shadow-2xs flex flex-col justify-between">
           <div className="flex items-center justify-between text-xs text-rose-600 font-semibold">
             <span>Total Overdue</span>
-            <AlertCircle className="h-4 w-4 text-rose-500" />
+            <div className="p-1.5 rounded-lg bg-rose-50 border border-rose-200/60">
+              <AlertCircle className="h-3.5 w-3.5 text-rose-500" />
+            </div>
           </div>
-          <div className="mt-2">
+          <div className="mt-2.5">
             <div className="text-base sm:text-lg font-bold font-mono text-rose-600">
-              {formatCurrency(globalKPIs.totalOverdue)}
+              {formatCurrency(activeScopeKPIs.totalOverdue)}
             </div>
             <div className="text-[11px] text-rose-500 font-medium mt-0.5">High priority recovery</div>
           </div>
         </div>
 
         {/* KPI 3: Due in 7 Days */}
-        <div className="p-4 rounded-2xl bg-white border border-amber-200/80 shadow-2xs flex flex-col justify-between">
+        <div className="p-4 rounded-2xl bg-white border border-amber-200/90 shadow-2xs flex flex-col justify-between">
           <div className="flex items-center justify-between text-xs text-amber-700 font-medium">
             <span>Due in 7 Days</span>
-            <Clock className="h-4 w-4 text-amber-500" />
+            <div className="p-1.5 rounded-lg bg-amber-50 border border-amber-200/60">
+              <Clock className="h-3.5 w-3.5 text-amber-600" />
+            </div>
           </div>
-          <div className="mt-2">
+          <div className="mt-2.5">
             <div className="text-base sm:text-lg font-bold font-mono text-slate-900">
-              {formatCurrency(globalKPIs.totalDueSoon)}
+              {formatCurrency(activeScopeKPIs.totalDueSoon)}
             </div>
             <div className="text-[11px] text-amber-600 font-medium mt-0.5">Upcoming collections</div>
           </div>
         </div>
 
         {/* KPI 4: Collected This Month */}
-        <div className="p-4 rounded-2xl bg-white border border-emerald-200/80 shadow-2xs flex flex-col justify-between">
+        <div className="p-4 rounded-2xl bg-white border border-emerald-200/90 shadow-2xs flex flex-col justify-between">
           <div className="flex items-center justify-between text-xs text-emerald-700 font-medium">
-            <span>Collected This Month</span>
-            <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+            <span>Collected Month</span>
+            <div className="p-1.5 rounded-lg bg-emerald-50 border border-emerald-200/60">
+              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+            </div>
           </div>
-          <div className="mt-2">
+          <div className="mt-2.5">
             <div className="text-base sm:text-lg font-bold font-mono text-emerald-700">
-              {formatCurrency(globalKPIs.collectedThisMonth)}
+              {formatCurrency(activeScopeKPIs.collectedThisMonth)}
             </div>
             <div className="text-[11px] text-slate-500 mt-0.5">Verified settlements</div>
           </div>
         </div>
 
         {/* KPI 5: Recovery Rate */}
-        <div className="p-4 rounded-2xl bg-white border border-slate-200/80 shadow-2xs flex flex-col justify-between">
+        <div className="p-4 rounded-2xl bg-white border border-slate-200/90 shadow-2xs flex flex-col justify-between">
           <div className="flex items-center justify-between text-xs text-slate-500 font-medium">
             <span>Collection Rate</span>
-            <Percent className="h-4 w-4 text-indigo-500" />
+            <div className="p-1.5 rounded-lg bg-slate-50 border border-slate-200/60">
+              <Percent className="h-3.5 w-3.5 text-slate-700" />
+            </div>
           </div>
-          <div className="mt-2">
-            <div className="text-base sm:text-lg font-bold font-mono text-indigo-700">
-              {globalKPIs.recoveryRate}%
+          <div className="mt-2.5">
+            <div className="text-base sm:text-lg font-bold font-mono text-slate-900">
+              {activeScopeKPIs.recoveryRate}%
             </div>
             <div className="h-1.5 w-full bg-slate-100 rounded-full mt-1.5 overflow-hidden">
               <div
-                className="h-full bg-indigo-600 rounded-full transition-all"
-                style={{ width: `${Math.min(100, globalKPIs.recoveryRate)}%` }}
+                className="h-full bg-slate-800 rounded-full transition-all"
+                style={{ width: `${Math.min(100, activeScopeKPIs.recoveryRate)}%` }}
               />
             </div>
           </div>
         </div>
 
         {/* KPI 6: Accounts Affected */}
-        <div className="p-4 rounded-2xl bg-white border border-slate-200/80 shadow-2xs flex flex-col justify-between">
+        <div className="p-4 rounded-2xl bg-white border border-slate-200/90 shadow-2xs flex flex-col justify-between">
           <div className="flex items-center justify-between text-xs text-slate-500 font-medium">
-            <span>Customer Accounts</span>
-            <Users className="h-4 w-4 text-slate-400" />
+            <span>Accounts Managed</span>
+            <div className="p-1.5 rounded-lg bg-slate-50 border border-slate-200/60">
+              <Users className="h-3.5 w-3.5 text-slate-500" />
+            </div>
           </div>
-          <div className="mt-2">
+          <div className="mt-2.5">
             <div className="text-base sm:text-lg font-bold font-mono text-slate-900">
-              {globalKPIs.totalCustomers} Accounts
+              {activeScopeKPIs.totalCustomers} Accounts
             </div>
             <div className="text-[11px] text-rose-500 font-medium mt-0.5">
-              {globalKPIs.debtorCount} with active debt
+              {activeScopeKPIs.debtorCount} with active debt
             </div>
           </div>
         </div>
       </div>
 
-      {/* ── 3. Interactive Area-Wise Performance Overview ── */}
-      <AreaPerformanceOverviewCard
-        areas={areas}
-        customers={customers}
-        invoices={invoices}
-        selectedAreaId={selectedAreaId}
-        onSelectArea={setSelectedAreaId}
-      />
+      {/* ── 3. Interactive Area-Wise Performance Overview (Only for Multi-Area Management Roles) ── */}
+      {(!isAreaManager || visibleAreas.length > 1) && (
+        <AreaPerformanceOverviewCard
+          areas={visibleAreas}
+          customers={scopedCustomers}
+          invoices={invoices}
+          selectedAreaId={selectedAreaId}
+          onSelectArea={(id) => {
+            if (isAreaManager) return;
+            setSelectedAreaId(id);
+          }}
+        />
+      )}
 
-      {/* ── 4. Dedicated Area Operational Context Banner (When Area is Selected) ── */}
+      {/* ── 4. Dedicated Territory Command Desk (Balanced, Relaxed, No Free Space Gap or Duplicated Boxes) ── */}
       {selectedAreaObj && areaSpecificKPIs && (
-        <Card className="bg-gradient-to-r from-slate-900 via-slate-800 to-indigo-950 text-white rounded-2xl p-4 sm:p-5 shadow-sm border-0 relative overflow-hidden">
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5">
-            {/* Left: Area & Responsible Area Manager Identity */}
-            <div className="space-y-3">
-              <div className="flex items-center gap-2.5 flex-wrap">
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10.5px] font-bold uppercase bg-white/10 text-white border border-white/20">
-                  <MapPin className="h-3 w-3 text-emerald-400" /> Area Focus: {selectedAreaObj.name}
-                </span>
-                <span className="text-xs text-slate-300 font-medium">{selectedAreaObj.region}</span>
-                <button
-                  type="button"
+        <Card className="bg-white border border-slate-200/90 rounded-2xl shadow-2xs overflow-hidden">
+          {/* Header Strip */}
+          <div className="bg-slate-50/70 border-b border-slate-200/80 px-4 sm:px-5 py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="h-9 w-9 rounded-xl bg-white border border-slate-200 text-primary flex items-center justify-center shadow-2xs shrink-0">
+                <MapPin className="h-4.5 w-4.5" />
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h3 className="text-sm sm:text-base font-bold text-slate-900 tracking-tight">
+                    {selectedAreaObj.name} Territory Command Desk
+                  </h3>
+                  {isAreaManager ? (
+                    <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[10.5px] font-semibold gap-1">
+                      <ShieldCheck className="h-3 w-3" /> Managed Territory
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20 text-[10.5px] font-semibold gap-1">
+                      <MapPin className="h-3 w-3" /> Active Area Focus
+                    </Badge>
+                  )}
+                </div>
+                <p className="text-xs text-slate-500 font-medium mt-0.5 truncate">
+                  {selectedAreaObj.region} • Regional Debt & Field Float Oversight
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 self-start sm:self-auto shrink-0">
+              <div className="text-xs text-slate-500 hidden md:flex items-center gap-1.5 bg-white px-2.5 py-1 rounded-lg border border-slate-200/70">
+                <UserCheck className="h-3.5 w-3.5 text-slate-400" />
+                <span>Area Manager: <strong className="text-slate-800">{selectedAreaObj.areaManagerName || 'Nimal Bandara'}</strong></span>
+                <span className="text-slate-400">• +94 77 567 8901</span>
+              </div>
+              {!isAreaManager && (
+                <Button
+                  variant="ghost"
+                  size="sm"
                   onClick={() => {
                     setSelectedAreaId('ALL');
                     setSelectedRepId('ALL');
                   }}
-                  className="inline-flex items-center gap-1 text-[11px] text-rose-300 hover:text-white transition-colors cursor-pointer ml-1"
+                  className="h-8 px-2.5 text-xs font-semibold text-slate-500 hover:text-rose-600 hover:bg-rose-50 gap-1 rounded-xl cursor-pointer"
                 >
-                  <X className="h-3 w-3" /> Clear Area Focus
-                </button>
-              </div>
+                  <X className="h-3.5 w-3.5" />
+                  <span>Clear Area Focus</span>
+                </Button>
+              )}
+            </div>
+          </div>
 
-              {/* Area Manager Details */}
-              <div className="flex items-center gap-3.5 bg-white/5 p-3 rounded-xl border border-white/10 max-w-lg">
-                <div className="h-10 w-10 rounded-xl bg-indigo-500/30 border border-indigo-400/40 text-white flex items-center justify-center font-bold text-sm shrink-0">
-                  {selectedAreaObj.areaManagerName ? selectedAreaObj.areaManagerName.charAt(0) : 'A'}
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                      Area Manager Responsible
-                    </span>
-                    <Badge variant="outline" className="bg-emerald-500/20 text-emerald-300 border-emerald-400/30 text-[9.5px]">
-                      Active Oversight
-                    </Badge>
-                  </div>
-                  <div className="text-sm font-bold text-white mt-0.5">{selectedAreaObj.areaManagerName || 'Nimal Bandara'}</div>
-                  <div className="text-xs text-slate-300">Western Operations • Contact: +94 77 567 8901</div>
-                </div>
-              </div>
-
-              {/* Assigned Sales Reps Pills */}
-              <div>
-                <div className="text-xs font-semibold text-slate-300 mb-1.5 flex items-center gap-1.5">
-                  <Users className="h-3.5 w-3.5 text-indigo-400" />
+          {/* Body: Proportional 2-Column Responsive Layout (Eliminating the empty hole & duplicated 6 cards) */}
+          <div className="p-4 sm:p-5 grid grid-cols-1 lg:grid-cols-12 gap-5 items-center">
+            {/* Left: Rep Assignment & Route Control (7 cols) */}
+            <div className="lg:col-span-7 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                  <Users className="h-4 w-4 text-slate-400" />
                   <span>Assigned Field Sales Representatives in {selectedAreaObj.name}:</span>
                 </div>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <button
-                    type="button"
-                    onClick={() => setSelectedRepId('ALL')}
-                    className={cn(
-                      'px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer',
-                      selectedRepId === 'ALL'
-                        ? 'bg-white text-slate-900 shadow-xs'
-                        : 'bg-white/10 text-slate-300 hover:bg-white/20 hover:text-white'
-                    )}
-                  >
-                    All Reps ({availableRepsForSelectedArea.length})
-                  </button>
+                <span className="text-xs text-slate-400 font-mono">
+                  {availableRepsForSelectedArea.length} Rep{availableRepsForSelectedArea.length === 1 ? '' : 's'} on Route
+                </span>
+              </div>
 
-                  {availableRepsForSelectedArea.map((rep) => {
-                    const isRepActive = selectedRepId === rep.id;
-                    const repCustsCount = customers.filter(
-                      (c) => c.areaId === selectedAreaObj.id && c.assignedRepId === rep.id
-                    ).length;
+              <div className="flex items-center gap-2 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => setSelectedRepId('ALL')}
+                  className={cn(
+                    'px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer border',
+                    selectedRepId === 'ALL'
+                      ? 'bg-primary text-white border-primary shadow-2xs font-bold'
+                      : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200'
+                  )}
+                >
+                  All Reps ({availableRepsForSelectedArea.length})
+                </button>
 
-                    return (
-                      <button
-                        key={rep.id}
-                        type="button"
-                        onClick={() => setSelectedRepId(isRepActive ? 'ALL' : rep.id)}
+                {availableRepsForSelectedArea.map((rep) => {
+                  const isRepActive = selectedRepId === rep.id;
+                  const repCustsCount = scopedCustomers.filter(
+                    (c) => c.areaId === selectedAreaObj.id && c.assignedRepId === rep.id
+                  ).length;
+
+                  return (
+                    <button
+                      key={rep.id}
+                      type="button"
+                      onClick={() => setSelectedRepId(isRepActive ? 'ALL' : rep.id)}
+                      className={cn(
+                        'inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer border',
+                        isRepActive
+                          ? 'bg-primary text-white border-primary shadow-2xs font-bold'
+                          : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200 shadow-2xs'
+                      )}
+                    >
+                      <UserCheck className="h-3.5 w-3.5 text-slate-400" />
+                      <span>{rep.name}</span>
+                      <span
                         className={cn(
-                          'inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer border',
-                          isRepActive
-                            ? 'bg-indigo-600 text-white border-indigo-400 shadow-xs'
-                            : 'bg-white/10 text-slate-300 border-white/10 hover:bg-white/20 hover:text-white'
+                          'text-[10px] px-1.5 py-0.2 rounded-full font-mono',
+                          isRepActive ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'
                         )}
                       >
-                        <UserCheck className="h-3 w-3" />
-                        <span>{rep.name}</span>
-                        <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-black/30 font-mono">
-                          {repCustsCount}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
+                        {repCustsCount} Accounts
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Mobile Area Manager Info */}
+              <div className="md:hidden text-xs text-slate-500 pt-2 border-t border-slate-100 flex items-center gap-1.5">
+                <UserCheck className="h-3.5 w-3.5 text-slate-400" />
+                <span>AM: <strong>{selectedAreaObj.areaManagerName || 'Nimal Bandara'}</strong> • +94 77 567 8901</span>
               </div>
             </div>
 
-            {/* Right: Area Financial Summary Metrics Grid */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 bg-black/25 p-3.5 rounded-xl border border-white/10 shrink-0 lg:w-96">
-              <div className="p-2 rounded-lg bg-white/5">
-                <span className="text-[10.5px] uppercase font-semibold text-slate-400 tracking-wider">Area Receivables</span>
-                <p className="text-sm font-bold font-mono text-white mt-0.5">{formatCurrency(areaSpecificKPIs.receivables)}</p>
+            {/* Right: Territory Float Health & Recovery Progress Bar (5 cols) */}
+            <div className="lg:col-span-5 bg-slate-50/80 rounded-xl p-3.5 sm:p-4 border border-slate-200/80 space-y-3">
+              <div className="flex items-center justify-between text-xs">
+                <div className="flex items-center gap-1.5 font-bold text-slate-700">
+                  <Target className="h-3.5 w-3.5 text-primary" />
+                  <span>Territory Collection Recovery Target</span>
+                </div>
+                <span className="font-bold font-mono text-primary text-sm">{areaSpecificKPIs.rate}%</span>
               </div>
 
-              <div className="p-2 rounded-lg bg-rose-500/10 border border-rose-500/20">
-                <span className="text-[10.5px] uppercase font-semibold text-rose-300 tracking-wider">Area Overdue</span>
-                <p className="text-sm font-bold font-mono text-rose-300 mt-0.5">{formatCurrency(areaSpecificKPIs.overdue)}</p>
+              <div className="h-2 w-full bg-slate-200/80 rounded-full overflow-hidden">
+                <div
+                  className={cn(
+                    'h-full rounded-full transition-all duration-500',
+                    areaSpecificKPIs.rate >= 75 ? 'bg-emerald-500' : areaSpecificKPIs.rate >= 50 ? 'bg-amber-500' : 'bg-primary'
+                  )}
+                  style={{ width: `${Math.min(100, areaSpecificKPIs.rate)}%` }}
+                />
               </div>
 
-              <div className="p-2 rounded-lg bg-amber-500/10 border border-amber-500/20">
-                <span className="text-[10.5px] uppercase font-semibold text-amber-300 tracking-wider">Due in 7 Days</span>
-                <p className="text-sm font-bold font-mono text-amber-300 mt-0.5">{formatCurrency(areaSpecificKPIs.dueSoon)}</p>
-              </div>
-
-              <div className="p-2 rounded-lg bg-white/5">
-                <span className="text-[10.5px] uppercase font-semibold text-slate-400 tracking-wider">Customers</span>
-                <p className="text-sm font-bold font-mono text-white mt-0.5">
-                  {areaSpecificKPIs.totalCustomers} ({areaSpecificKPIs.debtorCount} with debt)
-                </p>
-              </div>
-
-              <div className="p-2 rounded-lg bg-white/5">
-                <span className="text-[10.5px] uppercase font-semibold text-slate-400 tracking-wider">Collected</span>
-                <p className="text-sm font-bold font-mono text-emerald-400 mt-0.5">{formatCurrency(areaSpecificKPIs.collected)}</p>
-              </div>
-
-              <div className="p-2 rounded-lg bg-white/5">
-                <span className="text-[10.5px] uppercase font-semibold text-slate-400 tracking-wider">Area Recovery</span>
-                <p className="text-sm font-bold font-mono text-indigo-300 mt-0.5">{areaSpecificKPIs.rate}%</p>
+              <div className="grid grid-cols-2 gap-3 text-xs pt-1 border-t border-slate-200/60">
+                <div className="space-y-0.5">
+                  <span className="text-[10.5px] uppercase font-bold text-slate-400">Total Outstanding</span>
+                  <p className="font-mono font-bold text-slate-900">{formatCurrency(areaSpecificKPIs.receivables)}</p>
+                </div>
+                <div className="space-y-0.5 text-right sm:text-left">
+                  <span className="text-[10.5px] uppercase font-bold text-rose-500">Overdue Recovery</span>
+                  <p className="font-mono font-bold text-rose-600">{formatCurrency(areaSpecificKPIs.overdue)}</p>
+                </div>
               </div>
             </div>
           </div>
@@ -795,16 +914,16 @@ export function CustomerPaymentsTab({ onSelectCustomer, className }: CustomerPay
 
       {/* ── 5. Dedicated Sales Representative Detail Card (When Rep is Selected) ── */}
       {selectedRepObj && repSpecificKPIs && (
-        <Card className="bg-gradient-to-r from-indigo-50 via-white to-slate-50 border border-indigo-200 rounded-2xl p-4 sm:p-5 shadow-xs">
+        <Card className="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-xs border-l-4 border-l-primary">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="flex items-start sm:items-center gap-3.5">
-              <div className="h-11 w-11 rounded-2xl bg-indigo-600 text-white font-bold text-base flex items-center justify-center shrink-0 shadow-xs">
+              <div className="h-11 w-11 rounded-2xl bg-slate-100 text-slate-800 font-bold text-base flex items-center justify-center shrink-0 border border-slate-200 shadow-2xs">
                 {selectedRepObj.name.charAt(0)}
               </div>
               <div>
                 <div className="flex items-center gap-2 flex-wrap">
                   <h3 className="text-sm font-bold text-slate-900">{selectedRepObj.name}</h3>
-                  <Badge variant="outline" className="bg-indigo-50 text-indigo-700 border-indigo-200 text-[10px] font-semibold">
+                  <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20 text-[10px] font-semibold">
                     Field Sales Representative
                   </Badge>
                   <span className="text-xs text-slate-500">
@@ -820,12 +939,12 @@ export function CustomerPaymentsTab({ onSelectCustomer, className }: CustomerPay
             <div className="flex items-center gap-2.5 self-start sm:self-auto">
               <div className="text-right sm:text-right">
                 <div className="text-xs text-slate-500 font-medium">Monthly Achievement</div>
-                <div className="text-sm font-bold font-mono text-indigo-700">{repSpecificKPIs.rate}% of Target</div>
+                <div className="text-sm font-bold font-mono text-primary">{repSpecificKPIs.rate}% of Target</div>
               </div>
               <button
                 type="button"
                 onClick={() => setSelectedRepId('ALL')}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
                 title="Clear Rep Focus"
               >
                 <X className="h-4 w-4" />
@@ -834,8 +953,8 @@ export function CustomerPaymentsTab({ onSelectCustomer, className }: CustomerPay
           </div>
 
           {/* Rep KPIs */}
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5 mt-3 pt-3 border-t border-indigo-100">
-            <div className="p-2.5 rounded-xl bg-white border border-slate-200/80">
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5 mt-3 pt-3 border-t border-slate-100">
+            <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80">
               <span className="text-[10px] uppercase font-bold text-slate-400">Total Outstanding</span>
               <p className="text-xs sm:text-sm font-bold font-mono text-slate-900 mt-0.5">
                 {formatCurrency(repSpecificKPIs.receivables)}
@@ -863,9 +982,9 @@ export function CustomerPaymentsTab({ onSelectCustomer, className }: CustomerPay
               </p>
             </div>
 
-            <div className="p-2.5 rounded-xl bg-white border border-indigo-200 col-span-2 sm:col-span-1">
-              <span className="text-[10px] uppercase font-bold text-indigo-500">Accounts Managed</span>
-              <p className="text-xs sm:text-sm font-bold font-mono text-indigo-800 mt-0.5">
+            <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80 col-span-2 sm:col-span-1">
+              <span className="text-[10px] uppercase font-bold text-slate-400">Accounts Managed</span>
+              <p className="text-xs sm:text-sm font-bold font-mono text-slate-800 mt-0.5">
                 {repSpecificKPIs.totalCustomers} Accounts
               </p>
             </div>
@@ -873,139 +992,142 @@ export function CustomerPaymentsTab({ onSelectCustomer, className }: CustomerPay
         </Card>
       )}
 
-      {/* ── 6. Comprehensive Management Filter Bar & Quick Status Chips ── */}
-      <Card className="bg-white border border-slate-200/90 rounded-2xl shadow-xs p-4 sm:p-5 space-y-4">
-        {/* Row 1: Dropdown Selectors & Search Box */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+      {/* ── 6. Comprehensive Management Filter Bar & Quick Status Chips (Relaxed Proportions, No Truncation) ── */}
+      <Card className="bg-white border border-slate-200/90 rounded-2xl shadow-2xs p-4 sm:p-4.5 space-y-3.5">
+        {/* Row 1: Search Box & Dropdowns (Flexible Flexbox Layout) */}
+        <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3">
           {/* Search Box */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 pointer-events-none" />
+          <div className="relative flex-1 min-w-[220px]">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 pointer-events-none" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search code, customer, area, rep..."
-              className="w-full pl-9 pr-8 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-hidden focus:ring-1 focus:ring-primary focus:border-primary transition-colors font-medium placeholder:text-slate-400"
+              placeholder={isAreaManager ? "Search customer, code, contact or rep..." : "Search code, customer, area, rep..."}
+              className="w-full pl-9 pr-8 py-2.5 text-xs rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-hidden focus:ring-1 focus:ring-primary focus:border-primary transition-colors font-medium placeholder:text-slate-400"
             />
             {searchQuery && (
               <button
                 type="button"
                 onClick={() => setSearchQuery('')}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
               >
                 <X className="h-3 w-3" />
               </button>
             )}
           </div>
 
-          {/* Area Selector */}
-          <div className="relative">
+          {/* Area Selector (Generous width to prevent awkward truncation) */}
+          <div className="relative w-full md:w-64 lg:w-72 shrink-0">
             <select
-              value={selectedAreaId}
+              value={effectiveAreaId}
               onChange={(e) => {
+                if (isAreaManager) return;
                 setSelectedAreaId(e.target.value);
                 setSelectedRepId('ALL');
               }}
-              className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-hidden focus:ring-1 focus:ring-primary focus:border-primary transition-colors font-semibold text-slate-800"
+              disabled={isAreaManager}
+              className={cn(
+                "w-full px-3 py-2.5 text-xs rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-hidden focus:ring-1 focus:ring-primary focus:border-primary transition-colors font-semibold text-slate-800",
+                isAreaManager && "cursor-not-allowed bg-slate-100 text-slate-600 opacity-90"
+              )}
             >
-              <option value="ALL">All Operational Areas ({areas.length})</option>
-              {areas.map((a) => (
+              {!isAreaManager && (
+                <option value="ALL">All Operational Areas ({allAreas.length})</option>
+              )}
+              {visibleAreas.map((a) => (
                 <option key={a.id} value={a.id}>
-                  {a.name} ({a.region})
+                  {a.name} ({a.region}){isAreaManager ? ' — Assigned Territory' : ''}
                 </option>
               ))}
             </select>
           </div>
 
           {/* Sales Representative Selector */}
-          <div className="relative">
+          <div className="relative w-full md:w-48 lg:w-56 shrink-0">
             <select
               value={selectedRepId}
               onChange={(e) => setSelectedRepId(e.target.value)}
-              className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-hidden focus:ring-1 focus:ring-primary focus:border-primary transition-colors font-semibold text-slate-800"
+              className="w-full px-3 py-2.5 text-xs rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-hidden focus:ring-1 focus:ring-primary focus:border-primary transition-colors font-semibold text-slate-800"
             >
               <option value="ALL">
-                {selectedAreaId !== 'ALL'
-                  ? `All Reps in Selected Area (${availableRepsForSelectedArea.length})`
-                  : `All Sales Representatives (${salesReps.length})`}
+                {effectiveAreaId !== 'ALL'
+                  ? `All Reps in Area (${availableRepsForSelectedArea.length})`
+                  : `All Sales Reps (${salesReps.length})`}
               </option>
               {availableRepsForSelectedArea.map((r) => (
                 <option key={r.id} value={r.id}>
-                  {r.name} ({r.areaName || 'Western'})
+                  {r.name}
                 </option>
               ))}
             </select>
           </div>
 
           {/* Balance Filter Selector */}
-          <div className="relative">
+          <div className="relative w-full md:w-48 lg:w-52 shrink-0">
             <select
               value={balanceFilter}
               onChange={(e) => setBalanceFilter(e.target.value as BalanceFilter)}
-              className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-hidden focus:ring-1 focus:ring-primary focus:border-primary transition-colors font-semibold text-slate-800"
+              className="w-full px-3 py-2.5 text-xs rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-hidden focus:ring-1 focus:ring-primary focus:border-primary transition-colors font-semibold text-slate-800"
             >
-              <option value="ALL">All Ledger Accounts (Active Portfolio)</option>
-              <option value="OUTSTANDING_ONLY">Accounts With Outstanding Only</option>
-              <option value="OVERDUE_ONLY">Past Due Overdue Accounts Only</option>
+              <option value="ALL">All Ledger Accounts</option>
+              <option value="OUTSTANDING_ONLY">With Outstanding Only</option>
+              <option value="OVERDUE_ONLY">Past Due Overdue Only</option>
               <option value="SETTLED_ONLY">Fully Settled (Zero Balance)</option>
             </select>
           </div>
         </div>
 
         {/* Row 2: Status Quick Filter Pills */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none text-xs">
-          <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider shrink-0 mr-1 flex items-center gap-1">
-            <Filter className="h-3 w-3" /> Status:
-          </span>
+        <div className="flex items-center justify-between gap-3 pt-1 border-t border-slate-100 flex-wrap">
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 scrollbar-none text-xs">
+            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider shrink-0 mr-1 flex items-center gap-1">
+              <Filter className="h-3 w-3" /> Status:
+            </span>
 
-          {[
-            { id: 'ALL' as CollectionStatusFilter, label: 'All Customers', count: statusCounts.all },
-            { id: 'OVERDUE' as CollectionStatusFilter, label: 'Past Due / Overdue', count: statusCounts.overdue, variant: 'danger' },
-            { id: 'DUE_SOON' as CollectionStatusFilter, label: 'Due in 7 Days', count: statusCounts.dueSoon, variant: 'warning' },
-            { id: 'DUE_24H' as CollectionStatusFilter, label: 'Due in 24h', count: statusCounts.due24h, variant: 'warning' },
-            { id: 'PENDING' as CollectionStatusFilter, label: 'Pending Collection', count: statusCounts.pending, variant: 'indigo' },
-            { id: 'SETTLED' as CollectionStatusFilter, label: 'Fully Settled', count: statusCounts.settled, variant: 'success' },
-          ].map((pill) => {
-            const isActive = statusFilter === pill.id;
+            {[
+              { id: 'ALL' as CollectionStatusFilter, label: 'All Customers', count: statusCounts.all },
+              { id: 'OVERDUE' as CollectionStatusFilter, label: 'Past Due / Overdue', count: statusCounts.overdue },
+              { id: 'DUE_SOON' as CollectionStatusFilter, label: 'Due in 7 Days', count: statusCounts.dueSoon },
+              { id: 'DUE_24H' as CollectionStatusFilter, label: 'Due in 24h', count: statusCounts.due24h },
+              { id: 'PENDING' as CollectionStatusFilter, label: 'Pending Collection', count: statusCounts.pending },
+              { id: 'SETTLED' as CollectionStatusFilter, label: 'Fully Settled', count: statusCounts.settled },
+            ].map((pill) => {
+              const isActive = statusFilter === pill.id;
 
-            return (
-              <button
-                key={pill.id}
-                type="button"
-                onClick={() => setStatusFilter(pill.id)}
-                className={cn(
-                  'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all shrink-0 cursor-pointer',
-                  isActive
-                    ? 'bg-slate-900 text-white shadow-xs'
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-900'
-                )}
-              >
-                <span>{pill.label}</span>
-                <span
+              return (
+                <button
+                  key={pill.id}
+                  type="button"
+                  onClick={() => setStatusFilter(pill.id)}
                   className={cn(
-                    'text-[10px] font-mono px-1.5 py-0.2 rounded-full',
-                    isActive ? 'bg-white/20 text-white' : 'bg-slate-200/80 text-slate-700'
+                    'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all shrink-0 cursor-pointer',
+                    isActive
+                      ? 'bg-slate-900 text-white shadow-xs'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-900'
                   )}
                 >
-                  {pill.count}
-                </span>
-              </button>
-            );
-          })}
+                  <span>{pill.label}</span>
+                  <span
+                    className={cn(
+                      'text-[10px] font-mono px-1.5 py-0.2 rounded-full',
+                      isActive ? 'bg-white/20 text-white' : 'bg-slate-200/80 text-slate-700'
+                    )}
+                  >
+                    {pill.count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
 
-          {(selectedAreaId !== 'ALL' || selectedRepId !== 'ALL' || statusFilter !== 'ALL' || balanceFilter !== 'ALL' || searchQuery) && (
+          {hasActiveFilters && (
             <button
               type="button"
-              onClick={() => {
-                setSelectedAreaId('ALL');
-                setSelectedRepId('ALL');
-                setStatusFilter('ALL');
-                setBalanceFilter('ALL');
-                setSearchQuery('');
-              }}
+              onClick={handleResetFilters}
               className="text-xs font-semibold text-rose-600 hover:text-rose-800 ml-auto shrink-0 cursor-pointer"
             >
-              Reset All Filters
+              Reset Filters
             </button>
           )}
         </div>
@@ -1030,20 +1152,16 @@ export function CustomerPaymentsTab({ onSelectCustomer, className }: CustomerPay
           <div>
             <h3 className="text-sm font-bold text-slate-800">No Customer Accounts Found</h3>
             <p className="text-xs text-slate-500 mt-1 max-w-md mx-auto">
-              No customer records match the active Area, Sales Representative, and Collection status filters.
+              {isAreaManager
+                ? `No customer accounts in ${selectedAreaObj?.name || 'your area'} match the active sales representative or status filters.`
+                : 'No customer records match the active Area, Sales Representative, and Collection status filters.'}
             </p>
           </div>
           <Button
             variant="outline"
             size="sm"
-            onClick={() => {
-              setSelectedAreaId('ALL');
-              setSelectedRepId('ALL');
-              setStatusFilter('ALL');
-              setBalanceFilter('ALL');
-              setSearchQuery('');
-            }}
-            className="text-xs rounded-xl"
+            onClick={handleResetFilters}
+            className="text-xs rounded-xl cursor-pointer"
           >
             Clear Active Filters
           </Button>
@@ -1055,16 +1173,16 @@ export function CustomerPaymentsTab({ onSelectCustomer, className }: CustomerPay
             <table className="w-full text-left text-xs border-collapse">
               <thead>
                 <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-500 font-semibold uppercase tracking-wider text-[10.5px]">
-                  <th className="py-3 px-4">Customer Account</th>
-                  <th className="py-3 px-3">Territory & Rep</th>
-                  <th className="py-3 px-3 text-right">Total Outstanding</th>
-                  <th className="py-3 px-3 text-right">Past Due Overdue</th>
-                  <th className="py-3 px-3">Oldest Overdue</th>
-                  <th className="py-3 px-3 text-center">Open Invoices</th>
-                  <th className="py-3 px-3">Next Due Date</th>
-                  <th className="py-3 px-3 text-center">Collection Status</th>
-                  <th className="py-3 px-3 text-right">Last Payment</th>
-                  <th className="py-3 px-4 text-right">Actions</th>
+                  <th className="py-3.5 px-4">Customer Account</th>
+                  <th className="py-3.5 px-3">Territory & Rep</th>
+                  <th className="py-3.5 px-3 text-right">Total Outstanding</th>
+                  <th className="py-3.5 px-3 text-right">Past Due Overdue</th>
+                  <th className="py-3.5 px-3">Oldest Overdue</th>
+                  <th className="py-3.5 px-3 text-center">Open Invoices</th>
+                  <th className="py-3.5 px-3">Next Due Date</th>
+                  <th className="py-3.5 px-3 text-center">Collection Status</th>
+                  <th className="py-3.5 px-3 text-right">Last Payment</th>
+                  <th className="py-3.5 px-4 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -1237,7 +1355,7 @@ export function CustomerPaymentsTab({ onSelectCustomer, className }: CustomerPay
                           <button
                             type="button"
                             onClick={() => handleWhatsApp(customer, data?.meta.totalOutstanding || 0)}
-                            className="p-1.5 rounded-lg text-emerald-600 hover:bg-emerald-50 border border-emerald-200 transition-colors"
+                            className="p-1.5 rounded-lg text-emerald-600 hover:bg-emerald-50 border border-emerald-200 transition-colors cursor-pointer"
                             title="Send WhatsApp Reminder"
                           >
                             <MessageSquare className="h-3.5 w-3.5" />
@@ -1247,7 +1365,7 @@ export function CustomerPaymentsTab({ onSelectCustomer, className }: CustomerPay
                           <button
                             type="button"
                             onClick={() => (window.location.href = `tel:${customer.phone}`)}
-                            className="p-1.5 rounded-lg text-slate-600 hover:bg-slate-100 border border-slate-200 transition-colors"
+                            className="p-1.5 rounded-lg text-slate-600 hover:bg-slate-100 border border-slate-200 transition-colors cursor-pointer"
                             title="Call Customer"
                           >
                             <Phone className="h-3.5 w-3.5" />
@@ -1257,7 +1375,7 @@ export function CustomerPaymentsTab({ onSelectCustomer, className }: CustomerPay
                           <Button
                             size="sm"
                             onClick={() => handleSelectCustomer(customer)}
-                            className="h-7 px-2.5 text-[11px] font-bold bg-primary hover:bg-primary-hover text-white rounded-lg shadow-2xs gap-1"
+                            className="h-7 px-2.5 text-[11px] font-bold bg-primary hover:bg-primary-hover text-white rounded-lg shadow-2xs gap-1 cursor-pointer"
                           >
                             <span>Collect</span>
                             <ArrowRight className="h-3 w-3" />
@@ -1273,7 +1391,7 @@ export function CustomerPaymentsTab({ onSelectCustomer, className }: CustomerPay
         </Card>
       ) : (
         /* ── EXECUTIVE CARDS VIEW ── */
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredCustomers.map((customer) => {
             const data = customerLedgerMap.get(customer.id);
             const isOverdue = (data?.meta.totalOverdue || 0) > 0;
@@ -1284,7 +1402,7 @@ export function CustomerPaymentsTab({ onSelectCustomer, className }: CustomerPay
               <Card
                 key={customer.id}
                 className={cn(
-                  'bg-white border rounded-2xl p-4 shadow-xs hover:shadow-sm transition-all flex flex-col justify-between space-y-3.5',
+                  'bg-white border rounded-2xl p-4 sm:p-4.5 shadow-2xs hover:shadow-xs transition-all flex flex-col justify-between space-y-3.5',
                   isOverdue ? 'border-rose-200/90 bg-rose-50/10' : 'border-slate-200/90'
                 )}
               >
@@ -1381,7 +1499,7 @@ export function CustomerPaymentsTab({ onSelectCustomer, className }: CustomerPay
                     <button
                       type="button"
                       onClick={() => handleWhatsApp(customer, data?.meta.totalOutstanding || 0)}
-                      className="p-2 rounded-xl text-emerald-600 hover:bg-emerald-50 border border-emerald-200 transition-colors"
+                      className="p-2 rounded-xl text-emerald-600 hover:bg-emerald-50 border border-emerald-200 transition-colors cursor-pointer"
                       title="WhatsApp Reminder"
                     >
                       <MessageSquare className="h-3.5 w-3.5" />
@@ -1389,7 +1507,7 @@ export function CustomerPaymentsTab({ onSelectCustomer, className }: CustomerPay
                     <button
                       type="button"
                       onClick={() => (window.location.href = `tel:${customer.phone}`)}
-                      className="p-2 rounded-xl text-slate-600 hover:bg-slate-100 border border-slate-200 transition-colors"
+                      className="p-2 rounded-xl text-slate-600 hover:bg-slate-100 border border-slate-200 transition-colors cursor-pointer"
                       title="Call"
                     >
                       <Phone className="h-3.5 w-3.5" />
@@ -1399,7 +1517,7 @@ export function CustomerPaymentsTab({ onSelectCustomer, className }: CustomerPay
                   <Button
                     size="sm"
                     onClick={() => handleSelectCustomer(customer)}
-                    className="h-8 px-3 text-xs font-bold bg-primary hover:bg-primary-hover text-white rounded-xl shadow-xs gap-1.5"
+                    className="h-8 px-3 text-xs font-bold bg-primary hover:bg-primary-hover text-white rounded-xl shadow-xs gap-1.5 cursor-pointer"
                   >
                     <span>Collect Payment</span>
                     <ArrowRight className="h-3.5 w-3.5" />
