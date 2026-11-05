@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
@@ -16,6 +16,7 @@ import { PaginationControls } from '../../components/common/PaginationControls';
 import { UnitBarcodeRecord, GRN, GRNItem, ElectricalProductCategory } from '../../types/inventory';
 import { toast } from 'sonner';
 import { StatusBadge } from '../../components/common/StatusBadge';
+import { GRNStockManagerVerificationPanel } from './components/GRNStockManagerVerificationPanel';
 import { PrintableGRN } from './PrintableGRN';
 import { cn } from '../../utils/cn';
 import {
@@ -231,25 +232,26 @@ export function GRNDetailPage({ backUrl, backTitle }: GRNDetailPageProps = {}) {
   // Product category filter for the items table
   const [categoryFilter, setCategoryFilter] = useState<'ALL' | 'GENERAL_ELECTRICAL' | 'SERIAL_TRACKED' | 'WIRES_CABLES' | 'DAMAGED'>('ALL');
 
-  useEffect(() => {
-    const fetchGRN = async () => {
-      if (!id) return;
-      try {
-        setLoading(true);
-        const data = await grnService.getGRNById(id);
-        if (!data) {
-          setError('GRN record not found');
-        } else {
-          setGrn(data);
-        }
-      } catch (err: any) {
-        setError(err.message || 'Error loading GRN');
-      } finally {
-        setLoading(false);
+  const fetchGRN = useCallback(async () => {
+    if (!id) return;
+    try {
+      setLoading(true);
+      const data = await grnService.getGRNById(id);
+      if (!data) {
+        setError('GRN record not found');
+      } else {
+        setGrn(data);
       }
-    };
-    fetchGRN();
+    } catch (err: any) {
+      setError(err.message || 'Error loading GRN');
+    } finally {
+      setLoading(false);
+    }
   }, [id, grnService]);
+
+  useEffect(() => {
+    fetchGRN();
+  }, [fetchGRN]);
 
   // Ensure all GRN items have unitRecords populated and categorical classifications
   const preparedItems = useMemo(() => {
@@ -385,9 +387,9 @@ export function GRNDetailPage({ backUrl, backTitle }: GRNDetailPageProps = {}) {
   const handleApprove = async () => {
     if (!id || !user) return;
     try {
-      await grnService.approveGRN(id, user.id, comment);
-      toast.success('Goods Received Note approved and posted to inventory.');
-      navigate(resolvedBackPath);
+      await grnService.approveGRN(id, user.id, user.name || 'Finance Officer', user.role);
+      toast.success('Goods Received Note approved by Finance and posted to inventory.');
+      fetchGRN();
     } catch (err: any) {
       toast.error(err.message || 'Failed to approve GRN');
     }
@@ -402,7 +404,29 @@ export function GRNDetailPage({ backUrl, backTitle }: GRNDetailPageProps = {}) {
     try {
       await grnService.rejectGRN(id, user.id, comment);
       toast.error('GRN rejected and returned for inspection resolution.');
-      navigate(resolvedBackPath);
+      fetchGRN();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to reject GRN');
+    }
+  };
+
+  const handleStockManagerApprove = async (remarks?: string) => {
+    if (!id || !user) return;
+    try {
+      await grnService.verifyAndApproveGRN(id, { id: user.id, name: user.name, role: user.role }, remarks);
+      toast.success('GRN physical verification approved! Forwarded to Finance for approval.');
+      fetchGRN();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to verify GRN');
+    }
+  };
+
+  const handleStockManagerReject = async (reason: string) => {
+    if (!id || !user) return;
+    try {
+      await grnService.rejectGRNVerification(id, { id: user.id, name: user.name, role: user.role }, reason);
+      toast.error('GRN verification rejected. Shipment returned to Stock Keeper for inspection resolution.');
+      fetchGRN();
     } catch (err: any) {
       toast.error(err.message || 'Failed to reject GRN');
     }
@@ -413,8 +437,9 @@ export function GRNDetailPage({ backUrl, backTitle }: GRNDetailPageProps = {}) {
   }, [grn]);
 
   const isStockKeeper = user?.role === 'STOCK_KEEPER';
-  const isFinanceRole = ['FINANCE_OFFICER', 'FINANCE_MANAGER', 'DIRECTOR', 'ADMIN'].includes(user?.role || '');
-  const isManagerRole = ['DIRECTOR', 'MANAGER', 'SALES_MANAGER', 'FINANCE_MANAGER', 'STOCK_MANAGER'].includes(user?.role || '');
+  const isStockManager = user?.role === 'STOCK_MANAGER';
+  const isFinanceRole = ['FINANCE_OFFICER', 'FINANCE_MANAGER', 'DIRECTOR', 'ADMIN', 'MANAGER'].includes(user?.role || '');
+  const isManagementApprover = ['DIRECTOR', 'MANAGER', 'FINANCE_MANAGER', 'FINANCE_OFFICER'].includes(user?.role || '');
 
   if (loading) {
     return (
@@ -570,8 +595,10 @@ export function GRNDetailPage({ backUrl, backTitle }: GRNDetailPageProps = {}) {
               variant="outline"
               size="sm"
               onClick={() => {
-                setSelectedProductForModal('ALL');
-                setIsBarcodeModalOpen(true);
+                const stickersPath = isPurchasingRoute
+                  ? `/purchasing/grn/${id}/stickers`
+                  : `/inventory/grn/${id}/stickers`;
+                navigate(stickersPath);
               }}
               className="gap-1.5 text-xs font-semibold text-primary border-primary/30 hover:bg-primary/5 shadow-2xs"
             >
@@ -580,14 +607,55 @@ export function GRNDetailPage({ backUrl, backTitle }: GRNDetailPageProps = {}) {
             </Button>
 
             {/* Approval Workflow Actions */}
-            {grn.status === 'SUBMITTED' && isManagerRole && (
+            {/* 1. STOCK MANAGER WORKFLOW: Verifies and forwards to Finance; NEVER posts directly to Inventory */}
+            {isStockManager && grn.status === 'PENDING_STOCK_MANAGER_APPROVAL' && (
               <>
                 <ConfirmButton
                   variant="default"
                   size="sm"
                   dialogVariant="success"
-                  confirmTitle="Approve Goods Received Note"
-                  confirmMessage={`Confirm sign-off and approval of ${grn.grnNumber || grn.id}? This will officially post physical inventory to warehouse balances.`}
+                  confirmTitle="Approve Physical Inbound Verification"
+                  confirmMessage={`Confirm physical verification of ${grn.grnNumber || grn.id}? This will approve physical receipt and forward the GRN to Finance for approval. It will NOT be posted to Inventory until Finance approves.`}
+                  confirmText="Approve & Forward to Finance"
+                  onConfirm={() => handleStockManagerApprove(comment || 'Physical quantities & barcode compliance verified by Stock Manager. Forwarded to Finance AP.')}
+                  className="gap-1.5 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs"
+                >
+                  <CheckCircle2 className="h-3.5 w-3.5" />
+                  Approve GRN
+                </ConfirmButton>
+                <ConfirmButton
+                  variant="outline"
+                  size="sm"
+                  dialogVariant="destructive"
+                  confirmTitle="Reject Physical Inbound Verification"
+                  confirmMessage={`Are you sure you want to reject ${grn.grnNumber || grn.id}? The shipment will be marked rejected and returned to the Stock Keeper for resolution.`}
+                  confirmText="Reject GRN"
+                  onConfirm={() => handleStockManagerReject(comment || 'Physical stock verification rejected by Stock Manager.')}
+                  className="gap-1.5 text-xs font-semibold text-rose-700 border-rose-300 hover:bg-rose-50"
+                >
+                  <XCircle className="h-3.5 w-3.5" />
+                  Reject GRN
+                </ConfirmButton>
+              </>
+            )}
+
+            {/* If Stock Manager is viewing a GRN that has already been approved and forwarded to Finance */}
+            {isStockManager && (grn.status === 'SUBMITTED' || grn.status === 'COSTED') && (
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-50 border border-amber-300 text-amber-800 text-xs font-semibold select-none">
+                <Clock className="h-3.5 w-3.5 text-amber-600" />
+                <span>Forwarded to Finance for Approval</span>
+              </div>
+            )}
+
+            {/* 2. FINANCE / MANAGEMENT WORKFLOW: Only Finance approves and posts to Inventory */}
+            {!isStockManager && isManagementApprover && (grn.status === 'SUBMITTED' || grn.status === 'COSTED') && (
+              <>
+                <ConfirmButton
+                  variant="default"
+                  size="sm"
+                  dialogVariant="success"
+                  confirmTitle="Finance Approval & Inventory Post"
+                  confirmMessage={`Confirm Finance sign-off and approval of ${grn.grnNumber || grn.id}? This will officially approve the GRN and post physical inventory to warehouse balances.`}
                   confirmText="Approve & Post"
                   onConfirm={handleApprove}
                   className="gap-1.5 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs"
@@ -609,6 +677,14 @@ export function GRNDetailPage({ backUrl, backTitle }: GRNDetailPageProps = {}) {
                   Reject GRN
                 </ConfirmButton>
               </>
+            )}
+
+            {/* If GRN is already approved and posted to inventory */}
+            {grn.status === 'APPROVED' && (
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 border border-emerald-300 text-emerald-800 text-xs font-semibold select-none">
+                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+                <span>Approved by Finance • Posted to Inventory</span>
+              </div>
             )}
 
             {/* Finance Costing Redirect */}
@@ -671,6 +747,14 @@ export function GRNDetailPage({ backUrl, backTitle }: GRNDetailPageProps = {}) {
       </div>
 
       {/* ───────────────────────────────────────────────────────────────────────── */}
+      {/* Stock Manager Verification Workspace (UI Reference Standard) */}
+      <GRNStockManagerVerificationPanel
+        grn={grn}
+        currentUser={user}
+        onApprove={handleStockManagerApprove}
+        onReject={handleStockManagerReject}
+      />
+
       {/* 2. EXECUTIVE GRN QUANTITY & VALUATION SUMMARY (KPI GRID) */}
       {/* ───────────────────────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
@@ -857,52 +941,7 @@ export function GRNDetailPage({ backUrl, backTitle }: GRNDetailPageProps = {}) {
             <span>Received Items &amp; Quantity Verification ({preparedItems.length})</span>
           </button>
 
-          <button
-            type="button"
-            onClick={() => setActiveTab('inspection')}
-            className={cn(
-              'flex items-center gap-2 py-2.5 px-4 text-xs font-semibold border-b-2 transition-all whitespace-nowrap',
-              activeTab === 'inspection'
-                ? 'border-primary text-primary bg-primary/5 rounded-t-lg'
-                : 'border-transparent text-slate-500 hover:text-slate-900 hover:border-slate-300'
-            )}
-          >
-            <ShieldCheck className="h-4 w-4" />
-            <span>Quality Inspection &amp; Damage Audit</span>
-            {metrics.totalDamaged > 0 && (
-              <Badge className="bg-rose-100 text-rose-800 text-[10px] px-1.5 py-0 border-0">
-                {metrics.totalDamaged} Damaged
-              </Badge>
-            )}
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab('logistics')}
-            className={cn(
-              'flex items-center gap-2 py-2.5 px-4 text-xs font-semibold border-b-2 transition-all whitespace-nowrap',
-              activeTab === 'logistics'
-                ? 'border-primary text-primary bg-primary/5 rounded-t-lg'
-                : 'border-transparent text-slate-500 hover:text-slate-900 hover:border-slate-300'
-            )}
-          >
-            <UserCheck className="h-4 w-4" />
-            <span>Logistics Notes &amp; Tri-Party Sign-Off</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab('attachments')}
-            className={cn(
-              'flex items-center gap-2 py-2.5 px-4 text-xs font-semibold border-b-2 transition-all whitespace-nowrap',
-              activeTab === 'attachments'
-                ? 'border-primary text-primary bg-primary/5 rounded-t-lg'
-                : 'border-transparent text-slate-500 hover:text-slate-900 hover:border-slate-300'
-            )}
-          >
-            <Paperclip className="h-4 w-4" />
-            <span>Document Attachments (3)</span>
-          </button>
+          
         </div>
 
         {/* ── TAB 1: RECEIVED ITEMS & QUANTITY VERIFICATION ── */}
@@ -928,33 +967,7 @@ export function GRNDetailPage({ backUrl, backTitle }: GRNDetailPageProps = {}) {
                 >
                   All ({preparedItems.length})
                 </Button>
-                <Button
-                  size="sm"
-                  variant={categoryFilter === 'SERIAL_TRACKED' ? 'default' : 'outline'}
-                  onClick={() => setCategoryFilter('SERIAL_TRACKED')}
-                  className="h-7 text-[11px] px-2.5 rounded-lg gap-1"
-                >
-                  <Cpu className="h-3 w-3" />
-                  Serial-Tracked
-                </Button>
-                <Button
-                  size="sm"
-                  variant={categoryFilter === 'WIRES_CABLES' ? 'default' : 'outline'}
-                  onClick={() => setCategoryFilter('WIRES_CABLES')}
-                  className="h-7 text-[11px] px-2.5 rounded-lg gap-1"
-                >
-                  <Cable className="h-3 w-3" />
-                  Wires &amp; Cables
-                </Button>
-                <Button
-                  size="sm"
-                  variant={categoryFilter === 'GENERAL_ELECTRICAL' ? 'default' : 'outline'}
-                  onClick={() => setCategoryFilter('GENERAL_ELECTRICAL')}
-                  className="h-7 text-[11px] px-2.5 rounded-lg gap-1"
-                >
-                  <Zap className="h-3 w-3" />
-                  General Electrical
-                </Button>
+                
                 {metrics.totalDamaged > 0 && (
                   <Button
                     size="sm"
@@ -1155,288 +1168,7 @@ export function GRNDetailPage({ backUrl, backTitle }: GRNDetailPageProps = {}) {
           </Card>
         )}
 
-        {/* ── TAB 2: QUALITY INSPECTION & DAMAGE AUDIT ── */}
-        {activeTab === 'inspection' && (
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {/* Inspection Status Card */}
-              <Card className="border-slate-200 shadow-2xs">
-                <CardHeader className="py-3 px-4 border-b border-slate-100 flex flex-row items-center justify-between">
-                  <CardTitle className="text-xs font-bold text-slate-800">Inspection Overall Verdict</CardTitle>
-                  <Badge
-                    className={
-                      inspection.status === 'PASSED'
-                        ? 'bg-emerald-100 text-emerald-800 border-0'
-                        : inspection.status === 'PASSED_WITH_EXCEPTION'
-                        ? 'bg-amber-100 text-amber-800 border-0'
-                        : 'bg-rose-100 text-rose-800 border-0'
-                    }
-                  >
-                    {inspection.status.replace(/_/g, ' ')}
-                  </Badge>
-                </CardHeader>
-                <CardContent className="p-4 space-y-3 text-xs">
-                  <div>
-                    <span className="text-slate-400 block text-[11px]">Quality Inspector</span>
-                    <span className="font-semibold text-slate-900">{inspection.inspectorName}</span>
-                  </div>
-                  <div>
-                    <span className="text-slate-400 block text-[11px]">Inspection Completion Date</span>
-                    <span className="text-slate-800">{inspection.inspectedAt}</span>
-                  </div>
-                  <div>
-                    <span className="text-slate-400 block text-[11px]">Outer Packaging Condition</span>
-                    <Badge variant="outline" className="font-mono text-slate-700 bg-slate-50 mt-0.5">
-                      {inspection.packagingCondition}
-                    </Badge>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Technical Inspection Checklist */}
-              <Card className="border-slate-200 shadow-2xs md:col-span-2">
-                <CardHeader className="py-3 px-4 border-b border-slate-100">
-                  <CardTitle className="text-xs font-bold text-slate-800">Technical QC Compliance Checklist</CardTitle>
-                </CardHeader>
-                <CardContent className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                  <div className="p-2.5 rounded-lg border border-emerald-200 bg-emerald-50/40 flex items-start gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-600 mt-0.5 shrink-0" />
-                    <div>
-                      <p className="font-bold text-emerald-900">Visual &amp; Cosmetic Check: PASSED</p>
-                      <p className="text-[11px] text-emerald-700 mt-0.5">Labels, manufacturer logos, and terminals match engineering drawing standards.</p>
-                    </div>
-                  </div>
-
-                  <div className="p-2.5 rounded-lg border border-emerald-200 bg-emerald-50/40 flex items-start gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-600 mt-0.5 shrink-0" />
-                    <div>
-                      <p className="font-bold text-emerald-900">Specification Verification: PASSED</p>
-                      <p className="text-[11px] text-emerald-700 mt-0.5">Operating voltage, rated current (A), and breaking capacity (kA) verified.</p>
-                    </div>
-                  </div>
-
-                  <div className="p-2.5 rounded-lg border border-emerald-200 bg-emerald-50/40 flex items-start gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-600 mt-0.5 shrink-0" />
-                    <div>
-                      <p className="font-bold text-emerald-900">Serial Uniqueness: PASSED</p>
-                      <p className="text-[11px] text-emerald-700 mt-0.5">Individual serial numbers captured for equipment items and verified against OEM manifest.</p>
-                    </div>
-                  </div>
-
-                  <div className="p-2.5 rounded-lg border border-emerald-200 bg-emerald-50/40 flex items-start gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-600 mt-0.5 shrink-0" />
-                    <div>
-                      <p className="font-bold text-emerald-900">Batch Traceability: ACTIVE</p>
-                      <p className="text-[11px] text-emerald-700 mt-0.5">Unique batch identifiers assigned and mapped to inventory inward records.</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Damage & Quarantine Protocol Card */}
-            {metrics.totalDamaged > 0 && (
-              <Card className="border-rose-200 bg-rose-50/30 shadow-2xs">
-                <CardHeader className="py-3 px-4 border-b border-rose-200 bg-rose-100/40 flex flex-row items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <AlertOctagon className="h-4 w-4 text-rose-600" />
-                    <CardTitle className="text-xs font-bold text-rose-900">Warehouse Quarantine &amp; Damage Report</CardTitle>
-                  </div>
-                  <Badge className="bg-rose-700 text-white border-0 text-[10px]">
-                    Quarantine Bay: WH-BAY-QUARANTINE-01
-                  </Badge>
-                </CardHeader>
-                <CardContent className="p-4 space-y-3 text-xs text-rose-900">
-                  <p className="leading-relaxed">
-                    <strong>Incident Description:</strong> {inspection.damageDetails}
-                  </p>
-                  <p className="text-[11px] text-rose-700">
-                    A total of <strong>{metrics.totalDamaged} units</strong> were physically separated during de-stuffing and tagged with fluorescent red quarantine labels. They are excluded from commercial available stock until formal vendor return (Debit Note) or credit note settlement.
-                  </p>
-                  {isFinanceRole && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => navigate(`/finance/ap/debit-notes?grnId=${grn.id}`)}
-                      className="h-7 text-xs font-semibold bg-white text-rose-800 border-rose-300 hover:bg-rose-100"
-                    >
-                      Issue Vendor Debit Note for Damaged Items
-                    </Button>
-                  )}
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Inspection Notes & Narrative */}
-            <Card className="border-slate-200 shadow-2xs">
-              <CardHeader className="py-3 px-4 border-b border-slate-100">
-                <CardTitle className="text-xs font-bold text-slate-800">Inspector Final Remarks &amp; Certification</CardTitle>
-              </CardHeader>
-              <CardContent className="p-4 text-xs text-slate-700 leading-relaxed">
-                <p>{inspection.notes}</p>
-                <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
-                  <span>Inspection certified under DNS Quality Assurance Standard ISO 9001:2015.</span>
-                  <span className="font-mono">Audit Stamp # QA-COL-2025-081</span>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
-
-        {/* ── TAB 3: LOGISTICS NOTES & TRI-PARTY SIGN-OFF ── */}
-        {activeTab === 'logistics' && (
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Card className="border-slate-200 shadow-2xs">
-                <CardHeader className="py-3 px-4 border-b border-slate-100">
-                  <CardTitle className="text-xs font-bold text-slate-800">Transporter &amp; Delivery Notes</CardTitle>
-                </CardHeader>
-                <CardContent className="p-4 space-y-2 text-xs text-slate-700 leading-relaxed">
-                  <p>{grn.deliveryNotes || 'Consignment delivered by Ace Freight Logistics, Container 40ft High Cube # TGHU-992140. Driver: K. Gunawardena (License: B-8812903). De-stuffed and palletized under warehouse supervisor oversight.'}</p>
-                  <div className="pt-2 text-slate-500 text-[11px] font-mono">
-                    Vehicle Reg: WP-CAD-4412 • Unload Bay: Bay 1 Central
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="border-slate-200 shadow-2xs">
-                <CardHeader className="py-3 px-4 border-b border-slate-100">
-                  <CardTitle className="text-xs font-bold text-slate-800">Internal Warehouse Remarks</CardTitle>
-                </CardHeader>
-                <CardContent className="p-4 space-y-2 text-xs text-slate-700 leading-relaxed">
-                  <p>{grn.internalRemarks || grn.notes || 'All good units barcoded with DNS individual code-128 stickers and placed onto selective pallet racks in Bay 1 (Aisle C, Shelves 01-04). Electrical continuity spot-checked.'}</p>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Tri-Party Sign-Off Audit */}
-            <Card className="border-slate-200 shadow-2xs">
-              <CardHeader className="py-3 px-4 border-b border-slate-100">
-                <CardTitle className="text-xs font-bold text-slate-800">Tri-Party Authorization Sign-Off</CardTitle>
-                <CardDescription className="text-xs">
-                  Mandatory corporate accountability sign-offs for goods intake, quality validation, and inventory ledger posting.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="p-4 grid grid-cols-1 md:grid-cols-3 gap-4">
-                {/* 1. Received & Counted By */}
-                <div className="p-3.5 rounded-xl border border-slate-200 bg-slate-50 space-y-2 text-xs">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-slate-800">1. Received &amp; Counted By</span>
-                    <Badge className="bg-emerald-100 text-emerald-800 text-[10px] border-0">Verified</Badge>
-                  </div>
-                  <p className="font-medium text-slate-900">{receivedBy}</p>
-                  <p className="text-[11px] text-slate-500">Warehouse Receiving Storekeeper</p>
-                  <div className="pt-2 border-t border-slate-200 text-[10px] text-slate-400 font-mono">
-                    Signed: {formatDate(grn.receivedDate || grn.createdAt)} 11:15 AM
-                  </div>
-                </div>
-
-                {/* 2. Inspected & Verified By */}
-                <div className="p-3.5 rounded-xl border border-slate-200 bg-slate-50 space-y-2 text-xs">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-slate-800">2. Inspected &amp; Tested By</span>
-                    <Badge className="bg-emerald-100 text-emerald-800 text-[10px] border-0">Certified</Badge>
-                  </div>
-                  <p className="font-medium text-slate-900">{verifiedBy}</p>
-                  <p className="text-[11px] text-slate-500">Quality Assurance Inspector</p>
-                  <div className="pt-2 border-t border-slate-200 text-[10px] text-slate-400 font-mono">
-                    Signed: {formatDate(grn.receivedDate || grn.createdAt)} 02:40 PM
-                  </div>
-                </div>
-
-                {/* 3. Approved By */}
-                <div className="p-3.5 rounded-xl border border-slate-200 bg-slate-50 space-y-2 text-xs">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-slate-800">3. Approved &amp; Posted By</span>
-                    <Badge className={grn.status === 'APPROVED' || grn.status === 'COSTED' ? 'bg-emerald-100 text-emerald-800 text-[10px] border-0' : 'bg-amber-100 text-amber-800 text-[10px] border-0'}>
-                      {grn.status === 'APPROVED' || grn.status === 'COSTED' ? 'Approved' : 'Pending Sign-Off'}
-                    </Badge>
-                  </div>
-                  <p className="font-medium text-slate-900">{approvedBy}</p>
-                  <p className="text-[11px] text-slate-500">Logistics &amp; Supply Chain Director</p>
-                  <div className="pt-2 border-t border-slate-200 text-[10px] text-slate-400 font-mono">
-                    {grn.status === 'APPROVED' || grn.status === 'COSTED'
-                      ? `Approved: ${formatDate(grn.approvedAt || grn.createdAt)}`
-                      : 'Pending final executive approval'}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
-
-        {/* ── TAB 4: DOCUMENT ATTACHMENTS ── */}
-        {activeTab === 'attachments' && (
-          <Card className="border-slate-200 shadow-2xs">
-            <CardHeader className="py-3 px-4 border-b border-slate-100 flex flex-row items-center justify-between">
-              <div>
-                <CardTitle className="text-xs font-bold text-slate-800">Inward Document Attachments</CardTitle>
-                <CardDescription className="text-xs">Original vendor invoices, bills of lading, and inspection reports.</CardDescription>
-              </div>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => toast.info('Document upload simulation. In production, connect cloud blob storage.')}
-                className="h-7 text-xs gap-1 font-semibold"
-              >
-                <Paperclip className="h-3 w-3" />
-                Upload New Document
-              </Button>
-            </CardHeader>
-            <CardContent className="p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-              <div className="p-3.5 rounded-xl border border-slate-200 bg-white hover:border-slate-300 transition-all flex items-start gap-3">
-                <FileText className="h-8 w-8 text-rose-500 shrink-0" />
-                <div className="space-y-1 min-w-0 flex-1">
-                  <p className="text-xs font-bold text-slate-900 truncate">Supplier_Commercial_Invoice_{supplierInvoice}.pdf</p>
-                  <p className="text-[11px] text-slate-500">2.4 MB • PDF Document</p>
-                  <div className="pt-1 flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setIsPrintModalOpen(true)}
-                      className="text-[11px] text-primary hover:underline font-semibold flex items-center gap-1"
-                    >
-                      <Eye className="h-3 w-3" /> View Preview
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              <div className="p-3.5 rounded-xl border border-slate-200 bg-white hover:border-slate-300 transition-all flex items-start gap-3">
-                <Truck className="h-8 w-8 text-blue-500 shrink-0" />
-                <div className="space-y-1 min-w-0 flex-1">
-                  <p className="text-xs font-bold text-slate-900 truncate">Transporter_Waybill_{supplierDN}.pdf</p>
-                  <p className="text-[11px] text-slate-500">1.1 MB • PDF Document</p>
-                  <div className="pt-1 flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => toast.success('Downloading transporter delivery note...')}
-                      className="text-[11px] text-primary hover:underline font-semibold flex items-center gap-1"
-                    >
-                      <Download className="h-3 w-3" /> Download
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              <div className="p-3.5 rounded-xl border border-slate-200 bg-white hover:border-slate-300 transition-all flex items-start gap-3">
-                <ShieldCheck className="h-8 w-8 text-emerald-500 shrink-0" />
-                <div className="space-y-1 min-w-0 flex-1">
-                  <p className="text-xs font-bold text-slate-900 truncate">OEM_Factory_Test_Certificate.pdf</p>
-                  <p className="text-[11px] text-slate-500">850 KB • Quality Certificate</p>
-                  <div className="pt-1 flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => toast.success('Downloading OEM certificate...')}
-                      className="text-[11px] text-primary hover:underline font-semibold flex items-center gap-1"
-                    >
-                      <Download className="h-3 w-3" /> Download
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+        
       </div>
 
       {/* ───────────────────────────────────────────────────────────────────────── */}

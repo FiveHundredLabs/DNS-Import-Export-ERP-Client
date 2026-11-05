@@ -1,4 +1,5 @@
 import { BaseEntity } from './common';
+import { UserRole } from './auth';
 
 export type PurchaseOrderStatus =
   | 'DRAFT'
@@ -52,7 +53,14 @@ export interface PurchaseOrder extends BaseEntity {
   deliveryInstructions?: string;
   createdBy: string;
   createdByName: string;
+  createdByRole?: UserRole;
   approvalRequestId?: string;
+  purchasingManagerApproval?: {
+    approvedById: string;
+    approvedByName: string;
+    approvedAt: string;
+    remarks?: string;
+  };
   approvedBy?: string;
   approvedByName?: string;
   approvedAt?: string;

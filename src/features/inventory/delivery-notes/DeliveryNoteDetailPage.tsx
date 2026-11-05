@@ -16,7 +16,7 @@ import { useAuth } from '../../../hooks/useAuth';
 import {
   Truck,
   Printer,
-  Edit3,
+  Lock,
   CheckCircle2,
   AlertTriangle,
   ArrowLeft,
@@ -48,20 +48,16 @@ export const DeliveryNoteDetailPage: React.FC = () => {
   const [barcodeFilterProduct, setBarcodeFilterProduct] = useState<string>('ALL');
   const [barcodeSingleCode, setBarcodeSingleCode] = useState<string | undefined>(undefined);
 
-  // Quick edit mode for driver/vehicle
-  const [isEditing, setIsEditing] = useState(false);
-  const [editDriverName, setEditDriverName] = useState('');
-  const [editDriverPhone, setEditDriverPhone] = useState('');
-  const [editVehicleNumber, setEditVehicleNumber] = useState('');
-  const [editNotes, setEditNotes] = useState('');
+
 
   // Expandable row barcode drawers
   const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({});
 
+  const effectiveRole = role || currentUser?.role;
   const isManagerOrAdmin =
-    role === 'MANAGER' ||
-    role === 'DIRECTOR' ||
-    role === 'STOCK_MANAGER';
+    effectiveRole === 'MANAGER' ||
+    effectiveRole === 'DIRECTOR' ||
+    effectiveRole === 'STOCK_MANAGER';
 
   const fetchNote = async () => {
     if (!id) return;
@@ -70,10 +66,7 @@ export const DeliveryNoteDetailPage: React.FC = () => {
       const data = await deliveryNoteService.getById(id);
       if (data) {
         setNote(data);
-        setEditDriverName(data.driverName);
-        setEditDriverPhone(data.driverPhone || '');
-        setEditVehicleNumber(data.vehicleNumber);
-        setEditNotes(data.notes || '');
+
 
         // Expand all line item drawers by default
         const initExpanded: Record<string, boolean> = {};
@@ -113,22 +106,7 @@ export const DeliveryNoteDetailPage: React.FC = () => {
     }));
   }, [note]);
 
-  const handleSaveEdit = async () => {
-    if (!note) return;
-    try {
-      const updated = await deliveryNoteService.updateDeliveryNote(note.id, {
-        driverName: editDriverName.trim(),
-        driverPhone: editDriverPhone.trim(),
-        vehicleNumber: editVehicleNumber.trim().toUpperCase(),
-        notes: editNotes.trim(),
-      });
-      setNote(updated);
-      setIsEditing(false);
-      toast.success('Delivery Note details updated.');
-    } catch (err: any) {
-      toast.error('Failed to update: ' + err.message);
-    }
-  };
+
 
   // Case A: 100% Delivered & Accepted without rejections
   const handleConfirmFullDelivery = async () => {
@@ -151,13 +129,22 @@ export const DeliveryNoteDetailPage: React.FC = () => {
   // Case B: Customer Rejection submission
   const handleSubmitRejection = async (payload: SubmitRejectionPayload) => {
     if (!note) return;
-    const user = currentUser || {
-      id: 'usr-01',
-      name: 'Amal Perera',
-      role: 'STOCK_KEEPER',
+    const user = {
+      id: currentUser?.id || 'usr-01',
+      name: currentUser?.name || 'Amal Perera',
+      role: role || currentUser?.role || 'STOCK_KEEPER',
     };
     const updated = await deliveryNoteService.submitRejection(note.id, payload, user as any);
     setNote(updated);
+    if (updated.status === 'REJECTION_APPROVED') {
+      toast.success(
+        `Customer rejection processed & approved by Stock Manager! ${updated.totalRejectedUnits} unit(s) logged for quarantine.`
+      );
+    } else {
+      toast.info(
+        `Customer rejection recorded for ${updated.totalRejectedUnits} unit(s). Awaiting Stock Manager review.`
+      );
+    }
   };
 
   // Manager Approval Actions
@@ -171,9 +158,9 @@ export const DeliveryNoteDetailPage: React.FC = () => {
 
     try {
       const approver = currentUser || {
-        id: 'mgr-01',
-        name: 'Sunil Weerasinghe',
-        role: 'Operations Manager',
+        id: 'usr-115',
+        name: 'Bandara Jayasinghe',
+        role: role || 'STOCK_MANAGER',
       };
       const updated = await deliveryNoteService.approveRejection(
         note.id,
@@ -266,7 +253,13 @@ export const DeliveryNoteDetailPage: React.FC = () => {
     return (
       <div className="p-8 text-center space-y-3">
         <div className="text-sm font-bold text-slate-800">Delivery Note Not Found</div>
-        <Button size="sm" onClick={() => navigate('/inventory/delivery-notes')}>
+        <Button size="sm" onClick={() => {
+              if (window.history.length > 1) {
+                navigate(-1);
+              } else {
+                navigate(effectiveRole === 'STOCK_MANAGER' ? '/approvals?tab=delivery-notes' : '/inventory/delivery-notes');
+              }
+            }}>
           Back to List
         </Button>
       </div>
@@ -302,15 +295,10 @@ export const DeliveryNoteDetailPage: React.FC = () => {
 
         {/* Action Buttons */}
         <div className="flex flex-wrap items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setIsEditing(!isEditing)}
-            className="text-xs gap-1.5"
-          >
-            <Edit3 className="h-3.5 w-3.5" />
-            {isEditing ? 'Cancel Edit' : 'Edit Transport'}
-          </Button>
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-100 text-slate-600 border border-slate-200 text-xs font-semibold select-none">
+            <Lock className="h-3.5 w-3.5 text-slate-400" />
+            <span>Permanently Non-Editable</span>
+          </div>
 
           <Button
             variant="outline"
@@ -364,49 +352,101 @@ export const DeliveryNoteDetailPage: React.FC = () => {
       {/* ── Approval Alert Banner (When Rejection is Pending Approval) ── */}
       {note.status === 'REJECTION_PENDING_APPROVAL' && (
         <Card className="border-amber-300 bg-gradient-to-r from-amber-50/90 via-amber-50/50 to-white shadow-xs">
-          <CardContent className="p-4 sm:p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="flex items-start gap-3">
-              <div className="p-2 rounded-xl bg-amber-100 text-amber-700 shrink-0">
-                <ShieldAlert className="h-6 w-6" />
+          <CardContent className="p-4 sm:p-5 space-y-3.5">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="flex items-start gap-3">
+                <div className="p-2 rounded-xl bg-amber-100 text-amber-700 shrink-0">
+                  <ShieldAlert className="h-6 w-6" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-amber-950 flex items-center gap-2">
+                    Customer Rejection Submitted — Awaiting Operations Manager Review
+                  </h3>
+                  <p className="text-xs text-amber-900 mt-1 leading-relaxed">
+                    Submitted by: <strong>{note.rejectionSubmittedBy}</strong> • Total Rejected Units:{' '}
+                    <strong>{note.totalRejectedUnits} physical unit(s)</strong>.
+                  </p>
+                  {note.rejectionNotes && (
+                    <div className="mt-1.5 text-[11px] text-amber-800 bg-white/70 p-2 rounded-md border border-amber-200 italic">
+                      Stock Keeper Note: {note.rejectionNotes}
+                    </div>
+                  )}
+                </div>
               </div>
-              <div>
-                <h3 className="text-sm font-bold text-amber-950 flex items-center gap-2">
-                  Customer Rejection Submitted — Awaiting Operations Manager Review
-                </h3>
-                <p className="text-xs text-amber-900 mt-1 leading-relaxed">
-                  The Stock Keeper ({note.rejectionSubmittedBy}) recorded{' '}
-                  <strong>{note.totalRejectedUnits} physical unit(s)</strong> rejected by the customer.
-                  Units are physically held in warehouse Quarantine Bay Q-01.
-                </p>
-                {note.rejectionNotes && (
-                  <div className="mt-2 text-[11px] text-amber-800 bg-white/70 p-2 rounded-md border border-amber-200 italic">
-                    Stock Keeper Note: {note.rejectionNotes}
-                  </div>
-                )}
-              </div>
+
+              {/* Manager Approval Buttons */}
+              {isManagerOrAdmin ? (
+                <div className="flex items-center gap-2 shrink-0 pt-2 md:pt-0">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={handleDeclineRejection}
+                    className="text-xs text-rose-700 border-rose-300 hover:bg-rose-50 font-semibold"
+                  >
+                    Decline Rejection
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={handleApproveRejection}
+                    className="gap-1.5 text-xs font-bold bg-amber-600 hover:bg-amber-700 text-white shadow-xs"
+                  >
+                    <ShieldCheck className="h-4 w-4" />
+                    Approve Customer Rejection
+                  </Button>
+                </div>
+              ) : (
+                <div className="text-xs text-amber-800 bg-amber-100/60 px-3 py-1.5 rounded-lg border border-amber-300/60 font-medium">
+                  Awaiting Stock Manager approval. As a Stock Keeper, you cannot self-approve rejections.
+                </div>
+              )}
             </div>
 
-            {/* Manager Approval Buttons */}
-            {isManagerOrAdmin && (
-              <div className="flex items-center gap-2 shrink-0 pt-2 md:pt-0">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={handleDeclineRejection}
-                  className="text-xs text-rose-700 border-rose-300 hover:bg-rose-50"
-                >
-                  Decline Rejection
-                </Button>
-                <Button
-                  size="sm"
-                  onClick={handleApproveRejection}
-                  className="gap-1.5 text-xs font-bold bg-amber-600 hover:bg-amber-700 text-white shadow-xs"
-                >
-                  <ShieldCheck className="h-4 w-4" />
-                  Approve Customer Rejection
-                </Button>
+            {/* Detailed Rejected Units List with Barcode & Rejection Reason */}
+            <div className="pt-3 border-t border-amber-200/80 space-y-2">
+              <span className="text-[11px] font-bold text-amber-950 uppercase tracking-wider block">
+                Rejected Units Breakdown ({note.totalRejectedUnits} Units Scanned):
+              </span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+                {(note.rejectedUnitsDetail && note.rejectedUnitsDetail.length > 0
+                  ? note.rejectedUnitsDetail
+                  : note.items.flatMap((item) =>
+                      item.rejectedUnitBarcodes.map((bc) => ({
+                        productId: item.productId,
+                        productName: item.productName,
+                        sku: item.sku,
+                        barcode: bc,
+                        reason: item.rejectionReason || 'DAMAGED',
+                        notes: item.rejectionNotes,
+                      }))
+                    )
+                ).map((rej, rIdx) => (
+                  <div
+                    key={rIdx}
+                    className="bg-white/95 p-2.5 rounded-lg border border-amber-200 text-xs shadow-2xs space-y-1"
+                  >
+                    <div className="flex items-center justify-between font-bold text-slate-900 gap-1">
+                      <span className="truncate max-w-[170px]" title={rej.productName}>
+                        {rej.productName}
+                      </span>
+                      <Badge variant="destructive" className="text-[9.5px] py-0 px-1 uppercase font-semibold">
+                        {rej.reason}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center justify-between text-[11px] text-slate-500 font-mono">
+                      <span>SKU: {rej.sku}</span>
+                      <span className="text-rose-700 font-bold bg-rose-50 px-1 rounded border border-rose-200">
+                        {rej.barcode}
+                      </span>
+                    </div>
+                    {rej.notes && (
+                      <p className="text-[10px] text-slate-600 italic">
+                        "{rej.notes}"
+                      </p>
+                    )}
+                  </div>
+                ))}
               </div>
-            )}
+            </div>
           </CardContent>
         </Card>
       )}
@@ -485,109 +525,54 @@ export const DeliveryNoteDetailPage: React.FC = () => {
             </span>
           </CardHeader>
           <CardContent className="p-4 text-xs">
-            {!isEditing ? (
-              <div className="space-y-3">
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <span className="text-[10px] text-slate-400 block uppercase font-bold">
-                      Delivery Driver
-                    </span>
-                    <span className="font-bold text-slate-900">{note.driverName}</span>
-                    {note.driverPhone && (
-                      <span className="text-slate-500 block text-[11px]">
-                        {note.driverPhone}
-                      </span>
-                    )}
-                  </div>
-                  <div>
-                    <span className="text-[10px] text-slate-400 block uppercase font-bold">
-                      Vehicle / Lorry No
-                    </span>
-                    <span className="font-mono font-bold text-slate-900 uppercase">
-                      {note.vehicleNumber}
-                    </span>
-                  </div>
-                </div>
-
-                {note.deliveryRoute && (
-                  <div>
-                    <span className="text-[10px] text-slate-400 block uppercase font-bold">
-                      Route
-                    </span>
-                    <span className="text-slate-700">{note.deliveryRoute}</span>
-                  </div>
-                )}
-
-                {note.notes && (
-                  <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-200 text-slate-700 italic text-[11px]">
-                    "{note.notes}"
-                  </div>
-                )}
-              </div>
-            ) : (
-              /* Inline Edit Mode */
-              <div className="space-y-3">
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className="text-[11px] font-semibold text-slate-700 block mb-1">
-                      Driver Name
-                    </label>
-                    <Input
-                      value={editDriverName}
-                      onChange={(e) => setEditDriverName(e.target.value)}
-                      className="h-8 text-xs"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[11px] font-semibold text-slate-700 block mb-1">
-                      Vehicle No
-                    </label>
-                    <Input
-                      value={editVehicleNumber}
-                      onChange={(e) => setEditVehicleNumber(e.target.value)}
-                      className="h-8 text-xs font-mono uppercase"
-                    />
-                  </div>
-                </div>
-
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="text-[11px] font-semibold text-slate-700 block mb-1">
-                    Driver Phone
-                  </label>
-                  <Input
-                    value={editDriverPhone}
-                    onChange={(e) => setEditDriverPhone(e.target.value)}
-                    className="h-8 text-xs"
-                  />
+                  <span className="text-[10px] text-slate-400 block uppercase font-bold">
+                    Delivery Driver
+                  </span>
+                  <span className="font-bold text-slate-900">{note.driverName}</span>
+                  {note.driverPhone && (
+                    <span className="text-slate-500 block text-[11px]">
+                      {note.driverPhone}
+                    </span>
+                  )}
                 </div>
-
                 <div>
-                  <label className="text-[11px] font-semibold text-slate-700 block mb-1">
-                    Dispatch Notes
-                  </label>
-                  <Textarea
-                    value={editNotes}
-                    onChange={(e) => setEditNotes(e.target.value)}
-                    rows={2}
-                    className="text-xs"
-                  />
-                </div>
-
-                <div className="flex justify-end gap-2 pt-1">
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => setIsEditing(false)}
-                    className="h-7 text-xs"
-                  >
-                    Cancel
-                  </Button>
-                  <Button size="sm" onClick={handleSaveEdit} className="h-7 text-xs font-bold">
-                    Save Changes
-                  </Button>
+                  <span className="text-[10px] text-slate-400 block uppercase font-bold">
+                    Vehicle / Lorry No
+                  </span>
+                  <span className="font-mono font-bold text-slate-900 uppercase">
+                    {note.vehicleNumber}
+                  </span>
                 </div>
               </div>
-            )}
+
+              {note.deliveryRoute && (
+                <div>
+                  <span className="text-[10px] text-slate-400 block uppercase font-bold">
+                    Route
+                  </span>
+                  <span className="text-slate-700">{note.deliveryRoute}</span>
+                </div>
+              )}
+
+              {note.notes && (
+                <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-200 text-slate-700 italic text-[11px]">
+                  "{note.notes}"
+                </div>
+              )}
+
+              <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
+                <span className="flex items-center gap-1 font-medium">
+                  <Lock className="h-3 w-3 text-slate-400" />
+                  Locked upon dispatch creation
+                </span>
+                <span className="text-[10px] text-slate-400 font-mono">
+                  Audit: Immutable
+                </span>
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>

@@ -326,6 +326,21 @@ export class ThermalPrinterService implements IPrinterService {
           : '';
 
       const is58mm = data.paperWidth === '58mm';
+
+      let barcodeHtml = '';
+      try {
+        const codeData = encodeCode128(data.receiptNumber || 'REC-0000', 8);
+        const pathD = generateCode128SvgPath(codeData, 24);
+        barcodeHtml = `
+          <div style="text-align: center; margin-top: 8px;">
+            <svg viewBox="0 0 ${codeData.totalModules} 24" style="height: 22px; width: auto; max-width: 180px; margin: 0 auto; display: block;">
+              <path d="${pathD}" fill="#000" />
+            </svg>
+            <div style="font-size: 8px; letter-spacing: 2px; margin-top: 2px;">*${data.receiptNumber}*</div>
+          </div>
+        `;
+      } catch {}
+
       const receiptHtml = `
         <!DOCTYPE html>
         <html>
@@ -377,8 +392,7 @@ export class ThermalPrinterService implements IPrinterService {
                 : ''
             }
             <div class="divider"></div>
-            <div class="center" style="font-size: 10px;">Subject to Realization / Finance Approval</div>
-            <div class="center" style="font-size: 10px; margin-top: 4px;">Thank you for your business!</div>
+            <div class="center bold" style="font-size: 10px; margin-top: 4px;">Thank you for your business!</div>
             <script>
               window.onload = function() {
                 window.print();

@@ -116,6 +116,34 @@ export function InventoryStatusBadge({ status, className, label }: InventoryStat
         </Badge>
       );
 
+    case 'PENDING_STOCK_MANAGER_APPROVAL':
+      return (
+        <Badge
+          variant="warning"
+          className={cn(
+            'gap-1 font-semibold bg-amber-50 text-amber-800 border-amber-300 text-xs py-0.5 px-2.5 shadow-2xs',
+            className
+          )}
+        >
+          <Clock className="h-3 w-3 text-amber-600 shrink-0" />
+          <span>{label || 'Pending Manager Verification'}</span>
+        </Badge>
+      );
+
+    case 'STOCK_MANAGER_REJECTED':
+      return (
+        <Badge
+          variant="destructive"
+          className={cn(
+            'gap-1 font-semibold bg-rose-50 text-rose-700 border-rose-200 text-xs py-0.5 px-2.5 shadow-2xs',
+            className
+          )}
+        >
+          <AlertTriangle className="h-3 w-3 text-rose-600 shrink-0" />
+          <span>{label || 'Manager Rejected'}</span>
+        </Badge>
+      );
+
     case 'SUBMITTED':
       return (
         <Badge

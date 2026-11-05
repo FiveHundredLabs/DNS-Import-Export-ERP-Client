@@ -15,7 +15,13 @@ export class MockPurchaseOrderRepository implements IPurchaseOrderRepository {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
       try {
-        this.purchaseOrders = JSON.parse(stored);
+        const parsed: PurchaseOrder[] = JSON.parse(stored);
+        const existingIds = new Set(parsed.map((p) => p.id));
+        const missing = MOCK_PURCHASE_ORDERS.filter((p) => !existingIds.has(p.id));
+        this.purchaseOrders = [...parsed, ...missing];
+        if (missing.length > 0) {
+          this.persist();
+        }
       } catch {
         this.purchaseOrders = [...MOCK_PURCHASE_ORDERS];
         this.persist();

@@ -97,8 +97,8 @@ describe('Phase 7 — Invoice & Payment UI Components', () => {
       </MemoryRouter>
     );
 
-    expect(screen.getByText('Payment Collections & Verification')).toBeInTheDocument();
-    expect(screen.getByText('Record Payment')).toBeInTheDocument();
+    expect(screen.getByText(/Cash in Hand & Collections Management|Payment Collections/i)).toBeInTheDocument();
+    expect(screen.getByText(/Hand Over Cash|Executive Management Center/i)).toBeInTheDocument();
     expect(screen.getByPlaceholderText(/Search by receipt #/i)).toBeInTheDocument();
     expect(screen.getByText('All Receipts')).toBeInTheDocument();
     expect(screen.getByText('All Customers')).toBeInTheDocument();
@@ -226,6 +226,6 @@ describe('Phase 7 — Invoice & Payment UI Components', () => {
     expect(screen.getByText(/Thermal Receipt Preview/i)).toBeInTheDocument();
     expect(screen.getAllByText('DNS DISTRIBUTION (PVT) LTD').length).toBeGreaterThan(0);
     expect(screen.getByText(MOCK_PAYMENTS[0].receiptNumber)).toBeInTheDocument();
-    expect(screen.getByText('Print Thermal Receipt')).toBeInTheDocument();
+    expect(screen.getByText('Print & Handover')).toBeInTheDocument();
   });
 });

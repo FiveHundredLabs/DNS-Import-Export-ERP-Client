@@ -99,6 +99,16 @@ const CANONICAL_STATUS_MAP: Record<string, StatusMeta> = {
     variant: 'warning',
     icon: Clock,
   },
+  PENDING_STOCK_MANAGER_APPROVAL: {
+    label: 'Pending Stock Manager Verification',
+    variant: 'warning',
+    icon: Clock,
+  },
+  STOCK_MANAGER_REJECTED: {
+    label: 'Manager Rejected',
+    variant: 'destructive',
+    icon: AlertTriangle,
+  },
   PENDING_MANAGER_APPROVAL: {
     label: 'Pending Manager Approval',
     variant: 'warning',

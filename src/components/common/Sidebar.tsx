@@ -45,6 +45,7 @@ import {
   Wallet,
   LayoutDashboard,
   ShoppingBag,
+  UserPlus,
 } from 'lucide-react';
 import { useEffect } from 'react';
 import { useAuth } from '../../hooks/useAuth';
@@ -84,7 +85,7 @@ interface SidebarItem {
 }
 
 export function Sidebar({ isOpen, onClose }: SidebarProps) {
-  const { canAccessRoute, currentUser } = useAuth();
+  const { canAccessRoute, currentUser, role } = useAuth();
   const { isFavorite, toggleFavorite } = useFavorites();
   const location = useLocation();
   const navigate = useNavigate();
@@ -117,8 +118,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         p.startsWith('/purchasing/suppliers') ||
         p.startsWith('/teams') ||
         p.startsWith('/areas')
-      ) {
-        setActiveCategory('users');
+      ) {        setActiveCategory('users');
       } else if (p.startsWith('/inventory') || p.startsWith('/products')) {
         setActiveCategory('inventory');
       } else if (p.startsWith('/finance') || p === '/payments') {
@@ -137,6 +137,10 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         setActiveCategory('purchasing');
       } else if (location.pathname.startsWith('/finance') && canAccessRoute('/finance')) {
         setActiveCategory('finance');
+      } else if (location.pathname.startsWith('/customers')) {
+        setActiveCategory('customers');
+      } else if (location.pathname.startsWith('/inventory') || location.pathname.startsWith('/products')) {
+        setActiveCategory('inventory');
       }
     }
   }, [location.pathname, location.search, canAccessRoute, isDirector]);
@@ -146,6 +150,8 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   // =========================================================================
   const directorPurchasingItems: SidebarItem[] = [
     { id: 'purchasing-orders', name: 'Purchase Orders', path: '/purchasing/orders', icon: ShoppingCart, category: 'purchasing' },
+    { id: 'director-purchasing-approvals', name: 'PO Approvals', path: '/approvals', icon: ShieldCheck, category: 'purchasing' },
+    { id: 'purchasing-payments', name: 'Supplier Payments (View Only)', path: '/purchasing/payments', icon: CreditCard, category: 'purchasing' },
     { id: 'purchasing-grn', name: 'Goods Received Notes (View Only)', path: '/purchasing/grn', icon: Boxes, category: 'purchasing' },
     { id: 'purchasing-returns', name: 'Supplier Returns & RMA', path: '/purchasing/returns', icon: RotateCcw, category: 'purchasing' },
   ];
@@ -160,6 +166,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
 
   const directorUserManagementItems: SidebarItem[] = [
     { id: 'customers', name: 'Customer Master', path: '/customers', icon: Users2, category: 'users' },
+    { id: 'customer-onboarding', name: 'Customer Onboarding', path: '/customers/onboarding', icon: UserPlus, category: 'users' },
     { id: 'purchasing-suppliers', name: 'Supplier Management', path: '/purchasing/suppliers', icon: Store, category: 'users' },
     { id: 'teams', name: 'Team Management', path: '/teams', icon: Users, category: 'users' },
     { id: 'areas', name: 'Area Management', path: '/areas', icon: Compass, category: 'users' },
@@ -171,6 +178,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     { id: 'grn', name: 'GRN (Read Only)', path: '/inventory/grn', icon: Receipt, category: 'inventory' },
     { id: 'products', name: 'Product Master', path: '/products', icon: Package, category: 'inventory' },
     { id: 'damaged-stock', name: 'Damaged Stock & RMA', path: '/inventory/damaged-stock', icon: ShieldAlert, category: 'inventory' },
+    { id: 'stock-approvals', name: 'Stock Manager Approvals', path: '/approvals', icon: ShieldCheck, category: 'inventory', allowedRoles: ['STOCK_MANAGER'] },
   ];
 
   const directorFinanceItems: SidebarItem[] = [
@@ -244,6 +252,8 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     { id: 'purchasing-dashboard', name: 'Purchasing Dashboard', path: '/purchasing', icon: LayoutGrid, category: 'purchasing', exact: true },
     { id: 'purchasing-suppliers', name: 'Supplier Management', path: '/purchasing/suppliers', icon: Store, category: 'purchasing' },
     { id: 'purchasing-orders', name: 'Purchase Orders', path: '/purchasing/orders', icon: ShoppingCart, category: 'purchasing' },
+    { id: 'purchasing-approvals', name: 'PO Approvals', path: '/approvals', icon: ShieldCheck, category: 'purchasing' },
+    { id: 'purchasing-payments', name: 'Supplier Payments (View Only)', path: '/purchasing/payments', icon: CreditCard, category: 'purchasing' },
     { id: 'purchasing-grn', name: 'Goods Received (View Only)', path: '/purchasing/grn', icon: Boxes, category: 'purchasing' },
     { id: 'purchasing-reports', name: 'Purchase Reports', path: '/purchasing/reports', icon: BarChart3, category: 'purchasing' },
     { id: 'purchasing-returns', name: 'Supplier Returns & RMA', path: '/purchasing/returns', icon: RotateCcw, category: 'purchasing' },
@@ -253,7 +263,18 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const procurementItems: SidebarItem[] = [
     { id: 'quotations', name: 'Quotations', path: '/quotations', icon: FileSpreadsheet, category: 'sales' },
     { id: 'orders', name: 'Sales Orders', path: '/orders', icon: ShoppingCart, category: 'sales' },
-    { id: 'approvals', name: 'Approvals Engine', path: '/approvals', icon: CheckCircle, category: 'approvals' },
+    {
+      id: 'approvals',
+      name:
+        role === 'STOCK_MANAGER'
+          ? 'Stock Manager Approvals'
+          : role === 'PURCHASING_MANAGER' || role === 'PURCHASING_OFFICER'
+          ? 'Purchasing Approvals'
+          : 'Approvals Engine',
+      path: '/approvals',
+      icon: role === 'STOCK_MANAGER' || role === 'PURCHASING_MANAGER' ? ShieldCheck : CheckCircle,
+      category: 'approvals',
+    },
     { id: 'warranty', name: 'Warranty Hub', path: '/warranty', icon: ShieldCheck, category: 'approvals' },
     { id: 'warranty-verification', name: 'Warranty Verification', path: '/warranty/verification', icon: Barcode, category: 'sales' },
   ];
@@ -263,6 +284,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     { id: 'customer-collections', name: 'Customer Collections', path: '/payments/collect', icon: Banknote, category: 'sales', excludedRoles: ['CASHIER', 'SHOWROOM_MANAGER'] },
     { id: 'cash-in-hand', name: 'Cash in Hand (Wallet)', path: '/payments', icon: Wallet, category: 'sales', excludedRoles: ['CASHIER', 'SHOWROOM_MANAGER', 'STOCK_KEEPER', 'STOCK_MANAGER'] },
     { id: 'customers', name: 'Customer Master', path: '/customers', icon: Users2, category: 'customers', excludedRoles: ['CASHIER', 'SHOWROOM_MANAGER'] },
+    { id: 'customer-onboarding', name: 'Customer Onboarding', path: '/customers/onboarding', icon: UserPlus, category: 'customers', excludedRoles: ['CASHIER', 'SHOWROOM_MANAGER', 'STOCK_KEEPER', 'FINANCE_MANAGER', 'PURCHASING_OFFICER'] },
     { id: 'invoices', name: 'Invoices', path: '/invoices', icon: Receipt, category: 'sales', excludedRoles: ['CASHIER', 'SHOWROOM_MANAGER'] },
     { id: 'pos', name: 'Showroom POS', path: '/pos', icon: Store, category: 'sales', excludedRoles: ['STOCK_KEEPER', 'STOCK_MANAGER'] },
   ];
@@ -491,6 +513,10 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     if (item.path === '/') {
       return location.pathname === '/' && !location.search.includes('tab=settings');
     }
+    // Prevent Customer Master (/customers) from highlighting when on Customer Onboarding (/customers/onboarding)
+    if (item.path === '/customers' && location.pathname.startsWith('/customers/onboarding')) {
+      return false;
+    }
     return location.pathname === item.path || location.pathname.startsWith(item.path + '/');
   };
 
@@ -499,6 +525,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     const Icon = item.icon;
     const itemIsFav = isFavorite(item.id);
     const active = isItemActive(item);
+    const isCustomerMasterExempt = item.path === '/customers' && location.pathname.startsWith('/customers/onboarding');
 
     return (
       <div
@@ -513,7 +540,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         {/* Left: Slate Gray Menu Item Icon (Small: h-3.5 w-3.5) + Item Name */}
         <NavLink
           to={item.path}
-          end={item.exact}
+          end={item.exact || isCustomerMasterExempt}
           onClick={onClose}
           className="flex items-center gap-2 min-w-0 flex-1 px-2 py-1.5 focus:outline-none"
         >

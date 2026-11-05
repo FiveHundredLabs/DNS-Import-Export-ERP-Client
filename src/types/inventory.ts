@@ -29,7 +29,27 @@ export interface StockMovement {
   timestamp: string;
 }
 
-export type GRNStatus = 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'COSTED' | 'PRICED' | 'REJECTED';
+export type GRNStatus =
+  | 'DRAFT'
+  | 'PENDING_STOCK_MANAGER_APPROVAL'
+  | 'STOCK_MANAGER_REJECTED'
+  | 'SUBMITTED'
+  | 'APPROVED'
+  | 'COSTED'
+  | 'PRICED'
+  | 'REJECTED';
+
+export interface GRNStockManagerApproval {
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  approvedById?: string;
+  approvedByName?: string;
+  approvedAt?: string;
+  rejectedById?: string;
+  rejectedByName?: string;
+  rejectedAt?: string;
+  rejectionReason?: string;
+  remarks?: string;
+}
 
 export type ElectricalProductCategory = 'GENERAL_ELECTRICAL' | 'SERIAL_TRACKED' | 'WIRES_CABLES';
 
@@ -141,6 +161,10 @@ export interface GRN {
   submittedAt?: string;
   approvedAt?: string;
   rejectedReason?: string;
+  createdById?: string;
+  createdByName?: string;
+  createdByRole?: string;
+  stockManagerApproval?: GRNStockManagerApproval;
 }
 
 export interface PurchaseOrderItem {

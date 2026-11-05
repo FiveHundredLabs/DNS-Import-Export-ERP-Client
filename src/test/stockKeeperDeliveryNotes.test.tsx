@@ -217,9 +217,21 @@ describe('Stock Keeper Delivery Notes Flow', () => {
         expect(screen.getByText('2 / 2')).toBeInTheDocument();
       });
 
-      // Click Save & Dispatch
+      // Click Save & Dispatch (triggers double-confirmation modal)
       const submitBtn = screen.getByRole('button', { name: /save & dispatch delivery note/i });
       fireEvent.click(submitBtn);
+
+      await waitFor(() => {
+        expect(screen.getByText('Confirm Delivery Note Creation')).toBeInTheDocument();
+        expect(screen.getByText(/Once created, this Delivery Note cannot be edited/i)).toBeInTheDocument();
+      });
+
+      // Acknowledge non-editable terms & finalize
+      const confirmCheckbox = screen.getByRole('checkbox');
+      fireEvent.click(confirmCheckbox);
+
+      const confirmBtn = screen.getByRole('button', { name: /confirm & finalize delivery note/i });
+      fireEvent.click(confirmBtn);
 
       // Navigates to detail page with new DN
       await waitFor(() => {
@@ -464,9 +476,21 @@ describe('Stock Keeper Delivery Notes Flow', () => {
       const closeBtn3 = screen.getByRole('button', { name: 'Close' });
       fireEvent.click(closeBtn3);
 
-      // Dispatch Delivery Note from Step 4
+      // Dispatch Delivery Note from Step 4 (triggers double-confirmation modal)
       const dispatchBtn = screen.getByRole('button', { name: /save & dispatch delivery note/i });
       fireEvent.click(dispatchBtn);
+
+      await waitFor(() => {
+        expect(screen.getByText('Confirm Delivery Note Creation')).toBeInTheDocument();
+        expect(screen.getByText(/Once created, this Delivery Note cannot be edited/i)).toBeInTheDocument();
+      });
+
+      // Acknowledge non-editable terms & finalize
+      const confirmCheckbox = screen.getByRole('checkbox');
+      fireEvent.click(confirmCheckbox);
+
+      const confirmBtn = screen.getByRole('button', { name: /confirm & finalize delivery note/i });
+      fireEvent.click(confirmBtn);
 
       // Navigates to Delivery Note Details
       await waitFor(() => {

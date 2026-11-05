@@ -10,3 +10,5 @@ export * from './delivery-notes/DeliveryNoteListPage';
 export * from './delivery-notes/DeliveryNoteCreatePage';
 export * from './delivery-notes/DeliveryNoteDetailPage';
 export * from './InventoryStatusBadge';
+
+export * from './components/StockManagerApprovalHub';

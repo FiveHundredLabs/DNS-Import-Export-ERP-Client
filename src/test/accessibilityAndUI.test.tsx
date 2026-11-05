@@ -263,9 +263,9 @@ describe('Phase 12 — Accessibility, Responsive UI & Form Validation Audit (Sec
       fireEvent.click(submitBtn);
 
       // Field level errors
-      expect(screen.getByText('Shop / Business full name is required.')).toBeInTheDocument();
+      expect(screen.getByText('Display name is required.')).toBeInTheDocument();
       expect(screen.getByText('Contact person name is required.')).toBeInTheDocument();
-      expect(screen.getByText('Contact phone number is required.')).toBeInTheDocument();
+      expect(screen.getByText('Primary phone number is required.')).toBeInTheDocument();
       expect(screen.getByText('Registered business address is required.')).toBeInTheDocument();
       expect(screen.getByText('Please select an assigned operational Area.')).toBeInTheDocument();
       expect(screen.getByText('Please select an assigned Sales Representative.')).toBeInTheDocument();

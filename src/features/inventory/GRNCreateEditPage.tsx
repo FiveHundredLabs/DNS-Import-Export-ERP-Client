@@ -1026,7 +1026,7 @@ export function GRNCreateEditPage() {
       };
 
       if (status === 'SUBMITTED') {
-        await grnService.submitGRN(grn);
+        await grnService.submitGRN(grn, activeUser);
       } else {
         await grnService.createGRN(grn, activeUser);
       }

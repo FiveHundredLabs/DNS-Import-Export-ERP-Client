@@ -51,8 +51,9 @@ export function GRNListPage() {
     const totalGRNs = list.length;
     const approvedGRNs = list.filter((g) => g.status === 'APPROVED' || g.status === 'COSTED').length;
     const submittedGRNs = list.filter((g) => g.status === 'SUBMITTED').length;
+    const pendingVerificationGRNs = list.filter((g) => g.status === 'PENDING_STOCK_MANAGER_APPROVAL').length;
     const draftGRNs = list.filter((g) => g.status === 'DRAFT').length;
-    const rejectedGRNs = list.filter((g) => g.status === 'REJECTED').length;
+    const rejectedGRNs = list.filter((g) => g.status === 'REJECTED' || g.status === 'STOCK_MANAGER_REJECTED').length;
 
     let totalReceivedUnits = 0;
     let totalDamagedUnits = 0;
@@ -93,6 +94,7 @@ export function GRNListPage() {
       totalGRNs,
       approvedGRNs,
       submittedGRNs,
+      pendingVerificationGRNs,
       draftGRNs,
       rejectedGRNs,
       totalReceivedUnits,
@@ -108,7 +110,13 @@ export function GRNListPage() {
   const filteredGRNs = useMemo(() => {
     return (
       grns?.filter((g) => {
-        if (filter !== 'All' && g.status !== filter.toUpperCase()) return false;
+        if (filter === 'Pending Verification') {
+          if (g.status !== 'PENDING_STOCK_MANAGER_APPROVAL') return false;
+        } else if (filter === 'Rejected') {
+          if (g.status !== 'REJECTED' && g.status !== 'STOCK_MANAGER_REJECTED') return false;
+        } else if (filter !== 'All' && g.status !== filter.toUpperCase()) {
+          return false;
+        }
         if (search.trim()) {
           const s = search.toLowerCase().trim();
           if (
@@ -168,21 +176,6 @@ export function GRNListPage() {
           ) : null
         }
       />
-
-      {/* ── Director Read-Only Executive Oversight Banner ── */}
-      {isDirector && (
-        <div className="rounded-xl border border-indigo-200 bg-indigo-50/60 p-3.5 flex items-center justify-between text-xs text-indigo-900">
-          <div className="flex items-center gap-2">
-            <ShieldCheck className="h-4 w-4 text-indigo-600 shrink-0" />
-            <span>
-              <strong>Director Executive Oversight (Read-Only):</strong> Viewing physical intake specifications, serial registry, and QC sign-offs. Physical intake creation & editing are restricted to Stock Keepers.
-            </span>
-          </div>
-          <span className="text-[11px] font-mono text-indigo-700 font-semibold hidden sm:inline">
-            Read-Only Audit Mode
-          </span>
-        </div>
-      )}
 
       {/* ── Warehouse Isolation Mode Banner for Stock Keeper ── */}
       {isStockKeeper && (
@@ -390,6 +383,7 @@ export function GRNListPage() {
               {[
                 { label: 'All', count: stats.totalGRNs },
                 { label: 'Draft', count: stats.draftGRNs },
+                { label: 'Pending Verification', count: stats.pendingVerificationGRNs },
                 { label: 'Submitted', count: stats.submittedGRNs },
                 { label: 'Approved', count: stats.approvedGRNs },
                 { label: 'Rejected', count: stats.rejectedGRNs },
