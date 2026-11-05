@@ -64,6 +64,12 @@ export function WarrantyHubPage() {
   const isSalesRep = role === 'SALES_REP';
   const isAreaManager = role === 'AREA_MANAGER';
   const isFieldUser = isSalesRep || isAreaManager;
+  // Director, Manager, Sales Manager, and field users do not have Registration & Barcode or Distributor Notes tabs
+  const hideRegistrationAndNotes =
+    role === 'DIRECTOR' ||
+    role === 'MANAGER' ||
+    role === 'SALES_MANAGER' ||
+    isFieldUser;
 
   // Assigned customers based on strict RBAC
   const assignedCustomers = useMemo(() => {
@@ -83,6 +89,9 @@ export function WarrantyHubPage() {
 
   const handleTabChange = (val: string) => {
     if (isFieldUser && (val === 'registration' || val === 'claims' || val === 'notes')) {
+      return;
+    }
+    if (hideRegistrationAndNotes && (val === 'registration' || val === 'notes')) {
       return;
     }
     setActiveTab(val as any);
@@ -596,10 +605,12 @@ export function WarrantyHubPage() {
         <TabsList className="bg-slate-100/90 p-1 border border-slate-200/80 rounded-xl flex-wrap">
           {!isFieldUser && (
             <>
-              <TabsTrigger value="registration" className="gap-1.5">
-                <Barcode className="h-3.5 w-3.5" />
-                1. Warranty Registration & Barcode
-              </TabsTrigger>
+              {!hideRegistrationAndNotes && (
+                <TabsTrigger value="registration" className="gap-1.5">
+                  <Barcode className="h-3.5 w-3.5" />
+                  1. Warranty Registration & Barcode
+                </TabsTrigger>
+              )}
               <TabsTrigger value="claims" className="gap-1.5">
                 <ShieldAlert className="h-3.5 w-3.5" />
                 2. Warranty Claims ({pendingClaimsCount})
@@ -618,7 +629,7 @@ export function WarrantyHubPage() {
               ? 'Sales Rep Field Follow-up & Tally'
               : 'Customer Field Follow-up & Tally'}
           </TabsTrigger>
-          {!isFieldUser && (
+          {!isFieldUser && !hideRegistrationAndNotes && (
             <TabsTrigger value="notes" className="gap-1.5">
               <FileCheck2 className="h-3.5 w-3.5" />
               Distributor Notes ({notes.length})
@@ -629,7 +640,7 @@ export function WarrantyHubPage() {
         {/* ------------------------------------------------------------- */}
         {/* TAB 1: SALES MANAGER WARRANTY REGISTRATION & BARCODE SCANNER */}
         {/* ------------------------------------------------------------- */}
-        {!isFieldUser && (
+        {!isFieldUser && !hideRegistrationAndNotes && (
           <TabsContent value="registration" className="space-y-6 pt-2">
           {/* CORE BUSINESS RULE BANNER */}
           <div className="bg-gradient-to-r from-emerald-50 via-teal-50 to-sky-50 border border-emerald-200 rounded-xl p-4 text-xs shadow-xs">
@@ -1177,7 +1188,11 @@ export function WarrantyHubPage() {
                     onClick={() => {
                       setScanBarcode(claimDossier.barcode);
                       handleLookupBarcode(claimDossier.barcode);
-                      setActiveTab('registration');
+                      if (hideRegistrationAndNotes) {
+                        setActiveTab('records');
+                      } else {
+                        setActiveTab('registration');
+                      }
                     }}
                     size="sm"
                     className="bg-amber-600 hover:bg-amber-700 text-white text-xs h-8"
@@ -1585,7 +1600,7 @@ export function WarrantyHubPage() {
         {/* ------------------------------------------------------------- */}
         {/* TAB 5: DISTRIBUTOR WARRANTY NOTES */}
         {/* ------------------------------------------------------------- */}
-        {!isFieldUser && (
+        {!isFieldUser && !hideRegistrationAndNotes && (
         <TabsContent value="notes" className="space-y-4 pt-2">
           <Card className="border-slate-200 shadow-xs">
             <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-3">
