@@ -27,10 +27,15 @@ import {
   ArrowRight,
 } from 'lucide-react';
 import { formatCurrency } from '../../utils/formatters';
+import { CashierStandaloneNotice } from '../pos/CashierStandaloneNotice';
 
 export function DashboardPage() {
   const { currentUser, role } = useAuth();
   const navigate = useNavigate();
+
+  if (role === 'CASHIER') {
+    return <CashierStandaloneNotice />;
+  }
 
   if (role === 'DIRECTOR' || role === 'MANAGER') {
     return <DirectorDashboard />;

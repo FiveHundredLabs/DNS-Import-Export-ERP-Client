@@ -291,7 +291,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     { id: 'customer-onboarding', name: 'Customer Onboarding', path: '/customers/onboarding', icon: UserPlus, category: 'customers', excludedRoles: ['CASHIER', 'SHOWROOM_MANAGER', 'STOCK_KEEPER', 'FINANCE_MANAGER', 'PURCHASING_OFFICER'] },
     { id: 'invoices', name: 'Invoices', path: '/invoices', icon: Receipt, category: 'sales', excludedRoles: ['CASHIER', 'SHOWROOM_MANAGER'] },
     { id: 'my-performance', name: 'Performance & Incentives', path: '/my-performance', icon: Award, category: 'sales', allowedRoles: ['SALES_REP', 'AREA_MANAGER'] },
-    { id: 'pos', name: 'Showroom POS', path: '/pos', icon: Store, category: 'sales', excludedRoles: ['STOCK_KEEPER', 'STOCK_MANAGER'] },
+    { id: 'pos', name: 'Showroom POS', path: '/pos', icon: Store, category: 'sales', excludedRoles: ['STOCK_KEEPER', 'STOCK_MANAGER', 'CASHIER'] },
     { id: 'showroom-sales-report', name: 'Showroom Sales Report', path: '/reports/sales/showroom', icon: Store, category: 'sales', allowedRoles: ['SHOWROOM_MANAGER'] },
   ];
 
