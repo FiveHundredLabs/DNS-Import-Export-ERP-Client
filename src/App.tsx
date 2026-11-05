@@ -169,6 +169,7 @@ export function App() {
         <Route element={<StandardLayout />}>
           {/* Core Operational Routes */}
           <Route index element={<DashboardPage />} />
+          <Route path="dashboard" element={<Navigate to="/" replace />} />
 
 
           {/* Phase 3: Master Data */}

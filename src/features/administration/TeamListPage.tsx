@@ -17,10 +17,23 @@ export function TeamListPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [formData, setFormData] = useState({ name: '', email: '', phone: '', role: 'SALES_REP', areaId: '' });
+  const [selectedAreaFilter, setSelectedAreaFilter] = useState('ALL');
+  const [search, setSearch] = useState('');
 
   const teamUsers = useMemo(() => {
     return users.filter(u => u.role === 'AREA_MANAGER' || u.role === 'SALES_REP');
   }, [users]);
+
+  const filteredTeamUsers = useMemo(() => {
+    return teamUsers.filter(u => {
+      const matchesArea = selectedAreaFilter === 'ALL' || u.areaId === selectedAreaFilter;
+      const matchesSearch = !search.trim() || 
+        u.name.toLowerCase().includes(search.toLowerCase()) || 
+        u.email.toLowerCase().includes(search.toLowerCase()) ||
+        (u.areaName && u.areaName.toLowerCase().includes(search.toLowerCase()));
+      return matchesArea && matchesSearch;
+    });
+  }, [teamUsers, selectedAreaFilter, search]);
 
   const handleOpenModal = (user?: User) => {
     if (user) {
@@ -66,6 +79,29 @@ export function TeamListPage() {
         }
       />
 
+      <div className="flex items-center justify-between gap-4 flex-wrap">
+        <div className="flex-1 min-w-[240px] max-w-sm">
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search team by name, email, or area..."
+            className="focus-visible:ring-indigo-500"
+          />
+        </div>
+        <div className="w-64">
+          <Select
+            value={selectedAreaFilter}
+            onChange={(e) => setSelectedAreaFilter(e.target.value)}
+            className="focus-visible:ring-indigo-500"
+          >
+            <option value="ALL">All Areas (Show All)</option>
+            {areas.map((a) => (
+              <option key={a.id} value={a.id}>{a.name} ({a.code})</option>
+            ))}
+          </Select>
+        </div>
+      </div>
+
       <div className="rounded-2xl border border-slate-200/80 bg-white shadow-sm overflow-hidden">
         <Table>
           <TableHeader>
@@ -80,9 +116,9 @@ export function TeamListPage() {
           <TableBody>
             {usersLoading ? (
               <TableRow><TableCell colSpan={5} className="text-center py-12 text-slate-500">Loading team...</TableCell></TableRow>
-            ) : teamUsers.length === 0 ? (
+            ) : filteredTeamUsers.length === 0 ? (
               <TableRow><TableCell colSpan={5} className="text-center py-12 text-slate-500">No team members found.</TableCell></TableRow>
-            ) : teamUsers.map(user => (
+            ) : filteredTeamUsers.map(user => (
               <TableRow key={user.id} className="group hover:bg-slate-50 transition-colors">
                 <TableCell>
                   <div className="flex items-center gap-3">
@@ -184,28 +220,25 @@ export function TeamListPage() {
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <label className="text-sm font-semibold text-slate-700 flex items-center gap-1.5">
-                  <Map className="h-3.5 w-3.5 text-slate-400" /> Assigned Area
+                <label className="text-sm font-semibold text-slate-700 flex items-center justify-between">
+                  <span className="flex items-center gap-1.5">
+                    <Map className="h-3.5 w-3.5 text-slate-400" /> Assigned Area
+                  </span>
+                  <span className="text-xs font-normal text-slate-400">Optional</span>
                 </label>
                 <Select 
                   value={formData.areaId} 
                   onChange={e => setFormData({...formData, areaId: e.target.value})}
                   className="focus-visible:ring-indigo-500"
                 >
-                  <option value="">-- No Area Assigned --</option>
-                  {areasLoading ? (
-                    <option value="" disabled>Loading areas...</option>
-                  ) : (
-                    <>
-                      {areas.map(a => (
-                        <option key={a.id} value={a.id}>{a.name}</option>
-                      ))}
-                      {formData.areaId && !areas.some(a => a.id === formData.areaId) && (
-                        <option key={formData.areaId} value={formData.areaId}>
-                          {editingUser?.areaName || 'Unknown'} (Deleted)
-                        </option>
-                      )}
-                    </>
+                  <option value="">-- No Area Assigned (Optional) --</option>
+                  {areas.map(a => (
+                    <option key={a.id} value={a.id}>{a.name} ({a.code})</option>
+                  ))}
+                  {formData.areaId && !areas.some(a => a.id === formData.areaId) && (
+                    <option key={formData.areaId} value={formData.areaId}>
+                      {editingUser?.areaName || 'Unknown'} (Deleted)
+                    </option>
                   )}
                 </Select>
               </div>

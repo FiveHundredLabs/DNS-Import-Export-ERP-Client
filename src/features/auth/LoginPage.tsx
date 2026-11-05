@@ -108,7 +108,7 @@ export const DEMO_MODULES: DemoModuleGroup[] = [
         title: 'Sales Manager',
         department: 'Sales & Approvals',
         description: 'Sales pipeline monitoring, quotation approvals, order authorizations & commission hub.',
-        defaultPath: '/approvals',
+        defaultPath: '/',
         badgeBg: 'bg-primary-light text-primary border-primary-border',
         avatarBg: 'bg-primary text-primary-foreground',
         icon: TrendingUp,
@@ -121,7 +121,7 @@ export const DEMO_MODULES: DemoModuleGroup[] = [
         title: 'Area Manager',
         department: 'Regional Hub (Kelaniya)',
         description: 'Regional hub management, local client accounts & territory order dispatch.',
-        defaultPath: '/orders',
+        defaultPath: '/',
         badgeBg: 'bg-cyan-100 text-cyan-800 border-cyan-200',
         avatarBg: 'bg-cyan-600 text-white',
         icon: MapPin,
@@ -134,7 +134,7 @@ export const DEMO_MODULES: DemoModuleGroup[] = [
         title: 'Sales Representative',
         department: 'Field Sales (14 Clients)',
         description: 'Customer visits, field quotation entry, order creation & commission tracking.',
-        defaultPath: '/quotations',
+        defaultPath: '/',
         badgeBg: 'bg-amber-100 text-amber-800 border-amber-200',
         avatarBg: 'bg-amber-600 text-white',
         icon: ShoppingBag,
@@ -155,7 +155,7 @@ export const DEMO_MODULES: DemoModuleGroup[] = [
         title: 'Purchasing Manager',
         department: 'Procurement Governance',
         description: 'PO Stage 1 verification, vendor master agreements, escalation to Manager.',
-        defaultPath: '/purchasing',
+        defaultPath: '/',
         badgeBg: 'bg-cyan-100 text-cyan-800 border-cyan-200',
         avatarBg: 'bg-cyan-700 text-white',
         icon: ShoppingCart,
@@ -168,7 +168,7 @@ export const DEMO_MODULES: DemoModuleGroup[] = [
         title: 'Purchasing Officer',
         department: 'Procurement Operations',
         description: 'Purchase Order drafting, supplier price catalogs & approval requests.',
-        defaultPath: '/purchasing',
+        defaultPath: '/',
         badgeBg: 'bg-teal-100 text-teal-800 border-teal-200',
         avatarBg: 'bg-teal-600 text-white',
         icon: ShoppingCart,
@@ -189,7 +189,7 @@ export const DEMO_MODULES: DemoModuleGroup[] = [
         title: 'Stock Manager',
         department: 'Warehouse Operations & Verifications',
         description: 'GRN physical verification, customer delivery note rejections & quarantine oversight.',
-        defaultPath: '/approvals',
+        defaultPath: '/',
         badgeBg: 'bg-amber-100 text-amber-800 border-amber-200',
         avatarBg: 'bg-amber-700 text-white',
         icon: PackageCheck,
@@ -202,7 +202,7 @@ export const DEMO_MODULES: DemoModuleGroup[] = [
         title: 'Stock Keeper',
         department: 'Warehouse Intake & Picking',
         description: 'Goods Received Notes (GRN) intake, stock balances, picking & transfer notes.',
-        defaultPath: '/inventory',
+        defaultPath: '/',
         badgeBg: 'bg-orange-100 text-orange-800 border-orange-200',
         avatarBg: 'bg-orange-600 text-white',
         icon: Boxes,
@@ -223,7 +223,7 @@ export const DEMO_MODULES: DemoModuleGroup[] = [
         title: 'Finance Manager',
         department: 'Finance & Ledger Accounting',
         description: 'Double-entry journal desk, Chart of Accounts, landed costing & payment sign-offs.',
-        defaultPath: '/finance',
+        defaultPath: '/',
         badgeBg: 'bg-emerald-100 text-emerald-800 border-emerald-200',
         avatarBg: 'bg-emerald-600 text-white',
         icon: Landmark,
@@ -244,7 +244,7 @@ export const DEMO_MODULES: DemoModuleGroup[] = [
         title: 'Showroom Manager',
         department: 'Retail Showroom Operations',
         description: 'Terminal management, cash limits, shift handover approvals & override reviews.',
-        defaultPath: '/pos',
+        defaultPath: '/',
         badgeBg: 'bg-emerald-100 text-emerald-800 border-emerald-200',
         avatarBg: 'bg-emerald-600 text-white',
         icon: Store,
@@ -257,7 +257,7 @@ export const DEMO_MODULES: DemoModuleGroup[] = [
         title: 'Cashier',
         department: 'Retail Point-of-Sale',
         description: 'Point-of-sale checkout, barcode scanning, cash drawer balancing & session closing.',
-        defaultPath: '/pos',
+        defaultPath: '/',
         badgeBg: 'bg-rose-100 text-rose-800 border-rose-200',
         avatarBg: 'bg-rose-600 text-white',
         icon: Store,
@@ -283,12 +283,12 @@ export function LoginPage() {
 
   const from = (location.state as { from?: string })?.from;
 
-  const handleQuickLogin = (userId: string, defaultPath: string) => {
+  const handleQuickLogin = (userId: string, defaultPath: string = '/') => {
     setErrorMsg(null);
     setIsLoading(true);
     try {
       loginAs(userId);
-      const targetPath = from || defaultPath || '/';
+      const targetPath = defaultPath || '/';
       setTimeout(() => {
         setIsLoading(false);
         navigate(targetPath, { replace: true });
@@ -364,12 +364,11 @@ export function LoginPage() {
               </div>
               <button
                 onClick={() => {
-                  const roleMeta = UNIQUE_DEMO_ROLES.find((r) => r.role === currentUser.role);
-                  navigate(roleMeta?.defaultPath || '/');
+                  navigate('/');
                 }}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary hover:bg-primary-hover text-white text-xs font-semibold shadow transition-all cursor-pointer"
               >
-                <span>Workspace</span>
+                <span>Dashboard</span>
                 <ArrowRight className="h-3.5 w-3.5" />
               </button>
               <button

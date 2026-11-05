@@ -310,7 +310,9 @@ const Select = ({
   const extractOptions = (nodeChildren: React.ReactNode) => {
     React.Children.forEach(nodeChildren, (child) => {
       if (React.isValidElement(child)) {
-        if (
+        if (child.type === React.Fragment) {
+          extractOptions((child.props as { children?: React.ReactNode }).children);
+        } else if (
           child.type === SelectTrigger ||
           (child.type as { displayName?: string })?.displayName === 'SelectTrigger'
         ) {
@@ -318,14 +320,21 @@ const Select = ({
         } else if (child.type === 'optgroup') {
           const groupLabel = String((child.props as { label?: string }).label || '');
           const groupOptions: { value: string; label: React.ReactNode }[] = [];
-          React.Children.forEach((child.props as { children?: React.ReactNode }).children, (subChild) => {
-            if (React.isValidElement(subChild) && subChild.type === 'option') {
-              const val = String((subChild.props as { value?: unknown }).value ?? '');
-              const lbl = (subChild.props as { children?: React.ReactNode }).children;
-              groupOptions.push({ value: val, label: lbl });
-              flatOptions.push({ value: val, label: lbl });
-            }
-          });
+          const extractGroupOptions = (subChildren: React.ReactNode) => {
+            React.Children.forEach(subChildren, (subChild) => {
+              if (React.isValidElement(subChild)) {
+                if (subChild.type === React.Fragment) {
+                  extractGroupOptions((subChild.props as { children?: React.ReactNode }).children);
+                } else if (subChild.type === 'option') {
+                  const val = String((subChild.props as { value?: unknown }).value ?? '');
+                  const lbl = (subChild.props as { children?: React.ReactNode }).children;
+                  groupOptions.push({ value: val, label: lbl });
+                  flatOptions.push({ value: val, label: lbl });
+                }
+              }
+            });
+          };
+          extractGroupOptions((child.props as { children?: React.ReactNode }).children);
           if (groupOptions.length > 0) {
             renderItems.push({
               type: 'group',
@@ -392,8 +401,13 @@ const Select = ({
       (safeValue === '__empty_val__' && o.value === '')
   );
 
+  const widthClasses = className
+    ?.split(/\s+/)
+    .filter((c) => c.startsWith('w-') || c.startsWith('min-w-') || c.startsWith('max-w-'))
+    .join(' ');
+
   return (
-    <div className="w-full">
+    <div className={cn(widthClasses || 'w-full', widthClasses && 'shrink-0')}>
       <SelectContext.Provider value={contextValue}>
         <SelectPrimitive.Root
           open={isOpen}

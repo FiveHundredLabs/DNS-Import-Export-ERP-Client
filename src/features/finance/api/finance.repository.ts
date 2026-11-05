@@ -50,6 +50,15 @@ export interface IFinanceRepository {
   approveJournalEntry(id: string, approverName?: string): Promise<JournalEntry>;
   voidJournalEntry(id: string, reason?: string): Promise<JournalEntry>;
   reverseJournalEntry?(id: string, reason?: string): Promise<JournalEntry>;
+  correctAndReissueJournalEntry(id: string, reason: string): Promise<{ original: JournalEntry; replacement: JournalEntry }>;
+  createReclassificationEntry(params: {
+    originalEntryId: string;
+    lineIndex: number;
+    targetAccountId: string;
+    amount?: number;
+    reason: string;
+    date?: string;
+  }): Promise<JournalEntry>;
 
   // Reports
   getProfitLossReport(dateRange?: DateRangeFilter): Promise<ProfitLossReport>;
