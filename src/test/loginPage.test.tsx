@@ -128,29 +128,23 @@ describe('LoginPage and Example Users For Each Role', () => {
     expect(screen.queryByText('Kamal Perera')).toBeNull();
 
     // Use search box
-    const searchInput = screen.getByPlaceholderText('Search role or name...');
+    const searchInput = screen.getByPlaceholderText(/Search role/i);
     fireEvent.change(searchInput, { target: { value: 'Saman' } });
 
     expect(screen.getByText('Saman Jayasuriya')).toBeDefined();
     expect(screen.queryByText('Ruwan Wijesinghe')).toBeNull();
   });
 
-  it('submits standard login form and authenticates with credentials', async () => {
+  it('verifies standard login card (Enterprise Access form) is removed from the page', () => {
     render(
       <MemoryRouter initialEntries={['/login']}>
         <LoginPage />
       </MemoryRouter>
     );
 
-    const emailInput = screen.getByPlaceholderText('user@dnserp.com');
-    const submitBtn = screen.getByRole('button', { name: /Sign In to ERP Portal/i });
-
-    fireEvent.change(emailInput, { target: { value: 'finance@dnserp.com' } });
-    fireEvent.click(submitBtn);
-
-    await waitFor(() => {
-      expect(authService.getCurrentUser()?.email).toBe('finance@dnserp.com');
-      expect(authService.getCurrentUser()?.role).toBe('FINANCE_MANAGER');
-    });
+    // Standard login form elements should NOT exist
+    expect(screen.queryByText('Enterprise Access')).toBeNull();
+    expect(screen.queryByPlaceholderText('user@dnserp.com')).toBeNull();
+    expect(screen.queryByRole('button', { name: /Sign In to ERP Portal/i })).toBeNull();
   });
 });
