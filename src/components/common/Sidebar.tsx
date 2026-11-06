@@ -414,7 +414,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     { id: 'inventory' as RailCategory, label: 'Inventory & Products', icon: Boxes },
     { id: 'finance' as RailCategory, label: 'Finance & Payments', icon: CreditCard },
     { id: 'approvals' as RailCategory, label: 'Approvals & Warranty', icon: ShieldCheck },
-    { id: 'reports' as RailCategory, label: currentUser.role === 'SALES_MANAGER' ? 'Sales Reports' : 'Enterprise Reports', icon: BarChart3 },
+    { id: 'reports' as RailCategory, label: currentUser.role === 'SALES_MANAGER' ? 'Sales Reports' : currentUser.role === 'SHOWROOM_MANAGER' ? 'Analytics & Reports' : 'Enterprise Reports', icon: BarChart3 },
     { id: 'admin' as RailCategory, label: 'Administration', icon: Settings },
   ];
 
