@@ -58,10 +58,11 @@ import {
 } from '../../components/ui/dialog';
 import { toast } from 'sonner';
 
-type ManagerTab = 'TERMINALS' | 'TOKENS' | 'OFFERS' | 'RECONCILIATION' | 'REFUNDS_VOIDS' | 'REPORTS';
+type ManagerTab = 'TERMINALS' | 'TOKENS' | 'OFFERS' | 'RECONCILIATION' | 'REPORTS';
 
 export function ShowroomManagerHub() {
   const { currentUser, role } = useAuth();
+  const isShowroomManager = role === 'SHOWROOM_MANAGER';
   const {
     terminals,
     sessions,
@@ -79,7 +80,9 @@ export function ShowroomManagerHub() {
 
   const { products } = useProducts({ pageSize: 100, status: 'ACTIVE' });
 
-  const [activeTab, setActiveTab] = useState<ManagerTab>('TERMINALS');
+  const [activeTab, setActiveTab] = useState<ManagerTab>(
+    role === 'SHOWROOM_MANAGER' ? 'TERMINALS' : 'REPORTS'
+  );
   const [copiedToken, setCopiedToken] = useState<string | null>(null);
 
   // -------------------------------------------------------------
@@ -130,6 +133,10 @@ export function ShowroomManagerHub() {
   // -------------------------------------------------------------
   const [reportDate, setReportDate] = useState<string>(new Date().toISOString().slice(0, 10));
   const [dayEndSummary, setDayEndSummary] = useState<DayEndClosingSummary | null>(null);
+
+  useEffect(() => {
+    if (!isShowroomManager) setActiveTab('REPORTS');
+  }, [isShowroomManager]);
 
   // Selected product details for offer modal
   const selectedOfferProduct = useMemo(
@@ -350,7 +357,7 @@ export function ShowroomManagerHub() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2.5 flex-wrap">
+          {isShowroomManager && <div className="flex items-center gap-2.5 flex-wrap">
             <Button
               variant="outline"
               size="sm"
@@ -382,11 +389,11 @@ export function ShowroomManagerHub() {
               <span>Create Clearance Offer</span>
             </Button>
 
-          </div>
+          </div>}
         </div>
 
         {/* High-Level Summary KPI Strip */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mt-4 pt-3 border-t border-slate-100">
+        {isShowroomManager && <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mt-4 pt-3 border-t border-slate-100">
           <div className="bg-slate-50/80 rounded-lg p-2.5 border border-slate-200/60">
             <div className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">
               Today's Total Sales
@@ -451,7 +458,7 @@ export function ShowroomManagerHub() {
               {pendingOffersCount} Pending Sales Mgr Review
             </div>
           </div>
-        </div>
+        </div>}
 
         {/* Navigation Tabs */}
         <div className="flex items-center gap-1 mt-4 border-b border-slate-200 -mb-4 overflow-x-auto">
@@ -460,9 +467,8 @@ export function ShowroomManagerHub() {
             { id: 'TOKENS', label: 'Manager Tokens Desk', icon: Key, badge: activeTokensCount },
             { id: 'OFFERS', label: 'Clearance Offers', icon: Tag, badge: offers.length },
             { id: 'RECONCILIATION', label: 'Shifts & Cash Reconciliation', icon: DollarSign },
-            { id: 'REFUNDS_VOIDS', label: 'Refunds & Voids Desk', icon: RotateCcw },
             { id: 'REPORTS', label: 'Day-End & POS Reports', icon: FileText },
-          ].map((tab) => {
+          ].filter((tab) => isShowroomManager || tab.id === 'REPORTS').map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
             return (
@@ -617,7 +623,10 @@ export function ShowroomManagerHub() {
 
             {/* Active Tokens Grid */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {tokens.slice(0, 6).map((tok) => {
+              {tokens
+                .filter((tok) => !tok.isUsed && !tok.isRevoked && new Date(tok.expiresAt) > new Date())
+                .slice(0, 6)
+                .map((tok) => {
                 const isExpired = new Date(tok.expiresAt) < new Date();
                 const isUsable = !tok.isUsed && !tok.isRevoked && !isExpired;
                 return (
@@ -695,7 +704,7 @@ export function ShowroomManagerHub() {
                     </CardContent>
                   </Card>
                 );
-              })}
+                })}
             </div>
 
             {/* Token Audit Table */}
@@ -1000,108 +1009,6 @@ export function ShowroomManagerHub() {
         )}
 
         {/* ========================================================= */}
-        {/* TAB 5: REFUNDS & VOIDS DESK */}
-        {/* ========================================================= */}
-        {activeTab === 'REFUNDS_VOIDS' && (
-          <div className="space-y-5">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-base font-bold text-slate-900">Showroom Refunds & Voids Management</h2>
-                <p className="text-xs text-slate-500">
-                  Audited return condition routing (Restockable / Damaged / Inspection) and unfinalized transaction voiding.
-                </p>
-              </div>
-            </div>
-
-            <Card className="border-slate-200">
-              <CardHeader className="p-4 border-b border-slate-100 bg-slate-50/50">
-                <CardTitle className="text-xs font-bold text-slate-800 uppercase tracking-wider">
-                  Recent Sales Transactions
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-0">
-                <table className="w-full text-xs text-left text-slate-600">
-                  <thead className="bg-slate-50 text-[11px] font-semibold text-slate-500 border-b border-slate-200">
-                    <tr>
-                      <th className="px-4 py-2.5">Receipt #</th>
-                      <th className="px-4 py-2.5">Date & Time</th>
-                      <th className="px-4 py-2.5">Customer</th>
-                      <th className="px-4 py-2.5">Payment</th>
-                      <th className="px-4 py-2.5 text-right">Amount</th>
-                      <th className="px-4 py-2.5 text-center">Status</th>
-                      <th className="px-4 py-2.5 text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {transactions.slice(0, 15).map((tx) => (
-                      <tr key={tx.id} className="hover:bg-slate-50/60">
-                        <td className="px-4 py-3 font-mono font-semibold text-slate-900">{tx.receiptNumber}</td>
-                        <td className="px-4 py-3 text-slate-400">{formatDateTime(tx.createdAt)}</td>
-                        <td className="px-4 py-3 font-medium text-slate-800">{tx.customerName}</td>
-                        <td className="px-4 py-3">
-                          <Badge variant="outline" className="text-[10px] font-bold">
-                            {tx.paymentMethod}
-                          </Badge>
-                        </td>
-                        <td className="px-4 py-3 text-right font-bold text-slate-900">
-                          {formatCurrency(tx.totalAmount)}
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          <Badge
-                            variant={
-                              tx.status === 'COMPLETED'
-                                ? 'default'
-                                : tx.status === 'REFUNDED'
-                                ? 'outline'
-                                : 'destructive'
-                            }
-                            className={cn(
-                              'text-[10px]',
-                              tx.status === 'COMPLETED' && 'bg-emerald-600 text-white',
-                              tx.status === 'REFUNDED' && 'border-amber-400 text-amber-800 bg-amber-50'
-                            )}
-                          >
-                            {tx.status}
-                          </Badge>
-                        </td>
-                        <td className="px-4 py-3 text-right">
-                          {tx.status === 'COMPLETED' ? (
-                            <div className="flex items-center justify-end gap-1.5">
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleOpenRefundModal(tx)}
-                                className="h-7 px-2 text-[11px] text-blue-700 border-blue-300 hover:bg-blue-50"
-                              >
-                                Refund
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleOpenVoidModal(tx)}
-                                className="h-7 px-2 text-[11px] text-rose-700 border-rose-300 hover:bg-rose-50"
-                              >
-                                Void
-                              </Button>
-                            </div>
-                          ) : (
-                            <span className="text-[11px] text-slate-400 italic">
-                              {tx.status === 'REFUNDED'
-                                ? `Refunded (${tx.refundReason || 'No reason'})`
-                                : `Voided (${tx.voidReason || 'No reason'})`}
-                            </span>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </CardContent>
-            </Card>
-          </div>
-        )}
-
-        {/* ========================================================= */}
         {/* TAB 6: DAY-END & COMPREHENSIVE POS REPORTS */}
         {/* ========================================================= */}
         {activeTab === 'REPORTS' && (
@@ -1168,7 +1075,7 @@ export function ShowroomManagerHub() {
                   Token Type <span className="text-rose-500">*</span>
                 </label>
                 <div className="grid grid-cols-3 gap-2">
-                  {(['DISCOUNT', 'REFUND', 'VOID'] as POSManagerTokenType[]).map((op) => (
+                  {(['DISCOUNT'] as POSManagerTokenType[]).map((op) => (
                     <button
                       key={op}
                       type="button"
