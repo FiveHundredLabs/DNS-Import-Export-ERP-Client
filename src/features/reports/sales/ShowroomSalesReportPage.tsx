@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { Store } from 'lucide-react';
+import { useSmartBack } from '../../../hooks/useSmartBack';
+import { useAuth } from '../../../hooks/useAuth';
 import { ReportPageShell, ReportFilterBar, getDefaultDateRange, KpiCard, SortableTable, lkr, type DateRange, type TableCol } from '../shared/ReportSharedUI';
 import { MOCK_SHOWROOM_SALES, SHOWROOM_KPIS, type ShowroomRow } from '../shared/reportMockData';
 
@@ -15,12 +17,17 @@ const COLS: TableCol<ShowroomRow>[] = [
 ];
 
 export function ShowroomSalesReportPage() {
+  const { role } = useAuth();
   const [dr, setDr] = useState<DateRange>(getDefaultDateRange());
+  const goBack = useSmartBack('/reports');
+  const isShowroomManager = role === 'SHOWROOM_MANAGER';
 
   return (
     <ReportPageShell
-      backPath="/reports/sales"
-      backLabel="Back to Sales Reports"
+      backPath="/reports"
+      backLabel="Back to Reports"
+      onBack={goBack}
+      hideBack={isShowroomManager}
       title="Showroom Sales Report"
       subtitle="POS counter sales — daily revenue, payment method split (cash, card, cheque), and transaction history."
       badge="POS Showroom"

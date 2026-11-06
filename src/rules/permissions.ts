@@ -329,9 +329,9 @@ export function canAccessRoute(role: UserRole, path: string): boolean {
     if (role === 'AREA_MANAGER') {
       return false;
     }
-    // Showroom Manager: ONLY the showroom sales report
+    // Showroom Manager: ONLY the showroom sales report and day-end POS report
     if (role === 'SHOWROOM_MANAGER') {
-      return path === '/reports/sales/showroom' || path === '/reports/sales/pos-day-end';
+      return path === '/reports' || path === '/reports/sales/showroom' || path === '/reports/sales/pos-day-end';
     }
     // Finance Manager: ONLY finance reports
     if (role === 'FINANCE_MANAGER') {
