@@ -289,7 +289,6 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     { id: 'invoices', name: 'Invoices', path: '/invoices', icon: Receipt, category: 'sales', excludedRoles: ['CASHIER', 'SHOWROOM_MANAGER'] },
     { id: 'my-performance', name: 'Performance & Incentives', path: '/my-performance', icon: Award, category: 'sales', allowedRoles: ['SALES_REP', 'AREA_MANAGER'] },
     { id: 'pos', name: 'Showroom POS', path: '/pos', icon: Store, category: 'sales', excludedRoles: ['STOCK_KEEPER', 'STOCK_MANAGER', 'CASHIER'] },
-    { id: 'showroom-sales-report', name: 'Showroom Sales Report', path: '/reports/sales/showroom', icon: Store, category: 'sales', allowedRoles: ['SHOWROOM_MANAGER'] },
   ];
 
   // 3. Products & Inventory
@@ -321,7 +320,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const adminItems: SidebarItem[] = [
     { id: 'teams', name: 'Team Management', path: '/teams', icon: Users, category: 'admin' },
     { id: 'areas', name: 'Area Management', path: '/areas', icon: Compass, category: 'admin' },
-    { id: 'reports', name: 'Enterprise Reports', path: '/reports', icon: BarChart3, category: 'reports', excludedRoles: ['DIRECTOR', 'MANAGER', 'FINANCE_MANAGER', 'SALES_MANAGER', 'AREA_MANAGER', 'STOCK_MANAGER', 'STOCK_KEEPER'] },
+    { id: 'reports', name: 'Enterprise Reports', path: '/reports', icon: BarChart3, category: 'reports', excludedRoles: ['DIRECTOR', 'MANAGER', 'FINANCE_MANAGER', 'SALES_MANAGER', 'AREA_MANAGER', 'STOCK_MANAGER', 'STOCK_KEEPER', 'SHOWROOM_MANAGER'] },
     { id: 'credit-terms-settings', name: 'Default Credit Terms', path: '/?tab=settings&section=credit-terms', icon: CreditCard, category: 'admin', allowedRoles: ['DIRECTOR', 'MANAGER'] },
     { id: 'commissions-config', name: 'Commission Configuration', path: '/commissions', icon: Award, category: 'admin', allowedRoles: ['DIRECTOR', 'MANAGER'] },
     { id: 'tax-settings', name: 'Global Tax Configuration', path: '/?tab=settings&section=tax', icon: Percent, category: 'admin', directorOnly: true },
@@ -332,6 +331,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   // 6. Reports Suite — Direct Parity between Director & Manager
   const standardReportItems: SidebarItem[] = [
     { id: 'pos-day-end-report', name: 'Day-End POS Report', path: '/reports/sales/pos-day-end', icon: FileText, category: 'reports', allowedRoles: ['DIRECTOR', 'MANAGER', 'SALES_MANAGER', 'SHOWROOM_MANAGER'] },
+    { id: 'showroom-sales-report', name: 'Showroom Sales Report', path: '/reports/sales/showroom', icon: Store, category: 'reports', allowedRoles: ['SHOWROOM_MANAGER'] },
     { id: 'purchase-reports', name: 'Purchase Reports', path: '/reports/purchasing', icon: ShoppingCart, category: 'reports', allowedRoles: ['DIRECTOR', 'MANAGER'] },
     { id: 'sales-reports', name: 'Sales Reports', path: '/reports/sales', icon: BarChart3, category: 'reports', allowedRoles: ['DIRECTOR', 'MANAGER', 'SALES_MANAGER'] },
     { id: 'inventory-reports', name: 'Inventory Reports', path: '/reports/inventory', icon: Boxes, category: 'reports', allowedRoles: ['DIRECTOR', 'MANAGER'] },
@@ -414,7 +414,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     { id: 'inventory' as RailCategory, label: 'Inventory & Products', icon: Boxes },
     { id: 'finance' as RailCategory, label: 'Finance & Payments', icon: CreditCard },
     { id: 'approvals' as RailCategory, label: 'Approvals & Warranty', icon: ShieldCheck },
-    { id: 'reports' as RailCategory, label: currentUser.role === 'SALES_MANAGER' ? 'Sales Reports' : 'Enterprise Reports', icon: BarChart3 },
+    { id: 'reports' as RailCategory, label: currentUser.role === 'SALES_MANAGER' ? 'Sales Reports' : currentUser.role === 'SHOWROOM_MANAGER' ? 'Analytics & Reports' : 'Enterprise Reports', icon: BarChart3 },
     { id: 'admin' as RailCategory, label: 'Administration', icon: Settings },
   ];
 
