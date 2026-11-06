@@ -144,6 +144,8 @@ export function ReportHubLayout({
 interface ReportPageShellProps {
   backPath: string;
   backLabel: string;
+  onBack?: () => void;
+  hideBack?: boolean;
   title: string;
   subtitle?: string;
   badge?: string;
@@ -155,6 +157,8 @@ interface ReportPageShellProps {
 export function ReportPageShell({
   backPath,
   backLabel,
+  onBack,
+  hideBack,
   title,
   subtitle,
   badge,
@@ -167,14 +171,26 @@ export function ReportPageShell({
   return (
     <div className="space-y-6">
       {/* Nav */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 print:hidden">
-        <Link
-          to={backPath}
-          className="flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-primary transition-colors bg-white px-3 py-1.5 rounded-md border border-slate-200 shadow-2xs"
-        >
-          <ArrowLeft className="h-3.5 w-3.5" />
-          <span>{backLabel}</span>
-        </Link>
+      <div className={`flex flex-col sm:flex-row items-start sm:items-center ${hideBack ? 'justify-end' : 'justify-between'} gap-3 print:hidden`}>
+        {!hideBack && (
+          onBack ? (
+            <button
+              onClick={onBack}
+              className="flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-primary transition-colors bg-white px-3 py-1.5 rounded-md border border-slate-200 shadow-2xs cursor-pointer"
+            >
+              <ArrowLeft className="h-3.5 w-3.5" />
+              <span>{backLabel}</span>
+            </button>
+          ) : (
+            <Link
+              to={backPath}
+              className="flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-primary transition-colors bg-white px-3 py-1.5 rounded-md border border-slate-200 shadow-2xs"
+            >
+              <ArrowLeft className="h-3.5 w-3.5" />
+              <span>{backLabel}</span>
+            </Link>
+          )
+        )}
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" className="text-xs gap-1.5" onClick={handlePrint}>
             <Printer className="h-3.5 w-3.5" />
