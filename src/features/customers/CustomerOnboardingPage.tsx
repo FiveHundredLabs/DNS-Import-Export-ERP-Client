@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useSmartBack } from '../../hooks/useSmartBack';
 import { useAuth } from '../../hooks/useAuth';
 import { useAreas } from '../../hooks/useAreas';
 import { useUsers } from '../../hooks/useUsers';
@@ -162,6 +163,7 @@ export function CustomerOnboardingPage() {
   const { areas } = useAreas();
   const { users } = useUsers();
   const navigate = useNavigate();
+  const goBack = useSmartBack('/customers/onboarding');
   const { customerId } = useParams<{ customerId?: string }>();
 
   const isAreaManager = role === 'AREA_MANAGER';
@@ -596,6 +598,15 @@ export function CustomerOnboardingPage() {
         }
         actions={
           <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={goBack}
+              className="text-xs gap-1.5 border-slate-200 text-slate-700 hover:bg-slate-50"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              Back
+            </Button>
             {selectedCustomer && (
               <Button
                 variant="outline"
