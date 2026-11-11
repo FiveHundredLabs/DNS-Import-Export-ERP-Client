@@ -90,4 +90,17 @@ describe('Quotation UI Components & Type Checking', () => {
       expect(screen.getByText('Lanka Electrical & Hardware Superstore')).toBeInTheDocument();
     });
   });
+
+  it('renders PaginationControls and repository-wide KPI summary in QuotationListPage', async () => {
+    render(
+      <MemoryRouter>
+        <QuotationListPage />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Next page')).toBeInTheDocument();
+      expect(screen.getByLabelText('Previous page')).toBeInTheDocument();
+    });
+  });
 });

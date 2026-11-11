@@ -11,6 +11,7 @@ export interface CustomerSelectorProps {
   onSelect: (customer: Customer) => void;
   selectedCustomerId?: string;
   assignedRepId?: string;
+  areaId?: string;
   className?: string;
   placeholder?: string;
   isModalMode?: boolean;
@@ -20,6 +21,7 @@ export function CustomerSelector({
   onSelect,
   selectedCustomerId,
   assignedRepId,
+  areaId,
   className,
   placeholder = 'Search customer by code, name, phone...',
   isModalMode = false,
@@ -31,6 +33,7 @@ export function CustomerSelector({
   const { customers, loading } = useCustomers({
     search: searchTerm,
     assignedRepId,
+    areaId,
     page: 1,
     pageSize: 25,
   });

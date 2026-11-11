@@ -3,6 +3,7 @@ import { MockQuotationRepository } from '../repositories/mock/MockQuotationRepos
 import {
   Quotation,
   QuotationFilters,
+  QuotationSummary,
   CreateQuotationInput,
   UpdateQuotationInput,
   QuotationItem,
@@ -16,7 +17,7 @@ import { productService, ProductService } from './ProductService';
 import { customerService, CustomerService } from './CustomerService';
 import { approvalService, ApprovalService } from './ApprovalService';
 import { taxService, TaxService } from './TaxService';
-import { evaluateDiscount } from '../rules/discountRules';
+import { evaluateCustomerProductDiscount } from '../rules/discountRules';
 import { generateOrderNumber } from '../rules/orderRules';
 
 export class QuotationService {
@@ -76,8 +77,32 @@ export class QuotationService {
     return this.repo.getAll(filters, userContext);
   }
 
+  async getQuotationSummary(
+    filters?: QuotationFilters,
+    userContext?: QuotationUserContext
+  ): Promise<QuotationSummary> {
+    return this.repo.getSummary(filters, userContext);
+  }
+
   async getQuotationById(id: string): Promise<Quotation | null> {
     return this.repo.getById(id);
+  }
+
+  private async ensureAreaAndRepAccess(
+    customer: Customer,
+    user: User,
+    actionLabel: string = 'create quotations for'
+  ): Promise<void> {
+    if (user.role === 'SALES_REP' && customer.assignedRepId && customer.assignedRepId !== user.id) {
+      throw new Error(
+        `Permission Denied: Customer ${customer.name} (${customer.code}) is not assigned to your territory.`
+      );
+    }
+    if (user.role === 'AREA_MANAGER' && user.areaId && customer.areaId !== user.areaId) {
+      throw new Error(
+        `Permission Denied: Customer ${customer.name} (${customer.code}) is outside your assigned area.`
+      );
+    }
   }
 
   /**
@@ -101,23 +126,21 @@ export class QuotationService {
       throw new Error(`Product not found: ${productId}`);
     }
 
-    // Role-based rep discount authority: Rep = 5%, Managers/Directors = 15%
-    const repAuthority = userRole === 'SALES_REP' ? 5 : 15;
+    if (requestedDiscountPercentage < 0) {
+      throw new Error('Discount percentage cannot be negative.');
+    }
+    if (requestedDiscountPercentage > 100) {
+      throw new Error('Discount percentage cannot exceed 100%.');
+    }
 
-    // Evaluate discount against central business rules
-    const discountEval = evaluateDiscount({
-      requestedDiscountPercentage,
-      repMaxDiscountPercentage: repAuthority,
-      customerMaxDiscountPercentage: customer.commercialTerms?.maxDiscountPercentage || 12,
-      productMaxDiscountPercentage: product.pricing.maxDiscountPercentage || 15,
-      promotionalDiscountPercentage: product.pricing.promotionalDiscountPercentage,
+    // Evaluate discount identically for SALES_REP and AREA_MANAGER based on
+    // customer loyalty level and configured product discount levels.
+    const discountEval = evaluateCustomerProductDiscount({
       product,
       customer,
+      requestedDiscountPercentage,
+      userRole,
     });
-
-    if (!discountEval.isValid) {
-      throw new Error(discountEval.reason || `Invalid discount: ${requestedDiscountPercentage}%`);
-    }
 
     const unitPriceSnapshot = product.pricing.currentSellingPrice;
     const subtotal = Number((unitPriceSnapshot * quantity).toFixed(2));
@@ -149,12 +172,12 @@ export class QuotationService {
       taxPercentage,
       taxAmount,
       lineTotal,
-      requiresApproval: discountEval.requiresSpecialApproval,
-      approvalReason: discountEval.reason,
-      discountApprovalStatus: discountEval.requiresSpecialApproval
+      requiresApproval: discountEval.requiresApproval,
+      approvalReason: discountEval.requiresApproval ? discountEval.reason : undefined,
+      discountApprovalStatus: discountEval.requiresApproval
         ? 'PENDING_APPROVAL'
         : 'NOT_REQUIRED',
-      discountAllowedPercentage: discountEval.allowedDiscountPercentage,
+      discountAllowedPercentage: discountEval.maxPermittedDiscountPercentage,
     };
   }
 
@@ -176,12 +199,8 @@ export class QuotationService {
       status: 'ACTIVE',
     };
 
-    // 2. Role-based scoping check: Sales Rep can only quote for assigned customers
-    if (effectiveUser.role === 'SALES_REP' && customer.assignedRepId && customer.assignedRepId !== effectiveUser.id) {
-      throw new Error(
-        `Permission Denied: Customer ${customer.name} (${customer.code}) is not assigned to your territory.`
-      );
-    }
+    // 2. Role-based scoping check: Sales Rep (assignedRepId) & Area Manager (areaId)
+    await this.ensureAreaAndRepAccess(customer, effectiveUser);
 
     if (!input.items || input.items.length === 0) {
       throw new Error('A quotation must contain at least one product line item.');
@@ -233,27 +252,61 @@ export class QuotationService {
       input.validUntil ||
       new Date(Date.now() + (input.validDays || 30) * 86400000).toISOString().split('T')[0];
 
-    // Determine status:
-    // If user clicked "Save as Draft", it's DRAFT.
-    // Else if quotationRequiresApproval, it becomes PENDING_APPROVAL.
-    // Otherwise, direct issue APPROVED.
+    // Determine status & auto-approval based on creator role:
+    // - Manager / Director: automatically approved (unless saved as draft)
+    // - Sales Manager: must be approved by another authorized approver (never auto-approved)
+    // - Sales Rep / Area Manager: approved if within customer loyalty discount limits, else PENDING_APPROVAL for Sales Manager
     let status: Quotation['status'] = 'APPROVED';
+    let targetApproverRole: UserRole | undefined;
+    let effectiveRequiresApproval = quotationRequiresApproval;
+    const isManagerOrDirector =
+      effectiveUser.role === 'MANAGER' || effectiveUser.role === 'DIRECTOR';
+    const isSalesManager = effectiveUser.role === 'SALES_MANAGER';
+
     if (input.saveAsDraft) {
       status = 'DRAFT';
+      if (isSalesManager) {
+        effectiveRequiresApproval = true;
+      }
+    } else if (isManagerOrDirector) {
+      status = 'APPROVED';
+    } else if (isSalesManager) {
+      status = 'PENDING_APPROVAL';
+      effectiveRequiresApproval = true;
+      targetApproverRole = 'MANAGER';
     } else if (quotationRequiresApproval) {
       status = 'PENDING_APPROVAL';
+      targetApproverRole = 'SALES_MANAGER';
     }
+
+    const nowIso = new Date().toISOString();
+    const finalItems =
+      status === 'APPROVED' && isManagerOrDirector
+        ? snapshotItems.map((it) =>
+            it.requiresApproval
+              ? {
+                  ...it,
+                  discountApprovalStatus: 'APPROVED' as const,
+                  discountApprovedById: effectiveUser.id,
+                  discountApprovedByName: effectiveUser.name,
+                  discountApprovedAt: nowIso,
+                }
+              : it
+          )
+        : snapshotItems;
 
     const quotation = await this.repo.create({
       quotationNumber: '', // repo assigns formatted sequence
       customerId: customer.id,
+      areaId: customer.areaId,
       customerCodeSnapshot: customer.code,
       customerNameSnapshot: customer.name,
       customerPhoneSnapshot: customer.phone,
       customerAddressSnapshot: customer.address,
       salesRepId: effectiveUser.id,
       salesRepNameSnapshot: effectiveUser.name,
-      items: snapshotItems,
+      createdByRole: effectiveUser.role,
+      items: finalItems,
       subtotal,
       discountAmount,
       taxAmount,
@@ -267,22 +320,34 @@ export class QuotationService {
         input.termsAndConditions ||
         customer.commercialTerms.paymentTermNotes ||
         'Standard 30 days payment terms upon delivery. Goods warranty as specified per manufacturer guidelines.',
-      requiresApproval: quotationRequiresApproval,
-      approvalReason: quotationRequiresApproval ? approvalReasons.join('; ') : undefined,
+      requiresApproval: effectiveRequiresApproval,
+      approvalReason: effectiveRequiresApproval
+        ? approvalReasons.join('; ') ||
+          (isSalesManager ? 'Quotations created by Sales Manager require approval by another authorized approver.' : undefined)
+        : undefined,
+      ...(status === 'APPROVED'
+        ? {
+            approvedById: effectiveUser.id,
+            approvedByName: effectiveUser.name,
+            approvedAt: nowIso,
+          }
+        : {}),
     });
 
     // 6. If submitted and requires approval, submit an ApprovalRequest to the Approvals Engine
     if (quotation.status === 'PENDING_APPROVAL') {
+      const approverRole = targetApproverRole || 'SALES_MANAGER';
       const approvalReq = await this.approvalSvc.createApprovalRequest({
         documentType: 'QUOTATION_DISCOUNT',
         documentId: quotation.id,
         documentReferenceNumber: quotation.quotationNumber,
         title: `Discount Approval for ${quotation.customerNameSnapshot}`,
-        description: `Quotation ${quotation.quotationNumber} total LKR ${quotation.totalAmount.toLocaleString()} has requested discounts exceeding rep authority limit (5%). Reasons: ${quotation.approvalReason}`,
+        description: `Quotation ${quotation.quotationNumber} total LKR ${quotation.totalAmount.toLocaleString()} requires ${approverRole.replace('_', ' ')} approval. ${quotation.approvalReason || ''}`,
         initiatorId: effectiveUser.id,
         initiatorName: effectiveUser.name,
         initiatorRole: effectiveUser.role,
-        currentApproverRole: 'SALES_MANAGER',
+        currentApproverRole: approverRole,
+        targetApproverRole: approverRole,
         isSpecialScenario: true,
         specialReason: quotation.approvalReason,
         status: 'PENDING',
@@ -296,7 +361,7 @@ export class QuotationService {
             action: 'APPROVE', // Initiated
             fromStatus: 'DRAFT',
             toStatus: 'PENDING',
-            comment: 'Quotation submitted with special discount. Routing to Sales Manager.',
+            comment: `Quotation submitted. Routing to ${approverRole.replace('_', ' ')}.`,
             timestamp: new Date().toISOString(),
           },
         ],
@@ -337,6 +402,8 @@ export class QuotationService {
     if (!customer) {
       throw new Error('Customer data not found');
     }
+
+    await this.ensureAreaAndRepAccess(customer, currentUser);
 
     let items = existing.items;
     let requiresApproval = false;
@@ -388,13 +455,24 @@ export class QuotationService {
       items.reduce((acc, item) => acc + item.lineTotal, 0).toFixed(2)
     );
 
+    const isManagerOrDirector =
+      currentUser.role === 'MANAGER' || currentUser.role === 'DIRECTOR';
+    const isSalesManager = currentUser.role === 'SALES_MANAGER';
     let status: Quotation['status'] = 'DRAFT';
+    let effectiveRequiresApproval = requiresApproval || isSalesManager;
     if (!updates.saveAsDraft) {
-      status = requiresApproval ? 'PENDING_APPROVAL' : 'APPROVED';
+      if (isManagerOrDirector) {
+        status = 'APPROVED';
+      } else if (isSalesManager) {
+        status = 'PENDING_APPROVAL';
+      } else {
+        status = requiresApproval ? 'PENDING_APPROVAL' : 'APPROVED';
+      }
     }
 
     const updated = await this.repo.update(id, {
       customerId: customer.id,
+      areaId: customer.areaId,
       customerCodeSnapshot: customer.code,
       customerNameSnapshot: customer.name,
       customerPhoneSnapshot: customer.phone,
@@ -410,21 +488,33 @@ export class QuotationService {
       validUntil: updates.validUntil || existing.validUntil,
       notes: updates.notes ?? existing.notes,
       termsAndConditions: updates.termsAndConditions ?? existing.termsAndConditions,
-      requiresApproval,
-      approvalReason: requiresApproval ? approvalReasons.join('; ') : undefined,
+      requiresApproval: effectiveRequiresApproval,
+      approvalReason: effectiveRequiresApproval
+        ? approvalReasons.join('; ') ||
+          (isSalesManager ? 'Quotations created by Sales Manager require approval by another authorized approver.' : undefined)
+        : undefined,
+      ...(status === 'APPROVED' && isManagerOrDirector
+        ? {
+            approvedById: currentUser.id,
+            approvedByName: currentUser.name,
+            approvedAt: new Date().toISOString(),
+          }
+        : {}),
     });
 
     if (status === 'PENDING_APPROVAL') {
+      const approverRole: UserRole = isSalesManager ? 'MANAGER' : 'SALES_MANAGER';
       const approvalReq = await this.approvalSvc.createApprovalRequest({
         documentType: 'QUOTATION_DISCOUNT',
         documentId: updated.id,
         documentReferenceNumber: updated.quotationNumber,
         title: `Discount Approval for ${updated.customerNameSnapshot}`,
-        description: `Quotation ${updated.quotationNumber} requires approval for discounts. ${updated.approvalReason}`,
+        description: `Quotation ${updated.quotationNumber} requires approval. ${updated.approvalReason || ''}`,
         initiatorId: currentUser.id,
         initiatorName: currentUser.name,
         initiatorRole: currentUser.role,
-        currentApproverRole: 'SALES_MANAGER',
+        currentApproverRole: approverRole,
+        targetApproverRole: approverRole,
         isSpecialScenario: true,
         specialReason: updated.approvalReason,
         status: 'PENDING',
@@ -457,16 +547,34 @@ export class QuotationService {
       throw new Error('Permission Denied: You can only submit your own draft quotations for approval.');
     }
 
+    if (currentUser.role === 'AREA_MANAGER' && currentUser.areaId) {
+      const cust = await this.customerSvc.getCustomer(quotation.customerId);
+      if (cust && cust.areaId !== currentUser.areaId) {
+        throw new Error('Permission Denied: You can only submit quotations for customers in your assigned area.');
+      }
+    }
+
+    if (currentUser.role === 'MANAGER' || currentUser.role === 'DIRECTOR') {
+      return this.repo.update(id, {
+        status: 'APPROVED',
+        approvedById: currentUser.id,
+        approvedByName: currentUser.name,
+        approvedAt: new Date().toISOString(),
+      });
+    }
+
+    const approverRole: UserRole = currentUser.role === 'SALES_MANAGER' ? 'MANAGER' : 'SALES_MANAGER';
     const approvalReq = await this.approvalSvc.createApprovalRequest({
       documentType: 'QUOTATION_DISCOUNT',
       documentId: quotation.id,
       documentReferenceNumber: quotation.quotationNumber,
       title: `Discount Approval for ${quotation.customerNameSnapshot}`,
-      description: `Quotation ${quotation.quotationNumber} total LKR ${quotation.totalAmount.toLocaleString()} submitted for manager approval. ${reason || quotation.approvalReason || ''}`,
+      description: `Quotation ${quotation.quotationNumber} total LKR ${quotation.totalAmount.toLocaleString()} submitted for ${approverRole.replace('_', ' ')} approval. ${reason || quotation.approvalReason || ''}`,
       initiatorId: currentUser.id,
       initiatorName: currentUser.name,
       initiatorRole: currentUser.role,
-      currentApproverRole: 'SALES_MANAGER',
+      currentApproverRole: approverRole,
+      targetApproverRole: approverRole,
       isSpecialScenario: true,
       specialReason: reason || quotation.approvalReason,
       status: 'PENDING',
@@ -481,7 +589,7 @@ export class QuotationService {
   }
 
   /**
-   * Finalizes and issues a draft quotation directly when within standard sales rep authority.
+   * Finalizes and issues a draft quotation directly when within standard authority.
    */
   async issueQuotation(id: string, currentUser: User): Promise<Quotation> {
     const quotation = await this.repo.getById(id);
@@ -497,8 +605,22 @@ export class QuotationService {
       throw new Error('Permission Denied: You can only issue your own draft quotations.');
     }
 
-    if (quotation.requiresApproval) {
-      throw new Error('Cannot directly issue quotation: Requested discounts exceed authority limit. Manager approval is required.');
+    if (currentUser.role === 'AREA_MANAGER' && currentUser.areaId) {
+      const cust = await this.customerSvc.getCustomer(quotation.customerId);
+      if (cust && cust.areaId !== currentUser.areaId) {
+        throw new Error('Permission Denied: You can only issue quotations for customers in your assigned area.');
+      }
+    }
+
+    if (currentUser.role === 'SALES_MANAGER') {
+      throw new Error('Quotations created by Sales Managers must be approved by another authorized approver.');
+    }
+
+    const isManagerOrDirector =
+      currentUser.role === 'MANAGER' || currentUser.role === 'DIRECTOR';
+
+    if (quotation.requiresApproval && !isManagerOrDirector) {
+      throw new Error('Cannot directly issue quotation: Requested discounts exceed customer loyalty limit. Manager approval is required.');
     }
 
     return this.repo.update(id, {
@@ -527,6 +649,11 @@ export class QuotationService {
     const canApprove = ['SALES_MANAGER', 'MANAGER', 'DIRECTOR'].includes(approverUser.role);
     if (!canApprove) {
       throw new Error(`Role ${approverUser.role} is not authorized to approve quotations.`);
+    }
+
+    // Sales Manager cannot approve their own quotation
+    if (approverUser.role === 'SALES_MANAGER' && quotation.salesRepId === approverUser.id) {
+      throw new Error('Permission Denied: A Sales Manager cannot approve their own quotation.');
     }
 
     if (quotation.approvalRequestId) {
@@ -647,9 +774,16 @@ export class QuotationService {
       );
     }
 
-    // Role check: Sales Rep can only convert quotations assigned to their territory
+    // Role check: Sales Rep can only convert quotations assigned to their territory; Area Manager only their area
     if (currentUser.role === 'SALES_REP' && quotation.salesRepId !== currentUser.id) {
       throw new Error('Permission Denied: You can only convert quotations assigned to your territory.');
+    }
+    if (currentUser.role === 'AREA_MANAGER' && currentUser.areaId) {
+      const cust = await this.customerSvc.getCustomer(quotation.customerId);
+      const qAreaId = quotation.areaId || cust?.areaId;
+      if (qAreaId && qAreaId !== currentUser.areaId) {
+        throw new Error('Permission Denied: You can only convert quotations belonging to your assigned area.');
+      }
     }
 
     // Check expiration date
