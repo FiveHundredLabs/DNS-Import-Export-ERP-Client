@@ -112,7 +112,6 @@ export function ProductTable({
                   <TableCell>
                     <div className="font-semibold text-slate-900 flex items-center gap-1.5">
                       {p.name}
-                      {p.isPromotional && <Badge variant="warning">Promo</Badge>}
                     </div>
                     <div className="font-mono text-xs text-slate-500 mt-0.5">
                       SKU: {p.sku} | Barcode: {p.barcode}

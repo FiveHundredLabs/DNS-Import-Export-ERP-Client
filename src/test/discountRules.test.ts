@@ -44,7 +44,6 @@ describe('Discount Rules Engine', () => {
       repMaxDiscountPercentage: 5,
       customerMaxDiscountPercentage: 10,
       productMaxDiscountPercentage: 15,
-      isPromotional: true,
       promotionalDiscountPercentage: 18,
     });
 
@@ -55,7 +54,6 @@ describe('Discount Rules Engine', () => {
   it('rejects negative discounts even when promotional is set', () => {
     const result = evaluateDiscount({
       requestedDiscountPercentage: -5,
-      isPromotional: true,
       promotionalDiscountPercentage: 15,
       customerMaxDiscountPercentage: 10,
       productMaxDiscountPercentage: 15,
@@ -68,7 +66,6 @@ describe('Discount Rules Engine', () => {
   it('rejects discounts > 100% even when promotional is set', () => {
     const result = evaluateDiscount({
       requestedDiscountPercentage: 110,
-      isPromotional: true,
       promotionalDiscountPercentage: 15,
       customerMaxDiscountPercentage: 10,
       productMaxDiscountPercentage: 15,

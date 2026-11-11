@@ -4,7 +4,6 @@ import { PaginatedResult, PaginationParams } from '../types/common';
 export interface ProductFilters extends PaginationParams {
   categoryId?: string;
   status?: string;
-  isPromotional?: boolean;
 }
 
 export interface IProductRepository {
