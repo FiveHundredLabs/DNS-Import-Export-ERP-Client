@@ -141,12 +141,7 @@ export function ProductDetailPage() {
                   <span className="text-slate-500">Barcode / EAN:</span>
                   <span className="font-mono font-semibold text-slate-900">{product.barcode}</span>
                 </div>
-                <div className="flex justify-between py-1.5 border-b border-slate-100">
-                  <span className="text-slate-500">Promotional Item:</span>
-                  <Badge variant={product.isPromotional ? 'warning' : 'outline'}>
-                    {product.isPromotional ? 'Yes' : 'No'}
-                  </Badge>
-                </div>
+
                 <div className="pt-2">
                   <span className="text-slate-500 block mb-1">Description:</span>
                   <p className="text-slate-700 bg-slate-50 p-2.5 rounded border border-slate-100">

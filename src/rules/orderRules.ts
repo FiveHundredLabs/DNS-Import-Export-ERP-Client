@@ -132,7 +132,6 @@ export function evaluateOrderApproval(
       repMaxDiscountPercentage: repMaxDiscount,
       customerMaxDiscountPercentage: customerMaxDisc,
       productMaxDiscountPercentage: productMaxDisc,
-      isPromotional: item.product?.isPromotional,
       promotionalDiscountPercentage: item.product?.pricing?.promotionalDiscountPercentage,
       product: item.product,
       customer,

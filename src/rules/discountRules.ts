@@ -241,7 +241,6 @@ export interface DiscountEvaluationParams {
   repMaxDiscountPercentage?: number; // Rep's personal authority limit (e.g. 5%)
   customerMaxDiscountPercentage: number; // Customer's configured limit (e.g. 10%)
   productMaxDiscountPercentage: number; // Product's configured limit (e.g. 15%)
-  isPromotional?: boolean;
   promotionalDiscountPercentage?: number;
   product?: Partial<Product> | null;
   customer?: Partial<Customer> | null;
@@ -299,9 +298,8 @@ export function evaluateDiscount(
     };
   }
 
-  // If item is promotional, promotional rate can be applied directly without special escalation
+  // If promotional rate can be applied directly without special escalation
   if (
-    params.isPromotional &&
     params.promotionalDiscountPercentage &&
     params.promotionalDiscountPercentage > 0
   ) {

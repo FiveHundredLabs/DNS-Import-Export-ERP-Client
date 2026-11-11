@@ -110,7 +110,6 @@ export class QuotationService {
       repMaxDiscountPercentage: repAuthority,
       customerMaxDiscountPercentage: customer.commercialTerms?.maxDiscountPercentage || 12,
       productMaxDiscountPercentage: product.pricing.maxDiscountPercentage || 15,
-      isPromotional: product.isPromotional,
       promotionalDiscountPercentage: product.pricing.promotionalDiscountPercentage,
       product,
       customer,
