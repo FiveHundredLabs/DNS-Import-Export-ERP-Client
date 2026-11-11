@@ -39,7 +39,6 @@ export interface Product extends BaseEntity {
   barcode?: string;
   pricing: ProductPricing;
   discountLevels?: number[]; // Up to 3 product-level discount levels ordered lowest to highest (e.g. [5, 10, 15])
-  isPromotional: boolean;
   warrantyPeriodMonths: number;
   status: ProductStatus;
   approvalStatus: ApprovalStatus;

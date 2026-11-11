@@ -255,7 +255,6 @@ export function QuotationCreateEditPage() {
         repMaxDiscountPercentage: repAuthority,
         customerMaxDiscountPercentage: selectedCustomer?.commercialTerms.maxDiscountPercentage || 12,
         productMaxDiscountPercentage: it.product.pricing.maxDiscountPercentage || 15,
-        isPromotional: it.product.isPromotional,
         promotionalDiscountPercentage: it.product.pricing.promotionalDiscountPercentage,
         product: it.product,
         customer: selectedCustomer,

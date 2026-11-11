@@ -36,7 +36,6 @@ describe('Showroom POS & Terminal Management System — 20 Required Scenarios', 
       showroomDiscountPercentage: 5, // Cashier ceiling
       taxRatePercentage: 0,
     },
-    isPromotional: false,
     warrantyPeriodMonths: 24,
     status: 'ACTIVE',
     approvalStatus: 'APPROVED',

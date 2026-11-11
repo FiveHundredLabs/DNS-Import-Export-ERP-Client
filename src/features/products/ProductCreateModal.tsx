@@ -37,7 +37,7 @@ export function ProductCreateModal({
   const [showroomDiscountPercentage, setShowroomDiscountPercentage] = useState<number>(5);
   const [showDiscountInfo, setShowDiscountInfo] = useState(false);
   const [warrantyMonths, setWarrantyMonths] = useState<number>(12);
-  const [isPromotional, setIsPromotional] = useState(false);
+
   const [requiresSerialNumber, setRequiresSerialNumber] = useState(false);
   const [discLevel1, setDiscLevel1] = useState<string>('');
   const [discLevel2, setDiscLevel2] = useState<string>('');
@@ -75,7 +75,7 @@ export function ProductCreateModal({
         discountLevels,
       },
       discountLevels,
-      isPromotional,
+
       warrantyPeriodMonths: Number(warrantyMonths),
       status: 'ACTIVE' as const,
       approvalStatus: 'APPROVED' as const,
