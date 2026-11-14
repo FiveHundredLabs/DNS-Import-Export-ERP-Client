@@ -103,6 +103,12 @@ export class MockApprovalRepository implements IApprovalRepository {
       ) {
         return true;
       }
+      if (
+        (userRole === 'MANAGER' || userRole === 'STOCK_MANAGER') &&
+        a.documentType === 'STOCK_ADJUSTMENT'
+      ) {
+        return true;
+      }
       // Domain-specific visibility for Sales
       if (
         (userRole === 'SALES_MANAGER' || userRole === 'SALES_REP' || userRole === 'AREA_MANAGER') &&
@@ -177,6 +183,7 @@ export class MockApprovalRepository implements IApprovalRepository {
       'FINANCE_MANAGER',
       'PURCHASING_MANAGER',
       'STOCK_MANAGER',
+      'MANAGER',
     ];
     if (actorRole && !authorizedApprovers.includes(actorRole)) {
       throw new Error(`Role '${actorRole}' is not authorized to act on approval requests.`);

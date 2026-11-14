@@ -11,8 +11,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../../components/ui/select';
-import { Textarea } from '../../components/ui/textarea';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table';
 import { Skeleton } from '../../components/ui/skeleton';
 import { StatCard } from '../../components/common/StatCard';
@@ -28,8 +26,6 @@ import { InventoryStatusBadge } from './InventoryStatusBadge';
 import { exportToCSV } from '../../utils/exportUtils';
 import { toast } from 'sonner';
 import { DollarSign, AlertTriangle, Package, Boxes, TrendingDown, Truck, Layers, CheckCircle2 } from 'lucide-react';
-
-type AdjustDirection = 'ADD' | 'REMOVE';
 
 interface StockRow {
   id: string;
@@ -52,7 +48,7 @@ interface StockRow {
 
 export function StockBalancePage() {
   const navigate = useNavigate();
-  const { stockBalances, loading, inventoryService } = useInventory();
+  const { stockBalances, loading } = useInventory();
   const { user, role } = useAuth();
   const isStockStaff =
     role === 'STOCK_KEEPER' ||
@@ -69,13 +65,6 @@ export function StockBalancePage() {
   const [categoryFilter, setCategoryFilter] = useState('All');
   const [locationFilter, setLocationFilter] = useState('All');
   const [lowStockOnly, setLowStockOnly] = useState(false);
-
-  // Adjustment dialog state
-  const [adjustRow, setAdjustRow] = useState<StockRow | null>(null);
-  const [adjDir, setAdjDir] = useState<AdjustDirection>('ADD');
-  const [adjQty, setAdjQty] = useState('');
-  const [adjReason, setAdjReason] = useState('');
-  const [adjProcessing, setAdjProcessing] = useState(false);
 
   // Map product sales orders
   const productOrderStats = useMemo(() => {
@@ -157,47 +146,7 @@ export function StockBalancePage() {
   const totalDmg   = filteredBalances.reduce((s, b) => s + b.damagedQuantity, 0);
 
   const handleOpenAdjust = (row: StockRow) => {
-    setAdjustRow(row);
-    setAdjDir('ADD');
-    setAdjQty('');
-    setAdjReason('');
-  };
-
-  const handleAdjustSubmit = async () => {
-    if (!adjustRow || !user) return;
-    const qty = parseInt(adjQty, 10);
-    if (isNaN(qty) || qty <= 0) {
-      toast.error('Please enter a valid quantity greater than 0');
-      return;
-    }
-    if (!adjReason.trim() || adjReason.trim().length < 5) {
-      toast.error('Reason must be at least 5 characters');
-      return;
-    }
-    if (adjDir === 'REMOVE' && qty > adjustRow.availableForSale) {
-      toast.error(`Cannot remove more than available quantity (${adjustRow.availableForSale})`);
-      return;
-    }
-    try {
-      setAdjProcessing(true);
-      const qtyDiff = adjDir === 'ADD' ? qty : -qty;
-      await inventoryService.adjustStock(
-        adjustRow.productId,
-        adjustRow.locationId,
-        adjustRow.locationType,
-        qtyDiff,
-        adjReason.trim(),
-        user.id,
-        user.name
-      );
-      toast.success(`Stock adjusted: ${adjDir === 'ADD' ? '+' : '-'}${qty} units for ${adjustRow.productName}`);
-      setAdjustRow(null);
-      // Note: In a real app, refetch would refresh balances. With singleton repo, the service updates in-memory.
-    } catch (err: any) {
-      toast.error(err.message ?? 'Failed to adjust stock');
-    } finally {
-      setAdjProcessing(false);
-    }
+    navigate('/inventory/stock-adjustments', { state: { productId: row.productId, balanceId: row.id } });
   };
 
   const getStatusInfo = (avail: number) => {
@@ -459,7 +408,7 @@ export function StockBalancePage() {
                           className="text-xs h-7 px-3"
                           onClick={() => handleOpenAdjust(b)}
                         >
-                          Adjust Stock
+                          Request Adjustment
                         </Button>
                       </div>
                     </div>
@@ -553,7 +502,7 @@ export function StockBalancePage() {
                               className="text-xs h-7 px-2"
                               onClick={() => handleOpenAdjust(b)}
                             >
-                              Adjust
+                              Request Adjustment
                             </Button>
                           </TableCell>
                         </TableRow>
@@ -567,88 +516,6 @@ export function StockBalancePage() {
         </CardContent>
       </Card>
 
-      {/* ── Stock Adjustment Dialog ─────────────────────────────────── */}
-      <Dialog open={!!adjustRow} onOpenChange={open => { if (!open) setAdjustRow(null); }}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Manual Stock Adjustment</DialogTitle>
-          </DialogHeader>
-          {adjustRow && (
-            <div className="space-y-4 py-2">
-              <div className="p-3 bg-muted rounded-lg">
-                <p className="text-sm font-semibold">{adjustRow.productName}</p>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  {adjustRow.sku} · {adjustRow.locationType} · Available: <strong>{adjustRow.availableForSale}</strong>
-                </p>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  type="button"
-                  onClick={() => setAdjDir('ADD')}
-                  className={`p-3 rounded-lg border-2 text-center transition-all ${
-                    adjDir === 'ADD'
-                      ? 'border-green-500 bg-green-50 text-green-700'
-                      : 'border-border hover:border-muted-foreground'
-                  }`}
-                >
-                  <p className="text-lg font-bold">+</p>
-                  <p className="text-sm font-medium">Add Stock</p>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setAdjDir('REMOVE')}
-                  className={`p-3 rounded-lg border-2 text-center transition-all ${
-                    adjDir === 'REMOVE'
-                      ? 'border-red-500 bg-red-50 text-red-700'
-                      : 'border-border hover:border-muted-foreground'
-                  }`}
-                >
-                  <p className="text-lg font-bold">-</p>
-                  <p className="text-sm font-medium">Remove Stock</p>
-                </button>
-              </div>
-
-              <div>
-                <label className="text-sm font-medium block mb-1.5">Quantity</label>
-                <Input
-                  type="number"
-                  min="1"
-                  placeholder="e.g. 50"
-                  value={adjQty}
-                  onChange={e => setAdjQty(e.target.value)}
-                />
-              </div>
-
-              <div>
-                <label className="text-sm font-medium block mb-1.5">
-                  Reason <span className="text-muted-foreground">(min 5 characters)</span>
-                </label>
-                <Textarea
-                  placeholder="e.g. Cycle count correction, Breakage during transit, Supplier credit note..."
-                  value={adjReason}
-                  onChange={e => setAdjReason(e.target.value)}
-                  rows={3}
-                />
-              </div>
-
-              <p className="text-xs text-muted-foreground">
-                All stock adjustments are recorded in the inventory movement log.
-              </p>
-            </div>
-          )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setAdjustRow(null)}>Cancel</Button>
-            <Button
-              onClick={handleAdjustSubmit}
-              disabled={adjProcessing}
-              className={adjDir === 'REMOVE' ? 'bg-red-600 hover:bg-red-700' : ''}
-            >
-              {adjProcessing ? 'Processing...' : `Confirm ${adjDir === 'ADD' ? 'Addition' : 'Removal'}`}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
