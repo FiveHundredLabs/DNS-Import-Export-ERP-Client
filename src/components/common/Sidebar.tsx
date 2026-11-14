@@ -42,7 +42,6 @@ import {
   Barcode,
   ArrowLeftRight,
   CheckSquare,
-  ClipboardCheck,
   Truck,
   Banknote,
   Wallet,
@@ -180,7 +179,6 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
 
   const directorInventoryItems: SidebarItem[] = [
     { id: 'inventory', name: 'Inventory Hub', path: '/inventory', icon: Boxes, category: 'inventory', exact: true },
-    { id: 'stock-adjustments', name: 'Stock Adjustments', path: '/inventory/stock-adjustments', icon: ClipboardCheck, category: 'inventory' },
     { id: 'delivery-notes', name: 'Delivery Notes (Read Only)', path: '/inventory/delivery-notes', icon: Truck, category: 'inventory' },
     { id: 'grn', name: 'GRN (Read Only)', path: '/inventory/grn', icon: Receipt, category: 'inventory' },
     { id: 'products', name: 'Product Master', path: '/products', icon: Package, category: 'inventory' },
@@ -296,7 +294,6 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   // 3. Products & Inventory
   const inventoryItems: SidebarItem[] = [
     { id: 'inventory', name: 'Inventory Hub', path: '/inventory', icon: Boxes, category: 'inventory', exact: true },
-    { id: 'stock-adjustments', name: 'Stock Adjustments', path: '/inventory/stock-adjustments', icon: ClipboardCheck, category: 'inventory', allowedRoles: ['STOCK_MANAGER', 'MANAGER'] },
     { id: 'inventory-reports-stock', name: 'Inventory Reports', path: '/reports/inventory', icon: BarChart3, category: 'inventory', allowedRoles: ['STOCK_MANAGER'] },
     { id: 'grn', name: 'GRN', path: '/inventory/grn', icon: Receipt, category: 'inventory' },
     { id: 'delivery-notes', name: 'Delivery Notes', path: '/inventory/delivery-notes', icon: Truck, category: 'inventory' },

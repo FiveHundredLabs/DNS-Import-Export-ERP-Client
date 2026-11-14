@@ -23,7 +23,6 @@ import { GRNCreateEditPage } from './features/inventory/GRNCreateEditPage';
 import { GRNDetailPage } from './features/inventory/GRNDetailPage';
 import { GRNUnitStickersPage } from './features/inventory/GRNUnitStickersPage';
 import { StockBalancePage } from './features/inventory/StockBalancePage';
-import { StockAdjustmentsPage } from './features/inventory/StockAdjustmentsPage';
 import { DamagedStockPage } from './features/inventory/DamagedStockPage';
 import { StockMovementsPage } from './features/inventory/StockMovementsPage';
 import { OrderPickingPage } from './features/inventory/OrderPickingPage';
@@ -362,14 +361,6 @@ export function App() {
           element={
             <ProtectedRoute>
               <StockBalancePage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="inventory/stock-adjustments"
-          element={
-            <ProtectedRoute>
-              <StockAdjustmentsPage />
             </ProtectedRoute>
           }
         />
