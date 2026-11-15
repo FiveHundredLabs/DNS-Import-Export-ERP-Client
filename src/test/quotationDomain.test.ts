@@ -94,16 +94,16 @@ describe('Phase 4 — Quotation Domain & Sales Foundation', () => {
       expect(quotation.totalAmount).toBe(36816);
     });
 
-    it('flags PENDING_APPROVAL and routes to Sales Manager when discount exceeds rep authority limit (5%)', async () => {
+    it('flags PENDING_APPROVAL and routes to Sales Manager when discount exceeds customer loyalty level limit', async () => {
       const quotation = await quotationSvc.createQuotation(
         {
-          customerId: 'cust-001',
+          customerId: 'cust-001', // PLATINUM -> max 15% on prod-001 ([5, 10, 15])
           salesRepId: mockSalesRepUser.id,
           items: [
             {
               productId: 'prod-001',
               quantity: 10,
-              requestedDiscountPercentage: 8, // 8% > 5% rep limit, within customer 12% and product 12%
+              requestedDiscountPercentage: 18, // 18% > 15% customer loyalty limit
             },
           ],
         },
@@ -113,7 +113,7 @@ describe('Phase 4 — Quotation Domain & Sales Foundation', () => {
       expect(quotation.status).toBe('PENDING_APPROVAL');
       expect(quotation.requiresApproval).toBe(true);
       expect(quotation.approvalRequestId).toBeDefined();
-      expect(quotation.approvalReason).toContain('exceeds standard limit');
+      expect(quotation.approvalReason).toContain('exceeds the customer\'s permitted discount level');
 
       // Verify approval request was created in approval repo
       const approvalReq = await approvalSvc.getApproval(quotation.approvalRequestId!);
@@ -133,7 +133,7 @@ describe('Phase 4 — Quotation Domain & Sales Foundation', () => {
             {
               productId: 'prod-001',
               quantity: 5,
-              requestedDiscountPercentage: 8,
+              requestedDiscountPercentage: 18,
             },
           ],
           saveAsDraft: true,
@@ -264,7 +264,7 @@ describe('Phase 4 — Quotation Domain & Sales Foundation', () => {
             {
               productId: 'prod-001',
               quantity: 20,
-              requestedDiscountPercentage: 9, // requires approval
+              requestedDiscountPercentage: 18, // requires approval (> 15%)
             },
           ],
         },
@@ -295,7 +295,7 @@ describe('Phase 4 — Quotation Domain & Sales Foundation', () => {
             {
               productId: 'prod-001',
               quantity: 20,
-              requestedDiscountPercentage: 9,
+              requestedDiscountPercentage: 18,
             },
           ],
         },
@@ -322,7 +322,7 @@ describe('Phase 4 — Quotation Domain & Sales Foundation', () => {
             {
               productId: 'prod-001',
               quantity: 20,
-              requestedDiscountPercentage: 9,
+              requestedDiscountPercentage: 18,
             },
           ],
         },
@@ -555,7 +555,7 @@ describe('Phase 4 — Quotation Domain & Sales Foundation', () => {
         {
           customerId: 'cust-001',
           salesRepId: mockSalesRepUser.id,
-          items: [{ productId: 'prod-001', quantity: 4, requestedDiscountPercentage: 9 }],
+          items: [{ productId: 'prod-001', quantity: 4, requestedDiscountPercentage: 18 }],
           saveAsDraft: true,
         },
         mockSalesRepUser
@@ -567,6 +567,133 @@ describe('Phase 4 — Quotation Domain & Sales Foundation', () => {
       await expect(
         quotationSvc.issueQuotation(draft.id, mockSalesRepUser)
       ).rejects.toThrow('Manager approval is required');
+    });
+  });
+
+  describe('6. Area Manager & Auto-Approval Rules', () => {
+    const mockAreaManagerUser: User = {
+      id: 'usr-105',
+      name: 'Nimal Bandara',
+      email: 'area.western@dnserp.com',
+      role: 'AREA_MANAGER',
+      areaId: 'area-01',
+      areaName: 'Kelaniya',
+      phone: '+94 77 567 8901',
+      isActive: true,
+    };
+
+    const mockManagerUser: User = {
+      id: 'usr-102',
+      name: 'Ruwan Wijesinghe',
+      email: 'manager@dnserp.com',
+      role: 'MANAGER',
+      phone: '+94 77 234 5678',
+      isActive: true,
+    };
+
+    it('enforces area-based customer access for AREA_MANAGER on create and list', async () => {
+      // cust-002 is in area-02 (Maharagama) -> blocked for area-01 Area Manager
+      await expect(
+        quotationSvc.createQuotation(
+          {
+            customerId: 'cust-002',
+            salesRepId: mockAreaManagerUser.id,
+            items: [{ productId: 'prod-001', quantity: 2, requestedDiscountPercentage: 5 }],
+          },
+          mockAreaManagerUser
+        )
+      ).rejects.toThrow(/outside your assigned area/i);
+
+      // cust-001 is in area-01 (Kelaniya) -> allowed
+      const qt = await quotationSvc.createQuotation(
+        {
+          customerId: 'cust-001',
+          salesRepId: mockAreaManagerUser.id,
+          items: [{ productId: 'prod-001', quantity: 2, requestedDiscountPercentage: 5 }],
+        },
+        mockAreaManagerUser
+      );
+      expect(qt.status).toBe('APPROVED');
+
+      const scopedList = await quotationSvc.listQuotations(
+        { page: 1, pageSize: 50 },
+        { userId: mockAreaManagerUser.id, role: 'AREA_MANAGER', areaId: 'area-01' }
+      );
+      expect(scopedList.data.every((q) => q.areaId === 'area-01' || q.customerId === 'cust-001')).toBe(true);
+    });
+
+    it('enforces identical loyalty-based discount approval rules for AREA_MANAGER and SALES_REP', async () => {
+      // cust-005 is in area-01 with loyaltyLevel = PREMIUM (max 10% on prod-001 [5,10,15])
+      const qtAreaMgr = await quotationSvc.createQuotation(
+        {
+          customerId: 'cust-005',
+          salesRepId: mockAreaManagerUser.id,
+          items: [{ productId: 'prod-001', quantity: 3, requestedDiscountPercentage: 15 }], // > 10%
+        },
+        mockAreaManagerUser
+      );
+      expect(qtAreaMgr.status).toBe('PENDING_APPROVAL');
+      expect(qtAreaMgr.requiresApproval).toBe(true);
+    });
+
+    it('auto-approves quotations created by MANAGER and DIRECTOR, but requires another approver for SALES_MANAGER', async () => {
+      const mgrQt = await quotationSvc.createQuotation(
+        {
+          customerId: 'cust-001',
+          salesRepId: mockManagerUser.id,
+          items: [{ productId: 'prod-001', quantity: 5, requestedDiscountPercentage: 20 }],
+        },
+        mockManagerUser
+      );
+      expect(mgrQt.status).toBe('APPROVED');
+      expect(mgrQt.approvedById).toBe(mockManagerUser.id);
+
+      const dirQt = await quotationSvc.createQuotation(
+        {
+          customerId: 'cust-001',
+          salesRepId: mockDirectorUser.id,
+          items: [{ productId: 'prod-001', quantity: 5, requestedDiscountPercentage: 25 }],
+        },
+        mockDirectorUser
+      );
+      expect(dirQt.status).toBe('APPROVED');
+      expect(dirQt.approvedById).toBe(mockDirectorUser.id);
+
+      const smQt = await quotationSvc.createQuotation(
+        {
+          customerId: 'cust-001',
+          salesRepId: mockSalesManagerUser.id,
+          items: [{ productId: 'prod-001', quantity: 5, requestedDiscountPercentage: 5 }],
+        },
+        mockSalesManagerUser
+      );
+      expect(smQt.status).toBe('PENDING_APPROVAL');
+
+      await expect(
+        quotationSvc.approveQuotation(smQt.id, mockSalesManagerUser, 'Self approval')
+      ).rejects.toThrow(/cannot approve their own quotation/i);
+
+      const approvedByMgr = await quotationSvc.approveQuotation(
+        smQt.id,
+        mockManagerUser,
+        'Approved by Manager'
+      );
+      expect(approvedByMgr.status).toBe('APPROVED');
+    });
+
+    it('computes repository-wide summary independent of current page size', async () => {
+      const summary = await quotationSvc.getQuotationSummary(
+        { page: 1, pageSize: 1 },
+        { userId: mockDirectorUser.id, role: 'DIRECTOR' }
+      );
+      const all = await quotationSvc.listQuotations(
+        { page: 1, pageSize: 100 },
+        { userId: mockDirectorUser.id, role: 'DIRECTOR' }
+      );
+      expect(summary.totalCount).toBe(all.total);
+      expect(summary.pendingApprovalCount).toBe(
+        all.data.filter((q) => q.status === 'PENDING_APPROVAL').length
+      );
     });
   });
 });

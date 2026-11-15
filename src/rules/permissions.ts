@@ -165,6 +165,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'customers:create',
     'customers:edit',
     'quotations:view',
+    'quotations:create',
     'orders:view',
     'invoices:view',
     'payments:view',

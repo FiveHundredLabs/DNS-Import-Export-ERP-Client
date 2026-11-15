@@ -6,6 +6,8 @@ import { Quotation, QuotationStatus } from '../../types/quotation';
 import { Customer } from '../../types/customer';
 import { customerService } from '../../services/CustomerService';
 import { QuotationStatusBadge } from './QuotationStatusBadge';
+import { QuotationConvertModal } from './QuotationConvertModal';
+import { PaginationControls } from '../../components/common/PaginationControls';
 import { toast } from 'sonner';
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
@@ -62,6 +64,7 @@ export function QuotationListPage() {
 
   const {
     quotations,
+    summary,
     loading,
     error,
     filters,
@@ -76,6 +79,7 @@ export function QuotationListPage() {
 
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [convertingId, setConvertingId] = useState<string | null>(null);
+  const [convertingQuotation, setConvertingQuotation] = useState<Quotation | null>(null);
 
   const handleConvertToOrder = async (q: Quotation) => {
     try {
@@ -103,6 +107,8 @@ export function QuotationListPage() {
         const res = await customerService.listCustomers(
           currentUser.role === 'SALES_REP'
             ? { assignedRepId: currentUser.id, pageSize: 100 }
+            : currentUser.role === 'AREA_MANAGER'
+            ? { areaId: currentUser.areaId, pageSize: 100 }
             : { pageSize: 100 }
         );
         setCustomers(res.data);
@@ -130,11 +136,11 @@ export function QuotationListPage() {
     setFilters({ ...filters, sortByDate: nextSort });
   };
 
-  // Metrics summary
-  const pendingCount = quotations.filter((q) => q.status === 'PENDING_APPROVAL').length;
-  const approvedCount = quotations.filter((q) => q.status === 'APPROVED').length;
-  const convertedCount = quotations.filter((q) => q.status === 'CONVERTED').length;
-  const totalPipelineValue = quotations.reduce((acc, q) => acc + q.totalAmount, 0);
+  // Repository-wide KPI summary across all matching quotations (not only current page)
+  const totalQuotesCount = summary.totalCount;
+  const pendingCount = summary.pendingApprovalCount;
+  const convertedCount = summary.convertedCount;
+  const totalPipelineValue = summary.totalPipelineValue;
 
   return (
     <div className="space-y-6">
@@ -170,7 +176,20 @@ export function QuotationListPage() {
             </span>
           </div>
           <span className="text-xs font-medium text-primary bg-white px-2.5 py-0.5 rounded border border-primary-border">
-            Rep Max Discount Limit: 5%
+            Loyalty-Based Discount Rules
+          </span>
+        </div>
+      ) : currentUser.role === 'AREA_MANAGER' ? (
+        <div className="rounded-lg bg-emerald-50 border border-emerald-200 p-3 text-xs flex items-center justify-between text-emerald-900">
+          <div className="flex items-center gap-2">
+            <UserCheck className="h-4 w-4 text-emerald-700" />
+            <span>
+              <strong>Area Scoped View:</strong> Showing quotations for customers in your assigned area (
+              <span className="font-semibold">{currentUser.areaName || currentUser.areaId || 'Assigned Area'}</span>).
+            </span>
+          </div>
+          <span className="text-xs font-medium text-emerald-700 bg-white px-2.5 py-0.5 rounded border border-emerald-200">
+            Loyalty-Based Discount Rules
           </span>
         </div>
       ) : (
@@ -189,7 +208,7 @@ export function QuotationListPage() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <StatCard
           title="Total Quotes"
-          value={total}
+          value={totalQuotesCount}
           icon={FileSpreadsheet}
           variant="indigo"
         />
@@ -534,10 +553,64 @@ export function QuotationListPage() {
                   </TableBody>
                 </Table>
               </div>
+
+              {/* Pagination Controls */}
+              <div className="border-t border-slate-100 px-4 py-2 bg-slate-50/40">
+                <PaginationControls
+                  currentPage={filters.page || 1}
+                  totalItems={total}
+                  pageSize={filters.pageSize || 15}
+                  onPageChange={(page) => setFilters({ ...filters, page })}
+                  onPageSizeChange={(pageSize) => setFilters({ ...filters, page: 1, pageSize })}
+                  pageSizeOptions={[10, 15, 25, 50]}
+                  label="quotations"
+                />
+              </div>
             </>
           )}
         </CardContent>
       </Card>
+
+      {/* Mobile Conversion Modal */}
+      {convertingQuotation && (
+        <QuotationConvertModal
+          isOpen={!!convertingQuotation}
+          onClose={() => setConvertingQuotation(null)}
+          quotation={convertingQuotation}
+          onConfirmConvert={async (details) => {
+            const order = await convertToSalesOrder(convertingQuotation.id, details);
+            toast.success(
+              `Quotation ${convertingQuotation.quotationNumber} successfully converted to Sales Order ${order.orderNumber}!`,
+              {
+                action: {
+                  label: 'View Order',
+                  onClick: () => navigate(`/orders/${order.id || order.orderNumber}`),
+                },
+              }
+            );
+            return {
+              orderNumber: order.orderNumber,
+              quotationId: convertingQuotation.id,
+              quotationNumber: convertingQuotation.quotationNumber,
+              customerId: convertingQuotation.customerId,
+              customerNameSnapshot: convertingQuotation.customerNameSnapshot,
+              salesRepId: convertingQuotation.salesRepId,
+              salesRepNameSnapshot: convertingQuotation.salesRepNameSnapshot,
+              items: convertingQuotation.items,
+              subtotal: convertingQuotation.subtotal,
+              discountAmount: convertingQuotation.discountAmount,
+              taxAmount: convertingQuotation.taxAmount,
+              totalAmount: convertingQuotation.totalAmount,
+              taxEnabled: convertingQuotation.taxEnabled,
+              taxRatePercentage: convertingQuotation.taxRatePercentage,
+              deliveryAddress: details.deliveryAddress,
+              deliveryDate: details.deliveryDate,
+              customerPoNumber: details.customerPoNumber,
+              convertedAt: new Date().toISOString(),
+            };
+          }}
+        />
+      )}
     </div>
   );
 }

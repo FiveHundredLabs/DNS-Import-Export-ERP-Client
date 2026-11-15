@@ -5,7 +5,11 @@ export type DeliveryNoteStatus =
   | 'DELIVERED'
   | 'REJECTION_PENDING_APPROVAL'
   | 'REJECTION_APPROVED'
-  | 'REJECTION_DECLINED';
+  | 'REJECTION_DECLINED'
+  | 'PARTIALLY_REJECTED'
+  | 'REJECTED'
+  | 'CANCELLATION_PENDING'
+  | 'CANCELLED';
 
 export type RejectionReasonCode =
   | 'DAMAGED'
@@ -23,6 +27,17 @@ export interface RejectedUnitDetail {
   barcode: string;
   serialNumber?: string;
   reason: RejectionReasonCode | string;
+  condition?: 'REUSABLE' | 'DAMAGED';
+  notes?: string;
+}
+
+export interface ReturnedUnitDetail {
+  productId: string;
+  productName: string;
+  sku: string;
+  barcode: string;
+  condition: 'REUSABLE' | 'DAMAGED';
+  reason?: RejectionReasonCode | string;
   notes?: string;
 }
 
@@ -37,14 +52,20 @@ export interface DeliveryNoteRejectionApprovalRequest {
   submittedAt: string;
   status: 'PENDING' | 'APPROVED' | 'DECLINED';
   totalUnits: number;
+  totalDeliveredUnits?: number;
+  totalDamagedUnits?: number;
+  totalReusableUnits?: number;
   items: {
     productId: string;
     productName: string;
     sku: string;
     rejectedBarcodes: string[];
+    damagedBarcodes?: string[];
+    reusableBarcodes?: string[];
     reason: RejectionReasonCode | string;
     notes?: string;
   }[];
+  returnedUnitsDetail?: ReturnedUnitDetail[];
   reviewedBy?: string;
   reviewedById?: string;
   reviewedAt?: string;
@@ -57,12 +78,16 @@ export interface DeliveryNoteItem {
   productName: string;
   sku: string;
   uom: string;
-  invoicedQuantity: number;
+  invoicedQuantity?: number;
   dispatchedQuantity: number;
   unitBarcodes: string[]; // Scanned Code-128 unit barcodes allocated to this delivery
   acceptedQuantity: number;
   rejectedQuantity: number;
+  damagedQuantity?: number;
+  reusableQuantity?: number;
   rejectedUnitBarcodes: string[]; // Scanned barcodes of units returned/rejected by customer
+  damagedUnitBarcodes?: string[];
+  reusableUnitBarcodes?: string[];
   rejectionReason?: RejectionReasonCode | string;
   rejectionNotes?: string;
 }
@@ -88,20 +113,34 @@ export interface DeliveryNote {
   notes?: string;
   status: DeliveryNoteStatus;
   items: DeliveryNoteItem[];
-  totalInvoicedUnits: number;
+  totalInvoicedUnits?: number;
   totalDispatchedUnits: number;
   totalAcceptedUnits: number;
   totalRejectedUnits: number;
+  totalDamagedUnits?: number;
+  totalReusableUnits?: number;
+
   // Stock Keeper rejection submission
   rejectionSubmittedBy?: string;
   rejectionSubmittedAt?: string;
   rejectionNotes?: string;
+
   // Supervisor / Manager Approval
   rejectionApprovedBy?: string;
   rejectionApprovedAt?: string;
   rejectionApprovalRemarks?: string;
   rejectionApprovalRequest?: DeliveryNoteRejectionApprovalRequest;
   rejectedUnitsDetail?: RejectedUnitDetail[];
+  returnedUnitsDetail?: ReturnedUnitDetail[];
+
+  // Cancellation governance
+  cancellationRequestedBy?: string;
+  cancellationRequestedAt?: string;
+  cancellationReason?: string;
+  cancellationApprovedBy?: string;
+  cancellationApprovedAt?: string;
+  cancellationApprovalRemarks?: string;
+
   // Customer sign-off
   customerSignatureName?: string;
   customerSignedAt?: string;
@@ -144,8 +183,27 @@ export interface SubmitRejectionPayload {
   rejectedItems: {
     productId: string;
     rejectedBarcodes: string[];
+    damagedBarcodes?: string[];
+    reusableBarcodes?: string[];
     reason: RejectionReasonCode | string;
     notes?: string;
+  }[];
+  returnedUnitsDetail?: ReturnedUnitDetail[];
+  notes?: string;
+  submittedBy: string;
+}
+
+export interface SubmitDeliveryOutcomePayload {
+  deliveryNoteId: string;
+  deliveredUnitIds: string[];
+  returnedUnits: ReturnedUnitDetail[];
+  productSummary: {
+    productId: string;
+    dispatchedQuantity: number;
+    deliveredQuantity: number;
+    returnedQuantity: number;
+    damagedQuantity: number;
+    reusableQuantity: number;
   }[];
   notes?: string;
   submittedBy: string;
