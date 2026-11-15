@@ -62,6 +62,7 @@ export type Permission =
   | 'inventory:grn_approve'
   | 'inventory:pick_issue'
   | 'inventory:damaged_recover'
+  | 'inventory:stock_adjustment'
   | 'invoices:view'
   | 'invoices:create'
   | 'payments:view'

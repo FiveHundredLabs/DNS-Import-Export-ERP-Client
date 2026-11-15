@@ -16,6 +16,7 @@ export class InventoryService {
         lastUpdated: new Date().toISOString()
       };
     }
+
     balance.availableQuantity += qtyDiff;
     await this.repo.saveBalance(balance);
 
@@ -32,6 +33,18 @@ export class InventoryService {
       reason,
       timestamp: new Date().toISOString()
     });
+  }
+
+  async applyApprovedAdjustment(
+    productId: string,
+    locationId: string,
+    locationType: any,
+    qtyDiff: number,
+    reason: string,
+    actorId: string,
+    actorName: string
+  ) {
+    return this.adjustStock(productId, locationId, locationType, qtyDiff, reason, actorId, actorName);
   }
 
   async getAllStockBalances(filters?: any): Promise<StockBalance[]> {
