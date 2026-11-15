@@ -25,6 +25,7 @@ import {
   Eye,
   X,
   ShieldAlert,
+  Ban,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -65,7 +66,8 @@ export const DeliveryNoteListPage: React.FC = () => {
         const q = search.toLowerCase().trim();
         return (
           n.deliveryNoteNumber.toLowerCase().includes(q) ||
-          n.invoiceNumber.toLowerCase().includes(q) ||
+          n.orderNumber?.toLowerCase().includes(q) ||
+          n.invoiceNumber?.toLowerCase().includes(q) ||
           n.customerName.toLowerCase().includes(q) ||
           n.customerCode.toLowerCase().includes(q) ||
           n.driverName.toLowerCase().includes(q) ||
@@ -81,7 +83,7 @@ export const DeliveryNoteListPage: React.FC = () => {
   const inTransitCount = notes.filter((n) => n.status === 'DISPATCHED').length;
   const deliveredCount = notes.filter((n) => n.status === 'DELIVERED').length;
   const pendingApprovalCount = notes.filter(
-    (n) => n.status === 'REJECTION_PENDING_APPROVAL'
+    (n) => n.status === 'REJECTION_PENDING_APPROVAL' || n.status === 'CANCELLATION_PENDING'
   ).length;
   const totalRejectedUnitsCount = notes.reduce(
     (sum, n) => sum + (n.totalRejectedUnits || 0),
@@ -102,6 +104,20 @@ export const DeliveryNoteListPage: React.FC = () => {
           <Badge className="bg-emerald-100 text-emerald-800 border-emerald-300 font-bold text-[11px] gap-1">
             <CheckCircle2 className="h-3 w-3" />
             Delivered & Accepted
+          </Badge>
+        );
+      case 'PARTIALLY_REJECTED':
+        return (
+          <Badge className="bg-amber-100 text-amber-800 border-amber-300 font-bold text-[11px] gap-1">
+            <AlertTriangle className="h-3 w-3" />
+            Partially Delivered
+          </Badge>
+        );
+      case 'REJECTED':
+        return (
+          <Badge className="bg-rose-100 text-rose-800 border-rose-300 font-bold text-[11px] gap-1">
+            <X className="h-3 w-3" />
+            All Units Rejected
           </Badge>
         );
       case 'REJECTION_PENDING_APPROVAL':
@@ -125,6 +141,20 @@ export const DeliveryNoteListPage: React.FC = () => {
             Rejection Declined
           </Badge>
         );
+      case 'CANCELLATION_PENDING':
+        return (
+          <Badge className="bg-amber-100 text-amber-900 border-amber-300 font-bold text-[11px] gap-1 animate-pulse">
+            <Ban className="h-3 w-3 text-amber-700" />
+            Cancellation Pending
+          </Badge>
+        );
+      case 'CANCELLED':
+        return (
+          <Badge className="bg-slate-100 text-slate-700 border-slate-300 font-bold text-[11px] gap-1">
+            <Ban className="h-3 w-3 text-slate-500" />
+            Cancelled
+          </Badge>
+        );
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
@@ -137,7 +167,11 @@ export const DeliveryNoteListPage: React.FC = () => {
       name: 'Amal Perera',
       role: 'STOCK_KEEPER',
     };
-    await deliveryNoteService.submitRejection(selectedNoteForRejection.id, payload, user as any);
+    if (payload.productSummary) {
+      await deliveryNoteService.submitDeliveryOutcome(payload, user as any);
+    } else {
+      await deliveryNoteService.submitRejection(selectedNoteForRejection.id, payload, user as any);
+    }
     await fetchNotes();
   };
 
@@ -146,7 +180,7 @@ export const DeliveryNoteListPage: React.FC = () => {
       {/* Canonical Page Header */}
       <PageHeader
         title="Warehouse Delivery Notes"
-        subtitle="Physical goods dispatch notes created from draft invoices with scanned unit barcodes and customer sign-off."
+        subtitle="Physical goods dispatch notes created from approved sales orders with scanned unit barcodes and customer sign-off."
         badge={
           <Badge
             variant="outline"
@@ -190,7 +224,7 @@ export const DeliveryNoteListPage: React.FC = () => {
         />
 
         <StatCard
-          title="Rejection Approvals"
+          title="Pending Approvals"
           value={pendingApprovalCount}
           icon={ShieldAlert}
           variant="amber"
@@ -250,7 +284,7 @@ export const DeliveryNoteListPage: React.FC = () => {
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            Pending Approval ({pendingApprovalCount})
+            Pending Review ({pendingApprovalCount})
           </button>
         </div>
 
@@ -260,7 +294,7 @@ export const DeliveryNoteListPage: React.FC = () => {
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search DN #, Invoice #, customer, driver..."
+            placeholder="Search DN #, Order #, customer, driver..."
             className="text-xs pl-9 h-9"
           />
         </div>
@@ -273,11 +307,11 @@ export const DeliveryNoteListPage: React.FC = () => {
             <TableHeader className="bg-slate-50 border-b border-slate-200">
               <TableRow>
                 <TableHead className="w-32">Delivery Note #</TableHead>
-                <TableHead className="w-28">Invoice Ref</TableHead>
+                <TableHead className="w-28">Order Ref</TableHead>
                 <TableHead>Customer</TableHead>
                 <TableHead>Driver & Vehicle</TableHead>
                 <TableHead className="w-24 text-center">Dispatched Units</TableHead>
-                <TableHead className="w-24 text-center">Accepted / Rejected</TableHead>
+                <TableHead className="w-28 text-center">Accepted / Returned</TableHead>
                 <TableHead className="w-24">Date</TableHead>
                 <TableHead className="w-36 text-center">Status</TableHead>
                 <TableHead className="w-36 text-right">Actions</TableHead>
@@ -298,10 +332,13 @@ export const DeliveryNoteListPage: React.FC = () => {
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => navigate('/inventory/delivery-notes/new')}
-                      className="text-xs mt-1"
+                      onClick={() => {
+                        setSearch('');
+                        setStatusFilter('ALL');
+                      }}
+                      className="text-xs"
                     >
-                      + Create Delivery Note from Draft Invoice
+                      Clear Filters
                     </Button>
                   </TableCell>
                 </TableRow>
@@ -309,104 +346,82 @@ export const DeliveryNoteListPage: React.FC = () => {
                 filteredNotes.map((note) => (
                   <TableRow
                     key={note.id}
-                    className="border-b border-slate-200 hover:bg-slate-50/70 transition-colors"
+                    className="border-b border-slate-200 hover:bg-slate-50/60 transition-colors"
                   >
-                    {/* DN Number */}
                     <TableCell className="font-mono font-bold text-slate-900">
-                      <button
-                        type="button"
-                        onClick={() => navigate(`/inventory/delivery-notes/${note.id}`)}
-                        className="text-primary hover:underline"
-                      >
-                        {note.deliveryNoteNumber}
-                      </button>
+                      {note.deliveryNoteNumber}
                     </TableCell>
 
-                    {/* Invoice Reference */}
-                    <TableCell className="font-mono text-slate-600 font-semibold">
-                      {note.invoiceNumber}
+                    <TableCell className="font-mono text-primary font-semibold">
+                      {note.orderNumber || note.invoiceNumber || 'SO-Direct'}
                     </TableCell>
 
-                    {/* Customer */}
                     <TableCell>
-                      <div className="font-bold text-slate-900 line-clamp-1">
-                        {note.customerName}
-                      </div>
-                      <div className="text-[11px] text-slate-500 font-mono">
+                      <div className="font-semibold text-slate-900">{note.customerName}</div>
+                      <span className="font-mono text-[10px] text-slate-400">
                         {note.customerCode}
-                      </div>
+                      </span>
                     </TableCell>
 
-                    {/* Driver & Vehicle */}
                     <TableCell>
-                      <div className="font-medium text-slate-900">{note.driverName}</div>
-                      <div className="text-[11px] text-slate-500 font-mono uppercase">
+                      <div className="font-medium text-slate-800">{note.driverName}</div>
+                      <span className="font-mono text-[10px] text-slate-500 uppercase">
                         {note.vehicleNumber}
-                      </div>
+                      </span>
                     </TableCell>
 
-                    {/* Dispatched Units */}
-                    <TableCell className="text-center font-bold text-slate-900">
-                      {note.totalDispatchedUnits} Units
+                    <TableCell className="text-center font-bold font-mono text-slate-900">
+                      {note.totalDispatchedUnits}
                     </TableCell>
 
-                    {/* Accepted vs Rejected */}
-                    <TableCell className="text-center">
-                      <div className="flex items-center justify-center gap-1.5 text-[11px] font-semibold">
-                        <span className="text-emerald-700">{note.totalAcceptedUnits} OK</span>
-                        {note.totalRejectedUnits > 0 && (
-                          <span className="text-rose-700 font-bold bg-rose-50 px-1 py-0.2 rounded border border-rose-200">
-                            {note.totalRejectedUnits} REJ
-                          </span>
-                        )}
-                      </div>
+                    <TableCell className="text-center font-mono">
+                      <span className="text-emerald-700 font-bold">{note.totalAcceptedUnits}</span>
+                      <span className="text-slate-400 mx-1">/</span>
+                      <span
+                        className={
+                          note.totalRejectedUnits > 0 ? 'text-rose-700 font-bold' : 'text-slate-400'
+                        }
+                      >
+                        {note.totalRejectedUnits}
+                      </span>
                     </TableCell>
 
-                    {/* Dispatch Date */}
-                    <TableCell className="text-slate-600 font-medium">
-                      {note.dispatchDate}
-                    </TableCell>
+                    <TableCell className="font-mono text-slate-600">{note.dispatchDate}</TableCell>
 
-                    {/* Status Badge */}
-                    <TableCell className="text-center">
-                      {getStatusBadge(note.status)}
-                    </TableCell>
+                    <TableCell className="text-center">{getStatusBadge(note.status)}</TableCell>
 
-                    {/* Action Buttons */}
                     <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => navigate(`/inventory/delivery-notes/${note.id}`)}
-                          className="h-7 w-7 p-0 text-slate-600 hover:text-slate-900"
-                          title="View Details"
-                        >
-                          <Eye className="h-3.5 w-3.5" />
-                        </Button>
-
+                      <div className="flex items-center justify-end gap-1.5">
                         <Button
                           size="sm"
                           variant="ghost"
                           onClick={() => setSelectedNoteForPrint(note)}
-                          className="h-7 w-7 p-0 text-slate-600 hover:text-primary"
-                          title="Print Delivery Slip"
+                          title="Print Delivery Note"
+                          className="h-8 w-8 p-0 text-slate-500 hover:text-slate-900"
                         >
-                          <Printer className="h-3.5 w-3.5" />
+                          <Printer className="h-3.5 w-3.5 text-primary" />
                         </Button>
 
                         {note.status === 'DISPATCHED' && (
                           <Button
                             size="sm"
-                            variant="ghost"
+                            variant="outline"
                             onClick={() => setSelectedNoteForRejection(note)}
-                            className="h-7 px-2 text-[11px] text-rose-600 hover:bg-rose-50 hover:text-rose-700"
-                            title="Process Customer Rejections"
+                            className="h-7 text-[11px] gap-1 px-2 border-rose-300 text-rose-700 hover:bg-rose-50"
                           >
-                            <AlertTriangle className="h-3 w-3 mr-1" />
-                            Rejection
+                            <AlertTriangle className="h-3 w-3 text-rose-600" />
+                            Return
                           </Button>
                         )}
+
+                        <Button
+                          size="sm"
+                          onClick={() => navigate(`/inventory/delivery-notes/${note.id}`)}
+                          className="h-7 text-[11px] px-2.5 bg-slate-900 hover:bg-slate-800 text-white font-medium"
+                        >
+                          <Eye className="h-3 w-3 mr-1" />
+                          View
+                        </Button>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -417,7 +432,7 @@ export const DeliveryNoteListPage: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* ── Printable Modal ── */}
+      {/* ── Modal: Printable A4 Document ── */}
       {selectedNoteForPrint && (
         <PrintableDeliveryNote
           note={selectedNoteForPrint}
@@ -425,7 +440,7 @@ export const DeliveryNoteListPage: React.FC = () => {
         />
       )}
 
-      {/* ── Customer Rejection Processing Modal ── */}
+      {/* ── Modal: Customer Rejection / Delivery Outcome ── */}
       {selectedNoteForRejection && (
         <CustomerRejectionModal
           note={selectedNoteForRejection}
