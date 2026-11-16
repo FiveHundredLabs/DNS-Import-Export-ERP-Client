@@ -331,6 +331,18 @@ export function canAccessRoute(role: UserRole, path: string): boolean {
   if (path === '/reports/sales/pos-day-end') {
     return ['DIRECTOR', 'MANAGER', 'SALES_MANAGER', 'SHOWROOM_MANAGER'].includes(role);
   }
+  // Sales Collection Tracking Report is accessible to Sales Reps, Area Managers, Sales Managers, Managers, Directors, Finance Officers & Finance Managers
+  if (path === '/reports/sales/collections') {
+    return [
+      'SALES_REP',
+      'AREA_MANAGER',
+      'SALES_MANAGER',
+      'MANAGER',
+      'DIRECTOR',
+      'FINANCE_OFFICER',
+      'FINANCE_MANAGER',
+    ].includes(role);
+  }
   if (path.startsWith('/reports')) {
     // Area Manager: NO access to reports
     if (role === 'AREA_MANAGER') {
