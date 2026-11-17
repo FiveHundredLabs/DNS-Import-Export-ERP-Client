@@ -299,12 +299,66 @@ export class PaymentService {
       );
     }
 
-    // 1. Update Payment status
+    // 1. Post GL Journal Entry atomically
+    let journalEntryId: string | undefined;
+    try {
+      const { financeRepository } = await import('../features/finance/api');
+      const accounts = await financeRepository.getAccounts();
+      const arAcc = accounts.find((a) => a.code === '1020');
+
+      let debitAcc: any;
+      if (payment.paymentMethod === 'CHEQUE') {
+        debitAcc = accounts.find((a) => a.code === '1018') || accounts.find((a) => a.name.toLowerCase().includes('cheque'));
+      } else {
+        // CASH or BANK_TRANSFER
+        debitAcc =
+          accounts.find((a) => a.code === '1010') ||
+          accounts.find((a) => a.code === '1040') ||
+          accounts.find((a) => a.name.toLowerCase().includes('bank') || a.name.toLowerCase().includes('cash'));
+      }
+
+      if (arAcc && debitAcc) {
+        const journal = await financeRepository.createJournalEntry({
+          date: payment.collectedAt ? payment.collectedAt.slice(0, 10) : new Date().toISOString().slice(0, 10),
+          description:
+            payment.paymentMethod === 'CHEQUE'
+              ? `Cheque Collection: ${payment.receiptNumber} (${payment.customerName} - Chq #${payment.chequeNumber || 'N/A'})`
+              : `Payment Receipt: ${payment.receiptNumber} (${payment.customerName} via ${payment.paymentMethod})`,
+          reference: payment.receiptNumber,
+          source: 'PAYMENT',
+          lines: [
+            {
+              accountId: debitAcc.id,
+              debit: payment.amount,
+              credit: 0,
+              description:
+                payment.paymentMethod === 'CHEQUE'
+                  ? `PDC Cheque #${payment.chequeNumber || ''} deposited to vault for ${payment.receiptNumber}`
+                  : `Funds received via ${payment.paymentMethod} for ${payment.receiptNumber}`,
+            },
+            {
+              accountId: arAcc.id,
+              debit: 0,
+              credit: payment.amount,
+              customerId: payment.customerId,
+              customerName: payment.customerName,
+              description: `A/R Settlement for ${payment.customerName} (Receipt #${payment.receiptNumber})`,
+            },
+          ],
+        });
+        journalEntryId = journal.id;
+      }
+    } catch (glErr) {
+      console.warn('Payment GL posting error:', glErr);
+    }
+
+    // 2. Update Payment status & GL reference
     const approvedPayment = await this.repo.update(payment.id, {
       status: 'APPROVED',
       approvedById: currentUser.id,
       approvedByName: currentUser.name,
       approvedAt: new Date().toISOString(),
+      journalEntryId,
     });
 
     // 2. Apply allocations to invoices
@@ -430,6 +484,7 @@ export class PaymentService {
             chequeDate: payment.chequeDate || new Date().toISOString().slice(0, 10),
             receivedDate: payment.collectedAt ? payment.collectedAt.slice(0, 10) : new Date().toISOString().slice(0, 10),
             amount: payment.amount,
+            journalEntryId,
             notes: `Auto-registered via Payment approval for receipt ${payment.receiptNumber}`,
           });
         }
@@ -543,6 +598,165 @@ export class PaymentService {
     }
 
     return rejected;
+  }
+
+  /**
+   * Reverses an approved Cash or Bank Transfer payment (clerical error correction).
+   * Note: Cheques cannot be reversed here; they must follow the PDC Vault dishonour/return workflow.
+   */
+  async reversePayment(
+    paymentId: string,
+    currentUser: User,
+    reason: string
+  ): Promise<Payment> {
+    if (!reason || !reason.trim()) {
+      throw new Error('A reason is required to reverse a payment.');
+    }
+
+    const payment = await this.repo.getById(paymentId);
+    if (!payment) {
+      throw new Error(`Payment record not found: ${paymentId}`);
+    }
+
+    if (payment.status !== 'APPROVED') {
+      throw new Error(`Cannot reverse payment with status '${payment.status}'. Only APPROVED payments can be reversed.`);
+    }
+
+    if (payment.paymentMethod === 'CHEQUE') {
+      throw new Error(
+        'Cheque payments cannot be reversed directly through payment reversal. Please use the PDC Vault bounce/dishonour workflow.'
+      );
+    }
+
+    const canReverse = ['FINANCE_MANAGER', 'DIRECTOR', 'MANAGER'].includes(currentUser.role);
+    if (!canReverse) {
+      throw new Error(
+        `Role ${currentUser.role} is not authorized to reverse payments. Requires Finance Manager or Director authorization.`
+      );
+    }
+
+    // 1. Post GL Reversal Journal Entry
+    let reversalJournalId: string | undefined;
+    try {
+      const { financeRepository } = await import('../features/finance/api');
+      const accounts = await financeRepository.getAccounts();
+      const arAcc = accounts.find((a) => a.code === '1020');
+      const liquidAcc =
+        accounts.find((a) => a.code === '1010') ||
+        accounts.find((a) => a.code === '1040') ||
+        accounts.find((a) => a.name.toLowerCase().includes('bank') || a.name.toLowerCase().includes('cash'));
+
+      if (arAcc && liquidAcc) {
+        const journal = await financeRepository.createJournalEntry({
+          date: new Date().toISOString().slice(0, 10),
+          description: `Payment Reversal: ${payment.receiptNumber} (${reason.trim()})`,
+          reference: `REV-${payment.receiptNumber}`,
+          source: 'PAYMENT',
+          lines: [
+            {
+              accountId: arAcc.id,
+              debit: payment.amount,
+              credit: 0,
+              customerId: payment.customerId,
+              customerName: payment.customerName,
+              description: `Reinstate A/R for reversed receipt ${payment.receiptNumber}`,
+            },
+            {
+              accountId: liquidAcc.id,
+              debit: 0,
+              credit: payment.amount,
+              description: `Reversal of liquid funds for receipt ${payment.receiptNumber}`,
+            },
+          ],
+        });
+        reversalJournalId = journal.id;
+      }
+    } catch (glErr) {
+      console.warn('Payment reversal GL posting error:', glErr);
+    }
+
+    // 2. Re-open allocated invoices
+    if (payment.invoiceAllocations && payment.invoiceAllocations.length > 0) {
+      for (const alloc of payment.invoiceAllocations) {
+        const inv = await this.invoiceSvc.getInvoiceById(alloc.invoiceId);
+        if (inv) {
+          const allocAmount = alloc.allocatedAmount ?? (alloc as any).amount ?? 0;
+          const newPaidAmount = Math.max(0, inv.paidAmount - allocAmount);
+          const newBalanceAmount = Math.min(inv.totalAmount, inv.balanceAmount + allocAmount);
+          const newStatus = calculateInvoiceStatus(
+            inv.totalAmount,
+            newPaidAmount,
+            inv.dueDate,
+            undefined,
+            inv.collectedAmount || 0
+          );
+
+          await this.invoiceSvc.updateInvoice(inv.id, {
+            paidAmount: newPaidAmount,
+            balanceAmount: newBalanceAmount,
+            status: newStatus,
+          });
+        }
+      }
+    }
+
+    // 3. Reinstate Customer Master financials
+    try {
+      const customer = await this.customerSvc.getCustomer(payment.customerId);
+      if (customer) {
+        const newTotalOutstanding = customer.financials.totalOutstanding + payment.amount;
+        const newAvailableCredit = Math.max(0, customer.commercialTerms.creditLimit - newTotalOutstanding);
+
+        // Recalculate customer aging
+        const customerInvoices = await this.invoiceSvc.getInvoicesByCustomer(customer.id);
+        let totalOverdue = 0;
+        let totalNearDue = 0;
+        let totalCurrent = 0;
+
+        const now = new Date();
+        const sevenDaysAhead = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+        for (const inv of customerInvoices) {
+          if (inv.balanceAmount > 0) {
+            const isOverdue = isPastDueDate(inv.dueDate, now);
+            if (isOverdue) {
+              totalOverdue += inv.balanceAmount;
+            } else {
+              const [y, m, d] = inv.dueDate.split('-').map(Number);
+              const due = new Date(y, m - 1, d, 23, 59, 59, 999);
+              if (due <= sevenDaysAhead) {
+                totalNearDue += inv.balanceAmount;
+              } else {
+                totalCurrent += inv.balanceAmount;
+              }
+            }
+          }
+        }
+
+        await this.customerSvc.updateCustomer(customer.id, {
+          financials: {
+            ...customer.financials,
+            totalOutstanding: newTotalOutstanding,
+            availableCredit: newAvailableCredit,
+            overdue: totalOverdue,
+            nearDue: totalNearDue,
+            currentDue: totalCurrent,
+          },
+        });
+      }
+    } catch (err) {
+      console.warn(`Customer financials update error on reversal for customer ${payment.customerId}:`, err);
+    }
+
+    // 4. Update Payment status to REVERSED
+    return await this.repo.update(payment.id, {
+      status: 'REVERSED',
+      reversalJournalId,
+      reversedById: currentUser.id,
+      reversedByName: currentUser.name,
+      reversedAt: new Date().toISOString(),
+      reversalReason: reason.trim(),
+    });
   }
 
   async printReceipt(payment: Payment, remainingCustomerBalance?: number): Promise<boolean> {

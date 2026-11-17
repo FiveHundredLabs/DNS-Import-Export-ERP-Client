@@ -72,7 +72,9 @@ export class InvoiceService {
 
     const deliveryNotes = await this.deliveryNoteSvc.getByOrderId(order.id);
     const existingInvoices = await this.repo.getByOrderId(order.id);
-    const activeInvoices = existingInvoices.filter((inv) => inv.status !== 'CANCELLED');
+    const activeInvoices = existingInvoices.filter(
+      (inv) => inv.status !== 'CANCELLED' && inv.status !== 'DRAFT'
+    );
 
     const taxConfig = this.taxSvc.getTaxConfig();
     const effectiveTaxRate = taxConfig.taxEnabled ? taxConfig.taxRate : 0;
@@ -345,6 +347,21 @@ export class InvoiceService {
       };
     });
 
+    // Calculate total landed cost for COGS recognition
+    let calculatedCostTotal = 0;
+    for (const it of invoiceItems) {
+      let unitCost = 0;
+      if (it.batchId) {
+        const batch = batchInventoryService.getBatchById(it.batchId);
+        if (batch && batch.unitCost > 0) unitCost = batch.unitCost;
+      }
+      if (unitCost === 0) {
+        const prod = await productService.getProduct(it.productId);
+        unitCost = prod?.pricing.costPrice || 0;
+      }
+      calculatedCostTotal += Math.round(unitCost * it.quantity * 100) / 100;
+    }
+
     const now = new Date();
     const issueDateStr = now.toISOString().split('T')[0];
 
@@ -474,6 +491,84 @@ export class InvoiceService {
         }
       } catch (err) {
         console.warn(`Could not update customer financials for customer ${order.customerId}:`, err);
+      }
+
+      // Post GL Journal Entry for Revenue & COGS recognition
+      try {
+        const { financeRepository } = await import('../features/finance/api');
+        const accounts = await financeRepository.getAccounts();
+        const arAcc = accounts.find((a) => a.code === '1020');
+        const revAcc = accounts.find((a) => a.code === '4010');
+        const vatAcc = accounts.find((a) => a.code === '2020');
+        const cogsAcc = accounts.find((a) => a.code === '5010');
+        const invAcc =
+          accounts.find((a) => a.code === '1100') ||
+          accounts.find((a) => a.code === '1030') ||
+          accounts.find((a) => a.name.toLowerCase().includes('inventory'));
+
+        if (arAcc && revAcc) {
+          const netRevenue = Math.round((calculatedSubtotal - calculatedDiscountTotal) * 100) / 100;
+          const taxAmt = Math.round(calculatedTaxTotal * 100) / 100;
+          const grossAr = Math.round((netRevenue + taxAmt) * 100) / 100;
+
+          const lines: any[] = [
+            {
+              accountId: arAcc.id,
+              debit: grossAr,
+              credit: 0,
+              customerId: order.customerId,
+              customerName: order.customerNameSnapshot,
+              description: `Sales Invoice ${newInvoice.invoiceNumber} (${order.customerNameSnapshot})`,
+            },
+            {
+              accountId: revAcc.id,
+              debit: 0,
+              credit: netRevenue,
+              description: `Revenue from Invoice ${newInvoice.invoiceNumber}`,
+            },
+          ];
+
+          if (taxAmt > 0 && vatAcc) {
+            lines.push({
+              accountId: vatAcc.id,
+              debit: 0,
+              credit: taxAmt,
+              description: `Output VAT (18%) on Invoice ${newInvoice.invoiceNumber}`,
+            });
+          }
+
+          if (calculatedCostTotal > 0 && cogsAcc && invAcc) {
+            lines.push({
+              accountId: cogsAcc.id,
+              debit: calculatedCostTotal,
+              credit: 0,
+              description: `COGS for Invoice ${newInvoice.invoiceNumber}`,
+            });
+            lines.push({
+              accountId: invAcc.id,
+              debit: 0,
+              credit: calculatedCostTotal,
+              description: `Inventory relief for Invoice ${newInvoice.invoiceNumber}`,
+            });
+          }
+
+          const journal = await financeRepository.createJournalEntry({
+            date: issueDateStr,
+            description: `Sales Invoice: ${newInvoice.invoiceNumber} - ${order.customerNameSnapshot}`,
+            reference: newInvoice.invoiceNumber,
+            source: 'SALES',
+            lines,
+          });
+
+          newInvoice.journalEntryId = journal.id;
+          newInvoice.totalCostAmount = calculatedCostTotal;
+          await this.repo.update(newInvoice.id, {
+            journalEntryId: journal.id,
+            totalCostAmount: calculatedCostTotal,
+          });
+        }
+      } catch (glErr) {
+        console.warn('Invoice GL posting error:', glErr);
       }
     }
 
@@ -663,7 +758,9 @@ export class InvoiceService {
     if (!order) throw new Error(`Sales Order not found: ${orderId}`);
 
     const existingInvoices = await this.repo.getByOrderId(order.id);
-    const activeInvoices = existingInvoices.filter((inv) => inv.status !== 'CANCELLED');
+    const activeInvoices = existingInvoices.filter(
+      (inv) => inv.status !== 'CANCELLED' && inv.status !== 'DRAFT'
+    );
 
     const lines = order.items.map((it) => {
       const targetQty = it.approvedQuantity > 0 ? it.approvedQuantity : it.orderedQuantity;
