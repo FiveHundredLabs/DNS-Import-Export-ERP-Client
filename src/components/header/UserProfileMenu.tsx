@@ -48,10 +48,13 @@ export function UserProfileMenu({ className }: UserProfileMenuProps) {
     };
   }, [isOpen]);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     setIsOpen(false);
-    logout();
-    navigate('/login', { replace: true });
+    try {
+      await logout();
+    } finally {
+      navigate('/login', { replace: true });
+    }
   };
 
   if (!currentUser) return null;

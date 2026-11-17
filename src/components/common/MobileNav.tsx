@@ -80,10 +80,13 @@ export function MobileNav() {
     navigate(path);
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     setMoreOpen(false);
-    logout();
-    navigate('/login');
+    try {
+      await logout();
+    } finally {
+      navigate('/login', { replace: true });
+    }
   };
 
   return (

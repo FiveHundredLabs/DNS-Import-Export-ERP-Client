@@ -2,41 +2,37 @@ import { useState, useEffect, useCallback } from 'react';
 import { User, UserRole, Permission } from '../types/auth';
 import { authService } from '../services/AuthService';
 import { hasPermission, canAccessRoute } from '../rules/permissions';
-import { MOCK_USERS } from '../mock/mockUsers';
 
 export function useAuth() {
   const [currentUser, setCurrentUser] = useState<User | null>(() => authService.getCurrentUser());
+  const [isInitializing, setIsInitializing] = useState(true);
 
   useEffect(() => {
-    return authService.subscribe((user) => {
+    const unsubscribe = authService.subscribe((user) => {
       setCurrentUser(user ? { ...user } : null);
     });
+
+    void authService.restoreSession().finally(() => setIsInitializing(false));
+
+    return unsubscribe;
   }, []);
 
   const switchRole = useCallback((role: UserRole) => {
-    const updated = authService.switchRole(role);
-    setCurrentUser({ ...updated });
-    return updated;
+    return authService.switchRole(role);
   }, []);
 
   const loginAs = useCallback((userId: string) => {
-    const updated = authService.loginAs(userId);
-    setCurrentUser({ ...updated });
-    return updated;
+    return authService.loginAs(userId);
   }, []);
 
-  const loginWithEmail = useCallback((email: string, password?: string) => {
-    const updated = authService.loginWithEmail(email, password);
-    setCurrentUser({ ...updated });
-    return updated;
+  const loginWithEmail = useCallback(async (email: string, password: string) => {
+    return authService.loginWithEmail(email, password);
   }, []);
 
-  const logout = useCallback(() => {
-    authService.logout();
-    setCurrentUser(null);
+  const logout = useCallback(async () => {
+    await authService.logout();
   }, []);
 
-  const activeUser: User = currentUser || MOCK_USERS[0];
   const role: UserRole = currentUser ? currentUser.role : 'DIRECTOR';
 
   const checkPermission = useCallback(
@@ -56,10 +52,11 @@ export function useAuth() {
   );
 
   return {
-    currentUser: currentUser || activeUser,
-    user: currentUser || activeUser,
+    currentUser: currentUser as User,
+    user: currentUser as User,
     rawUser: currentUser,
     isAuthenticated: currentUser !== null,
+    isInitializing,
     role,
     switchRole,
     loginAs,

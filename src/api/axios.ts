@@ -132,7 +132,7 @@ function redirectForError(
   }
 }
 
-async function refreshAccessToken(): Promise<string> {
+export async function refreshAccessToken(): Promise<string> {
   if (!refreshPromise) {
     refreshPromise = refreshClient
       .post<ApiSuccessResponse<{ accessToken: string }>>('/auth/refresh')
