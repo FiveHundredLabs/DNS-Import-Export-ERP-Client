@@ -417,7 +417,7 @@ export function LoginPage() {
 
         {/* Company credit */}
         <p className="absolute bottom-4 text-center text-[11px] font-normal tracking-wide text-white/50 z-20 select-none">
-          Developed and Maintained by FiveHundred Labs (Pvt) Ltd
+           Developed and Maintain by FiveHundred Labs (Pvt) Ltd
         </p>
       </section>
     </main>
