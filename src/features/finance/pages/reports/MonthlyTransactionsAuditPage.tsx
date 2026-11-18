@@ -16,6 +16,7 @@ import { Card } from '../../../../components/ui/card';
 import { Badge } from '../../../../components/ui/badge';
 import { Button } from '../../../../components/ui/button';
 import { Input } from '../../../../components/ui/input';
+import { TableLoadingSkeleton } from '../../../../components/common/LoadingSkeleton';
 
 export type TransactionOriginFilter = 'ALL' | 'AUTOMATED' | 'MANUAL';
 
@@ -139,7 +140,7 @@ export function getAffectedTablesForJournal(journal: JournalEntry): AffectedTabl
 }
 
 export function MonthlyTransactionsAuditPage() {
-  const { journals } = useFinanceLedger();
+  const { journals, loading } = useFinanceLedger();
 
   const currentDate = new Date();
   const currentYear = currentDate.getFullYear();
@@ -411,7 +412,10 @@ export function MonthlyTransactionsAuditPage() {
       </div>
 
       {/* Transactions Table */}
-      <Card className="overflow-hidden border-slate-200 bg-white shadow-xs">
+      {loading ? (
+        <TableLoadingSkeleton rows={10} cols={9} />
+      ) : (
+        <Card className="overflow-hidden border-slate-200 bg-white shadow-xs">
         <div className="border-b border-slate-200 bg-slate-50 px-4 py-2.5 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="text-xs font-semibold text-slate-800">
@@ -705,6 +709,7 @@ export function MonthlyTransactionsAuditPage() {
           </table>
         </div>
       </Card>
+      )}
     </div>
   );
 }

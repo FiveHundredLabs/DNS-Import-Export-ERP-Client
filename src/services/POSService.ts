@@ -32,7 +32,6 @@ import {
 import { MockPOSRepository } from '../repositories/mock/MockPOSRepository';
 import { MockInventoryRepository } from '../repositories/mock/MockInventoryRepository';
 import { MockProductRepository } from '../repositories/mock/MockProductRepository';
-import { MOCK_PRODUCTS } from '../mock/mockProducts';
 
 export interface CheckoutItemInput {
   productId: string;
@@ -926,17 +925,6 @@ export class POSService {
         } else if (!name || unitPrice === undefined) {
           throw new Error(`Product "${item.productId}" not found in Product Master.`);
         }
-      } else {
-        const prod = MOCK_PRODUCTS.find((p) => p.id === item.productId);
-        if (prod) {
-          name = name || prod.name;
-          sku = sku || prod.sku;
-          barcode = barcode || prod.barcode;
-          unitPrice = unitPrice ?? prod.pricing.currentSellingPrice;
-          maxDiscount = prod.pricing.maxDiscountPercentage;
-          showroomDiscount = prod.pricing.showroomDiscountPercentage ?? 5;
-          taxRate = taxRate || (prod.pricing.taxRatePercentage || 0);
-        }
       }
 
       if (!name || unitPrice === undefined) {
@@ -1352,8 +1340,3 @@ export const posService = new POSService(
   mockProductRepositoryForPOS,
   printerService
 );
-
-// Seed initial showroom stock for mock products in the singleton instance
-for (const p of MOCK_PRODUCTS) {
-  posService.seedShowroomStock(p.id, Math.min(50, p.stockOnHand || 50));
-}

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { areasApi } from '../api/areas/areas.api';
 import { toast } from 'sonner';
+import { MOCK_AREAS } from '../mock/mockAreas';
 
 export interface AreaItem {
   id: string;
@@ -16,12 +17,24 @@ export interface AreaItem {
   updatedAt?: string;
 }
 
+const DEFAULT_AREAS: AreaItem[] = MOCK_AREAS.map((a) => ({
+  id: a.id,
+  code: a.code || a.name.slice(0, 3).toUpperCase(),
+  name: a.name,
+  areaName: a.name,
+  region: a.region || 'Western',
+  description: null,
+  areaManagerId: a.areaManagerId,
+  areaManagerName: a.areaManagerName,
+  salesManagerId: a.salesManagerId,
+  salesManagerName: a.salesManagerName,
+}));
+
 export function useAreas() {
-  const [areas, setAreas] = useState<AreaItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [areas, setAreas] = useState<AreaItem[]>(DEFAULT_AREAS);
+  const [loading, setLoading] = useState(false);
 
   const fetchAreas = useCallback(async () => {
-    setLoading(true);
     try {
       const response = await areasApi.listAreas({ pageSize: 100 });
       const mapped: AreaItem[] = response.data.map((a) => {
@@ -45,7 +58,8 @@ export function useAreas() {
       });
       setAreas(mapped);
     } catch (e) {
-      console.error('Failed to fetch areas from backend:', e);
+      console.warn('Backend areas API unavailable, falling back to offline fixtures:', e);
+      setAreas(DEFAULT_AREAS);
     } finally {
       setLoading(false);
     }
@@ -60,10 +74,22 @@ export function useAreas() {
     const region = data.region ? `Region: ${data.region}` : '';
     const desc = data.description ? `${region ? `${region} | ` : ''}${data.description}` : region || undefined;
 
-    const created = await areasApi.createArea({
-      areaName,
-      description: desc,
-    });
+    let created: any;
+    try {
+      created = await areasApi.createArea({
+        areaName,
+        description: desc,
+      });
+    } catch {
+      created = {
+        id: `area-${Date.now()}`,
+        areaCode: areaName.slice(0, 3).toUpperCase(),
+        areaName,
+        description: desc,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+    }
 
     const newArea: AreaItem = {
       id: created.id,

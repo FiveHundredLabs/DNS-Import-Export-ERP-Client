@@ -27,9 +27,11 @@ import {
 import { Card } from '../../../components/ui/card';
 import { Badge } from '../../../components/ui/badge';
 import { Button } from '../../../components/ui/button';
+import { DashboardSkeleton } from '../../../components/common/LoadingSkeleton';
 
 export function FinanceDashboardPage() {
-  const { accounts, journals, getProfitLoss, getBalanceSheet } = useFinanceLedger();
+  const { accounts, journals, getProfitLoss, getBalanceSheet, loading } = useFinanceLedger();
+  const [kpiLoading, setKpiLoading] = useState(true);
   const [netProfit, setNetProfit] = useState<number>(0);
   const [totalAssets, setTotalAssets] = useState<number>(0);
   const [totalLiabilities, setTotalLiabilities] = useState<number>(0);
@@ -37,6 +39,7 @@ export function FinanceDashboardPage() {
 
   useEffect(() => {
     async function loadKpis() {
+      setKpiLoading(true);
       try {
         const [pnl, bs] = await Promise.all([getProfitLoss(), getBalanceSheet()]);
         setNetProfit(pnl.netOperatingProfit);
@@ -45,6 +48,8 @@ export function FinanceDashboardPage() {
         setTotalEquity(bs.totalEquity);
       } catch {
         // Handled
+      } finally {
+        setKpiLoading(false);
       }
     }
     loadKpis();
@@ -183,6 +188,22 @@ export function FinanceDashboardPage() {
       color: 'bg-violet-50 text-violet-700 border-violet-200',
     },
   ];
+
+  if (loading || kpiLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Finance & Accounting Command Hub</h1>
+            <p className="text-sm text-slate-500 mt-1">
+              Real-time double-entry general ledger, sub-ledger reconciliation, automated cash verification, and financial reporting.
+            </p>
+          </div>
+        </div>
+        <DashboardSkeleton />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

@@ -1,9 +1,6 @@
 import { GRN } from '../../../types/inventory';
-import { MOCK_GRNS } from '../../../mock/mockInventory';
 import { MockGRNRepository } from '../../../repositories/mock/MockGRNRepository';
-import { MOCK_PRODUCTS } from '../../../mock/mockProducts';
 import { financeRepository } from '../api';
-import { DEFAULT_SUPPLIERS } from '../api/mock/MockFinanceRepository';
 import {
   SupplierAdvance,
   SupplierDebitNote,
@@ -475,25 +472,11 @@ class AccountsPayableService {
   getHistoricalPurchasePrice(supplierIdOrName: string, productId: string): number {
     const sQuery = (supplierIdOrName || '').toLowerCase().trim();
 
-    // 1. Check Supplier Master
-    const supplier = DEFAULT_SUPPLIERS.find(
-      (s) =>
-        s.id.toLowerCase() === sQuery ||
-        s.code.toLowerCase() === sQuery ||
-        s.name.toLowerCase().includes(sQuery) ||
-        (sQuery.includes('schneider') && s.id === 'sup-1') ||
-        (sQuery.includes('kelani') && s.id === 'sup-2')
-    );
-    if (supplier?.historicalPrices?.[productId]) {
-      return supplier.historicalPrices[productId];
-    }
-
-    // 2. Check previous posted bills for this supplier
+    // 1. Check previous posted bills for this supplier
     const previousBills = this.bills.filter(
       (b) =>
         b.supplierId.toLowerCase() === sQuery ||
-        b.supplierName.toLowerCase().includes(sQuery) ||
-        (supplier && b.supplierId === supplier.id)
+        b.supplierName.toLowerCase().includes(sQuery)
     );
     for (const bill of previousBills) {
       const match = bill.lineItems.find((li) => li.productId === productId);
@@ -502,9 +485,7 @@ class AccountsPayableService {
       }
     }
 
-    // 3. Fallback to product catalogue default cost price
-    const product = MOCK_PRODUCTS.find((p) => p.id === productId);
-    return product?.pricing.costPrice || 0;
+    return 0;
   }
 
   /**
@@ -627,15 +608,7 @@ class AccountsPayableService {
    */
   getAvailableGRNs(): GRN[] {
     const repoList = MockGRNRepository.getInstance().getAllSync();
-    const existingIds = new Set(repoList.map((g) => g.id));
-    const combined = [...repoList];
-    for (const mg of MOCK_GRNS) {
-      if (!existingIds.has(mg.id)) {
-        combined.push(mg as GRN);
-      }
-    }
-
-    return combined
+    return repoList
       .map((g) => {
         const overrideStatus = this.grnStatuses[g.id];
         if (overrideStatus) {

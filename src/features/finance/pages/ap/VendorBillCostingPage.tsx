@@ -11,7 +11,6 @@ import { Badge } from '../../../../components/ui/badge';
 import { Card } from '../../../../components/ui/card';
 import { formatCurrency, formatDate } from '../../../../utils/formatters';
 import { cn } from '../../../../utils/cn';
-import { MOCK_PRODUCTS } from '../../../../mock/mockProducts';
 import { PrintableGRN, CostedPriceItemInfo } from '../../../inventory/PrintableGRN';
 import Decimal from 'decimal.js';
 import {
@@ -235,8 +234,7 @@ export function VendorBillCostingPage() {
       setOtherChargesAmount(0);
 
       const rows: ProductRowState[] = existingBill.lineItems.map((item, idx) => {
-        const prod = MOCK_PRODUCTS.find((p) => p.id === item.productId || p.sku === item.sku);
-        const currentPrice = prod?.pricing?.currentSellingPrice || Math.round(item.unitCost * 1.35);
+        const currentPrice = (item as any).currentSellingPrice || Math.round(item.unitCost * 1.35);
         return {
           id: item.id || `line-${idx}`,
           productId: item.productId,
@@ -268,8 +266,7 @@ export function VendorBillCostingPage() {
           item.productId
         );
         const actualCost = histPrice > 0 ? histPrice : (item.unitCostSnapshot || 0);
-        const prod = MOCK_PRODUCTS.find((p) => p.id === item.productId || p.sku === item.skuSnapshot);
-        const currentPrice = prod?.pricing?.currentSellingPrice || Math.round(actualCost * 1.35);
+        const currentPrice = (item as any).currentSellingPrice || Math.round(actualCost * 1.35);
 
         return {
           id: `line-${idx}`,

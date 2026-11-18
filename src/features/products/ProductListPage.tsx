@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useProducts } from '../../hooks/useProducts';
+import { useDebounce } from '../../hooks/useDebounce';
 import { ProductTable } from './ProductTable';
 import { ProductCreateModal } from './ProductCreateModal';
 import { ProductPriceProposalModal } from './ProductPriceProposalModal';
@@ -26,6 +27,7 @@ export function ProductListPage() {
   const location = useLocation();
   const { hasPermission } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
+  const debouncedSearch = useDebounce(searchTerm, 350);
   const [selectedCategory, setSelectedCategory] = useState('');
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [createCategoryModalOpen, setCreateCategoryModalOpen] = useState(false);
@@ -45,9 +47,12 @@ export function ProductListPage() {
     setFilters,
   } = useProducts();
 
+  useEffect(() => {
+    setFilters((prev) => ({ ...prev, search: debouncedSearch || undefined, page: 1 }));
+  }, [debouncedSearch, setFilters]);
+
   const handleSearch = (q: string) => {
     setSearchTerm(q);
-    setFilters((prev) => ({ ...prev, search: q, page: 1 }));
   };
 
   const handleCategoryChange = (catId: string) => {

@@ -395,7 +395,10 @@ export function canAccessRoute(role: UserRole, path: string): boolean {
   if (path.startsWith('/audit')) {
     return hasPermission(role, 'audit:view');
   }
-  if (path.startsWith('/areas') || path.startsWith('/teams')) {
+  if (path.startsWith('/teams') || path.startsWith('/users')) {
+    return role === 'DIRECTOR' || role === 'MANAGER';
+  }
+  if (path.startsWith('/areas')) {
     return (
       role === 'DIRECTOR' ||
       role === 'MANAGER' ||

@@ -3,7 +3,7 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { usePurchaseOrders } from '../../hooks/usePurchaseOrders';
 import { useFinanceLedger } from '../finance/hooks/useFinanceLedger';
 import { purchaseOrderService } from '../../services/PurchaseOrderService';
-import { MOCK_PRODUCTS } from '../../mock/mockProducts';
+import { useProducts } from '../../hooks/useProducts';
 import { formatCurrency } from '../../utils/formatters';
 import {
   ShoppingCart,
@@ -60,6 +60,7 @@ export function PurchaseOrderCreateEditPage() {
   const isEdit = Boolean(id);
   const { purchaseOrders, createPO, updatePO } = usePurchaseOrders();
   const { suppliers } = useFinanceLedger();
+  const { products } = useProducts({ page: 1, pageSize: 200 });
 
   // Form states
   const [selectedSupplierId, setSelectedSupplierId] = useState<string>(initialSupplierId || '');
@@ -185,7 +186,7 @@ export function PurchaseOrderCreateEditPage() {
 
   // Line helpers
   const handleProductChange = (lineId: string, productId: string) => {
-    const prod = MOCK_PRODUCTS.find((p) => p.id === productId);
+    const prod = products.find((p) => p.id === productId);
     if (!prod) return;
 
     // Check if supplier has negotiated historical price
@@ -476,7 +477,7 @@ export function PurchaseOrderCreateEditPage() {
                           className="w-full h-8 text-xs rounded border border-slate-300 bg-white px-2 focus:ring-1 focus:ring-slate-400"
                         >
                           <option value="">Select Catalog Product...</option>
-                          {MOCK_PRODUCTS.map((prod) => (
+                          {products.map((prod) => (
                             <option key={prod.id} value={prod.id}>
                               {prod.sku} - {prod.name}
                             </option>

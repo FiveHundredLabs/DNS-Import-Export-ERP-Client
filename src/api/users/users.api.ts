@@ -1,5 +1,13 @@
-import { apiGetPaginated, apiGet } from '../client';
-import { UserSummary, ListUsersParams, PaginatedUsersResponse } from './users.types';
+import { apiGetPaginated, apiGet, apiPost, apiPatch, apiDelete } from '../client';
+import {
+  UserSummary,
+  ListUsersParams,
+  PaginatedUsersResponse,
+  CreateUserPayload,
+  UpdateUserPayload,
+  ChangeUserRolePayload,
+  ChangeUserStatusPayload,
+} from './users.types';
 
 export const usersApi = {
   listUsers: async (params?: ListUsersParams, signal?: AbortSignal): Promise<PaginatedUsersResponse> => {
@@ -28,5 +36,25 @@ export const usersApi = {
 
   getUserById: async (id: string, signal?: AbortSignal): Promise<UserSummary> => {
     return apiGet<UserSummary>(`/users/${id}`, { signal });
+  },
+
+  createUser: async (payload: CreateUserPayload): Promise<UserSummary> => {
+    return apiPost<UserSummary>('/users', payload);
+  },
+
+  updateUser: async (id: string, payload: UpdateUserPayload): Promise<UserSummary> => {
+    return apiPatch<UserSummary>(`/users/${id}`, payload);
+  },
+
+  changeUserRole: async (id: string, payload: ChangeUserRolePayload): Promise<UserSummary> => {
+    return apiPatch<UserSummary>(`/users/${id}/role`, payload);
+  },
+
+  changeUserStatus: async (id: string, payload: ChangeUserStatusPayload): Promise<UserSummary> => {
+    return apiPatch<UserSummary>(`/users/${id}/status`, payload);
+  },
+
+  deleteUser: async (id: string): Promise<void> => {
+    return apiDelete<void>(`/users/${id}`);
   },
 };

@@ -20,56 +20,7 @@ interface CommissionLedgerItem {
   accrualDate: string;
 }
 
-const MOCK_COMMISSION_ACCRUALS: CommissionLedgerItem[] = [
-  {
-    id: 'comm-acc-1',
-    repId: 'usr-106',
-    repName: 'Kasun Wickramasinghe',
-    period: '2026-09',
-    orderNumber: 'SO-DLR-COL-001-1001',
-    saleValue: 3250000.0,
-    ratePercentage: 3.0,
-    accruedAmount: 97500.0,
-    status: 'ACCRUED',
-    accrualDate: '2026-09-10',
-  },
-  {
-    id: 'comm-acc-2',
-    repId: 'usr-108',
-    repName: 'Dinesh Rathnayake',
-    period: '2026-09',
-    orderNumber: 'SO-DLR-NEG-002-1004',
-    saleValue: 1500000.0,
-    ratePercentage: 3.5,
-    accruedAmount: 52500.0,
-    status: 'ACCRUED',
-    accrualDate: '2026-09-15',
-  },
-  {
-    id: 'comm-acc-3',
-    repId: 'usr-109',
-    repName: 'Pradeep Alwis',
-    period: '2026-09',
-    orderNumber: 'SO-DLR-GAL-003-1006',
-    saleValue: 750000.0,
-    ratePercentage: 2.0,
-    accruedAmount: 15000.0,
-    status: 'ACCRUED',
-    accrualDate: '2026-09-18',
-  },
-  {
-    id: 'comm-acc-4',
-    repId: 'usr-110',
-    repName: 'Chaminda Silva',
-    period: '2026-09',
-    orderNumber: 'SO-DLR-KND-004-0992',
-    saleValue: 650000.0,
-    ratePercentage: 3.0,
-    accruedAmount: 19500.0,
-    status: 'PAID',
-    accrualDate: '2026-09-02',
-  },
-];
+const COMMISSION_ACCRUALS: CommissionLedgerItem[] = [];
 
 export function FinanceCommissionsPage() {
   const { accounts } = useFinanceLedger();
@@ -81,7 +32,7 @@ export function FinanceCommissionsPage() {
   }, [accounts]);
 
   const filteredAccruals = useMemo(() => {
-    return MOCK_COMMISSION_ACCRUALS.filter((item) => {
+    return COMMISSION_ACCRUALS.filter((item) => {
       if (statusFilter !== 'ALL' && item.status !== statusFilter) return false;
       if (!search.trim()) return true;
       const q = search.toLowerCase();
@@ -94,7 +45,7 @@ export function FinanceCommissionsPage() {
   }, [search, statusFilter]);
 
   const totalAccruedUnpaid = useMemo(() => {
-    return MOCK_COMMISSION_ACCRUALS.filter((i) => i.status === 'ACCRUED').reduce(
+    return COMMISSION_ACCRUALS.filter((i) => i.status === 'ACCRUED').reduce(
       (sum, i) => sum + i.accruedAmount,
       0
     );

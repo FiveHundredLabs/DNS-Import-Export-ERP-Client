@@ -70,205 +70,9 @@ export interface ApproveReceiptOptions {
 
 const AR_RECEIPTS_STORAGE_KEY = 'dns_finance_ar_receipts_queue';
 
-const INITIAL_AR_RECEIPTS: ARReceiptItem[] = [
-  {
-    id: 'rcpt-401',
-    receiptNumber: 'REC-2026-0491',
-    customerName: 'Lanka Electrical & Hardware Superstore',
-    customerCode: 'DLR-COL-001',
-    customerId: 'cust-001',
-    collectorName: 'Kasun Wickramasinghe (Sales Rep)',
-    collectedAt: '2026-09-24T14:30:00.000Z',
-    paymentMethod: 'BANK_TRANSFER',
-    amount: 3835000.0,
-    status: 'PENDING_APPROVAL',
-    attachmentUrl: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&w=600&q=80',
-  },
-  {
-    id: 'rcpt-402',
-    receiptNumber: 'REC-2026-0492',
-    customerName: 'Muthurajawela Engineering Enterprises',
-    customerCode: 'DLR-NEG-002',
-    customerId: 'cust-002',
-    collectorName: 'Dinesh Rathnayake (Sales Rep)',
-    collectedAt: '2026-09-25T09:15:00.000Z',
-    paymentMethod: 'CASH',
-    amount: 212400.0,
-    status: 'PENDING_APPROVAL',
-    attachmentUrl: 'https://images.unsplash.com/photo-1559526324-4b87b5e36e44?auto=format&fit=crop&w=600&q=80',
-  },
-  {
-    id: 'rcpt-403',
-    receiptNumber: 'REC-2026-0493',
-    customerName: 'Southern Solar & Electric Centre',
-    customerCode: 'DLR-GAL-003',
-    customerId: 'cust-003',
-    collectorName: 'Pradeep Alwis (Sales Rep)',
-    collectedAt: '2026-09-25T11:00:00.000Z',
-    paymentMethod: 'CHEQUE',
-    chequeNumber: 'CHQ-772910',
-    drawerBank: 'Commercial Bank of Ceylon',
-    chequeDate: new Date().toISOString().slice(0, 10),
-    amount: 531000.0,
-    status: 'PENDING_APPROVAL',
-    attachmentUrl: 'https://images.unsplash.com/photo-1580519542036-c47de6196ba5?auto=format&fit=crop&w=600&q=80',
-  },
-  {
-    id: 'rcpt-404',
-    receiptNumber: 'REC-2026-0480',
-    customerName: 'Kandy Industrial Power Systems',
-    customerCode: 'DLR-KND-004',
-    customerId: 'cust-004',
-    collectorName: 'Chaminda Silva (Sales Rep)',
-    collectedAt: '2026-09-22T10:00:00.000Z',
-    paymentMethod: 'BANK_TRANSFER',
-    amount: 885000.0,
-    status: 'APPROVED',
-    attachmentUrl: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&w=600&q=80',
-    approvedAt: '2026-09-22T15:30:00.000Z',
-  },
-  {
-    id: 'rcpt-405',
-    receiptNumber: 'REC-2026-0494',
-    customerName: 'Lanka Electrical & Hardware Superstore',
-    customerCode: 'DLR-COL-001',
-    customerId: 'cust-001',
-    collectorName: 'Kasun Wickramasinghe (Sales Rep)',
-    collectedAt: '2026-09-26T16:00:00.000Z',
-    paymentMethod: 'CHEQUE',
-    chequeNumber: 'CHQ-884021',
-    drawerBank: 'Sampath Bank PLC',
-    chequeDate: '2026-10-25',
-    amount: 1200000.0,
-    status: 'PENDING_APPROVAL',
-    attachmentUrl: 'https://images.unsplash.com/photo-1580519542036-c47de6196ba5?auto=format&fit=crop&w=600&q=80',
-  },
-  {
-    id: 'rcpt-406',
-    receiptNumber: 'REC-2026-0495',
-    customerName: 'Southern Solar & Electric Centre',
-    customerCode: 'DLR-GAL-003',
-    customerId: 'cust-003',
-    collectorName: 'Pradeep Alwis (Sales Rep)',
-    collectedAt: '2026-09-27T10:30:00.000Z',
-    paymentMethod: 'CASH',
-    amount: 150000.0,
-    status: 'PENDING_APPROVAL',
-    attachmentUrl: 'https://images.unsplash.com/photo-1559526324-4b87b5e36e44?auto=format&fit=crop&w=600&q=80',
-  },
-];
+const INITIAL_AR_RECEIPTS: ARReceiptItem[] = [];
 
-const MOCK_OPEN_INVOICES: AROpenInvoice[] = [
-  {
-    id: 'inv-001',
-    invoiceNumber: 'INV-2026-0035',
-    date: '2026-08-10',
-    customerId: 'cust-001',
-    customerName: 'Lanka Electrical & Hardware Superstore',
-    originalAmount: 1500000.0,
-    balanceDue: 1500000.0,
-    items: [
-      {
-        productId: 'prod-001',
-        productName: 'Schneider Acti9 32A Double Pole MCB',
-        sku: 'DNS-MCB-32A-2P',
-        quantity: 300,
-        unitPrice: 3250.0,
-        unitCost: 2200.0,
-        taxRate: 0.18,
-      },
-      {
-        productId: 'prod-002',
-        productName: 'Schneider Acti9 63A Triple Pole MCB',
-        sku: 'DNS-MCB-63A-3P',
-        quantity: 50,
-        unitPrice: 8400.0,
-        unitCost: 5800.0,
-        taxRate: 0.18,
-      },
-    ],
-  },
-  {
-    id: 'inv-002',
-    invoiceNumber: 'INV-2026-0039',
-    date: '2026-08-25',
-    customerId: 'cust-001',
-    customerName: 'Lanka Electrical & Hardware Superstore',
-    originalAmount: 2000000.0,
-    balanceDue: 1800000.0,
-    items: [
-      {
-        productId: 'prod-001',
-        productName: 'Hybrid Solar Inverter 5kW Pure Sine',
-        sku: 'INV-5KW-HYB',
-        quantity: 25,
-        unitPrice: 60000.0,
-        unitCost: 42000.0,
-        taxRate: 0.18,
-      },
-    ],
-  },
-  {
-    id: 'inv-003',
-    invoiceNumber: 'INV-2026-0042',
-    date: '2026-09-05',
-    customerId: 'cust-001',
-    customerName: 'Lanka Electrical & Hardware Superstore',
-    originalAmount: 1200000.0,
-    balanceDue: 1200000.0,
-    items: [
-      {
-        productId: 'prod-002',
-        productName: 'Schneider Acti9 63A Triple Pole MCB',
-        sku: 'DNS-MCB-63A-3P',
-        quantity: 120,
-        unitPrice: 8400.0,
-        unitCost: 5800.0,
-        taxRate: 0.18,
-      },
-    ],
-  },
-  {
-    id: 'inv-004',
-    invoiceNumber: 'INV-2026-0045',
-    date: '2026-09-12',
-    customerId: 'cust-002',
-    customerName: 'Muthurajawela Engineering Enterprises',
-    originalAmount: 212400.0,
-    balanceDue: 212400.0,
-    items: [
-      {
-        productId: 'prod-001',
-        productName: 'Schneider Acti9 32A Double Pole MCB',
-        sku: 'DNS-MCB-32A-2P',
-        quantity: 50,
-        unitPrice: 3250.0,
-        unitCost: 2200.0,
-        taxRate: 0.18,
-      },
-    ],
-  },
-  {
-    id: 'inv-005',
-    invoiceNumber: 'INV-2026-0048',
-    date: '2026-09-18',
-    customerId: 'cust-003',
-    customerName: 'Southern Solar & Electric Centre',
-    originalAmount: 600000.0,
-    balanceDue: 531000.0,
-    items: [
-      {
-        productId: 'prod-002',
-        productName: 'MPPT Solar Charge Controller 60A',
-        sku: 'MPPT-60A-150V',
-        quantity: 12,
-        unitPrice: 38000.0,
-        unitCost: 26500.0,
-        taxRate: 0.18,
-      },
-    ],
-  },
-];
+const INITIAL_OPEN_INVOICES: AROpenInvoice[] = [];
 
 class ARCollectionService {
   private receipts: ARReceiptItem[] = [];
@@ -289,7 +93,7 @@ class ARCollectionService {
     } catch {
       this.receipts = JSON.parse(JSON.stringify(INITIAL_AR_RECEIPTS));
     }
-    this.openInvoices = JSON.parse(JSON.stringify(MOCK_OPEN_INVOICES));
+    this.openInvoices = JSON.parse(JSON.stringify(INITIAL_OPEN_INVOICES));
   }
 
   private save() {
@@ -716,7 +520,7 @@ class ARCollectionService {
 
   reset(): void {
     this.receipts = JSON.parse(JSON.stringify(INITIAL_AR_RECEIPTS));
-    this.openInvoices = JSON.parse(JSON.stringify(MOCK_OPEN_INVOICES));
+    this.openInvoices = JSON.parse(JSON.stringify(INITIAL_OPEN_INVOICES));
     this.save();
   }
 }

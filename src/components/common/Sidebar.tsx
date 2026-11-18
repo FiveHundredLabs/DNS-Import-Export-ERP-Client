@@ -175,7 +175,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     { id: 'customers', name: 'Customer Master', path: '/customers', icon: Users2, category: 'users' },
     { id: 'customer-onboarding', name: 'Customer Onboarding', path: '/customers/onboarding', icon: UserPlus, category: 'users' },
     { id: 'purchasing-suppliers', name: 'Supplier Management', path: '/purchasing/suppliers', icon: Store, category: 'users' },
-    { id: 'teams', name: 'Team Management', path: '/teams', icon: Users, category: 'users' },
+    { id: 'teams', name: 'User Management', path: '/teams', icon: Users, category: 'users' },
     { id: 'areas', name: 'Area Management', path: '/areas', icon: Compass, category: 'users' },
   ];
 
@@ -325,7 +325,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
 
   // 5. Administration, Field Management & Intelligence
   const adminItems: SidebarItem[] = [
-    { id: 'teams', name: 'Team Management', path: '/teams', icon: Users, category: 'admin' },
+    { id: 'teams', name: 'User Management', path: '/teams', icon: Users, category: 'admin', allowedRoles: ['DIRECTOR', 'MANAGER'] },
     { id: 'areas', name: 'Area Management', path: '/areas', icon: Compass, category: 'admin' },
     { id: 'reports', name: 'Enterprise Reports', path: '/reports', icon: BarChart3, category: 'reports', excludedRoles: ['DIRECTOR', 'MANAGER', 'FINANCE_MANAGER', 'SALES_MANAGER', 'AREA_MANAGER', 'STOCK_MANAGER', 'STOCK_KEEPER', 'SHOWROOM_MANAGER'] },
     { id: 'credit-terms-settings', name: 'Default Credit Terms', path: '/?tab=settings&section=credit-terms', icon: CreditCard, category: 'admin', allowedRoles: ['DIRECTOR', 'MANAGER'] },
