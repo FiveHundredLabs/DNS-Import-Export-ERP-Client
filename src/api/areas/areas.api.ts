@@ -1,4 +1,4 @@
-import { apiGetPaginated, apiGet } from '../client';
+import { apiGetPaginated, apiGet, apiPost, apiPatch, apiDelete } from '../client';
 import { Area, ListAreasParams, PaginatedAreasResponse } from './areas.types';
 
 export const areasApi = {
@@ -25,5 +25,23 @@ export const areasApi = {
 
   getAreaById: async (id: string, signal?: AbortSignal): Promise<Area> => {
     return apiGet<Area>(`/areas/${id}`, { signal });
+  },
+
+  createArea: async (data: { areaName: string; description?: string }): Promise<Area> => {
+    return apiPost<Area>('/areas', data);
+  },
+
+  updateArea: async (
+    id: string,
+    data: { areaName?: string; description?: string | null; updatedAt?: string },
+  ): Promise<Area> => {
+    return apiPatch<Area>(`/areas/${id}`, {
+      ...data,
+      updatedAt: data.updatedAt || new Date().toISOString(),
+    });
+  },
+
+  deleteArea: async (id: string): Promise<void> => {
+    return apiDelete<void>(`/areas/${id}`);
   },
 };
