@@ -8,7 +8,8 @@ RUN npm ci
 
 COPY . .
 
-ARG VITE_API_BASE_URL
+ARG VITE_API_BASE_URL=https://dns500api.residuesolution.io/api/v1
+ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 RUN npm run build
 
 # Serve the static files with Nginx
@@ -16,8 +17,6 @@ FROM nginx:1.27-alpine
 
 COPY nginx.conf.template /etc/nginx/templates/default.conf.template
 COPY --from=build /app/dist /usr/share/nginx/html
-
-ENV API_UPSTREAM=http://host.docker.internal:3000
 
 EXPOSE 80
 
