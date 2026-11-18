@@ -385,20 +385,6 @@ export class PaymentService {
             lastPaymentAmount: payment.amount,
           },
         });
-
-        try {
-          const { MOCK_CUSTOMERS } = await import('../mock/mockCustomers');
-          const mockCust = MOCK_CUSTOMERS.find((c) => c.id === payment.customerId);
-          if (mockCust) {
-            mockCust.financials.totalOutstanding = newTotalOutstanding;
-            mockCust.financials.availableCredit = newAvailableCredit;
-            mockCust.financials.overdue = totalOverdue;
-            mockCust.financials.nearDue = totalNearDue;
-            mockCust.financials.currentDue = totalCurrent;
-            mockCust.financials.lastPaymentDate = payment.collectedAt;
-            mockCust.financials.lastPaymentAmount = payment.amount;
-          }
-        } catch {}
       }
     } catch (err) {
       console.warn(`Customer financials update error for customer ${payment.customerId}:`, err);

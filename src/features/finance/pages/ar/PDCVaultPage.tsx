@@ -1,8 +1,9 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { pdcVaultService } from '../../services/pdcVaultService';
 import { PostDatedCheque } from '../../api/types';
 import { useFinanceLedger } from '../../hooks/useFinanceLedger';
+import { useCustomers } from '../../../../hooks/useCustomers';
 import { Button } from '../../../../components/ui/button';
 import { Input } from '../../../../components/ui/input';
 import { Badge } from '../../../../components/ui/badge';
@@ -10,7 +11,6 @@ import { Card } from '../../../../components/ui/card';
 import { Dialog, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../../../../components/ui/dialog';
 import { Textarea } from '../../../../components/ui/textarea';
 import { formatCurrency, formatDate } from '../../../../utils/formatters';
-import { MOCK_CUSTOMERS } from '../../../../mock/mockCustomers';
 import { DoubleEntryHoverBadge } from '../../components/DoubleEntryHoverBadge';
 import {
   Clock,
@@ -34,6 +34,7 @@ import { toast } from 'sonner';
 export function PDCVaultPage() {
   const navigate = useNavigate();
   const { accounts } = useFinanceLedger();
+  const { customers } = useCustomers();
   const [cheques, setCheques] = useState<PostDatedCheque[]>(() => pdcVaultService.getPDCs());
   const [search, setSearch] = useState('');
   const [filterTab, setFilterTab] = useState<'ALL' | 'IN_HAND' | 'MATURED' | 'FUTURE' | 'CLEARED'>('IN_HAND');
@@ -52,12 +53,18 @@ export function PDCVaultPage() {
 
   // Register Cheque Modal State
   const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
-  const [newCustomerId, setNewCustomerId] = useState(MOCK_CUSTOMERS[0]?.id || '');
+  const [newCustomerId, setNewCustomerId] = useState('');
   const [newChequeNumber, setNewChequeNumber] = useState('');
   const [newDrawerBank, setNewDrawerBank] = useState('Commercial Bank of Ceylon');
   const [newChequeDate, setNewChequeDate] = useState(new Date().toISOString().slice(0, 10));
   const [newAmount, setNewAmount] = useState<number | ''>('');
   const [newNotes, setNewNotes] = useState('');
+
+  useEffect(() => {
+    if (!newCustomerId && customers.length > 0) {
+      setNewCustomerId(customers[0].id);
+    }
+  }, [customers, newCustomerId]);
 
   // Selected for Details Sheet
   const [selectedCheque, setSelectedCheque] = useState<PostDatedCheque | null>(null);
@@ -68,7 +75,7 @@ export function PDCVaultPage() {
 
   const handleRegisterCheque = (e: React.FormEvent) => {
     e.preventDefault();
-    const cust = MOCK_CUSTOMERS.find((c) => c.id === newCustomerId);
+    const cust = customers.find((c) => c.id === newCustomerId);
     if (!cust) {
       toast.error('Please select a customer.');
       return;
@@ -803,7 +810,7 @@ export function PDCVaultPage() {
               className="w-full h-9 text-xs rounded-md border border-slate-300 px-2.5 bg-white text-slate-800"
               required
             >
-              {MOCK_CUSTOMERS.map((c) => (
+              {customers.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.name} ({c.code})
                 </option>
@@ -911,7 +918,7 @@ export function PDCVaultPage() {
                 },
                 {
                   accountCode: '1020',
-                  accountName: `Accounts Receivable (${MOCK_CUSTOMERS.find((c) => c.id === newCustomerId)?.name || 'Selected Customer'})`,
+                  accountName: `Accounts Receivable (${customers.find((c) => c.id === newCustomerId)?.name || 'Selected Customer'})`,
                   type: 'CREDIT',
                   amount: typeof newAmount === 'number' && newAmount > 0 ? newAmount : 'Cheque Amount',
                 },

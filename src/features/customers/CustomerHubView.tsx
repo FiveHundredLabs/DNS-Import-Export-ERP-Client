@@ -100,8 +100,8 @@ export function CustomerHubView({ customer: initialCustomer }: { customer: Custo
   const handleRejectCustomer = async (id: string, reason?: string) => {
     try {
       const updated = await customerService.updateCustomer(id, {
-        approvalStage: 'REJECTED',
-        status: 'INACTIVE',
+        approvalStage: 'REJECT',
+        status: 'REJECT',
       });
       await customerService.finalizeApproval(id, false);
       setCustomer(updated);

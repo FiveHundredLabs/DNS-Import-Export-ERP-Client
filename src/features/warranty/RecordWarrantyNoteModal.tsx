@@ -13,7 +13,7 @@ import { Alert, AlertDescription } from '../../components/ui/alert';
 import { WarrantyRecord } from '../../types/warranty';
 import { warrantyService } from '../../services/WarrantyService';
 import { useAuth } from '../../hooks/useAuth';
-import { MOCK_CUSTOMERS } from '../../mock/mockCustomers';
+import { useCustomers } from '../../hooks/useCustomers';
 import { formatDate } from '../../utils/formatters';
 import {
   FileCheck2,
@@ -41,6 +41,7 @@ export function RecordWarrantyNoteModal({
   preselectedRecord,
 }: RecordWarrantyNoteModalProps) {
   const { currentUser } = useAuth();
+  const { customers } = useCustomers();
   const [barcodeInput, setBarcodeInput] = useState<string>('');
   const [barcodeLookupMessage, setBarcodeLookupMessage] = useState<{
     type: 'success' | 'error';
@@ -448,7 +449,7 @@ export function RecordWarrantyNoteModal({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="ALL">All Distributors</SelectItem>
-                {MOCK_CUSTOMERS.filter((c) => c.status === 'ACTIVE').map((cust) => (
+                {customers.filter((c) => c.status === 'ACTIVE').map((cust) => (
                   <SelectItem key={cust.id} value={cust.id}>
                     {cust.name} ({cust.customerCode})
                   </SelectItem>

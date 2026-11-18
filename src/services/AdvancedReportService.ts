@@ -42,8 +42,8 @@ export class AdvancedReportService {
   // 1. Sales Reports
 
   async getCreditExceptions(_user: User, _filter?: ReportFilter): Promise<CreditExceptionItem[]> {
-    const ordersResult = await this.orderSvc.listOrders({ page: 1, pageSize: 10000 });
-    const customersResult = await this.customerSvc.listCustomers({ page: 1, pageSize: 10000 });
+    const ordersResult = await this.orderSvc.listOrders({ page: 1, pageSize: 100 });
+    const customersResult = await this.customerSvc.listCustomers({ page: 1, pageSize: 100 });
     const customerMap = new Map(customersResult.data.map((c) => [c.id, c]));
 
     const exceptions: CreditExceptionItem[] = [];
@@ -78,7 +78,7 @@ export class AdvancedReportService {
   }
 
   async getCommissionLinkedSales(_user: User, _filter?: ReportFilter): Promise<CommissionLinkedSalesItem[]> {
-    const invoicesResult = await this.invoiceSvc.getInvoices({ page: 1, pageSize: 10000 });
+    const invoicesResult = await this.invoiceSvc.getInvoices({ page: 1, pageSize: 100 });
     const rules = [{ role: 'SALES_REP', ratePercentage: 2 }]; // Mocked rules
 
     const items: CommissionLinkedSalesItem[] = [];
@@ -105,7 +105,7 @@ export class AdvancedReportService {
   }
 
   async getChequeRealizationAndAging(_user: User, _filter?: ReportFilter): Promise<ChequeRealizationItem[]> {
-    const paymentsResult = await this.paymentSvc.getPayments({ page: 1, pageSize: 10000 });
+    const paymentsResult = await this.paymentSvc.getPayments({ page: 1, pageSize: 100 });
     const chequePayments = paymentsResult.data.filter((p) => p.paymentMethod === 'CHEQUE');
 
     return chequePayments.map(p => ({
@@ -285,7 +285,7 @@ export class AdvancedReportService {
   // 4. Inventory Reports
 
   async getOldStockTracking(_user: User, _filter?: ReportFilter): Promise<OldStockItem[]> {
-    const productsResult = await this.productSvc.listProducts({ page: 1, pageSize: 10000 });
+    const productsResult = await this.productSvc.listProducts({ page: 1, pageSize: 100 });
     return productsResult.data
       .filter(p => (p.stockOnHand || 0) > 0)
       .map(p => ({
@@ -359,8 +359,8 @@ export class AdvancedReportService {
   }
 
   async getSlowMovingProducts(_user: User, _filter?: ReportFilter): Promise<SlowMovingProduct[]> {
-    const productsResult = await this.productSvc.listProducts({ page: 1, pageSize: 10000 });
-    const invoicesResult = await this.invoiceSvc.getInvoices({ page: 1, pageSize: 10000 });
+    const productsResult = await this.productSvc.listProducts({ page: 1, pageSize: 100 });
+    const invoicesResult = await this.invoiceSvc.getInvoices({ page: 1, pageSize: 100 });
     
     const unitsSoldMap = new Map<string, number>();
     for (const inv of invoicesResult.data) {

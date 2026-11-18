@@ -1,7 +1,6 @@
 import { PostDatedCheque } from '../api/types';
 import { financeRepository } from '../api';
 import { periodLockService } from './periodLockService';
-import { MOCK_CUSTOMERS } from '../../../mock/mockCustomers';
 
 const PDC_STORAGE_KEY = 'dns_finance_ar_pdc_vault';
 
@@ -292,23 +291,6 @@ class PDCVaultService {
             overdue: (cust.financials?.overdue || 0) + cheque.amount,
           },
         });
-        const customer = MOCK_CUSTOMERS.find((c) => c.id === cheque.customerId);
-        if (customer) {
-          customer.financials.totalOutstanding = newTotalOutstanding;
-          customer.financials.availableCredit = newAvailableCredit;
-          customer.financials.overdue = (customer.financials.overdue || 0) + cheque.amount;
-        }
-      } else {
-        const customer = MOCK_CUSTOMERS.find((c) => c.id === cheque.customerId);
-        if (customer) {
-          const newTotalOutstanding = customer.financials.totalOutstanding + cheque.amount;
-          customer.financials.totalOutstanding = newTotalOutstanding;
-          customer.financials.availableCredit = Math.max(
-            0,
-            customer.commercialTerms.creditLimit - newTotalOutstanding
-          );
-          customer.financials.overdue = (customer.financials.overdue || 0) + cheque.amount;
-        }
       }
     } catch (custErr) {
       console.warn('CustomerService update failed on cheque bounce:', custErr);

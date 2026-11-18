@@ -11,8 +11,8 @@ import {
 import { Printer, RotateCcw, MapPin, UserCheck } from 'lucide-react';
 import { ReportFilter } from '../../types/reports';
 import { User } from '../../types/auth';
-import { MOCK_AREAS } from '../../mock/mockAreas';
-import { MOCK_USERS } from '../../mock/mockUsers';
+import { useAreas } from '../../hooks/useAreas';
+import { useUsers } from '../../hooks/useUsers';
 
 interface ReportsFilterToolbarProps {
   user: User | null;
@@ -31,10 +31,12 @@ export function ReportsFilterToolbar({
   onPrint,
   activeTabTitle,
 }: ReportsFilterToolbarProps) {
+  const { areas } = useAreas();
+  const { users } = useUsers();
   const isAreaLocked = user?.role === 'AREA_MANAGER' || user?.role === 'SALES_REP';
   const isRepLocked = user?.role === 'SALES_REP';
 
-  const reps = MOCK_USERS.filter((u) => u.role === 'SALES_REP');
+  const reps = users.filter((u) => u.role === 'SALES_REP');
 
   const getScopeLabel = () => {
     if (user?.role === 'SALES_REP') {
@@ -44,7 +46,7 @@ export function ReportsFilterToolbar({
       return `Territory: ${user.areaName || 'Kelaniya'} (Locked)`;
     }
     if (filter.areaId) {
-      const area = MOCK_AREAS.find((a) => a.id === filter.areaId);
+      const area = areas.find((a) => a.id === filter.areaId);
       return `Territory: ${area?.name || filter.areaId}`;
     }
     return 'Organization-Wide Consolidated Scope';
@@ -126,9 +128,9 @@ export function ReportsFilterToolbar({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="__all__">All Territories</SelectItem>
-              {MOCK_AREAS.map((a) => (
+              {areas.map((a) => (
                 <SelectItem key={a.id} value={a.id}>
-                  {a.name} ({a.code})
+                  {a.name} ({a.code || a.id.slice(0, 4)})
                 </SelectItem>
               ))}
             </SelectContent>

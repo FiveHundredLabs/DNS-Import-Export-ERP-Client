@@ -6,7 +6,7 @@ import { CashHandover } from '../../../types/handover';
 import { useAuth } from '../../../hooks/useAuth';
 import { useFinanceLedger } from '../hooks/useFinanceLedger';
 import { evaluate24hHandoverStatus } from '../../../rules/paymentRules';
-import { MOCK_CUSTOMERS } from '../../../mock/mockCustomers';
+import { useCustomers } from '../../../hooks/useCustomers';
 import { PageHeader } from '../../../components/common/PageHeader';
 import { StatCard } from '../../../components/common/StatCard';
 import { Button } from '../../../components/ui/button';
@@ -66,6 +66,7 @@ export function IncomeDeskPage({ defaultTab }: IncomeDeskPageProps) {
   const [searchParams, setSearchParams] = useSearchParams();
   const { currentUser } = useAuth();
   const { accounts } = useFinanceLedger();
+  const { customers } = useCustomers();
 
   const queryTab = searchParams.get('tab');
   const [deskTab, setDeskTab] = useState<'HANDOVERS_QUEUE' | 'CUSTOMER_RECEIPTS'>(() => {
@@ -321,7 +322,13 @@ export function IncomeDeskPage({ defaultTab }: IncomeDeskPageProps) {
   const [isNewReceiptModalOpen, setIsNewReceiptModalOpen] = useState(false);
 
   // New Receipt Form State
-  const [newReceiptCustomer, setNewReceiptCustomer] = useState(MOCK_CUSTOMERS[0]?.id || '');
+  const [newReceiptCustomer, setNewReceiptCustomer] = useState('');
+
+  useEffect(() => {
+    if (!newReceiptCustomer && customers.length > 0) {
+      setNewReceiptCustomer(customers[0].id);
+    }
+  }, [customers, newReceiptCustomer]);
   const [newReceiptDate, setNewReceiptDate] = useState(new Date().toISOString().slice(0, 10));
   const [newReceiptMethod, setNewReceiptMethod] = useState<'CASH' | 'CHEQUE' | 'BANK_TRANSFER'>('BANK_TRANSFER');
   const [newReceiptDepositAccount, setNewReceiptDepositAccount] = useState('acc-1010');
@@ -487,7 +494,7 @@ export function IncomeDeskPage({ defaultTab }: IncomeDeskPageProps) {
       return;
     }
 
-    const cust = MOCK_CUSTOMERS.find((c) => c.id === newReceiptCustomer);
+    const cust = customers.find((c) => c.id === newReceiptCustomer);
     if (!cust) return;
 
     try {
@@ -1251,7 +1258,7 @@ export function IncomeDeskPage({ defaultTab }: IncomeDeskPageProps) {
                       }}
                       className="h-8 text-xs"
                     >
-                      {MOCK_CUSTOMERS.map((c) => (
+                      {customers.map((c) => (
                         <option key={c.id} value={c.id}>
                           {c.name} ({c.code})
                         </option>

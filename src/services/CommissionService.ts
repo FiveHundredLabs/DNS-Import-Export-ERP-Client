@@ -15,7 +15,7 @@ import { calculateCommission } from '../rules/commissionRules';
 import { commissionConfigService } from './CommissionConfigService';
 import { invoiceService } from './InvoiceService';
 import { paymentService } from './PaymentService';
-import { MOCK_USERS } from '../mock/mockUsers';
+import { userService } from './UserService';
 
 export interface CreateSalesTargetDTO {
   salesRepId: string;
@@ -199,7 +199,7 @@ export class CommissionService {
     salesRepId: string,
     selectedMonth: string = new Date().toISOString().slice(0, 7)
   ): Promise<RepPersonalPerformanceData> {
-    const user = MOCK_USERS.find((u) => u.id === salesRepId) || {
+    const user = (await userService.getById(salesRepId)) || {
       id: salesRepId,
       name: 'Sales Representative',
       email: 'rep@dnserp.com',
@@ -220,8 +220,8 @@ export class CommissionService {
 
     // Fetch invoices and payments
     const [invoicesPage, paymentsPage] = await Promise.all([
-      invoiceService.getInvoices({ pageSize: 10000 }),
-      paymentService.getPayments({ pageSize: 10000 }),
+      invoiceService.getInvoices({ page: 1, pageSize: 100 }),
+      paymentService.getPayments({ page: 1, pageSize: 100 }),
     ]);
 
     const allInvoices = (invoicesPage && Array.isArray((invoicesPage as any).data))

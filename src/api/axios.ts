@@ -7,6 +7,7 @@ import axios, {
   InternalAxiosRequestConfig,
 } from 'axios';
 import { toast } from 'sonner';
+import { clearAppCache } from './queryClient';
 
 const API_BASE_URL = (
   import.meta.env.VITE_API_BASE_URL || '/api/v1'
@@ -200,6 +201,7 @@ apiClient.interceptors.response.use(
         return apiClient.request(config);
       } catch (refreshError) {
         clearAccessToken();
+        clearAppCache();
         notifyError(refreshError as AxiosError<ApiErrorResponse>);
         redirectTo('/login');
         throw refreshError;
@@ -211,6 +213,7 @@ apiClient.interceptors.response.use(
 
     if (status === 401) {
       clearAccessToken();
+      clearAppCache();
       redirectTo('/login');
     }
 
