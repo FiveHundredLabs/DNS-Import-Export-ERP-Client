@@ -72,6 +72,11 @@ export class AuthService {
   private currentUser: User | null = null;
   private listeners: Set<AuthListener> = new Set();
   private restorePromise: Promise<User | null> | null = null;
+  private initialized = false;
+
+  isInitialized(): boolean {
+    return this.initialized;
+  }
 
   getCurrentUser(): User | null {
     return this.currentUser;
@@ -87,6 +92,17 @@ export class AuthService {
   }
 
   async restoreSession(): Promise<User | null> {
+    // If a valid session is already in memory (e.g. fresh login), do NOT rotate token!
+    if (this.currentUser) {
+      this.initialized = true;
+      return this.currentUser;
+    }
+
+    // If session bootstrap already ran and determined there is no session, don't re-run.
+    if (this.initialized) {
+      return this.currentUser;
+    }
+
     if (this.restorePromise) {
       return this.restorePromise;
     }
@@ -104,6 +120,7 @@ export class AuthService {
         this.clearSession();
         return null;
       } finally {
+        this.initialized = true;
         this.restorePromise = null;
       }
     })();
@@ -121,6 +138,7 @@ export class AuthService {
 
     setAccessToken(response.data.data.accessToken);
     const user = mapUser(response.data.data.user);
+    this.initialized = true;
     this.setCurrentUser(user);
     return user;
   }
@@ -128,9 +146,11 @@ export class AuthService {
   async logout(): Promise<void> {
     try {
       if (this.currentUser) {
-        // /auth/logout requires a live access token. Rotate first so an expired
-        // in-memory token cannot leave the HttpOnly refresh session active.
-        await refreshAccessToken();
+        // Best-effort server revocation using the current in-memory access token.
+        // The apiClient interceptor will attempt one automatic refresh if the token
+        // is expired. Do NOT pre-refresh here — if the refresh cookie is already
+        // invalid, a pre-refresh call would throw without ever hitting /auth/logout,
+        // leaving the backend session open for its full 7-day TTL.
         await apiClient.post('/auth/logout', undefined, {
           suppressErrorToast: true,
           suppressErrorRedirect: true,
@@ -144,8 +164,8 @@ export class AuthService {
   async logoutAll(): Promise<void> {
     try {
       if (this.currentUser) {
-        // The all-sessions endpoint has the same bearer-token requirement.
-        await refreshAccessToken();
+        // Same rationale as logout() — skip the pre-refresh; let the interceptor handle
+        // token expiry automatically on the actual /auth/logout-all call.
         await apiClient.post('/auth/logout-all', undefined, {
           suppressErrorToast: true,
           suppressErrorRedirect: true,
@@ -191,6 +211,7 @@ export class AuthService {
     clearAccessToken();
     clearAppCache();
     this.currentUser = null;
+    this.initialized = true;
     this.notify();
   }
 

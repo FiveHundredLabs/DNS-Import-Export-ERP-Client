@@ -5,14 +5,18 @@ import { hasPermission, canAccessRoute } from '../rules/permissions';
 
 export function useAuth() {
   const [currentUser, setCurrentUser] = useState<User | null>(() => authService.getCurrentUser());
-  const [isInitializing, setIsInitializing] = useState(true);
+  const [isInitializing, setIsInitializing] = useState(() => !authService.isInitialized());
 
   useEffect(() => {
     const unsubscribe = authService.subscribe((user) => {
       setCurrentUser(user ? { ...user } : null);
     });
 
-    void authService.restoreSession().finally(() => setIsInitializing(false));
+    if (!authService.isInitialized()) {
+      void authService.restoreSession().finally(() => setIsInitializing(false));
+    } else {
+      setIsInitializing(false);
+    }
 
     return unsubscribe;
   }, []);

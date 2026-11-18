@@ -202,7 +202,8 @@ apiClient.interceptors.response.use(
       } catch (refreshError) {
         clearAccessToken();
         clearAppCache();
-        notifyError(refreshError as AxiosError<ApiErrorResponse>);
+        // Session has expired — redirect to login silently. The login page is
+        // sufficient feedback; a toast here would be noisy and confusing on boot.
         redirectTo('/login');
         throw refreshError;
       }
