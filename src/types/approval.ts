@@ -10,7 +10,8 @@ export type ApprovalDocumentType =
   | 'GRN_RECEIPT'
   | 'PAYMENT_RECEIPT'
   | 'EXPENSE_CLAIM'
-  | 'PURCHASE_ORDER';
+  | 'PURCHASE_ORDER'
+  | 'STOCK_ADJUSTMENT';
 
 export type ApprovalRequestStatus =
   | 'PENDING'
@@ -48,4 +49,5 @@ export interface ApprovalRequest extends BaseEntity {
   specialReason?: string;
   status: ApprovalRequestStatus;
   history: ApprovalHistoryEntry[];
+  metadata?: Record<string, unknown>;
 }

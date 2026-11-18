@@ -108,8 +108,13 @@ export function PaymentListPage() {
   const [repDetailInitialTab, setRepDetailInitialTab] = useState<'CASH_IN_HAND' | 'HANDOVERS' | 'HISTORY'>('CASH_IN_HAND');
 
   const salesReps = useMemo(() => {
-    return MOCK_USERS.filter((u) => u.role === 'SALES_REP' || u.id === 'usr-106');
-  }, []);
+    if (role === 'AREA_MANAGER') {
+      return MOCK_USERS.filter(
+        (u) => (u.areaId === currentUser?.areaId || u.id === currentUser?.id) && u.isActive
+      );
+    }
+    return MOCK_USERS.filter((u) => u.role === 'SALES_REP' || u.role === 'AREA_MANAGER' || u.id === 'usr-106');
+  }, [role, currentUser]);
 
   // Daily Handover Metrics & Handovers state
   const [dailyMetrics, setDailyMetrics] = useState<DailyHandoverMetrics>({

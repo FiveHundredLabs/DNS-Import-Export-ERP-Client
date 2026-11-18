@@ -30,7 +30,7 @@ import {
 import { formatCurrency } from '../../utils/formatters';
 import { cn } from '../../utils/cn';
 import {
-  evaluateDiscount,
+  evaluateCustomerProductDiscount,
   getProductDiscountLevels,
   getAllowedDiscountLevels,
   getMaxAllowedDiscount,
@@ -139,6 +139,8 @@ export function QuotationCreateEditPage() {
             if (cust) {
               if (currentUser.role === 'SALES_REP' && cust.assignedRepId && cust.assignedRepId !== currentUser.id) {
                 setFormError('Selected customer is not in your assigned sales territory.');
+              } else if (currentUser.role === 'AREA_MANAGER' && currentUser.areaId && cust.areaId !== currentUser.areaId) {
+                setFormError('Selected customer is outside your assigned area.');
               } else {
                 setSelectedCustomer(cust);
                 if (cust.commercialTerms.paymentTermNotes) {
@@ -161,6 +163,10 @@ export function QuotationCreateEditPage() {
   const handleCustomerSelect = (customer: Customer) => {
     if (currentUser.role === 'SALES_REP' && customer.assignedRepId && customer.assignedRepId !== currentUser.id) {
       setFormError(`Cannot select ${customer.name}: this customer is assigned to another representative.`);
+      return;
+    }
+    if (currentUser.role === 'AREA_MANAGER' && currentUser.areaId && customer.areaId !== currentUser.areaId) {
+      setFormError(`Cannot select ${customer.name}: this customer belongs to another area.`);
       return;
     }
     setFormError(null);
@@ -235,8 +241,6 @@ export function QuotationCreateEditPage() {
 
   // Calculations & Validations per line item
   const calculatedItems = useMemo(() => {
-    const repAuthority = currentUser.role === 'SALES_REP' ? 5 : 15;
-
     return items.map((it) => {
       const unitPrice = it.product.pricing.currentSellingPrice;
       const subtotal = unitPrice * it.quantity;
@@ -250,15 +254,17 @@ export function QuotationCreateEditPage() {
       const availableLevels = getAllowedDiscountLevels(it.product, selectedCustomer);
       const maxAllowed = getMaxAllowedDiscount(it.product, selectedCustomer);
 
-      const evalResult = evaluateDiscount({
-        requestedDiscountPercentage: discountRate,
-        repMaxDiscountPercentage: repAuthority,
-        customerMaxDiscountPercentage: selectedCustomer?.commercialTerms.maxDiscountPercentage || 12,
-        productMaxDiscountPercentage: it.product.pricing.maxDiscountPercentage || 15,
-        promotionalDiscountPercentage: it.product.pricing.promotionalDiscountPercentage,
+      const loyaltyEval = evaluateCustomerProductDiscount({
         product: it.product,
         customer: selectedCustomer,
+        requestedDiscountPercentage: discountRate,
+        userRole: currentUser.role,
       });
+
+      const evalResult = {
+        ...loyaltyEval,
+        requiresSpecialApproval: loyaltyEval.requiresApproval,
+      };
 
       const productBatches = batchInventoryService.getActiveBatches(it.product.id);
       const selectedBatch = it.selectedBatchId ? batchInventoryService.getBatchById(it.selectedBatchId) : null;
@@ -410,6 +416,7 @@ export function QuotationCreateEditPage() {
                 onSelect={handleCustomerSelect}
                 selectedCustomerId={selectedCustomer?.id}
                 assignedRepId={currentUser.role === 'SALES_REP' ? currentUser.id : undefined}
+                areaId={currentUser.role === 'AREA_MANAGER' ? currentUser.areaId : undefined}
               />
             </div>
           )}

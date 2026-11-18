@@ -39,12 +39,14 @@ export interface QuotationItem {
 export interface Quotation extends BaseEntity {
   quotationNumber: string;
   customerId: string;
+  areaId?: string;
   customerCodeSnapshot: string;
   customerNameSnapshot: string;
   customerPhoneSnapshot: string;
   customerAddressSnapshot?: string;
   salesRepId: string;
   salesRepNameSnapshot: string;
+  createdByRole?: string;
   items: QuotationItem[];
   subtotal: number;
   discountAmount: number;
@@ -71,10 +73,22 @@ export interface Quotation extends BaseEntity {
   convertedAt?: string;
 }
 
+export interface QuotationSummary {
+  totalCount: number;
+  draftCount: number;
+  pendingApprovalCount: number;
+  approvedCount: number;
+  convertedCount: number;
+  rejectedCount: number;
+  expiredCount: number;
+  totalPipelineValue: number;
+}
+
 export interface QuotationFilters {
   status?: QuotationStatus | 'ALL';
   customerId?: string;
   salesRepId?: string;
+  areaId?: string;
   search?: string;
   sortByDate?: 'asc' | 'desc';
   page?: number;

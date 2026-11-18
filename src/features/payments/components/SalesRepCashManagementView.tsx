@@ -61,14 +61,21 @@ export function SalesRepCashManagementView({
       const repPayments = payments.filter((p) => p.salesRepId === rep.id);
       const repHandovers = handovers.filter((h) => h.salesRepId === rep.id);
 
-      // Cash payments currently in hand
+      // Cash payments currently in hand (PENDING or REJECTED without Finance acceptance)
       const cashInHandPayments = repPayments.filter((p) => {
         if (p.paymentMethod !== 'CASH') return false;
-        const h24 = evaluate24hHandoverStatus(p);
-        return h24.handoverStatus === 'PENDING_HANDOVER' && p.status !== 'APPROVED';
+        return p.status !== 'APPROVED' && p.handoverStatus !== 'APPROVED';
+      });
+
+      // Cheque payments currently held (PENDING or REJECTED without Finance acceptance)
+      const chequesHeldPayments = repPayments.filter((p) => {
+        if (p.paymentMethod !== 'CHEQUE') return false;
+        return p.status !== 'APPROVED' && p.handoverStatus !== 'APPROVED';
       });
 
       const totalCashInHand = cashInHandPayments.reduce((sum, p) => sum + p.amount, 0);
+      const totalChequesHeld = chequesHeldPayments.reduce((sum, p) => sum + p.amount, 0);
+      const totalHeldCustody = totalCashInHand + totalChequesHeld;
 
       // Overdue >24h collections
       const overduePayments = cashInHandPayments.filter((p) => {
@@ -99,6 +106,9 @@ export function SalesRepCashManagementView({
         rep,
         totalCashInHand,
         cashInHandCount: cashInHandPayments.length,
+        totalChequesHeld,
+        chequesHeldCount: chequesHeldPayments.length,
+        totalHeldCustody,
         targetInvoicesCount,
         overdueCount: overduePayments.length,
         overduePayments,
@@ -427,19 +437,32 @@ export function SalesRepCashManagementView({
                       )}
                     </div>
 
-                    {/* Main Cash in Hand Box */}
-                    <div className="mt-4 p-3.5 rounded-xl bg-amber-50/70 border border-amber-200/80 flex items-center justify-between gap-3">
-                      <div>
-                        <span className="text-[10px] uppercase tracking-wider font-bold text-amber-800 block">
-                          Current Cash in Hand
-                        </span>
-                        <span className="text-xl font-mono font-extrabold text-amber-950 mt-0.5 block">
-                          {formatCurrency(item.totalCashInHand)}
-                        </span>
+                    {/* Main Cash & Cheque Held Box */}
+                    <div className="mt-4 p-3.5 rounded-xl bg-amber-50/70 border border-amber-200/80 space-y-2">
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <span className="text-[10px] uppercase tracking-wider font-bold text-amber-800 block">
+                            Cash in Hand
+                          </span>
+                          <span className="text-lg font-mono font-extrabold text-amber-950 block">
+                            {formatCurrency(item.totalCashInHand)}
+                          </span>
+                        </div>
+                        <div className="text-right text-[11px] text-amber-800">
+                          <div><strong>{item.cashInHandCount}</strong> cash receipts</div>
+                          <div>{item.targetInvoicesCount} invoices</div>
+                        </div>
                       </div>
-                      <div className="text-right text-[11px] text-amber-800">
-                        <div><strong>{item.cashInHandCount}</strong> receipts</div>
-                        <div>{item.targetInvoicesCount} invoices</div>
+
+                      <div className="flex items-center justify-between pt-2 border-t border-amber-200/60 text-xs">
+                        <div>
+                          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Cheques Held:</span>
+                          <span className="font-mono font-bold text-sky-900 ml-1.5">{formatCurrency(item.totalChequesHeld)}</span>
+                        </div>
+                        <div>
+                          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Total Held:</span>
+                          <span className="font-mono font-extrabold text-rose-950 ml-1.5">{formatCurrency(item.totalHeldCustody)}</span>
+                        </div>
                       </div>
                     </div>
 
@@ -508,9 +531,10 @@ export function SalesRepCashManagementView({
               <TableRow className="text-[11px] font-bold text-slate-600">
                 <TableHead>Sales Representative</TableHead>
                 <TableHead>Territory</TableHead>
-                <TableHead className="text-right">Current Cash in Hand</TableHead>
+                <TableHead className="text-right">Cash in Hand</TableHead>
+                <TableHead className="text-right">Cheques Held</TableHead>
+                <TableHead className="text-right">Total Held</TableHead>
                 <TableHead className="text-center">24h Compliance Status</TableHead>
-                <TableHead className="text-right">Pending Handover</TableHead>
                 <TableHead className="text-right">Approved Collections</TableHead>
                 <TableHead>Last Handover</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
@@ -519,7 +543,7 @@ export function SalesRepCashManagementView({
             <TableBody className="text-xs divide-y divide-slate-100">
               {filteredReps.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-10 text-slate-400 italic">
+                  <TableCell colSpan={9} className="text-center py-10 text-slate-400 italic">
                     No sales representatives match the filter.
                   </TableCell>
                 </TableRow>
@@ -541,7 +565,20 @@ export function SalesRepCashManagementView({
                           {formatCurrency(item.totalCashInHand)}
                         </div>
                         <div className="text-[10px] text-slate-400">
-                          {item.cashInHandCount} receipts · {item.targetInvoicesCount} invoices
+                          {item.cashInHandCount} receipts
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="font-mono font-bold text-sky-900 text-sm">
+                          {formatCurrency(item.totalChequesHeld)}
+                        </div>
+                        <div className="text-[10px] text-slate-400">
+                          {item.chequesHeldCount} cheques
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="font-mono font-black text-rose-950 text-sm">
+                          {formatCurrency(item.totalHeldCustody)}
                         </div>
                       </TableCell>
                       <TableCell className="text-center">
@@ -549,18 +586,15 @@ export function SalesRepCashManagementView({
                           <Badge className="bg-rose-600 text-white text-[10px] font-bold animate-pulse gap-1">
                             <AlertCircle className="h-3 w-3" /> Overdue &gt;24h ({item.overdueCount})
                           </Badge>
-                        ) : item.totalCashInHand > 0 ? (
+                        ) : item.totalHeldCustody > 0 ? (
                           <Badge className="bg-amber-100 text-amber-800 border-amber-300 text-[10px] font-bold gap-1">
-                            <Clock className="h-3 w-3" /> Due &lt;24h
+                            <Clock className="h-3 w-3" /> Active Float
                           </Badge>
                         ) : (
                           <Badge className="bg-emerald-100 text-emerald-800 border-emerald-300 text-[10px] font-bold gap-1">
                             <CheckCircle2 className="h-3 w-3" /> Fully Cleared
                           </Badge>
                         )}
-                      </TableCell>
-                      <TableCell className="text-right font-mono font-bold text-slate-800">
-                        {formatCurrency(item.totalPendingHandover)}
                       </TableCell>
                       <TableCell className="text-right font-mono font-bold text-emerald-700">
                         {formatCurrency(item.totalApproved)}

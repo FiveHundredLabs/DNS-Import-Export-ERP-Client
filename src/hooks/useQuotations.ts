@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import {
   Quotation,
   QuotationFilters,
+  QuotationSummary,
   CreateQuotationInput,
   UpdateQuotationInput,
   ConvertedOrderPayload,
@@ -11,9 +12,21 @@ import { orderService } from '../services/OrderService';
 import { SalesOrder } from '../types/order';
 import { useAuth } from './useAuth';
 
+const EMPTY_SUMMARY: QuotationSummary = {
+  totalCount: 0,
+  draftCount: 0,
+  pendingApprovalCount: 0,
+  approvedCount: 0,
+  convertedCount: 0,
+  rejectedCount: 0,
+  expiredCount: 0,
+  totalPipelineValue: 0,
+};
+
 export function useQuotations(initialFilters?: QuotationFilters) {
   const { currentUser } = useAuth();
   const [quotations, setQuotations] = useState<Quotation[]>([]);
+  const [summary, setSummary] = useState<QuotationSummary>(EMPTY_SUMMARY);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState<QuotationFilters>(
@@ -26,14 +39,19 @@ export function useQuotations(initialFilters?: QuotationFilters) {
     try {
       setLoading(true);
       setError(null);
-      const res = await quotationService.listQuotations(filters, {
+      const userContext = {
         userId: currentUser.id,
         role: currentUser.role,
         areaId: currentUser.areaId,
-      });
+      };
+      const [res, summaryRes] = await Promise.all([
+        quotationService.listQuotations(filters, userContext),
+        quotationService.getQuotationSummary(filters, userContext),
+      ]);
       setQuotations(res.data);
       setTotal(res.total);
       setTotalPages(res.totalPages);
+      setSummary(summaryRes);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to fetch quotations');
     } finally {
@@ -95,6 +113,7 @@ export function useQuotations(initialFilters?: QuotationFilters) {
 
   return {
     quotations,
+    summary,
     loading,
     error,
     filters,

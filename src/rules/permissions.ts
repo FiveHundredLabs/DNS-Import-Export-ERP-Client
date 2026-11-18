@@ -25,6 +25,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'inventory:grn_approve',
     'inventory:pick_issue',
     'inventory:damaged_recover',
+    'inventory:stock_adjustment',
     'invoices:view',
     'invoices:create',
     'payments:view',
@@ -83,6 +84,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'inventory:grn_approve',
     'inventory:pick_issue',
     'inventory:damaged_recover',
+    'inventory:stock_adjustment',
     'invoices:view',
     'payments:view',
     'pos:operate',
@@ -163,6 +165,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'customers:create',
     'customers:edit',
     'quotations:view',
+    'quotations:create',
     'orders:view',
     'invoices:view',
     'payments:view',
@@ -199,6 +202,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'inventory:grn_approve',
     'inventory:pick_issue',
     'inventory:damaged_recover',
+    'inventory:stock_adjustment',
   ],
   CASHIER: [
     'view:cashier_dashboard',
@@ -287,6 +291,9 @@ export function canAccessRoute(role: UserRole, path: string): boolean {
     return hasPermission(role, 'orders:view');
   }
   if (path.startsWith('/inventory')) {
+    if (path.startsWith('/inventory/stock-adjustments')) {
+      return hasPermission(role, 'inventory:stock_adjustment') || role === 'MANAGER';
+    }
     return hasPermission(role, 'inventory:view');
   }
   if (path.startsWith('/pos')) {
@@ -323,6 +330,18 @@ export function canAccessRoute(role: UserRole, path: string): boolean {
   }
   if (path === '/reports/sales/pos-day-end') {
     return ['DIRECTOR', 'MANAGER', 'SALES_MANAGER', 'SHOWROOM_MANAGER'].includes(role);
+  }
+  // Sales Collection Tracking Report is accessible to Sales Reps, Area Managers, Sales Managers, Managers, Directors, Finance Officers & Finance Managers
+  if (path === '/reports/sales/collections') {
+    return [
+      'SALES_REP',
+      'AREA_MANAGER',
+      'SALES_MANAGER',
+      'MANAGER',
+      'DIRECTOR',
+      'FINANCE_OFFICER',
+      'FINANCE_MANAGER',
+    ].includes(role);
   }
   if (path.startsWith('/reports')) {
     // Area Manager: NO access to reports

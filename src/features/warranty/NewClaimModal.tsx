@@ -21,7 +21,7 @@ import { AlertTriangle, CheckCircle, ShieldAlert, Search } from 'lucide-react';
 interface NewClaimModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSuccess: () => void;
+  onSuccess: (createdClaim?: WarrantyClaim) => void;
   preselectedRecord?: WarrantyRecord | null;
 }
 
@@ -136,7 +136,7 @@ export function NewClaimModal({
     try {
       setLoading(true);
       setError(null);
-      await warrantyService.createClaim(
+      const created = await warrantyService.createClaim(
         {
           warrantyRecordId: selectedRecord.id,
           complaintDate,
@@ -145,7 +145,7 @@ export function NewClaimModal({
         },
         currentUser
       );
-      onSuccess();
+      onSuccess(created);
       onOpenChange(false);
     } catch (err: any) {
       setError(err.message || 'Failed to submit warranty claim');
@@ -159,8 +159,12 @@ export function NewClaimModal({
       <DialogHeader>
         <DialogTitle className="flex items-center gap-2 text-slate-900">
           <ShieldAlert className="h-5 w-5 text-primary" />
-          Lodge Warranty Claim
+          <span>Lodge Warranty Claim</span>
+          <span className="text-xs font-normal text-slate-500">(Sales Manager Approval & POS Voucher)</span>
         </DialogTitle>
+        <p className="text-xs text-slate-500 mt-1">
+          Sales Manager Single-Step Action: Approves the claim immediately and generates a unique 14-day Reference Code for Showroom POS replacement issuance.
+        </p>
       </DialogHeader>
 
       <form onSubmit={handleSubmit} className="space-y-4 text-xs">
@@ -372,10 +376,10 @@ export function NewClaimModal({
             className="bg-primary hover:bg-primary-hover text-primary-foreground font-semibold"
           >
             {loading
-              ? 'Submitting...'
+              ? 'Approving & Generating Code...'
               : isDealerSale && !hasVerifiedNote
               ? 'Validation Required'
-              : 'Lodge Claim'}
+              : 'Register & Approve (Generate POS Code)'}
           </Button>
         </DialogFooter>
       </form>

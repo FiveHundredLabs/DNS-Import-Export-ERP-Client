@@ -1,16 +1,97 @@
 import { IQuotationRepository, QuotationUserContext } from '../IQuotationRepository';
-import { Quotation, QuotationFilters } from '../../types/quotation';
+import { Quotation, QuotationFilters, QuotationSummary } from '../../types/quotation';
 import { PaginatedResult } from '../../types/common';
 import { MOCK_QUOTATIONS } from '../../mock/mockQuotations';
 import { MOCK_APPROVALS } from '../../mock/mockApprovals';
+import { MOCK_CUSTOMERS } from '../../mock/mockCustomers';
+import { Customer } from '../../types/customer';
 
 const QUOTATIONS_STORAGE_KEY = 'dns_erp_quotations_v2';
+const CUSTOMERS_STORAGE_KEY = 'dns_erp_customers_v2';
 
 export class MockQuotationRepository implements IQuotationRepository {
   private quotations: Quotation[] = [];
 
   constructor() {
     this.init();
+  }
+
+  private getCustomerAreaMap(): Map<string, string> {
+    const map = new Map<string, string>();
+    for (const c of MOCK_CUSTOMERS) {
+      if (c.areaId) map.set(c.id, c.areaId);
+    }
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const stored = localStorage.getItem(CUSTOMERS_STORAGE_KEY);
+        if (stored) {
+          const parsed: Customer[] = JSON.parse(stored);
+          for (const c of parsed) {
+            if (c.areaId) map.set(c.id, c.areaId);
+          }
+        }
+      }
+    } catch {}
+    return map;
+  }
+
+  private applyScopeAndFilters(
+    filters?: QuotationFilters,
+    userContext?: QuotationUserContext,
+    includeStatusFilter: boolean = true
+  ): Quotation[] {
+    let filtered = [...this.quotations];
+    const customerAreaMap = this.getCustomerAreaMap();
+
+    // 1. Role-based scoping
+    if (userContext) {
+      if (userContext.role === 'SALES_REP') {
+        filtered = filtered.filter((q) => q.salesRepId === userContext.userId);
+      } else if (userContext.role === 'AREA_MANAGER' && userContext.areaId) {
+        filtered = filtered.filter((q) => {
+          const qAreaId = q.areaId || customerAreaMap.get(q.customerId);
+          return qAreaId === userContext.areaId;
+        });
+      }
+    }
+
+    // 2. Area filtering
+    if (filters?.areaId) {
+      filtered = filtered.filter((q) => {
+        const qAreaId = q.areaId || customerAreaMap.get(q.customerId);
+        return qAreaId === filters.areaId;
+      });
+    }
+
+    // 3. Status filtering
+    if (includeStatusFilter && filters?.status && filters.status !== 'ALL') {
+      filtered = filtered.filter((q) => q.status === filters.status);
+    }
+
+    // 4. Customer filtering
+    if (filters?.customerId) {
+      filtered = filtered.filter((q) => q.customerId === filters.customerId);
+    }
+
+    // 5. Sales rep filtering
+    if (filters?.salesRepId) {
+      filtered = filtered.filter((q) => q.salesRepId === filters.salesRepId);
+    }
+
+    // 6. Search text filtering
+    if (filters?.search && filters.search.trim()) {
+      const q = filters.search.toLowerCase().trim();
+      filtered = filtered.filter(
+        (item) =>
+          item.quotationNumber.toLowerCase().includes(q) ||
+          item.customerNameSnapshot.toLowerCase().includes(q) ||
+          item.customerCodeSnapshot.toLowerCase().includes(q) ||
+          item.salesRepNameSnapshot.toLowerCase().includes(q) ||
+          (item.notes && item.notes.toLowerCase().includes(q))
+      );
+    }
+
+    return filtered;
   }
 
   private init() {
@@ -51,45 +132,9 @@ export class MockQuotationRepository implements IQuotationRepository {
   ): Promise<PaginatedResult<Quotation>> {
     await new Promise((resolve) => setTimeout(resolve, 80));
 
-    let filtered = [...this.quotations];
+    const filtered = this.applyScopeAndFilters(filters, userContext, true);
 
-    // 1. Role-based scoping
-    if (userContext) {
-      if (userContext.role === 'SALES_REP') {
-        filtered = filtered.filter((q) => q.salesRepId === userContext.userId);
-      }
-      // Note: AREA_MANAGER / SALES_MANAGER / MANAGER / DIRECTOR have wide/appropriate visibility
-    }
-
-    // 2. Status filtering
-    if (filters?.status && filters.status !== 'ALL') {
-      filtered = filtered.filter((q) => q.status === filters.status);
-    }
-
-    // 3. Customer filtering
-    if (filters?.customerId) {
-      filtered = filtered.filter((q) => q.customerId === filters.customerId);
-    }
-
-    // 4. Sales rep filtering
-    if (filters?.salesRepId) {
-      filtered = filtered.filter((q) => q.salesRepId === filters.salesRepId);
-    }
-
-    // 5. Search text filtering
-    if (filters?.search && filters.search.trim()) {
-      const q = filters.search.toLowerCase().trim();
-      filtered = filtered.filter(
-        (item) =>
-          item.quotationNumber.toLowerCase().includes(q) ||
-          item.customerNameSnapshot.toLowerCase().includes(q) ||
-          item.customerCodeSnapshot.toLowerCase().includes(q) ||
-          item.salesRepNameSnapshot.toLowerCase().includes(q) ||
-          (item.notes && item.notes.toLowerCase().includes(q))
-      );
-    }
-
-    // 6. Date sorting
+    // Date sorting
     const sortAsc = filters?.sortByDate === 'asc';
     filtered.sort((a, b) => {
       const dateA = new Date(a.createdAt).getTime();
@@ -97,7 +142,7 @@ export class MockQuotationRepository implements IQuotationRepository {
       return sortAsc ? dateA - dateB : dateB - dateA;
     });
 
-    // 7. Pagination
+    // Pagination
     const page = filters?.page || 1;
     const pageSize = filters?.pageSize || 10;
     const startIndex = (page - 1) * pageSize;
@@ -109,6 +154,28 @@ export class MockQuotationRepository implements IQuotationRepository {
       page,
       pageSize,
       totalPages: Math.ceil(filtered.length / pageSize) || 1,
+    };
+  }
+
+  async getSummary(
+    filters?: QuotationFilters,
+    userContext?: QuotationUserContext
+  ): Promise<QuotationSummary> {
+    await new Promise((resolve) => setTimeout(resolve, 40));
+
+    const scoped = this.applyScopeAndFilters(filters, userContext, false);
+
+    return {
+      totalCount: scoped.length,
+      draftCount: scoped.filter((q) => q.status === 'DRAFT').length,
+      pendingApprovalCount: scoped.filter((q) => q.status === 'PENDING_APPROVAL').length,
+      approvedCount: scoped.filter((q) => q.status === 'APPROVED').length,
+      convertedCount: scoped.filter((q) => q.status === 'CONVERTED').length,
+      rejectedCount: scoped.filter((q) => q.status === 'REJECTED').length,
+      expiredCount: scoped.filter((q) => q.status === 'EXPIRED').length,
+      totalPipelineValue: Number(
+        scoped.reduce((acc, q) => acc + (q.totalAmount || 0), 0).toFixed(2)
+      ),
     };
   }
 
