@@ -171,7 +171,7 @@ export function LoginPage() {
   }
 
   return (
-    <main className="min-h-screen flex flex-col lg:flex-row relative">
+    <main className="min-h-screen w-full bg-slate-950 flex flex-col lg:flex-row relative p-3 sm:p-5 lg:p-6 gap-4 lg:gap-6">
       {/* ── Dev Quick Login button (top-right corner, DEV only) ── */}
       {import.meta.env.DEV && (
         <div className="absolute top-4 right-4 z-50">
@@ -234,7 +234,7 @@ export function LoginPage() {
       )}
 
       {/* ── LEFT PANEL: Login form ── */}
-      <section className="flex flex-1 items-center justify-center bg-white px-6 py-12 lg:max-w-[520px] lg:px-14 xl:px-20">
+      <section className="flex flex-1 items-center justify-center bg-white px-6 py-10 sm:py-12 lg:max-w-[480px] xl:max-w-[520px] lg:px-12 xl:px-16 rounded-3xl shadow-2xl z-10 border border-slate-100">
         <div className="w-full max-w-sm">
           {/* Logo */}
           <div className="mb-10 flex items-center gap-3">
@@ -360,43 +360,50 @@ export function LoginPage() {
       </section>
 
       {/* ── RIGHT PANEL: Branding ── */}
-      <section
-        className="hidden lg:flex flex-1 flex-col items-center justify-center relative overflow-hidden bg-cover bg-center"
-        style={{
-          backgroundImage: "url('/login.webp')",
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          backgroundRepeat: 'no-repeat',
-        }}
-      >
-        {/* Subtle overlay to enhance contrast and ensure text readability */}
-        <div className="absolute inset-0 bg-gradient-to-t from-blue-950/80 via-blue-900/40 to-blue-950/60" />
+      <section className="hidden lg:flex flex-1 flex-col items-center justify-center relative overflow-hidden rounded-3xl shadow-2xl">
+        {/* Optimized picture element with WebP + JPEG fallback */}
+        <picture className="absolute inset-0 h-full w-full pointer-events-none">
+          <source srcSet="/login.webp" type="image/webp" />
+          <source srcSet="/login.jpg" type="image/jpeg" />
+          <img
+            src="/login.webp"
+            alt="DNS ERP Global Logistics and Distribution"
+            loading="eager"
+            fetchPriority="high"
+            className="h-full w-full object-cover object-center"
+          />
+        </picture>
 
-        {/* Watermark logo top-right */}
-        <div className="absolute top-6 right-6 flex items-center gap-2 opacity-60 z-10">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/20 p-1 backdrop-blur-sm shadow">
-            <img src="/logo.png" alt="" className="h-full w-full object-contain" />
-          </div>
-          <span className="text-xs font-bold tracking-widest text-white uppercase drop-shadow-sm">DNS ERP</span>
+        {/* Dark contrast overlay to ensure clear readability */}
+        <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/60 to-slate-900/70 backdrop-blur-[1px]" />
+
+        {/* Top-right company branding (no logo icon, enlarged, shifted left and down) */}
+        <div className="absolute top-10 right-10 xl:top-12 xl:right-14 z-20 text-right">
+          <span className="block text-base xl:text-lg font-extrabold tracking-widest text-white uppercase drop-shadow-md">
+            DNS Import &amp; Export
+          </span>
+          <span className="block text-[11px] font-semibold tracking-wider text-blue-200/80 uppercase">
+            Enterprise Resource Planning
+          </span>
         </div>
 
-        {/* Tagline & Content */}
-        <div className="relative z-10 text-center px-10 max-w-lg">
-          <h2 className="text-3xl xl:text-4xl font-bold text-white leading-tight tracking-tight drop-shadow-md">
+        {/* Centered Hero Content with frosted card for maximum readability */}
+        <div className="relative z-10 text-center px-8 py-8 sm:px-10 sm:py-10 max-w-lg rounded-2xl bg-slate-950/50 backdrop-blur-md border border-white/10 shadow-2xl">
+          <h2 className="text-3xl xl:text-4xl font-extrabold text-white leading-tight tracking-tight drop-shadow-lg">
             Drive Your Business
             <br />
-            <span className="text-blue-200">Forward.</span>
+            <span className="text-blue-300">Forward.</span>
           </h2>
-          <p className="mt-4 text-sm text-blue-100/90 leading-relaxed drop-shadow">
+          <p className="mt-4 text-sm text-slate-100 font-medium leading-relaxed drop-shadow">
             &ldquo;Secure, integrated enterprise resource planning for modern distribution networks.&rdquo;
           </p>
 
           {/* Feature pills */}
-          <div className="mt-8 flex flex-wrap justify-center gap-2">
+          <div className="mt-7 flex flex-wrap justify-center gap-2">
             {['Sales & CRM', 'Inventory', 'Finance & Ledger', 'Purchasing', 'Reports'].map((f) => (
               <span
                 key={f}
-                className="rounded-full border border-white/25 bg-white/15 px-3 py-1 text-[11px] font-medium text-white shadow-sm backdrop-blur-md"
+                className="rounded-full border border-white/25 bg-white/20 px-3.5 py-1.5 text-xs font-semibold text-white shadow-sm backdrop-blur-md hover:bg-white/25 transition"
               >
                 {f}
               </span>
@@ -405,7 +412,7 @@ export function LoginPage() {
         </div>
 
         {/* Bottom version tag */}
-        <p className="absolute bottom-5 text-[10px] font-medium tracking-widest text-white/40 uppercase z-10">
+        <p className="absolute bottom-6 text-[10px] font-semibold tracking-widest text-white/50 uppercase z-20">
           DNS ERP · Enterprise Edition
         </p>
       </section>

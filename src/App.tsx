@@ -970,6 +970,14 @@ export function App() {
             </ProtectedRoute>
           }
         />
+        <Route
+          path="users"
+          element={
+            <ProtectedRoute>
+              <TeamListPage />
+            </ProtectedRoute>
+          }
+        />
 
         {/* Dedicated Purchasing Officer & Procurement Module */}
         <Route

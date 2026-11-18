@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { User, UserRole } from '../types/auth';
 import { usersApi } from '../api/users/users.api';
+import { MOCK_USERS } from '../mock/mockUsers';
 import {
   UserSummary,
   UserStatus,
@@ -36,13 +37,12 @@ function mapUserSummaryToUser(u: UserSummary): User {
 }
 
 export function useUsers(initialParams?: ListUsersParams) {
-  const [users, setUsers] = useState<User[]>([]);
+  const [users, setUsers] = useState<User[]>(MOCK_USERS);
   const [rawUsers, setRawUsers] = useState<UserSummary[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const fetchUsers = useCallback(async (params?: ListUsersParams) => {
-    setLoading(true);
     setError(null);
     try {
       const response = await usersApi.listUsers({
@@ -55,7 +55,8 @@ export function useUsers(initialParams?: ListUsersParams) {
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Failed to fetch users';
       setError(msg);
-      console.error('Failed to fetch users from backend:', err);
+      console.warn('Backend users API unavailable, falling back to offline fixtures:', err);
+      setUsers(MOCK_USERS);
     } finally {
       setLoading(false);
     }
