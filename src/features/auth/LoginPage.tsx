@@ -180,11 +180,10 @@ export function LoginPage() {
             type="button"
             onClick={() => setShowDevPanel((v) => !v)}
             aria-label="Open developer quick login"
-            title="Dev Quick Login"
-            className="flex items-center gap-1.5 rounded-lg border border-amber-400/40 bg-amber-400/10 px-2.5 py-1.5 text-amber-300 backdrop-blur-sm transition hover:bg-amber-400/20"
+            title="Developer Quick Login"
+            className="flex h-7 w-7 items-center justify-center rounded-full border border-amber-400/50 bg-slate-900/80 text-amber-300 shadow-md backdrop-blur-md transition hover:scale-105 hover:bg-amber-400/20 active:scale-95"
           >
-            <Terminal className="h-3.5 w-3.5" />
-            <span className="text-[10px] font-bold uppercase tracking-wider">Dev</span>
+            <span className="font-extrabold text-xs leading-none select-none">!</span>
           </button>
 
           {/* Dev panel dropdown */}
@@ -234,25 +233,25 @@ export function LoginPage() {
       )}
 
       {/* ── LEFT PANEL: Login form ── */}
-      <section className="flex flex-1 items-center justify-center bg-white px-6 py-12 lg:max-w-[500px] xl:max-w-[540px] lg:px-14 xl:px-18 rounded-b-3xl lg:rounded-b-none lg:rounded-r-3xl xl:rounded-r-[2.5rem] shadow-2xl z-10">
+      <section className="flex flex-1 items-center justify-center bg-white px-6 py-12 lg:max-w-[500px] xl:max-w-[540px] lg:px-14 xl:px-18 rounded-b-3xl lg:rounded-b-none lg:rounded-r-3xl xl:rounded-r-[2.5rem] shadow-2xl z-10 border-r border-slate-200/70">
         <div className="w-full max-w-sm">
           {/* Logo */}
           <div className="mb-10 flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-50 p-1 shadow-sm border border-slate-100">
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#eff4fa] p-1.5 shadow-xs border border-blue-100/80">
               <img src="/logo.png" alt="DNS ERP" className="h-full w-full object-contain" />
             </div>
             <div>
-              <p className="text-sm font-bold tracking-tight text-slate-800">DNS Import &amp; Export</p>
-              <p className="text-[11px] text-slate-400">Enterprise Resource Planning</p>
+              <p className="text-sm font-bold tracking-tight text-slate-900">DNS Import &amp; Export</p>
+              <p className="text-[11px] font-medium text-slate-400">Enterprise Resource Planning</p>
             </div>
           </div>
 
           {/* Heading */}
           <div className="mb-8">
-            <h1 className="text-2xl font-bold tracking-tight text-slate-800">
+            <h1 className="text-2xl xl:text-3xl font-extrabold tracking-tight text-slate-900">
               Nice to see you again
             </h1>
-            <p className="mt-1.5 text-sm text-slate-500">
+            <p className="mt-1.5 text-sm text-slate-500 font-normal">
               Sign in to your organization account to continue.
             </p>
           </div>
@@ -261,7 +260,7 @@ export function LoginPage() {
           <form onSubmit={handleSubmit} className="space-y-5">
             {/* Email */}
             <div>
-              <label className="mb-1.5 block text-xs font-semibold text-slate-600" htmlFor="login-email">
+              <label className="mb-1.5 block text-xs font-semibold text-slate-700 tracking-wide" htmlFor="login-email">
                 Email Address
               </label>
               <div className="relative">
@@ -274,14 +273,14 @@ export function LoginPage() {
                   autoComplete="email"
                   required
                   placeholder="you@dnserp.com"
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-4 text-sm text-slate-800 outline-none placeholder:text-slate-400 transition focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/15"
+                  className="w-full rounded-xl border border-slate-200/90 bg-[#eff4fa] py-3 pl-10 pr-4 text-sm text-slate-800 outline-none placeholder:text-slate-400 transition focus:border-[#263183] focus:bg-white focus:ring-2 focus:ring-[#263183]/15"
                 />
               </div>
             </div>
 
             {/* Password */}
             <div>
-              <label className="mb-1.5 block text-xs font-semibold text-slate-600" htmlFor="login-password">
+              <label className="mb-1.5 block text-xs font-semibold text-slate-700 tracking-wide" htmlFor="login-password">
                 Password
               </label>
               <div className="relative">
@@ -295,13 +294,13 @@ export function LoginPage() {
                   required
                   minLength={8}
                   placeholder="Enter your password"
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-11 text-sm text-slate-800 outline-none placeholder:text-slate-400 transition focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/15"
+                  className="w-full rounded-xl border border-slate-200/90 bg-[#eff4fa] py-3 pl-10 pr-11 text-sm text-slate-800 outline-none placeholder:text-slate-400 transition focus:border-[#263183] focus:bg-white focus:ring-2 focus:ring-[#263183]/15"
                 />
                 <button
                   type="button"
                   aria-label={showPassword ? 'Hide password' : 'Show password'}
                   onClick={() => setShowPassword((v) => !v)}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 transition hover:text-slate-600"
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 transition hover:text-slate-700"
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
@@ -313,12 +312,12 @@ export function LoginPage() {
               <label className="flex cursor-pointer items-center gap-2 select-none">
                 <div className="relative">
                   <input type="checkbox" className="sr-only peer" />
-                  <div className="h-5 w-9 rounded-full border border-slate-200 bg-slate-100 transition peer-checked:border-blue-500 peer-checked:bg-blue-500" />
+                  <div className="h-5 w-9 rounded-full border border-slate-200 bg-slate-100 transition peer-checked:border-[#263183] peer-checked:bg-[#263183]" />
                   <div className="absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white shadow transition peer-checked:translate-x-4" />
                 </div>
-                <span className="text-xs text-slate-500">Remember me</span>
+                <span className="text-xs font-medium text-slate-600">Remember me</span>
               </label>
-              <span className="text-xs font-medium text-blue-600 hover:underline cursor-default select-none">
+              <span className="text-xs font-semibold text-[#263183] hover:underline cursor-default select-none">
                 Forgot password?
               </span>
             </div>
@@ -337,7 +336,7 @@ export function LoginPage() {
             <button
               type="submit"
               disabled={isSubmitting || isInitializing}
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-bold text-white shadow-md shadow-blue-600/20 transition hover:bg-blue-700 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#263183] px-4 py-3 text-sm font-bold text-white shadow-md shadow-[#263183]/20 transition hover:bg-[#1D2667] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
             >
               {isSubmitting ? (
                 <>
@@ -353,9 +352,15 @@ export function LoginPage() {
             </button>
           </form>
 
-          <p className="mt-8 text-center text-[11px] text-slate-400">
-            Access is controlled by your backend role and permissions.
-          </p>
+          {/* Footer note & credit on mobile */}
+          <div className="mt-8 text-center space-y-1">
+            <p className="text-[11px] text-slate-400">
+              Access is controlled by your backend role and permissions.
+            </p>
+            <p className="text-[10px] text-slate-400/80 font-normal lg:hidden">
+              Developed and Maintained by FiveHundred Labs (Pvt) Ltd
+            </p>
+          </div>
         </div>
       </section>
 
@@ -410,9 +415,9 @@ export function LoginPage() {
           </div>
         </div>
 
-        {/* Bottom version tag */}
-        <p className="absolute bottom-5 text-[10px] font-medium tracking-widest text-white/50 uppercase z-20">
-          DNS ERP · Enterprise Edition
+        {/* Company credit */}
+        <p className="absolute bottom-4 text-center text-[11px] font-normal tracking-wide text-white/50 z-20 select-none">
+          Developed and Maintained by FiveHundred Labs (Pvt) Ltd
         </p>
       </section>
     </main>
