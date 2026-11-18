@@ -66,7 +66,7 @@ export interface CreateCustomerStep1Payload {
   contactPerson: string;
   companyName: string;
   displayName: string;
-  email: string;
+  email?: string;
   whatsappNumber: string;
   primaryContactNumber: string;
   secondaryContactNumber?: string;
