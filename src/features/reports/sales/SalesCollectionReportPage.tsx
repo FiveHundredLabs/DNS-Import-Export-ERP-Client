@@ -13,8 +13,8 @@ import { Button } from '../../../components/ui/button';
 import { Input } from '../../../components/ui/input';
 import { Badge } from '../../../components/ui/badge';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../../../components/ui/table';
-import { MOCK_AREAS } from '../../../mock/mockAreas';
-import { MOCK_USERS } from '../../../mock/mockUsers';
+import { useAreas } from '../../../hooks/useAreas';
+import { useUsers } from '../../../hooks/useUsers';
 import { cn } from '../../../utils/cn';
 import {
   Banknote,
@@ -46,6 +46,8 @@ type ActiveTab = 'DATE_WISE' | 'REPRESENTATIVES' | 'RECEIPTS_LEDGER';
 
 export function SalesCollectionReportPage() {
   const { currentUser, role } = useAuth();
+  const { areas } = useAreas();
+  const { users } = useUsers();
 
   const [datePreset, setDatePreset] = useState<DatePreset>('this_month');
   const [startDate, setStartDate] = useState<string>('');
@@ -105,16 +107,16 @@ export function SalesCollectionReportPage() {
   const availableCollectors = useMemo(() => {
     if (isSalesRep) return [];
     if (isAreaManager) {
-      return MOCK_USERS.filter(
+      return users.filter(
         (u) => (u.areaId === currentUser?.areaId || u.id === currentUser?.id) && u.isActive
       );
     }
     // Executives
     if (selectedAreaId !== 'ALL') {
-      return MOCK_USERS.filter((u) => u.areaId === selectedAreaId && (u.role === 'SALES_REP' || u.role === 'AREA_MANAGER'));
+      return users.filter((u) => u.areaId === selectedAreaId && (u.role === 'SALES_REP' || u.role === 'AREA_MANAGER'));
     }
-    return MOCK_USERS.filter((u) => u.role === 'SALES_REP' || u.role === 'AREA_MANAGER');
-  }, [isSalesRep, isAreaManager, selectedAreaId, currentUser]);
+    return users.filter((u) => u.role === 'SALES_REP' || u.role === 'AREA_MANAGER');
+  }, [isSalesRep, isAreaManager, selectedAreaId, currentUser, users]);
 
   const kpi = data?.kpi || {
     totalCollected: 0,
@@ -273,7 +275,7 @@ export function SalesCollectionReportPage() {
                 className="w-full h-8 px-2.5 text-xs rounded-xl border border-slate-200 bg-white font-medium text-slate-700 focus:outline-none focus:ring-1 focus:ring-primary"
               >
                 <option value="ALL">All Territories</option>
-                {MOCK_AREAS.map((a) => (
+                {areas.map((a) => (
                   <option key={a.id} value={a.id}>
                     {a.name}
                   </option>

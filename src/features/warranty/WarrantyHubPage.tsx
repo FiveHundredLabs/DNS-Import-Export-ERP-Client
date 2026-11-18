@@ -22,6 +22,7 @@ import {
 import { warrantyService } from '../../services/WarrantyService';
 import { WarrantyStatusBadge, ClaimStatusBadge } from './WarrantyStatusBadge';
 import { NewClaimModal } from './NewClaimModal';
+import { ClaimVoucherModal } from './ClaimVoucherModal';
 import { ResolveClaimModal } from './ResolveClaimModal';
 import { RecordFollowUpModal } from './RecordFollowUpModal';
 import { RecordWarrantyNoteModal } from './RecordWarrantyNoteModal';
@@ -30,7 +31,7 @@ import { SalesRepWarrantyPage } from './SalesRepWarrantyPage';
 import { useAuth } from '../../hooks/useAuth';
 import { formatDate, formatCurrency } from '../../utils/formatters';
 import { calculateWarrantyExpiry, calculateRemainingWarranty } from '../../rules/warrantyRules';
-import { MOCK_CUSTOMERS } from '../../mock/mockCustomers';
+import { useCustomers } from '../../hooks/useCustomers';
 import {
   ShieldCheck,
   ShieldAlert,
@@ -57,10 +58,13 @@ import {
   Info,
   Check,
   Package,
+  Printer,
+  Copy,
 } from 'lucide-react';
 
 export function WarrantyHubPage() {
   const { role, currentUser, hasPermission } = useAuth();
+  const { customers } = useCustomers();
   const isSalesRep = role === 'SALES_REP';
   const isAreaManager = role === 'AREA_MANAGER';
   const isFieldUser = isSalesRep || isAreaManager;
@@ -74,13 +78,13 @@ export function WarrantyHubPage() {
   // Assigned customers based on strict RBAC
   const assignedCustomers = useMemo(() => {
     if (role === 'SALES_REP') {
-      return MOCK_CUSTOMERS.filter((c) => c.assignedRepId === currentUser?.id);
+      return customers.filter((c) => c.assignedRepId === currentUser?.id);
     }
     if (role === 'AREA_MANAGER') {
-      return MOCK_CUSTOMERS.filter((c) => c.areaId === currentUser?.areaId);
+      return customers.filter((c) => c.areaId === currentUser?.areaId);
     }
-    return MOCK_CUSTOMERS;
-  }, [role, currentUser?.id, currentUser?.areaId]);
+    return customers;
+  }, [role, currentUser?.id, currentUser?.areaId, customers]);
 
   // Active Hub Tab - restricted for Area Managers & Sales Reps
   const [activeTab, setActiveTab] = useState<
@@ -182,7 +186,7 @@ export function WarrantyHubPage() {
     try {
       setRegisterLoading(true);
       setRegisterErrorMsg(null);
-      const selectedCust = MOCK_CUSTOMERS.find((c) => c.id === selectedCustomerId);
+      const selectedCust = customers.find((c) => c.id === selectedCustomerId);
       const res = await warrantyService.registerEndCustomerWarranty(
         {
           barcode: scanBarcode.trim(),
@@ -261,7 +265,7 @@ export function WarrantyHubPage() {
     try {
       setClaimSubmitting(true);
       setClaimErrorMsg(null);
-      await warrantyService.createClaim(
+      const created = await warrantyService.createClaim(
         {
           warrantyRecordId: claimDossier.warrantyRecordId,
           complaintDate: claimComplaintDate,
@@ -270,9 +274,10 @@ export function WarrantyHubPage() {
         },
         currentUser
       );
-      setClaimSuccessMsg('Warranty claim successfully lodged! Awaiting technical desk inspection.');
+      setClaimSuccessMsg(`Warranty claim approved! POS Reference Code: ${created.referenceCode || created.claimNumber} (Valid for 14 days).`);
       setClaimComplaintReason('');
       loadClaims();
+      setViewingVoucher(created);
     } catch (err: any) {
       setClaimErrorMsg(err.message || 'Failed to lodge warranty claim.');
     } finally {
@@ -293,6 +298,7 @@ export function WarrantyHubPage() {
   const [claimsLoading, setClaimsLoading] = useState(true);
   const [claimSearch, setClaimSearch] = useState('');
   const [claimStatusFilter, setClaimStatusFilter] = useState<string>('ALL');
+  const [viewingVoucher, setViewingVoucher] = useState<WarrantyClaim | null>(null);
 
   const [notes, setNotes] = useState<WarrantyNote[]>([]);
   const [notesLoading, setNotesLoading] = useState(true);
@@ -911,7 +917,7 @@ export function WarrantyHubPage() {
                               <SelectValue placeholder="Select Customer" />
                             </SelectTrigger>
                             <SelectContent>
-                              {MOCK_CUSTOMERS.map((c) => (
+                              {customers.map((c) => (
                                 <SelectItem key={c.id} value={c.id} className="text-xs">
                                   {c.name} ({c.code})
                                 </SelectItem>
@@ -1353,6 +1359,175 @@ export function WarrantyHubPage() {
               </div>
             </div>
           ) : null}
+
+          {/* CLAIMS MASTER LEDGER & POS REFERENCE CODE TRACKER */}
+          <Card className="border-slate-200 shadow-xs bg-white">
+            <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 border-b border-slate-100 bg-slate-50/60">
+              <div>
+                <CardTitle className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                  <ShieldCheck className="h-4 w-4 text-primary" />
+                  Approved Claims & Showroom POS Tracking
+                </CardTitle>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Single-use 14-day reference codes for Showroom POS product replacement.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <div className="relative flex-1 sm:w-64">
+                  <Search className="h-3.5 w-3.5 absolute left-2.5 top-2.5 text-slate-400" />
+                  <Input
+                    type="text"
+                    placeholder="Search claim, ref code, customer..."
+                    value={claimSearch}
+                    onChange={(e) => setClaimSearch(e.target.value)}
+                    className="pl-8 text-xs h-8"
+                  />
+                </div>
+
+                <Select
+                  value={claimStatusFilter}
+                  onValueChange={(val) => setClaimStatusFilter(val)}
+                >
+                  <SelectTrigger className="rounded-md border border-slate-300 text-xs h-8 px-2 bg-white text-slate-700 min-w-36">
+                    <SelectValue placeholder="All Statuses" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ALL">All Statuses ({claims.length})</SelectItem>
+                    <SelectItem value="APPROVED">Approved</SelectItem>
+                    <SelectItem value="REPLACED">Replaced via POS</SelectItem>
+                    <SelectItem value="EXPIRED">Code Expired</SelectItem>
+                    <SelectItem value="SUBMITTED">Submitted</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsNewClaimOpen(true)}
+                  className="h-8 text-xs gap-1.5 shrink-0 bg-white"
+                >
+                  <PlusCircle className="h-3.5 w-3.5" /> New Claim
+                </Button>
+              </div>
+            </CardHeader>
+
+            <CardContent className="p-0">
+              {claimsLoading ? (
+                <div className="p-8 text-center text-xs text-slate-500 flex items-center justify-center gap-2">
+                  <RefreshCw className="h-4 w-4 animate-spin" /> Loading warranty claims...
+                </div>
+              ) : claims.length === 0 ? (
+                <div className="p-8 text-center text-xs text-slate-500">
+                  No warranty claims found matching your filter criteria.
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs text-slate-600">
+                    <thead className="bg-slate-50 text-[11px] font-semibold text-slate-500 uppercase tracking-wider border-b border-slate-200">
+                      <tr>
+                        <th className="py-3 px-4">Claim & Reference Code</th>
+                        <th className="py-3 px-3">Customer</th>
+                        <th className="py-3 px-3">Defective Product</th>
+                        <th className="py-3 px-3">Replacement SKU</th>
+                        <th className="py-3 px-3">POS Validity</th>
+                        <th className="py-3 px-3 text-center">Status</th>
+                        <th className="py-3 px-4 text-right">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 bg-white">
+                      {claims.map((c) => {
+                        const refCode = c.referenceCode || `WRC-${c.claimNumber.replace('CLM-', '')}`;
+                        const isClaimFulfilled = c.status === 'REPLACED';
+                        const expiresAt = c.referenceCodeExpiresAt
+                          ? new Date(c.referenceCodeExpiresAt)
+                          : new Date(new Date(c.createdAt).getTime() + 14 * 24 * 60 * 60 * 1000);
+                        const isExpired = !isClaimFulfilled && new Date() > expiresAt;
+                        const daysLeft = Math.max(0, Math.ceil((expiresAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
+
+                        return (
+                          <tr key={c.id} className="hover:bg-slate-50/80 transition-colors">
+                            <td className="py-3 px-4">
+                              <div className="font-mono font-bold text-slate-900">{c.claimNumber}</div>
+                              <div className="mt-1 flex items-center gap-1.5">
+                                <span className="font-mono text-[11px] font-bold text-primary bg-primary/10 border border-primary/20 px-2 py-0.5 rounded-md">
+                                  {refCode}
+                                </span>
+                              </div>
+                            </td>
+                            <td className="py-3 px-3">
+                              <div className="font-semibold text-slate-900">{c.customerName}</div>
+                              {c.customerPhone && (
+                                <div className="text-[11px] text-slate-500">{c.customerPhone}</div>
+                              )}
+                            </td>
+                            <td className="py-3 px-3">
+                              <div className="font-medium text-slate-800">{c.productName}</div>
+                              <div className="text-[11px] text-slate-400 font-mono">
+                                {c.defectiveBarcode || c.serialNumber || c.sku}
+                              </div>
+                              <div className="text-[11px] text-slate-500 italic truncate max-w-xs mt-0.5">
+                                {c.complaintReason}
+                              </div>
+                            </td>
+                            <td className="py-3 px-3">
+                              <div className="font-medium text-slate-900">
+                                {c.replacementProductName || c.productName}
+                              </div>
+                              <div className="text-[11px] text-emerald-700 font-mono font-semibold">
+                                {c.replacementProductSku || c.sku} (1 Unit)
+                              </div>
+                            </td>
+                            <td className="py-3 px-3">
+                              {isClaimFulfilled ? (
+                                <div>
+                                  <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700">
+                                    <CheckCircle2 className="h-3 w-3" /> Note: {c.replacementNoteNumber || 'Issued'}
+                                  </span>
+                                  {c.replacementBarcode && (
+                                    <div className="text-[10px] text-slate-500 font-mono">
+                                      BC: {c.replacementBarcode}
+                                    </div>
+                                  )}
+                                </div>
+                              ) : isExpired ? (
+                                <span className="text-[11px] font-semibold text-rose-600 flex items-center gap-1">
+                                  <Clock className="h-3 w-3" /> Expired ({formatDate(expiresAt.toISOString())})
+                                </span>
+                              ) : (
+                                <div>
+                                  <span className="text-[11px] font-bold text-amber-700 flex items-center gap-1">
+                                    <Clock className="h-3 w-3" /> {daysLeft} days left
+                                  </span>
+                                  <span className="text-[10px] text-slate-400 block">
+                                    Exp: {formatDate(expiresAt.toISOString())}
+                                  </span>
+                                </div>
+                              )}
+                            </td>
+                            <td className="py-3 px-3 text-center">
+                              <ClaimStatusBadge status={c.status} />
+                            </td>
+                            <td className="py-3 px-4 text-right">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setViewingVoucher(c)}
+                                className="h-7 text-xs gap-1.5 border-slate-200 text-slate-700 hover:bg-slate-100"
+                              >
+                                <Printer className="h-3 w-3 text-slate-500" />
+                                Voucher
+                              </Button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
         )}
 
@@ -1395,7 +1570,7 @@ export function WarrantyHubPage() {
                     <SelectItem value="ALL">
                       {isFieldUser
                         ? `All Assigned Customers (${assignedCustomers.length})`
-                        : `All Customers (${MOCK_CUSTOMERS.length})`}
+                        : `All Customers (${customers.length})`}
                     </SelectItem>
                     {assignedCustomers.map((c) => (
                       <SelectItem key={c.id} value={c.id}>
@@ -1723,10 +1898,21 @@ export function WarrantyHubPage() {
         <NewClaimModal
           open={isNewClaimOpen}
           onOpenChange={setIsNewClaimOpen}
-          onSuccess={() => {
+          onSuccess={(created) => {
             loadClaims();
             loadRecords();
+            if (created) {
+              setViewingVoucher(created);
+            }
           }}
+        />
+      )}
+
+      {viewingVoucher && (
+        <ClaimVoucherModal
+          claim={viewingVoucher}
+          open={Boolean(viewingVoucher)}
+          onOpenChange={(open) => !open && setViewingVoucher(null)}
         />
       )}
 

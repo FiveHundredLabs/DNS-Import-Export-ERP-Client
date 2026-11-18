@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { User } from '../types/auth';
-import { userService } from '../services/UserService';
+import { User, UserRole } from '../types/auth';
+import { usersApi } from '../api/users/users.api';
 
 export function useUsers() {
   const [users, setUsers] = useState<User[]>([]);
@@ -9,10 +9,22 @@ export function useUsers() {
   const fetchUsers = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await userService.getUsers();
-      setUsers(data);
+      const response = await usersApi.listUsers({ pageSize: 100, status: 'ACTIVE' });
+      const mapped: User[] = response.data.map((u) => {
+        const roleCode = (typeof u.role === 'string' ? u.role : u.role?.code || u.roleCode || 'SALES_REP') as UserRole;
+        return {
+          id: u.id,
+          name: u.displayName || u.fullName,
+          email: u.email,
+          role: roleCode,
+          phone: u.phone || '',
+          areaId: u.areaId || undefined,
+          isActive: u.status === 'ACTIVE',
+        };
+      });
+      setUsers(mapped);
     } catch (e) {
-      console.error(e);
+      console.error('Failed to fetch users from backend:', e);
     } finally {
       setLoading(false);
     }
@@ -26,17 +38,5 @@ export function useUsers() {
     users,
     loading,
     refetch: fetchUsers,
-    createUser: async (data: Omit<User, 'id' | 'createdAt' | 'updatedAt'>) => {
-      await userService.createUser(data);
-      await fetchUsers();
-    },
-    updateUser: async (id: string, data: Partial<User>) => {
-      await userService.updateUser(id, data);
-      await fetchUsers();
-    },
-    deleteUser: async (id: string) => {
-      await userService.deleteUser(id);
-      await fetchUsers();
-    }
   };
 }

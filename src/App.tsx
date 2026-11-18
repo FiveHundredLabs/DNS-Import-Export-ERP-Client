@@ -1,146 +1,408 @@
+import React, { Suspense } from 'react';
+import { PageLoadingFallback } from './components/common/PageLoadingFallback';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AppLayout } from './layouts/AppLayout';
 import { StandardLayout } from './layouts/StandardLayout';
-import { DashboardPage } from './features/dashboard/DashboardPage';
-import { ProductListPage } from './features/products/ProductListPage';
-import { ProductDetailPage } from './features/products/ProductDetailPage';
-import { CustomerListPage } from './features/customers/CustomerListPage';
-import { CustomerOnboardingPage } from './features/customers/CustomerOnboardingPage';
-import { CustomerDetailPage } from './features/customers/CustomerDetailPage';
-import { ApprovalsPage } from './features/approvals/ApprovalsPage';
-import { StockManagerApprovalHub } from './features/inventory/components/StockManagerApprovalHub';
-import { QuotationListPage } from './features/quotations/QuotationListPage';
-import { QuotationCreateEditPage } from './features/quotations/QuotationCreateEditPage';
-import { QuotationDetailPage } from './features/quotations/QuotationDetailPage';
-import { OrderListPage } from './features/orders/OrderListPage';
-import { OrderCreateEditPage } from './features/orders/OrderCreateEditPage';
-import { OrderDetailPage } from './features/orders/OrderDetailPage';
-import { OrderTrackingPage } from './features/orders/OrderTrackingPage';
-import { OrderActivityLogPage } from './features/orders/OrderActivityLogPage';
-import { InventoryDashboardPage } from './features/inventory/InventoryDashboardPage';
-import { GRNListPage } from './features/inventory/GRNListPage';
-import { GRNCreateEditPage } from './features/inventory/GRNCreateEditPage';
-import { GRNDetailPage } from './features/inventory/GRNDetailPage';
-import { GRNUnitStickersPage } from './features/inventory/GRNUnitStickersPage';
-import { StockBalancePage } from './features/inventory/StockBalancePage';
-import { StockAdjustmentsPage } from './features/inventory/StockAdjustmentsPage';
-import { DamagedStockPage } from './features/inventory/DamagedStockPage';
-import { StockMovementsPage } from './features/inventory/StockMovementsPage';
-import { OrderPickingPage } from './features/inventory/OrderPickingPage';
-import { DispatchPage } from './features/inventory/DispatchPage';
-import { DeliveryNoteListPage } from './features/inventory/delivery-notes/DeliveryNoteListPage';
-import { DeliveryNoteCreatePage } from './features/inventory/delivery-notes/DeliveryNoteCreatePage';
-import { DeliveryNoteDetailPage } from './features/inventory/delivery-notes/DeliveryNoteDetailPage';
-import { InvoiceListPage } from './features/invoices/InvoiceListPage';
-import { InvoiceDetailPage } from './features/invoices/InvoiceDetailPage';
-import { InvoiceDraftEditPage } from './features/invoices/InvoiceDraftEditPage';
-import { OrderApprovalDetailPage } from './features/approvals/OrderApprovalDetailPage';
-import { MyApprovalsPage } from './features/approvals/MyApprovalsPage';
-import { PaymentListPage } from './features/payments/PaymentListPage';
-import { PaymentCollectionPage } from './features/payments/PaymentCollectionPage';
-import { PaymentDetailPage } from './features/payments/PaymentDetailPage';
-import { CustomerPaymentDetailPage } from './features/payments/CustomerPaymentDetailPage';
-import { CustomerPaymentsTab } from './features/payments/CustomerPaymentsTab';
-import { ShowroomManagerHub } from './features/pos/ShowroomManagerHub';
-import { DayEndPOSReportPage } from './features/pos/DayEndPOSReport';
-import { POSTransactionHistoryPage } from './features/pos/POSTransactionHistoryPage';
-import { POSSessionsPage } from './features/pos/POSSessionsPage';
-import { WarrantyHubPage } from './features/warranty/WarrantyHubPage';
-import { SalesRepWarrantyPage } from './features/warranty/SalesRepWarrantyPage';
-import { CommissionHubPage } from './features/commissions/CommissionHubPage';
-import { CommissionConfigPage } from './features/commissions/CommissionConfigPage';
-import { PerformanceDashboardPage } from './features/performance/PerformanceDashboardPage';
-import { CustomerCreditTermsSettings } from './features/dashboard/CustomerCreditTermsSettings';
-import { FinanceLayout } from './features/finance/FinanceLayout';
-import { FinanceDashboardPage } from './features/finance/pages/FinanceDashboardPage';
-import { ChartOfAccountsPage } from './features/finance/pages/ChartOfAccountsPage';
-import { SuppliersPage } from './features/finance/pages/SuppliersPage';
-import { PaymentApprovalPage } from './features/finance/pages/PaymentApprovalPage';
-import { FinanceCommissionsPage } from './features/finance/pages/FinanceCommissionsPage';
-import { FinanceDeskPage } from './features/finance/pages/FinanceDeskPage';
-import { FinanceReportsHubPage } from './features/finance/pages/reports/FinanceReportsHubPage';
-import { ProfitLossPage } from './features/finance/pages/reports/ProfitLossPage';
-import { BalanceSheetPage } from './features/finance/pages/reports/BalanceSheetPage';
-import { TrialBalancePage } from './features/finance/pages/reports/TrialBalancePage';
-import { GeneralLedgerPage } from './features/finance/pages/reports/GeneralLedgerPage';
-import { VatSummaryPage } from './features/finance/pages/reports/VatSummaryPage';
-import { MonthlyTransactionsAuditPage } from './features/finance/pages/reports/MonthlyTransactionsAuditPage';
-import { VendorBillCostingPage } from './features/finance/pages/ap/VendorBillCostingPage';
-import { SupplierAdvancePaymentsPage } from './features/finance/pages/ap/SupplierAdvancePaymentsPage';
-import { SupplierDebitNotesPage } from './features/finance/pages/ap/SupplierDebitNotesPage';
-import { BatchSupplierPaymentPage } from './features/finance/pages/ap/BatchSupplierPaymentPage';
-import { ReceiptApprovalQueuePage } from './features/finance/pages/ar/ReceiptApprovalQueuePage';
-import { ARCollectionAllocationPage } from './features/finance/pages/ar/ARCollectionAllocationPage';
-import { PDCVaultPage } from './features/finance/pages/ar/PDCVaultPage';
-import { CustomerCreditNotesPage } from './features/finance/pages/ar/CustomerCreditNotesPage';
-import { CommercialNotesPage } from './features/finance/pages/CommercialNotesPage';
-import { ManualJournalPage } from './features/finance/pages/journal/ManualJournalPage';
-import { BankReconciliationPage } from './features/finance/pages/reconciliation/BankReconciliationPage';
-import { FinancialPeriodLockPage } from './features/finance/pages/settings/FinancialPeriodLockPage';
-import { CashBookPage } from './features/finance/pages/CashBookPage';
-import { IncomeDeskPage } from './features/finance/pages/IncomeDeskPage';
-import { ExpenseDeskPage } from './features/finance/pages/ExpenseDeskPage';
-import { ReportsPage } from './features/reports/ReportsPage';
-import { ReportsHubDispatcher } from './features/reports/ReportsHubDispatcher';
-
-// Sales Reports
-import { SalesReportsHubPage } from './features/reports/sales/SalesReportsHubPage';
-import { SalesSummaryReportPage } from './features/reports/sales/SalesSummaryReportPage';
-import { SalesOrderReportPage } from './features/reports/sales/SalesOrderReportPage';
-import { SalesRepPerformanceReportPage } from './features/reports/sales/SalesRepPerformanceReportPage';
-import { AreaSalesReportPage } from './features/reports/sales/AreaSalesReportPage';
-import { SalesTargetReportPage } from './features/reports/sales/SalesTargetReportPage';
-import { CustomerSalesReportPage } from './features/reports/sales/CustomerSalesReportPage';
-import { ProductSalesReportPage } from './features/reports/sales/ProductSalesReportPage';
-import { SalesCollectionReportPage } from './features/reports/sales/SalesCollectionReportPage';
-import { SalesOutstandingReportPage } from './features/reports/sales/SalesOutstandingReportPage';
-import { SalesProfitabilityReportPage } from './features/reports/sales/SalesProfitabilityReportPage';
-import { ShowroomSalesReportPage } from './features/reports/sales/ShowroomSalesReportPage';
-
-// Purchasing Reports
-import { PurchasingReportsHubPage } from './features/reports/purchasing/PurchasingReportsHubPage';
-import { POReportPage } from './features/reports/purchasing/POReportPage';
-import { PurchaseSummaryReportPage } from './features/reports/purchasing/PurchaseSummaryReportPage';
-import { SupplierPurchaseReportPage } from './features/reports/purchasing/SupplierPurchaseReportPage';
-import { GRNReportPage } from './features/reports/purchasing/GRNReportPage';
-import { PurchaseReturnReportPage } from './features/reports/purchasing/PurchaseReturnReportPage';
-import { PurchaseCostAnalysisPage } from './features/reports/purchasing/PurchaseCostAnalysisPage';
-import { SupplierPaymentReportPage } from './features/reports/purchasing/SupplierPaymentReportPage';
-import { PurchaseOutstandingReportPage } from './features/reports/purchasing/PurchaseOutstandingReportPage';
-
-// Inventory Reports
-import { InventoryReportsHubPage } from './features/reports/inventory/InventoryReportsHubPage';
-import { StockSummaryReportPage } from './features/reports/inventory/StockSummaryReportPage';
-import { StockMovementReportPage } from './features/reports/inventory/StockMovementReportPage';
-import { StockValuationReportPage } from './features/reports/inventory/StockValuationReportPage';
-import { LowStockReportPage } from './features/reports/inventory/LowStockReportPage';
 import { ProtectedRoute } from './components/common/ProtectedRoute';
-import { LoginPage } from './features/auth/LoginPage';
 import { Toaster } from 'sonner';
-import { AreaListPage } from './features/administration/AreaListPage';
-import { TeamListPage } from './features/administration/TeamListPage';
-import { PurchasingDashboard } from './features/purchasing/PurchasingDashboard';
-import { PurchasingSuppliersPage } from './features/purchasing/PurchasingSuppliersPage';
-import { PurchaseOrderListPage } from './features/purchasing/PurchaseOrderListPage';
-import { PurchaseOrderCreateEditPage } from './features/purchasing/PurchaseOrderCreateEditPage';
-import { PurchaseOrderDetailPage } from './features/purchasing/PurchaseOrderDetailPage';
-import { PurchaseOrderPrintPage } from './features/purchasing/PurchaseOrderPrintPage';
-import { PurchaseOrderApprovalPage } from './features/purchasing/PurchaseOrderApprovalPage';
-import { PurchasingGRNListPage } from './features/purchasing/PurchasingGRNListPage';
-import { PurchasingGRNDetailPage } from './features/purchasing/PurchasingGRNDetailPage';
-import { PurchasingReportsPage } from './features/purchasing/PurchasingReportsPage';
-import { PurchasingSupplierPaymentsPage } from './features/purchasing/PurchasingSupplierPaymentsPage';
-import { PurchasingApprovalHub } from './features/purchasing/components/PurchasingApprovalHub';
-import { ProfilePage } from './features/profile/ProfilePage';
-import { SupplierReturnsPage } from './features/purchasing/SupplierReturnsPage';
+
+// Route-based code splitting for all page components
+const DashboardPage = React.lazy(() =>
+  import('./features/dashboard/DashboardPage').then(m => ({ default: m.DashboardPage || m.default }))
+);
+const ProductListPage = React.lazy(() =>
+  import('./features/products/ProductListPage').then(m => ({ default: m.ProductListPage || m.default }))
+);
+const ProductDetailPage = React.lazy(() =>
+  import('./features/products/ProductDetailPage').then(m => ({ default: m.ProductDetailPage || m.default }))
+);
+const CustomerListPage = React.lazy(() =>
+  import('./features/customers/CustomerListPage').then(m => ({ default: m.CustomerListPage || m.default }))
+);
+const CustomerOnboardingPage = React.lazy(() =>
+  import('./features/customers/CustomerOnboardingPage').then(m => ({ default: m.CustomerOnboardingPage || m.default }))
+);
+const CustomerDetailPage = React.lazy(() =>
+  import('./features/customers/CustomerDetailPage').then(m => ({ default: m.CustomerDetailPage || m.default }))
+);
+const ApprovalsPage = React.lazy(() =>
+  import('./features/approvals/ApprovalsPage').then(m => ({ default: m.ApprovalsPage || m.default }))
+);
+const StockManagerApprovalHub = React.lazy(() =>
+  import('./features/inventory/components/StockManagerApprovalHub').then(m => ({ default: m.StockManagerApprovalHub || m.default }))
+);
+const QuotationListPage = React.lazy(() =>
+  import('./features/quotations/QuotationListPage').then(m => ({ default: m.QuotationListPage || m.default }))
+);
+const QuotationCreateEditPage = React.lazy(() =>
+  import('./features/quotations/QuotationCreateEditPage').then(m => ({ default: m.QuotationCreateEditPage || m.default }))
+);
+const QuotationDetailPage = React.lazy(() =>
+  import('./features/quotations/QuotationDetailPage').then(m => ({ default: m.QuotationDetailPage || m.default }))
+);
+const OrderListPage = React.lazy(() =>
+  import('./features/orders/OrderListPage').then(m => ({ default: m.OrderListPage || m.default }))
+);
+const OrderCreateEditPage = React.lazy(() =>
+  import('./features/orders/OrderCreateEditPage').then(m => ({ default: m.OrderCreateEditPage || m.default }))
+);
+const OrderDetailPage = React.lazy(() =>
+  import('./features/orders/OrderDetailPage').then(m => ({ default: m.OrderDetailPage || m.default }))
+);
+const OrderTrackingPage = React.lazy(() =>
+  import('./features/orders/OrderTrackingPage').then(m => ({ default: m.OrderTrackingPage || m.default }))
+);
+const OrderActivityLogPage = React.lazy(() =>
+  import('./features/orders/OrderActivityLogPage').then(m => ({ default: m.OrderActivityLogPage || m.default }))
+);
+const InventoryDashboardPage = React.lazy(() =>
+  import('./features/inventory/InventoryDashboardPage').then(m => ({ default: m.InventoryDashboardPage || m.default }))
+);
+const GRNListPage = React.lazy(() =>
+  import('./features/inventory/GRNListPage').then(m => ({ default: m.GRNListPage || m.default }))
+);
+const GRNCreateEditPage = React.lazy(() =>
+  import('./features/inventory/GRNCreateEditPage').then(m => ({ default: m.GRNCreateEditPage || m.default }))
+);
+const GRNDetailPage = React.lazy(() =>
+  import('./features/inventory/GRNDetailPage').then(m => ({ default: m.GRNDetailPage || m.default }))
+);
+const GRNUnitStickersPage = React.lazy(() =>
+  import('./features/inventory/GRNUnitStickersPage').then(m => ({ default: m.GRNUnitStickersPage || m.default }))
+);
+const StockBalancePage = React.lazy(() =>
+  import('./features/inventory/StockBalancePage').then(m => ({ default: m.StockBalancePage || m.default }))
+);
+const StockAdjustmentsPage = React.lazy(() =>
+  import('./features/inventory/StockAdjustmentsPage').then(m => ({ default: m.StockAdjustmentsPage || m.default }))
+);
+const DamagedStockPage = React.lazy(() =>
+  import('./features/inventory/DamagedStockPage').then(m => ({ default: m.DamagedStockPage || m.default }))
+);
+const StockMovementsPage = React.lazy(() =>
+  import('./features/inventory/StockMovementsPage').then(m => ({ default: m.StockMovementsPage || m.default }))
+);
+const OrderPickingPage = React.lazy(() =>
+  import('./features/inventory/OrderPickingPage').then(m => ({ default: m.OrderPickingPage || m.default }))
+);
+const DispatchPage = React.lazy(() =>
+  import('./features/inventory/DispatchPage').then(m => ({ default: m.DispatchPage || m.default }))
+);
+const DeliveryNoteListPage = React.lazy(() =>
+  import('./features/inventory/delivery-notes/DeliveryNoteListPage').then(m => ({ default: m.DeliveryNoteListPage || m.default }))
+);
+const DeliveryNoteCreatePage = React.lazy(() =>
+  import('./features/inventory/delivery-notes/DeliveryNoteCreatePage').then(m => ({ default: m.DeliveryNoteCreatePage || m.default }))
+);
+const DeliveryNoteDetailPage = React.lazy(() =>
+  import('./features/inventory/delivery-notes/DeliveryNoteDetailPage').then(m => ({ default: m.DeliveryNoteDetailPage || m.default }))
+);
+const InvoiceListPage = React.lazy(() =>
+  import('./features/invoices/InvoiceListPage').then(m => ({ default: m.InvoiceListPage || m.default }))
+);
+const InvoiceDetailPage = React.lazy(() =>
+  import('./features/invoices/InvoiceDetailPage').then(m => ({ default: m.InvoiceDetailPage || m.default }))
+);
+const InvoiceDraftEditPage = React.lazy(() =>
+  import('./features/invoices/InvoiceDraftEditPage').then(m => ({ default: m.InvoiceDraftEditPage || m.default }))
+);
+const OrderApprovalDetailPage = React.lazy(() =>
+  import('./features/approvals/OrderApprovalDetailPage').then(m => ({ default: m.OrderApprovalDetailPage || m.default }))
+);
+const MyApprovalsPage = React.lazy(() =>
+  import('./features/approvals/MyApprovalsPage').then(m => ({ default: m.MyApprovalsPage || m.default }))
+);
+const PaymentListPage = React.lazy(() =>
+  import('./features/payments/PaymentListPage').then(m => ({ default: m.PaymentListPage || m.default }))
+);
+const PaymentCollectionPage = React.lazy(() =>
+  import('./features/payments/PaymentCollectionPage').then(m => ({ default: m.PaymentCollectionPage || m.default }))
+);
+const PaymentDetailPage = React.lazy(() =>
+  import('./features/payments/PaymentDetailPage').then(m => ({ default: m.PaymentDetailPage || m.default }))
+);
+const CustomerPaymentDetailPage = React.lazy(() =>
+  import('./features/payments/CustomerPaymentDetailPage').then(m => ({ default: m.CustomerPaymentDetailPage || m.default }))
+);
+const CustomerPaymentsTab = React.lazy(() =>
+  import('./features/payments/CustomerPaymentsTab').then(m => ({ default: m.CustomerPaymentsTab || m.default }))
+);
+const ShowroomManagerHub = React.lazy(() =>
+  import('./features/pos/ShowroomManagerHub').then(m => ({ default: m.ShowroomManagerHub || m.default }))
+);
+const DayEndPOSReportPage = React.lazy(() =>
+  import('./features/pos/DayEndPOSReport').then(m => ({ default: m.DayEndPOSReportPage || m.default }))
+);
+const POSTransactionHistoryPage = React.lazy(() =>
+  import('./features/pos/POSTransactionHistoryPage').then(m => ({ default: m.POSTransactionHistoryPage || m.default }))
+);
+const POSSessionsPage = React.lazy(() =>
+  import('./features/pos/POSSessionsPage').then(m => ({ default: m.POSSessionsPage || m.default }))
+);
+const WarrantyHubPage = React.lazy(() =>
+  import('./features/warranty/WarrantyHubPage').then(m => ({ default: m.WarrantyHubPage || m.default }))
+);
+const SalesRepWarrantyPage = React.lazy(() =>
+  import('./features/warranty/SalesRepWarrantyPage').then(m => ({ default: m.SalesRepWarrantyPage || m.default }))
+);
+const CommissionHubPage = React.lazy(() =>
+  import('./features/commissions/CommissionHubPage').then(m => ({ default: m.CommissionHubPage || m.default }))
+);
+const CommissionConfigPage = React.lazy(() =>
+  import('./features/commissions/CommissionConfigPage').then(m => ({ default: m.CommissionConfigPage || m.default }))
+);
+const PerformanceDashboardPage = React.lazy(() =>
+  import('./features/performance/PerformanceDashboardPage').then(m => ({ default: m.PerformanceDashboardPage || m.default }))
+);
+const CustomerCreditTermsSettings = React.lazy(() =>
+  import('./features/dashboard/CustomerCreditTermsSettings').then(m => ({ default: m.CustomerCreditTermsSettings || m.default }))
+);
+const FinanceLayout = React.lazy(() =>
+  import('./features/finance/FinanceLayout').then(m => ({ default: m.FinanceLayout || m.default }))
+);
+const FinanceDashboardPage = React.lazy(() =>
+  import('./features/finance/pages/FinanceDashboardPage').then(m => ({ default: m.FinanceDashboardPage || m.default }))
+);
+const ChartOfAccountsPage = React.lazy(() =>
+  import('./features/finance/pages/ChartOfAccountsPage').then(m => ({ default: m.ChartOfAccountsPage || m.default }))
+);
+const SuppliersPage = React.lazy(() =>
+  import('./features/finance/pages/SuppliersPage').then(m => ({ default: m.SuppliersPage || m.default }))
+);
+const PaymentApprovalPage = React.lazy(() =>
+  import('./features/finance/pages/PaymentApprovalPage').then(m => ({ default: m.PaymentApprovalPage || m.default }))
+);
+const FinanceCommissionsPage = React.lazy(() =>
+  import('./features/finance/pages/FinanceCommissionsPage').then(m => ({ default: m.FinanceCommissionsPage || m.default }))
+);
+const FinanceDeskPage = React.lazy(() =>
+  import('./features/finance/pages/FinanceDeskPage').then(m => ({ default: m.FinanceDeskPage || m.default }))
+);
+const FinanceReportsHubPage = React.lazy(() =>
+  import('./features/finance/pages/reports/FinanceReportsHubPage').then(m => ({ default: m.FinanceReportsHubPage || m.default }))
+);
+const ProfitLossPage = React.lazy(() =>
+  import('./features/finance/pages/reports/ProfitLossPage').then(m => ({ default: m.ProfitLossPage || m.default }))
+);
+const BalanceSheetPage = React.lazy(() =>
+  import('./features/finance/pages/reports/BalanceSheetPage').then(m => ({ default: m.BalanceSheetPage || m.default }))
+);
+const TrialBalancePage = React.lazy(() =>
+  import('./features/finance/pages/reports/TrialBalancePage').then(m => ({ default: m.TrialBalancePage || m.default }))
+);
+const GeneralLedgerPage = React.lazy(() =>
+  import('./features/finance/pages/reports/GeneralLedgerPage').then(m => ({ default: m.GeneralLedgerPage || m.default }))
+);
+const VatSummaryPage = React.lazy(() =>
+  import('./features/finance/pages/reports/VatSummaryPage').then(m => ({ default: m.VatSummaryPage || m.default }))
+);
+const MonthlyTransactionsAuditPage = React.lazy(() =>
+  import('./features/finance/pages/reports/MonthlyTransactionsAuditPage').then(m => ({ default: m.MonthlyTransactionsAuditPage || m.default }))
+);
+const VendorBillCostingPage = React.lazy(() =>
+  import('./features/finance/pages/ap/VendorBillCostingPage').then(m => ({ default: m.VendorBillCostingPage || m.default }))
+);
+const SupplierAdvancePaymentsPage = React.lazy(() =>
+  import('./features/finance/pages/ap/SupplierAdvancePaymentsPage').then(m => ({ default: m.SupplierAdvancePaymentsPage || m.default }))
+);
+const SupplierDebitNotesPage = React.lazy(() =>
+  import('./features/finance/pages/ap/SupplierDebitNotesPage').then(m => ({ default: m.SupplierDebitNotesPage || m.default }))
+);
+const BatchSupplierPaymentPage = React.lazy(() =>
+  import('./features/finance/pages/ap/BatchSupplierPaymentPage').then(m => ({ default: m.BatchSupplierPaymentPage || m.default }))
+);
+const ReceiptApprovalQueuePage = React.lazy(() =>
+  import('./features/finance/pages/ar/ReceiptApprovalQueuePage').then(m => ({ default: m.ReceiptApprovalQueuePage || m.default }))
+);
+const ARCollectionAllocationPage = React.lazy(() =>
+  import('./features/finance/pages/ar/ARCollectionAllocationPage').then(m => ({ default: m.ARCollectionAllocationPage || m.default }))
+);
+const PDCVaultPage = React.lazy(() =>
+  import('./features/finance/pages/ar/PDCVaultPage').then(m => ({ default: m.PDCVaultPage || m.default }))
+);
+const CustomerCreditNotesPage = React.lazy(() =>
+  import('./features/finance/pages/ar/CustomerCreditNotesPage').then(m => ({ default: m.CustomerCreditNotesPage || m.default }))
+);
+const CommercialNotesPage = React.lazy(() =>
+  import('./features/finance/pages/CommercialNotesPage').then(m => ({ default: m.CommercialNotesPage || m.default }))
+);
+const ManualJournalPage = React.lazy(() =>
+  import('./features/finance/pages/journal/ManualJournalPage').then(m => ({ default: m.ManualJournalPage || m.default }))
+);
+const BankReconciliationPage = React.lazy(() =>
+  import('./features/finance/pages/reconciliation/BankReconciliationPage').then(m => ({ default: m.BankReconciliationPage || m.default }))
+);
+const FinancialPeriodLockPage = React.lazy(() =>
+  import('./features/finance/pages/settings/FinancialPeriodLockPage').then(m => ({ default: m.FinancialPeriodLockPage || m.default }))
+);
+const CashBookPage = React.lazy(() =>
+  import('./features/finance/pages/CashBookPage').then(m => ({ default: m.CashBookPage || m.default }))
+);
+const IncomeDeskPage = React.lazy(() =>
+  import('./features/finance/pages/IncomeDeskPage').then(m => ({ default: m.IncomeDeskPage || m.default }))
+);
+const ExpenseDeskPage = React.lazy(() =>
+  import('./features/finance/pages/ExpenseDeskPage').then(m => ({ default: m.ExpenseDeskPage || m.default }))
+);
+const ReportsPage = React.lazy(() =>
+  import('./features/reports/ReportsPage').then(m => ({ default: m.ReportsPage || m.default }))
+);
+const ReportsHubDispatcher = React.lazy(() =>
+  import('./features/reports/ReportsHubDispatcher').then(m => ({ default: m.ReportsHubDispatcher || m.default }))
+);
+const SalesReportsHubPage = React.lazy(() =>
+  import('./features/reports/sales/SalesReportsHubPage').then(m => ({ default: m.SalesReportsHubPage || m.default }))
+);
+const SalesSummaryReportPage = React.lazy(() =>
+  import('./features/reports/sales/SalesSummaryReportPage').then(m => ({ default: m.SalesSummaryReportPage || m.default }))
+);
+const SalesOrderReportPage = React.lazy(() =>
+  import('./features/reports/sales/SalesOrderReportPage').then(m => ({ default: m.SalesOrderReportPage || m.default }))
+);
+const SalesRepPerformanceReportPage = React.lazy(() =>
+  import('./features/reports/sales/SalesRepPerformanceReportPage').then(m => ({ default: m.SalesRepPerformanceReportPage || m.default }))
+);
+const AreaSalesReportPage = React.lazy(() =>
+  import('./features/reports/sales/AreaSalesReportPage').then(m => ({ default: m.AreaSalesReportPage || m.default }))
+);
+const SalesTargetReportPage = React.lazy(() =>
+  import('./features/reports/sales/SalesTargetReportPage').then(m => ({ default: m.SalesTargetReportPage || m.default }))
+);
+const CustomerSalesReportPage = React.lazy(() =>
+  import('./features/reports/sales/CustomerSalesReportPage').then(m => ({ default: m.CustomerSalesReportPage || m.default }))
+);
+const ProductSalesReportPage = React.lazy(() =>
+  import('./features/reports/sales/ProductSalesReportPage').then(m => ({ default: m.ProductSalesReportPage || m.default }))
+);
+const SalesCollectionReportPage = React.lazy(() =>
+  import('./features/reports/sales/SalesCollectionReportPage').then(m => ({ default: m.SalesCollectionReportPage || m.default }))
+);
+const SalesOutstandingReportPage = React.lazy(() =>
+  import('./features/reports/sales/SalesOutstandingReportPage').then(m => ({ default: m.SalesOutstandingReportPage || m.default }))
+);
+const SalesProfitabilityReportPage = React.lazy(() =>
+  import('./features/reports/sales/SalesProfitabilityReportPage').then(m => ({ default: m.SalesProfitabilityReportPage || m.default }))
+);
+const ShowroomSalesReportPage = React.lazy(() =>
+  import('./features/reports/sales/ShowroomSalesReportPage').then(m => ({ default: m.ShowroomSalesReportPage || m.default }))
+);
+const PurchasingReportsHubPage = React.lazy(() =>
+  import('./features/reports/purchasing/PurchasingReportsHubPage').then(m => ({ default: m.PurchasingReportsHubPage || m.default }))
+);
+const POReportPage = React.lazy(() =>
+  import('./features/reports/purchasing/POReportPage').then(m => ({ default: m.POReportPage || m.default }))
+);
+const PurchaseSummaryReportPage = React.lazy(() =>
+  import('./features/reports/purchasing/PurchaseSummaryReportPage').then(m => ({ default: m.PurchaseSummaryReportPage || m.default }))
+);
+const SupplierPurchaseReportPage = React.lazy(() =>
+  import('./features/reports/purchasing/SupplierPurchaseReportPage').then(m => ({ default: m.SupplierPurchaseReportPage || m.default }))
+);
+const GRNReportPage = React.lazy(() =>
+  import('./features/reports/purchasing/GRNReportPage').then(m => ({ default: m.GRNReportPage || m.default }))
+);
+const PurchaseReturnReportPage = React.lazy(() =>
+  import('./features/reports/purchasing/PurchaseReturnReportPage').then(m => ({ default: m.PurchaseReturnReportPage || m.default }))
+);
+const PurchaseCostAnalysisPage = React.lazy(() =>
+  import('./features/reports/purchasing/PurchaseCostAnalysisPage').then(m => ({ default: m.PurchaseCostAnalysisPage || m.default }))
+);
+const SupplierPaymentReportPage = React.lazy(() =>
+  import('./features/reports/purchasing/SupplierPaymentReportPage').then(m => ({ default: m.SupplierPaymentReportPage || m.default }))
+);
+const PurchaseOutstandingReportPage = React.lazy(() =>
+  import('./features/reports/purchasing/PurchaseOutstandingReportPage').then(m => ({ default: m.PurchaseOutstandingReportPage || m.default }))
+);
+const InventoryReportsHubPage = React.lazy(() =>
+  import('./features/reports/inventory/InventoryReportsHubPage').then(m => ({ default: m.InventoryReportsHubPage || m.default }))
+);
+const StockSummaryReportPage = React.lazy(() =>
+  import('./features/reports/inventory/StockSummaryReportPage').then(m => ({ default: m.StockSummaryReportPage || m.default }))
+);
+const StockMovementReportPage = React.lazy(() =>
+  import('./features/reports/inventory/StockMovementReportPage').then(m => ({ default: m.StockMovementReportPage || m.default }))
+);
+const StockValuationReportPage = React.lazy(() =>
+  import('./features/reports/inventory/StockValuationReportPage').then(m => ({ default: m.StockValuationReportPage || m.default }))
+);
+const LowStockReportPage = React.lazy(() =>
+  import('./features/reports/inventory/LowStockReportPage').then(m => ({ default: m.LowStockReportPage || m.default }))
+);
+const LoginPage = React.lazy(() =>
+  import('./features/auth/LoginPage').then(m => ({ default: m.LoginPage || m.default }))
+);
+const AreaListPage = React.lazy(() =>
+  import('./features/administration/AreaListPage').then(m => ({ default: m.AreaListPage || m.default }))
+);
+const TeamListPage = React.lazy(() =>
+  import('./features/administration/TeamListPage').then(m => ({ default: m.TeamListPage || m.default }))
+);
+const PurchasingDashboard = React.lazy(() =>
+  import('./features/purchasing/PurchasingDashboard').then(m => ({ default: m.PurchasingDashboard || m.default }))
+);
+const PurchasingSuppliersPage = React.lazy(() =>
+  import('./features/purchasing/PurchasingSuppliersPage').then(m => ({ default: m.PurchasingSuppliersPage || m.default }))
+);
+const PurchaseOrderListPage = React.lazy(() =>
+  import('./features/purchasing/PurchaseOrderListPage').then(m => ({ default: m.PurchaseOrderListPage || m.default }))
+);
+const PurchaseOrderCreateEditPage = React.lazy(() =>
+  import('./features/purchasing/PurchaseOrderCreateEditPage').then(m => ({ default: m.PurchaseOrderCreateEditPage || m.default }))
+);
+const PurchaseOrderDetailPage = React.lazy(() =>
+  import('./features/purchasing/PurchaseOrderDetailPage').then(m => ({ default: m.PurchaseOrderDetailPage || m.default }))
+);
+const PurchaseOrderPrintPage = React.lazy(() =>
+  import('./features/purchasing/PurchaseOrderPrintPage').then(m => ({ default: m.PurchaseOrderPrintPage || m.default }))
+);
+const PurchaseOrderApprovalPage = React.lazy(() =>
+  import('./features/purchasing/PurchaseOrderApprovalPage').then(m => ({ default: m.PurchaseOrderApprovalPage || m.default }))
+);
+const PurchasingGRNListPage = React.lazy(() =>
+  import('./features/purchasing/PurchasingGRNListPage').then(m => ({ default: m.PurchasingGRNListPage || m.default }))
+);
+const PurchasingGRNDetailPage = React.lazy(() =>
+  import('./features/purchasing/PurchasingGRNDetailPage').then(m => ({ default: m.PurchasingGRNDetailPage || m.default }))
+);
+const PurchasingReportsPage = React.lazy(() =>
+  import('./features/purchasing/PurchasingReportsPage').then(m => ({ default: m.PurchasingReportsPage || m.default }))
+);
+const PurchasingSupplierPaymentsPage = React.lazy(() =>
+  import('./features/purchasing/PurchasingSupplierPaymentsPage').then(m => ({ default: m.PurchasingSupplierPaymentsPage || m.default }))
+);
+const PurchasingApprovalHub = React.lazy(() =>
+  import('./features/purchasing/components/PurchasingApprovalHub').then(m => ({ default: m.PurchasingApprovalHub || m.default }))
+);
+const ProfilePage = React.lazy(() =>
+  import('./features/profile/ProfilePage').then(m => ({ default: m.ProfilePage || m.default }))
+);
+const SupplierReturnsPage = React.lazy(() =>
+  import('./features/purchasing/SupplierReturnsPage').then(m => ({ default: m.SupplierReturnsPage || m.default }))
+);
+const NotFoundPage = React.lazy(() =>
+  import('./features/errors/NotFoundPage').then(m => ({ default: m.NotFoundPage || m.default }))
+);
+const ServerErrorPage = React.lazy(() =>
+  import('./features/errors/ServerErrorPage').then(m => ({ default: m.ServerErrorPage || m.default }))
+);
 
 export function App() {
   return (
     <>
       <Toaster richColors position="top-right" />
-      <Routes>
+      <Suspense fallback={<PageLoadingFallback />}>
+        <Routes>
         <Route path="/login" element={<LoginPage />} />
-      <Route path="/" element={<AppLayout />}>
+        <Route path="/404" element={<NotFoundPage />} />
+        <Route path="/500" element={<ServerErrorPage />} />
+      <Route
+        path="/"
+        element={
+          <ProtectedRoute>
+            <AppLayout />
+          </ProtectedRoute>
+        }
+      >
         {/* Standard Single-Column Content Pages */}
         <Route element={<StandardLayout />}>
           {/* Core Operational Routes */}
@@ -910,9 +1172,11 @@ export function App() {
         </Route>
 
         {/* Fallback */}
-        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="*" element={<NotFoundPage />} />
       </Route>
+      <Route path="*" element={<NotFoundPage />} />
     </Routes>
+      </Suspense>
     </>
   );
 }

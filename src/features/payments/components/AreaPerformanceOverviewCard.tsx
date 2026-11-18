@@ -1,5 +1,5 @@
 import React from 'react';
-import { Area } from '../../../mock/mockAreas';
+import { Area } from '../../../api/areas/areas.types';
 import { Customer } from '../../../types/customer';
 import { Invoice } from '../../../types/invoice';
 import { evaluateCustomerPaymentStatus } from '../../../rules/customerPaymentRules';

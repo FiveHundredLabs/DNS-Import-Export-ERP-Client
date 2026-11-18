@@ -1,38 +1,77 @@
+import { ApiSuccessResponse, apiClient, clearAccessToken, refreshAccessToken, setAccessToken } from '../api/axios';
+import { clearAppCache } from '../api/queryClient';
 import { User, UserRole } from '../types/auth';
-import { MOCK_USERS } from '../mock/mockUsers';
 
-const AUTH_STORAGE_KEY = 'dns_erp_current_user';
-const LOGGED_OUT_KEY = 'dns_erp_is_logged_out';
+const BackendRoleCodes: UserRole[] = [
+  'DIRECTOR',
+  'MANAGER',
+  'SALES_MANAGER',
+  'AREA_MANAGER',
+  'SALES_REP',
+  'FINANCE_MANAGER',
+  'FINANCE_OFFICER',
+  'PURCHASING_MANAGER',
+  'PURCHASING_OFFICER',
+  'SHOWROOM_MANAGER',
+  'SHOWROOM_CASHIER',
+  'STOCK_KEEPER',
+  'STOCK_MANAGER',
+];
+
+interface BackendRole {
+  id: string;
+  code: string;
+  name: string;
+}
+
+interface BackendUser {
+  id: string;
+  fullName: string;
+  displayName: string;
+  email: string;
+  role: string | BackendRole;
+  phone?: string | null;
+  areaId?: string | null;
+  profileImage?: string | null;
+  status: string;
+  birthday?: string | null;
+}
+
+interface LoginResponse {
+  accessToken: string;
+  user: BackendUser;
+}
 
 type AuthListener = (user: User | null) => void;
+
+function mapRole(role: BackendUser['role']): UserRole {
+  const roleCode = typeof role === 'string' ? role : role.code;
+
+  if (!BackendRoleCodes.includes(roleCode as UserRole)) {
+    throw new Error(`Unsupported backend role: ${roleCode}`);
+  }
+
+  return roleCode as UserRole;
+}
+
+function mapUser(user: BackendUser): User {
+  return {
+    id: user.id,
+    name: user.displayName || user.fullName,
+    email: user.email,
+    role: mapRole(user.role),
+    phone: user.phone || '',
+    areaId: user.areaId || undefined,
+    avatarUrl: user.profileImage || undefined,
+    isActive: user.status === 'ACTIVE',
+    birthDate: user.birthday || undefined,
+  };
+}
 
 export class AuthService {
   private currentUser: User | null = null;
   private listeners: Set<AuthListener> = new Set();
-
-  constructor() {
-    const isLoggedOut = localStorage.getItem(LOGGED_OUT_KEY) === 'true';
-    if (isLoggedOut) {
-      this.currentUser = null;
-      return;
-    }
-
-    const saved = localStorage.getItem(AUTH_STORAGE_KEY);
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        if (parsed && parsed.id) {
-          const found = MOCK_USERS.find((u) => u.id === parsed.id);
-          this.currentUser = found || parsed;
-          return;
-        }
-      } catch {
-        // Fallback
-      }
-    }
-    // Default to DIRECTOR for development
-    this.currentUser = MOCK_USERS[0];
-  }
+  private restorePromise: Promise<User | null> | null = null;
 
   getCurrentUser(): User | null {
     return this.currentUser;
@@ -44,69 +83,120 @@ export class AuthService {
 
   subscribe(listener: AuthListener): () => void {
     this.listeners.add(listener);
-    return () => {
-      this.listeners.delete(listener);
-    };
+    return () => this.listeners.delete(listener);
   }
 
-  private notify() {
-    this.listeners.forEach((listener) => {
-      try {
-        listener(this.currentUser);
-      } catch (err) {
-        console.error('Error in auth listener:', err);
-      }
-    });
-  }
-
-  switchRole(role: UserRole): User {
-    const user = MOCK_USERS.find((u) => u.role === role);
-    if (!user) throw new Error(`No mock user configured for role: ${role}`);
-    this.currentUser = user;
-    localStorage.removeItem(LOGGED_OUT_KEY);
-    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
-    this.notify();
-    return user;
-  }
-
-  loginAs(userId: string): User {
-    const user = MOCK_USERS.find((u) => u.id === userId || u.role === userId);
-    if (!user) throw new Error(`User not found: ${userId}`);
-    this.currentUser = user;
-    localStorage.removeItem(LOGGED_OUT_KEY);
-    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
-    this.notify();
-    return user;
-  }
-
-  loginWithEmail(email: string, _password?: string): User {
-    const normalized = email.trim().toLowerCase();
-    const user = MOCK_USERS.find((u) => u.email.toLowerCase() === normalized);
-    if (!user) {
-      throw new Error(`No registered account found for "${email}". Please select one of the example users below.`);
+  async restoreSession(): Promise<User | null> {
+    if (this.restorePromise) {
+      return this.restorePromise;
     }
-    this.currentUser = user;
-    localStorage.removeItem(LOGGED_OUT_KEY);
-    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
-    this.notify();
+
+    this.restorePromise = (async () => {
+      try {
+        await refreshAccessToken();
+        const response = await apiClient.get<ApiSuccessResponse<BackendUser>>('/auth/me', {
+          suppressErrorToast: true,
+          suppressErrorRedirect: true,
+        });
+        this.setCurrentUser(mapUser(response.data.data));
+        return this.currentUser;
+      } catch {
+        this.clearSession();
+        return null;
+      } finally {
+        this.restorePromise = null;
+      }
+    })();
+
+    return this.restorePromise;
+  }
+
+  async loginWithEmail(email: string, password: string): Promise<User> {
+    clearAppCache(); // Flush prior cached data before new session
+    const response = await apiClient.post<ApiSuccessResponse<LoginResponse>>(
+      '/auth/login',
+      { email, password },
+      { skipAuthRefresh: true },
+    );
+
+    setAccessToken(response.data.data.accessToken);
+    const user = mapUser(response.data.data.user);
+    this.setCurrentUser(user);
     return user;
   }
 
-  logout(): void {
-    localStorage.removeItem(AUTH_STORAGE_KEY);
-    localStorage.setItem(LOGGED_OUT_KEY, 'true');
+  async logout(): Promise<void> {
+    try {
+      if (this.currentUser) {
+        // /auth/logout requires a live access token. Rotate first so an expired
+        // in-memory token cannot leave the HttpOnly refresh session active.
+        await refreshAccessToken();
+        await apiClient.post('/auth/logout', undefined, {
+          suppressErrorToast: true,
+          suppressErrorRedirect: true,
+        });
+      }
+    } finally {
+      this.clearSession();
+    }
+  }
+
+  async logoutAll(): Promise<void> {
+    try {
+      if (this.currentUser) {
+        // The all-sessions endpoint has the same bearer-token requirement.
+        await refreshAccessToken();
+        await apiClient.post('/auth/logout-all', undefined, {
+          suppressErrorToast: true,
+          suppressErrorRedirect: true,
+        });
+      }
+    } finally {
+      this.clearSession();
+    }
+  }
+
+  async changePassword(currentPassword: string, newPassword: string): Promise<void> {
+    await apiClient.post(
+      '/auth/change-password',
+      { currentPassword, newPassword },
+    );
+    this.clearSession();
+  }
+
+  updateProfile(updates: Partial<User>): User {
+    if (!this.currentUser) {
+      throw new Error('Not authenticated');
+    }
+
+    const updatedUser = { ...this.currentUser, ...updates };
+    this.setCurrentUser(updatedUser);
+    return updatedUser;
+  }
+
+  switchRole(_role: UserRole): User {
+    throw new Error('Role switching is not available with backend authentication.');
+  }
+
+  loginAs(_userId: string): User {
+    throw new Error('Demo login is not available with backend authentication.');
+  }
+
+  private setCurrentUser(user: User): void {
+    this.currentUser = user;
+    this.notify();
+  }
+
+  private clearSession(): void {
+    clearAccessToken();
+    clearAppCache();
     this.currentUser = null;
     this.notify();
   }
 
-  updateProfile(updates: Partial<User>): User {
-    if (!this.currentUser) throw new Error('Not authenticated');
-    this.currentUser = { ...this.currentUser, ...updates };
-    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(this.currentUser));
-    this.notify();
-    return this.currentUser;
+  private notify(): void {
+    this.listeners.forEach((listener) => listener(this.currentUser));
   }
 }
 
 export const authService = new AuthService();
-

@@ -1,7 +1,7 @@
 import { Payment } from '../types/payment';
 import { User } from '../types/auth';
 import { paymentService, PaymentService } from './PaymentService';
-import { MOCK_USERS } from '../mock/mockUsers';
+import { userService } from './UserService';
 
 export interface CollectionKpiSummary {
   totalCollected: number;
@@ -78,9 +78,11 @@ export interface CollectionSummaryResult {
 
 export class CollectionSummaryService {
   private paymentSvc: PaymentService;
+  private userSvc: typeof userService;
 
   constructor(paymentSvc?: PaymentService) {
     this.paymentSvc = paymentSvc || paymentService;
+    this.userSvc = userService;
   }
 
   /**
@@ -145,7 +147,7 @@ export class CollectionSummaryService {
     });
 
     const allPayments = result.data;
-    const allUsers = MOCK_USERS;
+    const allUsers = await this.userSvc.getUsers();
 
     // Find current actor user details
     const actorUser = allUsers.find((u) => u.id === options.actorUserId) || {

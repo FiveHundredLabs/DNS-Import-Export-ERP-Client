@@ -376,8 +376,8 @@ export class CommissionConfigService {
     // Fetch existing actual invoices, orders, payments
     const [allOrders, invoicesPage, paymentsPage] = await Promise.all([
       orderService.getOrders(),
-      invoiceService.getInvoices({ pageSize: 10000 }),
-      paymentService.getPayments({ pageSize: 10000 }),
+      invoiceService.getInvoices({ page: 1, pageSize: 100 }),
+      paymentService.getPayments({ page: 1, pageSize: 100 }),
     ]);
 
     const allInvoices = (invoicesPage && Array.isArray((invoicesPage as any).data)) ? (invoicesPage as any).data : (Array.isArray(invoicesPage) ? invoicesPage : []);

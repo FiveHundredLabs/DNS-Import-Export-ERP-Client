@@ -10,7 +10,7 @@ import {
 import { MapPin, Building2, Trophy, Download } from 'lucide-react';
 import { AreaPerformanceReport } from '../../types/reports';
 import { User } from '../../types/auth';
-import { MOCK_AREAS } from '../../mock/mockAreas';
+import { useAreas } from '../../hooks/useAreas';
 import { formatCurrencyLKR, exportToCSV } from '../../utils/exportUtils';
 import { Button } from '../../components/ui/button';
 
@@ -27,6 +27,7 @@ export function AreaPerformanceTab({
   onAreaSelect,
   user,
 }: AreaPerformanceTabProps) {
+  const { areas } = useAreas();
   const isAreaLocked = user?.role === 'AREA_MANAGER';
 
   if (!areaPerformance) {
@@ -69,9 +70,9 @@ export function AreaPerformanceTab({
                   <SelectValue placeholder="Select Territory" />
                 </SelectTrigger>
                 <SelectContent>
-                  {MOCK_AREAS.map((a) => (
+                  {areas.map((a) => (
                     <SelectItem key={a.id} value={a.id}>
-                      {a.name} ({a.code})
+                      {a.name} ({a.code || a.id.slice(0, 4)})
                     </SelectItem>
                   ))}
                 </SelectContent>

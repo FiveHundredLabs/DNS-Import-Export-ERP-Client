@@ -15,7 +15,7 @@ import { Select } from '../../../../components/ui/select';
 import { Badge } from '../../../../components/ui/badge';
 import { Card } from '../../../../components/ui/card';
 import { formatCurrency, formatDate } from '../../../../utils/formatters';
-import { MOCK_CUSTOMERS } from '../../../../mock/mockCustomers';
+import { useCustomers } from '../../../../hooks/useCustomers';
 import Decimal from 'decimal.js';
 import {
   Dialog,
@@ -204,6 +204,7 @@ export function ManualJournalPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { currentUser } = useAuth();
+  const { customers } = useCustomers();
   const {
     accounts,
     suppliers,
@@ -575,8 +576,8 @@ export function ManualJournalPage() {
         credit: 0,
         supplierId: isAp ? (tl.supplierId || (suppliers[0] ? suppliers[0].id : undefined)) : undefined,
         supplierName: isAp ? (tl.supplierName || (suppliers[0] ? suppliers[0].name : undefined)) : undefined,
-        customerId: isAr ? (tl.customerId || (MOCK_CUSTOMERS[0] ? MOCK_CUSTOMERS[0].id : undefined)) : undefined,
-        customerName: isAr ? (tl.customerName || (MOCK_CUSTOMERS[0] ? MOCK_CUSTOMERS[0].name : undefined)) : undefined,
+        customerId: isAr ? (tl.customerId || (customers[0] ? customers[0].id : undefined)) : undefined,
+        customerName: isAr ? (tl.customerName || (customers[0] ? customers[0].name : undefined)) : undefined,
       };
     });
 
@@ -695,8 +696,8 @@ export function ManualJournalPage() {
         isDebit: l.isDebit,
         supplierId: isAp && suppliers[0] ? suppliers[0].id : undefined,
         supplierName: isAp && suppliers[0] ? suppliers[0].name : undefined,
-        customerId: isAr && MOCK_CUSTOMERS[0] ? MOCK_CUSTOMERS[0].id : undefined,
-        customerName: isAr && MOCK_CUSTOMERS[0] ? MOCK_CUSTOMERS[0].name : undefined,
+        customerId: isAr && customers[0] ? customers[0].id : undefined,
+        customerName: isAr && customers[0] ? customers[0].name : undefined,
       };
     });
 
@@ -1422,7 +1423,7 @@ export function ManualJournalPage() {
                                 value={line.customerId || ''}
                                 onChange={(e) => {
                                   const cId = e.target.value;
-                                  const cust = MOCK_CUSTOMERS.find((c) => c.id === cId);
+                                  const cust = customers.find((c) => c.id === cId);
                                   handleUpdateLine(line.id, 'customerId', cId);
                                   handleUpdateLine(line.id, 'customerName', cust?.name || cId);
                                 }}
@@ -1430,7 +1431,7 @@ export function ManualJournalPage() {
                                 className="h-6 w-full text-[11px] rounded border border-blue-300 bg-white px-1.5 focus:border-blue-500 font-medium"
                               >
                                 <option value="">Select Customer Sub-Ledger *</option>
-                                {MOCK_CUSTOMERS.map((c) => (
+                                {customers.map((c) => (
                                   <option key={c.id} value={c.id}>
                                     {c.code} - {c.name}
                                   </option>

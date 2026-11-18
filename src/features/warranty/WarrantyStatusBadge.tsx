@@ -59,21 +59,46 @@ export function WarrantyStatusBadge({
   }
 }
 
-export function ClaimStatusBadge({ status }: { status: ClaimStatus }) {
+export function ClaimStatusBadge({ status, className }: { status: ClaimStatus | string; className?: string }) {
   switch (status) {
-    case 'SUBMITTED':
-      return <Badge variant="info">Submitted</Badge>;
-    case 'IN_INSPECTION':
-      return <Badge variant="warning">In Inspection</Badge>;
     case 'APPROVED':
-      return <Badge variant="success">Approved</Badge>;
+      return (
+        <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-[11px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200 shadow-2xs ${className || ''}`}>
+          <span className="h-1.5 w-1.5 rounded-full bg-indigo-500 animate-pulse" />
+          Approved
+        </span>
+      );
     case 'REPLACED':
-      return <Badge variant="success">Replaced</Badge>;
+      return (
+        <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-[11px] font-semibold bg-emerald-50 text-emerald-800 border border-emerald-300 shadow-2xs ${className || ''}`}>
+          <span className="h-1.5 w-1.5 rounded-full bg-emerald-600" />
+          <span>Replaced</span>
+          <span className="text-[10px] text-emerald-600 font-normal">via POS</span>
+        </span>
+      );
+    case 'EXPIRED':
+      return (
+        <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-[11px] font-semibold bg-amber-50 text-amber-800 border border-amber-300 shadow-2xs ${className || ''}`}>
+          <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+          Code Expired
+        </span>
+      );
+    case 'CANCELLED':
+      return (
+        <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-[11px] font-semibold bg-slate-100 text-slate-700 border border-slate-300 shadow-2xs ${className || ''}`}>
+          <span className="h-1.5 w-1.5 rounded-full bg-slate-400" />
+          Cancelled
+        </span>
+      );
+    case 'SUBMITTED':
+      return <Badge variant="info" className={className}>Submitted</Badge>;
+    case 'IN_INSPECTION':
+      return <Badge variant="warning" className={className}>In Inspection</Badge>;
     case 'REPAIRED':
-      return <Badge variant="success">Repaired</Badge>;
+      return <Badge variant="success" className={className}>Repaired</Badge>;
     case 'REJECTED':
-      return <Badge variant="destructive">Rejected</Badge>;
+      return <Badge variant="destructive" className={className}>Rejected</Badge>;
     default:
-      return <Badge variant="outline">{status}</Badge>;
+      return <Badge variant="outline" className={className}>{status}</Badge>;
   }
 }

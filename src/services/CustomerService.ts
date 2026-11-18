@@ -1,193 +1,154 @@
-import { ICustomerRepository, CustomerFilters } from '../repositories/ICustomerRepository';
-import { MockCustomerRepository } from '../repositories/mock/MockCustomerRepository';
-import { Customer, CommercialTerms, CustomerApprovalStage } from '../types/customer';
+import { customersApi } from '../api/customers/customers.api';
+import { Customer, CommercialTerms, CustomerApprovalStage, CustomerStatus } from '../types/customer';
 import { PaginatedResult } from '../types/common';
-import { determineCustomerApprovalRoute } from '../rules/approvalRules';
-import { hasPermission } from '../rules/permissions';
+import { CustomerFilters } from '../repositories/ICustomerRepository';
 import { User } from '../types/auth';
-import { approvalService } from './ApprovalService';
-import { creditTermsConfigService } from './CreditTermsConfigService';
+
+function mapBackendCustomer(c: any): Customer {
+  return {
+    ...c,
+    id: c.id,
+    code: c.customerCode || c.id.slice(0, 8).toUpperCase(),
+    customerCode: c.customerCode,
+    name: c.displayName,
+    displayName: c.displayName,
+    companyName: c.companyName || undefined,
+    type: c.customerType || 'DEALER',
+    customerType: c.customerType || 'DEALER',
+    areaId: c.areaId || '',
+    areaName: c.area?.areaName || '',
+    assignedRepId: c.salesRepId || '',
+    assignedRepName: c.salesRep?.fullName || '',
+    salesRepId: c.salesRepId,
+    areaManagerId: c.areaManagerId,
+    contactPerson: c.contactPerson,
+    phone: c.primaryContactNumber,
+    primaryContactNumber: c.primaryContactNumber,
+    whatsappNumber: c.whatsappNumber || undefined,
+    secondaryPhone: c.secondaryContactNumber || undefined,
+    email: c.email,
+    address: c.registrationAddress,
+    registrationAddress: c.registrationAddress,
+    tinNumber: c.tinNumber || undefined,
+    vatNumber: c.vatNumber || undefined,
+    creditPeriod: c.creditPeriod || 30,
+    creditLimit: c.creditLimit ? Number(c.creditLimit) : 500000,
+    commercialTerms: {
+      creditLimit: c.creditLimit ? Number(c.creditLimit) : 500000,
+      creditDays: c.creditPeriod || 30,
+      paymentTermNotes: c.paymentTermNotes || undefined,
+    },
+    financials: {
+      totalOutstanding: 0,
+      currentDue: 0,
+      nearDue: 0,
+      overdue: 0,
+      availableCredit: c.creditLimit ? Number(c.creditLimit) : 500000,
+    },
+    approvalStage: c.approvalStage as CustomerApprovalStage,
+    status: c.status as CustomerStatus,
+    loyaltyLevel: c.loyaltyLevel,
+    createdAt: c.createdAt,
+    updatedAt: c.updatedAt,
+  };
+}
 
 export class CustomerService {
-  private repo: ICustomerRepository;
-
-  constructor(repo?: ICustomerRepository) {
-    this.repo = repo || new MockCustomerRepository();
-  }
-
   async listCustomers(filters?: CustomerFilters): Promise<PaginatedResult<Customer>> {
-    return this.repo.getAll(filters);
+    const res = await customersApi.listCustomers({
+      page: filters?.page || 1,
+      pageSize: filters?.pageSize ? Math.min(filters.pageSize, 100) : 20,
+      search: filters?.search,
+      areaId: filters?.areaId,
+      salesRepId: filters?.salesRepId || (filters as any)?.assignedRepId,
+      approvalStage: filters?.approvalStage as any,
+      customerType: filters?.type as any,
+    });
+
+    return {
+      data: res.data.map(mapBackendCustomer),
+      total: res.meta.total,
+      page: res.meta.page,
+      pageSize: res.meta.pageSize,
+      totalPages: res.meta.totalPages,
+    };
   }
 
   async getCustomer(id: string): Promise<Customer | null> {
-    return this.repo.getById(id);
+    try {
+      const c = await customersApi.getCustomerById(id);
+      return mapBackendCustomer(c);
+    } catch {
+      return null;
+    }
   }
 
   async createCustomer(
     data: Omit<Customer, 'id' | 'createdAt' | 'updatedAt' | 'financials'>,
-    user?: User
+    _user?: User
   ): Promise<Customer> {
-    if (user && !hasPermission(user.role, 'customers:create')) {
-      throw new Error(`Role ${user.role} is not authorized to register new customers.`);
-    }
-    if (!data.name || data.name.trim().length < 3) {
-      throw new Error('Customer name must be at least 3 characters.');
-    }
-    if (!data.phone || data.phone.trim().length < 8) {
-      throw new Error('Valid phone number is required.');
-    }
-    const defaultTerms = creditTermsConfigService.getCreditTermsConfig();
-    const creditLimit = data.commercialTerms?.creditLimit ?? defaultTerms.defaultCreditLimit;
-    const creditDays = data.commercialTerms?.creditDays ?? defaultTerms.defaultCreditDays;
-    const defaultDiscount = data.commercialTerms?.defaultDiscountPercentage ?? defaultTerms.defaultDiscountPercentage;
-    const maxDiscount = data.commercialTerms?.maxDiscountPercentage ?? defaultTerms.maxDiscountPercentage;
+    const created = await customersApi.createCustomerStep1({
+      displayName: data.displayName || data.name,
+      companyName: data.companyName || data.displayName || data.name,
+      contactPerson: data.contactPerson || data.displayName || data.name,
+      email: data.email,
+      primaryContactNumber: data.primaryContactNumber || data.phone,
+      whatsappNumber: data.whatsappNumber || data.primaryContactNumber || data.phone,
+      secondaryContactNumber: data.secondaryContactNumber || data.secondaryPhone || undefined,
+      registrationAddress: data.registrationAddress || data.address,
+      tinNumber: data.tinNumber || data.taxNumber || undefined,
+      vatNumber: data.vatNumber || undefined,
+      customerType: data.customerType || data.type || 'DEALER',
+    });
 
-    const isSpecialAttention =
-      creditLimit > defaultTerms.defaultCreditLimit ||
-      creditDays > defaultTerms.defaultCreditDays ||
-      creditDays > defaultTerms.requireDirectorApprovalAboveDays ||
-      creditLimit > defaultTerms.requireDirectorApprovalAboveLimit;
-
-    const payload = {
-      ...data,
-      commercialTerms: {
-        creditLimit,
-        creditDays,
-        defaultDiscountPercentage: defaultDiscount,
-        maxDiscountPercentage: maxDiscount,
-      },
-    };
-    const created = await this.repo.create(payload);
-
-    // Register customer creation in central approval engine for Sales Manager/Director review
-    try {
-      await approvalService.createApprovalRequest({
-        documentType: 'CUSTOMER_CREATION',
-        documentId: created.id,
-        documentReferenceNumber: created.code,
-        title: isSpecialAttention
-          ? `[SPECIAL ATTENTION] Commercial Terms Setup: ${created.name}`
-          : `Commercial Terms Setup: ${created.name}`,
-        description: isSpecialAttention
-          ? `Special Attention Required: Proposed terms (Credit Limit: LKR ${creditLimit.toLocaleString()}, Allowed Credit: ${creditDays} Days) exceed standard policy defaults (Max standard: LKR ${defaultTerms.defaultCreditLimit.toLocaleString()}, ${defaultTerms.defaultCreditDays} Days). Mandates Director authorization.`
-          : `New customer registered in ${created.areaName} with standard policy commercial terms (Credit Limit: LKR ${creditLimit.toLocaleString()}, ${creditDays} Days). Manager approval sufficient.`,
-        initiatorId: 'usr-105',
-        initiatorName: 'Nimal Bandara (Area Manager)',
-        initiatorRole: 'AREA_MANAGER',
-        currentApproverRole: isSpecialAttention ? 'DIRECTOR' : 'SALES_MANAGER',
-        isSpecialScenario: isSpecialAttention,
-        status: 'PENDING',
-        history: [
-          {
-            id: `h-${Date.now().toString().slice(-4)}`,
-            stepNumber: 1,
-            actorId: 'usr-105',
-            actorName: 'Nimal Bandara',
-            actorRole: 'AREA_MANAGER',
-            action: 'APPROVE',
-            fromStatus: 'DRAFT',
-            toStatus: 'PENDING_SALES_REVIEW',
-            comment: isSpecialAttention
-              ? `Dealer registered with exceptional credit terms (${creditDays} days, LKR ${creditLimit.toLocaleString()}). Flagged for Special Attention.`
-              : 'Dealer registered following initial site visit with standard policy commercial terms.',
-            timestamp: new Date().toISOString(),
-          },
-        ],
-      });
-    } catch (e) {
-      console.warn('Could not register approval request:', e);
-    }
-
-    return created;
+    return mapBackendCustomer(created);
   }
 
-  async updateCustomer(id: string, updates: Partial<Customer>, user?: User): Promise<Customer> {
-    if (user && !hasPermission(user.role, 'customers:edit')) {
-      throw new Error(`Role ${user.role} is not authorized to edit customer details.`);
+  async updateCustomer(id: string, updates: Partial<Customer>): Promise<Customer> {
+    if (updates.approvalStage === 'REJECT') {
+      const rejected = await customersApi.rejectCustomer(id);
+      return mapBackendCustomer(rejected);
     }
-    return this.repo.update(id, updates);
+    if (updates.approvalStage === 'APPROVED') {
+      const approved = await customersApi.approveCustomer(id);
+      return mapBackendCustomer(approved);
+    }
+    const existing = await this.getCustomer(id);
+    return existing || ({} as Customer);
   }
 
   async setCommercialTerms(
     customerId: string,
     terms: CommercialTerms,
-    user?: User
-  ): Promise<{ customer: Customer; targetApprovalRole: 'MANAGER' | 'DIRECTOR'; isExceptional: boolean }> {
-    if (user && !hasPermission(user.role, 'customers:commercial_approval')) {
-      throw new Error(`Role ${user.role} is not authorized to configure commercial terms.`);
-    }
+    _user?: User
+  ): Promise<{ customer: Customer; targetApprovalRole: string; isExceptional: boolean }> {
+    const updated = await customersApi.updateCommercialTerms(customerId, {
+      creditPeriod: terms.creditDays,
+      creditLimit: terms.creditLimit,
+      paymentTermNotes: terms.paymentTermNotes,
+    });
 
-    const route = determineCustomerApprovalRoute(terms.creditDays, terms.creditLimit);
-    const nextStage: CustomerApprovalStage =
-      route.targetRole === 'DIRECTOR'
-        ? 'PENDING_DIRECTOR_APPROVAL'
-        : 'PENDING_MANAGER_APPROVAL';
-
-    let customer = await this.repo.updateCommercialTerms(customerId, terms);
-    customer = await this.repo.updateApprovalStage(customerId, nextStage);
-
-    // Register or route approval to Manager or Director
-    try {
-      await approvalService.createApprovalRequest({
-        documentType: 'CUSTOMER_CREATION',
-        documentId: customer.id,
-        documentReferenceNumber: customer.code,
-        title: `Customer Commercial Terms Sign-Off: ${customer.name}`,
-        description: `Commercial setup: ${terms.creditDays} days credit, LKR ${terms.creditLimit.toLocaleString()} limit, ${terms.defaultDiscountPercentage}% standard discount.`,
-        initiatorId: 'usr-103',
-        initiatorName: 'Kamal Perera (Sales Manager)',
-        initiatorRole: 'SALES_MANAGER',
-        currentApproverRole: route.targetRole,
-        targetApproverRole: route.targetRole,
-        isSpecialScenario: route.isExceptional,
-        specialReason: route.isExceptional ? route.reason : undefined,
-        status: 'PENDING',
-        history: [
-          {
-            id: `h-${Date.now().toString().slice(-4)}`,
-            stepNumber: 1,
-            actorId: 'usr-103',
-            actorName: 'Kamal Perera',
-            actorRole: 'SALES_MANAGER',
-            action: 'APPROVE',
-            fromStatus: 'PENDING_SALES_REVIEW',
-            toStatus: nextStage,
-            comment: `Commercial terms verified. Routed to ${route.targetRole}.`,
-            timestamp: new Date().toISOString(),
-          },
-        ],
-      });
-    } catch (e) {
-      console.warn('Could not register approval request:', e);
-    }
-
+    const isExceptional = (terms.creditDays || 0) > 30 || (terms.creditLimit || 0) > 500000;
     return {
-      customer,
-      targetApprovalRole: route.targetRole,
-      isExceptional: route.isExceptional,
+      customer: mapBackendCustomer(updated),
+      targetApprovalRole: isExceptional ? 'DIRECTOR' : 'MANAGER',
+      isExceptional,
     };
   }
 
   async finalizeApproval(customerId: string, approved: boolean): Promise<Customer> {
-    const nextStage: CustomerApprovalStage = approved ? 'APPROVED' : 'REJECTED';
-    return this.repo.updateApprovalStage(customerId, nextStage);
+    if (approved) {
+      const res = await customersApi.approveCustomer(customerId);
+      return mapBackendCustomer(res);
+    } else {
+      const res = await customersApi.rejectCustomer(customerId);
+      return mapBackendCustomer(res);
+    }
   }
 
   async deleteCustomer(id: string): Promise<void> {
-    return this.repo.delete(id);
+    await customersApi.deleteCustomer(id);
   }
 }
 
 export const customerService = new CustomerService();
-
-// Register listener to update customer master when approvals conclude
-approvalService.onAction(async (request, action) => {
-  if (request.documentType === 'CUSTOMER_CREATION') {
-    if (request.status === 'APPROVED') {
-      await customerService.finalizeApproval(request.documentId, true);
-    } else if (request.status === 'REJECTED') {
-      await customerService.finalizeApproval(request.documentId, false);
-    }
-  }
-});
-

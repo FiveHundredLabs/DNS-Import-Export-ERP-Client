@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { customerCreditNoteService } from '../../services/customerCreditNoteService';
 import { periodLockService } from '../../services/periodLockService';
 import { CustomerCreditNote, CustomerCreditNoteLineItem } from '../../api/types';
-import { MOCK_CUSTOMERS } from '../../../../mock/mockCustomers';
+import { useCustomers } from '../../../../hooks/useCustomers';
 import { MOCK_PRODUCTS } from '../../../../mock/mockProducts';
 import { arService } from '../../services/arService';
 import { Button } from '../../../../components/ui/button';
@@ -42,6 +42,7 @@ import { toast } from 'sonner';
 export function CustomerCreditNotesPage({ hideTopSwitcher = false }: { hideTopSwitcher?: boolean } = {}) {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const { customers } = useCustomers();
 
   // Tab: 'REGISTRY' | 'CREATE'
   const [activeTab, setActiveTab] = useState<'REGISTRY' | 'CREATE'>(
@@ -111,8 +112,8 @@ export function CustomerCreditNotesPage({ hideTopSwitcher = false }: { hideTopSw
   }, [creditNotes]);
 
   const selectedCustomer = useMemo(() => {
-    return MOCK_CUSTOMERS.find((c) => c.id === selectedCustomerId) || null;
-  }, [selectedCustomerId]);
+    return customers.find((c) => c.id === selectedCustomerId) || null;
+  }, [customers, selectedCustomerId]);
 
   const customerOpenInvoices = useMemo(() => {
     if (!selectedCustomerId) return [];
@@ -542,7 +543,7 @@ export function CustomerCreditNotesPage({ hideTopSwitcher = false }: { hideTopSw
                 className="h-9 text-xs px-2.5 rounded-lg border border-slate-200 bg-white font-medium text-slate-700"
               >
                 <option value="ALL">All Customers</option>
-                {MOCK_CUSTOMERS.map((c) => (
+                {customers.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.name}
                   </option>
@@ -841,7 +842,7 @@ export function CustomerCreditNotesPage({ hideTopSwitcher = false }: { hideTopSw
                   }}
                   className="w-full h-9 text-xs rounded-md border border-slate-300 px-2.5 bg-white text-slate-800"
                 >
-                  {MOCK_CUSTOMERS.map((c) => (
+                  {customers.map((c) => (
                     <option key={c.id} value={c.id}>
                       {c.name} ({c.code})
                     </option>

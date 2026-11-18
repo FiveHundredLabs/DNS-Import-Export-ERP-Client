@@ -9,8 +9,16 @@ interface ProtectedRouteProps {
 }
 
 export function ProtectedRoute({ children }: ProtectedRouteProps) {
-  const { role, canAccessRoute, isAuthenticated } = useAuth();
+  const { role, canAccessRoute, isAuthenticated, isInitializing } = useAuth();
   const location = useLocation();
+
+  if (isInitializing) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-950 text-sm text-slate-300">
+        Restoring secure session...
+      </div>
+    );
+  }
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace state={{ from: location.pathname }} />;

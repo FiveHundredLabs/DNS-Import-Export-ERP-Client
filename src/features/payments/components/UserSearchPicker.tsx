@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { User, UserRole } from '../../../types/auth';
-import { MOCK_USERS } from '../../../mock/mockUsers';
+import { useUsers } from '../../../hooks/useUsers';
 import { Search, Check, User as UserIcon, X, ChevronDown, ShieldCheck } from 'lucide-react';
 import { cn } from '../../../utils/cn';
 
@@ -19,18 +19,19 @@ export function UserSearchPicker({
   placeholder = 'Search by name, role, or email (e.g. Nimal, Finance)...',
   className,
 }: UserSearchPickerProps) {
+  const { users } = useUsers();
   const [query, setQuery] = useState('');
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Eligible users (filtered by allowed roles for receiving handovers)
   const eligibleUsers = useMemo(() => {
-    return MOCK_USERS.filter((u) => u.isActive && allowedRoles.includes(u.role));
-  }, [allowedRoles]);
+    return users.filter((u) => u.isActive && allowedRoles.includes(u.role));
+  }, [users, allowedRoles]);
 
   const selectedUser = useMemo(() => {
-    return MOCK_USERS.find((u) => u.id === selectedUserId);
-  }, [selectedUserId]);
+    return users.find((u) => u.id === selectedUserId);
+  }, [users, selectedUserId]);
 
   const filteredUsers = useMemo(() => {
     if (!query.trim()) return eligibleUsers;

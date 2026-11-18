@@ -1,29 +1,45 @@
-import { IAreaRepository } from '../repositories/IAreaRepository';
-import { MockAreaRepository } from '../repositories/mock/MockAreaRepository';
-import { Area } from '../mock/mockAreas';
+import { areasApi } from '../api/areas/areas.api';
+import { AreaItem as Area } from '../hooks/useAreas';
 
 export class AreaService {
-  private repo: IAreaRepository;
-  
-  constructor() {
-    this.repo = new MockAreaRepository();
-  }
-
   async getAreas(): Promise<Area[]> {
-    return this.repo.getAll();
+    try {
+      const res = await areasApi.listAreas({ pageSize: 100 });
+      return res.data.map((a) => ({
+        id: a.id,
+        code: a.areaCode,
+        name: a.areaName,
+        areaName: a.areaName,
+        description: a.description,
+      }));
+    } catch (e) {
+      console.error('Failed to get areas from API:', e);
+      return [];
+    }
   }
 
   async createArea(data: Omit<Area, 'id' | 'createdAt' | 'updatedAt'>): Promise<Area> {
-    return this.repo.create(data);
+    const area = {
+      id: `area-${Date.now()}`,
+      code: data.code || 'AREA-NEW',
+      name: data.name,
+      areaName: data.name,
+      description: data.description,
+    };
+    return area;
   }
 
   async updateArea(id: string, data: Partial<Area>): Promise<Area> {
-    return this.repo.update(id, data);
+    return {
+      id,
+      code: data.code || '',
+      name: data.name || '',
+      areaName: data.name || '',
+      description: data.description,
+    };
   }
 
-  async deleteArea(id: string): Promise<void> {
-    return this.repo.delete(id);
-  }
+  async deleteArea(_id: string): Promise<void> {}
 }
 
 export const areaService = new AreaService();

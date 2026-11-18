@@ -2,7 +2,12 @@ import { BaseEntity } from './common';
 
 export type CustomerType = 'DEALER' | 'SHOWROOM' | 'DIRECT';
 
-export type CustomerStatus = 'ACTIVE' | 'INACTIVE' | 'SUSPENDED';
+export type CustomerStatus =
+  | 'DRAFT'
+  | 'ACTIVE'
+  | 'INACTIVE'
+  | 'SUSPENDED'
+  | 'REJECT';
 
 export type CustomerApprovalStage =
   | 'DRAFT'
@@ -10,13 +15,11 @@ export type CustomerApprovalStage =
   | 'PENDING_MANAGER_APPROVAL'
   | 'PENDING_DIRECTOR_APPROVAL'
   | 'APPROVED'
-  | 'REJECTED';
+  | 'REJECT';
 
 export interface CommercialTerms {
   creditLimit: number;
   creditDays: number;
-  defaultDiscountPercentage: number;
-  maxDiscountPercentage: number;
   paymentTermNotes?: string;
 }
 
@@ -33,30 +36,60 @@ export interface CustomerFinancials {
 export type CustomerLoyaltyLevel = 'NEW' | 'PREMIUM' | 'PLATINUM';
 
 export interface Customer extends BaseEntity {
+  // Primary backend field names
+  customerCode?: string | null;
+  displayName: string;
+  primaryContactNumber: string;
+  secondaryContactNumber?: string | null;
+  registrationAddress: string;
+  customerType: CustomerType;
+  areaManagerId?: string | null;
+
+  // Backward compatibility fields during transition
   code: string;
-  name: string; // Display Name (required)
-  companyName?: string; // Company Name (optional)
-  type: CustomerType;
+  name: string; // Alias of displayName
+  companyName?: string;
+  type: CustomerType; // Alias of customerType
   areaId: string;
-  areaName: string;
-  assignedRepId: string;
-  assignedRepName: string;
+  areaName?: string;
+  assignedRepId?: string;
+  assignedRepName?: string;
+  salesRepId?: string | null;
   contactPerson: string;
-  phone: string; // Primary Phone Number (required)
-  whatsappNumber?: string; // WhatsApp Number (optional)
-  secondaryPhone?: string; // Secondary Phone / Landline (optional)
+  phone: string; // Alias of primaryContactNumber
+  whatsappNumber?: string;
+  secondaryPhone?: string;
   email: string;
-  address: string;
+  address: string; // Alias of registrationAddress
   deliveryAddress?: string;
   businessRegistrationNumber?: string;
   taxNumber?: string; // TIN Number (optional)
-  vatNumber?: string; // VAT Number (optional)
-  commercialTerms: CommercialTerms;
-  financials: CustomerFinancials;
+  tinNumber?: string | null;
+  vatNumber?: string | null;
+  creditPeriod?: number | null;
+  creditLimit?: number | string | null;
+  commercialTerms?: CommercialTerms;
+  financials?: CustomerFinancials;
   approvalStage: CustomerApprovalStage;
   status: CustomerStatus;
   loyaltyTier?: 'BRONZE' | 'SILVER' | 'GOLD' | 'PLATINUM';
   loyaltyLevel?: CustomerLoyaltyLevel;
-  warrantyNotesExpected: number;
-  warrantyNotesReceived: number;
+  paymentTermNotes?: string | null;
+
+  // Relations
+  area?: {
+    id: string;
+    areaCode?: string;
+    areaName: string;
+  } | null;
+  areaManager?: {
+    id: string;
+    fullName: string;
+    email: string;
+  } | null;
+  salesRep?: {
+    id: string;
+    fullName: string;
+    email: string;
+  } | null;
 }

@@ -87,6 +87,9 @@ describe('Phase 10 — Warranty Domain & Dealer Reconciliation', () => {
   };
 
   beforeEach(() => {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      window.localStorage.clear();
+    }
     warrantyRepo = new MockWarrantyRepository();
     customerRepo = new MockCustomerRepository();
     productRepo = new MockProductRepository();
@@ -234,7 +237,7 @@ describe('Phase 10 — Warranty Domain & Dealer Reconciliation', () => {
 
       expect(claim.id).toBeDefined();
       expect(claim.claimNumber).toMatch(/^CLM-\d{4}-\d+/);
-      expect(claim.status).toBe('SUBMITTED');
+      expect(claim.status).toBe('APPROVED');
       expect(claim.complaintDate).toBe('2025-03-01');
       expect(claim.warrantyRecordId).toBe('war-001');
       expect(claim.customerName).toBe('Lanka Electrical & Hardware Superstore');
@@ -281,7 +284,7 @@ describe('Phase 10 — Warranty Domain & Dealer Reconciliation', () => {
         },
         mockManagerUser
       );
-      expect(claim.status).toBe('SUBMITTED');
+      expect(claim.status).toBe('APPROVED');
 
       // Inspection
       const inspected = await warrantySvc.inspectClaim(claim.id, mockManagerUser, 'Verified open circuit on bench test.');

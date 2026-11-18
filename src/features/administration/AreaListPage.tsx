@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Area } from '../../mock/mockAreas';
+import { AreaItem as Area } from '../../hooks/useAreas';
 import { useAreas } from '../../hooks/useAreas';
 import { useUsers } from '../../hooks/useUsers';
 import { Button } from '../../components/ui/button';

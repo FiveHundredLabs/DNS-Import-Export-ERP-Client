@@ -158,6 +158,19 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'reports:all',
     'audit:view',
   ],
+  FINANCE_OFFICER: [
+    'view:finance_dashboard',
+    'customers:view',
+    'invoices:view',
+    'payments:view',
+    'payments:create',
+    'finance:expenses',
+    'finance:petty_cash',
+    'finance:reports',
+    'finance:cashbook_view',
+    'finance:voucher_create',
+    'reports:all',
+  ],
   AREA_MANAGER: [
     'view:area_manager_dashboard',
     'products:view',
@@ -205,6 +218,10 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'inventory:stock_adjustment',
   ],
   CASHIER: [
+    'view:cashier_dashboard',
+    'products:view',
+  ],
+  SHOWROOM_CASHIER: [
     'view:cashier_dashboard',
     'products:view',
   ],

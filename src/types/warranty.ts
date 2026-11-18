@@ -9,7 +9,9 @@ export type ClaimStatus =
   | 'APPROVED'
   | 'REPLACED'
   | 'REPAIRED'
-  | 'REJECTED';
+  | 'REJECTED'
+  | 'EXPIRED'
+  | 'CANCELLED';
 export type ClaimResolutionType = 'REPLACE' | 'REPAIR' | 'REJECT';
 
 export interface WarrantyNote extends BaseEntity {
@@ -72,13 +74,17 @@ export interface WarrantyRecord extends BaseEntity {
 
 export interface WarrantyClaim extends BaseEntity {
   claimNumber: string;
+  referenceCode?: string;
+  referenceCodeExpiresAt?: string;
   warrantyRecordId: string;
   invoiceId: string;
   customerId: string;
   customerName: string;
+  customerPhone?: string;
   productId: string;
   productName: string;
   sku: string;
+  defectiveBarcode?: string;
   serialNumber?: string;
   complaintDate: string;
   complaintReason: string;
@@ -88,12 +94,25 @@ export interface WarrantyClaim extends BaseEntity {
   inspectedById?: string;
   resolvedById?: string;
   resolvedAt?: string;
+  approvedById?: string;
+  approvedByName?: string;
+  approvedAt?: string;
   warrantyNoteId?: string;
   warrantyNoteNumber?: string;
   distributorId?: string;
   distributorName?: string;
   endCustomerName?: string;
+  replacementProductId?: string;
+  replacementProductName?: string;
+  replacementProductSku?: string;
+  replacementBarcode?: string;
   replacementSerialNumber?: string;
+  replacementNoteNumber?: string;
+  posTerminalId?: string;
+  posReceiptNumber?: string;
+  issuedByCashierId?: string;
+  issuedByCashierName?: string;
+  issuedAt?: string;
   sparePartsUsed?: Array<{
     productId: string;
     productName: string;

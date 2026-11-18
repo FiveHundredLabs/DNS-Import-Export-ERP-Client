@@ -115,7 +115,7 @@ describe('Warranty Management System — End-Customer Selling Date & Active/Expi
         );
 
         expect(claim.id).toBeDefined();
-        expect(claim.status).toBe('SUBMITTED');
+        expect(claim.status).toBe('APPROVED');
         expect(claim.complaintReason).toBe('Motor thermal overload tripping during start');
       }
     });

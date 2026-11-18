@@ -23,8 +23,8 @@ import {
 import { warrantyService } from '../../services/WarrantyService';
 import { WarrantyStatusBadge } from './WarrantyStatusBadge';
 import { useAuth } from '../../hooks/useAuth';
+import { useCustomers } from '../../hooks/useCustomers';
 import { formatDate } from '../../utils/formatters';
-import { MOCK_CUSTOMERS } from '../../mock/mockCustomers';
 import {
   Store,
   FileCheck2,
@@ -69,19 +69,20 @@ interface SalesRepWarrantyPageProps {
 
 export function SalesRepWarrantyPage({ preselectedCustomerId }: SalesRepWarrantyPageProps) {
   const { role, currentUser } = useAuth();
+  const { customers } = useCustomers();
   const isSalesRep = role === 'SALES_REP';
   const isAreaManager = role === 'AREA_MANAGER';
 
   // Customer Selection state - scoped strictly to assigned customers
   const availableCustomers = useMemo(() => {
     if (isSalesRep) {
-      return MOCK_CUSTOMERS.filter((c) => c.assignedRepId === currentUser.id);
+      return customers.filter((c) => c.assignedRepId === currentUser.id);
     }
     if (isAreaManager) {
-      return MOCK_CUSTOMERS.filter((c) => c.areaId === currentUser.areaId);
+      return customers.filter((c) => c.areaId === currentUser.areaId);
     }
-    return MOCK_CUSTOMERS;
-  }, [isSalesRep, isAreaManager, currentUser.id, currentUser.areaId]);
+    return customers;
+  }, [isSalesRep, isAreaManager, currentUser.id, currentUser.areaId, customers]);
 
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>(
     preselectedCustomerId || availableCustomers[0]?.id || 'cust-001'
