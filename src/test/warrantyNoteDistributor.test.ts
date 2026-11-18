@@ -277,18 +277,18 @@ describe('Distributor Warranty Note Management & Sales Manager Validation', () =
       expect(recordVerified?.notesReceived).toBe(true);
       expect(recordVerified?.warrantyNoteStatus).toBe('VERIFIED');
 
-      // Claim can now be lodged successfully
+      // Claim can now be lodged successfully by Sales Manager
       const claim = await warrantySvc.createClaim(
         {
           warrantyRecordId: 'war-006',
           complaintDate: '2025-02-01',
           complaintReason: 'Defective trip coil reported by distributor',
         },
-        mockSalesRepUser
+        mockSalesManagerUser
       );
 
       expect(claim.id).toBeDefined();
-      expect(claim.status).toBe('SUBMITTED');
+      expect(claim.status).toBe('APPROVED');
       expect(claim.warrantyNoteNumber).toBe('WN-PEND-001');
       expect(claim.endCustomerName).toBe('Bandara & Sons Electricals');
     });
