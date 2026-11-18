@@ -1393,7 +1393,7 @@ export function WarrantyHubPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="ALL">All Statuses ({claims.length})</SelectItem>
-                    <SelectItem value="APPROVED">Approved (Ready for POS)</SelectItem>
+                    <SelectItem value="APPROVED">Approved</SelectItem>
                     <SelectItem value="REPLACED">Replaced via POS</SelectItem>
                     <SelectItem value="EXPIRED">Code Expired</SelectItem>
                     <SelectItem value="SUBMITTED">Submitted</SelectItem>

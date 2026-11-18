@@ -5,7 +5,6 @@ import { Badge } from '../../components/ui/badge';
 import { WarrantyClaim } from '../../types/warranty';
 import { formatDate, formatDateTime } from '../../utils/formatters';
 import {
-  Printer,
   Copy,
   Check,
   QrCode,
@@ -50,47 +49,47 @@ export function ClaimVoucherModal({ claim, open, onOpenChange }: ClaimVoucherMod
     }
   };
 
-  const handlePrint = () => {
-    window.print();
-  };
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl p-0 overflow-hidden rounded-2xl border-slate-200">
-        <DialogHeader className="bg-gradient-to-r from-slate-900 via-slate-800 to-primary p-6 text-white text-left">
+      <DialogContent className="sm:max-w-3xl max-w-[95vw] w-full p-0 overflow-hidden rounded-2xl border-slate-200">
+        <DialogHeader className="bg-gradient-to-r from-slate-900 via-slate-800 to-primary p-6 pr-12 text-white text-left">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 backdrop-blur-xs text-white">
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/10 backdrop-blur-xs text-white">
                 <ShieldCheck className="h-6 w-6 text-emerald-400" />
               </div>
               <div>
-                <DialogTitle className="text-lg font-bold text-white flex items-center gap-2">
+                <DialogTitle className="text-xl font-bold text-white flex items-center gap-2">
                   Warranty Replacement Voucher
                 </DialogTitle>
-                <p className="text-xs text-slate-300">
+                <p className="text-xs text-slate-300 mt-0.5">
                   Approved by Sales Manager · Authorized for Showroom POS Issuance
                 </p>
               </div>
             </div>
-            <Badge
-              variant="outline"
-              className={
-                isFulfilled
-                  ? 'border-emerald-400 bg-emerald-500/20 text-emerald-300 text-xs'
-                  : isExpired
-                  ? 'border-rose-400 bg-rose-500/20 text-rose-300 text-xs'
-                  : 'border-amber-400 bg-amber-500/20 text-amber-300 text-xs'
-              }
-            >
-              {isFulfilled ? 'Fulfilled at POS' : isExpired ? 'Code Expired' : 'Ready for POS'}
-            </Badge>
+            {isFulfilled && (
+              <Badge
+                variant="outline"
+                className="border-emerald-400 bg-emerald-500/20 text-emerald-300 text-xs"
+              >
+                Fulfilled at POS
+              </Badge>
+            )}
+            {isExpired && (
+              <Badge
+                variant="outline"
+                className="border-rose-400 bg-rose-500/20 text-rose-300 text-xs"
+              >
+                Code Expired
+              </Badge>
+            )}
           </div>
         </DialogHeader>
 
         <div className="p-6 space-y-6 max-h-[75vh] overflow-y-auto">
           {/* Main Reference Code Card */}
           <div className="relative overflow-hidden rounded-2xl border-2 border-primary/20 bg-gradient-to-b from-primary/5 to-white p-6 text-center shadow-xs">
-            <div className="flex items-center justify-between text-xs text-slate-500 mb-2">
+            <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500 mb-2">
               <span className="font-semibold uppercase tracking-wider text-slate-600 flex items-center gap-1.5">
                 <Store className="h-4 w-4 text-primary" /> Showroom POS Reference Code
               </span>
@@ -98,7 +97,7 @@ export function ClaimVoucherModal({ claim, open, onOpenChange }: ClaimVoucherMod
             </div>
 
             <div className="my-4 flex flex-col items-center justify-center">
-              <span className="font-mono text-3xl sm:text-4xl font-extrabold tracking-widest text-slate-900 bg-white px-6 py-2.5 rounded-xl border border-slate-200/90 shadow-2xs">
+              <span className="font-mono text-3xl sm:text-4xl font-extrabold tracking-widest text-slate-900 bg-white px-8 py-3 rounded-xl border border-slate-200/90 shadow-2xs whitespace-nowrap">
                 {refCode}
               </span>
 
@@ -273,24 +272,13 @@ export function ClaimVoucherModal({ claim, open, onOpenChange }: ClaimVoucherMod
             {copied ? 'Code Copied' : 'Copy Reference Code'}
           </Button>
 
-          <div className="flex items-center gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={handlePrint}
-              className="gap-1.5"
-            >
-              <Printer className="h-4 w-4" /> Print Voucher
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              onClick={() => onOpenChange(false)}
-            >
-              Done
-            </Button>
-          </div>
+          <Button
+            type="button"
+            size="sm"
+            onClick={() => onOpenChange(false)}
+          >
+            Close
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

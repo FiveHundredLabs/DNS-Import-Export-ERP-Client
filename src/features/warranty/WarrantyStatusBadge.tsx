@@ -65,7 +65,7 @@ export function ClaimStatusBadge({ status, className }: { status: ClaimStatus | 
       return (
         <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-[11px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200 shadow-2xs ${className || ''}`}>
           <span className="h-1.5 w-1.5 rounded-full bg-indigo-500 animate-pulse" />
-          Approved (Ready for POS)
+          Approved
         </span>
       );
     case 'REPLACED':
