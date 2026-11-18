@@ -32,6 +32,8 @@ import { useAuth } from '../../hooks/useAuth';
 import { formatDate, formatCurrency } from '../../utils/formatters';
 import { calculateWarrantyExpiry, calculateRemainingWarranty } from '../../rules/warrantyRules';
 import { useCustomers } from '../../hooks/useCustomers';
+import { Skeleton } from '../../components/ui/skeleton';
+import { TableLoadingSkeleton } from '../../components/common/LoadingSkeleton';
 import {
   ShieldCheck,
   ShieldAlert,
@@ -758,9 +760,12 @@ export function WarrantyHubPage() {
 
           {/* AUTOMATIC PRODUCT INFORMATION DOSSIER (READ ONLY) */}
           {dossierLoading ? (
-            <div className="py-8 text-center text-xs text-slate-400">
-              <RefreshCw className="h-6 w-6 animate-spin mx-auto text-primary mb-2" />
-              Retrieving product lifecycle records...
+            <div className="p-6 bg-white rounded-2xl border border-slate-200/80 shadow-sm space-y-3 animate-pulse">
+              <Skeleton className="h-5 w-48 rounded" />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Skeleton className="h-12 rounded-xl" />
+                <Skeleton className="h-12 rounded-xl" />
+              </div>
             </div>
           ) : dossier ? (
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -1163,9 +1168,12 @@ export function WarrantyHubPage() {
           </Card>
 
           {claimDossierLoading ? (
-            <div className="py-8 text-center text-xs text-slate-400">
-              <RefreshCw className="h-6 w-6 animate-spin mx-auto text-primary mb-2" />
-              Verifying warranty status...
+            <div className="p-6 bg-white rounded-2xl border border-slate-200/80 shadow-sm space-y-3 animate-pulse">
+              <Skeleton className="h-5 w-48 rounded" />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Skeleton className="h-12 rounded-xl" />
+                <Skeleton className="h-12 rounded-xl" />
+              </div>
             </div>
           ) : claimDossier ? (
             <div className="space-y-4">
@@ -1414,8 +1422,8 @@ export function WarrantyHubPage() {
 
             <CardContent className="p-0">
               {claimsLoading ? (
-                <div className="p-8 text-center text-xs text-slate-500 flex items-center justify-center gap-2">
-                  <RefreshCw className="h-4 w-4 animate-spin" /> Loading warranty claims...
+                <div className="p-4">
+                  <TableLoadingSkeleton rows={4} cols={5} />
                 </div>
               ) : claims.length === 0 ? (
                 <div className="p-8 text-center text-xs text-slate-500">

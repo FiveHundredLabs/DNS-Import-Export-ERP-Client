@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { Skeleton } from '../../components/ui/skeleton';
 import { StatCard } from '../../components/common/StatCard';
 import { PageHeader } from '../../components/common/PageHeader';
-import { MOCK_PRODUCTS } from '../../mock/mockProducts';
+import { useProducts } from '../../hooks/useProducts';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 import { unitBarcodeService } from '../../services/UnitBarcodeService';
 import { serialNumberService } from '../../services/SerialNumberService';
@@ -80,6 +80,7 @@ export function InventoryDashboardPage() {
   const navigate = useNavigate();
   const { user, role } = useAuth();
   const { grns, loading: grnsLoading } = useGRN();
+  const { products } = useProducts({ page: 1, pageSize: 200 });
   const [orders, setOrders] = useState<SalesOrder[]>([]);
 
   useEffect(() => {
@@ -173,7 +174,7 @@ function isPowerToolItem(item: { productId?: string; sku?: string; categoryName?
       );
 
       itemsWithBarcodes.forEach((item: any, idx: number) => {
-        const product = MOCK_PRODUCTS.find((p) => p.id === item.productId);
+        const product = item.product || products.find((p) => p.id === item.productId);
         const damagedQty = item.damagedQuantity || 0;
         const goodQty = Math.max(0, (item.receivedQuantity || 0) - damagedQty);
         const stats = productOrderStats[item.productId] || { reserved: 0, dispatched: 0, delivered: 0 };
@@ -245,7 +246,7 @@ function isPowerToolItem(item: { productId?: string; sku?: string; categoryName?
   const powerToolGrns = useMemo(() => {
     return (grns || []).filter((g) =>
       g.items?.some((item: any) => {
-        const prod = MOCK_PRODUCTS.find((p) => p.id === item.productId);
+        const prod = item.product || products.find((p) => p.id === item.productId);
         return isPowerToolItem({
           productId: item.productId,
           sku: prod?.sku || item.skuSnapshot,
@@ -254,7 +255,7 @@ function isPowerToolItem(item: { productId?: string; sku?: string; categoryName?
         });
       })
     );
-  }, [grns]);
+  }, [grns, products]);
 
   // Power tool filtered serials for Storekeeper inventory hub
   const powerToolSerials = useMemo(() => {

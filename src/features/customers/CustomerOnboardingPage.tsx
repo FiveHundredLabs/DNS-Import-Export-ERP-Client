@@ -181,7 +181,7 @@ export function CustomerOnboardingPage() {
     setPendingLoading(true);
     try {
       const stages: CustomerApprovalStage[] = isAreaManager
-        ? ['DRAFT', 'PENDING_SALES_REVIEW', 'PENDING_MANAGER_APPROVAL']
+        ? ['PENDING_SALES_REVIEW', 'PENDING_MANAGER_APPROVAL']
         : role === 'SALES_MANAGER'
         ? ['PENDING_SALES_REVIEW']
         : ['PENDING_SALES_REVIEW', 'PENDING_MANAGER_APPROVAL', 'PENDING_DIRECTOR_APPROVAL'];

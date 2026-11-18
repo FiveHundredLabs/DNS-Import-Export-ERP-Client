@@ -23,11 +23,12 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from '../../components/ui/input';
 import { Textarea } from '../../components/ui/textarea';
 import { PageHeader } from '../../components/common/PageHeader';
+import { TableLoadingSkeleton } from '../../components/common/LoadingSkeleton';
 import { useAuth } from '../../hooks/useAuth';
 import { useInventory } from '../../hooks/useInventory';
 import { approvalService } from '../../services/ApprovalService';
 import { stockAdjustmentService, StockAdjustmentMetadata } from '../../services/StockAdjustmentService';
-import { MOCK_PRODUCTS } from '../../mock/mockProducts';
+import { useProducts } from '../../hooks/useProducts';
 import { ApprovalRequest } from '../../types/approval';
 import { formatDateTime } from '../../utils/formatters';
 
@@ -42,6 +43,7 @@ function statusVariant(status: ApprovalRequest['status']) {
 export function StockAdjustmentsPage() {
   const { currentUser, role } = useAuth();
   const { stockBalances, loading: inventoryLoading } = useInventory();
+  const { products } = useProducts({ page: 1, pageSize: 200 });
   const [approvals, setApprovals] = useState<ApprovalRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -77,15 +79,15 @@ export function StockAdjustmentsPage() {
 
   const balanceRows = useMemo(() => {
     return stockBalances.map((balance: any) => {
-      const product = MOCK_PRODUCTS.find((item) => item.id === balance.productId);
+      const product = balance.product || products.find((item) => item.id === balance.productId);
       return {
         ...balance,
-        productName: product?.name ?? balance.productId,
-        sku: product?.sku ?? 'N/A',
+        productName: product?.name ?? balance.productName ?? balance.productId,
+        sku: product?.sku ?? balance.sku ?? 'N/A',
         availableQuantity: Number(balance.availableQuantity ?? 0),
       };
     });
-  }, [stockBalances]);
+  }, [stockBalances, products]);
 
   const selectedBalance = balanceRows.find((balance) => balance.id === selectedBalanceId);
 
@@ -460,7 +462,11 @@ export function StockAdjustmentsPage() {
           <div className="relative w-full max-w-xs"><Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" /><Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search requests..." className="pl-8" /></div>
         </CardHeader>
         <CardContent className="p-0">
-          {loading || inventoryLoading ? <div className="p-6 text-sm text-slate-500">Loading adjustment workflow...</div> : visibleApprovals.length === 0 ? <div className="p-8 text-center text-sm text-slate-500">No stock adjustment requests found.</div> : (
+          {loading || inventoryLoading ? (
+            <div className="p-4"><TableLoadingSkeleton rows={4} cols={5} /></div>
+          ) : visibleApprovals.length === 0 ? (
+            <div className="p-8 text-center text-sm text-slate-500">No stock adjustment requests found.</div>
+          ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="border-y border-slate-200 bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500"><tr><th className="px-4 py-3">Request</th><th className="px-4 py-3">Variance</th><th className="px-4 py-3">Requested by</th><th className="px-4 py-3">Status</th><th className="px-4 py-3 text-right">Action</th></tr></thead>

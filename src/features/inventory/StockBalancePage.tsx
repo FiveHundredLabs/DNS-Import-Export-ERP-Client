@@ -19,7 +19,7 @@ import { useInventory } from '../../hooks/useInventory';
 import { useAuth } from '../../hooks/useAuth';
 import { orderService } from '../../services/OrderService';
 import { SalesOrder } from '../../types/order';
-import { MOCK_PRODUCTS } from '../../mock/mockProducts';
+import { useProducts } from '../../hooks/useProducts';
 import { calculateAvailableForSale } from '../../rules/inventoryRules';
 import { formatCurrency } from '../../utils/formatters';
 import { InventoryStatusBadge } from './InventoryStatusBadge';
@@ -49,6 +49,7 @@ interface StockRow {
 export function StockBalancePage() {
   const navigate = useNavigate();
   const { stockBalances, loading } = useInventory();
+  const { products } = useProducts({ page: 1, pageSize: 200 });
   const { user, role } = useAuth();
   const isStockStaff =
     role === 'STOCK_KEEPER' ||
@@ -89,7 +90,7 @@ export function StockBalancePage() {
 
   const enrichedBalances: StockRow[] = useMemo(() => {
     return (stockBalances ?? []).map((b: any, idx: number) => {
-      const product = MOCK_PRODUCTS.find(p => p.id === b.productId);
+      const product = b.product || products.find(p => p.id === b.productId);
       const availRaw = typeof b.availableQuantity === 'number' ? b.availableQuantity : 0;
       const resRaw = typeof b.reservedQuantity === 'number' ? b.reservedQuantity : 0;
       const stats = productOrderStats[b.productId] || { reserved: 0, dispatched: 0, delivered: 0 };
@@ -102,9 +103,9 @@ export function StockBalancePage() {
         productId: b.productId,
         locationId: b.locationId,
         locationType: b.locationType,
-        productName: product?.name ?? b.productId,
-        sku: product?.sku ?? 'N/A',
-        category: product?.categoryName ?? 'N/A',
+        productName: product?.name ?? b.productName ?? b.productId,
+        sku: product?.sku ?? b.sku ?? 'N/A',
+        category: product?.categoryName ?? b.category ?? 'N/A',
         warehouseQuantity: b.locationType === 'WAREHOUSE' ? availRaw : 0,
         showroomQuantity: b.locationType === 'SHOWROOM' ? availRaw : 0,
         damagedQuantity: b.damagedQuantity ?? 0,
@@ -113,10 +114,10 @@ export function StockBalancePage() {
         deliveredQuantity: stats.delivered,
         availableForSale,
         physicalStock: availRaw,
-        costPrice: product?.pricing?.costPrice ?? 0,
+        costPrice: product?.pricing?.costPrice ?? b.costPrice ?? 0,
       } as StockRow;
     });
-  }, [stockBalances, productOrderStats]);
+  }, [stockBalances, productOrderStats, products]);
 
   const categories = useMemo(() => {
     const cats = new Set(enrichedBalances.map(b => b.category));

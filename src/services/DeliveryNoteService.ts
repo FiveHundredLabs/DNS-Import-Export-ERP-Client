@@ -1,4 +1,5 @@
 import { orderService } from './OrderService';
+import { invoiceService } from './InvoiceService';
 import {
   DeliveryNote,
   DeliveryNoteItem,
@@ -8,8 +9,6 @@ import {
   ReturnedUnitDetail,
   DeliveryNoteStatus,
 } from '../types/deliveryNote';
-import { MOCK_DELIVERY_NOTES } from '../mock/mockDeliveryNotes';
-import { MOCK_INVOICES } from '../mock/mockInvoices';
 import { Invoice } from '../types/invoice';
 import { SalesOrder } from '../types/order';
 import { User } from '../types/auth';
@@ -39,7 +38,7 @@ export class DeliveryNoteService {
     } catch {
       // Fallback
     }
-    this.notes = [...MOCK_DELIVERY_NOTES];
+    this.notes = [];
     this.persist();
   }
 
@@ -52,7 +51,7 @@ export class DeliveryNoteService {
   }
 
   public resetToDefaults() {
-    this.notes = JSON.parse(JSON.stringify(MOCK_DELIVERY_NOTES));
+    this.notes = [];
     this.persist();
   }
 
@@ -191,11 +190,14 @@ export class DeliveryNoteService {
    * Backwards-compatibility: Retrieves invoices eligible for delivery note generation.
    */
   async getDraftInvoices(): Promise<Invoice[]> {
-    const ordersRes = await orderService.listOrders({ pageSize: 1000 });
+    const [ordersRes, invoicesRes] = await Promise.all([
+      orderService.listOrders({ pageSize: 1000 }),
+      invoiceService.listInvoices({ pageSize: 1000 }),
+    ]);
     const closedOrderIds = new Set(
       (ordersRes.data || []).filter((o) => o.status === 'CLOSED').map((o) => o.id)
     );
-    return MOCK_INVOICES.filter(
+    return (invoicesRes.data || []).filter(
       (inv) => (inv.status === 'DRAFT' || inv.status === 'ISSUED') && (!inv.orderId || !closedOrderIds.has(inv.orderId))
     );
   }

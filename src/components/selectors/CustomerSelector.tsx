@@ -6,6 +6,7 @@ import { Search, Building2, X, ChevronDown, Check } from 'lucide-react';
 import { Input } from '../ui/input';
 import { Badge } from '../ui/badge';
 import { cn } from '../../utils/cn';
+import { Skeleton } from '../ui/skeleton';
 
 export interface CustomerSelectorProps {
   onSelect: (customer: Customer) => void;
@@ -112,9 +113,10 @@ export function CustomerSelector({
           )}
         >
           {loading ? (
-            <div className="p-4 text-center text-xs text-slate-400 flex items-center justify-center gap-2">
-              <span className="inline-block h-3.5 w-3.5 rounded-full border-2 border-primary border-t-transparent animate-spin" />
-              Searching Customer Master...
+            <div className="p-3 space-y-2.5 animate-pulse">
+              <div className="flex justify-between items-center"><Skeleton className="h-4 w-36 rounded" /><Skeleton className="h-3 w-16 rounded" /></div>
+              <div className="flex justify-between items-center"><Skeleton className="h-4 w-28 rounded" /><Skeleton className="h-3 w-14 rounded" /></div>
+              <div className="flex justify-between items-center"><Skeleton className="h-4 w-40 rounded" /><Skeleton className="h-3 w-20 rounded" /></div>
             </div>
           ) : customers.length === 0 ? (
             <div className="p-4 text-center text-xs text-slate-400">

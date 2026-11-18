@@ -22,9 +22,11 @@ const COLS: TableCol<LowStockRow>[] = [
 export function LowStockReportPage() {
   return (
     <ReportPageShell backPath="/reports/inventory" backLabel="Back to Inventory Reports" title="Low Stock & Reorder Report" subtitle="Products below minimum stock levels, configured reorder levels, and required reorder quantities." badge="Reorder Alert" badgeColor="bg-red-50 text-red-700 border-red-200">
-      <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-700">
-        <span className="font-semibold">⚠ Action Required:</span> {LOW_STOCK_KPIS.requireImmediate} product(s) are critically low and require immediate purchase orders.
-      </div>
+      {LOW_STOCK_KPIS.requireImmediate > 0 && (
+        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-700">
+          <span className="font-semibold">⚠ Action Required:</span> {LOW_STOCK_KPIS.requireImmediate} product(s) are critically low and require immediate purchase orders.
+        </div>
+      )}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <KpiCard label="Critical Stock" value={LOW_STOCK_KPIS.critical.toString()} sub="Immediate action needed" color="red" />
         <KpiCard label="Low Stock" value={LOW_STOCK_KPIS.low.toString()} sub="Below reorder level" color="amber" />

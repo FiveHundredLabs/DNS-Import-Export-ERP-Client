@@ -15,7 +15,6 @@ import { formatCurrency } from '../../../utils/formatters';
 import { batchInventoryService } from '../../../services/BatchInventoryService';
 import { priceHistoryService } from '../../../services/PriceHistoryService';
 import { productService } from '../../../services/ProductService';
-import { MOCK_PRODUCTS } from '../../../mock/mockProducts';
 import { VendorBillLineItem } from '../services/apService';
 import { GRN } from '../../../types/inventory';
 import {
@@ -64,25 +63,42 @@ export function FinancePricingModal({
   useEffect(() => {
     if (!isOpen || !items || items.length === 0) return;
 
-    const initial: Record<string, ProductPricingDecision> = {};
-    items.forEach((item) => {
-      const prodMaster = MOCK_PRODUCTS.find((p) => p.id === item.productId || p.sku === item.sku);
-      const landed = item.landedUnitCost || item.unitCost || 0;
-      const currentPrice = prodMaster?.pricing?.currentSellingPrice || Math.round(landed * 1.35);
+    let cancelled = false;
+    async function init() {
+      const initial: Record<string, ProductPricingDecision> = {};
+      for (const item of items) {
+        let currentPrice = (item as any).currentSellingPrice || (item as any).sellingPrice;
+        if (!currentPrice && item.productId) {
+          try {
+            const prod = await productService.getProduct(item.productId);
+            currentPrice = prod?.pricing?.currentSellingPrice;
+          } catch {
+            // fallback
+          }
+        }
+        const landed = item.landedUnitCost || item.unitCost || 0;
+        currentPrice = currentPrice || Math.round(landed * 1.35);
 
-      initial[item.productId] = {
-        productId: item.productId,
-        productName: item.productName,
-        sku: item.sku,
-        quantity: item.receivedQuantity,
-        landedUnitCost: landed,
-        currentSellingPrice: currentPrice,
-        proposedSellingPrice: currentPrice,
-        strategy: 'PRESERVE_BATCH',
-      };
-    });
+        initial[item.productId] = {
+          productId: item.productId,
+          productName: item.productName,
+          sku: item.sku,
+          quantity: item.receivedQuantity,
+          landedUnitCost: landed,
+          currentSellingPrice: currentPrice,
+          proposedSellingPrice: currentPrice,
+          strategy: 'PRESERVE_BATCH',
+        };
+      }
+      if (!cancelled) {
+        setDecisions(initial);
+      }
+    }
 
-    setDecisions(initial);
+    init();
+    return () => {
+      cancelled = true;
+    };
   }, [isOpen, items]);
 
   const updateDecision = (productId: string, updates: Partial<ProductPricingDecision>) => {

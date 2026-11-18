@@ -25,6 +25,7 @@ import { WarrantyStatusBadge } from './WarrantyStatusBadge';
 import { useAuth } from '../../hooks/useAuth';
 import { useCustomers } from '../../hooks/useCustomers';
 import { formatDate } from '../../utils/formatters';
+import { TableLoadingSkeleton } from '../../components/common/LoadingSkeleton';
 import {
   Store,
   FileCheck2,
@@ -565,10 +566,7 @@ export function SalesRepWarrantyPage({ preselectedCustomerId }: SalesRepWarranty
 
             <CardContent className="p-4 sm:p-5">
               {loading ? (
-                <div className="py-12 text-center text-xs text-slate-400">
-                  <RefreshCw className="h-6 w-6 animate-spin mx-auto text-primary mb-2" />
-                  Loading product warranty verification...
-                </div>
+                <TableLoadingSkeleton rows={4} cols={4} />
               ) : filteredProductGroups.length === 0 ? (
                 <div className="py-12 text-center text-xs text-slate-500">
                   <PackageCheck className="h-8 w-8 mx-auto text-slate-300 mb-2" />

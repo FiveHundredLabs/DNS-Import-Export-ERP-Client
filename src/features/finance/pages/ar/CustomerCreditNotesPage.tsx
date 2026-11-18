@@ -4,7 +4,7 @@ import { customerCreditNoteService } from '../../services/customerCreditNoteServ
 import { periodLockService } from '../../services/periodLockService';
 import { CustomerCreditNote, CustomerCreditNoteLineItem } from '../../api/types';
 import { useCustomers } from '../../../../hooks/useCustomers';
-import { MOCK_PRODUCTS } from '../../../../mock/mockProducts';
+import { useProducts } from '../../../../hooks/useProducts';
 import { arService } from '../../services/arService';
 import { Button } from '../../../../components/ui/button';
 import { ConfirmButton } from '../../../../components/ui/confirm-button';
@@ -43,6 +43,7 @@ export function CustomerCreditNotesPage({ hideTopSwitcher = false }: { hideTopSw
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { customers } = useCustomers();
+  const { products } = useProducts({ page: 1, pageSize: 200 });
 
   // Tab: 'REGISTRY' | 'CREATE'
   const [activeTab, setActiveTab] = useState<'REGISTRY' | 'CREATE'>(
@@ -199,7 +200,7 @@ export function CustomerCreditNotesPage({ hideTopSwitcher = false }: { hideTopSw
   };
 
   const handleAddCatalogItem = () => {
-    const firstProd = MOCK_PRODUCTS[0];
+    const firstProd = products[0];
     const unitPrice = firstProd?.pricing?.currentSellingPrice ?? 50000;
     const unitCost = firstProd?.pricing?.costPrice ?? 35000;
     const subtotal = unitPrice;
@@ -207,9 +208,9 @@ export function CustomerCreditNotesPage({ hideTopSwitcher = false }: { hideTopSw
 
     const newLine: CustomerCreditNoteLineItem = {
       id: `li-${Date.now()}`,
-      productId: firstProd?.id || 'prod-001',
-      productName: firstProd?.name || 'Solar Inverter',
-      sku: firstProd?.sku || 'INV-5KW',
+      productId: firstProd?.id || 'prod-catalog',
+      productName: firstProd?.name || 'Catalog Product',
+      sku: firstProd?.sku || 'PROD-01',
       returnedQuantity: 1,
       unitPrice,
       unitCost,
@@ -249,7 +250,7 @@ export function CustomerCreditNotesPage({ hideTopSwitcher = false }: { hideTopSw
   };
 
   const handleProductChange = (index: number, productId: string) => {
-    const prod = MOCK_PRODUCTS.find((p) => p.id === productId);
+    const prod = products.find((p) => p.id === productId);
     if (!prod) return;
 
     setLineItems((prev) =>
@@ -1016,7 +1017,7 @@ export function CustomerCreditNotesPage({ hideTopSwitcher = false }: { hideTopSw
                                 </Badge>
                                 <button
                                   type="button"
-                                  onClick={() => handleProductChange(index, MOCK_PRODUCTS[0]?.id || 'prod-001')}
+                                  onClick={() => handleProductChange(index, products[0]?.id || '')}
                                   className="text-[10px] text-primary hover:underline"
                                 >
                                   Switch to Catalog
@@ -1036,7 +1037,7 @@ export function CustomerCreditNotesPage({ hideTopSwitcher = false }: { hideTopSw
                                 }}
                                 className="w-full h-8 text-xs rounded border border-slate-300 px-2 bg-white text-slate-800"
                               >
-                                {MOCK_PRODUCTS.map((p) => (
+                                {products.map((p) => (
                                   <option key={p.id} value={p.id}>
                                     {p.name} ({p.sku})
                                   </option>

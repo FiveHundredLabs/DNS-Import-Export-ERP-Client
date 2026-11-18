@@ -38,9 +38,6 @@ import {
   classifyUnitWarrantyStatus,
   calculateRemainingWarranty,
 } from '../rules/warrantyRules';
-import { MOCK_PRODUCTS } from '../mock/mockProducts';
-import { MOCK_INVOICES } from '../mock/mockInvoices';
-import { MOCK_GRNS } from '../mock/mockInventory';
 
 export interface CreateClaimDTO {
   warrantyRecordId: string;
@@ -291,48 +288,25 @@ export class WarrantyService {
     const existingRecord = await this.getWarrantyByUnitBarcode(query);
 
     // 2. Identify Product
-    let product = MOCK_PRODUCTS.find(
-      (p) =>
-        (p.barcode && p.barcode.toLowerCase() === query) ||
-        p.sku.toLowerCase() === query ||
-        (existingRecord && p.id === existingRecord.productId)
-    );
-
-    if (!product) {
-      if (existingRecord) {
-        product = MOCK_PRODUCTS.find((p) => p.name === existingRecord.productName) || MOCK_PRODUCTS[0];
-      } else {
-        product =
-          MOCK_PRODUCTS.find((p) => p.barcode?.includes(query) || p.sku.toLowerCase().includes(query)) ||
-          MOCK_PRODUCTS[0];
-      }
+    let product: any = null;
+    if (this.productRepo) {
+      product =
+        (await this.productRepo.getByBarcode(query)) ||
+        (existingRecord?.productId ? await this.productRepo.getById(existingRecord.productId) : null);
     }
 
-    // 3. Identify Distributor Invoice & Sales Rep
-    let invoice = MOCK_INVOICES.find(
-      (inv) =>
-        (existingRecord &&
-          (inv.id === existingRecord.invoiceId || inv.invoiceNumber === existingRecord.invoiceNumber)) ||
-        inv.items.some((it) => it.productId === product?.id)
-    );
-    if (!invoice) {
-      invoice = MOCK_INVOICES[0];
+    if (!product && !existingRecord) {
+      return null;
     }
 
-    // 4. Identify GRN & Supplier
-    let grn = MOCK_GRNS.find((g) => g.items.some((it) => it.productId === product?.id));
-    if (!grn) {
-      grn = MOCK_GRNS[0];
-    }
-
-    // 5. Customer / Distributor
-    const allCustomers = (await this.customerRepo.getAll({ pageSize: 100 })).data;
-    const customer =
-      (await this.customerRepo.getById(existingRecord?.customerId || invoice?.customerId || '')) ||
-      allCustomers[0];
-
-    // 6. Warranty Expiry & Status Computation
+    const productName = existingRecord?.productName || product?.name || 'Unknown Product';
+    const sku = existingRecord?.sku || product?.sku || query;
+    const categoryName = product?.categoryName || 'General';
+    const productCost = product?.pricing?.costPrice || 0;
+    const sellingPrice = product?.pricing?.currentSellingPrice || 0;
     const defaultWarrantyPeriodMonths = product?.warrantyPeriodMonths || 12;
+
+    const customer = existingRecord?.customerId ? await this.customerRepo.getById(existingRecord.customerId) : null;
 
     if (existingRecord) {
       const remainingInfo = calculateRemainingWarranty(existingRecord.warrantyExpiryDate);
@@ -342,26 +316,26 @@ export class WarrantyService {
       return {
         barcode: existingRecord.barcode || barcodeQuery,
         serialNumber: existingRecord.serialNumber || `SN-${barcodeQuery.slice(-5)}`,
-        productId: product.id,
-        productName: product.name,
-        sku: product.sku,
-        categoryName: product.categoryName || 'Electrical Goods',
-        productCost: product.pricing?.costPrice || 2200,
-        sellingPrice: product.pricing?.currentSellingPrice || 3250,
+        productId: existingRecord.productId || product?.id || '',
+        productName,
+        sku,
+        categoryName,
+        productCost,
+        sellingPrice,
         defaultWarrantyPeriodMonths: existingRecord.warrantyPeriodMonths || defaultWarrantyPeriodMonths,
-        supplierId: grn?.supplierId || 'sup-001',
-        supplierName: grn?.supplierName || 'Schneider Electric Lanka (Pvt) Ltd',
-        grnId: grn?.id || 'GRN-2025-001',
-        grnNumber: grn?.grnNumber || 'GRN-2025-001',
-        grnDate: '2025-01-02',
-        distributorInvoiceId: invoice.id,
-        distributorInvoiceNumber: invoice.invoiceNumber,
-        distributorInvoiceDate: invoice.issueDate,
-        salesRepId: invoice.salesRepId || 'usr-106',
-        salesRepName: invoice.salesRepName || 'Kasun Wickramasinghe',
-        distributorId: customer.id,
-        distributorName: customer.name,
-        distributorCode: customer.code,
+        supplierId: '',
+        supplierName: '',
+        grnId: '',
+        grnNumber: '',
+        grnDate: '',
+        distributorInvoiceId: existingRecord.invoiceId || '',
+        distributorInvoiceNumber: existingRecord.invoiceNumber || '',
+        distributorInvoiceDate: existingRecord.saleDate || '',
+        salesRepId: '',
+        salesRepName: '',
+        distributorId: customer?.id || existingRecord.customerId || '',
+        distributorName: customer?.name || '',
+        distributorCode: customer?.code || '',
         isRegistered: true,
         warrantyRecordId: existingRecord.id,
         endCustomerSellingDate: existingRecord.dealerSoldDate || existingRecord.warrantyStartDate,
@@ -370,11 +344,9 @@ export class WarrantyService {
         warrantyExpiryDate: existingRecord.warrantyExpiryDate,
         warrantyStatus: remainingInfo.status,
         remainingPeriodText: remainingInfo.displayText,
-        receiptPhotoUrl:
-          existingRecord.receiptPhotoUrl ||
-          'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=600&auto=format&fit=crop&q=80',
-        endCustomerName: existingRecord.endCustomerName || 'Perera Constructions',
-        endCustomerPhone: existingRecord.endCustomerPhone || '+94 77 123 4567',
+        receiptPhotoUrl: existingRecord.receiptPhotoUrl || undefined,
+        endCustomerName: existingRecord.endCustomerName || '',
+        endCustomerPhone: existingRecord.endCustomerPhone || '',
         canRegister: user && (user.role === 'AREA_MANAGER' || user.role === 'SALES_REP') ? false : true,
         canClaim: user && (user.role === 'AREA_MANAGER' || user.role === 'SALES_REP') ? false : canClaim,
         isExpired,
@@ -387,27 +359,27 @@ export class WarrantyService {
     // Unregistered product dossier
     return {
       barcode: barcodeQuery,
-      serialNumber: `SN-${product.sku.slice(0, 3)}-${barcodeQuery.slice(-5)}`,
-      productId: product.id,
-      productName: product.name,
-      sku: product.sku,
-      categoryName: product.categoryName || 'Electrical Goods',
-      productCost: product.pricing?.costPrice || 2200,
-      sellingPrice: product.pricing?.currentSellingPrice || 3250,
+      serialNumber: `SN-${sku.slice(0, 3)}-${barcodeQuery.slice(-5)}`,
+      productId: product?.id || '',
+      productName,
+      sku,
+      categoryName,
+      productCost,
+      sellingPrice,
       defaultWarrantyPeriodMonths,
-      supplierId: grn?.supplierId || 'sup-001',
-      supplierName: grn?.supplierName || 'Schneider Electric Lanka (Pvt) Ltd',
-      grnId: grn?.id || 'GRN-2025-001',
-      grnNumber: grn?.grnNumber || 'GRN-2025-001',
-      grnDate: '2025-01-02',
-      distributorInvoiceId: invoice.id,
-      distributorInvoiceNumber: invoice.invoiceNumber,
-      distributorInvoiceDate: invoice.issueDate,
-      salesRepId: invoice.salesRepId || 'usr-106',
-      salesRepName: invoice.salesRepName || 'Kasun Wickramasinghe',
-      distributorId: customer.id,
-      distributorName: customer.name,
-      distributorCode: customer.code,
+      supplierId: '',
+      supplierName: '',
+      grnId: '',
+      grnNumber: '',
+      grnDate: '',
+      distributorInvoiceId: '',
+      distributorInvoiceNumber: '',
+      distributorInvoiceDate: '',
+      salesRepId: '',
+      salesRepName: '',
+      distributorId: customer?.id || '',
+      distributorName: customer?.name || '',
+      distributorCode: customer?.code || '',
       isRegistered: false,
       warrantyStatus: 'NOT_REGISTERED',
       remainingPeriodText: 'Not Registered',
@@ -519,7 +491,6 @@ export class WarrantyService {
     const allCustomers = (await this.customerRepo.getAll({ pageSize: 100 })).data;
     const customer = targetCustomer || allCustomers[0];
     const records = await this.repo.getRecordsByCustomerId(customerId);
-    const customerInvoices = MOCK_INVOICES.filter((inv) => inv.customerId === customerId);
 
     const items: CustomerWarrantyTallyItem[] = [];
 
@@ -546,34 +517,6 @@ export class WarrantyService {
         remainingPeriodText: remainingInfo.displayText,
       });
     });
-
-    // Ensure realistic demonstration numbers if mock records are fewer
-    const targetExpected = Math.max(items.length, customer.warrantyNotesExpected || 25);
-    if (items.length < targetExpected) {
-      const needed = targetExpected - items.length;
-      for (let i = 1; i <= needed; i++) {
-        const inv = customerInvoices[0] || MOCK_INVOICES[0];
-        const prod = MOCK_PRODUCTS[i % MOCK_PRODUCTS.length];
-        const dummyBarcode = `890102030${800 + i}`;
-        items.push({
-          id: `unreg-${customerId}-${i}`,
-          productId: prod.id,
-          productName: prod.name,
-          sku: prod.sku,
-          barcode: dummyBarcode,
-          serialNumber: `SN-${prod.sku.slice(0, 3)}-${1000 + i}`,
-          quantity: 1,
-          unit: 'PCS',
-          invoiceNumber: inv.invoiceNumber,
-          invoiceDate: inv.issueDate,
-          sellingDate: undefined,
-          isRegistered: false,
-          hasNoteReceipt: false,
-          warrantyStatus: 'NOT_REGISTERED',
-          remainingPeriodText: 'Pending Registration',
-        });
-      }
-    }
 
     const totalSupplied = items.length;
     const registeredCount = items.filter((i) => i.isRegistered).length;
