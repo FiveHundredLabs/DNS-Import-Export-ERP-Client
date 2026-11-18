@@ -15,6 +15,15 @@ interface CategoryModalProps {
   categoryToEdit?: FinanceCategory | null;
   defaultParentId?: string | null;
   onSuccess: (cat: FinanceCategory) => void;
+  onSave?: (catData: {
+    code: string;
+    name: string;
+    parentId?: string | null;
+    accountClass: AccountClass;
+    accountSubClass?: AccountSubClass;
+    description?: string;
+  }) => Promise<any>;
+  categoriesList?: FinanceCategory[];
 }
 
 export function CategoryModal({
@@ -23,6 +32,8 @@ export function CategoryModal({
   categoryToEdit = null,
   defaultParentId = null,
   onSuccess,
+  onSave,
+  categoriesList,
 }: CategoryModalProps) {
   const isEditing = Boolean(categoryToEdit);
   const isLockedSystem = Boolean(categoryToEdit?.isSystem);
@@ -56,7 +67,9 @@ export function CategoryModal({
 
   useEffect(() => {
     if (open) {
-      const allCats = categoryService.getCategories();
+      const allCats = categoriesList && categoriesList.length > 0
+        ? categoriesList
+        : categoryService.getCategories();
       setCategories(allCats);
 
       if (categoryToEdit) {
@@ -103,7 +116,7 @@ export function CategoryModal({
     setAccountSubClass(getDefaultSubClassForClass(newClass));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!code.trim()) {
       setError('Category Code is required (e.g. 1001, 2001).');
@@ -120,7 +133,25 @@ export function CategoryModal({
 
       const subClass = accountSubClass || getDefaultSubClassForClass(accountClass);
 
-      if (isEditing && categoryToEdit) {
+      if (onSave) {
+        await onSave({
+          code: code.trim(),
+          name: name.trim(),
+          parentId: parentId || null,
+          accountClass,
+          accountSubClass: subClass,
+          description: description.trim() || undefined,
+        });
+        onSuccess({
+          id: categoryToEdit?.id || `cat-${Date.now()}`,
+          code: code.trim(),
+          name: name.trim(),
+          accountClass,
+          accountSubClass: subClass,
+          parentId: parentId || null,
+          description: description.trim() || undefined,
+        });
+      } else if (isEditing && categoryToEdit) {
         const updated = categoryService.updateCategory(categoryToEdit.id, {
           code: code.trim(),
           name: name.trim(),

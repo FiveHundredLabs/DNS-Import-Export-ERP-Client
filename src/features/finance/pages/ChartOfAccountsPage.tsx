@@ -1,5 +1,17 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { useFinanceLedger } from '../hooks/useFinanceLedger';
+import {
+  useAccounts,
+  useCategories,
+  useCreateAccount,
+  useUpdateAccount,
+  useDeleteAccount,
+  useCreateCategory,
+  useUpdateCategory,
+  useDeleteCategory,
+  useJournals,
+  usePostDirectJournal,
+  FinanceAccount,
+} from '../../../api/finance';
 import { Account, AccountClass, AccountSubClass } from '../api/types';
 import { AccountModal } from '../components/AccountModal';
 import { CategoryModal } from '../components/CategoryModal';
@@ -31,6 +43,52 @@ import { Input } from '../../../components/ui/input';
 import { Badge } from '../../../components/ui/badge';
 import { Card } from '../../../components/ui/card';
 import { toast } from 'sonner';
+
+function toUiAccount(acc: FinanceAccount): Account {
+  const rootClass = (acc.category?.rootClass || 'ASSET') as AccountClass;
+  const subClassMap: Record<string, AccountSubClass> = {
+    '1000': 'CURRENT_ASSET',
+    '1001': 'CURRENT_ASSET',
+    '1500': 'NON_CURRENT_ASSET',
+    '2000': 'CURRENT_LIABILITY',
+    '2001': 'CURRENT_LIABILITY',
+    '2500': 'NON_CURRENT_LIABILITY',
+    '3000': 'EQUITY',
+    '4000': 'REVENUE',
+    '5000': 'OPERATING_EXPENSE',
+  };
+  const categoryCode = acc.category?.code || '';
+  const subClass =
+    subClassMap[categoryCode] ||
+    (rootClass === 'ASSET'
+      ? 'CURRENT_ASSET'
+      : rootClass === 'LIABILITY'
+      ? 'CURRENT_LIABILITY'
+      : rootClass === 'EQUITY'
+      ? 'EQUITY'
+      : rootClass === 'INCOME'
+      ? 'REVENUE'
+      : 'OPERATING_EXPENSE');
+
+  return {
+    id: acc.id,
+    code: acc.code,
+    name: acc.name,
+    classification: rootClass,
+    accountClass: rootClass,
+    accountType: acc.category?.name || rootClass,
+    accountSubClass: subClass,
+    accountSubType: acc.category?.name || '',
+    description: acc.description || undefined,
+    isSystem: acc.isSystem,
+    isActive: acc.isActive,
+    parentId: acc.categoryId,
+    currentBalance: Number(acc.currentBalance ?? 0),
+    currency: acc.currency || 'LKR',
+    createdAt: acc.createdAt,
+    updatedAt: acc.updatedAt,
+  };
+}
 
 interface ClassificationGroup {
   id: string;
@@ -79,13 +137,39 @@ interface ChartOfAccountsPageProps {
 }
 
 export function ChartOfAccountsPage({ defaultView = 'ACCOUNTS' }: ChartOfAccountsPageProps) {
-  const {
-    accounts,
-    createAccount,
-    updateAccount,
-    deleteAccount,
-    postJournalEntry,
-  } = useFinanceLedger();
+  const { data: rawAccounts = [], refetch: refetchAccounts } = useAccounts({ limit: 100 });
+  const { data: apiCategories = [], refetch: refetchCategories } = useCategories();
+  const { data: journals = [] } = useJournals();
+
+  const createAccountMutation = useCreateAccount();
+  const updateAccountMutation = useUpdateAccount();
+  const deleteAccountMutation = useDeleteAccount();
+  const createCategoryMutation = useCreateCategory();
+  const updateCategoryMutation = useUpdateCategory();
+  const deleteCategoryMutation = useDeleteCategory();
+  const postJournalMutation = usePostDirectJournal();
+
+  const categories: FinanceCategory[] = useMemo(() => {
+    if (apiCategories && apiCategories.length > 0) {
+      return apiCategories.map((c) => ({
+        id: c.id,
+        code: c.code,
+        name: c.name,
+        accountClass: c.rootClass as AccountClass,
+        parentId: c.parentId,
+        isSystem: c.isSystem,
+        order: c.sortOrder,
+      }));
+    }
+    return categoryService.getCategories();
+  }, [apiCategories]);
+
+  const accounts: Account[] = useMemo(() => {
+    if (rawAccounts && rawAccounts.length > 0) {
+      return rawAccounts.map(toUiAccount);
+    }
+    return [];
+  }, [rawAccounts]);
 
   const [activeMainView, setActiveMainView] = useState<'ACCOUNTS' | 'CATEGORIES'>(() => {
     if (defaultView === 'CATEGORIES') return 'CATEGORIES';
@@ -117,7 +201,6 @@ export function ChartOfAccountsPage({ defaultView = 'ACCOUNTS' }: ChartOfAccount
     }
   };
 
-  const [categories, setCategories] = useState<FinanceCategory[]>(() => categoryService.getCategories());
   const [search, setSearch] = useState('');
 
   // Helper to accurately map accounts to categories without cross-bleeding
@@ -181,13 +264,12 @@ export function ChartOfAccountsPage({ defaultView = 'ACCOUNTS' }: ChartOfAccount
     }
   });
 
-  const { journals } = useFinanceLedger();
   const isObInitLocked = useMemo(() => {
-    return openingBalancesCompleted || journals.some((j) => j.reference?.trim().toUpperCase() === 'SETUP-OB-INIT');
+    return openingBalancesCompleted || journals.some((j) => (j as any).referenceNumber?.trim().toUpperCase() === 'SETUP-OB-INIT' || j.description?.includes('SETUP-OB-INIT'));
   }, [openingBalancesCompleted, journals]);
 
   const refreshCategories = () => {
-    setCategories(categoryService.getCategories());
+    refetchCategories();
   };
 
   const toggleGroup = (groupId: string) => {
@@ -244,26 +326,96 @@ export function ChartOfAccountsPage({ defaultView = 'ACCOUNTS' }: ChartOfAccount
     setCategoryModalOpen(true);
   };
 
-  const handleDeleteCategory = (cat: FinanceCategory) => {
+  const handleSaveCategory = async (catData: any) => {
+    if (categoryToEdit) {
+      await updateCategoryMutation.mutateAsync({
+        id: categoryToEdit.id,
+        payload: {
+          name: catData.name,
+          parentId: catData.parentId || undefined,
+          sortOrder: catData.sortOrder || catData.order,
+        },
+      });
+      toast.success(`Category "${catData.code} - ${catData.name}" updated successfully.`);
+    } else {
+      let parentId = catData.parentId;
+      if (!parentId) {
+        const rootCat = categories.find(
+          (c) => (c.accountClass === catData.accountClass || (c as any).rootClass === catData.accountClass) && !c.parentId
+        );
+        parentId = rootCat?.id;
+      }
+      await createCategoryMutation.mutateAsync({
+        code: catData.code,
+        name: catData.name,
+        parentId: parentId!,
+        sortOrder: catData.sortOrder || catData.order,
+      });
+      toast.success(`Category "${catData.code} - ${catData.name}" created successfully.`);
+    }
+    refetchCategories();
+  };
+
+  const handleDeleteCategory = async (cat: FinanceCategory) => {
     if (cat.isSystem && !cat.parentId) {
       toast.error('Default system master categories cannot be deleted.');
       return;
     }
 
-    // Check if any accounts are using this category
     const linkedAccs = getAccountsForSubCategory(cat);
-
     if (linkedAccs.length > 0) {
       toast.error(`Cannot delete category "${cat.name}". ${linkedAccs.length} account(s) are attached to it.`);
       return;
     }
 
     try {
-      categoryService.deleteCategory(cat.id);
-      refreshCategories();
+      await deleteCategoryMutation.mutateAsync(cat.id);
+      refetchCategories();
       toast.success(`Category "${cat.code} - ${cat.name}" deleted.`);
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : 'Failed to delete category');
+    }
+  };
+
+  const handleCreateAccount = async (dto: any) => {
+    let catId = dto.categoryId || selectedHeaderCategoryForNewAccount;
+    if (!catId) {
+      const match = categories.find(
+        (c) => c.accountClass === dto.accountClass || (c as any).rootClass === dto.accountClass
+      );
+      catId = match?.id;
+    }
+    const res = await createAccountMutation.mutateAsync({
+      code: dto.code,
+      name: dto.name,
+      categoryId: catId!,
+      description: dto.description,
+    });
+    refetchAccounts();
+    return toUiAccount(res);
+  };
+
+  const handleUpdateAccount = async (id: string, dto: any) => {
+    const res = await updateAccountMutation.mutateAsync({
+      id,
+      payload: {
+        name: dto.name,
+        categoryId: dto.categoryId,
+        description: dto.description,
+        isActive: dto.isActive,
+      },
+    });
+    refetchAccounts();
+    return toUiAccount(res);
+  };
+
+  const handleDeleteAccount = async (id: string) => {
+    try {
+      await deleteAccountMutation.mutateAsync(id);
+      refetchAccounts();
+      toast.success('Account deleted successfully.');
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Failed to delete account');
     }
   };
 
@@ -282,7 +434,11 @@ export function ChartOfAccountsPage({ defaultView = 'ACCOUNTS' }: ChartOfAccount
 
     try {
       const nextState = !account.isActive;
-      await updateAccount(account.id, { isActive: nextState });
+      await updateAccountMutation.mutateAsync({
+        id: account.id,
+        payload: { isActive: nextState },
+      });
+      refetchAccounts();
       toast.success(
         `Account ${account.code} marked as ${nextState ? 'ACTIVE' : 'INACTIVE'}`
       );
@@ -315,12 +471,15 @@ export function ChartOfAccountsPage({ defaultView = 'ACCOUNTS' }: ChartOfAccount
   const handleSaveOpeningBalances = async (
     lines: { accountId: string; debit: number; credit: number; description?: string }[]
   ) => {
-    await postJournalEntry({
-      date: new Date().toISOString().slice(0, 10),
+    await postJournalMutation.mutateAsync({
+      transactionDate: new Date().toISOString().slice(0, 10),
       description: 'System Setup: Opening Balances Ledger Initiation',
-      reference: 'SETUP-OB-INIT',
-      source: 'SYSTEM',
-      lines,
+      lines: lines.map((l) => ({
+        accountId: l.accountId,
+        debit: l.debit || 0,
+        credit: l.credit || 0,
+        description: l.description,
+      })),
     });
 
     try {
@@ -330,6 +489,7 @@ export function ChartOfAccountsPage({ defaultView = 'ACCOUNTS' }: ChartOfAccount
     }
     setOpeningBalancesCompleted(true);
     setShowWizard(false);
+    refetchAccounts();
   };
 
   if (showWizard) {
@@ -958,7 +1118,7 @@ export function ChartOfAccountsPage({ defaultView = 'ACCOUNTS' }: ChartOfAccount
                                           <Button
                                             variant="ghost"
                                             size="sm"
-                                            onClick={() => deleteAccount(account.id)}
+                                            onClick={() => handleDeleteAccount(account.id)}
                                             className="h-7 px-2 text-xs text-slate-400 hover:text-rose-600"
                                             title="Delete Custom Sub-Account"
                                           >
@@ -1002,13 +1162,14 @@ export function ChartOfAccountsPage({ defaultView = 'ACCOUNTS' }: ChartOfAccount
       <AccountModal
         open={modalOpen}
         onOpenChange={setModalOpen}
-        onCreate={createAccount}
-        onUpdate={updateAccount}
+        onCreate={handleCreateAccount}
+        onUpdate={handleUpdateAccount}
         accountToEdit={accountToEdit}
         existingAccounts={accounts}
         defaultClass={targetClass}
         defaultSubClass={targetSubClass}
         defaultHeaderCategoryId={selectedHeaderCategoryForNewAccount}
+        categoriesList={categories}
       />
 
       {/* Category Creation / Edit Modal */}
@@ -1017,9 +1178,10 @@ export function ChartOfAccountsPage({ defaultView = 'ACCOUNTS' }: ChartOfAccount
         onOpenChange={setCategoryModalOpen}
         categoryToEdit={categoryToEdit}
         defaultParentId={categoryParentId}
+        onSave={handleSaveCategory}
+        categoriesList={categories}
         onSuccess={() => {
           refreshCategories();
-          toast.success('Category updated successfully');
         }}
       />
     </div>

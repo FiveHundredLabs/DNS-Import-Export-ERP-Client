@@ -12,13 +12,14 @@ import { categoryService, FinanceCategory } from '../services/categoryService';
 interface AccountModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onCreate: (dto: CreateAccountDTO) => Promise<Account>;
-  onUpdate?: (id: string, dto: Partial<CreateAccountDTO>) => Promise<Account>;
+  onCreate: (dto: CreateAccountDTO & { categoryId?: string }) => Promise<any>;
+  onUpdate?: (id: string, dto: Partial<CreateAccountDTO> & { categoryId?: string; isActive?: boolean }) => Promise<any>;
   accountToEdit?: Account | null;
   existingAccounts?: Account[];
   defaultClass?: AccountClass;
   defaultSubClass?: AccountSubClass;
   defaultHeaderCategoryId?: string;
+  categoriesList?: FinanceCategory[];
 }
 
 const CLASS_DISPLAY_NAMES: Record<AccountClass, string> = {
@@ -39,6 +40,7 @@ export function AccountModal({
   defaultClass = 'EXPENSE',
   defaultSubClass = 'OPERATING_EXPENSE',
   defaultHeaderCategoryId,
+  categoriesList,
 }: AccountModalProps) {
   const isEditing = Boolean(accountToEdit);
   const isLockedSystemAccount = Boolean(accountToEdit?.isSystem);
@@ -58,7 +60,9 @@ export function AccountModal({
   // Load categories whenever modal opens
   useEffect(() => {
     if (open) {
-      const allCats = categoryService.getCategories();
+      const allCats = categoriesList && categoriesList.length > 0
+        ? categoriesList
+        : categoryService.getCategories();
       setCategories(allCats);
 
       if (accountToEdit) {
@@ -160,6 +164,7 @@ export function AccountModal({
         await onUpdate(accountToEdit.id, {
           name: name.trim(),
           description: description.trim() || undefined,
+          categoryId: selectedHeaderCategory || (accountToEdit as any).categoryId || accountToEdit.parentId,
           accountSubType: effectiveSubType,
           ...(!isLockedSystemAccount ? { accountClass, accountSubClass, parentId: parentId || undefined } : {}),
         });
@@ -167,6 +172,7 @@ export function AccountModal({
         await onCreate({
           code: code.trim(),
           name: name.trim(),
+          categoryId: selectedHeaderCategory,
           classification: accountClass,
           accountClass,
           accountType: accountSubClass,

@@ -14,7 +14,39 @@ import {
   DateRangeFilter,
 } from '../api/types';
 import { financeRepository } from '../api';
+import { coaApi, FinanceAccount } from '../../../api/finance';
 import { toast } from 'sonner';
+
+function mapFinanceAccountToAccount(acc: FinanceAccount): Account {
+  const rootClass = (acc.category?.rootClass || 'ASSET') as Account['accountClass'];
+  return {
+    id: acc.id,
+    code: acc.code,
+    name: acc.name,
+    classification: rootClass,
+    accountClass: rootClass,
+    accountType: acc.category?.name || rootClass,
+    accountSubClass:
+      rootClass === 'ASSET'
+        ? 'CURRENT_ASSET'
+        : rootClass === 'LIABILITY'
+        ? 'CURRENT_LIABILITY'
+        : rootClass === 'EQUITY'
+        ? 'EQUITY'
+        : rootClass === 'INCOME'
+        ? 'REVENUE'
+        : 'OPERATING_EXPENSE',
+    accountSubType: acc.category?.name || '',
+    description: acc.description || undefined,
+    isSystem: acc.isSystem,
+    isActive: acc.isActive,
+    parentId: acc.categoryId,
+    currentBalance: Number(acc.currentBalance ?? 0),
+    currency: acc.currency || 'LKR',
+    createdAt: acc.createdAt,
+    updatedAt: acc.updatedAt,
+  };
+}
 
 export function useFinanceLedger() {
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -25,14 +57,19 @@ export function useFinanceLedger() {
 
   const fetchAccounts = useCallback(async () => {
     try {
+      const realAccounts = await coaApi.getAccounts({ limit: 100 });
+      if (realAccounts && realAccounts.length > 0) {
+        const mapped = realAccounts.map(mapFinanceAccountToAccount);
+        setAccounts(mapped);
+        return mapped;
+      }
       const data = await financeRepository.getAccounts();
       setAccounts(data);
       return data;
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Failed to fetch accounts';
-      setError(msg);
-      toast.error(msg);
-      return [];
+    } catch {
+      const data = await financeRepository.getAccounts();
+      setAccounts(data);
+      return data;
     }
   }, []);
 

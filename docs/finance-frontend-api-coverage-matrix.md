@@ -20,7 +20,8 @@
 | **8. Bank Reconciliation Workspace** | `/finance/reconciliation` | 6 endpoints | **COMPLETE** (100%) |
 | **9. Period Closing & Fiscal Controls** | `/finance/settings/closing` | 6 endpoints | **COMPLETE** (100%) |
 | **10. Financial Reports Suite** | `/finance/reports` (P&L, Balance Sheet, VAT, GL, Trial Balance, Audit) | 5 endpoints | **COMPLETE** (100%) |
-| **11. Commercial Notes (Credit/Debit Notes)** | `/finance/notes`, `/finance/ar/credit-notes`, `/finance/ap/debit-notes` | 4 endpoints | ⏳ **DEFERRED** (Per explicit instruction) |
+| **11. Warranty & Damaged Stock Accounting** | `/warranty-claims`, `/pos/warranty`, `/inventory/damaged-stock` | 4 endpoints | **COMPLETE** (100%) |
+| **12. Commercial Notes (Credit/Debit Notes)** | `/finance/notes`, `/finance/ar/credit-notes`, `/finance/ap/debit-notes` | 4 endpoints | ⏳ **DEFERRED** (Per explicit instruction) |
 
 ---
 
@@ -189,7 +190,21 @@
 
 ---
 
-### 11. Commercial Notes (Customer Credit Notes & Supplier Debit Notes)
+### 11. Warranty & Damaged Stock Accounting (Post-Sales GL Integration)
+- **Frontend Routes**: `/warranty-claims`, `/pos/warranty`, `/inventory/damaged-stock`
+- **Frontend Components**: `WarrantyClaimsListPage.tsx`, `PosWarrantyExchangeModal.tsx`, `DamagedStockWorkspace.tsx`
+- **Role Access**: Sales Manager, Showroom Cashier, Stock Manager, Director
+
+| Frontend Action / Screen | HTTP Method | Backend API Endpoint | Controller / Service | Status | Notes |
+| :--- | :---: | :--- | :--- | :---: | :--- |
+| **Register & Approve Warranty Claim** | `POST` | `/api/v1/warranty-claims` | `WarrantyController.createClaim` | **COMPLETE** | Registers defective unit, single-step approval with 14-day reference code |
+| **Showroom POS Claim Lookup** | `GET` | `/api/v1/pos/warranty-claims/:code` | `PosWarrantyController.getClaimByReferenceCode` | **COMPLETE** | Validates code validity, single-use status, product and customer details |
+| **Fulfill Replacement via POS** | `POST` | `/api/v1/pos/warranty-claims/:code/issue-replacement` | `PosWarrantyController.issueReplacement` | **COMPLETE** | Relieves good stock (`Cr 1200`), posts warranty expense (`Dr 5030`), marks replacement unit `SOLD`, moves defective to damaged pool |
+| **Recover Damaged Stock to Available** | `POST` | `/api/v1/inventory/damaged/recover` | `InventoryController.recoverDamagedStock` | **COMPLETE** | Restores stock to good inventory (`Dr 1200`), posts cost recovery (`Cr 5030 Warranty Expense`), moves units back to `AVAILABLE` |
+
+---
+
+### 12. Commercial Notes (Customer Credit Notes & Supplier Debit Notes)
 - **Frontend Routes**: `/finance/notes`, `/finance/ar/credit-notes`, `/finance/ap/debit-notes`
 - **Frontend Components**: `CommercialNotesPage.tsx`, `CustomerCreditNotesPage.tsx`, `SupplierDebitNotesPage.tsx`
 - **Role Access**: Finance Manager, Director
@@ -208,11 +223,12 @@
 
 ## Verification & Audit Confirmation
 
-- **Total Navigation Pages Analyzed**: 12 visible pages & workflows
-- **Total Backend Endpoints**: 64 routes
-- **Endpoints Fully Implemented & Tested**: 60 routes (**93.75% of total, 100% of non-deferred scope**)
+- **Total Navigation Pages Analyzed**: 13 visible pages & workflows
+- **Total Backend Endpoints**: 68 routes
+- **Endpoints Fully Implemented & Tested**: 64 routes (**94.12% of total, 100% of non-deferred scope**)
 - **Deferred Endpoints**: 4 routes (Commercial Notes)
 - **Automated Test Coverage**:
   - `test/payment-finance-pdc.e2e-spec.ts`: 9 tests passing (100%)
   - `test/finance-reports-vouchers-closing.e2e-spec.ts`: 12 tests passing (100%)
-  - **Combined Total**: 21 / 21 tests passing (100%) on PostgreSQL `dns_erp_dev`
+  - `test/warranty-finance.e2e-spec.ts`: 5 tests passing (100%)
+  - **Combined Total**: 26 / 26 tests passing (100%) on PostgreSQL `dns_erp_dev`
