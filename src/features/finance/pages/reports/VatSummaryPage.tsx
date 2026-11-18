@@ -24,10 +24,12 @@ import { Card } from '../../../../components/ui/card';
 import { Badge } from '../../../../components/ui/badge';
 import { Button } from '../../../../components/ui/button';
 import { toast } from 'sonner';
+import { TableLoadingSkeleton, CardGridSkeleton } from '../../../../components/common/LoadingSkeleton';
 
 export function VatSummaryPage() {
   const { getVatSummary } = useFinanceLedger();
   const [report, setReport] = useState<VatReport | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
   const [activeTab, setActiveTab] = useState<'SCHEDULE_01' | 'SCHEDULE_02'>('SCHEDULE_01');
 
   const [dateFilter, setDateFilter] = useState<DateFilterState>({
@@ -37,11 +39,18 @@ export function VatSummaryPage() {
   });
 
   const loadReport = useCallback(async () => {
-    const data = await getVatSummary({
-      startDate: dateFilter.startDate,
-      endDate: dateFilter.endDate,
-    });
-    setReport(data);
+    setLoading(true);
+    try {
+      const data = await getVatSummary({
+        startDate: dateFilter.startDate,
+        endDate: dateFilter.endDate,
+      });
+      setReport(data);
+    } catch {
+      // Handled
+    } finally {
+      setLoading(false);
+    }
   }, [getVatSummary, dateFilter.startDate, dateFilter.endDate]);
 
   useEffect(() => {
@@ -224,7 +233,14 @@ export function VatSummaryPage() {
         reportTitle="VAT_Summary_Report"
       />
 
-      {/* Tax Metric KPI Cards */}
+      {loading ? (
+        <div className="space-y-6">
+          <CardGridSkeleton count={4} />
+          <TableLoadingSkeleton rows={8} cols={6} />
+        </div>
+      ) : (
+        <>
+          {/* Tax Metric KPI Cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
         <Card className="p-4 border-slate-200">
           <div className="flex items-center justify-between">
@@ -496,6 +512,8 @@ export function VatSummaryPage() {
             </table>
           </div>
         </Card>
+      )}
+        </>
       )}
 
       {/* Corporate Sign-Off Block */}

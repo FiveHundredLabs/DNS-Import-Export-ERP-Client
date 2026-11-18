@@ -1,6 +1,7 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useCustomers } from '../../hooks/useCustomers';
+import { useDebounce } from '../../hooks/useDebounce';
 import { CustomerTable } from './CustomerTable';
 import { CustomerCreateModal } from './CustomerCreateModal';
 import { PageHeader } from '../../components/common/PageHeader';
@@ -26,6 +27,7 @@ export function CustomerListPage() {
   const location = useLocation();
   const { hasPermission, role, currentUser } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
+  const debouncedSearch = useDebounce(searchTerm, 350);
   const [selectedType, setSelectedType] = useState('');
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<'create' | 'edit'>('edit');
@@ -58,16 +60,19 @@ export function CustomerListPage() {
     return customers.filter((c) => c.approvalStage === 'APPROVED');
   }, [customers]);
 
-  const handleSearch = (q: string) => {
-    setSearchTerm(q);
+  useEffect(() => {
     setFilters((prev) => ({
       ...prev,
-      search: q,
+      search: debouncedSearch || undefined,
       page: 1,
       assignedRepId: role === 'SALES_REP' ? currentUser.id : prev.assignedRepId,
       areaId: role === 'AREA_MANAGER' ? currentUser.areaId : prev.areaId,
       approvalStage: 'APPROVED',
     }));
+  }, [debouncedSearch, role, currentUser, setFilters]);
+
+  const handleSearch = (q: string) => {
+    setSearchTerm(q);
   };
 
   const handleTypeChange = (type: string) => {

@@ -8,7 +8,6 @@ import { Skeleton } from '../../components/ui/skeleton';
 import { orderService } from '../../services/OrderService';
 import { inventoryService } from '../../services/InventoryService';
 import { useAuth } from '../../hooks/useAuth';
-import { MOCK_PRODUCTS } from '../../mock/mockProducts';
 import { toast } from 'sonner';
 
 export function OrderPickingPage() {
@@ -185,17 +184,18 @@ export function OrderPickingPage() {
                     </TableHeader>
                     <TableBody>
                       {selectedOrder.items?.map((item: any, idx: number) => {
-                        const product = MOCK_PRODUCTS.find(p => p.id === item.productId);
                         const approved = item.approvedQuantity || item.quantity;
                         const issued = item.issuedQuantity || 0;
                         const maxToPick = Math.max(0, approved - issued);
                         const currentPick = pickQuantities[idx] || 0;
                         const remaining = approved - issued - currentPick;
+                        const productName = item.productName || item.product?.name || item.productId;
+                        const productSku = item.productSku || item.sku || item.product?.sku || '-';
 
                         return (
                           <TableRow key={idx}>
-                            <TableCell className="font-semibold text-foreground">{product?.name || item.productId}</TableCell>
-                            <TableCell className="font-mono text-xs text-muted-foreground">{product?.sku || '-'}</TableCell>
+                            <TableCell className="font-semibold text-foreground">{productName}</TableCell>
+                            <TableCell className="font-mono text-xs text-muted-foreground">{productSku}</TableCell>
                             <TableCell className="text-right font-mono font-medium">{approved}</TableCell>
                             <TableCell className="text-right font-mono font-medium">{issued}</TableCell>
                             <TableCell className="text-right">

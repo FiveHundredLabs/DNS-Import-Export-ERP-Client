@@ -15,7 +15,7 @@ import {
   SupplierDebitNote,
   SupplierDebitNoteLineItem,
 } from '../../api/types';
-import { MOCK_PRODUCTS } from '../../../../mock/mockProducts';
+import { useProducts } from '../../../../hooks/useProducts';
 import Decimal from 'decimal.js';
 import {
   RotateCcw,
@@ -35,6 +35,7 @@ export function SupplierDebitNotesPage({ hideTopSwitcher = false }: { hideTopSwi
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { suppliers } = useFinanceLedger();
+  const { products } = useProducts({ page: 1, pageSize: 200 });
 
   // Tab: 'REGISTRY' or 'CREATE'
   const [activeTab, setActiveTab] = useState<'REGISTRY' | 'CREATE'>(
@@ -164,14 +165,14 @@ export function SupplierDebitNotesPage({ hideTopSwitcher = false }: { hideTopSwi
 
   // Add line item manually
   const handleAddLineItem = () => {
-    const defaultProduct = MOCK_PRODUCTS[0];
-    const cost = defaultProduct.pricing.costPrice;
+    const defaultProduct = products[0];
+    const cost = defaultProduct?.pricing?.costPrice ?? 0;
     setLineItems((prev) => [
       ...prev,
       {
-        productId: defaultProduct.id,
-        productName: defaultProduct.name,
-        sku: defaultProduct.sku,
+        productId: defaultProduct?.id ?? '',
+        productName: defaultProduct?.name ?? 'General Item',
+        sku: defaultProduct?.sku ?? 'N/A',
         damagedQuantity: 1,
         unitCost: cost,
         lineTotal: cost,
@@ -186,11 +187,11 @@ export function SupplierDebitNotesPage({ hideTopSwitcher = false }: { hideTopSwi
       const cur = { ...next[index], [field]: val };
 
       if (field === 'productId') {
-        const prod = MOCK_PRODUCTS.find((p) => p.id === val);
+        const prod = products.find((p) => p.id === val);
         if (prod) {
           cur.productName = prod.name;
           cur.sku = prod.sku;
-          cur.unitCost = prod.pricing.costPrice;
+          cur.unitCost = prod.pricing?.costPrice ?? 0;
         }
       }
 
@@ -533,7 +534,7 @@ export function SupplierDebitNotesPage({ hideTopSwitcher = false }: { hideTopSwi
                               onChange={(e) => handleUpdateLine(idx, 'productId', e.target.value)}
                               className="flex h-8 w-full rounded-md border border-slate-200/90 bg-white px-2 py-1 text-xs text-slate-900 shadow-2xs focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                             >
-                              {MOCK_PRODUCTS.map((p) => (
+                              {products.map((p) => (
                                 <option key={p.id} value={p.id}>
                                   {p.name} ({p.sku})
                                 </option>

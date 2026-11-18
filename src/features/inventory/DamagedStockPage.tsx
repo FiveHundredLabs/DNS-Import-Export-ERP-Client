@@ -5,7 +5,8 @@ import { inventoryService } from '../../services/InventoryService';
 import { apService } from '../finance/services/apService';
 import { useFinanceLedger } from '../finance/hooks/useFinanceLedger';
 import { SupplierDebitNote } from '../finance/api/types';
-import { MOCK_PRODUCTS } from '../../mock/mockProducts';
+import { Product } from '../../types/product';
+import { useProducts } from '../../hooks/useProducts';
 import { StockBalance, StockMovement } from '../../types/inventory';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/card';
@@ -49,6 +50,7 @@ export interface VisualDisposition {
 
 export function DamagedStockPage() {
   const { currentUser } = useAuth();
+  const { products } = useProducts({ page: 1, pageSize: 200 });
   const { suppliers } = useFinanceLedger();
   const [balances, setBalances] = useState<StockBalance[]>([]);
   const [movements, setMovements] = useState<StockMovement[]>([]);
@@ -70,7 +72,7 @@ export function DamagedStockPage() {
   // Active item for modal action
   const [activeItem, setActiveItem] = useState<{
     balance: StockBalance;
-    product: (typeof MOCK_PRODUCTS)[0];
+    product: Product | any;
     effectiveDamagedQty: number;
     disposition?: VisualDisposition;
     unitCost: number;
@@ -110,10 +112,10 @@ export function DamagedStockPage() {
     return balances
       .filter((b) => (b.damagedQuantity || 0) > 0)
       .map((b) => {
-        const prod = MOCK_PRODUCTS.find((p) => p.id === b.productId) || {
+        const prod = (b as any).product || products.find((p) => p.id === b.productId) || {
           id: b.productId,
-          name: 'Unknown Product',
-          sku: b.productId,
+          name: (b as any).productName || 'Unknown Product',
+          sku: (b as any).sku || b.productId,
           categoryName: 'General',
           pricing: { costPrice: 0, retailPrice: 0, wholesalePrice: 0 },
         };
@@ -135,7 +137,7 @@ export function DamagedStockPage() {
           key,
         };
       });
-  }, [balances, visualDispositions]);
+  }, [balances, visualDispositions, products]);
 
   // Filtered damaged items
   const filteredDamagedItems = useMemo(() => {
@@ -352,7 +354,7 @@ export function DamagedStockPage() {
             onClick={() => {
               setVisualDispositions({});
               loadData();
-              toast.info('Damaged stock registry refreshed to original mock baseline.');
+              toast.info('Damaged stock registry refreshed.');
             }}
             className="h-9 text-xs gap-1.5 cursor-pointer"
           >

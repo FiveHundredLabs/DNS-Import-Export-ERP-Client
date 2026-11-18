@@ -22,6 +22,7 @@ import {
   Coins,
   Percent,
 } from 'lucide-react';
+import { DashboardSkeleton } from '../../components/common/LoadingSkeleton';
 
 interface ManagerTerritoryViewProps {
   areaId: string;
@@ -74,12 +75,7 @@ export function ManagerTerritoryView({
   const selectedRep = data?.subordinateReps.find((r) => r.repId === selectedRepId);
 
   if (loading) {
-    return (
-      <div className="flex flex-col items-center justify-center py-20 space-y-3">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-slate-300 border-t-indigo-600" />
-        <p className="text-xs text-slate-500 font-medium">Loading territory performance & team leaderboard...</p>
-      </div>
-    );
+    return <DashboardSkeleton />;
   }
 
   if (error || !data) {

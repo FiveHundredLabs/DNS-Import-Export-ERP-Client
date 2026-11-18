@@ -409,7 +409,7 @@ export const PurchaseOrderApprovalPage: React.FC = () => {
             )}
           >
             {isStage1 ? (
-              <Clock className="h-4 w-4 text-amber-600 shrink-0 mt-0.5 animate-spin" />
+              <Clock className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
             ) : isStage2 || isFullyApproved ? (
               <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
             ) : (
@@ -435,7 +435,7 @@ export const PurchaseOrderApprovalPage: React.FC = () => {
             )}
           >
             {isStage2 ? (
-              <Clock className="h-4 w-4 text-blue-600 shrink-0 mt-0.5 animate-spin" />
+              <Clock className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" />
             ) : isFullyApproved ? (
               <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
             ) : (

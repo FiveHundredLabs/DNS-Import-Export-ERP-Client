@@ -88,7 +88,11 @@ function isAuthEndpoint(url?: string): boolean {
 
 function redirectTo(path: '/login' | '/404' | '/500'): void {
   if (typeof window !== 'undefined' && window.location.pathname !== path) {
-    window.location.replace(path);
+    try {
+      window.location.replace(path);
+    } catch {
+      // Safe no-op in test/JSDOM environments where navigation throws 'Not implemented'
+    }
   }
 }
 

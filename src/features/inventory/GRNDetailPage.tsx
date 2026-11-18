@@ -8,7 +8,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { Skeleton } from '../../components/ui/skeleton';
 import { useGRN } from '../../hooks/useGRN';
 import { useAuth } from '../../hooks/useAuth';
-import { MOCK_PRODUCTS } from '../../mock/mockProducts';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 import { UnitBarcodeModal } from '../../components/inventory/UnitBarcodeModal';
 import { unitBarcodeService } from '../../services/UnitBarcodeService';

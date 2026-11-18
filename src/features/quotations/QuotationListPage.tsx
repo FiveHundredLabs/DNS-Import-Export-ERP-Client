@@ -25,6 +25,7 @@ import { formatCurrency, formatDate } from '../../utils/formatters';
 import { AmountDisplay } from '../../components/common/AmountDisplay';
 import { StatCard } from '../../components/common/StatCard';
 import { PageHeader } from '../../components';
+import { TableLoadingSkeleton } from '../../components/common/LoadingSkeleton';
 import { whatsAppService } from '../../services/WhatsAppService';
 import { printerService } from '../../services/PrinterService';
 import {
@@ -307,7 +308,7 @@ export function QuotationListPage() {
       <Card className="shadow-xs overflow-hidden">
         <CardContent className="p-0">
           {loading ? (
-            <div className="p-8 text-center text-xs text-slate-500">Loading quotations...</div>
+            <TableLoadingSkeleton columns={6} rows={5} />
           ) : error ? (
             <div className="p-8 text-center text-xs text-rose-600">{error}</div>
           ) : quotations.length === 0 ? (

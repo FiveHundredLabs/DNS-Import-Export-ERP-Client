@@ -390,7 +390,7 @@ export function App() {
   return (
     <>
       <Toaster richColors position="top-right" />
-      <Suspense fallback={<PageLoadingFallback />}>
+      <Suspense fallback={null}>
         <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/404" element={<NotFoundPage />} />
@@ -964,6 +964,14 @@ export function App() {
         />
         <Route
           path="teams"
+          element={
+            <ProtectedRoute>
+              <TeamListPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="users"
           element={
             <ProtectedRoute>
               <TeamListPage />

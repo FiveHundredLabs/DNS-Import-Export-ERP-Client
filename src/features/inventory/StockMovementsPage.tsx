@@ -13,11 +13,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { Skeleton } from '../../components/ui/skeleton';
 import { PageHeader } from '../../components/common/PageHeader';
 import { useInventory } from '../../hooks/useInventory';
-import { MOCK_PRODUCTS } from '../../mock/mockProducts';
+import { useProducts } from '../../hooks/useProducts';
 import { formatDate } from '../../utils/formatters';
 
 export function StockMovementsPage() {
   const { movements, loading } = useInventory();
+  const { products } = useProducts({ page: 1, pageSize: 200 });
   const [typeFilter, setTypeFilter] = useState('ALL');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
@@ -115,7 +116,7 @@ export function StockMovementsPage() {
               {/* Mobile Card View (block md:hidden) */}
               <div className="block md:hidden space-y-3 pb-2">
                 {filteredMovements.map((m: any) => {
-                  const product = MOCK_PRODUCTS.find(p => p.id === m.productId);
+                  const product = m.product || products.find(p => p.id === m.productId);
                   return (
                     <div
                       key={m.id}
@@ -182,7 +183,7 @@ export function StockMovementsPage() {
               </TableHeader>
               <TableBody>
                 {filteredMovements.map((m: any) => {
-                  const product = MOCK_PRODUCTS.find(p => p.id === m.productId);
+                  const product = m.product || products.find(p => p.id === m.productId);
                   return (
                     <TableRow key={m.id}>
                       <TableCell className="whitespace-nowrap">{formatDate(m.timestamp)}</TableCell>

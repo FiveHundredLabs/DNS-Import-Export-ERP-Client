@@ -16,8 +16,8 @@ import { PrintableGRN } from './PrintableGRN';
 import { PaginationControls } from '../../components/common/PaginationControls';
 import { useGRN } from '../../hooks/useGRN';
 import { useAuth } from '../../hooks/useAuth';
-import { MOCK_PRODUCTS } from '../../mock/mockProducts';
-import { MOCK_PURCHASE_ORDERS } from '../../mock/mockInventory';
+import { useProducts } from '../../hooks/useProducts';
+import { usePurchaseOrders } from '../../hooks/usePurchaseOrders';
 import { GRN, GRNItem, UnitBarcodeRecord } from '../../types/inventory';
 import { unitBarcodeService } from '../../services/UnitBarcodeService';
 import { serialNumberService } from '../../services/SerialNumberService';
@@ -77,12 +77,12 @@ export const checkProductRequiresSerial = (item: {
   productId: string;
   skuSnapshot?: string;
   productNameSnapshot?: string;
+  requiresSerialNumber?: boolean;
 }): boolean => {
-  const prod = MOCK_PRODUCTS.find((p) => p.id === item.productId || p.sku === item.skuSnapshot);
-  if (prod?.requiresSerialNumber !== undefined) {
-    return prod.requiresSerialNumber;
+  if (item.requiresSerialNumber !== undefined) {
+    return item.requiresSerialNumber;
   }
-  const text = `${item.skuSnapshot || ''} ${item.productNameSnapshot || ''} ${prod?.name || ''} ${prod?.sku || ''}`.toLowerCase();
+  const text = `${item.skuSnapshot || ''} ${item.productNameSnapshot || ''}`.toLowerCase();
   return text.includes('chainsaw') || text.includes('inverter') || text.includes('solar') || text.includes('generator');
 };
 
@@ -91,6 +91,8 @@ export function GRNCreateEditPage() {
   const { id } = useParams<{ id?: string }>();
   const { grnService } = useGRN();
   const { user, currentUser } = useAuth();
+  const { products } = useProducts({ page: 1, pageSize: 200 });
+  const { purchaseOrders } = usePurchaseOrders();
 
   // Stepper state: 1: Inbound Details, 2: Product Counts, 3: Serial Numbers, 4: Barcode Stickers, 5: Review & Sign-Off
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4 | 5>(1);
@@ -187,7 +189,7 @@ export function GRNCreateEditPage() {
     updatedAt: new Date().toISOString(),
   }), [id, poNumber, selectedPoId, supplierName, deliveryNoteRef, warehouseId, receivedDate, activeUser, notes, items]);
 
-  const filteredProducts = MOCK_PRODUCTS.filter((p) => {
+  const filteredProducts = products.filter((p) => {
     if (!productSearch) return true;
     const s = productSearch.toLowerCase();
     return (
@@ -200,7 +202,7 @@ export function GRNCreateEditPage() {
   // Handle selecting an existing Purchase Order (PO)
   const handleSelectPO = (poId: string) => {
     setSelectedPoId(poId);
-    const po = MOCK_PURCHASE_ORDERS.find((p) => p.id === poId);
+    const po = purchaseOrders.find((p) => p.id === poId);
     if (!po) return;
 
     setSupplierName(po.supplierName);
@@ -208,7 +210,7 @@ export function GRNCreateEditPage() {
     setWarehouseId(po.warehouseId || 'WH-MAIN');
 
     const poItems: LineItem[] = po.items.map((pItem) => {
-      const product = MOCK_PRODUCTS.find((p) => p.id === pItem.productId);
+      const product = products.find((p) => p.id === pItem.productId);
       const cost = pItem.unitCost || product?.pricing?.costPrice || 0;
       const initialItem: LineItem = {
         _tempId: generateId(),
@@ -244,7 +246,7 @@ export function GRNCreateEditPage() {
       toast.error('Please select a product to add');
       return;
     }
-    const product = MOCK_PRODUCTS.find((p) => p.id === manualProductId);
+    const product = products.find((p) => p.id === manualProductId);
     if (!product) return;
 
     if (manualReceivedQty <= 0) {
@@ -321,7 +323,7 @@ export function GRNCreateEditPage() {
 
   // Add product from picker modal
   const addProduct = (productId: string, qty: number = 1) => {
-    const product = MOCK_PRODUCTS.find((p) => p.id === productId);
+    const product = products.find((p) => p.id === productId);
     if (!product) return;
     if (items.some((i) => i.productId === productId)) {
       toast.info('Product already added. Adjust quantity in the table.');
@@ -1279,17 +1281,17 @@ export function GRNCreateEditPage() {
                       <SelectValue placeholder="Choose Purchase Order (e.g. PO-2026-0891)" />
                     </SelectTrigger>
                     <SelectContent>
-                      {MOCK_PURCHASE_ORDERS.map((po) => (
+                      {purchaseOrders.map((po) => (
                         <SelectItem key={po.id} value={po.id} className="text-xs">
                           <span className="font-mono font-semibold">{po.poNumber}</span> · {po.supplierName} ({po.items.length} lines)
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
-                  {selectedPoId === '' && (
+                  {selectedPoId === '' && purchaseOrders.length > 0 && (
                     <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
                       <span className="text-[10px] text-slate-400 font-medium">Quick select:</span>
-                      {MOCK_PURCHASE_ORDERS.slice(0, 4).map((po) => (
+                      {purchaseOrders.slice(0, 4).map((po) => (
                         <button
                           key={po.id}
                           type="button"
@@ -1428,7 +1430,7 @@ export function GRNCreateEditPage() {
                       <SelectValue placeholder="Choose product by SKU or name..." />
                     </SelectTrigger>
                     <SelectContent>
-                      {MOCK_PRODUCTS.map((p) => (
+                      {products.map((p) => (
                         <SelectItem key={p.id} value={p.id} className="text-xs">
                           <span className="font-mono font-semibold">{p.sku}</span> — {p.name}
                         </SelectItem>
