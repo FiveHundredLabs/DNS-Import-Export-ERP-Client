@@ -12,7 +12,7 @@ import {
 import { Alert, AlertDescription } from '../../components/ui/alert';
 import { commissionService } from '../../services/CommissionService';
 import { useAuth } from '../../hooks/useAuth';
-import { MOCK_USERS } from '../../mock/mockUsers';
+import { useUsers } from '../../hooks/useUsers';
 import { TargetPeriodType } from '../../types/commission';
 import { Target, AlertTriangle } from 'lucide-react';
 
@@ -24,9 +24,10 @@ interface CreateTargetModalProps {
 
 export function CreateTargetModal({ open, onOpenChange, onSuccess }: CreateTargetModalProps) {
   const { currentUser } = useAuth();
-  const salesReps = MOCK_USERS.filter((u) => u.role === 'SALES_REP' || u.role === 'AREA_MANAGER');
+  const { users } = useUsers();
+  const salesReps = users.filter((u) => u.role === 'SALES_REP' || u.role === 'AREA_MANAGER');
 
-  const [salesRepId, setSalesRepId] = useState(salesReps[0]?.id || 'usr-106');
+  const [salesRepId, setSalesRepId] = useState(salesReps[0]?.id || '');
   const [periodType, setPeriodType] = useState<TargetPeriodType>('MONTHLY');
   const [startDate, setStartDate] = useState('2025-03-01');
   const [endDate, setEndDate] = useState('2025-03-31');

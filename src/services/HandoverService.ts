@@ -10,7 +10,7 @@ import { User } from '../types/auth';
 import { PaginatedResult } from '../types/common';
 import { paymentService } from './PaymentService';
 import { approvalService } from './ApprovalService';
-import { MOCK_USERS } from '../mock/mockUsers';
+import { userService } from './UserService';
 
 class HandoverService {
   private handovers: CashHandover[] = [
@@ -358,7 +358,7 @@ class HandoverService {
       throw new Error('Please select a Finance Department recipient for the cash handover.');
     }
 
-    const recipient = MOCK_USERS.find((u) => u.id === data.recipientUserId);
+    const recipient = await userService.getById(data.recipientUserId);
     if (!recipient) {
       throw new Error(`Designated recipient user with ID ${data.recipientUserId} was not found.`);
     }

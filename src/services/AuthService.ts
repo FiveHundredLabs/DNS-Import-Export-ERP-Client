@@ -1,4 +1,5 @@
 import { ApiSuccessResponse, apiClient, clearAccessToken, refreshAccessToken, setAccessToken } from '../api/axios';
+import { clearAppCache } from '../api/queryClient';
 import { User, UserRole } from '../types/auth';
 
 const BackendRoleCodes: UserRole[] = [
@@ -111,6 +112,7 @@ export class AuthService {
   }
 
   async loginWithEmail(email: string, password: string): Promise<User> {
+    clearAppCache(); // Flush prior cached data before new session
     const response = await apiClient.post<ApiSuccessResponse<LoginResponse>>(
       '/auth/login',
       { email, password },
@@ -187,6 +189,7 @@ export class AuthService {
 
   private clearSession(): void {
     clearAccessToken();
+    clearAppCache();
     this.currentUser = null;
     this.notify();
   }

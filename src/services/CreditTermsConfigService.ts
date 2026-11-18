@@ -1,5 +1,6 @@
 import { CustomerCreditTermsConfig, DEFAULT_CREDIT_TERMS_CONFIG } from '../types/creditTerms';
 import { User } from '../types/auth';
+import { creditTermsApi } from '../api/credit-terms/credit-terms.api';
 
 const STORAGE_KEY = 'dns_customer_credit_terms_config';
 
@@ -8,6 +9,31 @@ class CreditTermsConfigService {
 
   constructor() {
     this.config = this.loadConfig();
+    // Best-effort async synchronization from backend on startup
+    if (typeof window !== 'undefined') {
+      this.fetchFromBackend().catch(() => {
+        // Silently fall back to cached config if unauthenticated or offline
+      });
+    }
+  }
+
+  public async fetchFromBackend(): Promise<CustomerCreditTermsConfig> {
+    try {
+      const backendConfig = await creditTermsApi.getConfig();
+      if (backendConfig) {
+        this.config = {
+          ...this.config,
+          defaultCreditDays: backendConfig.defaultCreditDays ?? this.config.defaultCreditDays,
+          defaultCreditLimit: backendConfig.defaultCreditLimit ?? this.config.defaultCreditLimit,
+          updatedAt: backendConfig.updatedAt || this.config.updatedAt,
+          updatedBy: backendConfig.updatedBy?.fullName || this.config.updatedBy,
+        };
+        this.persistConfig();
+      }
+    } catch {
+      // Backend not yet reachable or user not logged in
+    }
+    return { ...this.config };
   }
 
   private loadConfig(): CustomerCreditTermsConfig {
@@ -42,6 +68,24 @@ class CreditTermsConfigService {
     return { ...this.config };
   }
 
+  public async updateCreditTermsConfigAsync(
+    updates: Partial<CustomerCreditTermsConfig>,
+    user?: User | null
+  ): Promise<CustomerCreditTermsConfig> {
+    // 1. Persist to real backend
+    try {
+      await creditTermsApi.updateConfig({
+        defaultCreditDays: updates.defaultCreditDays,
+        defaultCreditLimit: updates.defaultCreditLimit,
+      });
+    } catch (err) {
+      console.warn('Backend update failed, persisting locally:', err);
+    }
+
+    // 2. Update local state
+    return this.updateCreditTermsConfig(updates, user);
+  }
+
   public updateCreditTermsConfig(
     updates: Partial<CustomerCreditTermsConfig>,
     user?: User | null
@@ -70,4 +114,3 @@ class CreditTermsConfigService {
 }
 
 export const creditTermsConfigService = new CreditTermsConfigService();
-

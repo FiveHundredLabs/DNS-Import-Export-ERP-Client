@@ -4,7 +4,8 @@ import { useSmartBack } from '../../hooks/useSmartBack';
 import { useAuth } from '../../hooks/useAuth';
 import { useAreas } from '../../hooks/useAreas';
 import { useUsers } from '../../hooks/useUsers';
-import { customerService } from '../../services/CustomerService';
+import { customersApi } from '../../api/customers/customers.api';
+import { CreateCustomerStep1Payload, CompleteCustomerStep2Payload } from '../../api/customers/customers.types';
 import { creditTermsConfigService } from '../../services/CreditTermsConfigService';
 import { determineCustomerApprovalRoute, canApproveCustomerStage } from '../../rules/approvalRules';
 import { Customer, CustomerType, CustomerLoyaltyLevel, CustomerApprovalStage } from '../../types/customer';
@@ -167,7 +168,8 @@ export function CustomerOnboardingPage() {
   const { customerId } = useParams<{ customerId?: string }>();
 
   const isAreaManager = role === 'AREA_MANAGER';
-  const canDoStep2 = !isAreaManager; // SALES_MANAGER, MANAGER, DIRECTOR
+  const canEditStep2 = ['SALES_MANAGER', 'MANAGER', 'DIRECTOR'].includes(role);
+  const canDoStep2 = canEditStep2;
 
   // ── Pending Queue State ──────────────────────────────────────────────────
   const [pendingCustomers, setPendingCustomers] = useState<Customer[]>([]);
@@ -179,7 +181,7 @@ export function CustomerOnboardingPage() {
     setPendingLoading(true);
     try {
       const stages: CustomerApprovalStage[] = isAreaManager
-        ? []
+        ? ['DRAFT', 'PENDING_SALES_REVIEW', 'PENDING_MANAGER_APPROVAL']
         : role === 'SALES_MANAGER'
         ? ['PENDING_SALES_REVIEW']
         : ['PENDING_SALES_REVIEW', 'PENDING_MANAGER_APPROVAL', 'PENDING_DIRECTOR_APPROVAL'];
@@ -191,9 +193,9 @@ export function CustomerOnboardingPage() {
       }
 
       const results = await Promise.all(
-        stages.map((s) => customerService.listCustomers({ approvalStage: s, page: 1, pageSize: 50 }))
+        stages.map((s) => customersApi.listCustomers({ approvalStage: s, page: 1, pageSize: 50 }))
       );
-      const all = results.flatMap((r) => r.data);
+      const all = results.flatMap((r) => r.data as unknown as Customer[]);
       setPendingCustomers(all);
     } catch {
       setPendingCustomers([]);
@@ -311,9 +313,9 @@ export function CustomerOnboardingPage() {
   // Load customer if URL contains customerId
   useEffect(() => {
     if (customerId) {
-      customerService.getCustomer(customerId).then((c) => {
+      customersApi.getCustomerById(customerId).then((c) => {
         if (c) {
-          handleSelectCustomer(c);
+          handleSelectCustomer(c as unknown as Customer);
         }
       });
     }
@@ -321,39 +323,34 @@ export function CustomerOnboardingPage() {
 
   function handleSelectCustomer(c: Customer) {
     setSelectedCustomer(c);
-    setCustomerCode(c.code);
-    setDisplayName(c.name);
+    setCustomerCode(c.customerCode || c.code || '');
+    setDisplayName(c.displayName || c.name || '');
     setCompanyName(c.companyName || '');
-    setPrimaryPhone(c.phone);
+    setPrimaryPhone(c.primaryContactNumber || c.phone || '');
     setWhatsappNumber(c.whatsappNumber || '');
-    setSecondaryPhone(c.secondaryPhone || '');
-    setContactPerson(c.contactPerson || c.name);
+    setSecondaryPhone(c.secondaryContactNumber || c.secondaryPhone || '');
+    setContactPerson(c.contactPerson || c.displayName || c.name || '');
     setEmail(c.email || '');
-    setAddress(c.address || '');
-    setTaxNumber(c.taxNumber || '');
+    setAddress(c.registrationAddress || c.address || '');
+    setTaxNumber(c.tinNumber || c.taxNumber || '');
     setVatNumber(c.vatNumber || '');
     setAreaId(c.areaId || '');
-    setCustomerType(c.type || 'DEALER');
-    setLoyaltyLevel(c.loyaltyLevel || 'NEW');
+    setCustomerType((c.customerType || c.type || 'DEALER') as CustomerType);
+    setLoyaltyLevel((c.loyaltyLevel || 'NEW') as CustomerLoyaltyLevel);
 
-    if (c.commercialTerms) {
-      setCreditDays(c.commercialTerms.creditDays);
-      setCreditLimit(c.commercialTerms.creditLimit);
-      setDefaultDiscount(c.commercialTerms.defaultDiscountPercentage);
-      setMaxDiscount(c.commercialTerms.maxDiscountPercentage);
-      setPaymentTermNotes(c.commercialTerms.paymentTermNotes || '');
+    setCreditDays(c.creditPeriod ?? c.commercialTerms?.creditDays ?? defaultConfig.defaultCreditDays);
+    setCreditLimit(Number(c.creditLimit ?? c.commercialTerms?.creditLimit ?? defaultConfig.defaultCreditLimit));
+    setPaymentTermNotes(c.paymentTermNotes || c.commercialTerms?.paymentTermNotes || '');
+
+    if (c.salesRepId || c.assignedRepId) {
+      setSalesRepId(c.salesRepId || c.assignedRepId || '');
+    }
+    if (c.areaManagerId) {
+      setAreaManagerId(c.areaManagerId);
     }
 
-    if (c.assignedRepId) {
-      const assigned = users.find((u) => u.id === c.assignedRepId);
-      if (assigned?.role === 'SALES_REP') {
-        setSalesRepId(assigned.id);
-      } else if (assigned?.role === 'AREA_MANAGER') {
-        setAreaManagerId(assigned.id);
-      }
-    }
-
-    if (canDoStep2 && canApproveCustomerStage(role, c.approvalStage)) {
+    // If customer has moved beyond DRAFT or is in review, allow view/edit of Step 2
+    if (c.approvalStage !== 'DRAFT') {
       setStep(2);
     } else {
       setStep(1);
@@ -440,42 +437,26 @@ export function CustomerOnboardingPage() {
     if (isAreaManager) {
       setSubmitting(true);
       try {
-        const selectedAreaObj = areas.find((a) => a.id === areaId);
-        const payload: Omit<Customer, 'id' | 'createdAt' | 'updatedAt' | 'financials'> = {
-          code: customerCode,
-          name: displayName.trim(),
-          companyName: companyName.trim() || undefined,
-          type: 'DEALER',
-          areaId,
-          areaName: selectedAreaObj?.name || '',
-          assignedRepId: '',
-          assignedRepName: '',
+        const payload: CreateCustomerStep1Payload = {
+          displayName: displayName.trim(),
+          companyName: companyName.trim() || displayName.trim(),
           contactPerson: contactPerson.trim() || displayName.trim(),
-          phone: primaryPhone.trim(),
-          whatsappNumber: whatsappNumber.trim() || undefined,
-          secondaryPhone: secondaryPhone.trim() || undefined,
           email: email.trim(),
-          address: address.trim(),
-          taxNumber: taxNumber.trim() || undefined,
+          primaryContactNumber: primaryPhone.trim(),
+          whatsappNumber: whatsappNumber.trim() || primaryPhone.trim(),
+          secondaryContactNumber: secondaryPhone.trim() || undefined,
+          registrationAddress: address.trim(),
+          tinNumber: taxNumber.trim() || undefined,
           vatNumber: vatNumber.trim() || undefined,
-          commercialTerms: {
-            creditLimit: defaultConfig.defaultCreditLimit,
-            creditDays: defaultConfig.defaultCreditDays,
-            defaultDiscountPercentage: defaultConfig.defaultDiscountPercentage,
-            maxDiscountPercentage: defaultConfig.maxDiscountPercentage,
-          },
-          approvalStage: 'PENDING_SALES_REVIEW',
-          status: 'ACTIVE',
-          loyaltyLevel: 'NEW',
-          warrantyNotesExpected: 0,
-          warrantyNotesReceived: 0,
+          customerType: customerType || 'DEALER',
         };
 
-        await customerService.createCustomer(payload);
-        toast.success(`Dealer "${displayName}" submitted for Sales Manager approval!`);
+        await customersApi.createCustomerStep1(payload);
+        toast.success(`Customer draft "${displayName}" submitted for Sales Manager review!`);
         handleReset();
+        await loadPending();
       } catch (err: unknown) {
-        toast.error(err instanceof Error ? err.message : 'Failed to submit onboarding request.');
+        toast.error(err instanceof Error ? err.message : 'Failed to submit customer draft.');
       } finally {
         setSubmitting(false);
       }
@@ -487,82 +468,52 @@ export function CustomerOnboardingPage() {
 
   async function handleSubmitStep2() {
     if (!validateStep2()) return;
+    if (!canEditStep2) {
+      toast.error('Only Sales Managers, Managers, and Directors can complete Step 2.');
+      return;
+    }
     setSubmitting(true);
     try {
-      const selectedAreaObj = areas.find((a) => a.id === areaId);
-      const selectedAreaMgr = users.find((u) => u.id === areaManagerId);
-      const selectedRep = users.find((u) => u.id === salesRepId);
+      let targetCustomerId = selectedCustomer?.id;
 
-      const commercialTerms = {
+      if (!targetCustomerId) {
+        const step1Payload: CreateCustomerStep1Payload = {
+          displayName: displayName.trim(),
+          companyName: companyName.trim() || displayName.trim(),
+          contactPerson: contactPerson.trim() || displayName.trim(),
+          email: email.trim(),
+          primaryContactNumber: primaryPhone.trim(),
+          whatsappNumber: whatsappNumber.trim() || primaryPhone.trim(),
+          secondaryContactNumber: secondaryPhone.trim() || undefined,
+          registrationAddress: address.trim(),
+          tinNumber: taxNumber.trim() || undefined,
+          vatNumber: vatNumber.trim() || undefined,
+          customerType: customerType || 'DEALER',
+        };
+        const draft = await customersApi.createCustomerStep1(step1Payload);
+        targetCustomerId = draft.id;
+      }
+
+      const step2Payload: CompleteCustomerStep2Payload = {
+        areaId,
+        areaManagerId,
+        salesRepId,
+        loyaltyLevel,
+        creditPeriod: creditDays,
         creditLimit,
-        creditDays,
-        defaultDiscountPercentage: defaultDiscount,
-        maxDiscountPercentage: maxDiscount,
-        paymentTermNotes: paymentTermNotes.trim() || undefined,
+        status: 'ACTIVE',
       };
 
-      if (selectedCustomer) {
-        // Approving / updating existing pending customer
-        const res = await customerService.setCommercialTerms(
-          selectedCustomer.id,
-          commercialTerms,
-          currentUser
+      const completed = await customersApi.completeCustomerStep2(targetCustomerId, step2Payload);
+
+      if (completed.approvalStage === 'PENDING_DIRECTOR_APPROVAL') {
+        toast.success(
+          `Customer onboarding routed to Director for Special Approval (${creditDays} days, LKR ${creditLimit.toLocaleString()}).`
         );
-
-        await customerService.updateCustomer(selectedCustomer.id, {
-          name: displayName.trim(),
-          companyName: companyName.trim() || undefined,
-          contactPerson: contactPerson.trim() || displayName.trim(),
-          type: customerType,
-          areaId,
-          areaName: selectedAreaObj?.name || selectedCustomer.areaName,
-          assignedRepId: selectedRep?.id || selectedAreaMgr?.id || '',
-          assignedRepName: selectedRep?.name || selectedAreaMgr?.name || '',
-          loyaltyLevel,
-        });
-
-        if (res.isExceptional) {
-          toast.success(
-            `Commercial terms configured. Escalate to Director for Special Approval (${creditDays}d, LKR ${creditLimit.toLocaleString()}).`
-          );
-        } else {
-          toast.success(`Customer "${displayName}" approved and activated successfully!`);
-        }
       } else {
-        // Higher roles onboarding new customer directly
-        const payload: Omit<Customer, 'id' | 'createdAt' | 'updatedAt' | 'financials'> = {
-          code: customerCode,
-          name: displayName.trim(),
-          companyName: companyName.trim() || undefined,
-          type: customerType,
-          areaId,
-          areaName: selectedAreaObj?.name || '',
-          assignedRepId: selectedRep?.id || selectedAreaMgr?.id || '',
-          assignedRepName: selectedRep?.name || selectedAreaMgr?.name || '',
-          contactPerson: contactPerson.trim() || displayName.trim(),
-          phone: primaryPhone.trim(),
-          whatsappNumber: whatsappNumber.trim() || undefined,
-          secondaryPhone: secondaryPhone.trim() || undefined,
-          email: email.trim(),
-          address: address.trim(),
-          taxNumber: taxNumber.trim() || undefined,
-          vatNumber: vatNumber.trim() || undefined,
-          commercialTerms,
-          approvalStage: isSpecialApproval ? 'PENDING_DIRECTOR_APPROVAL' : 'APPROVED',
-          status: 'ACTIVE',
-          loyaltyLevel,
-          warrantyNotesExpected: 0,
-          warrantyNotesReceived: 0,
-        };
-
-        await customerService.createCustomer(payload);
-        if (isSpecialApproval) {
-          toast.success(
-            `Dealer registered. Routed for Director authorization due to exceptional credit terms.`
-          );
-        } else {
-          toast.success(`Dealer "${displayName}" successfully onboarded & activated!`);
-        }
+        toast.success(
+          `Customer "${displayName}" onboarding completed successfully! Generated code: ${completed.customerCode || completed.code}`
+        );
       }
 
       await loadPending();
@@ -948,12 +899,12 @@ export function CustomerOnboardingPage() {
                 {/* Step 2 Pill */}
                 <button
                   type="button"
-                  onClick={() => canDoStep2 && setStep(2)}
-                  disabled={!canDoStep2}
+                  onClick={() => (canEditStep2 || selectedCustomer) && setStep(2)}
+                  disabled={!canEditStep2 && !selectedCustomer}
                   className={`flex items-start gap-3 p-3 rounded-xl border text-left transition-all ${
                     step === 2
                       ? 'bg-primary/5 border-primary ring-1 ring-primary/20 shadow-2xs'
-                      : canDoStep2
+                      : canEditStep2 || selectedCustomer
                       ? 'border-slate-200/80 hover:bg-slate-50'
                       : 'border-slate-100 bg-slate-50/60 opacity-60 cursor-not-allowed'
                   }`}
@@ -962,25 +913,25 @@ export function CustomerOnboardingPage() {
                     className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold text-sm shrink-0 transition-colors ${
                       step === 2
                         ? 'bg-primary text-white shadow-xs'
-                        : canDoStep2
+                        : canEditStep2 || selectedCustomer
                         ? 'bg-slate-100 text-slate-600'
                         : 'bg-slate-200/80 text-slate-400'
                     }`}
                   >
-                    {isAreaManager ? <Lock className="w-3.5 h-3.5" /> : '2'}
+                    {!canEditStep2 ? <Lock className="w-3.5 h-3.5" /> : '2'}
                   </div>
                   <div className="min-w-0">
                     <div className="flex items-center gap-1.5">
                       <span className="text-xs font-bold text-slate-900">Step 2: Commercial &amp; Routing</span>
-                      {isAreaManager && (
-                        <span className="text-[10px] bg-slate-200 text-slate-600 px-1.5 py-0.2 rounded font-medium">
-                          Sales Mgr Desk
+                      {!canEditStep2 && (
+                        <span className="text-[10px] bg-amber-100 text-amber-800 px-1.5 py-0.2 rounded font-medium">
+                          View Only
                         </span>
                       )}
                     </div>
                     <p className="text-[11px] text-slate-500 mt-0.5">
-                      {isAreaManager
-                        ? 'Configured automatically by Sales Manager'
+                      {!canEditStep2
+                        ? 'View-only mode for Area Managers'
                         : 'Credit limits, days, discounts & sales rep assignment'}
                     </p>
                   </div>
@@ -1285,8 +1236,16 @@ export function CustomerOnboardingPage() {
             {/* ══════════════════════════════════════════════════════════════ */}
             {/* STEP 2: ASSIGNMENT & COMMERCIAL SETUP                           */}
             {/* ══════════════════════════════════════════════════════════════ */}
-            {step === 2 && canDoStep2 && (
+            {step === 2 && (canEditStep2 || selectedCustomer) && (
               <div className="space-y-5 animate-in fade-in-50 duration-200">
+                {!canEditStep2 && (
+                  <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 flex items-center gap-2.5 text-xs font-medium shadow-2xs">
+                    <Lock className="w-4 h-4 text-amber-600 shrink-0" />
+                    <div>
+                      <span className="font-bold">Step 2 Read-Only Mode:</span> Area Managers have view-only access to commercial configuration. Only Sales Managers, Managers, and Directors are authorized to modify or complete Step 2.
+                    </div>
+                  </div>
+                )}
                 
                 {/* Real-time Policy Evaluation Card */}
                 {isSpecialApproval ? (
@@ -1352,8 +1311,9 @@ export function CustomerOnboardingPage() {
                         <label className="text-xs font-semibold text-slate-700 mb-1.5 block">Loyalty Tier</label>
                         <Select
                           data-testid="loyalty-tier-select"
+                          disabled={!canEditStep2}
                           value={loyaltyLevel}
-                          onChange={(e) => handleLoyaltyTierChange(e.target.value as CustomerLoyaltyLevel)}
+                          onChange={(e) => canEditStep2 && handleLoyaltyTierChange(e.target.value as CustomerLoyaltyLevel)}
                           className="text-xs"
                         >
                           {LOYALTY_LEVELS.map((l) => (
@@ -1371,8 +1331,9 @@ export function CustomerOnboardingPage() {
                           <span className="text-[10.5px] text-slate-400 font-normal">Optional</span>
                         </label>
                         <Select
+                          disabled={!canEditStep2}
                           value={areaManagerId}
-                          onChange={(e) => setAreaManagerId(e.target.value)}
+                          onChange={(e) => canEditStep2 && setAreaManagerId(e.target.value)}
                           className="text-xs"
                         >
                           <option value="">Auto-detected / Not Assigned</option>
@@ -1391,8 +1352,9 @@ export function CustomerOnboardingPage() {
                           <span className="text-[10.5px] text-slate-400 font-normal">Optional</span>
                         </label>
                         <Select
+                          disabled={!canEditStep2}
                           value={salesRepId}
-                          onChange={(e) => setSalesRepId(e.target.value)}
+                          onChange={(e) => canEditStep2 && setSalesRepId(e.target.value)}
                           className="text-xs"
                         >
                           <option value="">Select Sales Rep (or assign later)</option>
@@ -1424,19 +1386,21 @@ export function CustomerOnboardingPage() {
                       </div>
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setCreditDays(defaultConfig.defaultCreditDays);
-                        setCreditLimit(defaultConfig.defaultCreditLimit);
-                        setDefaultDiscount(defaultConfig.defaultDiscountPercentage);
-                        setMaxDiscount(defaultConfig.maxDiscountPercentage);
-                      }}
-                      className="text-xs text-primary hover:text-primary-hover flex items-center gap-1 font-semibold"
-                    >
-                      <Sparkles className="w-3.5 h-3.5" />
-                      <span>Reset to Policy Defaults</span>
-                    </button>
+                    {canEditStep2 && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCreditDays(defaultConfig.defaultCreditDays);
+                          setCreditLimit(defaultConfig.defaultCreditLimit);
+                          setDefaultDiscount(defaultConfig.defaultDiscountPercentage);
+                          setMaxDiscount(defaultConfig.maxDiscountPercentage);
+                        }}
+                        className="text-xs text-primary hover:text-primary-hover flex items-center gap-1 font-semibold"
+                      >
+                        <Sparkles className="w-3.5 h-3.5" />
+                        <span>Reset to Policy Defaults</span>
+                      </button>
+                    )}
                   </CardHeader>
 
                   <CardContent className="p-5 space-y-5">
@@ -1454,6 +1418,8 @@ export function CustomerOnboardingPage() {
                           type="number"
                           min={1}
                           max={365}
+                          disabled={!canEditStep2}
+                          readOnly={!canEditStep2}
                           value={creditDays}
                           onChange={(e) => {
                             setCreditDays(Number(e.target.value));
@@ -1463,7 +1429,7 @@ export function CustomerOnboardingPage() {
                             creditDays > defaultConfig.requireDirectorApprovalAboveDays
                               ? 'border-rose-400 text-rose-700 bg-rose-50/30'
                               : ''
-                          }`}
+                          } ${!canEditStep2 ? 'bg-slate-50 cursor-not-allowed' : ''}`}
                         />
                         {errors.creditDays && <p className="text-[11px] text-rose-500">{errors.creditDays}</p>}
 
@@ -1474,7 +1440,8 @@ export function CustomerOnboardingPage() {
                             <button
                               key={p}
                               type="button"
-                              onClick={() => setCreditDays(p)}
+                              disabled={!canEditStep2}
+                              onClick={() => canEditStep2 && setCreditDays(p)}
                               className={`text-[11px] px-2.5 py-0.5 rounded-lg border font-semibold transition-all ${
                                 creditDays === p
                                   ? 'bg-primary text-white border-primary shadow-2xs'
@@ -1499,6 +1466,8 @@ export function CustomerOnboardingPage() {
                           type="number"
                           min={0}
                           step={50000}
+                          disabled={!canEditStep2}
+                          readOnly={!canEditStep2}
                           value={creditLimit}
                           onChange={(e) => {
                             setCreditLimit(Number(e.target.value));
@@ -1508,7 +1477,7 @@ export function CustomerOnboardingPage() {
                             creditLimit > defaultConfig.requireDirectorApprovalAboveLimit
                               ? 'border-rose-400 text-rose-700 bg-rose-50/30'
                               : ''
-                          }`}
+                          } ${!canEditStep2 ? 'bg-slate-50 cursor-not-allowed' : ''}`}
                         />
                         {errors.creditLimit && <p className="text-[11px] text-rose-500">{errors.creditLimit}</p>}
 
@@ -1519,7 +1488,8 @@ export function CustomerOnboardingPage() {
                             <button
                               key={p}
                               type="button"
-                              onClick={() => setCreditLimit(p)}
+                              disabled={!canEditStep2}
+                              onClick={() => canEditStep2 && setCreditLimit(p)}
                               className={`text-[11px] px-2.5 py-0.5 rounded-lg border font-semibold transition-all ${
                                 creditLimit === p
                                   ? 'bg-primary text-white border-primary shadow-2xs'
@@ -1539,9 +1509,11 @@ export function CustomerOnboardingPage() {
                         </label>
                         <Input
                           placeholder="e.g. Net 30 days. Cheque realization within 7 days. Monthly statement dispatch."
+                          disabled={!canEditStep2}
+                          readOnly={!canEditStep2}
                           value={paymentTermNotes}
                           onChange={(e) => setPaymentTermNotes(e.target.value)}
-                          className="text-xs"
+                          className={`text-xs ${!canEditStep2 ? 'bg-slate-50 cursor-not-allowed' : ''}`}
                         />
                       </div>
                     </div>
@@ -1564,57 +1536,63 @@ export function CustomerOnboardingPage() {
                     <span>Back to Step 1</span>
                   </Button>
 
-                  <div className="flex items-center gap-2">
-                    {selectedCustomer && (
+                  {canEditStep2 ? (
+                    <div className="flex items-center gap-2">
+                      {selectedCustomer && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={handleReset}
+                          className="text-xs text-slate-500 h-9"
+                        >
+                          Discard
+                        </Button>
+                      )}
+
                       <Button
                         type="button"
-                        variant="ghost"
+                        onClick={handleSubmitStep2}
+                        disabled={submitting}
                         size="sm"
-                        onClick={handleReset}
-                        className="text-xs text-slate-500 h-9"
+                        className={`gap-2 text-xs font-bold px-6 h-9 shadow-xs text-white ${
+                          isSpecialApproval
+                            ? 'bg-rose-600 hover:bg-rose-700'
+                            : 'bg-emerald-600 hover:bg-emerald-700'
+                        }`}
                       >
-                        Discard
-                      </Button>
-                    )}
-
-                    <Button
-                      type="button"
-                      onClick={handleSubmitStep2}
-                      disabled={submitting}
-                      size="sm"
-                      className={`gap-2 text-xs font-bold px-6 h-9 shadow-xs text-white ${
-                        isSpecialApproval
-                          ? 'bg-rose-600 hover:bg-rose-700'
-                          : 'bg-emerald-600 hover:bg-emerald-700'
-                      }`}
-                    >
-                      {submitting ? (
-                        'Processing...'
-                      ) : selectedCustomer ? (
-                        isSpecialApproval ? (
+                        {submitting ? (
+                          'Processing...'
+                        ) : selectedCustomer ? (
+                          isSpecialApproval ? (
+                            <>
+                              <ShieldAlert className="w-4 h-4" />
+                              Submit for Special Approval
+                            </>
+                          ) : (
+                            <>
+                              <Check className="w-4 h-4" />
+                              Approve &amp; Activate Customer
+                            </>
+                          )
+                        ) : isSpecialApproval ? (
                           <>
                             <ShieldAlert className="w-4 h-4" />
-                            Submit for Special Approval
+                            Submit for Director Authorization
                           </>
                         ) : (
                           <>
                             <Check className="w-4 h-4" />
-                            Approve &amp; Activate Customer
+                            Complete Onboarding &amp; Activate
                           </>
-                        )
-                      ) : isSpecialApproval ? (
-                        <>
-                          <ShieldAlert className="w-4 h-4" />
-                          Submit for Director Authorization
-                        </>
-                      ) : (
-                        <>
-                          <Check className="w-4 h-4" />
-                          Complete Onboarding &amp; Activate
-                        </>
-                      )}
-                    </Button>
-                  </div>
+                        )}
+                      </Button>
+                    </div>
+                  ) : (
+                    <span className="text-xs text-slate-400 italic font-medium">
+                      View-only mode (Area Manager)
+                    </span>
+                  )}
                 </div>
               </div>
             )}

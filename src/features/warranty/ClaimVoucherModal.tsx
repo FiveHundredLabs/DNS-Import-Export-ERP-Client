@@ -51,7 +51,7 @@ export function ClaimVoucherModal({ claim, open, onOpenChange }: ClaimVoucherMod
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-3xl max-w-[95vw] w-full p-0 overflow-hidden rounded-2xl border-slate-200">
+      <DialogContent className="sm:max-w-5xl max-w-[95vw] w-full p-0 overflow-hidden rounded-2xl border-slate-200">
         <DialogHeader className="bg-gradient-to-r from-slate-900 via-slate-800 to-primary p-6 pr-12 text-white text-left">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">

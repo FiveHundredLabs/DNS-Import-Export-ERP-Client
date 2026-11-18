@@ -37,7 +37,6 @@ import { useAuth } from '../../hooks/useAuth';
 import { handoverService } from '../../services/HandoverService';
 import { CashHandoverModal } from '../payments/components/CashHandoverModal';
 import { User } from '../../types/auth';
-import { MOCK_USERS } from '../../mock/mockUsers';
 import { invoiceService } from '../../services/InvoiceService';
 import { customerService } from '../../services/CustomerService';
 import { SalesRepGreetingCard } from './SalesRepGreetingCard';
@@ -756,7 +755,7 @@ export function SalesRepDashboard() {
       <CashHandoverModal
         isOpen={cashHandoverModalOpen}
         onClose={() => setCashHandoverModalOpen(false)}
-        currentUser={currentUser || MOCK_USERS.find((u) => u.role === 'SALES_REP')!}
+        currentUser={currentUser}
         onHandoverSuccess={(_handover) => {
           loadHandoverMetrics();
           toast.success(`Handover ${_handover.handoverNumber} submitted to Finance!`);

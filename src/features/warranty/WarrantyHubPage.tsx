@@ -31,7 +31,7 @@ import { SalesRepWarrantyPage } from './SalesRepWarrantyPage';
 import { useAuth } from '../../hooks/useAuth';
 import { formatDate, formatCurrency } from '../../utils/formatters';
 import { calculateWarrantyExpiry, calculateRemainingWarranty } from '../../rules/warrantyRules';
-import { MOCK_CUSTOMERS } from '../../mock/mockCustomers';
+import { useCustomers } from '../../hooks/useCustomers';
 import {
   ShieldCheck,
   ShieldAlert,
@@ -64,6 +64,7 @@ import {
 
 export function WarrantyHubPage() {
   const { role, currentUser, hasPermission } = useAuth();
+  const { customers } = useCustomers();
   const isSalesRep = role === 'SALES_REP';
   const isAreaManager = role === 'AREA_MANAGER';
   const isFieldUser = isSalesRep || isAreaManager;
@@ -77,13 +78,13 @@ export function WarrantyHubPage() {
   // Assigned customers based on strict RBAC
   const assignedCustomers = useMemo(() => {
     if (role === 'SALES_REP') {
-      return MOCK_CUSTOMERS.filter((c) => c.assignedRepId === currentUser?.id);
+      return customers.filter((c) => c.assignedRepId === currentUser?.id);
     }
     if (role === 'AREA_MANAGER') {
-      return MOCK_CUSTOMERS.filter((c) => c.areaId === currentUser?.areaId);
+      return customers.filter((c) => c.areaId === currentUser?.areaId);
     }
-    return MOCK_CUSTOMERS;
-  }, [role, currentUser?.id, currentUser?.areaId]);
+    return customers;
+  }, [role, currentUser?.id, currentUser?.areaId, customers]);
 
   // Active Hub Tab - restricted for Area Managers & Sales Reps
   const [activeTab, setActiveTab] = useState<
@@ -185,7 +186,7 @@ export function WarrantyHubPage() {
     try {
       setRegisterLoading(true);
       setRegisterErrorMsg(null);
-      const selectedCust = MOCK_CUSTOMERS.find((c) => c.id === selectedCustomerId);
+      const selectedCust = customers.find((c) => c.id === selectedCustomerId);
       const res = await warrantyService.registerEndCustomerWarranty(
         {
           barcode: scanBarcode.trim(),
@@ -916,7 +917,7 @@ export function WarrantyHubPage() {
                               <SelectValue placeholder="Select Customer" />
                             </SelectTrigger>
                             <SelectContent>
-                              {MOCK_CUSTOMERS.map((c) => (
+                              {customers.map((c) => (
                                 <SelectItem key={c.id} value={c.id} className="text-xs">
                                   {c.name} ({c.code})
                                 </SelectItem>
@@ -1569,7 +1570,7 @@ export function WarrantyHubPage() {
                     <SelectItem value="ALL">
                       {isFieldUser
                         ? `All Assigned Customers (${assignedCustomers.length})`
-                        : `All Customers (${MOCK_CUSTOMERS.length})`}
+                        : `All Customers (${customers.length})`}
                     </SelectItem>
                     {assignedCustomers.map((c) => (
                       <SelectItem key={c.id} value={c.id}>

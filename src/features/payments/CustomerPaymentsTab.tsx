@@ -6,8 +6,7 @@ import { customerService } from '../../services/CustomerService';
 import { invoiceService } from '../../services/InvoiceService';
 import { useAuth } from '../../hooks/useAuth';
 import { useAreas } from '../../hooks/useAreas';
-import { MOCK_USERS } from '../../mock/mockUsers';
-import { MOCK_AREAS } from '../../mock/mockAreas';
+import { useUsers } from '../../hooks/useUsers';
 import {
   evaluateCustomerPaymentStatus,
   getDaysOverdue,
@@ -63,7 +62,8 @@ export function CustomerPaymentsTab({ onSelectCustomer, className }: CustomerPay
   const navigate = useNavigate();
   const { currentUser, role } = useAuth();
   const { areas } = useAreas();
-  const allAreas = useMemo(() => (areas && areas.length > 0 ? areas : MOCK_AREAS), [areas]);
+  const { users } = useUsers();
+  const allAreas = useMemo(() => areas || [], [areas]);
 
   const isAreaManager = role === 'AREA_MANAGER';
   const isRep = role === 'SALES_REP';
@@ -138,12 +138,12 @@ export function CustomerPaymentsTab({ onSelectCustomer, className }: CustomerPay
   // When area changes, if current selectedRepId does not belong to the newly selected area, reset rep
   useEffect(() => {
     if (selectedAreaId !== 'ALL' && selectedRepId !== 'ALL') {
-      const rep = MOCK_USERS.find((u) => u.id === selectedRepId);
+      const rep = users.find((u) => u.id === selectedRepId);
       if (rep && rep.areaId !== selectedAreaId) {
         setSelectedRepId('ALL');
       }
     }
-  }, [selectedAreaId, selectedRepId]);
+  }, [users, selectedAreaId, selectedRepId]);
 
   // Visible areas: For Area Manager, strictly only their territory
   const visibleAreas = useMemo(() => {
@@ -164,8 +164,8 @@ export function CustomerPaymentsTab({ onSelectCustomer, className }: CustomerPay
 
   // Derived list of all sales reps in system
   const salesReps = useMemo(() => {
-    return MOCK_USERS.filter((u) => u.role === 'SALES_REP' && u.isActive);
-  }, []);
+    return users.filter((u) => u.role === 'SALES_REP' && u.isActive);
+  }, [users]);
 
   const effectiveAreaId = isAreaManager ? userAssignedAreaId : selectedAreaId;
 

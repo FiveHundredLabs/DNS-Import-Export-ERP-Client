@@ -57,8 +57,7 @@ import {
   FileText,
   SlidersHorizontal,
 } from 'lucide-react';
-import { MOCK_USERS } from '../../mock/mockUsers';
-import { MOCK_INVOICES } from '../../mock/mockInvoices';
+import { useUsers } from '../../hooks/useUsers';
 import { invoiceService } from '../../services/InvoiceService';
 import { Invoice } from '../../types/invoice';
 import { User } from '../../types/auth';
@@ -107,14 +106,15 @@ export function PaymentListPage() {
   const [repDetailModalOpen, setRepDetailModalOpen] = useState(false);
   const [repDetailInitialTab, setRepDetailInitialTab] = useState<'CASH_IN_HAND' | 'HANDOVERS' | 'HISTORY'>('CASH_IN_HAND');
 
+  const { users } = useUsers();
   const salesReps = useMemo(() => {
     if (role === 'AREA_MANAGER') {
-      return MOCK_USERS.filter(
+      return users.filter(
         (u) => (u.areaId === currentUser?.areaId || u.id === currentUser?.id) && u.isActive
       );
     }
-    return MOCK_USERS.filter((u) => u.role === 'SALES_REP' || u.role === 'AREA_MANAGER' || u.id === 'usr-106');
-  }, [role, currentUser]);
+    return users.filter((u) => u.role === 'SALES_REP' || u.role === 'AREA_MANAGER');
+  }, [users, role, currentUser]);
 
   // Daily Handover Metrics & Handovers state
   const [dailyMetrics, setDailyMetrics] = useState<DailyHandoverMetrics>({

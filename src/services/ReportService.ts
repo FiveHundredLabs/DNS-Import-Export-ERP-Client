@@ -21,8 +21,8 @@ import {
   DamagedStockItemSummary,
   FastMovingProduct,
 } from '../types/reports';
-import { MOCK_AREAS } from '../mock/mockAreas';
-import { MOCK_USERS } from '../mock/mockUsers';
+import { areaService } from './AreaService';
+import { userService } from './UserService';
 
 export class ReportService {
   constructor(
@@ -67,8 +67,8 @@ export class ReportService {
       this.getSalesReport(user, filter),
       this.getFinanceReport(user, filter),
       this.getInventoryReport(user, filter),
-      this.customerSvc.listCustomers({ pageSize: 10000 }),
-      this.orderSvc.listOrders({ pageSize: 10000 }),
+      this.customerSvc.listCustomers({ page: 1, pageSize: 100 }),
+      this.orderSvc.listOrders({ page: 1, pageSize: 100 }),
     ]);
 
     const effective = this.resolveEffectiveFilter(user, filter);
@@ -124,10 +124,10 @@ export class ReportService {
     const effective = this.resolveEffectiveFilter(user, filter);
 
     const [invoicesResult, posTransactions, customersResult, productsResult] = await Promise.all([
-      this.invoiceSvc.getInvoices({ pageSize: 10000 }),
+      this.invoiceSvc.getInvoices({ page: 1, pageSize: 100 }),
       this.posSvc.getAllTransactions(),
-      this.customerSvc.listCustomers({ pageSize: 10000 }),
-      this.productSvc.listProducts({ pageSize: 10000 }),
+      this.customerSvc.listCustomers({ page: 1, pageSize: 100 }),
+      this.productSvc.listProducts({ page: 1, pageSize: 100 }),
     ]);
 
     const customerMap = new Map(customersResult.data.map((c) => [c.id, c]));
@@ -371,9 +371,9 @@ export class ReportService {
     const effective = this.resolveEffectiveFilter(user, filter);
 
     const [productsResult, stockBalances, invoicesResult, posTransactions] = await Promise.all([
-      this.productSvc.listProducts({ pageSize: 10000 }),
+      this.productSvc.listProducts({ page: 1, pageSize: 100 }),
       this.inventorySvc.getAllStockBalances(),
-      this.invoiceSvc.getInvoices({ pageSize: 10000 }),
+      this.invoiceSvc.getInvoices({ page: 1, pageSize: 100 }),
       this.posSvc.getAllTransactions(),
     ]);
 
@@ -543,9 +543,9 @@ export class ReportService {
     const effective = this.resolveEffectiveFilter(user, filter);
 
     const [customersResult, invoicesResult, paymentsResult] = await Promise.all([
-      this.customerSvc.listCustomers({ pageSize: 10000 }),
-      this.invoiceSvc.getInvoices({ pageSize: 10000 }),
-      this.paymentSvc.getPayments({ pageSize: 10000 }),
+      this.customerSvc.listCustomers({ page: 1, pageSize: 100 }),
+      this.invoiceSvc.getInvoices({ page: 1, pageSize: 100 }),
+      this.paymentSvc.getPayments({ page: 1, pageSize: 100 }),
     ]);
 
     const customerMap = new Map(customersResult.data.map((c) => [c.id, c]));
@@ -748,7 +748,7 @@ export class ReportService {
       throw new Error(`Unauthorized: Area Managers can only access their assigned territory (${user.areaId})`);
     }
 
-    const area = MOCK_AREAS.find((a) => a.id === areaId) || {
+    const area = (await areaService.getById(areaId)) || {
       id: areaId,
       code: 'AREA',
       name: `Area ${areaId}`,
@@ -762,10 +762,10 @@ export class ReportService {
     };
 
     const [customersResult, invoicesResult, posTransactions, paymentsResult, targets] = await Promise.all([
-      this.customerSvc.listCustomers({ pageSize: 10000 }),
-      this.invoiceSvc.getInvoices({ pageSize: 10000 }),
+      this.customerSvc.listCustomers({ page: 1, pageSize: 100 }),
+      this.invoiceSvc.getInvoices({ page: 1, pageSize: 100 }),
       this.posSvc.getAllTransactions(),
-      this.paymentSvc.getPayments({ pageSize: 10000 }),
+      this.paymentSvc.getPayments({ page: 1, pageSize: 100 }),
       this.commissionSvc.getAllTargets(),
     ]);
 
@@ -806,7 +806,8 @@ export class ReportService {
     ) / 100;
 
     // Sales Reps in this area
-    const repsInArea = MOCK_USERS.filter(
+    const allUsers = await userService.getAll();
+    const repsInArea = allUsers.filter(
       (u) => u.role === 'SALES_REP' && (u.areaId === areaId || areaCustomers.some((c) => c.assignedRepId === u.id))
     );
 

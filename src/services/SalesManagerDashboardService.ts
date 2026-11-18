@@ -1,6 +1,6 @@
 import { reportService } from './ReportService';
-import { MOCK_USERS } from '../mock/mockUsers';
-import { MOCK_AREAS } from '../mock/mockAreas';
+import { userService } from './UserService';
+import { areaService } from './AreaService';
 import { User } from '../types/auth';
 import {
   AreaTerritoryPerformanceData,
@@ -38,8 +38,10 @@ export interface SalesManagerDashboardData {
 
 class SalesManagerDashboardService {
   async getDashboardData(user: User): Promise<SalesManagerDashboardData> {
-    const activeAreaManagers = MOCK_USERS.filter((u) => u.role === 'AREA_MANAGER' && u.isActive).length;
-    const totalSalesReps = MOCK_USERS.filter((u) => u.role === 'SALES_REP' && u.isActive).length;
+    const users = await userService.getAll();
+    const areas = await areaService.getAll();
+    const activeAreaManagers = users.filter((u) => u.role === 'AREA_MANAGER' && u.isActive).length;
+    const totalSalesReps = users.filter((u) => u.role === 'SALES_REP' && u.isActive).length;
 
     const financeReport = await reportService.getFinanceReport(user);
     const kpiSummary = await reportService.getExecutiveKpis(user);
@@ -49,7 +51,7 @@ class SalesManagerDashboardService {
 
     const managerMap = new Map<string, AreaManagerPerformanceData>();
 
-    for (const area of MOCK_AREAS) {
+    for (const area of areas) {
       try {
         const areaData = await reportService.getAreaPerformanceReport(area.id, user);
         
@@ -121,9 +123,22 @@ class SalesManagerDashboardService {
     areaId: string,
     selectedMonth: string = new Date().toISOString().slice(0, 7)
   ): Promise<AreaTerritoryPerformanceData> {
-    const area = MOCK_AREAS.find((a) => a.id === areaId) || MOCK_AREAS[0];
+    const areas = await areaService.getAll();
+    const area = areas.find((a) => a.id === areaId) || areas[0] || {
+      id: areaId,
+      code: 'AREA',
+      name: 'Area Territory',
+      region: 'Distribution Territory',
+      areaManagerId: 'usr-105',
+      areaManagerName: 'Area Manager',
+      salesManagerId: 'usr-103',
+      salesManagerName: 'Kamal Perera',
+      createdAt: '',
+      updatedAt: '',
+    };
 
-    const managerUser = MOCK_USERS.find((u) => u.id === area.areaManagerId) || {
+    const users = await userService.getAll();
+    const managerUser = users.find((u) => u.id === area.areaManagerId) || {
       id: area.areaManagerId || 'usr-105',
       name: area.areaManagerName || 'Area Manager',
       email: 'area.manager@dnserp.com',
@@ -132,12 +147,12 @@ class SalesManagerDashboardService {
       isActive: true,
     };
 
-    let reps = MOCK_USERS.filter(
+    let reps = users.filter(
       (u) => u.role === 'SALES_REP' && u.areaId === area.id && u.isActive
     );
     if (reps.length < 3) {
       // Include active sales reps so every territory leaderboard displays a competitive team ranking
-      reps = MOCK_USERS.filter((u) => u.role === 'SALES_REP' && u.isActive).slice(0, 4);
+      reps = users.filter((u) => u.role === 'SALES_REP' && u.isActive).slice(0, 4);
     }
 
     // Fetch subordinate reps and compute their sales, collected cash, and incentives

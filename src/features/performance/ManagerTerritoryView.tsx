@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../../components/ui/select';
-import { MOCK_AREAS } from '../../mock/mockAreas';
+import { useAreas } from '../../hooks/useAreas';
 import {
   MapPin,
   TrendingUp,
@@ -36,6 +36,7 @@ export function ManagerTerritoryView({
   canSwitchArea = false,
   onAreaChange,
 }: ManagerTerritoryViewProps) {
+  const { areas } = useAreas();
   const [data, setData] = useState<AreaTerritoryPerformanceData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -132,9 +133,9 @@ export function ManagerTerritoryView({
                   <SelectValue placeholder="Switch Territory" />
                 </SelectTrigger>
                 <SelectContent>
-                  {MOCK_AREAS.map((a) => (
+                  {areas.map((a) => (
                     <SelectItem key={a.id} value={a.id} className="text-xs">
-                      {a.name} ({a.code})
+                      {a.name} ({a.code || a.id.slice(0, 4)})
                     </SelectItem>
                   ))}
                 </SelectContent>

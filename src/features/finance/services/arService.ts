@@ -1,7 +1,6 @@
 import { financeRepository } from '../api';
 import { periodLockService } from './periodLockService';
 import { pdcVaultService } from './pdcVaultService';
-import { MOCK_CUSTOMERS } from '../../../mock/mockCustomers';
 import Decimal from 'decimal.js';
 
 export interface ARReceiptItem {
@@ -580,19 +579,6 @@ class ARCollectionService {
       receipt.allocations = fifoAllocations;
     }
 
-    // Restore customer credit limit / update available credit
-    try {
-      const customer = MOCK_CUSTOMERS.find((c) => c.id === receipt.customerId);
-      if (customer) {
-        const newTotalOutstanding = Math.max(0, customer.financials.totalOutstanding - receipt.amount);
-        customer.financials.totalOutstanding = newTotalOutstanding;
-        customer.financials.availableCredit = Math.max(
-          0,
-          customer.commercialTerms.creditLimit - newTotalOutstanding
-        );
-      }
-    } catch {}
-
     this.receipts[idx] = receipt;
     this.save();
     return receipt;
@@ -659,19 +645,6 @@ class ARCollectionService {
       receipt.isAllocated = false;
       receipt.allocatedAmount = 0;
     }
-
-    // Re-increase customer total outstanding and reduce available credit
-    try {
-      const customer = MOCK_CUSTOMERS.find((c) => c.id === receipt.customerId);
-      if (customer) {
-        const newTotalOutstanding = customer.financials.totalOutstanding + receipt.amount;
-        customer.financials.totalOutstanding = newTotalOutstanding;
-        customer.financials.availableCredit = Math.max(
-          0,
-          customer.commercialTerms.creditLimit - newTotalOutstanding
-        );
-      }
-    } catch {}
 
     receipt.status = 'VOIDED';
     this.receipts[idx] = receipt;

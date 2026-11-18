@@ -41,7 +41,6 @@ import {
 import { MOCK_PRODUCTS } from '../mock/mockProducts';
 import { MOCK_INVOICES } from '../mock/mockInvoices';
 import { MOCK_GRNS } from '../mock/mockInventory';
-import { MOCK_CUSTOMERS } from '../mock/mockCustomers';
 
 export interface CreateClaimDTO {
   warrantyRecordId: string;
@@ -204,7 +203,8 @@ export class WarrantyService {
     const effectiveFilters = { ...filters };
 
     if (user?.role === 'SALES_REP') {
-      const allowedCusts = MOCK_CUSTOMERS.filter((c) => c.assignedRepId === user.id);
+      const allCusts = (await this.customerRepo.getAll({ pageSize: 100 })).data;
+      const allowedCusts = allCusts.filter((c) => c.assignedRepId === user.id);
       const allowedCustIds = new Set(allowedCusts.map((c) => c.id));
 
       if (effectiveFilters.customerId && !allowedCustIds.has(effectiveFilters.customerId)) {
@@ -221,7 +221,8 @@ export class WarrantyService {
         totalPages: 1,
       };
     } else if (user?.role === 'AREA_MANAGER') {
-      const allowedCusts = MOCK_CUSTOMERS.filter((c) => c.areaId === user.areaId);
+      const allCusts = (await this.customerRepo.getAll({ pageSize: 100 })).data;
+      const allowedCusts = allCusts.filter((c) => c.areaId === user.areaId);
       const allowedCustIds = new Set(allowedCusts.map((c) => c.id));
 
       if (effectiveFilters.customerId && !allowedCustIds.has(effectiveFilters.customerId)) {
@@ -325,9 +326,10 @@ export class WarrantyService {
     }
 
     // 5. Customer / Distributor
+    const allCustomers = (await this.customerRepo.getAll({ pageSize: 100 })).data;
     const customer =
-      MOCK_CUSTOMERS.find((c) => c.id === (existingRecord?.customerId || invoice?.customerId)) ||
-      MOCK_CUSTOMERS[0];
+      (await this.customerRepo.getById(existingRecord?.customerId || invoice?.customerId || '')) ||
+      allCustomers[0];
 
     // 6. Warranty Expiry & Status Computation
     const defaultWarrantyPeriodMonths = product?.warrantyPeriodMonths || 12;
@@ -504,18 +506,18 @@ export class WarrantyService {
    * Provides items list for Sales Rep follow-up visits.
    */
   async getCustomerWarrantyTally(customerId: string, user?: User): Promise<CustomerWarrantyTally> {
+    const targetCustomer = await this.customerRepo.getById(customerId);
     if (user?.role === 'SALES_REP') {
-      const targetCustomer = MOCK_CUSTOMERS.find((c) => c.id === customerId);
       if (targetCustomer && targetCustomer.assignedRepId !== user.id) {
         throw new Error('Permission Denied: Customer is not assigned to this Sales Representative.');
       }
     } else if (user?.role === 'AREA_MANAGER') {
-      const targetCustomer = MOCK_CUSTOMERS.find((c) => c.id === customerId);
       if (targetCustomer && targetCustomer.areaId !== user.areaId) {
         throw new Error('Permission Denied: Customer is outside your assigned area.');
       }
     }
-    const customer = MOCK_CUSTOMERS.find((c) => c.id === customerId) || MOCK_CUSTOMERS[0];
+    const allCustomers = (await this.customerRepo.getAll({ pageSize: 100 })).data;
+    const customer = targetCustomer || allCustomers[0];
     const records = await this.repo.getRecordsByCustomerId(customerId);
     const customerInvoices = MOCK_INVOICES.filter((inv) => inv.customerId === customerId);
 

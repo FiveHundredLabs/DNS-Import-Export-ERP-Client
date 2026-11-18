@@ -1,18 +1,33 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Area } from '../mock/mockAreas';
-import { areaService } from '../services/AreaService';
+import { areasApi } from '../api/areas/areas.api';
+
+export interface AreaItem {
+  id: string;
+  code?: string;
+  name: string;
+  areaName?: string;
+  description?: string | null;
+  areaManagerName?: string;
+}
 
 export function useAreas() {
-  const [areas, setAreas] = useState<Area[]>([]);
+  const [areas, setAreas] = useState<AreaItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchAreas = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await areaService.getAreas();
-      setAreas(data);
+      const response = await areasApi.listAreas({ pageSize: 100 });
+      const mapped: AreaItem[] = response.data.map((a) => ({
+        id: a.id,
+        code: a.areaCode,
+        name: a.areaName,
+        areaName: a.areaName,
+        description: a.description,
+      }));
+      setAreas(mapped);
     } catch (e) {
-      console.error(e);
+      console.error('Failed to fetch areas from backend:', e);
     } finally {
       setLoading(false);
     }
@@ -26,17 +41,5 @@ export function useAreas() {
     areas,
     loading,
     refetch: fetchAreas,
-    createArea: async (data: Omit<Area, 'id' | 'createdAt' | 'updatedAt'>) => {
-      await areaService.createArea(data);
-      await fetchAreas();
-    },
-    updateArea: async (id: string, data: Partial<Area>) => {
-      await areaService.updateArea(id, data);
-      await fetchAreas();
-    },
-    deleteArea: async (id: string) => {
-      await areaService.deleteArea(id);
-      await fetchAreas();
-    }
   };
 }

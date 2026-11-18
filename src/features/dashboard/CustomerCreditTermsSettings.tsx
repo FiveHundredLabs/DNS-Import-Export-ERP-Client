@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { creditTermsConfigService } from '../../services/CreditTermsConfigService';
+import { useCreditTermsConfig, useUpdateCreditTermsConfig } from '../../api/credit-terms/credit-terms.hooks';
 import { CustomerCreditTermsConfig } from '../../types/creditTerms';
 import { determineCustomerApprovalRoute } from '../../rules/approvalRules';
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/card';
@@ -49,6 +50,9 @@ export function CustomerCreditTermsSettings() {
   const { role, currentUser } = useAuth();
   const isAuthorized = role === 'DIRECTOR' || role === 'MANAGER';
 
+  const { data: backendConfig } = useCreditTermsConfig();
+  const updateConfigMutation = useUpdateCreditTermsConfig();
+
   const [config, setConfig] = useState<CustomerCreditTermsConfig>(() =>
     creditTermsConfigService.getCreditTermsConfig()
   );
@@ -62,16 +66,28 @@ export function CustomerCreditTermsSettings() {
   const [isSaving, setIsSaving] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
 
-  // Sync draft state with service
+  // Sync draft state with backend query or service
   useEffect(() => {
-    const current = creditTermsConfigService.getCreditTermsConfig();
-    setConfig(current);
-    setDraftDays(current.defaultCreditDays);
-    setDraftLimit(current.defaultCreditLimit);
-    setDraftGraceDays(current.gracePeriodDays);
-    setDraftDiscount(current.defaultDiscountPercentage);
-    setDraftMaxDiscount(current.maxDiscountPercentage);
-  }, []);
+    if (backendConfig) {
+      setConfig((prev) => ({
+        ...prev,
+        defaultCreditDays: backendConfig.defaultCreditDays ?? prev.defaultCreditDays,
+        defaultCreditLimit: backendConfig.defaultCreditLimit ?? prev.defaultCreditLimit,
+        updatedAt: backendConfig.updatedAt || prev.updatedAt,
+        updatedBy: backendConfig.updatedBy?.fullName || prev.updatedBy,
+      }));
+      setDraftDays(backendConfig.defaultCreditDays);
+      setDraftLimit(backendConfig.defaultCreditLimit);
+    } else {
+      const current = creditTermsConfigService.getCreditTermsConfig();
+      setConfig(current);
+      setDraftDays(current.defaultCreditDays);
+      setDraftLimit(current.defaultCreditLimit);
+      setDraftGraceDays(current.gracePeriodDays);
+      setDraftDiscount(current.defaultDiscountPercentage);
+      setDraftMaxDiscount(current.maxDiscountPercentage);
+    }
+  }, [backendConfig]);
 
   // Access Control Guard
   if (!isAuthorized) {
@@ -94,7 +110,7 @@ export function CustomerCreditTermsSettings() {
   // Live approval evaluation based on draft values
   const approvalEvaluation = determineCustomerApprovalRoute(draftDays, draftLimit);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (draftDays <= 0 || draftDays > 365) {
       toast.error('Default Credit Days must be between 1 and 365 days.');
       return;
@@ -114,6 +130,11 @@ export function CustomerCreditTermsSettings() {
 
     setIsSaving(true);
     try {
+      await updateConfigMutation.mutateAsync({
+        defaultCreditDays: draftDays,
+        defaultCreditLimit: draftLimit,
+      });
+
       const updated = creditTermsConfigService.updateCreditTermsConfig(
         {
           defaultCreditDays: draftDays,
@@ -137,7 +158,15 @@ export function CustomerCreditTermsSettings() {
     }
   };
 
-  const handleReset = () => {
+  const handleReset = async () => {
+    try {
+      await updateConfigMutation.mutateAsync({
+        defaultCreditDays: 30,
+        defaultCreditLimit: 500000,
+      });
+    } catch {
+      // Best-effort backend sync
+    }
     const res = creditTermsConfigService.resetToDefaults(currentUser);
     setConfig(res);
     setDraftDays(res.defaultCreditDays);

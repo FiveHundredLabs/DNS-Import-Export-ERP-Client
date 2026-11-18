@@ -15,7 +15,7 @@ import { warrantyService } from '../../services/WarrantyService';
 import { useAuth } from '../../hooks/useAuth';
 import { isWarrantyValid } from '../../rules/warrantyRules';
 import { formatDate } from '../../utils/formatters';
-import { MOCK_CUSTOMERS } from '../../mock/mockCustomers';
+import { useCustomers } from '../../hooks/useCustomers';
 import { AlertTriangle, CheckCircle, ShieldAlert, Search } from 'lucide-react';
 
 interface NewClaimModalProps {
@@ -32,6 +32,7 @@ export function NewClaimModal({
   preselectedRecord,
 }: NewClaimModalProps) {
   const { currentUser } = useAuth();
+  const { customers } = useCustomers();
   const [records, setRecords] = useState<WarrantyRecord[]>([]);
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>('ALL');
   const [warrantySearch, setWarrantySearch] = useState<string>('');
@@ -191,7 +192,7 @@ export function NewClaimModal({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="ALL">All Customers</SelectItem>
-                  {MOCK_CUSTOMERS.map((c) => (
+                  {customers.map((c) => (
                     <SelectItem key={c.id} value={c.id}>
                       {c.name} ({c.type})
                     </SelectItem>
