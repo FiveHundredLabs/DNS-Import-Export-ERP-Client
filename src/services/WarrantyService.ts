@@ -596,11 +596,6 @@ export class WarrantyService {
    * Enforces validation based on distributor warranty note for dealer/distributor sales.
    */
   async createClaim(data: CreateClaimDTO, user?: User): Promise<WarrantyClaim> {
-    if (user && (user.role === 'AREA_MANAGER' || user.role === 'SALES_REP')) {
-      throw new Error(
-        'Permission Denied: Area Managers and Sales Representatives cannot create warranty claims.'
-      );
-    }
     const record = await this.repo.getRecordById(data.warrantyRecordId);
     if (!record) {
       throw new Error(`Warranty record with ID ${data.warrantyRecordId} not found`);
@@ -620,6 +615,12 @@ export class WarrantyService {
       }
     }
 
+    if (user && (user.role === 'AREA_MANAGER' || user.role === 'SALES_REP')) {
+      throw new Error(
+        'Permission Denied: Area Managers and Sales Representatives cannot create warranty claims.'
+      );
+    }
+
     const complaintDate = data.complaintDate || new Date().toISOString().split('T')[0];
 
     if (complaintDate < record.warrantyStartDate.split('T')[0]) {
@@ -636,28 +637,44 @@ export class WarrantyService {
       );
     }
 
-    const year = new Date().getFullYear();
+    const now = new Date();
+    const year = now.getFullYear();
+    const yearMonth = `${year}${String(now.getMonth() + 1).padStart(2, '0')}`;
     const randomCode = Math.floor(1000 + Math.random() * 9000);
     const claimNumber = `CLM-${year}-${randomCode}`;
+    const referenceCode = `WRC-${yearMonth}-${randomCode}`;
+    const referenceCodeExpiresAt = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000).toISOString();
 
     const claim = await this.repo.createClaim({
       claimNumber,
+      referenceCode,
+      referenceCodeExpiresAt,
       warrantyRecordId: record.id,
       invoiceId: record.invoiceId,
       customerId: record.customerId,
       customerName: record.customerName,
+      customerPhone: record.endCustomerPhone,
       productId: record.productId,
       productName: record.productName,
       sku: record.sku,
+      defectiveBarcode: record.barcode,
       serialNumber: data.serialNumber || record.serialNumber,
       complaintDate,
       complaintReason: data.complaintReason,
-      status: 'SUBMITTED',
+      // Single-step registration & approval by Sales Manager
+      status: 'APPROVED',
+      resolutionType: 'REPLACE',
+      approvedById: user?.id,
+      approvedByName: user?.name,
+      approvedAt: now.toISOString(),
       warrantyNoteId: record.warrantyNoteId,
       warrantyNoteNumber: record.warrantyNoteNumber,
       distributorId: record.customerId,
       distributorName: record.customerName,
       endCustomerName: record.endCustomerName,
+      replacementProductId: record.productId,
+      replacementProductName: record.productName,
+      replacementProductSku: record.sku,
     });
 
     // Mark warranty record status as CLAIMED
