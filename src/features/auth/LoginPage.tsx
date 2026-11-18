@@ -380,7 +380,7 @@ export function LoginPage() {
         </picture>
 
         {/* Subtle dark gradient overlay to ensure strong contrast against bright harbor lights */}
-        <div className="absolute inset-0 bg-gradient-to-t from-slate-950/85 via-slate-950/45 to-slate-950/65" />
+        <div className="absolute inset-0 bg-gradient-to-t from-slate-950/65 via-slate-950/15 to-slate-950/65" />
 
         {/* Top-right company branding: D N S (wide-spaced) and Import and Export (same width) */}
         <div className="absolute top-10 right-10 xl:top-12 xl:right-14 z-20 inline-flex flex-col items-stretch select-none pointer-events-none">
