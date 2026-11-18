@@ -171,7 +171,7 @@ export function LoginPage() {
   }
 
   return (
-    <main className="min-h-screen w-full bg-slate-950 flex flex-col lg:flex-row relative p-3 sm:p-5 lg:p-6 gap-4 lg:gap-6">
+    <main className="min-h-screen flex flex-col lg:flex-row relative bg-slate-950 overflow-hidden">
       {/* ── Dev Quick Login button (top-right corner, DEV only) ── */}
       {import.meta.env.DEV && (
         <div className="absolute top-4 right-4 z-50">
@@ -234,7 +234,7 @@ export function LoginPage() {
       )}
 
       {/* ── LEFT PANEL: Login form ── */}
-      <section className="flex flex-1 items-center justify-center bg-white px-6 py-10 sm:py-12 lg:max-w-[480px] xl:max-w-[520px] lg:px-12 xl:px-16 rounded-3xl shadow-2xl z-10 border border-slate-100">
+      <section className="flex flex-1 items-center justify-center bg-white px-6 py-12 lg:max-w-[500px] xl:max-w-[540px] lg:px-14 xl:px-18 rounded-b-3xl lg:rounded-b-none lg:rounded-r-3xl xl:rounded-r-[2.5rem] shadow-2xl z-10">
         <div className="w-full max-w-sm">
           {/* Logo */}
           <div className="mb-10 flex items-center gap-3">
@@ -360,7 +360,7 @@ export function LoginPage() {
       </section>
 
       {/* ── RIGHT PANEL: Branding ── */}
-      <section className="hidden lg:flex flex-1 flex-col items-center justify-center relative overflow-hidden rounded-3xl shadow-2xl">
+      <section className="hidden lg:flex flex-1 flex-col items-center justify-center relative overflow-hidden">
         {/* Optimized picture element with WebP + JPEG fallback */}
         <picture className="absolute inset-0 h-full w-full pointer-events-none">
           <source srcSet="/login.webp" type="image/webp" />
@@ -374,36 +374,35 @@ export function LoginPage() {
           />
         </picture>
 
-        {/* Dark contrast overlay to ensure clear readability */}
-        <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/60 to-slate-900/70 backdrop-blur-[1px]" />
+        {/* Subtle dark gradient overlay to ensure strong contrast against bright harbor lights */}
+        <div className="absolute inset-0 bg-gradient-to-t from-slate-950/85 via-slate-950/45 to-slate-950/65" />
 
-        {/* Top-right company branding (no logo icon, enlarged, shifted left and down) */}
-        <div className="absolute top-10 right-10 xl:top-12 xl:right-14 z-20 text-right">
-          <span className="block text-base xl:text-lg font-extrabold tracking-widest text-white uppercase drop-shadow-md">
-            DNS Import &amp; Export
-          </span>
-          <span className="block text-[11px] font-semibold tracking-wider text-blue-200/80 uppercase">
-            Enterprise Resource Planning
+        {/* Top-right company branding: D N S (wide-spaced) and Import and Export (same width) */}
+        <div className="absolute top-10 right-10 xl:top-12 xl:right-14 z-20 inline-flex flex-col items-stretch select-none pointer-events-none">
+          <div className="flex justify-between items-center text-3xl sm:text-4xl xl:text-5xl font-black text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)] leading-none">
+            <span>D</span>
+            <span>N</span>
+            <span>S</span>
+          </div>
+          <span className="mt-1.5 text-[11px] sm:text-xs xl:text-[13px] font-bold text-blue-200 uppercase tracking-widest text-center whitespace-nowrap drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)]">
+            Import and Export
           </span>
         </div>
 
-        {/* Centered Hero Content with frosted card for maximum readability */}
-        <div className="relative z-10 text-center px-8 py-8 sm:px-10 sm:py-10 max-w-lg rounded-2xl bg-slate-950/50 backdrop-blur-md border border-white/10 shadow-2xl">
-          <h2 className="text-3xl xl:text-4xl font-extrabold text-white leading-tight tracking-tight drop-shadow-lg">
+        {/* Centered Hero Content directly over background (no box, larger header, no description) */}
+        <div className="relative z-10 text-center px-8 max-w-2xl select-none">
+          <h2 className="text-4xl sm:text-5xl xl:text-6xl font-black text-white leading-[1.1] tracking-tight drop-shadow-[0_4px_16px_rgba(0,0,0,0.95)]">
             Drive Your Business
             <br />
-            <span className="text-blue-300">Forward.</span>
+            <span className="text-blue-300 drop-shadow-[0_4px_16px_rgba(0,0,0,0.95)]">Forward.</span>
           </h2>
-          <p className="mt-4 text-sm text-slate-100 font-medium leading-relaxed drop-shadow">
-            &ldquo;Secure, integrated enterprise resource planning for modern distribution networks.&rdquo;
-          </p>
 
           {/* Feature pills */}
-          <div className="mt-7 flex flex-wrap justify-center gap-2">
+          <div className="mt-8 flex flex-wrap justify-center gap-2.5 max-w-lg mx-auto">
             {['Sales & CRM', 'Inventory', 'Finance & Ledger', 'Purchasing', 'Reports'].map((f) => (
               <span
                 key={f}
-                className="rounded-full border border-white/25 bg-white/20 px-3.5 py-1.5 text-xs font-semibold text-white shadow-sm backdrop-blur-md hover:bg-white/25 transition"
+                className="rounded-full border border-white/30 bg-black/40 backdrop-blur-md px-4 py-1.5 text-xs xl:text-sm font-semibold text-white shadow-lg hover:bg-black/60 transition-all cursor-default"
               >
                 {f}
               </span>
@@ -412,7 +411,7 @@ export function LoginPage() {
         </div>
 
         {/* Bottom version tag */}
-        <p className="absolute bottom-6 text-[10px] font-semibold tracking-widest text-white/50 uppercase z-20">
+        <p className="absolute bottom-5 text-[10px] font-medium tracking-widest text-white/50 uppercase z-20">
           DNS ERP · Enterprise Edition
         </p>
       </section>
