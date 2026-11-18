@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Customer } from '../../types/customer';
 import { useCustomers } from '../../hooks/useCustomers';
+import { useDebounce } from '../../hooks/useDebounce';
 import { formatCurrency } from '../../utils/formatters';
 import { Search, Building2, X, ChevronDown, Check } from 'lucide-react';
 import { Input } from '../ui/input';
@@ -28,11 +29,12 @@ export function CustomerSelector({
   isModalMode = false,
 }: CustomerSelectorProps) {
   const [searchTerm, setSearchTerm] = useState('');
+  const debouncedSearch = useDebounce(searchTerm, 300);
   const [isOpen, setIsOpen] = useState(isModalMode);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const { customers, loading } = useCustomers({
-    search: searchTerm,
+    search: debouncedSearch,
     assignedRepId,
     areaId,
     page: 1,

@@ -1,5 +1,4 @@
 import { orderService } from './OrderService';
-import { invoiceService } from './InvoiceService';
 import {
   DeliveryNote,
   DeliveryNoteItem,
@@ -190,9 +189,10 @@ export class DeliveryNoteService {
    * Backwards-compatibility: Retrieves invoices eligible for delivery note generation.
    */
   async getDraftInvoices(): Promise<Invoice[]> {
+    const { invoiceService } = await import('./InvoiceService');
     const [ordersRes, invoicesRes] = await Promise.all([
       orderService.listOrders({ pageSize: 1000 }),
-      invoiceService.listInvoices({ pageSize: 1000 }),
+      invoiceService.getInvoices({ pageSize: 1000 }),
     ]);
     const closedOrderIds = new Set(
       (ordersRes.data || []).filter((o) => o.status === 'CLOSED').map((o) => o.id)

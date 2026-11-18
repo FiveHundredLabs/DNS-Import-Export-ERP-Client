@@ -65,8 +65,8 @@ export interface FifoAllocationBreakdown {
 // Simulated coordinates for proximity calculation (Colombo Central Field Rep base)
 const BASELINE_COORDS = { lat: 6.9271, lng: 79.8612 };
 
-// Distance lookup by customer code for reliable proximity tagging
-const MOCK_DISTANCES: Record<string, number> = {
+// Distance lookup by customer code for proximity tagging
+const KNOWN_PROXIMITY_DISTANCES: Record<string, number> = {
   'DLR-COL-001': 0.8, // 142 First Cross St, Colombo 11 (Pettah) -> 800m
   'DLR-NEG-002': 28.5, // Negombo
   'SHW-KOT-003': 1.6, // Nawala Rd, Kotte -> 1.6 km
@@ -77,7 +77,7 @@ const MOCK_DISTANCES: Record<string, number> = {
  * Calculates simulated or geo-distance to a customer shop.
  */
 export function getCustomerProximity(customer: Customer): { distanceKm: number; label: string; isNearby: boolean } {
-  const dist = MOCK_DISTANCES[customer.code] ?? (customer.areaId === 'area-01' ? 1.4 : 15.0);
+  const dist = KNOWN_PROXIMITY_DISTANCES[customer.code] ?? (customer.areaId === 'area-01' ? 1.4 : 15.0);
   const isNearby = dist <= 3.0; // Within 3 km is classified as Nearby
   const label = dist < 1.0 ? `${Math.round(dist * 1000)}m away` : `${dist.toFixed(1)} km away`;
   return { distanceKm: dist, label, isNearby };

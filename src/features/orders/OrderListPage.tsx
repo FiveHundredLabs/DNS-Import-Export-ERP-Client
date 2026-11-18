@@ -11,6 +11,7 @@ import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Badge } from '../../components/ui/badge';
 import { PageHeader } from '../../components';
+import { TableLoadingSkeleton } from '../../components/common/LoadingSkeleton';
 import { StatCard } from '../../components/common/StatCard';
 import {
   Select,
@@ -340,9 +341,7 @@ export function OrderListPage() {
         </CardHeader>
         <CardContent className="p-0">
           {loading ? (
-            <div className="p-8 text-center text-xs text-slate-500">
-              Loading enterprise sales orders...
-            </div>
+            <TableLoadingSkeleton columns={7} rows={5} />
           ) : error ? (
             <div className="p-8 text-center text-xs text-rose-500">{error}</div>
           ) : orders.length === 0 ? (

@@ -8,10 +8,12 @@ import { formatCurrency } from '../../../../utils/formatters';
 import { CheckCircle2, AlertTriangle } from 'lucide-react';
 import { Card } from '../../../../components/ui/card';
 import { Badge } from '../../../../components/ui/badge';
+import { TableLoadingSkeleton } from '../../../../components/common/LoadingSkeleton';
 
 export function TrialBalancePage() {
   const { getTrialBalance } = useFinanceLedger();
   const [report, setReport] = useState<TrialBalanceReport | null>(null);
+  const [loading, setLoading] = useState(true);
   const [dateFilter, setDateFilter] = useState<DateFilterState>({
     preset: 'THIS_MONTH',
     startDate: `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-01`,
@@ -19,8 +21,15 @@ export function TrialBalancePage() {
   });
 
   const loadReport = useCallback(async () => {
-    const data = await getTrialBalance(dateFilter.endDate);
-    setReport(data);
+    setLoading(true);
+    try {
+      const data = await getTrialBalance(dateFilter.endDate);
+      setReport(data);
+    } catch {
+      // Handled
+    } finally {
+      setLoading(false);
+    }
   }, [getTrialBalance, dateFilter.endDate]);
 
   useEffect(() => {
@@ -92,97 +101,103 @@ export function TrialBalancePage() {
         reportTitle="Trial_Balance_Statement"
       />
 
-      {/* Balancing Status Badge */}
-      <Card
-        className={`p-4 border ${
-          report?.isBalanced
-            ? 'bg-emerald-50/70 border-emerald-200 text-emerald-950'
-            : 'bg-rose-50/70 border-rose-200 text-rose-950'
-        }`}
-      >
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div
-              className={`flex h-10 w-10 items-center justify-center rounded-lg ${
-                report?.isBalanced ? 'bg-emerald-600 text-white' : 'bg-rose-600 text-white animate-pulse'
-              }`}
-            >
-              {report?.isBalanced ? <CheckCircle2 className="h-6 w-6" /> : <AlertTriangle className="h-6 w-6" />}
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-semibold">
-                  {report?.isBalanced
-                    ? 'Trial Balance Reconciled (Zero Net Difference)'
-                    : 'Trial Balance Imbalance Detected'}
-                </span>
-                <Badge
-                  className={`${
-                    report?.isBalanced
-                      ? 'bg-emerald-200 text-emerald-900 border-none'
-                      : 'bg-rose-200 text-rose-900 border-none'
-                  } text-xs font-semibold`}
+      {loading ? (
+        <TableLoadingSkeleton rows={10} cols={5} />
+      ) : (
+        <>
+          {/* Balancing Status Badge */}
+          <Card
+            className={`p-4 border ${
+              report?.isBalanced
+                ? 'bg-emerald-50/70 border-emerald-200 text-emerald-950'
+                : 'bg-rose-50/70 border-rose-200 text-rose-950'
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div
+                  className={`flex h-10 w-10 items-center justify-center rounded-lg ${
+                    report?.isBalanced ? 'bg-emerald-600 text-white' : 'bg-rose-600 text-white animate-pulse'
+                  }`}
                 >
-                  {report?.isBalanced ? 'Balanced' : `Imbalance: ${formatCurrency(report?.discrepancy || 0)}`}
-                </Badge>
-              </div>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Total Debits ({formatCurrency(report?.totalDebit || 0)}) === Total Credits (
-                {formatCurrency(report?.totalCredit || 0)})
-              </p>
-            </div>
-          </div>
-        </div>
-      </Card>
-
-      {/* Trial Balance Table */}
-      <Card className="overflow-hidden border-slate-200 bg-white shadow-sm">
-        <div className="overflow-x-auto w-full">
-          <table className="w-full min-w-[800px] text-left text-xs">
-            <thead className="border-b border-slate-200 bg-slate-50 text-xs font-semibold uppercase tracking-wider text-slate-500">
-              <tr>
-                <th className="px-4 py-3">Account Code</th>
-                <th className="px-4 py-3">Account Title</th>
-                <th className="px-4 py-3">Classification</th>
-                <th className="px-4 py-3 text-right">Debit Balance (LKR)</th>
-                <th className="px-4 py-3 text-right">Credit Balance (LKR)</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 text-slate-700">
-              {report?.items.map((item) => (
-                <tr key={item.accountId} className="hover:bg-slate-50/60 transition-colors">
-                  <td className="px-4 py-3 tabular-nums font-semibold text-primary-text">{item.code}</td>
-                  <td className="px-4 py-3 font-semibold text-slate-900">{item.name}</td>
-                  <td className="px-4 py-3">
-                    <Badge variant="outline" className="bg-slate-50 text-slate-600 border-slate-200 text-xs">
-                      {item.accountSubClass.replace(/_/g, ' ')}
+                  {report?.isBalanced ? <CheckCircle2 className="h-6 w-6" /> : <AlertTriangle className="h-6 w-6" />}
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-semibold">
+                      {report?.isBalanced
+                        ? 'Trial Balance Reconciled (Zero Net Difference)'
+                        : 'Trial Balance Imbalance Detected'}
+                    </span>
+                    <Badge
+                      className={`${
+                        report?.isBalanced
+                          ? 'bg-emerald-200 text-emerald-900 border-none'
+                          : 'bg-rose-200 text-rose-900 border-none'
+                      } text-xs font-semibold`}
+                    >
+                      {report?.isBalanced ? 'Balanced' : `Imbalance: ${formatCurrency(report?.discrepancy || 0)}`}
                     </Badge>
-                  </td>
-                  <td className="px-4 py-3 text-right tabular-nums font-medium text-slate-800">
-                    {item.debit > 0 ? formatCurrency(item.debit) : '—'}
-                  </td>
-                  <td className="px-4 py-3 text-right tabular-nums font-medium text-slate-800">
-                    {item.credit > 0 ? formatCurrency(item.credit) : '—'}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-            <tfoot className="border-t-2 border-slate-300 bg-slate-50 text-xs font-semibold text-slate-900">
-              <tr>
-                <td colSpan={3} className="px-4 py-3.5 uppercase tracking-wider">
-                  Total Trial Balance
-                </td>
-                <td className="px-4 py-3.5 text-right tabular-nums text-sm font-semibold text-indigo-950">
-                  {formatCurrency(report?.totalDebit || 0)}
-                </td>
-                <td className="px-4 py-3.5 text-right tabular-nums text-sm font-semibold text-indigo-950">
-                  {formatCurrency(report?.totalCredit || 0)}
-                </td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
-      </Card>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Total Debits ({formatCurrency(report?.totalDebit || 0)}) === Total Credits (
+                    {formatCurrency(report?.totalCredit || 0)})
+                  </p>
+                </div>
+              </div>
+            </div>
+          </Card>
+
+          {/* Trial Balance Table */}
+          <Card className="overflow-hidden border-slate-200 bg-white shadow-sm">
+            <div className="overflow-x-auto w-full">
+              <table className="w-full min-w-[800px] text-left text-xs">
+                <thead className="border-b border-slate-200 bg-slate-50 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                  <tr>
+                    <th className="px-4 py-3">Account Code</th>
+                    <th className="px-4 py-3">Account Title</th>
+                    <th className="px-4 py-3">Classification</th>
+                    <th className="px-4 py-3 text-right">Debit Balance (LKR)</th>
+                    <th className="px-4 py-3 text-right">Credit Balance (LKR)</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 text-slate-700">
+                  {report?.items.map((item) => (
+                    <tr key={item.accountId} className="hover:bg-slate-50/60 transition-colors">
+                      <td className="px-4 py-3 tabular-nums font-semibold text-primary-text">{item.code}</td>
+                      <td className="px-4 py-3 font-semibold text-slate-900">{item.name}</td>
+                      <td className="px-4 py-3">
+                        <Badge variant="outline" className="bg-slate-50 text-slate-600 border-slate-200 text-xs">
+                          {item.accountSubClass.replace(/_/g, ' ')}
+                        </Badge>
+                      </td>
+                      <td className="px-4 py-3 text-right tabular-nums font-medium text-slate-800">
+                        {item.debit > 0 ? formatCurrency(item.debit) : '—'}
+                      </td>
+                      <td className="px-4 py-3 text-right tabular-nums font-medium text-slate-800">
+                        {item.credit > 0 ? formatCurrency(item.credit) : '—'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot className="border-t-2 border-slate-300 bg-slate-50 text-xs font-semibold text-slate-900">
+                  <tr>
+                    <td colSpan={3} className="px-4 py-3.5 uppercase tracking-wider">
+                      Total Trial Balance
+                    </td>
+                    <td className="px-4 py-3.5 text-right tabular-nums text-sm font-semibold text-indigo-950">
+                      {formatCurrency(report?.totalDebit || 0)}
+                    </td>
+                    <td className="px-4 py-3.5 text-right tabular-nums text-sm font-semibold text-indigo-950">
+                      {formatCurrency(report?.totalCredit || 0)}
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </Card>
+        </>
+      )}
     </div>
   );
 }

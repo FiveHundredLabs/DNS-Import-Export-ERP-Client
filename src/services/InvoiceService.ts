@@ -23,7 +23,14 @@ export class InvoiceService {
   private orderSvc: OrderService;
   private customerSvc: CustomerService;
   private taxSvc: TaxService;
-  private deliveryNoteSvc: DeliveryNoteService;
+  private _deliveryNoteSvc?: DeliveryNoteService;
+
+  private get deliveryNoteSvc(): DeliveryNoteService {
+    if (!this._deliveryNoteSvc) {
+      this._deliveryNoteSvc = deliveryNoteService;
+    }
+    return this._deliveryNoteSvc;
+  }
 
   constructor(
     repo?: IInvoiceRepository,
@@ -36,7 +43,9 @@ export class InvoiceService {
     this.orderSvc = orderSvc || orderService;
     this.customerSvc = customerSvc || customerService;
     this.taxSvc = taxSvc || taxService;
-    this.deliveryNoteSvc = deliveryNoteSvc || deliveryNoteService;
+    if (deliveryNoteSvc) {
+      this._deliveryNoteSvc = deliveryNoteSvc;
+    }
   }
 
   async getInvoices(filters?: InvoiceFilters): Promise<PaginatedResult<Invoice>> {

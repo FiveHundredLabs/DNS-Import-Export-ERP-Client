@@ -31,6 +31,7 @@ import { Input } from '../../../components/ui/input';
 import { Badge } from '../../../components/ui/badge';
 import { Card } from '../../../components/ui/card';
 import { toast } from 'sonner';
+import { TableLoadingSkeleton } from '../../../components/common/LoadingSkeleton';
 
 interface ClassificationGroup {
   id: string;
@@ -85,6 +86,7 @@ export function ChartOfAccountsPage({ defaultView = 'ACCOUNTS' }: ChartOfAccount
     updateAccount,
     deleteAccount,
     postJournalEntry,
+    loading,
   } = useFinanceLedger();
 
   const [activeMainView, setActiveMainView] = useState<'ACCOUNTS' | 'CATEGORIES'>(() => {
@@ -688,6 +690,8 @@ export function ChartOfAccountsPage({ defaultView = 'ACCOUNTS' }: ChartOfAccount
             })}
           </div>
         </div>
+      ) : loading ? (
+        <TableLoadingSkeleton rows={10} cols={6} />
       ) : (
         /* Main Chart of Accounts View */
         <>

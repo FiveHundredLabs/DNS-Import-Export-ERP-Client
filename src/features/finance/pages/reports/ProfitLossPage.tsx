@@ -22,6 +22,7 @@ import { Card } from '../../../../components/ui/card';
 import { Badge } from '../../../../components/ui/badge';
 import { Button } from '../../../../components/ui/button';
 import { Input } from '../../../../components/ui/input';
+import { TableLoadingSkeleton, CardGridSkeleton } from '../../../../components/common/LoadingSkeleton';
 
 function computePriorPeriod(startDate: string, endDate: string) {
   const start = new Date(startDate);
@@ -53,6 +54,7 @@ export function ProfitLossPage() {
   const [report, setReport] = useState<ProfitLossReport | null>(null);
   const [priorReport, setPriorReport] = useState<ProfitLossReport | null>(null);
   const [comparePrior, setComparePrior] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(true);
 
   const [dateFilter, setDateFilter] = useState<DateFilterState>({
     preset: 'THIS_MONTH',
@@ -75,20 +77,27 @@ export function ProfitLossPage() {
   };
 
   const loadReport = useCallback(async () => {
-    const data = await getProfitLoss({
-      startDate: dateFilter.startDate,
-      endDate: dateFilter.endDate,
-    });
-    setReport(data);
-
-    if (comparePrior) {
-      const priorData = await getProfitLoss({
-        startDate: priorDateFilter.startDate,
-        endDate: priorDateFilter.endDate,
+    setLoading(true);
+    try {
+      const data = await getProfitLoss({
+        startDate: dateFilter.startDate,
+        endDate: dateFilter.endDate,
       });
-      setPriorReport(priorData);
-    } else {
-      setPriorReport(null);
+      setReport(data);
+
+      if (comparePrior) {
+        const priorData = await getProfitLoss({
+          startDate: priorDateFilter.startDate,
+          endDate: priorDateFilter.endDate,
+        });
+        setPriorReport(priorData);
+      } else {
+        setPriorReport(null);
+      }
+    } catch {
+      // Handled
+    } finally {
+      setLoading(false);
     }
   }, [getProfitLoss, dateFilter.startDate, dateFilter.endDate, comparePrior, priorDateFilter.startDate, priorDateFilter.endDate]);
 
@@ -278,7 +287,14 @@ export function ProfitLossPage() {
         </div>
       </div>
 
-      {/* Summary KPI Cards */}
+      {loading ? (
+        <div className="space-y-6">
+          <CardGridSkeleton count={3} />
+          <TableLoadingSkeleton rows={10} cols={4} />
+        </div>
+      ) : (
+        <>
+          {/* Summary KPI Cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <Card className="p-4 border-slate-200">
           <div className="flex items-center justify-between">
@@ -650,6 +666,8 @@ export function ProfitLossPage() {
           </div>
         </div>
       </Card>
+        </>
+      )}
 
       {/* Corporate Sign-Off Block */}
       <CorporateSignatureBlock date={dateFilter.endDate} />

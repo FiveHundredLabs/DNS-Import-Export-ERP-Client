@@ -20,6 +20,7 @@ import { Button } from '../../../components/ui/button';
 import { Input } from '../../../components/ui/input';
 import { Badge } from '../../../components/ui/badge';
 import { Card } from '../../../components/ui/card';
+import { TableLoadingSkeleton } from '../../../components/common/LoadingSkeleton';
 
 export function SuppliersPage() {
   const { suppliers, loading, createSupplier, updateSupplier, deleteSupplier } = useFinanceLedger();
@@ -182,7 +183,10 @@ export function SuppliersPage() {
       </div>
 
       {/* Suppliers Table */}
-      <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+      {loading ? (
+        <TableLoadingSkeleton rows={8} cols={8} />
+      ) : (
+        <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
         <div className="overflow-x-auto w-full">
           <table className="w-full min-w-[950px] text-left text-xs">
             <thead className="border-b border-slate-200 bg-slate-50 text-[11px] font-bold uppercase tracking-wider text-slate-500">
@@ -323,6 +327,7 @@ export function SuppliersPage() {
           </div>
         )}
       </div>
+      )}
 
       {/* Supplier Create/Edit Modal */}
       <SupplierModal

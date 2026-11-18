@@ -23,6 +23,7 @@ import { Card } from '../../../../components/ui/card';
 import { Badge } from '../../../../components/ui/badge';
 import { Button } from '../../../../components/ui/button';
 import { Input } from '../../../../components/ui/input';
+import { TableLoadingSkeleton, CardGridSkeleton } from '../../../../components/common/LoadingSkeleton';
 
 function computePriorDate(asOfDate: string): string {
   const d = new Date(asOfDate);
@@ -46,6 +47,7 @@ export function BalanceSheetPage() {
   const { getBalanceSheet } = useFinanceLedger();
   const [report, setReport] = useState<BalanceSheetReport | null>(null);
   const [priorReport, setPriorReport] = useState<BalanceSheetReport | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
   const [asOfDate, setAsOfDate] = useState<string>(new Date().toISOString().slice(0, 10));
   const [comparePrior, setComparePrior] = useState<boolean>(false);
   const [priorAsOfDate, setPriorAsOfDate] = useState<string>(() =>
@@ -65,14 +67,21 @@ export function BalanceSheetPage() {
   };
 
   const loadReport = useCallback(async () => {
-    const data = await getBalanceSheet(asOfDate);
-    setReport(data);
+    setLoading(true);
+    try {
+      const data = await getBalanceSheet(asOfDate);
+      setReport(data);
 
-    if (comparePrior) {
-      const priorData = await getBalanceSheet(priorAsOfDate);
-      setPriorReport(priorData);
-    } else {
-      setPriorReport(null);
+      if (comparePrior) {
+        const priorData = await getBalanceSheet(priorAsOfDate);
+        setPriorReport(priorData);
+      } else {
+        setPriorReport(null);
+      }
+    } catch {
+      // Handled
+    } finally {
+      setLoading(false);
     }
   }, [getBalanceSheet, asOfDate, comparePrior, priorAsOfDate]);
 
@@ -218,7 +227,14 @@ export function BalanceSheetPage() {
         </div>
       </div>
 
-      {/* Real-Time Mathematical Integrity Status Bar */}
+      {loading ? (
+        <div className="space-y-6">
+          <CardGridSkeleton count={4} />
+          <TableLoadingSkeleton rows={10} cols={4} />
+        </div>
+      ) : (
+        <>
+          {/* Real-Time Mathematical Integrity Status Bar */}
       <Card
         className={`p-4 border ${
           report?.isBalanced
@@ -619,6 +635,8 @@ export function BalanceSheetPage() {
           </Card>
         </div>
       </div>
+        </>
+      )}
 
       {/* Corporate Sign-Off Block */}
       <CorporateSignatureBlock date={asOfDate} />
