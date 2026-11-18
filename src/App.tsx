@@ -133,6 +133,8 @@ import { PurchasingSupplierPaymentsPage } from './features/purchasing/Purchasing
 import { PurchasingApprovalHub } from './features/purchasing/components/PurchasingApprovalHub';
 import { ProfilePage } from './features/profile/ProfilePage';
 import { SupplierReturnsPage } from './features/purchasing/SupplierReturnsPage';
+import { NotFoundPage } from './features/errors/NotFoundPage';
+import { ServerErrorPage } from './features/errors/ServerErrorPage';
 
 export function App() {
   return (
@@ -140,7 +142,16 @@ export function App() {
       <Toaster richColors position="top-right" />
       <Routes>
         <Route path="/login" element={<LoginPage />} />
-      <Route path="/" element={<AppLayout />}>
+        <Route path="/404" element={<NotFoundPage />} />
+        <Route path="/500" element={<ServerErrorPage />} />
+      <Route
+        path="/"
+        element={
+          <ProtectedRoute>
+            <AppLayout />
+          </ProtectedRoute>
+        }
+      >
         {/* Standard Single-Column Content Pages */}
         <Route element={<StandardLayout />}>
           {/* Core Operational Routes */}
@@ -910,8 +921,9 @@ export function App() {
         </Route>
 
         {/* Fallback */}
-        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="*" element={<NotFoundPage />} />
       </Route>
+      <Route path="*" element={<NotFoundPage />} />
     </Routes>
     </>
   );
