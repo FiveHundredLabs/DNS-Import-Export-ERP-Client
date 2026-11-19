@@ -24,6 +24,9 @@ import {
   Mail,
   Search,
   Loader2,
+  Power,
+  AlertTriangle,
+  RefreshCw,
 } from 'lucide-react';
 import { Dialog, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
 import { PageHeader } from '../../components/common/PageHeader';
@@ -35,11 +38,27 @@ export function AreaListPage() {
   const canEdit = role === 'DIRECTOR' || role === 'MANAGER' || role === 'SALES_MANAGER';
   const canDelete = role === 'DIRECTOR' || role === 'MANAGER';
 
-  const { areas, loading: areasLoading, createArea, updateArea, deleteArea } = useAreas();
+  const {
+    areas,
+    loading: areasLoading,
+    refetch,
+    createArea,
+    updateArea,
+    updateAreaStatus,
+    deleteArea,
+  } = useAreas();
   const { users } = useUsers();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingArea, setEditingArea] = useState<Area | null>(null);
   const [formData, setFormData] = useState({ code: '', name: '', region: '', areaManagerId: '' });
+
+  // Filtering & Search
+  const [areaSearchTerm, setAreaSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'INACTIVE'>('ALL');
+
+  // Dedicated Soft-Delete Modal
+  const [areaToDelete, setAreaToDelete] = useState<Area | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Inspection modals for assigned customers and team members
   const [selectedAreaForCustomers, setSelectedAreaForCustomers] = useState<Area | null>(null);
@@ -47,6 +66,19 @@ export function AreaListPage() {
   const [loadingAreaCustomers, setLoadingAreaCustomers] = useState(false);
   const [selectedAreaForTeam, setSelectedAreaForTeam] = useState<Area | null>(null);
   const [customerSearchTerm, setCustomerSearchTerm] = useState('');
+
+  const filteredAreas = useMemo(() => {
+    return areas.filter((area) => {
+      const q = areaSearchTerm.trim().toLowerCase();
+      const matchesSearch =
+        !q ||
+        area.name.toLowerCase().includes(q) ||
+        (area.code && area.code.toLowerCase().includes(q)) ||
+        (area.region && area.region.toLowerCase().includes(q));
+      const matchesStatus = statusFilter === 'ALL' || (area.status || 'ACTIVE') === statusFilter;
+      return matchesSearch && matchesStatus;
+    });
+  }, [areas, areaSearchTerm, statusFilter]);
 
   const areaManagers = useMemo(() => {
     return users.filter((u) => {
@@ -241,8 +273,26 @@ export function AreaListPage() {
     setIsModalOpen(false);
   };
 
-  const handleDelete = async (id: string) => {
-    await deleteArea(id);
+  const handleToggleStatus = async (area: Area) => {
+    const nextStatus = (area.status || 'ACTIVE') === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
+    try {
+      await updateAreaStatus(area.id, nextStatus);
+    } catch (err: unknown) {
+      console.error('Failed to change area status:', err);
+    }
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!areaToDelete) return;
+    try {
+      setIsDeleting(true);
+      await deleteArea(areaToDelete.id);
+      setAreaToDelete(null);
+    } catch (err: unknown) {
+      console.error('Failed to delete area:', err);
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   return (
@@ -251,13 +301,47 @@ export function AreaListPage() {
         title="Area Management"
         breadcrumbs={[{ label: 'Administration' }, { label: 'Areas' }]}
         actions={
-          canCreate ? (
-            <Button onClick={() => handleOpenModal()} className="gap-2 bg-primary hover:bg-primary-hover shadow-xs">
-              <Plus className="h-4 w-4" /> Create Area
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => refetch()}
+              className="gap-1.5"
+            >
+              <RefreshCw className="h-3.5 w-3.5" /> Refresh
             </Button>
-          ) : undefined
+            {canCreate && (
+              <Button onClick={() => handleOpenModal()} className="gap-2 bg-primary hover:bg-primary-hover shadow-xs">
+                <Plus className="h-4 w-4" /> Create Area
+              </Button>
+            )}
+          </div>
         }
       />
+
+      {/* Filter toolbar */}
+      <div className="flex flex-col sm:flex-row gap-3 bg-white p-3 rounded-xl border border-slate-200">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+          <Input
+            placeholder="Search by area name, code, or region..."
+            value={areaSearchTerm}
+            onChange={(e) => setAreaSearchTerm(e.target.value)}
+            className="pl-9 text-xs"
+          />
+        </div>
+        <div className="w-full sm:w-48">
+          <Select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value as 'ALL' | 'ACTIVE' | 'INACTIVE')}
+            className="text-xs h-9 bg-white"
+          >
+            <option value="ALL">All Status</option>
+            <option value="ACTIVE">Active Only</option>
+            <option value="INACTIVE">Inactive Only</option>
+          </Select>
+        </div>
+      </div>
 
       <div className="rounded-2xl border border-slate-200/80 bg-white shadow-sm overflow-hidden">
         <Table>
@@ -269,6 +353,7 @@ export function AreaListPage() {
               <TableHead className="font-semibold text-slate-600">Area Manager</TableHead>
               <TableHead className="font-semibold text-slate-600 text-center">Sales Reps</TableHead>
               <TableHead className="font-semibold text-slate-600 text-center">Customers</TableHead>
+              <TableHead className="font-semibold text-slate-600 text-center">Status</TableHead>
               {(canEdit || canDelete) && (
                 <TableHead className="text-right font-semibold text-slate-600">Actions</TableHead>
               )}
@@ -277,20 +362,23 @@ export function AreaListPage() {
           <TableBody>
             {areasLoading ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-12 text-slate-500">
+                <TableCell colSpan={8} className="text-center py-12 text-slate-500">
                   Loading areas...
                 </TableCell>
               </TableRow>
-            ) : areas.length === 0 ? (
+            ) : filteredAreas.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-12 text-slate-500">
-                  No areas found. Create one to get started.
+                <TableCell colSpan={8} className="text-center py-12 text-slate-500">
+                  {areaSearchTerm || statusFilter !== 'ALL'
+                    ? 'No areas match your search or filter.'
+                    : 'No areas found. Create one to get started.'}
                 </TableCell>
               </TableRow>
             ) : (
-              areas.map((area) => {
+              filteredAreas.map((area) => {
                 const { salesReps, primaryManagerName } = getAreaTeam(area);
                 const displayCustomerCount = area.customerCount ?? (area.customers ? area.customers.length : 0);
+                const isActive = (area.status || 'ACTIVE') === 'ACTIVE';
 
                 return (
                   <TableRow key={area.id} className="group hover:bg-slate-50 transition-colors">
@@ -352,32 +440,50 @@ export function AreaListPage() {
                         <span>{displayCustomerCount}</span>
                       </button>
                     </TableCell>
+                    <TableCell className="text-center">
+                      <Badge variant={isActive ? 'success' : 'secondary'} className="text-[11px] font-semibold">
+                        {area.status || 'ACTIVE'}
+                      </Badge>
+                    </TableCell>
                   {(canEdit || canDelete) && (
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         {canEdit && (
+                          <>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleOpenModal(area)}
+                              className="h-8 w-8 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50"
+                              title="Edit Area"
+                            >
+                              <Edit3 className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleToggleStatus(area)}
+                              className={`h-8 w-8 ${
+                                isActive
+                                  ? 'text-amber-600 hover:text-amber-700 hover:bg-amber-50'
+                                  : 'text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50'
+                              }`}
+                              title={isActive ? 'Deactivate Area' : 'Activate Area'}
+                            >
+                              <Power className="h-4 w-4" />
+                            </Button>
+                          </>
+                        )}
+                        {canDelete && (
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => handleOpenModal(area)}
-                            className="h-8 w-8 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50"
-                          >
-                            <Edit3 className="h-4 w-4" />
-                          </Button>
-                        )}
-                        {canDelete && (
-                          <ConfirmButton
-                            variant="ghost"
-                            size="icon"
-                            confirmTitle="Delete Area?"
-                            confirmMessage={`Are you sure you want to delete the area "${area.name}" (${area.code})?`}
-                            confirmLabel="Delete Area"
-                            confirmVariant="destructive"
-                            onConfirm={() => handleDelete(area.id)}
+                            onClick={() => setAreaToDelete(area)}
                             className="h-8 w-8 text-slate-500 hover:text-rose-600 hover:bg-rose-50"
+                            title="Delete Area"
                           >
                             <Trash2 className="h-4 w-4" />
-                          </ConfirmButton>
+                          </Button>
                         )}
                       </div>
                     </TableCell>
@@ -717,6 +823,44 @@ export function AreaListPage() {
           <DialogFooter className="border-t border-slate-100 pt-3">
             <Button variant="outline" size="sm" onClick={() => setSelectedAreaForTeam(null)}>
               Close
+            </Button>
+          </DialogFooter>
+        </div>
+      </Dialog>
+
+      {/* ── SOFT DELETE CONFIRMATION MODAL ── */}
+      <Dialog
+        open={Boolean(areaToDelete)}
+        onOpenChange={(open) => {
+          if (!open) setAreaToDelete(null);
+        }}
+      >
+        <div className="sm:max-w-md">
+          <DialogHeader className="mb-3">
+            <DialogTitle className="text-lg font-bold text-slate-900 flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-rose-500 shrink-0" />
+              Delete Area
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-2 text-xs text-slate-600 space-y-3">
+            <p>
+              Are you sure you want to delete the area <strong>'{areaToDelete?.name}'</strong>? This action will remove it from the active Area Management list. Historical records and existing relationships will be preserved.
+            </p>
+            <div className="p-3 rounded-lg bg-amber-50 text-amber-800 border border-amber-200 text-xs">
+              <strong>Notice:</strong> Once deleted, this area will no longer be visible or available for new assignments. However, its name can be reused for a new area if desired.
+            </div>
+          </div>
+          <DialogFooter className="mt-4 gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setAreaToDelete(null)} disabled={isDeleting}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleConfirmDelete}
+              disabled={isDeleting}
+              className="bg-rose-600 hover:bg-rose-700 text-white"
+            >
+              {isDeleting ? 'Deleting...' : 'Delete Area'}
             </Button>
           </DialogFooter>
         </div>

@@ -143,6 +143,19 @@ export function TeamListPage() {
   // Area quick assignment state
   const [quickAreaId, setQuickAreaId] = useState('');
 
+  // Only active areas can be newly assigned; preserve currently assigned area for existing users
+  const activeAreas = useMemo(() => {
+    return areas.filter((a) => (a.status || 'ACTIVE') === 'ACTIVE');
+  }, [areas]);
+
+  const editSelectableAreas = useMemo(() => {
+    return areas.filter((a) => (a.status || 'ACTIVE') === 'ACTIVE' || a.id === editForm.areaId);
+  }, [areas, editForm.areaId]);
+
+  const quickSelectableAreas = useMemo(() => {
+    return areas.filter((a) => (a.status || 'ACTIVE') === 'ACTIVE' || a.id === quickAreaId);
+  }, [areas, quickAreaId]);
+
   // Check authorization: only DIRECTOR and MANAGER have access (when authenticated)
   const isAuthorized = !currentUser || currentUser?.role === 'DIRECTOR' || currentUser?.role === 'MANAGER';
 
@@ -809,7 +822,7 @@ export function TeamListPage() {
                   className="h-9 text-sm bg-white"
                 >
                   <option value="">-- No Area Assigned (Optional) --</option>
-                  {areas.map((a) => (
+                  {activeAreas.map((a) => (
                     <option key={a.id} value={a.id}>
                       {a.name} ({a.code})
                     </option>
@@ -899,9 +912,9 @@ export function TeamListPage() {
                   className="h-9 text-sm bg-white"
                 >
                   <option value="">-- No Area Assigned (Unassigned) --</option>
-                  {areas.map((a) => (
+                  {editSelectableAreas.map((a) => (
                     <option key={a.id} value={a.id}>
-                      {a.name} ({a.code})
+                      {a.name} ({a.code}) {a.status === 'INACTIVE' ? '(Inactive)' : ''}
                     </option>
                   ))}
                 </Select>
@@ -951,9 +964,9 @@ export function TeamListPage() {
                 className="h-9 text-sm"
               >
                 <option value="">-- No Area Assigned (Unassigned) --</option>
-                {areas.map((a) => (
+                {quickSelectableAreas.map((a) => (
                   <option key={a.id} value={a.id}>
-                    {a.name} ({a.code})
+                    {a.name} ({a.code}) {a.status === 'INACTIVE' ? '(Inactive)' : ''}
                   </option>
                 ))}
               </Select>

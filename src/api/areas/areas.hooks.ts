@@ -6,6 +6,7 @@ import {
   ListAreasParams,
   PaginatedAreasResponse,
   UpdateAreaPayload,
+  UpdateAreaStatusPayload,
 } from './areas.types';
 
 export const areaQueryKeys = {
@@ -50,6 +51,19 @@ export function useUpdateArea() {
   return useMutation({
     mutationFn: ({ id, payload }: { id: string; payload: UpdateAreaPayload }) =>
       areasApi.updateArea(id, payload),
+    onSuccess: (_data, { id }) => {
+      queryClient.invalidateQueries({ queryKey: areaQueryKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: areaQueryKeys.detail(id) });
+    },
+  });
+}
+
+export function useUpdateAreaStatus() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, payload }: { id: string; payload: UpdateAreaStatusPayload }) =>
+      areasApi.updateAreaStatus(id, payload),
     onSuccess: (_data, { id }) => {
       queryClient.invalidateQueries({ queryKey: areaQueryKeys.lists() });
       queryClient.invalidateQueries({ queryKey: areaQueryKeys.detail(id) });

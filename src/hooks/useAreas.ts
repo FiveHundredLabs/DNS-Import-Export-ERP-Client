@@ -1,9 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { areasApi } from '../api/areas/areas.api';
 import { usersApi } from '../api/users/users.api';
-import { AreaCustomer, AreaUser } from '../api/areas/areas.types';
+import { AreaCustomer, AreaStatus, AreaUser } from '../api/areas/areas.types';
 import { toast } from 'sonner';
-import { MOCK_AREAS } from '../mock/mockAreas';
 
 export interface AreaItem {
   id: string;
@@ -12,6 +11,7 @@ export interface AreaItem {
   areaName?: string;
   region?: string;
   description?: string | null;
+  status: AreaStatus;
   areaManagerId?: string;
   areaManagerName?: string;
   areaManagers?: AreaUser[];
@@ -24,40 +24,14 @@ export interface AreaItem {
   userCount?: number;
 }
 
-const DEFAULT_AREAS: AreaItem[] = MOCK_AREAS.map((a) => ({
-  id: a.id,
-  code: a.code || a.name.slice(0, 3).toUpperCase(),
-  name: a.name,
-  areaName: a.name,
-  region: a.region || 'Western',
-  description: null,
-  areaManagerId: a.areaManagerId,
-  areaManagerName: a.areaManagerName,
-  areaManagers: a.areaManagerName
-    ? [
-        {
-          id: a.areaManagerId || 'am-1',
-          fullName: a.areaManagerName,
-          displayName: a.areaManagerName,
-          email: `${a.areaManagerName.toLowerCase().replace(/\s+/g, '.')}@dnserp.com`,
-          role: { code: 'AREA_MANAGER', name: 'Area Manager' },
-        },
-      ]
-    : [],
-  salesReps: [],
-  customers: [],
-  salesManagerId: a.salesManagerId,
-  salesManagerName: a.salesManagerName,
-  customerCount: 0,
-  userCount: a.areaManagerName ? 1 : 0,
-}));
-
 export function useAreas() {
-  const [areas, setAreas] = useState<AreaItem[]>(DEFAULT_AREAS);
+  const [areas, setAreas] = useState<AreaItem[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchAreas = useCallback(async () => {
     setLoading(true);
+    setError(null);
     try {
       const response = await areasApi.listAreas({ pageSize: 100 });
       const mapped: AreaItem[] = response.data.map((a) => {
@@ -88,6 +62,7 @@ export function useAreas() {
           areaName: a.areaName,
           region,
           description: desc,
+          status: a.status || 'ACTIVE',
           areaManagerId: primaryAreaManager?.id,
           areaManagerName: primaryAreaManager?.displayName || primaryAreaManager?.fullName || undefined,
           areaManagers,
@@ -101,9 +76,10 @@ export function useAreas() {
         };
       });
       setAreas(mapped);
-    } catch (e) {
-      console.warn('Backend areas API unavailable, falling back to offline fixtures:', e);
-      setAreas(DEFAULT_AREAS);
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : 'Failed to fetch areas from server';
+      setError(msg);
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
@@ -119,38 +95,28 @@ export function useAreas() {
       const region = data.region ? `Region: ${data.region}` : '';
       const desc = data.description ? `${region ? `${region} | ` : ''}${data.description}` : region || undefined;
 
-      let created: any;
-      try {
-        created = await areasApi.createArea({
-          areaName,
-          description: desc,
-        });
+      const created = await areasApi.createArea({
+        areaName,
+        description: desc,
+      });
 
-        // If an Area Manager was selected, assign the user to this area
-        if (data.areaManagerId) {
-          try {
-            const user = await usersApi.getUserById(data.areaManagerId);
-            if (user?.updatedAt) {
-              await usersApi.updateUser(data.areaManagerId, {
-                areaId: created.id,
-                updatedAt: user.updatedAt,
-              });
-            }
-          } catch (assignErr) {
-            console.warn('Failed to assign manager to area:', assignErr);
+      // If an Area Manager was selected, assign the user to this area
+      if (data.areaManagerId) {
+        try {
+          const user = await usersApi.getUserById(data.areaManagerId);
+          if (user?.updatedAt) {
+            await usersApi.updateUser(data.areaManagerId, {
+              areaId: created.id,
+              updatedAt: user.updatedAt,
+            });
           }
+        } catch (assignErr) {
+          console.warn('Failed to assign manager to area:', assignErr);
         }
-      } catch (err: unknown) {
-        console.warn('Backend createArea error, generating local fallback:', err);
-        created = {
-          id: `area-${Date.now()}`,
-          areaCode: areaName.slice(0, 3).toUpperCase(),
-          areaName,
-          description: desc,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        };
       }
+
+      await fetchAreas();
+      toast.success(`Area "${areaName}" created successfully.`);
 
       const newArea: AreaItem = {
         id: created.id,
@@ -159,33 +125,18 @@ export function useAreas() {
         areaName: created.areaName,
         region: data.region || 'Western',
         description: created.description,
+        status: created.status || 'ACTIVE',
         areaManagerId: data.areaManagerId,
         areaManagerName: data.areaManagerName,
-        areaManagers: data.areaManagerName
-          ? [
-              {
-                id: data.areaManagerId || 'am-new',
-                fullName: data.areaManagerName,
-                displayName: data.areaManagerName,
-                email: `${data.areaManagerName.toLowerCase().replace(/\s+/g, '.')}@dnserp.com`,
-                role: { code: 'AREA_MANAGER', name: 'Area Manager' },
-              },
-            ]
-          : [],
+        areaManagers: [],
         salesReps: [],
         customers: [],
-        salesManagerId: data.salesManagerId,
-        salesManagerName: data.salesManagerName,
-        updatedAt: created.updatedAt,
         customerCount: 0,
         userCount: data.areaManagerId ? 1 : 0,
       };
-
-      setAreas((prev) => [newArea, ...prev]);
-      toast.success(`Area "${areaName}" created successfully.`);
       return newArea;
     },
-    [],
+    [fetchAreas],
   );
 
   const updateArea = useCallback(
@@ -233,6 +184,9 @@ export function useAreas() {
         }
       }
 
+      await fetchAreas();
+      toast.success(`Area "${areaName || updated.areaName}" updated successfully.`);
+
       const updatedArea: AreaItem = {
         id: updated.id,
         code: updated.areaCode || (data.code || areaName.slice(0, 3).toUpperCase()),
@@ -240,19 +194,10 @@ export function useAreas() {
         areaName: updated.areaName,
         region: data.region || 'Western',
         description: updated.description,
+        status: updated.status || existingArea?.status || 'ACTIVE',
         areaManagerId: data.areaManagerId,
         areaManagerName: data.areaManagerName,
-        areaManagers: data.areaManagerName
-          ? [
-              {
-                id: data.areaManagerId || 'am-upd',
-                fullName: data.areaManagerName,
-                displayName: data.areaManagerName,
-                email: `${data.areaManagerName.toLowerCase().replace(/\s+/g, '.')}@dnserp.com`,
-                role: { code: 'AREA_MANAGER', name: 'Area Manager' },
-              },
-            ]
-          : [],
+        areaManagers: existingArea?.areaManagers || [],
         salesReps: existingArea?.salesReps || [],
         customers: existingArea?.customers || [],
         salesManagerId: data.salesManagerId,
@@ -261,26 +206,39 @@ export function useAreas() {
         customerCount: existingArea?.customerCount ?? 0,
         userCount: existingArea?.userCount ?? 0,
       };
-
-      setAreas((prev) => prev.map((a) => (a.id === id ? { ...a, ...updatedArea } : a)));
-      toast.success(`Area "${areaName || updated.areaName}" updated successfully.`);
       return updatedArea;
     },
-    [areas],
+    [areas, fetchAreas],
   );
 
-  const deleteArea = useCallback(async (id: string): Promise<void> => {
-    await areasApi.deleteArea(id);
-    setAreas((prev) => prev.filter((a) => a.id !== id));
-    toast.success('Area deleted successfully.');
-  }, []);
+  const updateAreaStatus = useCallback(
+    async (id: string, status: AreaStatus): Promise<void> => {
+      await areasApi.updateAreaStatus(id, { status });
+      setAreas((prev) =>
+        prev.map((a) => (a.id === id ? { ...a, status } : a)),
+      );
+      toast.success(`Area status changed to ${status}.`);
+    },
+    [],
+  );
+
+  const deleteArea = useCallback(
+    async (id: string): Promise<void> => {
+      await areasApi.deleteArea(id);
+      setAreas((prev) => prev.filter((a) => a.id !== id));
+      toast.success('Area soft-deleted successfully.');
+    },
+    [],
+  );
 
   return {
     areas,
     loading,
+    error,
     refetch: fetchAreas,
     createArea,
     updateArea,
+    updateAreaStatus,
     deleteArea,
   };
 }

@@ -1,3 +1,5 @@
+export type AreaStatus = 'ACTIVE' | 'INACTIVE';
+
 export interface AreaUser {
   id: string;
   fullName: string;
@@ -28,6 +30,7 @@ export interface Area {
   areaCode?: string;
   areaName: string;
   description?: string | null;
+  status: AreaStatus;
   createdAt?: string;
   updatedAt?: string;
   users?: AreaUser[];
@@ -42,6 +45,7 @@ export interface ListAreasParams {
   page?: number;
   pageSize?: number;
   search?: string;
+  status?: AreaStatus | 'ALL';
   sortBy?: 'areaName' | 'createdAt' | 'updatedAt';
   sortOrder?: 'asc' | 'desc';
 }
@@ -55,6 +59,10 @@ export interface UpdateAreaPayload {
   areaName?: string;
   description?: string | null;
   updatedAt: string;
+}
+
+export interface UpdateAreaStatusPayload {
+  status: AreaStatus;
 }
 
 export interface PaginatedAreasResponse {
