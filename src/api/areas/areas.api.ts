@@ -1,11 +1,16 @@
 import { apiGetPaginated, apiGet, apiPost, apiPatch, apiDelete } from '../client';
-import { Area, ListAreasParams, PaginatedAreasResponse } from './areas.types';
+import {
+  Area,
+  CreateAreaPayload,
+  ListAreasParams,
+  PaginatedAreasResponse,
+  UpdateAreaPayload,
+} from './areas.types';
 
 export const areasApi = {
   listAreas: async (params?: ListAreasParams, signal?: AbortSignal): Promise<PaginatedAreasResponse> => {
     const query = new URLSearchParams();
     if (params?.page) query.set('page', String(params.page));
-    // Safe pageSize: backend allows max 100
     if (params?.pageSize) query.set('pageSize', String(Math.min(params.pageSize, 100)));
     if (params?.search) query.set('search', params.search);
     if (params?.sortBy) query.set('sortBy', params.sortBy);
@@ -27,21 +32,21 @@ export const areasApi = {
     return apiGet<Area>(`/areas/${id}`, { signal });
   },
 
-  createArea: async (data: { areaName: string; description?: string }): Promise<Area> => {
-    return apiPost<Area>('/areas', data);
+  createArea: async (payload: CreateAreaPayload): Promise<Area> => {
+    return apiPost<Area>('/areas', payload, {
+      successMessage: 'Sales area created successfully',
+    });
   },
 
-  updateArea: async (
-    id: string,
-    data: { areaName?: string; description?: string | null; updatedAt?: string },
-  ): Promise<Area> => {
-    return apiPatch<Area>(`/areas/${id}`, {
-      ...data,
-      updatedAt: data.updatedAt || new Date().toISOString(),
+  updateArea: async (id: string, payload: UpdateAreaPayload): Promise<Area> => {
+    return apiPatch<Area>(`/areas/${id}`, payload, {
+      successMessage: 'Sales area updated successfully',
     });
   },
 
   deleteArea: async (id: string): Promise<void> => {
-    return apiDelete<void>(`/areas/${id}`);
+    return apiDelete<void>(`/areas/${id}`, {
+      successMessage: 'Sales area deleted successfully',
+    });
   },
 };

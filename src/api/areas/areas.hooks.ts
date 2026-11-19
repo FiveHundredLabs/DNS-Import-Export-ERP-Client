@@ -1,6 +1,12 @@
-import { useQuery, UseQueryResult } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient, UseQueryResult } from '@tanstack/react-query';
 import { areasApi } from './areas.api';
-import { Area, ListAreasParams, PaginatedAreasResponse } from './areas.types';
+import {
+  Area,
+  CreateAreaPayload,
+  ListAreasParams,
+  PaginatedAreasResponse,
+  UpdateAreaPayload,
+} from './areas.types';
 
 export const areaQueryKeys = {
   all: ['areas'] as const,
@@ -14,7 +20,7 @@ export function useAreas(params?: ListAreasParams): UseQueryResult<PaginatedArea
   return useQuery({
     queryKey: areaQueryKeys.list(params),
     queryFn: ({ signal }) => areasApi.listAreas(params, signal),
-    staleTime: 300_000, // Areas are reference data — 5 min cache
+    staleTime: 60_000,
   });
 }
 
@@ -23,6 +29,41 @@ export function useArea(id: string): UseQueryResult<Area, Error> {
     queryKey: areaQueryKeys.detail(id),
     queryFn: ({ signal }) => areasApi.getAreaById(id, signal),
     enabled: Boolean(id),
-    staleTime: 300_000,
+    staleTime: 60_000,
+  });
+}
+
+export function useCreateArea() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (payload: CreateAreaPayload) => areasApi.createArea(payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: areaQueryKeys.lists() });
+    },
+  });
+}
+
+export function useUpdateArea() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, payload }: { id: string; payload: UpdateAreaPayload }) =>
+      areasApi.updateArea(id, payload),
+    onSuccess: (_data, { id }) => {
+      queryClient.invalidateQueries({ queryKey: areaQueryKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: areaQueryKeys.detail(id) });
+    },
+  });
+}
+
+export function useDeleteArea() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) => areasApi.deleteArea(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: areaQueryKeys.lists() });
+    },
   });
 }

@@ -1,35 +1,40 @@
 import { useState, useMemo } from 'react';
-import { AreaItem as Area } from '../../hooks/useAreas';
-import { useAreas } from '../../hooks/useAreas';
+import { AreaItem as Area, useAreas } from '../../hooks/useAreas';
 import { useUsers } from '../../hooks/useUsers';
+import { useAuth } from '../../hooks/useAuth';
 import { Button } from '../../components/ui/button';
 import { ConfirmButton } from '../../components/ui/confirm-button';
 import { Input } from '../../components/ui/input';
 import { Select } from '../../components/ui/select';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../../components/ui/table';
-import { Edit3, Trash2, Plus, Map, Briefcase, Hash, MapPin } from 'lucide-react';
+import { Edit3, Trash2, Plus, Map, Briefcase, Hash, MapPin, Users, Building2 } from 'lucide-react';
 import { Dialog, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
 import { PageHeader } from '../../components/common/PageHeader';
 
 export function AreaListPage() {
+  const { role } = useAuth();
+  const canCreate = role === 'DIRECTOR' || role === 'MANAGER' || role === 'SALES_MANAGER';
+  const canEdit = role === 'DIRECTOR' || role === 'MANAGER' || role === 'SALES_MANAGER';
+  const canDelete = role === 'DIRECTOR' || role === 'MANAGER';
+
   const { areas, loading: areasLoading, createArea, updateArea, deleteArea } = useAreas();
-  const { users, loading: usersLoading } = useUsers();
+  const { users } = useUsers();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingArea, setEditingArea] = useState<Area | null>(null);
   const [formData, setFormData] = useState({ code: '', name: '', region: '', areaManagerId: '' });
 
   const areaManagers = useMemo(() => {
-    return users.filter(u => u.role === 'AREA_MANAGER');
+    return users.filter((u) => u.role === 'AREA_MANAGER');
   }, [users]);
 
   const handleOpenModal = (area?: Area) => {
     if (area) {
       setEditingArea(area);
-      setFormData({ 
-        code: area.code, 
-        name: area.name, 
-        region: area.region, 
-        areaManagerId: area.areaManagerId || '' 
+      setFormData({
+        code: area.code || '',
+        name: area.name,
+        region: area.region || '',
+        areaManagerId: area.areaManagerId || '',
       });
     } else {
       setEditingArea(null);
@@ -42,31 +47,30 @@ export function AreaListPage() {
     if (!formData.name.trim() || !formData.code.trim()) {
       return;
     }
-    const selectedManager = areaManagers.find(u => u.id === formData.areaManagerId);
+    const selectedManager = areaManagers.find((u) => u.id === formData.areaManagerId);
     let finalManagerName = 'Unassigned';
     let finalManagerId = '';
     if (selectedManager) {
       finalManagerName = selectedManager.name;
       finalManagerId = selectedManager.id;
     } else if (formData.areaManagerId) {
-      const allUsersMatch = users.find(u => u.id === formData.areaManagerId);
-      finalManagerName = allUsersMatch ? allUsersMatch.name : (editingArea?.areaManagerName || 'Unassigned');
+      const allUsersMatch = users.find((u) => u.id === formData.areaManagerId);
+      finalManagerName = allUsersMatch ? allUsersMatch.name : editingArea?.areaManagerName || 'Unassigned';
       finalManagerId = formData.areaManagerId;
     }
-    
+
     if (editingArea) {
       await updateArea(editingArea.id, {
         ...formData,
         areaManagerId: finalManagerId,
         areaManagerName: finalManagerName,
+        updatedAt: editingArea.updatedAt,
       });
     } else {
-      await createArea({ 
-        ...formData, 
+      await createArea({
+        ...formData,
         areaManagerId: finalManagerId,
         areaManagerName: finalManagerName,
-        salesManagerId: 'usr-103', 
-        salesManagerName: 'Kamal Perera',
       });
     }
     setIsModalOpen(false);
@@ -80,14 +84,13 @@ export function AreaListPage() {
     <div className="w-full space-y-5">
       <PageHeader
         title="Area Management"
-        breadcrumbs={[
-          { label: 'Administration' },
-          { label: 'Areas' },
-        ]}
+        breadcrumbs={[{ label: 'Administration' }, { label: 'Areas' }]}
         actions={
-          <Button onClick={() => handleOpenModal()} className="gap-2 bg-primary hover:bg-primary-hover shadow-xs">
-            <Plus className="h-4 w-4" /> Create Area
-          </Button>
+          canCreate ? (
+            <Button onClick={() => handleOpenModal()} className="gap-2 bg-primary hover:bg-primary-hover shadow-xs">
+              <Plus className="h-4 w-4" /> Create Area
+            </Button>
+          ) : undefined
         }
       />
 
@@ -99,61 +102,90 @@ export function AreaListPage() {
               <TableHead className="font-semibold text-slate-600">Area Name</TableHead>
               <TableHead className="font-semibold text-slate-600">Region</TableHead>
               <TableHead className="font-semibold text-slate-600">Area Manager</TableHead>
-              <TableHead className="text-right font-semibold text-slate-600">Actions</TableHead>
+              <TableHead className="font-semibold text-slate-600 text-center">Customers</TableHead>
+              {(canEdit || canDelete) && (
+                <TableHead className="text-right font-semibold text-slate-600">Actions</TableHead>
+              )}
             </TableRow>
           </TableHeader>
           <TableBody>
             {areasLoading ? (
-              <TableRow><TableCell colSpan={5} className="text-center py-12 text-slate-500">Loading areas...</TableCell></TableRow>
-            ) : areas.length === 0 ? (
-              <TableRow><TableCell colSpan={5} className="text-center py-12 text-slate-500">No areas found. Create one to get started.</TableCell></TableRow>
-            ) : areas.map(area => (
-              <TableRow key={area.id} className="group hover:bg-slate-50 transition-colors">
-                <TableCell>
-                  <div className="inline-flex items-center px-2 py-1 rounded-md bg-slate-100 text-slate-600 font-mono text-xs font-medium">
-                    {area.code}
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <div className="flex items-center gap-2">
-                    <Map className="h-4 w-4 text-indigo-500" />
-                    <span className="font-semibold text-slate-900">{area.name}</span>
-                  </div>
-                </TableCell>
-                <TableCell className="text-slate-600">{area.region}</TableCell>
-                <TableCell>
-                  {area.areaManagerName && area.areaManagerName !== 'Unassigned' ? (
-                    <div className="flex items-center gap-2 text-sm font-medium text-slate-700">
-                      <div className="h-6 w-6 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-xs font-bold">
-                        {area.areaManagerName.charAt(0)}
-                      </div>
-                      {area.areaManagerName}
-                    </div>
-                  ) : (
-                    <span className="text-sm text-slate-400 italic">Unassigned</span>
-                  )}
-                </TableCell>
-                <TableCell className="text-right">
-                  <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Button variant="ghost" size="icon" onClick={() => handleOpenModal(area)} className="h-8 w-8 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50">
-                      <Edit3 className="h-4 w-4" />
-                    </Button>
-                    <ConfirmButton
-                      variant="ghost"
-                      size="icon"
-                      confirmTitle="Delete Area?"
-                      confirmMessage={`Are you sure you want to delete the area "${area.name}" (${area.code})?`}
-                      confirmLabel="Delete Area"
-                      confirmVariant="destructive"
-                      onConfirm={() => handleDelete(area.id)}
-                      className="h-8 w-8 text-slate-500 hover:text-rose-600 hover:bg-rose-50"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </ConfirmButton>
-                  </div>
+              <TableRow>
+                <TableCell colSpan={6} className="text-center py-12 text-slate-500">
+                  Loading areas...
                 </TableCell>
               </TableRow>
-            ))}
+            ) : areas.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={6} className="text-center py-12 text-slate-500">
+                  No areas found. Create one to get started.
+                </TableCell>
+              </TableRow>
+            ) : (
+              areas.map((area) => (
+                <TableRow key={area.id} className="group hover:bg-slate-50 transition-colors">
+                  <TableCell>
+                    <div className="inline-flex items-center px-2 py-1 rounded-md bg-slate-100 text-slate-600 font-mono text-xs font-medium">
+                      {area.code}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <Map className="h-4 w-4 text-indigo-500" />
+                      <span className="font-semibold text-slate-900">{area.name}</span>
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-slate-600">{area.region}</TableCell>
+                  <TableCell>
+                    {area.areaManagerName && area.areaManagerName !== 'Unassigned' ? (
+                      <div className="flex items-center gap-2 text-sm font-medium text-slate-700">
+                        <div className="h-6 w-6 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-xs font-bold">
+                          {area.areaManagerName.charAt(0)}
+                        </div>
+                        {area.areaManagerName}
+                      </div>
+                    ) : (
+                      <span className="text-sm text-slate-400 italic">Unassigned</span>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-700">
+                      {area.customerCount ?? 0}
+                    </span>
+                  </TableCell>
+                  {(canEdit || canDelete) && (
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        {canEdit && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleOpenModal(area)}
+                            className="h-8 w-8 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50"
+                          >
+                            <Edit3 className="h-4 w-4" />
+                          </Button>
+                        )}
+                        {canDelete && (
+                          <ConfirmButton
+                            variant="ghost"
+                            size="icon"
+                            confirmTitle="Delete Area?"
+                            confirmMessage={`Are you sure you want to delete the area "${area.name}" (${area.code})?`}
+                            confirmLabel="Delete Area"
+                            confirmVariant="destructive"
+                            onConfirm={() => handleDelete(area.id)}
+                            className="h-8 w-8 text-slate-500 hover:text-rose-600 hover:bg-rose-50"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </ConfirmButton>
+                        )}
+                      </div>
+                    </TableCell>
+                  )}
+                </TableRow>
+              ))
+            )}
           </TableBody>
         </Table>
       </div>
@@ -161,9 +193,13 @@ export function AreaListPage() {
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <div className="sm:max-w-[425px]">
           <DialogHeader className="mb-4">
-            <DialogTitle className="text-xl font-bold">{editingArea ? 'Edit Area' : 'Create New Area'}</DialogTitle>
+            <DialogTitle className="text-xl font-bold">
+              {editingArea ? 'Edit Area' : 'Create New Area'}
+            </DialogTitle>
             <p className="text-sm text-slate-500 mt-1">
-              {editingArea ? 'Update the details of the operational area below.' : 'Define a new operational area and assign a manager.'}
+              {editingArea
+                ? 'Update the details of the operational area below.'
+                : 'Define a new operational area and assign a manager.'}
             </p>
           </DialogHeader>
           <div className="space-y-4 py-2">
@@ -171,9 +207,9 @@ export function AreaListPage() {
               <label className="text-sm font-semibold text-slate-700 flex items-center gap-1.5">
                 <Hash className="h-3.5 w-3.5 text-slate-400" /> Area Code
               </label>
-              <Input 
-                value={formData.code} 
-                onChange={e => setFormData({...formData, code: e.target.value})} 
+              <Input
+                value={formData.code}
+                onChange={(e) => setFormData({ ...formData, code: e.target.value })}
                 placeholder="e.g. KEL"
                 className="focus-visible:ring-indigo-500"
               />
@@ -182,9 +218,9 @@ export function AreaListPage() {
               <label className="text-sm font-semibold text-slate-700 flex items-center gap-1.5">
                 <Map className="h-3.5 w-3.5 text-slate-400" /> Area Name
               </label>
-              <Input 
-                value={formData.name} 
-                onChange={e => setFormData({...formData, name: e.target.value})} 
+              <Input
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 placeholder="e.g. Kelaniya, Maharagama, Malabe, Kottawa"
                 className="focus-visible:ring-indigo-500"
               />
@@ -193,9 +229,9 @@ export function AreaListPage() {
               <label className="text-sm font-semibold text-slate-700 flex items-center gap-1.5">
                 <MapPin className="h-3.5 w-3.5 text-slate-400" /> Region
               </label>
-              <Input 
-                value={formData.region} 
-                onChange={e => setFormData({...formData, region: e.target.value})} 
+              <Input
+                value={formData.region}
+                onChange={(e) => setFormData({ ...formData, region: e.target.value })}
                 placeholder="e.g. Colombo & Suburbs"
                 className="focus-visible:ring-indigo-500"
               />
@@ -207,16 +243,18 @@ export function AreaListPage() {
                 </span>
                 <span className="text-xs font-normal text-slate-400">Optional</span>
               </label>
-              <Select 
-                value={formData.areaManagerId} 
-                onChange={e => setFormData({...formData, areaManagerId: e.target.value})}
+              <Select
+                value={formData.areaManagerId}
+                onChange={(e) => setFormData({ ...formData, areaManagerId: e.target.value })}
                 className="focus-visible:ring-indigo-500"
               >
                 <option value="">-- No Area Manager (Optional) --</option>
-                {areaManagers.map(mgr => (
-                  <option key={mgr.id} value={mgr.id}>{mgr.name}</option>
+                {areaManagers.map((mgr) => (
+                  <option key={mgr.id} value={mgr.id}>
+                    {mgr.name}
+                  </option>
                 ))}
-                {formData.areaManagerId && !areaManagers.some(m => m.id === formData.areaManagerId) && (
+                {formData.areaManagerId && !areaManagers.some((m) => m.id === formData.areaManagerId) && (
                   <option key={formData.areaManagerId} value={formData.areaManagerId}>
                     {editingArea?.areaManagerName || 'Unknown'} (Role Changed)
                   </option>
@@ -225,7 +263,9 @@ export function AreaListPage() {
             </div>
           </div>
           <DialogFooter className="mt-6 gap-2 sm:gap-0">
-            <Button variant="outline" onClick={() => setIsModalOpen(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setIsModalOpen(false)}>
+              Cancel
+            </Button>
             <Button onClick={handleSave} className="bg-indigo-600 hover:bg-indigo-700">
               {editingArea ? 'Save Changes' : 'Create Area'}
             </Button>
@@ -235,4 +275,3 @@ export function AreaListPage() {
     </div>
   );
 }
-
