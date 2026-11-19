@@ -143,10 +143,14 @@ export function ProductListPage() {
         <ProductTable
           products={products}
           onView={(p) => navigate(`/products/${p.id}`, { state: { from: location.pathname + location.search } })}
-          onProposePrice={canEdit ? (p) => {
-            setSelectedProductForProposal(p);
-            setProposalModalOpen(true);
-          } : undefined}
+          onProposePrice={
+            canEdit
+              ? (p) => {
+                  setSelectedProductForProposal(p);
+                  setProposalModalOpen(true);
+                }
+              : undefined
+          }
         />
       )}
 
@@ -164,9 +168,11 @@ export function ProductListPage() {
           return await createCategory(catData);
         }}
       />
+      )}
 
       {/* Price Change Proposal Modal */}
-      <ProductPriceProposalModal
+      {canEdit && (
+        <ProductPriceProposalModal
         product={selectedProductForProposal}
         open={proposalModalOpen}
         onOpenChange={setProposalModalOpen}
@@ -174,15 +180,18 @@ export function ProductListPage() {
           await proposePriceChange(params);
         }}
       />
+      )}
 
       {/* Category Creation Modal */}
-      <CategoryCreateModal
+      {canCreate && (
+        <CategoryCreateModal
         open={createCategoryModalOpen}
         onOpenChange={setCreateCategoryModalOpen}
         onCreate={async (catData) => {
           await createCategory(catData);
         }}
       />
+      )}
     </div>
   );
 }
