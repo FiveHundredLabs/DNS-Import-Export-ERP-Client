@@ -43,6 +43,7 @@ import { Input } from '../../../components/ui/input';
 import { Badge } from '../../../components/ui/badge';
 import { Card } from '../../../components/ui/card';
 import { toast } from 'sonner';
+import { TableLoadingSkeleton } from '../../../components/common/LoadingSkeleton';
 
 function toUiAccount(acc: FinanceAccount): Account {
   const rootClass = (acc.category?.rootClass || 'ASSET') as AccountClass;
@@ -137,9 +138,11 @@ interface ChartOfAccountsPageProps {
 }
 
 export function ChartOfAccountsPage({ defaultView = 'ACCOUNTS' }: ChartOfAccountsPageProps) {
-  const { data: rawAccounts = [], refetch: refetchAccounts } = useAccounts({ limit: 100 });
-  const { data: apiCategories = [], refetch: refetchCategories } = useCategories();
+  const { data: rawAccounts = [], isLoading: accountsLoading, refetch: refetchAccounts } = useAccounts({ limit: 100 });
+  const { data: apiCategories = [], isLoading: categoriesLoading, refetch: refetchCategories } = useCategories();
   const { data: journals = [] } = useJournals();
+
+  const loading = accountsLoading || categoriesLoading;
 
   const createAccountMutation = useCreateAccount();
   const updateAccountMutation = useUpdateAccount();
@@ -848,6 +851,8 @@ export function ChartOfAccountsPage({ defaultView = 'ACCOUNTS' }: ChartOfAccount
             })}
           </div>
         </div>
+      ) : loading ? (
+        <TableLoadingSkeleton rows={10} cols={6} />
       ) : (
         /* Main Chart of Accounts View */
         <>

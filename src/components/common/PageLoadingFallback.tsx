@@ -1,12 +1,9 @@
-import React from 'react';
+import { DashboardSkeleton } from './LoadingSkeleton';
 
 export function PageLoadingFallback() {
   return (
-    <div className="flex h-[50vh] w-full items-center justify-center">
-      <div className="flex flex-col items-center gap-3">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary/20 border-t-primary" />
-        <span className="text-xs text-slate-400 font-medium tracking-wide">Loading workspace...</span>
-      </div>
+    <div className="w-full max-w-7xl mx-auto space-y-6 animate-in fade-in-50 duration-200">
+      <DashboardSkeleton />
     </div>
   );
 }

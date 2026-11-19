@@ -239,29 +239,7 @@ export function CustomerHubView({ customer: initialCustomer }: { customer: Custo
     return true;
   });
 
-  const mockActivities = [
-    {
-      id: 'act-01',
-      type: 'SHOP_VISIT',
-      date: '2025-02-18',
-      author: customer.assignedRepName,
-      summary: 'Bi-weekly routine dealer stock inspection and re-order discussion.',
-    },
-    {
-      id: 'act-02',
-      type: 'PAYMENT_COLLECTION',
-      date: '2025-02-12',
-      author: customer.assignedRepName,
-      summary: 'Collected security cheque for invoice INV-098 and issued thermal receipt.',
-    },
-    {
-      id: 'act-03',
-      type: 'WARRANTY_AUDIT',
-      date: '2025-02-05',
-      author: customer.assignedRepName,
-      summary: 'Reconciled 14 pending warranty registrations from December sales batch.',
-    },
-  ];
+  const mockActivities: Array<{ id: string; type: string; date: string; author: string; summary: string }> = [];
 
   return (
     <div className="space-y-6">
@@ -1255,24 +1233,30 @@ export function CustomerHubView({ customer: initialCustomer }: { customer: Custo
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {mockActivities.map((act) => (
-                  <div
-                    key={act.id}
-                    className="p-3 bg-white rounded-lg border border-slate-200 text-xs flex items-start gap-3"
-                  >
-                    <div className="p-2 rounded-md bg-primary-light text-primary mt-0.5">
-                      <Clock className="h-4 w-4" />
-                    </div>
-                    <div className="flex-1 space-y-1">
-                      <div className="flex items-center justify-between">
-                        <span className="font-semibold text-slate-900">{act.type.replace('_', ' ')}</span>
-                        <span className="text-xs text-slate-400">{formatDate(act.date)}</span>
-                      </div>
-                      <p className="text-slate-600">{act.summary}</p>
-                      <div className="text-xs text-slate-500 font-medium">Recorded by {act.author}</div>
-                    </div>
+                {mockActivities.length === 0 ? (
+                  <div className="py-8 text-center text-slate-500 text-xs">
+                    No field activities recorded for this customer yet.
                   </div>
-                ))}
+                ) : (
+                  mockActivities.map((act) => (
+                    <div
+                      key={act.id}
+                      className="p-3 bg-white rounded-lg border border-slate-200 text-xs flex items-start gap-3"
+                    >
+                      <div className="p-2 rounded-md bg-primary-light text-primary mt-0.5">
+                        <Clock className="h-4 w-4" />
+                      </div>
+                      <div className="flex-1 space-y-1">
+                        <div className="flex items-center justify-between">
+                          <span className="font-semibold text-slate-900">{act.type.replace('_', ' ')}</span>
+                          <span className="text-xs text-slate-400">{formatDate(act.date)}</span>
+                        </div>
+                        <p className="text-slate-600">{act.summary}</p>
+                        <div className="text-xs text-slate-500 font-medium">Recorded by {act.author}</div>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             </CardContent>
           </Card>

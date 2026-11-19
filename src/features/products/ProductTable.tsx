@@ -19,9 +19,9 @@ export function ProductTable({
   onEdit,
   onProposePrice,
 }: ProductTableProps) {
-  const { hasPermission } = useAuth();
-  const canEdit = hasPermission('products:edit');
-  const canProposePrice = hasPermission('products:price_approval') || canEdit;
+  const { role, hasPermission } = useAuth();
+  const canEdit = (role === 'DIRECTOR' || role === 'MANAGER') && hasPermission('products:edit');
+  const canProposePrice = (role === 'DIRECTOR' || role === 'MANAGER') && (hasPermission('products:price_approval') || canEdit);
   const hasActions = Boolean((canProposePrice && onProposePrice) || (canEdit && onEdit));
 
   return (
@@ -55,7 +55,13 @@ export function ProductTable({
               <div className="grid grid-cols-3 gap-2 py-2 px-2.5 bg-slate-50 rounded-xl text-xs">
                 <div>
                   <span className="text-[10px] text-slate-400 block font-medium">Selling Price</span>
-                  <span className="font-bold font-mono text-slate-900">{formatCurrency(p.pricing.currentSellingPrice)}</span>
+                  <span className="font-bold font-mono text-slate-900">
+                    {p.pricing.currentSellingPrice > 0 ? (
+                      formatCurrency(p.pricing.currentSellingPrice)
+                    ) : (
+                      <span className="text-amber-600 font-semibold text-[11px]">Batch Priced</span>
+                    )}
+                  </span>
                 </div>
                 <div>
                   <span className="text-[10px] text-slate-400 block font-medium">Stock On Hand</span>
@@ -114,6 +120,11 @@ export function ProductTable({
                       {p.name}
                     </div>
                     <div className="font-mono text-xs text-slate-500 mt-0.5">
+                      {p.brandName && (
+                        <span className="font-semibold text-indigo-700 mr-1.5 bg-indigo-50 px-1.5 py-0.2 rounded">
+                          {p.brandName}
+                        </span>
+                      )}
                       SKU: {p.sku} | Barcode: {p.barcode}
                     </div>
                   </TableCell>
@@ -124,7 +135,13 @@ export function ProductTable({
                     {formatCurrency(p.pricing.costPrice)}
                   </TableCell>
                   <TableCell className="text-right tabular-nums font-semibold text-[13.5px] text-slate-900">
-                    {formatCurrency(p.pricing.currentSellingPrice)}
+                    {p.pricing.currentSellingPrice > 0 ? (
+                      formatCurrency(p.pricing.currentSellingPrice)
+                    ) : (
+                      <span className="inline-flex items-center text-xs text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full font-medium border border-amber-200/80">
+                        Batch Priced
+                      </span>
+                    )}
                   </TableCell>
                   <TableCell className="text-right tabular-nums text-[13px] text-slate-600 font-normal">
                     {p.pricing.maxDiscountPercentage}%

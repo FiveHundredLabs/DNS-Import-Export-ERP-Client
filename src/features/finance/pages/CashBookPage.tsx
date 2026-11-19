@@ -19,6 +19,7 @@ import { Button } from '../../../components/ui/button';
 import { ConfirmButton } from '../../../components/ui/confirm-button';
 import { Input } from '../../../components/ui/input';
 import { Badge } from '../../../components/ui/badge';
+import { Skeleton } from '../../../components/ui/skeleton';
 import {
   Dialog,
   DialogContent,
@@ -599,12 +600,15 @@ export function CashBookPage() {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {ledgerLoading ? (
-                  <tr>
-                    <td colSpan={9} className="py-12 text-center text-slate-400">
-                      <RefreshCw className="h-5 w-5 animate-spin mx-auto mb-2 text-primary/60" />
-                      Loading live cash book ledger...
-                    </td>
-                  </tr>
+                  Array.from({ length: 4 }).map((_, r) => (
+                    <tr key={r} className="animate-pulse">
+                      {Array.from({ length: 9 }).map((_, c) => (
+                        <td key={c} className="py-3 px-4">
+                          <Skeleton className="h-4 w-full rounded" />
+                        </td>
+                      ))}
+                    </tr>
+                  ))
                 ) : filteredLedger.length === 0 ? (
                   <tr>
                     <td colSpan={9} className="py-12 text-center text-slate-400">
@@ -764,12 +768,15 @@ export function CashBookPage() {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {loading ? (
-                  <tr>
-                    <td colSpan={9} className="py-12 text-center text-slate-400">
-                      <RefreshCw className="h-5 w-5 animate-spin mx-auto mb-2 text-primary/60" />
-                      Loading payment vouchers...
-                    </td>
-                  </tr>
+                  Array.from({ length: 4 }).map((_, r) => (
+                    <tr key={r} className="animate-pulse">
+                      {Array.from({ length: 9 }).map((_, c) => (
+                        <td key={c} className="py-3 px-4">
+                          <Skeleton className="h-4 w-full rounded" />
+                        </td>
+                      ))}
+                    </tr>
+                  ))
                 ) : filteredVouchers.length === 0 ? (
                   <tr>
                     <td colSpan={9} className="py-12 text-center text-slate-400">

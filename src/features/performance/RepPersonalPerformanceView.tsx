@@ -17,6 +17,7 @@ import {
   Coins,
   FileText,
 } from 'lucide-react';
+import { DashboardSkeleton } from '../../components/common/LoadingSkeleton';
 
 interface RepPersonalPerformanceViewProps {
   repId: string;
@@ -78,12 +79,7 @@ export function RepPersonalPerformanceView({
   }, [data?.qualifyingInvoices, searchQuery, statusFilter]);
 
   if (loading) {
-    return (
-      <div className="flex flex-col items-center justify-center py-20 space-y-3">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-slate-300 border-t-indigo-600" />
-        <p className="text-xs text-slate-500 font-medium">Computing sales and cash collection balances...</p>
-      </div>
-    );
+    return <DashboardSkeleton />;
   }
 
   if (error || !data) {

@@ -30,6 +30,12 @@ export interface User {
   birthDate?: string;
   nationalId?: string;
   address?: string;
+  fullName?: string;
+  displayName?: string;
+  roleId?: string;
+  status?: string;
+  joinedDate?: string;
+  updatedAt?: string;
 }
 
 export type Permission =

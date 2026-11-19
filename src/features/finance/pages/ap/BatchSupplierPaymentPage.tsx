@@ -1,7 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apService, VendorBill } from '../../services/apService';
-import { MOCK_GRNS } from '../../../../mock/mockInventory';
 import { useFinanceLedger } from '../../hooks/useFinanceLedger';
 import { useAuth } from '../../../../hooks/useAuth';
 import { CurrencyInput } from '../../components/CurrencyInput';
@@ -282,12 +281,9 @@ export function BatchSupplierPaymentPage({
   }, [allPurchaseOrders, selectedSupplierId, selectedSupplier]);
 
   const getBillPoRef = (bill: VendorBill): string => {
-    const matchingGrn = MOCK_GRNS.find(
-      (g) => g.id === bill.grnId || g.grnNumber === bill.grnNumber
-    );
     return (
       (bill as any).purchaseOrderNumber ||
-      matchingGrn?.purchaseOrderNumber ||
+      (bill as any).poNumber ||
       (bill.grnNumber ? `PO-${bill.grnNumber.slice(-4)}` : 'PO-DIRECT')
     );
   };

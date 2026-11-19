@@ -21,6 +21,7 @@ export interface ProductPricing {
   costPrice: number;
   currentSellingPrice: number;
   minimumSellingPrice: number; // Lowest price rep can ever discount to
+  minFloorPricePercentage?: number; // Batch & product level floor price limit %
   maxDiscountPercentage: number;
   showroomDiscountPercentage?: number;
   promotionalDiscountPercentage?: number;
@@ -34,10 +35,13 @@ export interface Product extends BaseEntity {
   description: string;
   categoryId: string;
   categoryName: string;
+  brandId?: string;
+  brandName?: string;
   uomId: string;
   uomCode: string;
   barcode?: string;
   pricing: ProductPricing;
+  minFloorPricePercentage?: number;
   discountLevels?: number[]; // Up to 3 product-level discount levels ordered lowest to highest (e.g. [5, 10, 15])
   warrantyPeriodMonths: number;
   status: ProductStatus;

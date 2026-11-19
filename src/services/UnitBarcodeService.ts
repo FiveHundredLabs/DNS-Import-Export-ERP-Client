@@ -1,5 +1,4 @@
 import { GRNItem, UnitBarcodeRecord } from '../types/inventory';
-import { MOCK_PRODUCTS } from '../mock/mockProducts';
 
 /**
  * Service to manage unit-level barcode generation, physical sticker printing,

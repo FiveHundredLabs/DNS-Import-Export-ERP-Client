@@ -9,11 +9,13 @@ import { formatCurrency, formatDate } from '../../../../utils/formatters';
 import { BookOpen, DollarSign, ArrowDownLeft, ArrowUpRight, Search } from 'lucide-react';
 import { Card } from '../../../../components/ui/card';
 import { Badge } from '../../../../components/ui/badge';
+import { TableLoadingSkeleton, CardGridSkeleton } from '../../../../components/common/LoadingSkeleton';
 
 export function GeneralLedgerPage() {
   const { accounts, getGeneralLedger } = useFinanceLedger();
   const [selectedAccountId, setSelectedAccountId] = useState<string>('acc-1010'); // Default Bank Account
   const [report, setReport] = useState<GeneralLedgerAccountReport | null>(null);
+  const [loading, setLoading] = useState(true);
 
   const [dateFilter, setDateFilter] = useState<DateFilterState>({
     preset: 'THIS_YEAR',
@@ -23,6 +25,7 @@ export function GeneralLedgerPage() {
 
   const loadReport = useCallback(async () => {
     if (!selectedAccountId) return;
+    setLoading(true);
     try {
       const data = await getGeneralLedger(selectedAccountId, {
         startDate: dateFilter.startDate,
@@ -31,6 +34,8 @@ export function GeneralLedgerPage() {
       setReport(data);
     } catch {
       // Handled
+    } finally {
+      setLoading(false);
     }
   }, [getGeneralLedger, selectedAccountId, dateFilter.startDate, dateFilter.endDate]);
 
@@ -92,143 +97,152 @@ export function GeneralLedgerPage() {
         </div>
       </div>
 
-      {/* Account Balance Summary Cards */}
-      {report && (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
-          <Card className="p-4 border-slate-200">
-            <span className="text-xs font-medium text-slate-500">Opening Balance</span>
-            <div className="mt-2 text-xl font-semibold text-slate-800 font-mono tabular-nums">
-              {formatCurrency(report.openingBalance)}
-            </div>
-            <span className="text-xs text-slate-400">Prior to {dateFilter.startDate}</span>
-          </Card>
-
-          <Card className="p-4 border-slate-200">
-            <span className="text-xs font-medium text-slate-500">Total Period Debits</span>
-            <div className="mt-2 text-xl font-semibold text-primary font-mono tabular-nums">
-              {formatCurrency(report.totalDebits)}
-            </div>
-            <span className="text-xs text-primary font-medium">Inward / Additions</span>
-          </Card>
-
-          <Card className="p-4 border-slate-200">
-            <span className="text-xs font-medium text-slate-500">Total Period Credits</span>
-            <div className="mt-2 text-xl font-semibold text-slate-700 font-mono tabular-nums">
-              {formatCurrency(report.totalCredits)}
-            </div>
-            <span className="text-xs text-slate-400">Outward / Deductions</span>
-          </Card>
-
-          <Card className="p-4 border-slate-200 bg-primary-light/40 border-primary-border/40">
-            <span className="text-xs font-medium text-indigo-900">Closing Balance</span>
-            <div className="mt-2 text-xl font-semibold text-indigo-950 font-mono tabular-nums">
-              {formatCurrency(report.closingBalance)}
-            </div>
-            <span className="text-xs text-primary font-medium">As of {dateFilter.endDate}</span>
-          </Card>
+      {/* Account Balance Summary Cards & Transactions Table */}
+      {loading ? (
+        <div className="space-y-6">
+          <CardGridSkeleton count={4} />
+          <TableLoadingSkeleton rows={8} cols={7} />
         </div>
-      )}
+      ) : (
+        <>
+          {report && (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
+              <Card className="p-4 border-slate-200">
+                <span className="text-xs font-medium text-slate-500">Opening Balance</span>
+                <div className="mt-2 text-xl font-semibold text-slate-800 font-mono tabular-nums">
+                  {formatCurrency(report.openingBalance)}
+                </div>
+                <span className="text-xs text-slate-400">Prior to {dateFilter.startDate}</span>
+              </Card>
 
-      {/* Chronological Transactions Table */}
-      <Card className="overflow-hidden border-slate-200 bg-white shadow-sm">
-        <div className="border-b border-slate-200 bg-slate-50 px-6 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <BookOpen className="h-4 w-4 text-primary" />
-            <span className="text-xs font-semibold text-slate-800">
-              {selectedAccount?.code} — {selectedAccount?.name}
-            </span>
-          </div>
-          <span className="text-xs text-slate-500">
-            {report?.transactions.length || 0} Transactions in Period
-          </span>
-        </div>
+              <Card className="p-4 border-slate-200">
+                <span className="text-xs font-medium text-slate-500">Total Period Debits</span>
+                <div className="mt-2 text-xl font-semibold text-primary font-mono tabular-nums">
+                  {formatCurrency(report.totalDebits)}
+                </div>
+                <span className="text-xs text-primary font-medium">Inward / Additions</span>
+              </Card>
 
-        <div className="overflow-x-auto w-full">
-          <table className="w-full min-w-[900px] text-left text-[13px] tabular-nums">
-            <thead className="border-b border-slate-200 bg-slate-50 text-[12.5px] font-semibold text-slate-600">
-              <tr>
-                <th className="px-4 py-3 whitespace-nowrap">Date</th>
-                <th className="px-4 py-3 whitespace-nowrap">Voucher #</th>
-                <th className="px-4 py-3 whitespace-nowrap">Source</th>
-                <th className="px-4 py-3 whitespace-nowrap">Description & Reference</th>
-                <th className="px-4 py-3 text-right whitespace-nowrap">Debit (LKR)</th>
-                <th className="px-4 py-3 text-right whitespace-nowrap">Credit (LKR)</th>
-                <th className="px-4 py-3 text-right whitespace-nowrap">Running Balance</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 text-slate-700">
-              {/* Opening Balance Row */}
-              <tr className="bg-slate-50/50 font-medium text-slate-500 italic">
-                <td className="px-4 py-2.5">{dateFilter.startDate}</td>
-                <td className="px-4 py-2.5">—</td>
-                <td className="px-4 py-2.5">
-                  <Badge variant="outline" className="text-xs font-medium">
-                    OPENING
-                  </Badge>
-                </td>
-                <td className="px-4 py-2.5">Opening balance brought forward</td>
-                <td className="px-4 py-2.5 text-right">—</td>
-                <td className="px-4 py-2.5 text-right">—</td>
-                <td className="px-4 py-2.5 text-right font-mono font-semibold text-slate-800 tabular-nums">
-                  {formatCurrency(report?.openingBalance || 0)}
-                </td>
-              </tr>
+              <Card className="p-4 border-slate-200">
+                <span className="text-xs font-medium text-slate-500">Total Period Credits</span>
+                <div className="mt-2 text-xl font-semibold text-slate-700 font-mono tabular-nums">
+                  {formatCurrency(report.totalCredits)}
+                </div>
+                <span className="text-xs text-slate-400">Outward / Deductions</span>
+              </Card>
 
-              {/* Transactions */}
-              {report?.transactions.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="p-8 text-center text-slate-400">
-                    No transactions recorded for this account during the selected date range.
-                  </td>
-                </tr>
-              ) : (
-                report?.transactions.map((t, idx) => (
-                  <tr key={`${t.journalId}-${idx}`} className="hover:bg-slate-50/60 transition-colors">
-                    <td className="px-4 py-3 text-slate-600">{formatDate(t.date)}</td>
-                    <td className="px-4 py-3 font-mono font-semibold text-primary tabular-nums">{t.entryNumber}</td>
-                    <td className="px-4 py-3">
-                      <Badge variant="outline" className="font-mono text-xs bg-slate-50 font-medium">
-                        {t.source}
+              <Card className="p-4 border-slate-200 bg-primary-light/40 border-primary-border/40">
+                <span className="text-xs font-medium text-indigo-900">Closing Balance</span>
+                <div className="mt-2 text-xl font-semibold text-indigo-950 font-mono tabular-nums">
+                  {formatCurrency(report.closingBalance)}
+                </div>
+                <span className="text-xs text-primary font-medium">As of {dateFilter.endDate}</span>
+              </Card>
+            </div>
+          )}
+
+          {/* Chronological Transactions Table */}
+          <Card className="overflow-hidden border-slate-200 bg-white shadow-sm">
+            <div className="border-b border-slate-200 bg-slate-50 px-6 py-3 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <BookOpen className="h-4 w-4 text-primary" />
+                <span className="text-xs font-semibold text-slate-800">
+                  {selectedAccount?.code} — {selectedAccount?.name}
+                </span>
+              </div>
+              <span className="text-xs text-slate-500">
+                {report?.transactions.length || 0} Transactions in Period
+              </span>
+            </div>
+
+            <div className="overflow-x-auto w-full">
+              <table className="w-full min-w-[900px] text-left text-[13px] tabular-nums">
+                <thead className="border-b border-slate-200 bg-slate-50 text-[12.5px] font-semibold text-slate-600">
+                  <tr>
+                    <th className="px-4 py-3 whitespace-nowrap">Date</th>
+                    <th className="px-4 py-3 whitespace-nowrap">Voucher #</th>
+                    <th className="px-4 py-3 whitespace-nowrap">Source</th>
+                    <th className="px-4 py-3 whitespace-nowrap">Description & Reference</th>
+                    <th className="px-4 py-3 text-right whitespace-nowrap">Debit (LKR)</th>
+                    <th className="px-4 py-3 text-right whitespace-nowrap">Credit (LKR)</th>
+                    <th className="px-4 py-3 text-right whitespace-nowrap">Running Balance</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 text-slate-700">
+                  {/* Opening Balance Row */}
+                  <tr className="bg-slate-50/50 font-medium text-slate-500 italic">
+                    <td className="px-4 py-2.5">{dateFilter.startDate}</td>
+                    <td className="px-4 py-2.5">—</td>
+                    <td className="px-4 py-2.5">
+                      <Badge variant="outline" className="text-xs font-medium">
+                        OPENING
                       </Badge>
                     </td>
-                    <td className="px-4 py-3">
-                      <div className="font-medium text-slate-900">{t.description}</div>
-                      {t.reference && (
-                        <div className="font-mono text-xs text-slate-400">Ref: {t.reference}</div>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-right font-mono font-medium text-primary tabular-nums">
-                      {t.debit > 0 ? formatCurrency(t.debit) : '—'}
-                    </td>
-                    <td className="px-4 py-3 text-right font-mono font-medium text-slate-700 tabular-nums">
-                      {t.credit > 0 ? formatCurrency(t.credit) : '—'}
-                    </td>
-                    <td className="px-4 py-3 text-right font-mono font-semibold text-slate-900 tabular-nums">
-                      {formatCurrency(t.runningBalance)}
+                    <td className="px-4 py-2.5">Opening balance brought forward</td>
+                    <td className="px-4 py-2.5 text-right">—</td>
+                    <td className="px-4 py-2.5 text-right">—</td>
+                    <td className="px-4 py-2.5 text-right font-mono font-semibold text-slate-800 tabular-nums">
+                      {formatCurrency(report?.openingBalance || 0)}
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-            <tfoot className="border-t-2 border-slate-300 bg-slate-50 text-[13px] font-semibold text-slate-900">
-              <tr>
-                <td colSpan={4} className="px-4 py-3.5">
-                  Closing Balance as of {dateFilter.endDate}
-                </td>
-                <td className="px-4 py-3.5 text-right font-mono text-primary tabular-nums">
-                  {formatCurrency(report?.totalDebits || 0)}
-                </td>
-                <td className="px-4 py-3.5 text-right font-mono text-slate-800 tabular-nums">
-                  {formatCurrency(report?.totalCredits || 0)}
-                </td>
-                <td className="px-4 py-3.5 text-right font-mono text-sm text-indigo-950 font-semibold tabular-nums">
-                  {formatCurrency(report?.closingBalance || 0)}
-                </td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
-      </Card>
+
+                  {/* Transactions */}
+                  {report?.transactions.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="p-8 text-center text-slate-400">
+                        No transactions recorded for this account during the selected date range.
+                      </td>
+                    </tr>
+                  ) : (
+                    report?.transactions.map((t, idx) => (
+                      <tr key={`${t.journalId}-${idx}`} className="hover:bg-slate-50/60 transition-colors">
+                        <td className="px-4 py-3 text-slate-600">{formatDate(t.date)}</td>
+                        <td className="px-4 py-3 font-mono font-semibold text-primary tabular-nums">{t.entryNumber}</td>
+                        <td className="px-4 py-3">
+                          <Badge variant="outline" className="font-mono text-xs bg-slate-50 font-medium">
+                            {t.source}
+                          </Badge>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="font-medium text-slate-900">{t.description}</div>
+                          {t.reference && (
+                            <div className="font-mono text-xs text-slate-400">Ref: {t.reference}</div>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-right font-mono font-medium text-primary tabular-nums">
+                          {t.debit > 0 ? formatCurrency(t.debit) : '—'}
+                        </td>
+                        <td className="px-4 py-3 text-right font-mono font-medium text-slate-700 tabular-nums">
+                          {t.credit > 0 ? formatCurrency(t.credit) : '—'}
+                        </td>
+                        <td className="px-4 py-3 text-right font-mono font-semibold text-slate-900 tabular-nums">
+                          {formatCurrency(t.runningBalance)}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+                <tfoot className="border-t-2 border-slate-300 bg-slate-50 text-[13px] font-semibold text-slate-900">
+                  <tr>
+                    <td colSpan={4} className="px-4 py-3.5">
+                      Closing Balance as of {dateFilter.endDate}
+                    </td>
+                    <td className="px-4 py-3.5 text-right font-mono text-primary tabular-nums">
+                      {formatCurrency(report?.totalDebits || 0)}
+                    </td>
+                    <td className="px-4 py-3.5 text-right font-mono text-slate-800 tabular-nums">
+                      {formatCurrency(report?.totalCredits || 0)}
+                    </td>
+                    <td className="px-4 py-3.5 text-right font-mono text-sm text-indigo-950 font-semibold tabular-nums">
+                      {formatCurrency(report?.closingBalance || 0)}
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </Card>
+        </>
+      )}
     </div>
   );
 }

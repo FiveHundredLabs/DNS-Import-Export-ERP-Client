@@ -181,7 +181,7 @@ export function CustomerOnboardingPage() {
     setPendingLoading(true);
     try {
       const stages: CustomerApprovalStage[] = isAreaManager
-        ? ['DRAFT', 'PENDING_SALES_REVIEW', 'PENDING_MANAGER_APPROVAL']
+        ? ['PENDING_SALES_REVIEW', 'PENDING_MANAGER_APPROVAL']
         : role === 'SALES_MANAGER'
         ? ['PENDING_SALES_REVIEW']
         : ['PENDING_SALES_REVIEW', 'PENDING_MANAGER_APPROVAL', 'PENDING_DIRECTOR_APPROVAL'];
@@ -441,7 +441,7 @@ export function CustomerOnboardingPage() {
           displayName: displayName.trim(),
           companyName: companyName.trim() || displayName.trim(),
           contactPerson: contactPerson.trim() || displayName.trim(),
-          email: email.trim(),
+          email: email.trim() || undefined,
           primaryContactNumber: primaryPhone.trim(),
           whatsappNumber: whatsappNumber.trim() || primaryPhone.trim(),
           secondaryContactNumber: secondaryPhone.trim() || undefined,
@@ -481,7 +481,7 @@ export function CustomerOnboardingPage() {
           displayName: displayName.trim(),
           companyName: companyName.trim() || displayName.trim(),
           contactPerson: contactPerson.trim() || displayName.trim(),
-          email: email.trim(),
+          email: email.trim() || undefined,
           primaryContactNumber: primaryPhone.trim(),
           whatsappNumber: whatsappNumber.trim() || primaryPhone.trim(),
           secondaryContactNumber: secondaryPhone.trim() || undefined,

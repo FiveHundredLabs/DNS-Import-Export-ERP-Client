@@ -6,8 +6,8 @@ import { Alert, AlertDescription } from '../../components/ui/alert';
 import { WarrantyClaim, ClaimResolutionType } from '../../types/warranty';
 import { warrantyService } from '../../services/WarrantyService';
 import { useAuth } from '../../hooks/useAuth';
+import { useProducts } from '../../hooks/useProducts';
 import { AlertTriangle, Wrench, RefreshCw, XCircle, Plus, Trash2, ShieldCheck, Box } from 'lucide-react';
-import { MOCK_PRODUCTS } from '../../mock/mockProducts';
 
 interface ResolveClaimModalProps {
   claim: WarrantyClaim | null;
@@ -23,6 +23,7 @@ export function ResolveClaimModal({
   onSuccess,
 }: ResolveClaimModalProps) {
   const { currentUser } = useAuth();
+  const { products } = useProducts({ page: 1, pageSize: 200 });
   const [resolution, setResolution] = useState<ClaimResolutionType>('REPLACE');
   const [notes, setNotes] = useState('');
   const [replacementSerial, setReplacementSerial] = useState('');
@@ -33,12 +34,12 @@ export function ResolveClaimModal({
   if (!claim) return null;
 
   const handleAddSparePart = () => {
-    const firstProd = MOCK_PRODUCTS[0];
+    const firstProd = products[0];
     setSpareParts((prev) => [
       ...prev,
       {
-        productId: firstProd.id,
-        productName: firstProd.name,
+        productId: firstProd?.id || 'part-1',
+        productName: firstProd?.name || 'Spare Part',
         quantity: 1,
       },
     ]);
@@ -49,7 +50,7 @@ export function ResolveClaimModal({
   };
 
   const handleUpdateSparePart = (idx: number, productId: string, quantity: number) => {
-    const prod = MOCK_PRODUCTS.find((p) => p.id === productId);
+    const prod = products.find((p) => p.id === productId);
     setSpareParts((prev) => {
       const next = [...prev];
       next[idx] = {
@@ -219,7 +220,7 @@ export function ResolveClaimModal({
                       onChange={(e) => handleUpdateSparePart(idx, e.target.value, part.quantity)}
                       className="h-7 flex-1 rounded border border-slate-200 text-xs px-2"
                     >
-                      {MOCK_PRODUCTS.map((p) => (
+                      {products.map((p) => (
                         <option key={p.id} value={p.id}>
                           {p.sku} - {p.name}
                         </option>

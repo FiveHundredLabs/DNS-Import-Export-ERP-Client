@@ -88,7 +88,11 @@ function isAuthEndpoint(url?: string): boolean {
 
 function redirectTo(path: '/login' | '/404' | '/500'): void {
   if (typeof window !== 'undefined' && window.location.pathname !== path) {
-    window.location.replace(path);
+    try {
+      window.location.replace(path);
+    } catch {
+      // Safe no-op in test/JSDOM environments where navigation throws 'Not implemented'
+    }
   }
 }
 
@@ -202,7 +206,8 @@ apiClient.interceptors.response.use(
       } catch (refreshError) {
         clearAccessToken();
         clearAppCache();
-        notifyError(refreshError as AxiosError<ApiErrorResponse>);
+        // Session has expired — redirect to login silently. The login page is
+        // sufficient feedback; a toast here would be noisy and confusing on boot.
         redirectTo('/login');
         throw refreshError;
       }

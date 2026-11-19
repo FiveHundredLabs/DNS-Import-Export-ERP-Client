@@ -19,6 +19,7 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { cn } from '../../../utils/cn';
+import { Skeleton } from '../../../components/ui/skeleton';
 
 interface CreateInvoiceModalProps {
   isOpen: boolean;
@@ -202,9 +203,13 @@ export function CreateInvoiceModal({
         {/* ── ORDER LIST ────────────────────────────────────────────── */}
         <div className="flex-1 overflow-y-auto px-3 pb-3">
           {ordersLoading ? (
-            <div className="flex flex-col items-center justify-center py-14 gap-2 text-slate-400">
-              <Loader2 className="h-5 w-5 animate-spin" />
-              <span className="text-xs">Loading orders…</span>
+            <div className="space-y-2.5 p-1 animate-pulse">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="p-3 rounded-xl border border-slate-100 space-y-2 bg-slate-50/50">
+                  <div className="flex justify-between items-center"><Skeleton className="h-4 w-28 rounded" /><Skeleton className="h-4 w-16 rounded" /></div>
+                  <Skeleton className="h-3 w-44 rounded" />
+                </div>
+              ))}
             </div>
           ) : eligibleOrders.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-14 gap-2 text-center">

@@ -84,7 +84,7 @@ export function PaymentListPage() {
       : 'RECEIPTS'
   );
   const [payments, setPayments] = useState<Payment[]>([]);
-  const [invoices, setInvoices] = useState<Invoice[]>(MOCK_INVOICES);
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [customerIdFilter, setCustomerIdFilter] = useState(searchParams.get('customerId') || '');
   const [startDate, setStartDate] = useState('');
