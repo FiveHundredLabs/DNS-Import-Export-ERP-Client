@@ -25,7 +25,7 @@ import { useAuth } from '../../hooks/useAuth';
 export function ProductListPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { hasPermission } = useAuth();
+  const { role, hasPermission } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const debouncedSearch = useDebounce(searchTerm, 350);
   const [selectedCategory, setSelectedCategory] = useState('');
@@ -60,7 +60,9 @@ export function ProductListPage() {
     setFilters((prev) => ({ ...prev, categoryId: catId || undefined, page: 1 }));
   };
 
-  const canCreate = hasPermission('products:create');
+  // Strictly enforce that ONLY DIRECTOR and MANAGER can create and edit products
+  const canCreate = (role === 'DIRECTOR' || role === 'MANAGER') && hasPermission('products:create');
+  const canEdit = (role === 'DIRECTOR' || role === 'MANAGER') && hasPermission('products:edit');
 
   return (
     <div className="space-y-5">
@@ -135,21 +137,26 @@ export function ProductListPage() {
           title="No products found"
           description="Try adjusting your search query or create a new Product Master record."
           actionLabel={canCreate ? 'Create First Product' : undefined}
-          onAction={() => setCreateModalOpen(true)}
+          onAction={canCreate ? () => setCreateModalOpen(true) : undefined}
         />
       ) : (
         <ProductTable
           products={products}
           onView={(p) => navigate(`/products/${p.id}`, { state: { from: location.pathname + location.search } })}
-          onProposePrice={(p) => {
-            setSelectedProductForProposal(p);
-            setProposalModalOpen(true);
-          }}
+          onProposePrice={
+            canEdit
+              ? (p) => {
+                  setSelectedProductForProposal(p);
+                  setProposalModalOpen(true);
+                }
+              : undefined
+          }
         />
       )}
 
       {/* Product Creation Modal */}
-      <ProductCreateModal
+      {canCreate && (
+        <ProductCreateModal
         open={createModalOpen}
         onOpenChange={setCreateModalOpen}
         categories={categories}
@@ -161,9 +168,11 @@ export function ProductListPage() {
           return await createCategory(catData);
         }}
       />
+      )}
 
       {/* Price Change Proposal Modal */}
-      <ProductPriceProposalModal
+      {canEdit && (
+        <ProductPriceProposalModal
         product={selectedProductForProposal}
         open={proposalModalOpen}
         onOpenChange={setProposalModalOpen}
@@ -171,15 +180,18 @@ export function ProductListPage() {
           await proposePriceChange(params);
         }}
       />
+      )}
 
       {/* Category Creation Modal */}
-      <CategoryCreateModal
+      {canCreate && (
+        <CategoryCreateModal
         open={createCategoryModalOpen}
         onOpenChange={setCreateCategoryModalOpen}
         onCreate={async (catData) => {
           await createCategory(catData);
         }}
       />
+      )}
     </div>
   );
 }

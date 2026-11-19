@@ -19,9 +19,9 @@ export function ProductTable({
   onEdit,
   onProposePrice,
 }: ProductTableProps) {
-  const { hasPermission } = useAuth();
-  const canEdit = hasPermission('products:edit');
-  const canProposePrice = hasPermission('products:price_approval') || canEdit;
+  const { role, hasPermission } = useAuth();
+  const canEdit = (role === 'DIRECTOR' || role === 'MANAGER') && hasPermission('products:edit');
+  const canProposePrice = (role === 'DIRECTOR' || role === 'MANAGER') && (hasPermission('products:price_approval') || canEdit);
   const hasActions = Boolean((canProposePrice && onProposePrice) || (canEdit && onEdit));
 
   return (
