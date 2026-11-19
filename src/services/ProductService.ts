@@ -1,5 +1,5 @@
 import { IProductRepository, ProductFilters } from '../repositories/IProductRepository';
-import { MockProductRepository } from '../repositories/mock/MockProductRepository';
+import { ApiProductRepository } from '../repositories/ApiProductRepository';
 import { Product, PriceChangeProposal, Category } from '../types/product';
 import { PaginatedResult } from '../types/common';
 import { validateProductData } from '../rules/productRules';
@@ -10,7 +10,7 @@ export class ProductService {
   private repo: IProductRepository;
 
   constructor(repo?: IProductRepository) {
-    this.repo = repo || new MockProductRepository();
+    this.repo = repo || new ApiProductRepository();
   }
 
   async listProducts(filters?: ProductFilters): Promise<PaginatedResult<Product>> {
