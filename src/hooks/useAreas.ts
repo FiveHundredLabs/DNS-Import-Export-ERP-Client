@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { areasApi } from '../api/areas/areas.api';
 import { usersApi } from '../api/users/users.api';
+import { AreaCustomer, AreaUser } from '../api/areas/areas.types';
 import { toast } from 'sonner';
 import { MOCK_AREAS } from '../mock/mockAreas';
 
@@ -13,6 +14,9 @@ export interface AreaItem {
   description?: string | null;
   areaManagerId?: string;
   areaManagerName?: string;
+  areaManagers?: AreaUser[];
+  salesReps?: AreaUser[];
+  customers?: AreaCustomer[];
   salesManagerId?: string;
   salesManagerName?: string;
   updatedAt?: string;
@@ -29,8 +33,23 @@ const DEFAULT_AREAS: AreaItem[] = MOCK_AREAS.map((a) => ({
   description: null,
   areaManagerId: a.areaManagerId,
   areaManagerName: a.areaManagerName,
+  areaManagers: a.areaManagerName
+    ? [
+        {
+          id: a.areaManagerId || 'am-1',
+          fullName: a.areaManagerName,
+          displayName: a.areaManagerName,
+          email: `${a.areaManagerName.toLowerCase().replace(/\s+/g, '.')}@dnserp.com`,
+          role: { code: 'AREA_MANAGER', name: 'Area Manager' },
+        },
+      ]
+    : [],
+  salesReps: [],
+  customers: [],
   salesManagerId: a.salesManagerId,
   salesManagerName: a.salesManagerName,
+  customerCount: 0,
+  userCount: a.areaManagerName ? 1 : 0,
 }));
 
 export function useAreas() {
@@ -50,7 +69,9 @@ export function useAreas() {
           desc = parts.slice(1).join('|').trim() || null;
         }
 
-        const areaManager = a.users?.find((u) => u.role?.code === 'AREA_MANAGER');
+        const areaManagers = a.users?.filter((u) => u.role?.code === 'AREA_MANAGER') || [];
+        const salesReps = a.users?.filter((u) => u.role?.code === 'SALES_REP') || [];
+        const primaryAreaManager = areaManagers[0];
         const salesManager = a.users?.find((u) => u.role?.code === 'SALES_MANAGER');
 
         return {
@@ -60,12 +81,15 @@ export function useAreas() {
           areaName: a.areaName,
           region,
           description: desc,
-          areaManagerId: areaManager?.id,
-          areaManagerName: areaManager?.fullName || areaManager?.displayName || undefined,
+          areaManagerId: primaryAreaManager?.id,
+          areaManagerName: primaryAreaManager?.fullName || primaryAreaManager?.displayName || undefined,
+          areaManagers,
+          salesReps,
+          customers: a.customers || [],
           salesManagerId: salesManager?.id,
           salesManagerName: salesManager?.fullName || salesManager?.displayName || undefined,
           updatedAt: a.updatedAt,
-          customerCount: a._count?.customers ?? 0,
+          customerCount: a.customers?.length ?? (a._count?.customers ?? 0),
           userCount: a._count?.users ?? (a.users?.length ?? 0),
         };
       });
@@ -130,9 +154,24 @@ export function useAreas() {
         description: created.description,
         areaManagerId: data.areaManagerId,
         areaManagerName: data.areaManagerName,
+        areaManagers: data.areaManagerName
+          ? [
+              {
+                id: data.areaManagerId || 'am-new',
+                fullName: data.areaManagerName,
+                displayName: data.areaManagerName,
+                email: `${data.areaManagerName.toLowerCase().replace(/\s+/g, '.')}@dnserp.com`,
+                role: { code: 'AREA_MANAGER', name: 'Area Manager' },
+              },
+            ]
+          : [],
+        salesReps: [],
+        customers: [],
         salesManagerId: data.salesManagerId,
         salesManagerName: data.salesManagerName,
         updatedAt: created.updatedAt,
+        customerCount: 0,
+        userCount: data.areaManagerId ? 1 : 0,
       };
 
       setAreas((prev) => [newArea, ...prev]);
@@ -159,7 +198,6 @@ export function useAreas() {
 
       // Handle Area Manager re-assignment if changed
       if (data.areaManagerId !== undefined && data.areaManagerId !== existingArea?.areaManagerId) {
-        // 1. Unassign previous manager if existed
         if (existingArea?.areaManagerId) {
           try {
             const prevUser = await usersApi.getUserById(existingArea.areaManagerId);
@@ -173,7 +211,6 @@ export function useAreas() {
             console.warn('Failed to unassign previous manager:', unassignErr);
           }
         }
-        // 2. Assign new manager if selected
         if (data.areaManagerId) {
           try {
             const newUser = await usersApi.getUserById(data.areaManagerId);
@@ -198,9 +235,24 @@ export function useAreas() {
         description: updated.description,
         areaManagerId: data.areaManagerId,
         areaManagerName: data.areaManagerName,
+        areaManagers: data.areaManagerName
+          ? [
+              {
+                id: data.areaManagerId || 'am-upd',
+                fullName: data.areaManagerName,
+                displayName: data.areaManagerName,
+                email: `${data.areaManagerName.toLowerCase().replace(/\s+/g, '.')}@dnserp.com`,
+                role: { code: 'AREA_MANAGER', name: 'Area Manager' },
+              },
+            ]
+          : [],
+        salesReps: existingArea?.salesReps || [],
+        customers: existingArea?.customers || [],
         salesManagerId: data.salesManagerId,
         salesManagerName: data.salesManagerName,
         updatedAt: updated.updatedAt,
+        customerCount: existingArea?.customerCount ?? 0,
+        userCount: existingArea?.userCount ?? 0,
       };
 
       setAreas((prev) => prev.map((a) => (a.id === id ? { ...a, ...updatedArea } : a)));

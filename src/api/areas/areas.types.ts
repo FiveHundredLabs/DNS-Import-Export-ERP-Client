@@ -9,6 +9,20 @@ export interface AreaUser {
   };
 }
 
+export interface AreaCustomer {
+  id: string;
+  customerCode?: string | null;
+  displayName: string;
+  companyName: string;
+  contactPerson: string;
+  primaryContactNumber?: string | null;
+  email?: string | null;
+  status: string;
+  loyaltyLevel?: string;
+  creditPeriod?: number | null;
+  creditLimit?: number | string | null;
+}
+
 export interface Area {
   id: string;
   areaCode?: string;
@@ -17,6 +31,7 @@ export interface Area {
   createdAt?: string;
   updatedAt?: string;
   users?: AreaUser[];
+  customers?: AreaCustomer[];
   _count?: {
     users: number;
     customers: number;
