@@ -69,10 +69,17 @@ export function useAreas() {
           desc = parts.slice(1).join('|').trim() || null;
         }
 
-        const areaManagers = a.users?.filter((u) => u.role?.code === 'AREA_MANAGER') || [];
-        const salesReps = a.users?.filter((u) => u.role?.code === 'SALES_REP') || [];
+        const isAreaManager = (u: any) =>
+          u.role?.code === 'AREA_MANAGER' || u.role === 'AREA_MANAGER' || u.roleCode === 'AREA_MANAGER';
+        const isSalesRep = (u: any) =>
+          u.role?.code === 'SALES_REP' || u.role === 'SALES_REP' || u.roleCode === 'SALES_REP';
+        const isSalesManager = (u: any) =>
+          u.role?.code === 'SALES_MANAGER' || u.role === 'SALES_MANAGER' || u.roleCode === 'SALES_MANAGER';
+
+        const areaManagers = a.users?.filter(isAreaManager) || [];
+        const salesReps = a.users?.filter(isSalesRep) || [];
         const primaryAreaManager = areaManagers[0];
-        const salesManager = a.users?.find((u) => u.role?.code === 'SALES_MANAGER');
+        const salesManager = a.users?.find(isSalesManager);
 
         return {
           id: a.id,
@@ -82,15 +89,15 @@ export function useAreas() {
           region,
           description: desc,
           areaManagerId: primaryAreaManager?.id,
-          areaManagerName: primaryAreaManager?.fullName || primaryAreaManager?.displayName || undefined,
+          areaManagerName: primaryAreaManager?.displayName || primaryAreaManager?.fullName || undefined,
           areaManagers,
           salesReps,
           customers: a.customers || [],
           salesManagerId: salesManager?.id,
-          salesManagerName: salesManager?.fullName || salesManager?.displayName || undefined,
+          salesManagerName: salesManager?.displayName || salesManager?.fullName || undefined,
           updatedAt: a.updatedAt,
-          customerCount: a.customers?.length ?? (a._count?.customers ?? 0),
-          userCount: a._count?.users ?? (a.users?.length ?? 0),
+          customerCount: (a.customers && a.customers.length > 0) ? a.customers.length : (a._count?.customers ?? 0),
+          userCount: (a.users && a.users.length > 0) ? a.users.length : (a._count?.users ?? 0),
         };
       });
       setAreas(mapped);
