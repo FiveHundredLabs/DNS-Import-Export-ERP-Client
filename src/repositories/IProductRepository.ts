@@ -3,6 +3,7 @@ import { PaginatedResult, PaginationParams } from '../types/common';
 
 export interface ProductFilters extends PaginationParams {
   categoryId?: string;
+  brandId?: string;
   status?: string;
 }
 

@@ -19,6 +19,7 @@ export interface ProductPricing {
   costPrice: number;
   currentSellingPrice: number;
   minimumSellingPrice: number;
+  minFloorPricePercentage?: number;
   maxDiscountPercentage: number;
   showroomDiscountPercentage: number;
   taxRatePercentage: number;
@@ -38,6 +39,7 @@ export interface Product {
   uomCode?: string;
   barcode: string;
   pricing: ProductPricing;
+  minFloorPricePercentage?: number;
   discountLevels: number[];
   warrantyPeriodMonths: number;
   status: ProductStatus;
@@ -87,8 +89,9 @@ export interface CreateProductPayload {
   unitOfMeasure: ProductUnitOfMeasure;
   warrantyPeriod?: number;
   costPrice: number;
-  sellingPrice: number;
+  sellingPrice?: number;
   minimumSellingPrice?: number;
+  minFloorPricePercentage?: number;
   hasSerialNumber?: boolean;
   discountLevels?: number[];
   showroomDiscount?: number;
@@ -105,6 +108,7 @@ export interface UpdateProductPayload {
   costPrice?: number;
   sellingPrice?: number;
   minimumSellingPrice?: number;
+  minFloorPricePercentage?: number;
   hasSerialNumber?: boolean;
   discountLevels?: number[];
   showroomDiscount?: number;

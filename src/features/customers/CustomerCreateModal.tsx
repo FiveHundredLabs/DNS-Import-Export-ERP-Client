@@ -91,6 +91,11 @@ export function CustomerCreateModal({
   const [areaId, setAreaId] = useState('');
   const [assignedRepId, setAssignedRepId] = useState('');
 
+  // Only active areas can be newly selected; preserve currently assigned area if editing
+  const selectableAreas = useMemo(() => {
+    return areas.filter((a) => (a.status || 'ACTIVE') === 'ACTIVE' || a.id === areaId);
+  }, [areas, areaId]);
+
   // Commercial Terms State (Allowed Credit Days & Credit Balance/Limit)
   const [creditDays, setCreditDays] = useState<number>(defaultTerms.defaultCreditDays);
   const [creditLimit, setCreditLimit] = useState<number>(defaultTerms.defaultCreditLimit);
@@ -660,9 +665,9 @@ export function CustomerCreateModal({
                   className="bg-white"
                 >
                   <option value="">Select Area</option>
-                  {areas.map((a) => (
+                  {selectableAreas.map((a) => (
                     <option key={a.id} value={a.id}>
-                      {a.name}
+                      {a.name} {a.status === 'INACTIVE' ? '(Inactive)' : ''}
                     </option>
                   ))}
                 </Select>
