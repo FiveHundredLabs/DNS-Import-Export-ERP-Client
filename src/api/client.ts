@@ -6,6 +6,8 @@ export {
   setAccessToken,
   clearAccessToken,
   refreshAccessToken,
+  extractErrorMessage,
+  isRequestCanceled,
 } from './axios';
 
 export type {

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { areasApi } from '../api/areas/areas.api';
 import { usersApi } from '../api/users/users.api';
+import { extractErrorMessage, isRequestCanceled } from '../api/client';
 import { AreaCustomer, AreaStatus, AreaUser } from '../api/areas/areas.types';
 import { toast } from 'sonner';
 
@@ -78,7 +79,8 @@ export function useAreas() {
       });
       setAreas(mapped);
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : 'Failed to fetch areas from server';
+      if (isRequestCanceled(e)) return;
+      const msg = extractErrorMessage(e, 'Failed to fetch areas from server');
       setError(msg);
       toast.error(msg);
     } finally {
