@@ -72,6 +72,9 @@ export function setAccessToken(token: string | null): void {
 
 export function clearAccessToken(): void {
   accessToken = null;
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem('dns_refresh_token');
+  }
 }
 
 function getRequestId(): string {
@@ -132,18 +135,36 @@ function redirectForError(
 
   if (status === 404) {
     redirectTo('/404');
-  } else if (status !== undefined && status >= 500) {
-    redirectTo('/500');
   }
+  // Note: 500 server errors do NOT perform hard page redirects (redirectTo('/500')),
+  // which would destroy in-memory authentication and reload the application.
+  // Instead, 500 errors are surfaced via notifyError() toast or component error boundaries.
 }
 
 export async function refreshAccessToken(): Promise<string> {
   if (!refreshPromise) {
+    const fallbackToken =
+      typeof window !== 'undefined'
+        ? localStorage.getItem('dns_refresh_token')
+        : null;
+
     refreshPromise = refreshClient
-      .post<ApiSuccessResponse<{ accessToken: string }>>('/auth/refresh')
+      .post<ApiSuccessResponse<{ accessToken: string; refreshToken?: string }>>(
+        '/auth/refresh',
+        fallbackToken ? { refreshToken: fallbackToken } : undefined,
+      )
       .then(({ data }) => {
         setAccessToken(data.data.accessToken);
+        if (data.data.refreshToken && typeof window !== 'undefined') {
+          localStorage.setItem('dns_refresh_token', data.data.refreshToken);
+        }
         return data.data.accessToken;
+      })
+      .catch((err) => {
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('dns_refresh_token');
+        }
+        throw err;
       })
       .finally(() => {
         refreshPromise = null;
@@ -216,7 +237,9 @@ apiClient.interceptors.response.use(
     notifyError(error);
     redirectForError(error);
 
-    if (status === 401) {
+    // Only clear session and redirect to /login when an authenticated business request gets 401
+    // (do not redirect on login/refresh failures where the user is already on /login or refreshing)
+    if (status === 401 && !isAuthEndpoint(config?.url)) {
       clearAccessToken();
       clearAppCache();
       redirectTo('/login');
