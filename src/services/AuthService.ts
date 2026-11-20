@@ -39,7 +39,6 @@ interface BackendUser {
 
 interface LoginResponse {
   accessToken: string;
-  refreshToken?: string;
   user: BackendUser;
 }
 
@@ -138,9 +137,6 @@ export class AuthService {
     );
 
     setAccessToken(response.data.data.accessToken);
-    if (response.data.data.refreshToken && typeof window !== 'undefined') {
-      localStorage.setItem('dns_refresh_token', response.data.data.refreshToken);
-    }
     const user = mapUser(response.data.data.user);
     this.initialized = true;
     this.setCurrentUser(user);

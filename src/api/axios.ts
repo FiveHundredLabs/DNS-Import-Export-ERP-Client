@@ -72,9 +72,6 @@ export function setAccessToken(token: string | null): void {
 
 export function clearAccessToken(): void {
   accessToken = null;
-  if (typeof window !== 'undefined') {
-    localStorage.removeItem('dns_refresh_token');
-  }
 }
 
 function getRequestId(): string {
@@ -143,28 +140,11 @@ function redirectForError(
 
 export async function refreshAccessToken(): Promise<string> {
   if (!refreshPromise) {
-    const fallbackToken =
-      typeof window !== 'undefined'
-        ? localStorage.getItem('dns_refresh_token')
-        : null;
-
     refreshPromise = refreshClient
-      .post<ApiSuccessResponse<{ accessToken: string; refreshToken?: string }>>(
-        '/auth/refresh',
-        fallbackToken ? { refreshToken: fallbackToken } : undefined,
-      )
+      .post<ApiSuccessResponse<{ accessToken: string }>>('/auth/refresh')
       .then(({ data }) => {
         setAccessToken(data.data.accessToken);
-        if (data.data.refreshToken && typeof window !== 'undefined') {
-          localStorage.setItem('dns_refresh_token', data.data.refreshToken);
-        }
         return data.data.accessToken;
-      })
-      .catch((err) => {
-        if (typeof window !== 'undefined') {
-          localStorage.removeItem('dns_refresh_token');
-        }
-        throw err;
       })
       .finally(() => {
         refreshPromise = null;
@@ -230,7 +210,7 @@ apiClient.interceptors.response.use(
         // Session has expired — redirect to login silently. The login page is
         // sufficient feedback; a toast here would be noisy and confusing on boot.
         redirectTo('/login');
-        throw refreshError;
+        return Promise.reject(refreshError);
       }
     }
 
