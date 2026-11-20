@@ -282,7 +282,7 @@ export function CustomerOnboardingPage() {
   const defaultCreditDays = backendCreditConfig?.defaultCreditDays ?? defaultConfig.defaultCreditDays;
   const defaultCreditLimit = backendCreditConfig?.defaultCreditLimit ?? defaultConfig.defaultCreditLimit;
 
-  const approvalRoute = determineCustomerApprovalRoute(creditDays, creditLimit, defaultCreditDays, defaultCreditLimit, role);
+  const approvalRoute = determineCustomerApprovalRoute(creditDays, creditLimit, defaultCreditDays, defaultCreditLimit, role, loyaltyLevel);
   const isSpecialApproval = approvalRoute.isExceptional;
 
   // Rejection modal state
@@ -1335,15 +1335,17 @@ export function CustomerOnboardingPage() {
                     <div>
                       <div className="flex items-center gap-2">
                         <span className="font-bold text-xs uppercase tracking-wide text-rose-900">
-                          Special Director Approval Required
+                          {approvalRoute.targetRole === 'DIRECTOR'
+                            ? 'Special Director Approval Required'
+                            : 'Special Manager Approval Required'}
                         </span>
                         <Badge className="bg-rose-100 text-rose-800 text-[10px] font-bold border-rose-200">
                           Exceeds Defaults
                         </Badge>
                       </div>
                       <p className="text-xs text-rose-800 mt-1 leading-relaxed">
-                        {approvalRoute.reason} Upon submission, this customer setup will be routed to the Director's
-                        approval engine before commercial activation.
+                        {approvalRoute.reason} Upon submission, this customer setup will be routed to the{' '}
+                        {approvalRoute.targetRole === 'DIRECTOR' ? "Director's" : "Manager's"} approval engine before commercial activation.
                       </p>
                     </div>
                   </div>
@@ -1716,12 +1718,12 @@ export function CustomerOnboardingPage() {
                         ) : isSpecialApproval ? (
                           <>
                             <ShieldAlert className="w-4 h-4" />
-                            Submit for Director Authorization
+                            Submit for Special Approval
                           </>
                         ) : (
                           <>
                             <Check className="w-4 h-4" />
-                            Complete Onboarding &amp; Activate
+                            Confirm &amp; Approve Customer
                           </>
                         )}
                       </Button>

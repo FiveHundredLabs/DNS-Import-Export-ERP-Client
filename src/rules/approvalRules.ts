@@ -9,7 +9,8 @@ export function determineCustomerApprovalRoute(
   creditLimit: number,
   standardCreditDays: number = 30,
   standardCreditLimit: number = 500000,
-  userRole?: UserRole
+  userRole?: UserRole,
+  loyaltyLevel?: string
 ): {
   targetRole: 'SALES_MANAGER' | 'MANAGER' | 'DIRECTOR';
   isExceptional: boolean;
@@ -26,17 +27,20 @@ export function determineCustomerApprovalRoute(
 
   const isHighCreditDays = creditDays > standardCreditDays;
   const isHighCreditLimit = creditLimit > standardCreditLimit;
+  const isElevatedLoyalty = loyaltyLevel !== undefined && loyaltyLevel !== 'NEW';
 
-  if (isHighCreditDays || isHighCreditLimit) {
+  if (isHighCreditDays || isHighCreditLimit || isElevatedLoyalty) {
     const reasons: string[] = [];
     if (isHighCreditDays) reasons.push(`Credit days (${creditDays}) exceed standard ${standardCreditDays}-day limit`);
     if (isHighCreditLimit) reasons.push(`Credit limit (LKR ${creditLimit.toLocaleString()}) exceeds standard LKR ${standardCreditLimit.toLocaleString()} limit`);
+    if (isElevatedLoyalty) reasons.push(`Loyalty level (${loyaltyLevel}) differs from standard default (NEW)`);
 
     if (userRole === 'SALES_MANAGER') {
+      const targetRole = creditLimit > standardCreditLimit * 2 || loyaltyLevel === 'PLATINUM' ? 'DIRECTOR' : 'MANAGER';
       return {
-        targetRole: 'DIRECTOR',
+        targetRole,
         isExceptional: true,
-        reason: `Special Director Approval Required: Sales Manager configured terms exceeding standard defaults (${reasons.join(' and ')}).`,
+        reason: `Special ${targetRole === 'DIRECTOR' ? 'Director' : 'Manager'} Approval Required: Sales Manager configured terms exceeding standard defaults (${reasons.join(' and ')}).`,
       };
     }
 
