@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback } from 'react';
 import { toast } from 'sonner';
+import { extractErrorMessage } from '../../api/client';
 import { AreaItem as Area, useAreas } from '../../hooks/useAreas';
 import { useUsers } from '../../hooks/useUsers';
 import { useAuth } from '../../hooks/useAuth';
@@ -51,7 +52,7 @@ export function AreaListPage() {
     updateAreaStatus,
     deleteArea,
   } = useAreas();
-  const { users } = useUsers();
+  const { users, refetch: refetchUsers } = useUsers();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingArea, setEditingArea] = useState<Area | null>(null);
   const [formData, setFormData] = useState<{
@@ -419,9 +420,10 @@ export function AreaListPage() {
     try {
       setIsDeleting(true);
       await deleteArea(areaToDelete.id);
+      await refetchUsers();
       setAreaToDelete(null);
     } catch (err: unknown) {
-      console.error('Failed to delete area:', err);
+      toast.error(extractErrorMessage(err, 'Failed to delete area'));
     } finally {
       setIsDeleting(false);
     }
