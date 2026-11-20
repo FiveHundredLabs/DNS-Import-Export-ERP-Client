@@ -7,6 +7,10 @@ import {
   Product,
   SkuPreviewResponse,
   UpdateProductPayload,
+  ProductBatchPricingResponse,
+  BatchPricePreviewResponse,
+  UpdateBatchPricePayload,
+  UpdateBatchPriceResponse,
 } from './products.types';
 
 export const productQueryKeys = {
@@ -16,6 +20,8 @@ export const productQueryKeys = {
   details: () => [...productQueryKeys.all, 'detail'] as const,
   detail: (id: string) => [...productQueryKeys.details(), id] as const,
   barcode: (barcode: string) => [...productQueryKeys.all, 'barcode', barcode] as const,
+  batchPricing: (id: string) => [...productQueryKeys.all, 'batchPricing', id] as const,
+  batchPreview: (id: string) => [...productQueryKeys.all, 'batchPreview', id] as const,
   skuPreview: (query: { brandName?: string; brandId?: string; productName: string }) =>
     [...productQueryKeys.all, 'skuPreview', query] as const,
 };
@@ -89,6 +95,45 @@ export function useDeleteProduct() {
     mutationFn: (id: string) => productsApi.deleteProduct(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: productQueryKeys.lists() });
+    },
+  });
+}
+
+export function useProductBatchPricing(
+  productId: string,
+  enabled = true,
+): UseQueryResult<ProductBatchPricingResponse, Error> {
+  return useQuery({
+    queryKey: productQueryKeys.batchPricing(productId),
+    queryFn: ({ signal }) => productsApi.getBatchPricing(productId, signal),
+    enabled: enabled && Boolean(productId),
+    staleTime: 30_000,
+  });
+}
+
+export function useBatchPricePreview(
+  productId: string,
+  enabled = false,
+): UseQueryResult<BatchPricePreviewResponse, Error> {
+  return useQuery({
+    queryKey: productQueryKeys.batchPreview(productId),
+    queryFn: ({ signal }) => productsApi.previewBatchPriceUpdate(productId, signal),
+    enabled: enabled && Boolean(productId),
+    staleTime: 10_000,
+  });
+}
+
+export function useUpdateBatchSellingPrice() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ productId, payload }: { productId: string; payload: UpdateBatchPricePayload }) =>
+      productsApi.updateBatchSellingPrices(productId, payload),
+    onSuccess: (_data, { productId }) => {
+      queryClient.invalidateQueries({ queryKey: productQueryKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: productQueryKeys.detail(productId) });
+      queryClient.invalidateQueries({ queryKey: productQueryKeys.batchPricing(productId) });
+      queryClient.invalidateQueries({ queryKey: productQueryKeys.batchPreview(productId) });
     },
   });
 }

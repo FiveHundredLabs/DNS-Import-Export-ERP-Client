@@ -6,6 +6,7 @@ import { useDebounce } from '../../hooks/useDebounce';
 import { ProductTable } from './ProductTable';
 import { ProductCreateModal } from './ProductCreateModal';
 import { ProductPriceProposalModal } from './ProductPriceProposalModal';
+import { BatchPricingHistoryModal } from './BatchPricingHistoryModal';
 import { BrandListTab } from './BrandListTab';
 import { CategoryListTab } from './CategoryListTab';
 import { Button } from '../../components/ui/button';
@@ -39,6 +40,7 @@ export function ProductListPage() {
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [proposalModalOpen, setProposalModalOpen] = useState(false);
   const [selectedProductForProposal, setSelectedProductForProposal] = useState<Product | null>(null);
+  const [selectedProductForBatchPricing, setSelectedProductForBatchPricing] = useState<Product | null>(null);
 
   const {
     products,
@@ -199,6 +201,7 @@ export function ProductListPage() {
                   state: { from: location.pathname + location.search },
                 })
               }
+              onViewBatchPricing={(p) => setSelectedProductForBatchPricing(p)}
               onProposePrice={
                 canEdit
                   ? (p) => {
@@ -242,6 +245,22 @@ export function ProductListPage() {
           onOpenChange={setProposalModalOpen}
           onSubmitProposal={async (params) => {
             await proposePriceChange(params);
+          }}
+        />
+      )}
+
+      {/* Batch Pricing History & Bulk Repricing Modal */}
+      {selectedProductForBatchPricing && (
+        <BatchPricingHistoryModal
+          productId={selectedProductForBatchPricing.id}
+          productName={selectedProductForBatchPricing.name}
+          sku={selectedProductForBatchPricing.sku}
+          open={Boolean(selectedProductForBatchPricing)}
+          onOpenChange={(open) => {
+            if (!open) {
+              setSelectedProductForBatchPricing(null);
+              refetch();
+            }
           }}
         />
       )}

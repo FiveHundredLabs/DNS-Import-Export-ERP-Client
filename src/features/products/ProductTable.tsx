@@ -3,7 +3,7 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '.
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import { formatCurrency } from '../../utils/formatters';
-import { Edit3, TrendingUp, AlertTriangle } from 'lucide-react';
+import { Edit3, TrendingUp, AlertTriangle, Layers, Info } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 
 interface ProductTableProps {
@@ -11,6 +11,7 @@ interface ProductTableProps {
   onView: (product: Product) => void;
   onEdit?: (product: Product) => void;
   onProposePrice?: (product: Product) => void;
+  onViewBatchPricing?: (product: Product) => void;
 }
 
 export function ProductTable({
@@ -18,11 +19,12 @@ export function ProductTable({
   onView,
   onEdit,
   onProposePrice,
+  onViewBatchPricing,
 }: ProductTableProps) {
   const { role, hasPermission } = useAuth();
   const canEdit = (role === 'DIRECTOR' || role === 'MANAGER') && hasPermission('products:edit');
   const canProposePrice = (role === 'DIRECTOR' || role === 'MANAGER') && (hasPermission('products:price_approval') || canEdit);
-  const hasActions = Boolean((canProposePrice && onProposePrice) || (canEdit && onEdit));
+  const hasActions = Boolean((canProposePrice && onProposePrice) || (canEdit && onEdit) || onViewBatchPricing);
 
   return (
     <div className="rounded-2xl border border-slate-200/80 bg-white shadow-sm overflow-hidden">
@@ -56,7 +58,9 @@ export function ProductTable({
                 <div>
                   <span className="text-[10px] text-slate-400 block font-medium">Selling Price</span>
                   <span className="font-bold font-mono text-slate-900">
-                    {p.pricing.currentSellingPrice > 0 ? (
+                    {p.pricing.latestBatchSellingPrice !== null && p.pricing.latestBatchSellingPrice !== undefined ? (
+                      formatCurrency(p.pricing.latestBatchSellingPrice)
+                    ) : p.pricing.currentSellingPrice > 0 ? (
                       formatCurrency(p.pricing.currentSellingPrice)
                     ) : (
                       <span className="text-amber-600 font-semibold text-[11px]">Batch Priced</span>
@@ -91,12 +95,16 @@ export function ProductTable({
             <TableRow>
               <TableHead className="min-w-[240px]">Product / SKU</TableHead>
               <TableHead className="w-36">Category</TableHead>
-              <TableHead className="text-right w-28">Cost Price</TableHead>
-              <TableHead className="text-right w-32 font-bold">Selling Price</TableHead>
+              <TableHead className="text-right w-28" title="Latest active batch unit cost from GRN receiving">
+                Cost Price
+              </TableHead>
+              <TableHead className="text-right w-32 font-bold" title="Latest active batch selling price">
+                Selling Price
+              </TableHead>
               <TableHead className="text-right w-24">Max Disc</TableHead>
               <TableHead className="text-center w-28">Stock On Hand</TableHead>
               <TableHead className="text-center w-24">Status</TableHead>
-              {hasActions && <TableHead className="text-right w-24">Actions</TableHead>}
+              {hasActions && <TableHead className="text-right w-28">Actions</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -132,13 +140,52 @@ export function ProductTable({
                     <span className="text-[13px] text-slate-600 font-normal">{p.categoryName}</span>
                   </TableCell>
                   <TableCell className="text-right tabular-nums text-[13px] text-slate-600 font-normal">
-                    {formatCurrency(p.pricing.costPrice)}
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums font-semibold text-[13.5px] text-slate-900">
-                    {p.pricing.currentSellingPrice > 0 ? (
-                      formatCurrency(p.pricing.currentSellingPrice)
+                    {p.pricing.latestBatchCostPrice !== null && p.pricing.latestBatchCostPrice !== undefined ? (
+                      formatCurrency(p.pricing.latestBatchCostPrice)
+                    ) : p.pricing.costPrice > 0 ? (
+                      formatCurrency(p.pricing.costPrice)
                     ) : (
-                      <span className="inline-flex items-center text-xs text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full font-medium border border-amber-200/80">
+                      <span
+                        title="No active batches with available stock. Cost is determined on GRN receiving."
+                        className="text-slate-400 font-mono"
+                      >
+                        —
+                      </span>
+                    )}
+                  </TableCell>
+                  <TableCell
+                    className="text-right tabular-nums font-semibold text-[13.5px] text-slate-900"
+                    onClick={(e) => {
+                      if (onViewBatchPricing) {
+                        e.stopPropagation();
+                        onViewBatchPricing(p);
+                      }
+                    }}
+                  >
+                    {p.pricing.latestBatchSellingPrice !== null && p.pricing.latestBatchSellingPrice !== undefined ? (
+                      <div
+                        className="inline-flex items-center gap-1.5 cursor-pointer group hover:text-indigo-600 transition-colors"
+                        title="Click to view batch pricing history"
+                      >
+                        <span>{formatCurrency(p.pricing.latestBatchSellingPrice)}</span>
+                        {p.pricing.hasBatchPricing && (
+                          <span className="text-[10px] font-mono px-1 py-0.2 bg-emerald-50 text-emerald-700 rounded border border-emerald-200/80 font-normal">
+                            Batch
+                          </span>
+                        )}
+                      </div>
+                    ) : p.pricing.currentSellingPrice > 0 ? (
+                      <span
+                        className="cursor-pointer hover:text-indigo-600 transition-colors"
+                        title="Click to view batch pricing history"
+                      >
+                        {formatCurrency(p.pricing.currentSellingPrice)}
+                      </span>
+                    ) : (
+                      <span
+                        title="No active batches with available stock. Price is established upon GRN receiving. Click to inspect."
+                        className="inline-flex items-center text-xs text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full font-medium border border-amber-200/80 cursor-pointer hover:bg-amber-100 transition-colors"
+                      >
                         Batch Priced
                       </span>
                     )}
@@ -164,6 +211,19 @@ export function ProductTable({
                   {hasActions && (
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-1">
+                        {onViewBatchPricing && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onViewBatchPricing(p);
+                            }}
+                            title="View Batch Pricing & Stock Breakdown"
+                          >
+                            <Layers className="h-4 w-4 text-indigo-600" />
+                          </Button>
+                        )}
                         {canProposePrice && onProposePrice && (
                           <Button
                             variant="ghost"

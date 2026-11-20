@@ -6,6 +6,10 @@ import {
   Product,
   SkuPreviewResponse,
   UpdateProductPayload,
+  ProductBatchPricingResponse,
+  BatchPricePreviewResponse,
+  UpdateBatchPricePayload,
+  UpdateBatchPriceResponse,
 } from './products.types';
 
 export const productsApi = {
@@ -67,6 +71,23 @@ export const productsApi = {
   deleteProduct: async (id: string): Promise<{ message: string }> => {
     return apiDelete<{ message: string }>(`/products/${id}`, {
       successMessage: 'Product soft-deleted successfully',
+    });
+  },
+
+  getBatchPricing: async (productId: string, signal?: AbortSignal): Promise<ProductBatchPricingResponse> => {
+    return apiGet<ProductBatchPricingResponse>(`/products/${productId}/batch-pricing`, { signal });
+  },
+
+  previewBatchPriceUpdate: async (productId: string, signal?: AbortSignal): Promise<BatchPricePreviewResponse> => {
+    return apiGet<BatchPricePreviewResponse>(`/products/${productId}/batch-pricing/update-preview`, { signal });
+  },
+
+  updateBatchSellingPrices: async (
+    productId: string,
+    payload: UpdateBatchPricePayload,
+  ): Promise<UpdateBatchPriceResponse> => {
+    return apiPatch<UpdateBatchPriceResponse>(`/products/${productId}/batch-pricing`, payload, {
+      successMessage: 'Batch selling prices updated successfully',
     });
   },
 };

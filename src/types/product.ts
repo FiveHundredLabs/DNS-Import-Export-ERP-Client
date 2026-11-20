@@ -27,6 +27,11 @@ export interface ProductPricing {
   promotionalDiscountPercentage?: number;
   taxRatePercentage: number; // e.g., 18% VAT
   discountLevels?: number[]; // Up to 3 product-level discount levels ordered lowest to highest (e.g. [5, 10, 15])
+  latestBatchCostPrice?: number | null;
+  latestBatchSellingPrice?: number | null;
+  latestBatchFloorPct?: number | null;
+  hasBatchPricing?: boolean;
+  batchNumber?: string | null;
 }
 
 export interface Product extends BaseEntity {
