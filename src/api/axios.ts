@@ -132,9 +132,10 @@ function redirectForError(
 
   if (status === 404) {
     redirectTo('/404');
-  } else if (status !== undefined && status >= 500) {
-    redirectTo('/500');
   }
+  // Note: 500 server errors do NOT perform hard page redirects (redirectTo('/500')),
+  // which would destroy in-memory authentication and reload the application.
+  // Instead, 500 errors are surfaced via notifyError() toast or component error boundaries.
 }
 
 export async function refreshAccessToken(): Promise<string> {
@@ -209,14 +210,16 @@ apiClient.interceptors.response.use(
         // Session has expired — redirect to login silently. The login page is
         // sufficient feedback; a toast here would be noisy and confusing on boot.
         redirectTo('/login');
-        throw refreshError;
+        return Promise.reject(refreshError);
       }
     }
 
     notifyError(error);
     redirectForError(error);
 
-    if (status === 401) {
+    // Only clear session and redirect to /login when an authenticated business request gets 401
+    // (do not redirect on login/refresh failures where the user is already on /login or refreshing)
+    if (status === 401 && !isAuthEndpoint(config?.url)) {
       clearAccessToken();
       clearAppCache();
       redirectTo('/login');
