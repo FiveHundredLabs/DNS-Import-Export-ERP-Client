@@ -11,6 +11,9 @@ import {
   BatchPricePreviewResponse,
   UpdateBatchPricePayload,
   UpdateBatchPriceResponse,
+  FloorPercentagePreviewResponse,
+  UpdateProductFloorPercentagePayload,
+  UpdateProductFloorPercentageResponse,
 } from './products.types';
 
 export const productQueryKeys = {
@@ -22,6 +25,7 @@ export const productQueryKeys = {
   barcode: (barcode: string) => [...productQueryKeys.all, 'barcode', barcode] as const,
   batchPricing: (id: string) => [...productQueryKeys.all, 'batchPricing', id] as const,
   batchPreview: (id: string) => [...productQueryKeys.all, 'batchPreview', id] as const,
+  floorPreview: (id: string) => [...productQueryKeys.all, 'floorPreview', id] as const,
   skuPreview: (query: { brandName?: string; brandId?: string; productName: string }) =>
     [...productQueryKeys.all, 'skuPreview', query] as const,
 };
@@ -134,6 +138,38 @@ export function useUpdateBatchSellingPrice() {
       queryClient.invalidateQueries({ queryKey: productQueryKeys.detail(productId) });
       queryClient.invalidateQueries({ queryKey: productQueryKeys.batchPricing(productId) });
       queryClient.invalidateQueries({ queryKey: productQueryKeys.batchPreview(productId) });
+    },
+  });
+}
+
+export function useFloorPercentagePreview(
+  productId: string,
+  enabled = false,
+): UseQueryResult<FloorPercentagePreviewResponse, Error> {
+  return useQuery({
+    queryKey: productQueryKeys.floorPreview(productId),
+    queryFn: ({ signal }) => productsApi.previewFloorPercentageUpdate(productId, signal),
+    enabled: enabled && Boolean(productId),
+    staleTime: 10_000,
+  });
+}
+
+export function useUpdateProductFloorPercentage() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      productId,
+      payload,
+    }: {
+      productId: string;
+      payload: UpdateProductFloorPercentagePayload;
+    }) => productsApi.updateProductFloorPercentage(productId, payload),
+    onSuccess: (_data, { productId }) => {
+      queryClient.invalidateQueries({ queryKey: productQueryKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: productQueryKeys.detail(productId) });
+      queryClient.invalidateQueries({ queryKey: productQueryKeys.batchPricing(productId) });
+      queryClient.invalidateQueries({ queryKey: productQueryKeys.floorPreview(productId) });
     },
   });
 }

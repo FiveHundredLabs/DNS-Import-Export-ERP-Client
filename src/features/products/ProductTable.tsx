@@ -3,7 +3,7 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '.
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import { formatCurrency } from '../../utils/formatters';
-import { Edit3, TrendingUp, AlertTriangle, Layers, Info } from 'lucide-react';
+import { Edit3, TrendingUp, AlertTriangle, Layers, Info, Percent } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 
 interface ProductTableProps {
@@ -12,6 +12,7 @@ interface ProductTableProps {
   onEdit?: (product: Product) => void;
   onProposePrice?: (product: Product) => void;
   onViewBatchPricing?: (product: Product) => void;
+  onUpdateFloorPercentage?: (product: Product) => void;
 }
 
 export function ProductTable({
@@ -20,11 +21,12 @@ export function ProductTable({
   onEdit,
   onProposePrice,
   onViewBatchPricing,
+  onUpdateFloorPercentage,
 }: ProductTableProps) {
   const { role, hasPermission } = useAuth();
   const canEdit = (role === 'DIRECTOR' || role === 'MANAGER') && hasPermission('products:edit');
   const canProposePrice = (role === 'DIRECTOR' || role === 'MANAGER') && (hasPermission('products:price_approval') || canEdit);
-  const hasActions = Boolean((canProposePrice && onProposePrice) || (canEdit && onEdit) || onViewBatchPricing);
+  const hasActions = Boolean((canProposePrice && onProposePrice) || (canEdit && onEdit) || onViewBatchPricing || (canEdit && onUpdateFloorPercentage));
 
   return (
     <div className="rounded-2xl border border-slate-200/80 bg-white shadow-sm overflow-hidden">
@@ -100,6 +102,9 @@ export function ProductTable({
               </TableHead>
               <TableHead className="text-right w-32 font-bold" title="Latest active batch selling price">
                 Selling Price
+              </TableHead>
+              <TableHead className="text-right w-24" title="Product default floor price markup percentage">
+                Floor %
               </TableHead>
               <TableHead className="text-right w-24">Max Disc</TableHead>
               <TableHead className="text-center w-28">Stock On Hand</TableHead>
@@ -191,6 +196,24 @@ export function ProductTable({
                     )}
                   </TableCell>
                   <TableCell className="text-right tabular-nums text-[13px] text-slate-600 font-normal">
+                    {canEdit && onUpdateFloorPercentage ? (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onUpdateFloorPercentage(p);
+                        }}
+                        className="inline-flex items-center gap-1 font-mono text-violet-700 hover:text-violet-950 hover:bg-violet-50 px-1.5 py-0.5 rounded transition-colors font-medium cursor-pointer"
+                        title="Click to update Product default floor price percentage"
+                      >
+                        <span>{p.minFloorPricePercentage ?? p.pricing?.minFloorPricePercentage ?? 0}%</span>
+                        <Percent className="h-2.5 w-2.5 text-violet-500" />
+                      </button>
+                    ) : (
+                      <span className="font-mono">{p.minFloorPricePercentage ?? p.pricing?.minFloorPricePercentage ?? 0}%</span>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums text-[13px] text-slate-600 font-normal">
                     {p.pricing.maxDiscountPercentage}%
                   </TableCell>
                   <TableCell className="text-center">
@@ -248,6 +271,19 @@ export function ProductTable({
                             title="Edit Master Data"
                           >
                             <Edit3 className="h-4 w-4 text-slate-600" />
+                          </Button>
+                        )}
+                        {canEdit && onUpdateFloorPercentage && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onUpdateFloorPercentage(p);
+                            }}
+                            title="Update Floor Price Percentage"
+                          >
+                            <Percent className="h-4 w-4 text-violet-600" />
                           </Button>
                         )}
                       </div>

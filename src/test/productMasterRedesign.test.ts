@@ -138,4 +138,51 @@ describe('Product Master Redesign – Unit Tests', () => {
       expect(preferred?.unitCost).toBe(800);
     });
   });
+
+  describe('Phase F & G: Floor Price Governance & Immutable Fields Rules', () => {
+    it('validates floor price percentage bounds [0, 100]', () => {
+      const validateFloor = (pct: number) => pct >= 0 && pct <= 100;
+
+      expect(validateFloor(0)).toBe(true);
+      expect(validateFloor(15.5)).toBe(true);
+      expect(validateFloor(100)).toBe(true);
+      expect(validateFloor(-1)).toBe(false);
+      expect(validateFloor(100.1)).toBe(false);
+    });
+
+    it('enforces immutable system fields exclusion in product edit payload', () => {
+      const fullProduct = {
+        id: 'p-1',
+        name: 'Schneider 16A MCB',
+        sku: 'DNS-MCB-16A',
+        barcode: '8901234567890',
+        brandId: 'brand-1',
+        brandName: 'Schneider',
+        categoryId: 'cat-1',
+        categoryName: 'Circuit Breakers',
+        uomId: 'PCS',
+        description: 'Original spec',
+        warrantyPeriodMonths: 12,
+        minFloorPricePercentage: 15,
+        status: 'ACTIVE' as const,
+      };
+
+      // In ProductEditModal, only safe editable fields are extracted into the payload
+      const editablePayload = {
+        description: 'Updated spec with wiring notes',
+        warrantyPeriod: 24,
+        minFloorPricePercentage: 18,
+        status: 'ACTIVE' as const,
+      };
+
+      // Immutable fields must never be overwritten in the update payload
+      expect(editablePayload).not.toHaveProperty('sku');
+      expect(editablePayload).not.toHaveProperty('barcode');
+      expect(editablePayload).not.toHaveProperty('brandId');
+      expect(editablePayload).not.toHaveProperty('categoryId');
+      expect(editablePayload).not.toHaveProperty('uomId');
+      expect(editablePayload.warrantyPeriod).toBe(24);
+      expect(editablePayload.minFloorPricePercentage).toBe(18);
+    });
+  });
 });

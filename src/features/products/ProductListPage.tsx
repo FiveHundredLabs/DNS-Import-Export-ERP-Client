@@ -7,6 +7,8 @@ import { ProductTable } from './ProductTable';
 import { ProductCreateModal } from './ProductCreateModal';
 import { ProductPriceProposalModal } from './ProductPriceProposalModal';
 import { BatchPricingHistoryModal } from './BatchPricingHistoryModal';
+import { ProductEditModal } from './ProductEditModal';
+import { ProductFloorPercentageModal } from './ProductFloorPercentageModal';
 import { BrandListTab } from './BrandListTab';
 import { CategoryListTab } from './CategoryListTab';
 import { Button } from '../../components/ui/button';
@@ -41,6 +43,8 @@ export function ProductListPage() {
   const [proposalModalOpen, setProposalModalOpen] = useState(false);
   const [selectedProductForProposal, setSelectedProductForProposal] = useState<Product | null>(null);
   const [selectedProductForBatchPricing, setSelectedProductForBatchPricing] = useState<Product | null>(null);
+  const [selectedProductForEdit, setSelectedProductForEdit] = useState<Product | null>(null);
+  const [selectedProductForFloorPct, setSelectedProductForFloorPct] = useState<Product | null>(null);
 
   const {
     products,
@@ -202,6 +206,8 @@ export function ProductListPage() {
                 })
               }
               onViewBatchPricing={(p) => setSelectedProductForBatchPricing(p)}
+              onEdit={canEdit ? (p) => setSelectedProductForEdit(p) : undefined}
+              onUpdateFloorPercentage={canEdit ? (p) => setSelectedProductForFloorPct(p) : undefined}
               onProposePrice={
                 canEdit
                   ? (p) => {
@@ -261,6 +267,47 @@ export function ProductListPage() {
               setSelectedProductForBatchPricing(null);
               refetch();
             }
+          }}
+        />
+      )}
+
+      {/* Product Edit Modal (Decision 5: Immutable system fields locked) */}
+      {selectedProductForEdit && (
+        <ProductEditModal
+          product={selectedProductForEdit}
+          open={Boolean(selectedProductForEdit)}
+          onOpenChange={(open) => {
+            if (!open) {
+              setSelectedProductForEdit(null);
+              refetch();
+            }
+          }}
+          onSuccess={() => {
+            refetch();
+          }}
+        />
+      )}
+
+      {/* Product Floor Percentage Modal (Decision 4: Two-step confirmation) */}
+      {selectedProductForFloorPct && (
+        <ProductFloorPercentageModal
+          productId={selectedProductForFloorPct.id}
+          productName={selectedProductForFloorPct.name}
+          sku={selectedProductForFloorPct.sku}
+          currentFloorPercentage={
+            selectedProductForFloorPct.minFloorPricePercentage ??
+            selectedProductForFloorPct.pricing?.minFloorPricePercentage ??
+            0
+          }
+          open={Boolean(selectedProductForFloorPct)}
+          onOpenChange={(open) => {
+            if (!open) {
+              setSelectedProductForFloorPct(null);
+              refetch();
+            }
+          }}
+          onSuccess={() => {
+            refetch();
           }}
         />
       )}

@@ -10,6 +10,9 @@ import {
   BatchPricePreviewResponse,
   UpdateBatchPricePayload,
   UpdateBatchPriceResponse,
+  FloorPercentagePreviewResponse,
+  UpdateProductFloorPercentagePayload,
+  UpdateProductFloorPercentageResponse,
 } from './products.types';
 
 export const productsApi = {
@@ -88,6 +91,22 @@ export const productsApi = {
   ): Promise<UpdateBatchPriceResponse> => {
     return apiPatch<UpdateBatchPriceResponse>(`/products/${productId}/batch-pricing`, payload, {
       successMessage: 'Batch selling prices updated successfully',
+    });
+  },
+
+  previewFloorPercentageUpdate: async (
+    productId: string,
+    signal?: AbortSignal,
+  ): Promise<FloorPercentagePreviewResponse> => {
+    return apiGet<FloorPercentagePreviewResponse>(`/products/${productId}/floor-percentage/preview`, { signal });
+  },
+
+  updateProductFloorPercentage: async (
+    productId: string,
+    payload: UpdateProductFloorPercentagePayload,
+  ): Promise<UpdateProductFloorPercentageResponse> => {
+    return apiPatch<UpdateProductFloorPercentageResponse>(`/products/${productId}/floor-percentage`, payload, {
+      successMessage: 'Product floor percentage updated successfully',
     });
   },
 };

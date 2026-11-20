@@ -111,6 +111,42 @@ export interface UpdateBatchPriceResponse {
   }>;
 }
 
+export interface FloorPercentagePreviewItem {
+  id: string;
+  batchNumber: string;
+  grnNumber: string;
+  grnDate: string;
+  status: 'ACTIVE' | 'HOLD';
+  availableQuantity: number;
+  unitCost: number;
+  sellingPrice: number;
+  currentFloorPercentage: number;
+}
+
+export interface FloorPercentagePreviewResponse {
+  productId: string;
+  productName: string;
+  sku: string;
+  currentProductFloorPercentage: number;
+  count: number;
+  batches: FloorPercentagePreviewItem[];
+}
+
+export interface UpdateProductFloorPercentagePayload {
+  newFloorPercentage: number;
+  propagateToBatches?: boolean;
+  batchIds?: string[];
+  reason?: string;
+}
+
+export interface UpdateProductFloorPercentageResponse {
+  success: boolean;
+  productId: string;
+  newFloorPercentage: number;
+  propagateToBatches: boolean;
+  updatedBatchesCount: number;
+}
+
 export interface Product {
   id: string;
   sku: string;
