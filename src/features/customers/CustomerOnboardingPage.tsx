@@ -239,9 +239,9 @@ export function CustomerOnboardingPage() {
     const q = queueSearch.toLowerCase();
     return list.filter(
       (c) =>
-        c.name.toLowerCase().includes(q) ||
-        c.code.toLowerCase().includes(q) ||
-        c.areaName.toLowerCase().includes(q) ||
+        (c.name || c.displayName || '').toLowerCase().includes(q) ||
+        (c.customerCode || c.code || '').toLowerCase().includes(q) ||
+        (c.areaName || c.area?.areaName || '').toLowerCase().includes(q) ||
         (c.companyName && c.companyName.toLowerCase().includes(q))
     );
   }, [activeTab, normalPending, specialPending, queueSearch]);
@@ -375,7 +375,7 @@ export function CustomerOnboardingPage() {
 
   function handleSelectCustomer(c: Customer) {
     setSelectedCustomer(c);
-    setCustomerCode(c.customerCode || c.code || '');
+    setCustomerCode(c.customerCode || c.code || 'Generated upon final approval');
     setDisplayName(c.displayName || c.name || '');
     setCompanyName(c.companyName || '');
     setPrimaryPhone(c.primaryContactNumber || c.phone || '');
@@ -828,10 +828,10 @@ export function CustomerOnboardingPage() {
                               <div className="text-[11px] text-slate-500 truncate mt-0.5">{c.companyName}</div>
                             )}
                             <div className="font-mono text-[10.5px] text-slate-400 mt-1 flex items-center gap-2">
-                              <span>{c.code}</span>
+                              <span>{c.customerCode || c.code || 'Code Pending'}</span>
                               <span>•</span>
                               <span className="flex items-center gap-1 text-slate-500">
-                                <MapPin className="w-3 h-3 text-slate-400" /> {c.areaName}
+                                <MapPin className="w-3 h-3 text-slate-400" /> {c.area?.areaName || c.areaName || 'General'}
                               </span>
                             </div>
                           </div>
@@ -902,7 +902,7 @@ export function CustomerOnboardingPage() {
                         Reviewing Pending Intake
                       </span>
                       <span className="font-mono text-xs px-2 py-0.5 bg-blue-100/80 text-blue-800 rounded-md font-bold">
-                        {selectedCustomer.code}
+                        {selectedCustomer.customerCode || selectedCustomer.code || 'Code Pending'}
                       </span>
                     </div>
                     <div className="font-bold text-slate-900 text-sm truncate mt-0.5">
