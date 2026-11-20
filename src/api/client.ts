@@ -6,6 +6,7 @@ export {
   setAccessToken,
   clearAccessToken,
   refreshAccessToken,
+  extractErrorMessage,
 } from './axios';
 
 export type {

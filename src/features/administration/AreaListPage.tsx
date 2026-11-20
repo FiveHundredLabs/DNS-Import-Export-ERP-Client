@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback } from 'react';
 import { toast } from 'sonner';
+import { extractErrorMessage } from '../../api/client';
 import { AreaItem as Area, useAreas } from '../../hooks/useAreas';
 import { useUsers } from '../../hooks/useUsers';
 import { useAuth } from '../../hooks/useAuth';
@@ -421,7 +422,7 @@ export function AreaListPage() {
       await deleteArea(areaToDelete.id);
       setAreaToDelete(null);
     } catch (err: unknown) {
-      console.error('Failed to delete area:', err);
+      toast.error(extractErrorMessage(err, 'Failed to delete area'));
     } finally {
       setIsDeleting(false);
     }

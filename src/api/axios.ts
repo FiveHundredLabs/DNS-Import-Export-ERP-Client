@@ -96,17 +96,63 @@ function redirectTo(path: '/login' | '/404' | '/500'): void {
   }
 }
 
+export function extractErrorMessage(error: unknown, fallback = 'An unexpected error occurred.'): string {
+  if (!error) return fallback;
+
+  if (typeof error === 'string' && error.trim()) {
+    return error;
+  }
+
+  if (typeof error === 'object') {
+    const anyErr = error as any;
+    const responseData = anyErr.response?.data;
+
+    if (responseData) {
+      if (typeof responseData.message === 'string' && responseData.message.trim()) {
+        return responseData.message;
+      }
+      if (Array.isArray(responseData.message) && responseData.message.length > 0) {
+        return responseData.message.filter(Boolean).join(', ');
+      }
+      if (Array.isArray(responseData.details) && responseData.details.length > 0) {
+        return responseData.details.filter(Boolean).join(', ');
+      }
+      if (typeof responseData.error === 'string' && responseData.error.trim()) {
+        return responseData.error;
+      }
+    }
+
+    if (
+      typeof anyErr.message === 'string' &&
+      anyErr.message.trim() &&
+      !anyErr.message.startsWith('Request failed with status code')
+    ) {
+      return anyErr.message;
+    }
+  }
+
+  return fallback;
+}
+
 function getErrorPayload(error: AxiosError<ApiErrorResponse>): ApiErrorResponse {
-  const responseData = error.response?.data;
+  const responseData = error.response?.data as any;
 
   if (responseData && typeof responseData === 'object') {
-    return responseData;
+    const message = extractErrorMessage(error, error.message || 'A network error occurred.');
+
+    return {
+      statusCode: responseData.statusCode || error.response?.status || 0,
+      code: responseData.code || 'ERROR',
+      message,
+      details: responseData.details,
+      requestId: responseData.requestId,
+    };
   }
 
   return {
     statusCode: error.response?.status || 0,
     code: error.code || 'NETWORK_ERROR',
-    message: error.message || 'A network error occurred.',
+    message: extractErrorMessage(error, error.message || 'A network error occurred.'),
   };
 }
 
@@ -190,6 +236,12 @@ apiClient.interceptors.response.use(
   async (error: AxiosError<ApiErrorResponse>) => {
     const config = error.config as ApiRequestConfig | undefined;
     const status = error.response?.status;
+
+    // Normalize error.message to the server's descriptive message instead of generic Axios message
+    const payload = getErrorPayload(error);
+    if (payload.message && typeof payload.message === 'string') {
+      error.message = payload.message;
+    }
 
     if (
       status === 401 &&

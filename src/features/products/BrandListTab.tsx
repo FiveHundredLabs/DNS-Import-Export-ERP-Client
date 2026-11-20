@@ -13,6 +13,7 @@ import { ErrorState } from '../../components/common/ErrorState';
 import { Search, Plus, Edit2, Power, RefreshCw, Tag, AlertCircle, Trash2 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { toast } from 'sonner';
+import { extractErrorMessage } from '../../api/client';
 
 export function BrandListTab() {
   const { role, hasPermission } = useAuth();
@@ -387,10 +388,10 @@ export function BrandListTab() {
             Delete Brand
           </DialogTitle>
           <DialogDescription>
-            {brandToDelete && (brandToDelete.productCount ?? 0) > 0 ? (
+            {brandToDelete && (brandToDelete._count?.products ?? (brandToDelete as any).productCount ?? 0) > 0 ? (
               <div className="space-y-3 pt-2 text-xs">
                 <div className="p-3 bg-amber-50 text-amber-900 border border-amber-200 rounded-lg">
-                  <strong>Cannot Delete Brand:</strong> Brand <strong>"{brandToDelete.name}"</strong> is currently referenced by <strong>{brandToDelete.productCount}</strong> product(s).
+                  <strong>Cannot Delete Brand:</strong> Brand <strong>"{brandToDelete.name}"</strong> is currently referenced by <strong>{brandToDelete._count?.products ?? (brandToDelete as any).productCount}</strong> product(s).
                 </div>
                 <p className="text-slate-600">
                   To prevent breaking product references, please reassign or delete the associated products before attempting to delete this brand.
@@ -410,9 +411,9 @@ export function BrandListTab() {
         </DialogHeader>
         <DialogFooter className="mt-4 gap-2 sm:gap-0">
           <Button variant="outline" onClick={() => setBrandToDelete(null)}>
-            {(brandToDelete && (brandToDelete.productCount ?? 0) > 0) ? 'Close' : 'Cancel'}
+            {(brandToDelete && (brandToDelete._count?.products ?? (brandToDelete as any).productCount ?? 0) > 0) ? 'Close' : 'Cancel'}
           </Button>
-          {Boolean(brandToDelete && (brandToDelete.productCount ?? 0) === 0) && (
+          {Boolean(brandToDelete && (brandToDelete._count?.products ?? (brandToDelete as any).productCount ?? 0) === 0) && (
             <Button
               variant="destructive"
               disabled={deleteBrandMutation.isPending}
@@ -423,7 +424,7 @@ export function BrandListTab() {
                   toast.success(`Brand "${brandToDelete.name}" deleted successfully.`);
                   setBrandToDelete(null);
                 } catch (err: unknown) {
-                  toast.error(err instanceof Error ? err.message : 'Failed to delete brand');
+                  toast.error(extractErrorMessage(err, 'Failed to delete brand'));
                 }
               }}
               className="bg-rose-600 hover:bg-rose-700 text-white"

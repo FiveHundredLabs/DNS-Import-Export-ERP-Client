@@ -19,6 +19,7 @@ import { ErrorState } from '../../components/common/ErrorState';
 import { Search, Plus, Edit2, Power, RefreshCw, FolderTree, AlertCircle, Trash2 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { toast } from 'sonner';
+import { extractErrorMessage } from '../../api/client';
 
 export function CategoryListTab() {
   const { role, hasPermission } = useAuth();
@@ -461,10 +462,10 @@ export function CategoryListTab() {
             Delete Category
           </DialogTitle>
           <DialogDescription>
-            {categoryToDelete && (categoryToDelete.productCount ?? 0) > 0 ? (
+            {categoryToDelete && (categoryToDelete._count?.products ?? (categoryToDelete as any).productCount ?? 0) > 0 ? (
               <div className="space-y-3 pt-2 text-xs">
                 <div className="p-3 bg-amber-50 text-amber-900 border border-amber-200 rounded-lg">
-                  <strong>Cannot Delete Category:</strong> Category <strong>"{categoryToDelete.name}"</strong> is currently referenced by <strong>{categoryToDelete.productCount}</strong> product(s).
+                  <strong>Cannot Delete Category:</strong> Category <strong>"{categoryToDelete.name}"</strong> is currently referenced by <strong>{categoryToDelete._count?.products ?? (categoryToDelete as any).productCount}</strong> product(s).
                 </div>
                 <p className="text-slate-600">
                   To prevent orphaned products, please reassign or delete the associated products before attempting to delete this category.
@@ -484,9 +485,9 @@ export function CategoryListTab() {
         </DialogHeader>
         <DialogFooter className="mt-4 gap-2 sm:gap-0">
           <Button variant="outline" onClick={() => setCategoryToDelete(null)}>
-            {(categoryToDelete && (categoryToDelete.productCount ?? 0) > 0) ? 'Close' : 'Cancel'}
+            {(categoryToDelete && (categoryToDelete._count?.products ?? (categoryToDelete as any).productCount ?? 0) > 0) ? 'Close' : 'Cancel'}
           </Button>
-          {Boolean(categoryToDelete && (categoryToDelete.productCount ?? 0) === 0) && (
+          {Boolean(categoryToDelete && (categoryToDelete._count?.products ?? (categoryToDelete as any).productCount ?? 0) === 0) && (
             <Button
               variant="destructive"
               disabled={deleteCategoryMutation.isPending}
@@ -497,7 +498,7 @@ export function CategoryListTab() {
                   toast.success(`Category "${categoryToDelete.name}" deleted successfully.`);
                   setCategoryToDelete(null);
                 } catch (err: unknown) {
-                  toast.error(err instanceof Error ? err.message : 'Failed to delete category');
+                  toast.error(extractErrorMessage(err, 'Failed to delete category'));
                 }
               }}
               className="bg-rose-600 hover:bg-rose-700 text-white"
