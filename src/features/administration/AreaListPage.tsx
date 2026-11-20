@@ -87,6 +87,45 @@ export function AreaListPage() {
     });
   }, [users]);
 
+  // Compute manager assignment details to enforce:
+  // 1. Each Area can have only ONE Area Manager
+  // 2. Each Area Manager can be assigned to only ONE Area
+  // 3. Show already-assigned managers as disabled in dropdown with their assigned Area name
+  const managersWithAssignment = useMemo(() => {
+    return areaManagers.map((mgr) => {
+      // Find area from mgr.areaId or area.areaManagers / area.areaManagerId or mgr.areaName
+      const assignedArea = areas.find(
+        (a) =>
+          a.id === mgr.areaId ||
+          (a.areaManagers && a.areaManagers.some((m) => m.id === mgr.id)) ||
+          a.areaManagerId === mgr.id ||
+          (Boolean((mgr as any).areaName) && (a.name === (mgr as any).areaName || a.areaName === (mgr as any).areaName)),
+      );
+
+      const assignedAreaName = assignedArea?.name || assignedArea?.areaName || (mgr as any).areaName;
+
+      const isAssignedToThisArea = Boolean(
+        editingArea &&
+          ((mgr.areaId && mgr.areaId === editingArea.id) ||
+            editingArea.areaManagerId === mgr.id ||
+            (editingArea.areaManagers && editingArea.areaManagers.some((m) => m.id === mgr.id))),
+      );
+
+      const isAssignedToOtherArea = Boolean(
+        assignedAreaName && (!editingArea || (assignedArea && assignedArea.id !== editingArea.id) || (editingArea.name !== assignedAreaName && editingArea.areaName !== assignedAreaName)),
+      );
+
+      return {
+        ...mgr,
+        assignedArea,
+        assignedAreaName,
+        isAssignedToThisArea,
+        isAssignedToOtherArea,
+        disabled: isAssignedToOtherArea,
+      };
+    });
+  }, [areaManagers, areas, editingArea]);
+
   // Compute combined team info (Area Managers & Sales Reps) for any given area
   const getAreaTeam = useCallback(
     (area?: Area | null) => {
@@ -244,6 +283,18 @@ export function AreaListPage() {
     if (!formData.name.trim() || !formData.code.trim()) {
       return;
     }
+
+    if (formData.areaManagerId) {
+      const selected = managersWithAssignment.find((m) => m.id === formData.areaManagerId);
+      if (selected?.disabled) {
+        const areaName = selected.assignedArea?.name || selected.assignedArea?.areaName || 'another area';
+        toast.error(
+          `Cannot assign ${selected.name}: already assigned to "${areaName}". Each Area Manager can be assigned to only ONE Area.`,
+        );
+        return;
+      }
+    }
+
     const selectedManager = areaManagers.find((u) => u.id === formData.areaManagerId);
     let finalManagerName = 'Unassigned';
     let finalManagerId = '';
@@ -556,13 +607,21 @@ export function AreaListPage() {
                 className="focus-visible:ring-indigo-500"
               >
                 <option value="">-- No Area Manager (Optional) --</option>
-                {areaManagers.map((mgr) => (
-                  <option key={mgr.id} value={mgr.id}>
-                    {mgr.name}
+                {managersWithAssignment.map((mgr) => (
+                  <option key={mgr.id} value={mgr.id} disabled={mgr.disabled}>
+                    <span>{mgr.name}</span>
+                    {mgr.isAssignedToThisArea && (
+                      <span className="ml-1 text-slate-500 font-normal"> (Current Area Manager)</span>
+                    )}
+                    {mgr.isAssignedToOtherArea && (
+                      <span className="ml-1 text-slate-500 font-normal">
+                        {` — (Assigned to: ${mgr.assignedAreaName || mgr.assignedArea?.name || mgr.assignedArea?.areaName || 'Another Area'})`}
+                      </span>
+                    )}
                   </option>
                 ))}
-                {formData.areaManagerId && !areaManagers.some((m) => m.id === formData.areaManagerId) && (
-                  <option key={formData.areaManagerId} value={formData.areaManagerId}>
+                {formData.areaManagerId && !managersWithAssignment.some((m) => m.id === formData.areaManagerId) && (
+                  <option key={formData.areaManagerId} value={formData.areaManagerId} disabled>
                     {editingArea?.areaManagerName || 'Unknown'} (Role Changed)
                   </option>
                 )}

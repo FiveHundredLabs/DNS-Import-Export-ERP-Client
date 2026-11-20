@@ -164,6 +164,69 @@ describe('Area and Team Management Requirements', () => {
         expect(screen.getByText('NEG')).toBeInTheDocument();
       });
     });
+
+    it('disables already-assigned Area Managers in dropdown with their assigned area name indicated', async () => {
+      render(
+        <MemoryRouter initialEntries={['/areas']}>
+          <AreaListPage />
+        </MemoryRouter>
+      );
+
+      // Open Create Area modal
+      const createBtn = screen.getByRole('button', { name: /Create Area/i });
+      fireEvent.click(createBtn);
+
+      await waitFor(() => {
+        expect(screen.getByText('Create New Area')).toBeInTheDocument();
+      });
+
+      // Open the Area Manager select dropdown
+      const comboboxes = screen.getAllByRole('combobox');
+      const selectTrigger = comboboxes[comboboxes.length - 1];
+      fireEvent.click(selectTrigger);
+
+      // Verify already-assigned managers show their assigned area and are disabled
+      await waitFor(() => {
+        const nimalOption = screen.getByRole('option', { name: /Nimal Bandara.*Assigned to: Kelaniya/i });
+        expect(nimalOption).toBeInTheDocument();
+        expect(nimalOption).toHaveAttribute('aria-disabled', 'true');
+
+        const sunilOption = screen.getByRole('option', { name: /Sunil Shantha.*Assigned to: Maharagama/i });
+        expect(sunilOption).toBeInTheDocument();
+        expect(sunilOption).toHaveAttribute('aria-disabled', 'true');
+      });
+    });
+
+    it('shows current Area Manager as enabled when editing an existing area', async () => {
+      render(
+        <MemoryRouter initialEntries={['/areas']}>
+          <AreaListPage />
+        </MemoryRouter>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('Kelaniya')).toBeInTheDocument();
+      });
+
+      // Click Edit on Kelaniya row
+      const editButtons = screen.getAllByTitle('Edit Area');
+      fireEvent.click(editButtons[0]);
+
+      await waitFor(() => {
+        expect(screen.getByText('Edit Area')).toBeInTheDocument();
+      });
+
+      // Open Area Manager dropdown
+      const comboboxes = screen.getAllByRole('combobox');
+      const selectTrigger = comboboxes[comboboxes.length - 1];
+      fireEvent.click(selectTrigger);
+
+      // Verify Nimal Bandara is current manager for Kelaniya and other managers are disabled
+      await waitFor(() => {
+        const sunilOption = screen.getByRole('option', { name: /Sunil Shantha.*Assigned to: Maharagama/i });
+        expect(sunilOption).toHaveAttribute('aria-disabled', 'true');
+      });
+    });
   });
 
   describe('2. Team Management (/teams) - Areas Dropdown', () => {

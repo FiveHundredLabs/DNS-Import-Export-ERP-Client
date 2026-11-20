@@ -98,6 +98,7 @@ export function useAreas() {
       const created = await areasApi.createArea({
         areaName,
         description: desc,
+        areaManagerId: data.areaManagerId || undefined,
       });
 
       // If an Area Manager was selected, assign the user to this area
@@ -151,6 +152,7 @@ export function useAreas() {
       const updated = await areasApi.updateArea(id, {
         areaName: areaName || undefined,
         description: desc,
+        areaManagerId: data.areaManagerId !== undefined ? (data.areaManagerId || null) : undefined,
         updatedAt,
       });
 

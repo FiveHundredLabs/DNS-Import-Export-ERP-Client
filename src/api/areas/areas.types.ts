@@ -53,11 +53,13 @@ export interface ListAreasParams {
 export interface CreateAreaPayload {
   areaName: string;
   description?: string | null;
+  areaManagerId?: string | null;
 }
 
 export interface UpdateAreaPayload {
   areaName?: string;
   description?: string | null;
+  areaManagerId?: string | null;
   updatedAt: string;
 }
 
