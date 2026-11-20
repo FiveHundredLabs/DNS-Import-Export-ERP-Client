@@ -2,10 +2,27 @@ import React from 'react';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { CustomerOnboardingPage, LOYALTY_TIER_DEFAULTS } from '../features/customers/CustomerOnboardingPage';
 import { Sidebar } from '../components/common/Sidebar';
 import { creditTermsConfigService } from '../services/CreditTermsConfigService';
 import * as authHook from '../hooks/useAuth';
+
+function renderWithProviders(ui: React.ReactElement) {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: {
+        retry: false,
+      },
+    },
+  });
+
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <MemoryRouter>{ui}</MemoryRouter>
+    </QueryClientProvider>
+  );
+}
 
 // Mock Sonner toast
 vi.mock('sonner', () => ({
@@ -44,11 +61,7 @@ describe('Customer Onboarding — Step 2 Classification Removal & Loyalty Tier A
   });
 
   it('does NOT render Customer Classification dropdown anywhere in Step 2', async () => {
-    render(
-      <MemoryRouter>
-        <CustomerOnboardingPage />
-      </MemoryRouter>
-    );
+    renderWithProviders(<CustomerOnboardingPage />);
 
     // Switch to Step 2
     const step2Button = screen.getByRole('button', { name: /Step 2: Commercial & Routing/i });
@@ -74,11 +87,7 @@ describe('Customer Onboarding — Step 2 Classification Removal & Loyalty Tier A
   });
 
   it('automatically sets credit days and credit limit when Sales Manager selects Premium tier', async () => {
-    render(
-      <MemoryRouter>
-        <CustomerOnboardingPage />
-      </MemoryRouter>
-    );
+    renderWithProviders(<CustomerOnboardingPage />);
 
     // Switch to Step 2
     fireEvent.click(screen.getByRole('button', { name: /Step 2: Commercial & Routing/i }));
@@ -103,15 +112,11 @@ describe('Customer Onboarding — Step 2 Classification Removal & Loyalty Tier A
     });
 
     // Verify Special Director Approval Required is triggered because 45 > 30 and 1.5M > 1M
-    expect(screen.getByText(/Special Director Approval Required/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/Special Director Approval Required/i).length).toBeGreaterThan(0);
   });
 
   it('automatically sets credit days and credit limit when Sales Manager selects Platinum tier', async () => {
-    render(
-      <MemoryRouter>
-        <CustomerOnboardingPage />
-      </MemoryRouter>
-    );
+    renderWithProviders(<CustomerOnboardingPage />);
 
     // Switch to Step 2
     fireEvent.click(screen.getByRole('button', { name: /Step 2: Commercial & Routing/i }));
@@ -128,15 +133,11 @@ describe('Customer Onboarding — Step 2 Classification Removal & Loyalty Tier A
     });
 
     // Verify Special Approval is flagged
-    expect(screen.getByText(/Special Director Approval Required/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/Special Director Approval Required/i).length).toBeGreaterThan(0);
   });
 
   it('resets back to Normal Approval when switched back to New tier', async () => {
-    render(
-      <MemoryRouter>
-        <CustomerOnboardingPage />
-      </MemoryRouter>
-    );
+    renderWithProviders(<CustomerOnboardingPage />);
 
     // Switch to Step 2
     fireEvent.click(screen.getByRole('button', { name: /Step 2: Commercial & Routing/i }));
@@ -147,7 +148,7 @@ describe('Customer Onboarding — Step 2 Classification Removal & Loyalty Tier A
     fireEvent.click(loyaltyTrigger);
     fireEvent.click(screen.getByText('Premium (Level 2)'));
     await waitFor(() => {
-      expect(screen.getByText(/Special Director Approval Required/i)).toBeInTheDocument();
+      expect(screen.getAllByText(/Special Director Approval Required/i).length).toBeGreaterThan(0);
     });
 
     // Change back to NEW

@@ -4,6 +4,7 @@ import { useSmartBack } from '../../hooks/useSmartBack';
 import { useAuth } from '../../hooks/useAuth';
 import { useAreas } from '../../hooks/useAreas';
 import { useUsers } from '../../hooks/useUsers';
+import { useCreditTermsConfig } from '../../api/credit-terms/credit-terms.hooks';
 import { customersApi } from '../../api/customers/customers.api';
 import { CreateCustomerStep1Payload, CompleteCustomerStep2Payload } from '../../api/customers/customers.types';
 import { creditTermsConfigService } from '../../services/CreditTermsConfigService';
@@ -15,6 +16,14 @@ import { Select } from '../../components/ui/select';
 import { Badge } from '../../components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { PageHeader } from '../../components/common/PageHeader';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '../../components/ui/dialog';
+import { Textarea } from '../../components/ui/textarea';
 import { toast } from 'sonner';
 import {
   UserPlus,
@@ -36,6 +45,7 @@ import {
   RefreshCw,
   Check,
   X,
+  XCircle,
   Lock,
   Search,
   SlidersHorizontal,
@@ -267,24 +277,66 @@ export function CustomerOnboardingPage() {
   const [maxDiscount, setMaxDiscount] = useState(10);
   const [paymentTermNotes, setPaymentTermNotes] = useState('');
 
+  const { data: backendCreditConfig } = useCreditTermsConfig();
   const defaultConfig = creditTermsConfigService.getCreditTermsConfig();
-  const approvalRoute = determineCustomerApprovalRoute(creditDays, creditLimit);
+  const defaultCreditDays = backendCreditConfig?.defaultCreditDays ?? defaultConfig.defaultCreditDays;
+  const defaultCreditLimit = backendCreditConfig?.defaultCreditLimit ?? defaultConfig.defaultCreditLimit;
+
+  const approvalRoute = determineCustomerApprovalRoute(creditDays, creditLimit, defaultCreditDays, defaultCreditLimit, role);
   const isSpecialApproval = approvalRoute.isExceptional;
+
+  // Rejection modal state
+  const [rejectModalOpen, setRejectModalOpen] = useState(false);
+  const [rejectReason, setRejectReason] = useState('');
+  const [rejectTargetId, setRejectTargetId] = useState<string | null>(null);
+  const [isRejecting, setIsRejecting] = useState(false);
+
+  const canReject = ['SALES_MANAGER', 'MANAGER', 'DIRECTOR'].includes(role);
+
+  const handleOpenReject = (targetId: string) => {
+    setRejectTargetId(targetId);
+    setRejectReason('');
+    setRejectModalOpen(true);
+  };
+
+  const handleConfirmReject = async () => {
+    if (!rejectTargetId) return;
+    if (!rejectReason.trim() || rejectReason.trim().length < 3) {
+      toast.error('Please enter a rejection reason (at least 3 characters).');
+      return;
+    }
+    setIsRejecting(true);
+    try {
+      await customersApi.rejectCustomer(rejectTargetId, { reason: rejectReason.trim(), comments: rejectReason.trim() });
+      toast.success('Customer onboarding application rejected.');
+      setRejectModalOpen(false);
+      setRejectTargetId(null);
+      setRejectReason('');
+      if (selectedCustomer?.id === rejectTargetId) {
+        handleReset();
+      }
+      await loadPending();
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Failed to reject customer application.');
+    } finally {
+      setIsRejecting(false);
+    }
+  };
 
   // Initialize defaults
   useEffect(() => {
-    setCreditDays(defaultConfig.defaultCreditDays);
-    setCreditLimit(defaultConfig.defaultCreditLimit);
+    setCreditDays(defaultCreditDays);
+    setCreditLimit(defaultCreditLimit);
     setDefaultDiscount(defaultConfig.defaultDiscountPercentage);
     setMaxDiscount(defaultConfig.maxDiscountPercentage);
-  }, []);
+  }, [defaultCreditDays, defaultCreditLimit]);
 
   const handleLoyaltyTierChange = (tier: CustomerLoyaltyLevel) => {
     setLoyaltyLevel(tier);
     const tierConfig = LOYALTY_TIER_DEFAULTS[tier];
     if (tierConfig) {
-      const days = tier === 'NEW' ? defaultConfig.defaultCreditDays : tierConfig.creditDays;
-      const limit = tier === 'NEW' ? defaultConfig.defaultCreditLimit : tierConfig.creditLimit;
+      const days = tier === 'NEW' ? defaultCreditDays : tierConfig.creditDays;
+      const limit = tier === 'NEW' ? defaultCreditLimit : tierConfig.creditLimit;
       const defDisc = tier === 'NEW' ? defaultConfig.defaultDiscountPercentage : tierConfig.defaultDiscount;
       const maxDisc = tier === 'NEW' ? defaultConfig.maxDiscountPercentage : tierConfig.maxDiscount;
       setCreditDays(days);
@@ -338,8 +390,8 @@ export function CustomerOnboardingPage() {
     setCustomerType((c.customerType || c.type || 'DEALER') as CustomerType);
     setLoyaltyLevel((c.loyaltyLevel || 'NEW') as CustomerLoyaltyLevel);
 
-    setCreditDays(c.creditPeriod ?? c.commercialTerms?.creditDays ?? defaultConfig.defaultCreditDays);
-    setCreditLimit(Number(c.creditLimit ?? c.commercialTerms?.creditLimit ?? defaultConfig.defaultCreditLimit));
+    setCreditDays(c.creditPeriod ?? c.commercialTerms?.creditDays ?? defaultCreditDays);
+    setCreditLimit(Number(c.creditLimit ?? c.commercialTerms?.creditLimit ?? defaultCreditLimit));
     setPaymentTermNotes(c.paymentTermNotes || c.commercialTerms?.paymentTermNotes || '');
 
     if (c.salesRepId || c.assignedRepId) {
@@ -446,6 +498,7 @@ export function CustomerOnboardingPage() {
           whatsappNumber: whatsappNumber.trim() || primaryPhone.trim(),
           secondaryContactNumber: secondaryPhone.trim() || undefined,
           registrationAddress: address.trim(),
+          areaId,
           tinNumber: taxNumber.trim() || undefined,
           vatNumber: vatNumber.trim() || undefined,
           customerType: customerType || 'DEALER',
@@ -486,6 +539,7 @@ export function CustomerOnboardingPage() {
           whatsappNumber: whatsappNumber.trim() || primaryPhone.trim(),
           secondaryContactNumber: secondaryPhone.trim() || undefined,
           registrationAddress: address.trim(),
+          areaId,
           tinNumber: taxNumber.trim() || undefined,
           vatNumber: vatNumber.trim() || undefined,
           customerType: customerType || 'DEALER',
@@ -506,9 +560,9 @@ export function CustomerOnboardingPage() {
 
       const completed = await customersApi.completeCustomerStep2(targetCustomerId, step2Payload);
 
-      if (completed.approvalStage === 'PENDING_DIRECTOR_APPROVAL') {
+      if (completed.approvalStage === 'PENDING_DIRECTOR_APPROVAL' || completed.approvalStage === 'PENDING_MANAGER_APPROVAL') {
         toast.success(
-          `Customer onboarding routed to Director for Special Approval (${creditDays} days, LKR ${creditLimit.toLocaleString()}).`
+          `Customer onboarding routed for Special Approval (${creditDays} days, LKR ${creditLimit.toLocaleString()}).`
         );
       } else {
         toast.success(
@@ -801,9 +855,25 @@ export function CustomerOnboardingPage() {
                             <span>
                               Limit: <strong className="font-mono">{formatCurrency(c.commercialTerms.creditLimit)}</strong>
                             </span>
-                            <span className="text-primary font-semibold flex items-center gap-0.5 group-hover:translate-x-0.5 transition-transform text-[10px]">
-                              Review <ChevronRight className="w-3 h-3" />
-                            </span>
+                            <div className="flex items-center gap-2">
+                              {canReject && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleOpenReject(c.id);
+                                  }}
+                                  className="text-rose-600 hover:text-rose-800 p-1 hover:bg-rose-50 rounded text-[10px] font-semibold flex items-center gap-0.5"
+                                  title="Reject Application"
+                                >
+                                  <XCircle className="w-3 h-3" />
+                                  <span>Reject</span>
+                                </button>
+                              )}
+                              <span className="text-primary font-semibold flex items-center gap-0.5 group-hover:translate-x-0.5 transition-transform text-[10px]">
+                                Review <ChevronRight className="w-3 h-3" />
+                              </span>
+                            </div>
                           </div>
                         )}
                       </div>
@@ -845,6 +915,17 @@ export function CustomerOnboardingPage() {
                 </div>
 
                 <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
+                  {canReject && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleOpenReject(selectedCustomer.id)}
+                      className="text-xs text-rose-600 border-rose-200 hover:bg-rose-50 hover:text-rose-700 h-8 gap-1"
+                    >
+                      <XCircle className="w-3.5 h-3.5" />
+                      Reject Intake
+                    </Button>
+                  )}
                   <Button
                     variant="ghost"
                     size="sm"
@@ -1279,12 +1360,56 @@ export function CustomerOnboardingPage() {
                         </Badge>
                       </div>
                       <p className="text-xs text-emerald-800 mt-0.5 leading-relaxed">
-                        Terms are within standard operational limits (≤ {defaultConfig.defaultCreditDays} days, ≤ LKR {defaultConfig.defaultCreditLimit.toLocaleString()}).
+                        Terms are within standard operational limits (≤ {defaultCreditDays} days, ≤ LKR {defaultCreditLimit.toLocaleString()}).
                         Manager review &amp; sign-off sufficient for immediate activation.
                       </p>
                     </div>
                   </div>
                 )}
+
+                {/* Assigned Operating Territory Card */}
+                {(() => {
+                  const selectedArea = areas.find((a) => a.id === areaId);
+                  return (
+                    <Card className="border-slate-200/90 shadow-2xs overflow-hidden bg-slate-50/50">
+                      <CardContent className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                            <MapPin className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+                              Assigned Operating Territory (Configured in Step 1)
+                            </div>
+                            <div className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                              <span>{selectedArea ? selectedArea.name : (areaId ? 'Area ID: ' + areaId : 'No Area Assigned')}</span>
+                              {selectedArea?.code && (
+                                <Badge variant="outline" className="font-mono text-[10px] py-0 px-1.5">
+                                  {selectedArea.code}
+                                </Badge>
+                              )}
+                            </div>
+                            {selectedArea?.areaManagerName && (
+                              <div className="text-[11px] text-slate-500 mt-0.5">
+                                Area Manager: <strong className="text-slate-700">{selectedArea.areaManagerName}</strong>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setStep(1)}
+                          className="text-xs h-8 gap-1.5 self-start sm:self-auto border-slate-200 hover:bg-white"
+                        >
+                          <span>Change Area</span>
+                          <ArrowRight className="w-3 h-3" />
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  );
+                })()}
 
                 {/* 1. Territory & Commercial Tier Assignment */}
                 <Card className="border-slate-200/90 shadow-2xs overflow-hidden">
@@ -1390,8 +1515,8 @@ export function CustomerOnboardingPage() {
                       <button
                         type="button"
                         onClick={() => {
-                          setCreditDays(defaultConfig.defaultCreditDays);
-                          setCreditLimit(defaultConfig.defaultCreditLimit);
+                          setCreditDays(defaultCreditDays);
+                          setCreditLimit(defaultCreditLimit);
                           setDefaultDiscount(defaultConfig.defaultDiscountPercentage);
                           setMaxDiscount(defaultConfig.maxDiscountPercentage);
                         }}
@@ -1411,7 +1536,7 @@ export function CustomerOnboardingPage() {
                         <label className="text-xs font-semibold text-slate-700 flex items-center justify-between">
                           <span>Allowed Credit Days</span>
                           <span className="text-[10.5px] text-slate-400 font-mono">
-                            Policy Default: {defaultConfig.defaultCreditDays}d
+                            Policy Default: {defaultCreditDays}d
                           </span>
                         </label>
                         <Input
@@ -1426,7 +1551,7 @@ export function CustomerOnboardingPage() {
                             setErrors((p) => ({ ...p, creditDays: '' }));
                           }}
                           className={`font-mono text-xs font-bold ${
-                            creditDays > defaultConfig.requireDirectorApprovalAboveDays
+                            creditDays > defaultCreditDays
                               ? 'border-rose-400 text-rose-700 bg-rose-50/30'
                               : ''
                           } ${!canEditStep2 ? 'bg-slate-50 cursor-not-allowed' : ''}`}
@@ -1459,7 +1584,7 @@ export function CustomerOnboardingPage() {
                         <label className="text-xs font-semibold text-slate-700 flex items-center justify-between">
                           <span>Credit Exposure Limit (LKR)</span>
                           <span className="text-[10.5px] text-slate-400 font-mono">
-                            Max Std: {formatCurrency(defaultConfig.defaultCreditLimit)}
+                            Max Std: {formatCurrency(defaultCreditLimit)}
                           </span>
                         </label>
                         <Input
@@ -1474,7 +1599,7 @@ export function CustomerOnboardingPage() {
                             setErrors((p) => ({ ...p, creditLimit: '' }));
                           }}
                           className={`font-mono text-xs font-bold ${
-                            creditLimit > defaultConfig.requireDirectorApprovalAboveLimit
+                            creditLimit > defaultCreditLimit
                               ? 'border-rose-400 text-rose-700 bg-rose-50/30'
                               : ''
                           } ${!canEditStep2 ? 'bg-slate-50 cursor-not-allowed' : ''}`}
@@ -1538,6 +1663,19 @@ export function CustomerOnboardingPage() {
 
                   {canEditStep2 ? (
                     <div className="flex items-center gap-2">
+                      {selectedCustomer && canReject && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleOpenReject(selectedCustomer.id)}
+                          className="text-xs gap-1.5 h-9 text-rose-600 border-rose-200 hover:bg-rose-50 hover:text-rose-700"
+                        >
+                          <XCircle className="w-3.5 h-3.5" />
+                          <span>Reject Application</span>
+                        </Button>
+                      )}
+
                       {selectedCustomer && (
                         <Button
                           type="button"
@@ -1599,6 +1737,60 @@ export function CustomerOnboardingPage() {
           </div>
         </div>
       </div>
+
+      {/* Rejection Confirmation Modal Dialog */}
+      <Dialog open={rejectModalOpen} onOpenChange={setRejectModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-rose-600">
+              <XCircle className="w-5 h-5" />
+              Reject Customer Application
+            </DialogTitle>
+            <DialogDescription>
+              Please provide a clear reason for rejecting this customer intake application. This will transition the status to REJECT and record the action in the audit log.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div>
+              <label className="text-xs font-semibold text-slate-700 mb-1.5 block">
+                Rejection Reason / Notes <span className="text-rose-500">*</span>
+              </label>
+              <Textarea
+                placeholder="Specify reason for rejection (e.g., Incomplete documentation, territory overlap, unverified credit history)..."
+                value={rejectReason}
+                onChange={(e) => setRejectReason(e.target.value)}
+                rows={4}
+                className="text-xs"
+              />
+            </div>
+          </div>
+          <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setRejectModalOpen(false);
+                setRejectTargetId(null);
+                setRejectReason('');
+              }}
+              disabled={isRejecting}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              size="sm"
+              onClick={handleConfirmReject}
+              disabled={isRejecting || !rejectReason.trim()}
+              className="gap-1.5 bg-rose-600 hover:bg-rose-700 text-white"
+            >
+              {isRejecting ? 'Rejecting...' : 'Confirm Rejection'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

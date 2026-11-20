@@ -64,6 +64,8 @@ export interface OrderEvaluationInput {
   }>;
   requestedCreditDays: number;
   userRole?: UserRole;
+  standardCreditDays?: number;
+  standardCreditLimit?: number;
 }
 
 export interface OrderEvaluationResult {
@@ -98,8 +100,16 @@ export interface OrderEvaluationResult {
 export function evaluateOrderApproval(
   input: OrderEvaluationInput
 ): OrderEvaluationResult {
-  const { customer, items, requestedCreditDays, userRole = 'SALES_REP' } = input;
+  const {
+    customer,
+    items,
+    requestedCreditDays,
+    userRole = 'SALES_REP',
+    standardCreditDays = 30,
+    standardCreditLimit = 500000,
+  } = input;
   const reasons: string[] = [];
+  const isManagerOrDirector = userRole === 'DIRECTOR' || userRole === 'MANAGER';
 
   const repMaxDiscount = userRole === 'SALES_REP' ? 5 : 15;
 
@@ -139,9 +149,11 @@ export function evaluateOrderApproval(
 
     if (discEval.requiresSpecialApproval) {
       discountBreached = true;
-      reasons.push(
-        `Item "${item.productNameSnapshot || item.productId}": ${discEval.reason}`
-      );
+      if (!isManagerOrDirector) {
+        reasons.push(
+          `Item "${item.productNameSnapshot || item.productId}": ${discEval.reason}`
+        );
+      }
       if (item.discountPercentage > productMaxDisc || item.discountPercentage > 15) {
         hasDirectorDiscount = true;
       } else if (item.discountPercentage > customerMaxDisc) {
@@ -149,9 +161,11 @@ export function evaluateOrderApproval(
       }
     } else if (item.discountPercentage > repMaxDiscount) {
       discountBreached = true;
-      reasons.push(
-        `Item "${item.productNameSnapshot || item.productId}" discount (${item.discountPercentage}%) exceeds sales rep authority limit (${repMaxDiscount}%).`
-      );
+      if (!isManagerOrDirector) {
+        reasons.push(
+          `Item "${item.productNameSnapshot || item.productId}" discount (${item.discountPercentage}%) exceeds sales rep authority limit (${repMaxDiscount}%).`
+        );
+      }
 
       if (item.discountPercentage > productMaxDisc || item.discountPercentage > 15) {
         hasDirectorDiscount = true;
@@ -166,9 +180,9 @@ export function evaluateOrderApproval(
   taxAmount = Number(taxAmount.toFixed(2));
   const totalAmount = Number((subtotal - discountAmount + taxAmount).toFixed(2));
 
-  // 2. Evaluate Credit Limits & Days
-  const customerCreditLimit = customer.commercialTerms?.creditLimit ?? 0;
-  const customerCreditDays = customer.commercialTerms?.creditDays ?? 30;
+  // 2. Evaluate Credit Limits & Days using dynamic system defaults
+  const customerCreditLimit = customer.commercialTerms?.creditLimit ?? standardCreditLimit;
+  const customerCreditDays = customer.commercialTerms?.creditDays ?? standardCreditDays;
   const customerTotalOutstanding = customer.financials?.totalOutstanding ?? 0;
   const availableCredit = Number((customerCreditLimit - customerTotalOutstanding).toFixed(2));
 
@@ -180,46 +194,36 @@ export function evaluateOrderApproval(
     customerTotalOutstanding,
   });
 
-  if (creditEval.creditDaysBreached) {
+  if (creditEval.creditDaysBreached && !isManagerOrDirector) {
     reasons.push(
       `Requested credit days (${requestedCreditDays} days) exceeds customer approved limit (${customerCreditDays} days).`
     );
   }
 
   const projectedOutstanding = customerTotalOutstanding + totalAmount;
-  if (creditEval.creditLimitBreached) {
+  if (creditEval.creditLimitBreached && !isManagerOrDirector) {
     const excess = projectedOutstanding - customerCreditLimit;
     reasons.push(
       `Projected total balance (LKR ${projectedOutstanding.toLocaleString()}) exceeds credit limit (LKR ${customerCreditLimit.toLocaleString()}) by LKR ${excess.toLocaleString()}.`
     );
   }
 
+  // Rule 5: Directors and Managers do not require Special Approval
   const isSpecialApproval =
-    discountBreached || creditEval.creditDaysBreached || creditEval.creditLimitBreached;
+    !isManagerOrDirector &&
+    (discountBreached || creditEval.creditDaysBreached || creditEval.creditLimitBreached);
 
   // 3. Determine Approver Role Tier
   let targetApproverRole: 'SALES_MANAGER' | 'MANAGER' | 'DIRECTOR' = 'SALES_MANAGER';
 
-  if (isSpecialApproval) {
-    // Extreme cases require DIRECTOR:
-    // - Extreme credit days breach (> 30 days requested)
-    // - Extreme credit limit excess (> 500,000 LKR)
-    // - Extreme discount (exceeds product max discount or 15%)
-    const isExtremeCreditLimit =
-      creditEval.creditLimitBreached && projectedOutstanding - customerCreditLimit > 500000;
-    const isExtremeCreditDays =
-      creditEval.creditDaysBreached && requestedCreditDays > 30;
-
-    if (hasDirectorDiscount || isExtremeCreditLimit || isExtremeCreditDays) {
-      targetApproverRole = 'DIRECTOR';
-    } else if (
-      creditEval.creditLimitBreached ||
-      creditEval.creditDaysBreached ||
-      hasManagerDiscount
-    ) {
-      targetApproverRole = 'MANAGER';
+  if (isManagerOrDirector) {
+    targetApproverRole = userRole as 'MANAGER' | 'DIRECTOR';
+  } else if (isSpecialApproval) {
+    // Rule 3: If Sales Manager creates order exceeding standard credit terms -> approval must go to Manager/Director
+    if (userRole === 'SALES_MANAGER') {
+      targetApproverRole = hasDirectorDiscount ? 'DIRECTOR' : 'MANAGER';
     } else {
-      // Rep discount limit breached but within customer ceiling
+      // Rule 2: Orders created by Sales Reps or Area Managers that exceed credit terms must go to Sales Manager for Special Approval
       targetApproverRole = 'SALES_MANAGER';
     }
   }

@@ -2,35 +2,55 @@ import { UserRole } from '../types/auth';
 import { CustomerApprovalStage } from '../types/customer';
 
 /**
- * Determines whether a customer commercial setup requires Manager or Director approval.
+ * Determines whether a customer commercial setup requires Sales Manager, Manager, or Director approval.
  */
 export function determineCustomerApprovalRoute(
   creditDays: number,
-  creditLimit: number
+  creditLimit: number,
+  standardCreditDays: number = 30,
+  standardCreditLimit: number = 500000,
+  userRole?: UserRole
 ): {
-  targetRole: 'MANAGER' | 'DIRECTOR';
+  targetRole: 'SALES_MANAGER' | 'MANAGER' | 'DIRECTOR';
   isExceptional: boolean;
   reason: string;
 } {
-  const isHighCreditDays = creditDays > 30;
-  const isHighCreditLimit = creditLimit > 1000000;
+  const isManagerOrDirector = userRole === 'DIRECTOR' || userRole === 'MANAGER';
+  if (isManagerOrDirector) {
+    return {
+      targetRole: (userRole as 'MANAGER' | 'DIRECTOR') || 'DIRECTOR',
+      isExceptional: false,
+      reason: 'Director/Manager direct approval authority.',
+    };
+  }
+
+  const isHighCreditDays = creditDays > standardCreditDays;
+  const isHighCreditLimit = creditLimit > standardCreditLimit;
 
   if (isHighCreditDays || isHighCreditLimit) {
     const reasons: string[] = [];
-    if (isHighCreditDays) reasons.push(`Credit days (${creditDays}) exceed standard 30-day limit`);
-    if (isHighCreditLimit) reasons.push(`Credit limit (LKR ${creditLimit.toLocaleString()}) exceeds LKR 1,000,000 threshold`);
+    if (isHighCreditDays) reasons.push(`Credit days (${creditDays}) exceed standard ${standardCreditDays}-day limit`);
+    if (isHighCreditLimit) reasons.push(`Credit limit (LKR ${creditLimit.toLocaleString()}) exceeds standard LKR ${standardCreditLimit.toLocaleString()} limit`);
+
+    if (userRole === 'SALES_MANAGER') {
+      return {
+        targetRole: 'DIRECTOR',
+        isExceptional: true,
+        reason: `Special Director Approval Required: Sales Manager configured terms exceeding standard defaults (${reasons.join(' and ')}).`,
+      };
+    }
 
     return {
-      targetRole: 'DIRECTOR',
+      targetRole: 'SALES_MANAGER',
       isExceptional: true,
-      reason: `Director Approval required: ${reasons.join(' and ')}.`,
+      reason: `Special Approval Required: ${reasons.join(' and ')}. Requires Sales Manager review.`,
     };
   }
 
   return {
-    targetRole: 'MANAGER',
+    targetRole: 'SALES_MANAGER',
     isExceptional: false,
-    reason: 'Standard commercial terms. Manager approval sufficient.',
+    reason: `Standard policy terms applied (≤ ${standardCreditDays} days, ≤ LKR ${standardCreditLimit.toLocaleString()}). Sales Manager review sufficient.`,
   };
 }
 

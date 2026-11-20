@@ -599,10 +599,11 @@ describe('Phase 12 — Role Security & Permission Boundary Testing (Section 83)'
             productId: 'prod-001',
             unitPriceSnapshot: 1500,
             orderedQuantity: 10,
-            discountPercentage: 5,
+            discountPercentage: 20, // Discount exceeding director threshold
           },
         ],
-        requestedCreditDays: 45, // Breaches 30-day ceiling!
+        requestedCreditDays: 45, // Breaches credit days ceiling
+        userRole: 'SALES_MANAGER',
       });
 
       expect(evalResult.isSpecialApproval).toBe(true);

@@ -71,13 +71,14 @@ export interface CreateCustomerStep1Payload {
   primaryContactNumber: string;
   secondaryContactNumber?: string;
   registrationAddress: string;
+  areaId: string;
   tinNumber?: string;
   vatNumber?: string;
   customerType?: CustomerType;
 }
 
 export interface CompleteCustomerStep2Payload {
-  areaId: string;
+  areaId?: string;
   areaManagerId: string;
   salesRepId: string;
   loyaltyLevel: CustomerLoyaltyLevel;
@@ -94,6 +95,7 @@ export interface UpdateCommercialTermsPayload {
 
 export interface CustomerApprovalActionPayload {
   comments?: string;
+  reason?: string;
 }
 
 export interface UpdateCustomerStatusPayload {
