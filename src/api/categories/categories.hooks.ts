@@ -69,3 +69,15 @@ export function useUpdateCategoryStatus() {
     },
   });
 }
+
+export function useDeleteCategory() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) => categoriesApi.deleteCategory(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: categoryQueryKeys.all });
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+    },
+  });
+}

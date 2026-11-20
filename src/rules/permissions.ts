@@ -220,10 +220,12 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
   CASHIER: [
     'view:cashier_dashboard',
     'products:view',
+    'pos:operate',
   ],
   SHOWROOM_CASHIER: [
     'view:cashier_dashboard',
     'products:view',
+    'pos:operate',
   ],
   SHOWROOM_MANAGER: [
     'view:showroom_manager_dashboard',

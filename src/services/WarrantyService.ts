@@ -3,6 +3,7 @@ import { MockWarrantyRepository } from '../repositories/mock/MockWarrantyReposit
 import { ICustomerRepository } from '../repositories/ICustomerRepository';
 import { MockCustomerRepository } from '../repositories/mock/MockCustomerRepository';
 import { IProductRepository } from '../repositories/IProductRepository';
+import { ApiProductRepository } from '../repositories/ApiProductRepository';
 import { MockProductRepository } from '../repositories/mock/MockProductRepository';
 import { IInventoryRepository } from '../repositories/IInventoryRepository';
 import { MockInventoryRepository } from '../repositories/mock/MockInventoryRepository';
@@ -60,7 +61,7 @@ export class WarrantyService {
   ) {
     this.repo = repo || new MockWarrantyRepository();
     this.customerRepo = customerRepo || new MockCustomerRepository();
-    this.productRepo = productRepo || new MockProductRepository();
+    this.productRepo = productRepo || new ApiProductRepository();
     this.inventoryRepo = inventoryRepo || new MockInventoryRepository();
   }
 

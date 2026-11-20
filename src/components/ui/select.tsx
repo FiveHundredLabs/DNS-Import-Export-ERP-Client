@@ -296,16 +296,17 @@ const Select = ({
     type: 'item';
     value: string;
     label: React.ReactNode;
+    disabled?: boolean;
   }
   interface GroupItem {
     type: 'group';
     label: string;
-    options: { value: string; label: React.ReactNode }[];
+    options: { value: string; label: React.ReactNode; disabled?: boolean }[];
   }
   type RenderItem = OptionItem | GroupItem;
 
   const renderItems: RenderItem[] = [];
-  const flatOptions: { value: string; label: React.ReactNode }[] = [];
+  const flatOptions: { value: string; label: React.ReactNode; disabled?: boolean }[] = [];
 
   const extractOptions = (nodeChildren: React.ReactNode) => {
     React.Children.forEach(nodeChildren, (child) => {
@@ -319,7 +320,7 @@ const Select = ({
           hasTrigger = true;
         } else if (child.type === 'optgroup') {
           const groupLabel = String((child.props as { label?: string }).label || '');
-          const groupOptions: { value: string; label: React.ReactNode }[] = [];
+          const groupOptions: { value: string; label: React.ReactNode; disabled?: boolean }[] = [];
           const extractGroupOptions = (subChildren: React.ReactNode) => {
             React.Children.forEach(subChildren, (subChild) => {
               if (React.isValidElement(subChild)) {
@@ -328,8 +329,9 @@ const Select = ({
                 } else if (subChild.type === 'option') {
                   const val = String((subChild.props as { value?: unknown }).value ?? '');
                   const lbl = (subChild.props as { children?: React.ReactNode }).children;
-                  groupOptions.push({ value: val, label: lbl });
-                  flatOptions.push({ value: val, label: lbl });
+                  const dis = Boolean((subChild.props as { disabled?: boolean }).disabled);
+                  groupOptions.push({ value: val, label: lbl, disabled: dis });
+                  flatOptions.push({ value: val, label: lbl, disabled: dis });
                 }
               }
             });
@@ -345,12 +347,14 @@ const Select = ({
         } else if (child.type === 'option') {
           const val = String((child.props as { value?: unknown }).value ?? '');
           const lbl = (child.props as { children?: React.ReactNode }).children;
+          const dis = Boolean((child.props as { disabled?: boolean }).disabled);
           renderItems.push({
             type: 'item',
             value: val,
             label: lbl,
+            disabled: dis,
           });
-          flatOptions.push({ value: val, label: lbl });
+          flatOptions.push({ value: val, label: lbl, disabled: dis });
         }
       }
     });
@@ -435,6 +439,7 @@ const Select = ({
                       <SelectItem
                         key={opt.value ? opt.value : `grp-opt-${optIdx}`}
                         value={opt.value === '' ? '__empty_val__' : opt.value}
+                        disabled={opt.disabled}
                       >
                         {opt.label}
                       </SelectItem>
@@ -446,6 +451,7 @@ const Select = ({
                 <SelectItem
                   key={item.value ? item.value : `item-${idx}`}
                   value={item.value === '' ? '__empty_val__' : item.value}
+                  disabled={item.disabled}
                 >
                   {item.label}
                 </SelectItem>
