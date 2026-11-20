@@ -52,7 +52,7 @@ export function AreaListPage() {
     updateAreaStatus,
     deleteArea,
   } = useAreas();
-  const { users } = useUsers();
+  const { users, refetch: refetchUsers } = useUsers();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingArea, setEditingArea] = useState<Area | null>(null);
   const [formData, setFormData] = useState<{
@@ -420,6 +420,7 @@ export function AreaListPage() {
     try {
       setIsDeleting(true);
       await deleteArea(areaToDelete.id);
+      await refetchUsers();
       setAreaToDelete(null);
     } catch (err: unknown) {
       toast.error(extractErrorMessage(err, 'Failed to delete area'));
