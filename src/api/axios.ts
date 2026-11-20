@@ -96,8 +96,32 @@ function redirectTo(path: '/login' | '/404' | '/500'): void {
   }
 }
 
+export function isRequestCanceled(error: unknown): boolean {
+  if (!error) return false;
+  if (typeof error === 'string') {
+    const lower = error.trim().toLowerCase();
+    return lower === 'canceled' || lower === 'cancelled';
+  }
+  if (axios.isCancel(error)) return true;
+  if (typeof error === 'object') {
+    const anyErr = error as any;
+    if (
+      anyErr.code === 'ERR_CANCELED' ||
+      anyErr.name === 'CanceledError' ||
+      anyErr.name === 'AbortError' ||
+      anyErr.__CANCEL__ ||
+      (typeof anyErr.message === 'string' &&
+        (anyErr.message.toLowerCase() === 'canceled' || anyErr.message.toLowerCase() === 'cancelled'))
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
 export function extractErrorMessage(error: unknown, fallback = 'An unexpected error occurred.'): string {
   if (!error) return fallback;
+  if (isRequestCanceled(error)) return '';
 
   if (typeof error === 'string' && error.trim()) {
     return error;
@@ -157,12 +181,14 @@ function getErrorPayload(error: AxiosError<ApiErrorResponse>): ApiErrorResponse 
 }
 
 function notifyError(error: AxiosError<ApiErrorResponse>): void {
-  if (error.config?.suppressErrorToast) {
+  if (error.config?.suppressErrorToast || isRequestCanceled(error)) {
     return;
   }
 
   const payload = getErrorPayload(error);
-  toast.error(payload.message);
+  if (payload.message && !isRequestCanceled(payload.message)) {
+    toast.error(payload.message);
+  }
 }
 
 function redirectForError(
@@ -234,6 +260,13 @@ apiClient.interceptors.response.use(
     return response;
   },
   async (error: AxiosError<ApiErrorResponse>) => {
+    // 1. If request was intentionally aborted or cancelled (e.g. via AbortController,
+    // component unmounting, navigation, React StrictMode, or TanStack Query cancellation),
+    // do NOT treat it as an API failure. Do NOT show toasts or redirect.
+    if (isRequestCanceled(error)) {
+      return Promise.reject(error);
+    }
+
     const config = error.config as ApiRequestConfig | undefined;
     const status = error.response?.status;
 

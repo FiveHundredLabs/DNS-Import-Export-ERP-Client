@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { isRequestCanceled } from '../api/client';
 import { User, UserRole } from '../types/auth';
 import { usersApi } from '../api/users/users.api';
 import { MOCK_USERS } from '../mock/mockUsers';
@@ -53,6 +54,7 @@ export function useUsers(initialParams?: ListUsersParams) {
       setRawUsers(response.data);
       setUsers(response.data.map(mapUserSummaryToUser));
     } catch (err: unknown) {
+      if (isRequestCanceled(err)) return;
       const msg = err instanceof Error ? err.message : 'Failed to fetch users';
       setError(msg);
       console.warn('Backend users API unavailable, falling back to offline fixtures:', err);
