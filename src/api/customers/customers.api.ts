@@ -61,7 +61,11 @@ export const customersApi = {
     payload: CompleteCustomerStep2Payload,
     signal?: AbortSignal,
   ): Promise<Customer> => {
-    return apiPatch<Customer>(`/customers/${id}/onboarding/step-2`, payload, {
+    const cleanPayload = {
+      ...payload,
+      salesRepId: payload.salesRepId?.trim() ? payload.salesRepId.trim() : undefined,
+    };
+    return apiPatch<Customer>(`/customers/${id}/onboarding/step-2`, cleanPayload, {
       signal,
       successMessage: 'Customer onboarding completed successfully',
     });

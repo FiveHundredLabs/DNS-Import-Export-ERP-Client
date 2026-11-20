@@ -80,7 +80,7 @@ export interface CreateCustomerStep1Payload {
 export interface CompleteCustomerStep2Payload {
   areaId?: string;
   areaManagerId: string;
-  salesRepId: string;
+  salesRepId?: string | null;
   loyaltyLevel: CustomerLoyaltyLevel;
   creditPeriod?: number;
   creditLimit?: number;

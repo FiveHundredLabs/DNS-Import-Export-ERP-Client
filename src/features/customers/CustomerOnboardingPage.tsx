@@ -551,7 +551,7 @@ export function CustomerOnboardingPage() {
       const step2Payload: CompleteCustomerStep2Payload = {
         areaId,
         areaManagerId,
-        salesRepId,
+        salesRepId: salesRepId?.trim() ? salesRepId.trim() : undefined,
         loyaltyLevel,
         creditPeriod: creditDays,
         creditLimit,

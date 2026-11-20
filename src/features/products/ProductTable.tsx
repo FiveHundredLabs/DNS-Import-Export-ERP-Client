@@ -56,26 +56,14 @@ export function ProductTable({
                 </Badge>
               </div>
 
-              <div className="grid grid-cols-3 gap-2 py-2 px-2.5 bg-slate-50 rounded-xl text-xs">
-                <div>
-                  <span className="text-[10px] text-slate-400 block font-medium">Selling Price</span>
-                  <span className="font-bold font-mono text-slate-900">
-                    {p.pricing.latestBatchSellingPrice !== null && p.pricing.latestBatchSellingPrice !== undefined ? (
-                      formatCurrency(p.pricing.latestBatchSellingPrice)
-                    ) : p.pricing.currentSellingPrice > 0 ? (
-                      formatCurrency(p.pricing.currentSellingPrice)
-                    ) : (
-                      <span className="text-amber-600 font-semibold text-[11px]">Batch Priced</span>
-                    )}
-                  </span>
-                </div>
+              <div className="grid grid-cols-2 gap-2 py-2 px-2.5 bg-slate-50 rounded-xl text-xs">
                 <div>
                   <span className="text-[10px] text-slate-400 block font-medium">Stock On Hand</span>
                   <span className="font-bold font-mono text-slate-800">{p.stockOnHand} {p.uomCode}</span>
                 </div>
                 <div>
-                  <span className="text-[10px] text-slate-400 block font-medium">Max Disc</span>
-                  <span className="font-bold font-mono text-slate-700">{p.pricing.maxDiscountPercentage}%</span>
+                  <span className="text-[10px] text-slate-400 block font-medium">Floor %</span>
+                  <span className="font-bold font-mono text-violet-700">{p.minFloorPricePercentage ?? p.pricing?.minFloorPricePercentage ?? 0}%</span>
                 </div>
               </div>
 
@@ -97,16 +85,9 @@ export function ProductTable({
             <TableRow>
               <TableHead className="min-w-[240px]">Product / SKU</TableHead>
               <TableHead className="w-36">Category</TableHead>
-              <TableHead className="text-right w-28" title="Latest active batch unit cost from GRN receiving">
-                Cost Price
-              </TableHead>
-              <TableHead className="text-right w-32 font-bold" title="Latest active batch selling price">
-                Selling Price
-              </TableHead>
               <TableHead className="text-right w-24" title="Product default floor price markup percentage">
                 Floor %
               </TableHead>
-              <TableHead className="text-right w-24">Max Disc</TableHead>
               <TableHead className="text-center w-28">Stock On Hand</TableHead>
               <TableHead className="text-center w-24">Status</TableHead>
               {hasActions && <TableHead className="text-right w-28">Actions</TableHead>}
@@ -145,57 +126,6 @@ export function ProductTable({
                     <span className="text-[13px] text-slate-600 font-normal">{p.categoryName}</span>
                   </TableCell>
                   <TableCell className="text-right tabular-nums text-[13px] text-slate-600 font-normal">
-                    {p.pricing.latestBatchCostPrice !== null && p.pricing.latestBatchCostPrice !== undefined ? (
-                      formatCurrency(p.pricing.latestBatchCostPrice)
-                    ) : p.pricing.costPrice > 0 ? (
-                      formatCurrency(p.pricing.costPrice)
-                    ) : (
-                      <span
-                        title="No active batches with available stock. Cost is determined on GRN receiving."
-                        className="text-slate-400 font-mono"
-                      >
-                        —
-                      </span>
-                    )}
-                  </TableCell>
-                  <TableCell
-                    className="text-right tabular-nums font-semibold text-[13.5px] text-slate-900"
-                    onClick={(e) => {
-                      if (onViewBatchPricing) {
-                        e.stopPropagation();
-                        onViewBatchPricing(p);
-                      }
-                    }}
-                  >
-                    {p.pricing.latestBatchSellingPrice !== null && p.pricing.latestBatchSellingPrice !== undefined ? (
-                      <div
-                        className="inline-flex items-center gap-1.5 cursor-pointer group hover:text-indigo-600 transition-colors"
-                        title="Click to view batch pricing history"
-                      >
-                        <span>{formatCurrency(p.pricing.latestBatchSellingPrice)}</span>
-                        {p.pricing.hasBatchPricing && (
-                          <span className="text-[10px] font-mono px-1 py-0.2 bg-emerald-50 text-emerald-700 rounded border border-emerald-200/80 font-normal">
-                            Batch
-                          </span>
-                        )}
-                      </div>
-                    ) : p.pricing.currentSellingPrice > 0 ? (
-                      <span
-                        className="cursor-pointer hover:text-indigo-600 transition-colors"
-                        title="Click to view batch pricing history"
-                      >
-                        {formatCurrency(p.pricing.currentSellingPrice)}
-                      </span>
-                    ) : (
-                      <span
-                        title="No active batches with available stock. Price is established upon GRN receiving. Click to inspect."
-                        className="inline-flex items-center text-xs text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full font-medium border border-amber-200/80 cursor-pointer hover:bg-amber-100 transition-colors"
-                      >
-                        Batch Priced
-                      </span>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums text-[13px] text-slate-600 font-normal">
                     {canEdit && onUpdateFloorPercentage ? (
                       <button
                         type="button"
@@ -212,9 +142,6 @@ export function ProductTable({
                     ) : (
                       <span className="font-mono">{p.minFloorPricePercentage ?? p.pricing?.minFloorPricePercentage ?? 0}%</span>
                     )}
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums text-[13px] text-slate-600 font-normal">
-                    {p.pricing.maxDiscountPercentage}%
                   </TableCell>
                   <TableCell className="text-center">
                     <span className="font-medium text-[13px] text-slate-900">
