@@ -11,7 +11,7 @@ import { Input } from '../../components/ui/input';
 import { Select } from '../../components/ui/select';
 import { UnitOfMeasure } from '../../types/product';
 import { validateProductData } from '../../rules/productRules';
-import { Percent, Info, Plus, Sparkles, Tag, FolderTree, AlertCircle } from 'lucide-react';
+import { Percent, Info, Plus, Sparkles, AlertCircle } from 'lucide-react';
 import { useBrands, useCreateBrand } from '../../api/brands/brands.hooks';
 import { useCategories, useCreateCategory } from '../../api/categories/categories.hooks';
 import { productsApi } from '../../api/products/products.api';
@@ -53,9 +53,7 @@ export function ProductCreateModal({
   const [warrantyMonths, setWarrantyMonths] = useState<number>(12);
   const [requiresSerialNumber, setRequiresSerialNumber] = useState(false);
 
-  // Commercial Pricing & Floor Price
-  const [costPrice, setCostPrice] = useState<string>('');
-  const [sellingPrice, setSellingPrice] = useState<string>(''); // Optional (0 / empty = unset)
+  // Commercial Pricing Defaults & Floor Controls (cost & selling price come from GRN batches)
   const [minFloorPricePercentage, setMinFloorPricePercentage] = useState<string>('0');
   const [showroomDiscountPercentage, setShowroomDiscountPercentage] = useState<string>('5');
 
@@ -125,7 +123,6 @@ export function ProductCreateModal({
         }
       } catch {
         if (active) {
-          // Local fallback preview calculation
           const bCode = (selectedBrand?.name || 'GEN').replace(/[^a-zA-Z]/g, '').slice(0, 3).toUpperCase().padEnd(3, 'X');
           const words = debouncedName.trim().split(/\s+/).filter(Boolean);
           const pCode = (words.length >= 2 ? words[0][0] + words[1][0] : debouncedName.slice(0, 2)).toUpperCase().padEnd(2, 'X');
@@ -141,16 +138,6 @@ export function ProductCreateModal({
       active = false;
     };
   }, [debouncedName, selectedBrand]);
-
-  // Floor price calculated preview
-  const calculatedFloorPrice = useMemo(() => {
-    const sell = Number(sellingPrice);
-    const pct = Number(minFloorPricePercentage);
-    if (sell > 0 && pct > 0) {
-      return (sell * (pct / 100)).toFixed(2);
-    }
-    return null;
-  }, [sellingPrice, minFloorPricePercentage]);
 
   // Quick Add Brand
   const handleCreateQuickBrand = async (e: React.FormEvent) => {
@@ -202,8 +189,6 @@ export function ProductCreateModal({
     const selectedCategory = categories.find((c) => c.id === categoryId);
     const selectedUOM = uoms.find((u) => u.id === uomId) || uoms[0];
 
-    const parsedCost = Number(costPrice) || 0;
-    const parsedSelling = sellingPrice.trim() !== '' ? Number(sellingPrice) : 0;
     const parsedFloorPct = Number(minFloorPricePercentage) || 0;
     const parsedShowroom = Number(showroomDiscountPercentage) || 5;
 
@@ -224,12 +209,9 @@ export function ProductCreateModal({
       uomCode: selectedUOM?.code || 'PCS',
       unitOfMeasure: (selectedUOM?.code || 'PCS') as any,
       pricing: {
-        costPrice: parsedCost,
-        currentSellingPrice: parsedSelling,
-        minimumSellingPrice:
-          parsedSelling > 0 && parsedFloorPct > 0
-            ? Number((parsedSelling * (parsedFloorPct / 100)).toFixed(2))
-            : parsedCost,
+        costPrice: 0,
+        currentSellingPrice: 0,
+        minimumSellingPrice: 0,
         minFloorPricePercentage: parsedFloorPct,
         maxDiscountPercentage: discountLevels.length > 0 ? Math.max(...discountLevels) : 0,
         showroomDiscountPercentage: parsedShowroom,
@@ -260,8 +242,6 @@ export function ProductCreateModal({
       // Reset form
       setName('');
       setDescription('');
-      setCostPrice('');
-      setSellingPrice('');
       setMinFloorPricePercentage('0');
       setShowroomDiscountPercentage('5');
       setDiscLevel1('');
@@ -301,18 +281,16 @@ export function ProductCreateModal({
               <Input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="e.g. Schneider Acti9 16A Single Pole MCB"
+                placeholder="e.g. Schneider Acti9 32A Double Pole MCB"
                 error={errors.name}
-                autoFocus
               />
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {/* Brand Dropdown with inline Add */}
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <label className="block text-xs font-semibold text-slate-800">
-                    Brand <span className="text-rose-500">*</span>
+                    Brand
                   </label>
                   <button
                     type="button"
@@ -335,7 +313,6 @@ export function ProductCreateModal({
                 </Select>
               </div>
 
-              {/* Category Dropdown with inline Add */}
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <label className="block text-xs font-semibold text-slate-800">
@@ -364,7 +341,7 @@ export function ProductCreateModal({
               </div>
             </div>
 
-            {/* Step 2: Automatically Generated SKU Preview */}
+            {/* Automatically Generated SKU Preview */}
             <div className="pt-1">
               <div className="flex items-center justify-between mb-1">
                 <label className="block text-xs font-semibold text-slate-700">
@@ -394,7 +371,7 @@ export function ProductCreateModal({
           </div>
 
           {/* Unit of Measure & Warranty */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
                 Unit of Measure <span className="text-rose-500">*</span>
@@ -420,6 +397,17 @@ export function ProductCreateModal({
                 placeholder="12"
               />
             </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Description / Remarks
+              </label>
+              <Input
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Optional notes"
+              />
+            </div>
           </div>
 
           {/* Track Serial Numbers */}
@@ -439,54 +427,31 @@ export function ProductCreateModal({
             </label>
           </div>
 
-          {/* Commercial Pricing & Minimum Floor Price */}
+          {/* Commercial Pricing & Floor Controls */}
           <div className="rounded-xl border border-slate-200 p-3.5 space-y-3 bg-white">
             <div className="font-semibold text-xs text-slate-900 flex items-center justify-between">
               <span>Commercial Pricing & Floor Controls</span>
-              <span className="text-[11px] font-normal text-slate-500">All prices in LKR</span>
+              <span className="text-[11px] font-normal text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-100">
+                Batch-Level Pricing
+              </span>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="p-3 bg-slate-50/80 rounded-lg border border-slate-200 text-xs text-slate-600 flex items-start gap-2.5">
+              <Info className="h-4 w-4 text-indigo-600 shrink-0 mt-0.5" />
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Cost Price <span className="text-rose-500">*</span>
-                </label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  min="0.01"
-                  value={costPrice}
-                  onChange={(e) => setCostPrice(e.target.value)}
-                  placeholder="0.00"
-                  error={errors.costPrice}
-                />
-              </div>
-
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="block text-xs font-semibold text-slate-700">
-                    Selling Price
-                  </label>
-                  <span className="text-[10px] text-amber-600 font-medium">Optional</span>
-                </div>
-                <Input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={sellingPrice}
-                  onChange={(e) => setSellingPrice(e.target.value)}
-                  placeholder="0.00 (Unset)"
-                  error={errors.sellingPrice}
-                />
-                <p className="text-[10px] text-slate-400 mt-0.5">
-                  Leave 0 to set during GRN receiving.
+                <p className="font-medium text-slate-800">Batch-Level Cost & Selling Prices</p>
+                <p className="text-[11px] text-slate-500 mt-0.5 leading-relaxed">
+                  Cost and selling prices are determined when inventory batches are received through GRN costing and pricing.
+                  Once stock is received, batch-level prices will reflect automatically in the Product Master.
                 </p>
               </div>
+            </div>
 
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <label className="block text-xs font-semibold text-slate-700">
-                    Min Floor Price %
+                    Default Min Floor %
                   </label>
                   <span className="text-[10px] text-indigo-600 font-medium">0 - 100%</span>
                 </div>
@@ -501,14 +466,10 @@ export function ProductCreateModal({
                   error={errors.minFloorPricePercentage}
                 />
                 <p className="text-[10px] text-slate-400 mt-0.5">
-                  {calculatedFloorPrice
-                    ? `Floor limit: LKR ${calculatedFloorPrice}`
-                    : 'Default for GRN batches'}
+                  Default floor markup percentage inherited by future GRN batches.
                 </p>
               </div>
-            </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
                   Showroom Discount (%)
@@ -522,17 +483,9 @@ export function ProductCreateModal({
                   onChange={(e) => setShowroomDiscountPercentage(e.target.value)}
                   placeholder="5"
                 />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Description / Remarks
-                </label>
-                <Input
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Optional technical notes"
-                />
+                <p className="text-[10px] text-slate-400 mt-0.5">
+                  Standard showroom walk-in customer discount limit.
+                </p>
               </div>
             </div>
           </div>
@@ -548,33 +501,33 @@ export function ProductCreateModal({
                   Product Discount Levels (Up to 3 levels)
                 </span>
               </div>
-
               <button
                 type="button"
-                onClick={() => setShowDiscountInfo((prev) => !prev)}
-                className="inline-flex items-center gap-1 text-[11px] font-medium text-indigo-700 bg-white hover:bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-200"
+                onClick={() => setShowDiscountInfo(!showDiscountInfo)}
+                className="text-[11px] text-indigo-600 hover:text-indigo-800 font-medium inline-flex items-center gap-1 focus:outline-none"
               >
-                <Info className="h-3 w-3 text-indigo-600" />
-                <span>{showDiscountInfo ? 'Hide note' : 'View note'}</span>
+                <Info className="h-3 w-3" />
+                {showDiscountInfo ? 'Hide policy' : 'View policy'}
               </button>
             </div>
 
             {showDiscountInfo && (
-              <div className="rounded-lg bg-white p-2.5 text-xs border border-indigo-200/80 text-slate-600 space-y-1">
-                <p className="font-medium text-slate-800 text-[11px]">
-                  Discount tiers are enforced based on customer credit approvals and commercial tier:
+              <div className="p-2.5 rounded-lg bg-white/90 border border-indigo-100 text-[11px] text-slate-600 space-y-1">
+                <p>
+                  <strong>Level 1:</strong> Standard limit for <em>New</em> customer tier.
                 </p>
-                <ul className="list-disc list-inside text-[10.5px] space-y-0.5 text-slate-600">
-                  <li>Level 1: General commercial customer tier</li>
-                  <li>Level 2: Preferred dealer / corporate tier</li>
-                  <li>Level 3: Strategic enterprise tier (cannot violate Minimum Floor Price)</li>
-                </ul>
+                <p>
+                  <strong>Level 2:</strong> Intermediate limit for <em>Premium</em> customer tier.
+                </p>
+                <p>
+                  <strong>Level 3:</strong> Maximum commercial limit for <em>Platinum</em> VIP tier.
+                </p>
               </div>
             )}
 
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-3 gap-2.5">
               <div>
-                <label className="block text-[10px] font-semibold text-slate-600 mb-1">
+                <label className="block text-[11px] font-semibold text-slate-700 mb-1">
                   Level 1 (%)
                 </label>
                 <Input
@@ -584,12 +537,13 @@ export function ProductCreateModal({
                   max="100"
                   value={discLevel1}
                   onChange={(e) => setDiscLevel1(e.target.value)}
-                  placeholder="e.g. 5"
+                  placeholder="e.g. 5.0"
                   className="bg-white"
                 />
               </div>
+
               <div>
-                <label className="block text-[10px] font-semibold text-slate-600 mb-1">
+                <label className="block text-[11px] font-semibold text-slate-700 mb-1">
                   Level 2 (%)
                 </label>
                 <Input
@@ -599,12 +553,13 @@ export function ProductCreateModal({
                   max="100"
                   value={discLevel2}
                   onChange={(e) => setDiscLevel2(e.target.value)}
-                  placeholder="e.g. 10"
+                  placeholder="e.g. 10.0"
                   className="bg-white"
                 />
               </div>
+
               <div>
-                <label className="block text-[10px] font-semibold text-slate-600 mb-1">
+                <label className="block text-[11px] font-semibold text-slate-700 mb-1">
                   Level 3 (%)
                 </label>
                 <Input
@@ -614,37 +569,45 @@ export function ProductCreateModal({
                   max="100"
                   value={discLevel3}
                   onChange={(e) => setDiscLevel3(e.target.value)}
-                  placeholder="e.g. 15"
+                  placeholder="e.g. 15.0"
                   className="bg-white"
                 />
               </div>
             </div>
+            <p className="text-[10px] text-slate-500">
+              Leave unused levels blank. Values are automatically ordered from lowest to highest.
+            </p>
           </div>
 
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+          <DialogFooter className="pt-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => onOpenChange(false)}
+              disabled={submitting}
+            >
               Cancel
             </Button>
-            <Button type="submit" disabled={submitting}>
+            <Button type="submit" size="sm" disabled={submitting}>
               {submitting ? 'Creating Product...' : 'Create Product Master Item'}
             </Button>
           </DialogFooter>
         </form>
       </Dialog>
 
-      {/* Quick Add Brand Dialog */}
-      <Dialog open={quickAddBrandOpen} onOpenChange={setQuickAddBrandOpen}>
+      {/* Quick Add Brand Modal */}
+      <Dialog open={quickAddBrandOpen} onOpenChange={setQuickAddBrandOpen} size="sm">
         <DialogHeader>
-          <DialogTitle>Add New Brand</DialogTitle>
+          <DialogTitle>Quick Add Brand</DialogTitle>
           <DialogDescription>
-            Register a new brand without leaving product creation.
+            Add a new brand without leaving the product creation form.
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleCreateQuickBrand} className="space-y-4 py-2">
+        <form onSubmit={handleCreateQuickBrand} className="space-y-3 pt-2">
           {brandModalError && (
-            <div className="flex items-center gap-2 p-2.5 rounded-lg bg-rose-50 text-rose-700 text-xs">
-              <AlertCircle className="h-4 w-4 shrink-0" />
-              <span>{brandModalError}</span>
+            <div className="p-2 rounded bg-rose-50 text-rose-700 text-xs">
+              {brandModalError}
             </div>
           )}
           <div>
@@ -654,7 +617,7 @@ export function ProductCreateModal({
             <Input
               value={newBrandName}
               onChange={(e) => setNewBrandName(e.target.value)}
-              placeholder="e.g. Schneider, Legrand"
+              placeholder="e.g. Siemens"
               autoFocus
             />
           </div>
@@ -662,30 +625,30 @@ export function ProductCreateModal({
             <Button
               type="button"
               variant="outline"
+              size="sm"
               onClick={() => setQuickAddBrandOpen(false)}
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={createBrandMutation.isPending}>
-              {createBrandMutation.isPending ? 'Saving...' : 'Add Brand'}
+            <Button type="submit" size="sm" disabled={createBrandMutation.isPending}>
+              {createBrandMutation.isPending ? 'Saving...' : 'Save Brand'}
             </Button>
           </DialogFooter>
         </form>
       </Dialog>
 
-      {/* Quick Add Category Dialog */}
-      <Dialog open={quickAddCatOpen} onOpenChange={setQuickAddCatOpen}>
+      {/* Quick Add Category Modal */}
+      <Dialog open={quickAddCatOpen} onOpenChange={setQuickAddCatOpen} size="sm">
         <DialogHeader>
-          <DialogTitle>Add New Category</DialogTitle>
+          <DialogTitle>Quick Add Category</DialogTitle>
           <DialogDescription>
-            Register a new category without leaving product creation.
+            Add a new classification category for organizing products.
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleCreateQuickCategory} className="space-y-4 py-2">
+        <form onSubmit={handleCreateQuickCategory} className="space-y-3 pt-2">
           {catModalError && (
-            <div className="flex items-center gap-2 p-2.5 rounded-lg bg-rose-50 text-rose-700 text-xs">
-              <AlertCircle className="h-4 w-4 shrink-0" />
-              <span>{catModalError}</span>
+            <div className="p-2 rounded bg-rose-50 text-rose-700 text-xs">
+              {catModalError}
             </div>
           )}
           <div>
@@ -694,31 +657,37 @@ export function ProductCreateModal({
             </label>
             <Input
               value={newCatName}
-              onChange={(e) => setNewCatName(e.target.value)}
-              placeholder="e.g. Switchgear & Protection"
+              onChange={(e) => {
+                setNewCatName(e.target.value);
+                if (!newCatCode) {
+                  setNewCatCode(e.target.value.trim().toUpperCase().replace(/[^A-Z0-9]/g, '-').slice(0, 15));
+                }
+              }}
+              placeholder="e.g. Industrial Automation"
               autoFocus
             />
           </div>
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1">
-              Category Code (Optional)
+              Category Code
             </label>
             <Input
               value={newCatCode}
               onChange={(e) => setNewCatCode(e.target.value.toUpperCase())}
-              placeholder="e.g. SWG"
+              placeholder="e.g. IND-AUTO"
             />
           </div>
           <DialogFooter>
             <Button
               type="button"
               variant="outline"
+              size="sm"
               onClick={() => setQuickAddCatOpen(false)}
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={createCategoryMutation.isPending}>
-              {createCategoryMutation.isPending ? 'Saving...' : 'Add Category'}
+            <Button type="submit" size="sm" disabled={createCategoryMutation.isPending}>
+              {createCategoryMutation.isPending ? 'Saving...' : 'Save Category'}
             </Button>
           </DialogFooter>
         </form>

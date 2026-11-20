@@ -69,3 +69,15 @@ export function useUpdateBrandStatus() {
     },
   });
 }
+
+export function useDeleteBrand() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) => brandsApi.deleteBrand(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: brandQueryKeys.all });
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+    },
+  });
+}

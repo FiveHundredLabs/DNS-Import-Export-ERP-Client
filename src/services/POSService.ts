@@ -31,7 +31,7 @@ import {
 } from '../rules/posRules';
 import { MockPOSRepository } from '../repositories/mock/MockPOSRepository';
 import { MockInventoryRepository } from '../repositories/mock/MockInventoryRepository';
-import { MockProductRepository } from '../repositories/mock/MockProductRepository';
+import { ApiProductRepository } from '../repositories/ApiProductRepository';
 
 export interface CheckoutItemInput {
   productId: string;
@@ -1332,11 +1332,12 @@ export class POSService {
 // Global singleton instances for UI consumption
 export const mockPOSRepository = new MockPOSRepository();
 export const mockInventoryRepositoryForPOS = new MockInventoryRepository();
-export const mockProductRepositoryForPOS = new MockProductRepository();
+export const productRepositoryForPOS = new ApiProductRepository();
+export const mockProductRepositoryForPOS = productRepositoryForPOS as any;
 
 export const posService = new POSService(
   mockPOSRepository,
   mockInventoryRepositoryForPOS,
-  mockProductRepositoryForPOS,
+  productRepositoryForPOS,
   printerService
 );

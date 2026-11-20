@@ -28,6 +28,7 @@ import { Badge } from '../../components/ui/badge';
 import { formatCurrency } from '../../utils/formatters';
 import { cn } from '../../utils/cn';
 import { evaluateOrderApproval, canApproveOrder } from '../../rules/orderRules';
+import { useCreditTermsConfig } from '../../api/credit-terms/credit-terms.hooks';
 import {
   getProductDiscountLevels,
   getAllowedDiscountLevels,
@@ -123,6 +124,8 @@ export function OrderCreateEditPage() {
   const [pageLoading, setPageLoading] = useState(true);
   const [formError, setFormError] = useState<string | null>(null);
 
+  const { data: creditConfig } = useCreditTermsConfig();
+
   // Load initial data (edit mode, quotation prefill, or customer prefill)
   useEffect(() => {
     async function loadData() {
@@ -181,8 +184,9 @@ export function OrderCreateEditPage() {
             const cust = await customerService.getCustomer(quote.customerId);
             if (cust) {
               setSelectedCustomer(cust);
-              setRequestedCreditDays(cust.commercialTerms?.creditDays || 30);
-              setPaymentTerms(cust.commercialTerms?.paymentTermNotes || `${cust.commercialTerms?.creditDays || 30} Days Credit`);
+              const defaultDays = cust.commercialTerms?.creditDays || creditConfig?.defaultCreditDays || 30;
+              setRequestedCreditDays(defaultDays);
+              setPaymentTerms(cust.commercialTerms?.paymentTermNotes || `${defaultDays} Days Credit`);
             }
             setQuotationNumber(quote.quotationNumber);
             setDeliveryAddress(quote.customerAddressSnapshot || '');
@@ -205,9 +209,10 @@ export function OrderCreateEditPage() {
           const cust = await customerService.getCustomer(initialCustomerId);
           if (cust) {
             setSelectedCustomer(cust);
-            setRequestedCreditDays(cust.commercialTerms?.creditDays || 30);
+            const defaultDays = cust.commercialTerms?.creditDays || creditConfig?.defaultCreditDays || 30;
+            setRequestedCreditDays(defaultDays);
             setDeliveryAddress(cust.deliveryAddress || cust.address || '');
-            setPaymentTerms(cust.commercialTerms?.paymentTermNotes || `${cust.commercialTerms?.creditDays || 30} Days Credit`);
+            setPaymentTerms(cust.commercialTerms?.paymentTermNotes || `${defaultDays} Days Credit`);
           }
         }
       } catch (err: unknown) {
@@ -217,7 +222,7 @@ export function OrderCreateEditPage() {
       }
     }
     loadData();
-  }, [id, isEdit, quotationId, initialCustomerId]);
+  }, [id, isEdit, quotationId, initialCustomerId, creditConfig]);
 
   // When customer changes, update defaults
   const handleSelectCustomer = (customer: Customer) => {
@@ -227,9 +232,10 @@ export function OrderCreateEditPage() {
     }
     setFormError(null);
     setSelectedCustomer(customer);
-    setRequestedCreditDays(customer.commercialTerms?.creditDays || 30);
+    const defaultDays = customer.commercialTerms?.creditDays || creditConfig?.defaultCreditDays || 30;
+    setRequestedCreditDays(defaultDays);
     setDeliveryAddress(customer.deliveryAddress || customer.address || '');
-    setPaymentTerms(customer.commercialTerms?.paymentTermNotes || `${customer.commercialTerms?.creditDays || 30} Days Credit`);
+    setPaymentTerms(customer.commercialTerms?.paymentTermNotes || `${defaultDays} Days Credit`);
     setIsCustomerSelectorOpen(false);
   };
 
@@ -347,8 +353,19 @@ export function OrderCreateEditPage() {
       })),
       requestedCreditDays,
       userRole: currentUser.role,
+      standardCreditDays: creditConfig?.defaultCreditDays,
+      standardCreditLimit: creditConfig?.defaultCreditLimit,
     });
-  }, [selectedCustomer, items, requestedCreditDays, currentUser.role, taxEnabled, taxRate]);
+  }, [
+    selectedCustomer,
+    items,
+    requestedCreditDays,
+    currentUser.role,
+    taxEnabled,
+    taxRate,
+    creditConfig?.defaultCreditDays,
+    creditConfig?.defaultCreditLimit,
+  ]);
 
   // Price floor validation: checks if net price (after discount) drops below minimumSellingPrice
   const floorBreachedItems = useMemo(() => {
@@ -545,7 +562,9 @@ export function OrderCreateEditPage() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <StatCard
               title="Credit Limit"
-              value={formatCurrency(selectedCustomer.commercialTerms?.creditLimit || 0)}
+              value={formatCurrency(
+                selectedCustomer.commercialTerms?.creditLimit ?? creditConfig?.defaultCreditLimit ?? 500000
+              )}
               icon={CreditCard}
               variant="default"
             />
@@ -715,7 +734,7 @@ export function OrderCreateEditPage() {
                   className="text-xs"
                 />
                 <span className="text-[11px] text-slate-400 block mt-1">
-                  Customer limit: {selectedCustomer?.commercialTerms?.creditDays || 30} days
+                  Customer limit: {selectedCustomer?.commercialTerms?.creditDays || creditConfig?.defaultCreditDays || 30} days
                 </span>
               </div>
             </FormField>

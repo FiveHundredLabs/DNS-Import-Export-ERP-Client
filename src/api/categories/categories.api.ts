@@ -1,4 +1,4 @@
-import { apiGet, apiPost, apiPatch } from '../client';
+import { apiGet, apiPost, apiPatch, apiDelete } from '../client';
 import {
   Category,
   CreateCategoryPayload,
@@ -37,6 +37,12 @@ export const categoriesApi = {
   updateCategoryStatus: async (id: string, payload: UpdateCategoryStatusPayload): Promise<Category> => {
     return apiPatch<Category>(`/categories/${id}/status`, payload, {
       successMessage: `Category ${payload.status === 'ACTIVE' ? 'activated' : 'deactivated'} successfully`,
+    });
+  },
+
+  deleteCategory: async (id: string): Promise<void> => {
+    return apiDelete<void>(`/categories/${id}`, {
+      successMessage: 'Category deleted successfully',
     });
   },
 };

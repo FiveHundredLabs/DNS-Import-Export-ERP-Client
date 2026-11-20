@@ -1,4 +1,4 @@
-import { apiGet, apiPost, apiPatch } from '../client';
+import { apiGet, apiPost, apiPatch, apiDelete } from '../client';
 import {
   Brand,
   CreateBrandPayload,
@@ -37,6 +37,12 @@ export const brandsApi = {
   updateBrandStatus: async (id: string, payload: UpdateBrandStatusPayload): Promise<Brand> => {
     return apiPatch<Brand>(`/brands/${id}/status`, payload, {
       successMessage: `Brand ${payload.status === 'ACTIVE' ? 'activated' : 'deactivated'} successfully`,
+    });
+  },
+
+  deleteBrand: async (id: string): Promise<void> => {
+    return apiDelete<void>(`/brands/${id}`, {
+      successMessage: 'Brand deleted successfully',
     });
   },
 };
