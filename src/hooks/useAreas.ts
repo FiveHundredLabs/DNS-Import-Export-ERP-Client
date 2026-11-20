@@ -16,6 +16,7 @@ export interface AreaItem {
   areaManagerName?: string;
   areaManagers?: AreaUser[];
   salesReps?: AreaUser[];
+  salesRepIds?: string[];
   customers?: AreaCustomer[];
   salesManagerId?: string;
   salesManagerName?: string;
@@ -99,6 +100,7 @@ export function useAreas() {
         areaName,
         description: desc,
         areaManagerId: data.areaManagerId || undefined,
+        salesRepIds: data.salesRepIds && data.salesRepIds.length > 0 ? data.salesRepIds : undefined,
       });
 
       // If an Area Manager was selected, assign the user to this area
@@ -153,6 +155,7 @@ export function useAreas() {
         areaName: areaName || undefined,
         description: desc,
         areaManagerId: data.areaManagerId !== undefined ? (data.areaManagerId || null) : undefined,
+        salesRepIds: data.salesRepIds !== undefined ? data.salesRepIds : undefined,
         updatedAt,
       });
 

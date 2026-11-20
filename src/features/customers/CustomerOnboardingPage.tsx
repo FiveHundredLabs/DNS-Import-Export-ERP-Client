@@ -307,7 +307,7 @@ export function CustomerOnboardingPage() {
     }
     setIsRejecting(true);
     try {
-      await customersApi.rejectCustomer(rejectTargetId, { reason: rejectReason.trim(), comments: rejectReason.trim() });
+      await customersApi.rejectCustomer(rejectTargetId, { reason: rejectReason.trim() });
       toast.success('Customer onboarding application rejected.');
       setRejectModalOpen(false);
       setRejectTargetId(null);

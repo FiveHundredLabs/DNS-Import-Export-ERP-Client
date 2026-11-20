@@ -5,6 +5,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { AreaListPage } from '../features/administration/AreaListPage';
 import { TeamListPage } from '../features/administration/TeamListPage';
+import { areasApi } from '../api/areas/areas.api';
 
 const mockAreasData = [
   {
@@ -130,8 +131,7 @@ describe('Area and Team Management Requirements', () => {
       expect(screen.getByText('-- No Area Manager (Optional) --')).toBeInTheDocument();
 
       // Open the Area Manager select dropdown (the combobox inside the modal)
-      const comboboxes = screen.getAllByRole('combobox');
-      const selectTrigger = comboboxes[comboboxes.length - 1];
+      const selectTrigger = screen.getByTestId('area-manager-select');
       fireEvent.click(selectTrigger);
 
       // Verify all Area Managers are visible in dropdown options
@@ -181,8 +181,7 @@ describe('Area and Team Management Requirements', () => {
       });
 
       // Open the Area Manager select dropdown
-      const comboboxes = screen.getAllByRole('combobox');
-      const selectTrigger = comboboxes[comboboxes.length - 1];
+      const selectTrigger = screen.getByTestId('area-manager-select');
       fireEvent.click(selectTrigger);
 
       // Verify already-assigned managers show their assigned area and are disabled
@@ -217,14 +216,149 @@ describe('Area and Team Management Requirements', () => {
       });
 
       // Open Area Manager dropdown
-      const comboboxes = screen.getAllByRole('combobox');
-      const selectTrigger = comboboxes[comboboxes.length - 1];
+      const selectTrigger = screen.getByTestId('area-manager-select');
       fireEvent.click(selectTrigger);
 
       // Verify Nimal Bandara is current manager for Kelaniya and other managers are disabled
       await waitFor(() => {
         const sunilOption = screen.getByRole('option', { name: /Sunil Shantha.*Assigned to: Maharagama/i });
         expect(sunilOption).toHaveAttribute('aria-disabled', 'true');
+      });
+    });
+
+    it('disables already-assigned Sales Representatives in dropdown with their assigned area name indicated', async () => {
+      render(
+        <MemoryRouter initialEntries={['/areas']}>
+          <AreaListPage />
+        </MemoryRouter>
+      );
+
+      // Open Create Area modal
+      const createBtn = screen.getByRole('button', { name: /Create Area/i });
+      fireEvent.click(createBtn);
+
+      await waitFor(() => {
+        expect(screen.getByText('Create New Area')).toBeInTheDocument();
+      });
+
+      // Verify Sales Representatives section is present
+      expect(screen.getByText('Sales Representatives')).toBeInTheDocument();
+      expect(screen.getByText('Optional (Multiple)')).toBeInTheDocument();
+
+      // Open Sales Rep select dropdown
+      const repSelectTrigger = screen.getByTestId('sales-rep-select');
+      fireEvent.click(repSelectTrigger);
+
+      // Verify already-assigned sales reps show assigned area and are disabled
+      await waitFor(() => {
+        const kasunOption = screen.getByRole('option', { name: /Kasun Wickramasinghe.*Assigned to: Kelaniya/i });
+        expect(kasunOption).toBeInTheDocument();
+        expect(kasunOption).toHaveAttribute('aria-disabled', 'true');
+      });
+    });
+
+    it('allows selecting and assigning multiple unassigned Sales Representatives to an area', async () => {
+      render(
+        <MemoryRouter initialEntries={['/areas']}>
+          <AreaListPage />
+        </MemoryRouter>
+      );
+
+      // Open Create Area modal
+      const createBtn = screen.getByRole('button', { name: /Create Area/i });
+      fireEvent.click(createBtn);
+
+      await waitFor(() => {
+        expect(screen.getByText('Create New Area')).toBeInTheDocument();
+      });
+
+      // Initially no sales reps assigned
+      expect(screen.getByText('No Sales Representatives assigned yet.')).toBeInTheDocument();
+
+      // Open Sales Rep select dropdown and pick first unassigned rep
+      const repSelectTrigger = screen.getByTestId('sales-rep-select');
+      fireEvent.click(repSelectTrigger);
+
+      await waitFor(() => {
+        expect(screen.getByRole('option', { name: 'Suresh Gamage' })).toBeInTheDocument();
+      });
+      fireEvent.click(screen.getByRole('option', { name: 'Suresh Gamage' }));
+
+      // Verify Suresh Gamage chip is added
+      await waitFor(() => {
+        expect(screen.getAllByText('Suresh Gamage').length).toBeGreaterThan(0);
+      });
+
+      // Open Sales Rep select dropdown again to add a second rep
+      fireEvent.click(repSelectTrigger);
+
+      await waitFor(() => {
+        expect(screen.getByRole('option', { name: 'Tharindu Fernando' })).toBeInTheDocument();
+      });
+      fireEvent.click(screen.getByRole('option', { name: 'Tharindu Fernando' }));
+
+      // Verify both reps are present in chips
+      await waitFor(() => {
+        expect(screen.getAllByText('Suresh Gamage').length).toBeGreaterThan(0);
+        expect(screen.getAllByText('Tharindu Fernando').length).toBeGreaterThan(0);
+      });
+
+      // Fill in Code and Name
+      const codeInput = screen.getByPlaceholderText('e.g. KEL');
+      const nameInput = screen.getByPlaceholderText('e.g. Kelaniya, Maharagama, Malabe, Kottawa');
+      fireEvent.change(codeInput, { target: { value: 'BAT' } });
+      fireEvent.change(nameInput, { target: { value: 'Battaramulla' } });
+
+      // Save
+      const saveBtns = screen.getAllByRole('button', { name: 'Create Area' });
+      fireEvent.click(saveBtns[saveBtns.length - 1]);
+
+      // Verify createArea payload contains both sales reps
+      await waitFor(() => {
+        expect(areasApi.createArea).toHaveBeenCalledWith(
+          expect.objectContaining({
+            areaName: 'Battaramulla',
+            salesRepIds: expect.arrayContaining(['usr-120', 'usr-121']),
+          })
+        );
+      });
+    });
+
+    it('allows removing an added Sales Representative chip before saving', async () => {
+      render(
+        <MemoryRouter initialEntries={['/areas']}>
+          <AreaListPage />
+        </MemoryRouter>
+      );
+
+      // Open Create Area modal
+      const createBtn = screen.getByRole('button', { name: /Create Area/i });
+      fireEvent.click(createBtn);
+
+      await waitFor(() => {
+        expect(screen.getByText('Create New Area')).toBeInTheDocument();
+      });
+
+      // Add Suresh Gamage
+      const repSelectTrigger = screen.getByTestId('sales-rep-select');
+      fireEvent.click(repSelectTrigger);
+
+      await waitFor(() => {
+        expect(screen.getByRole('option', { name: 'Suresh Gamage' })).toBeInTheDocument();
+      });
+      fireEvent.click(screen.getByRole('option', { name: 'Suresh Gamage' }));
+
+      await waitFor(() => {
+        expect(screen.getAllByText('Suresh Gamage').length).toBeGreaterThan(0);
+      });
+
+      // Remove the chip
+      const removeBtn = screen.getByTitle('Remove representative');
+      fireEvent.click(removeBtn);
+
+      // Verify chip is removed
+      await waitFor(() => {
+        expect(screen.getByText('No Sales Representatives assigned yet.')).toBeInTheDocument();
       });
     });
   });

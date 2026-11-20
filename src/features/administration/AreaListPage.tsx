@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback } from 'react';
+import { toast } from 'sonner';
 import { AreaItem as Area, useAreas } from '../../hooks/useAreas';
 import { useUsers } from '../../hooks/useUsers';
 import { useAuth } from '../../hooks/useAuth';
@@ -27,6 +28,9 @@ import {
   Power,
   AlertTriangle,
   RefreshCw,
+  UserCheck,
+  UserPlus,
+  X,
 } from 'lucide-react';
 import { Dialog, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
 import { PageHeader } from '../../components/common/PageHeader';
@@ -50,7 +54,19 @@ export function AreaListPage() {
   const { users } = useUsers();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingArea, setEditingArea] = useState<Area | null>(null);
-  const [formData, setFormData] = useState({ code: '', name: '', region: '', areaManagerId: '' });
+  const [formData, setFormData] = useState<{
+    code: string;
+    name: string;
+    region: string;
+    areaManagerId: string;
+    salesRepIds: string[];
+  }>({
+    code: '',
+    name: '',
+    region: '',
+    areaManagerId: '',
+    salesRepIds: [],
+  });
 
   // Filtering & Search
   const [areaSearchTerm, setAreaSearchTerm] = useState('');
@@ -125,6 +141,53 @@ export function AreaListPage() {
       };
     });
   }, [areaManagers, areas, editingArea]);
+
+  const salesReps = useMemo(() => {
+    return users.filter((u) => {
+      const code = (typeof u.role === 'object' && u.role ? u.role.code : u.role) || (u as any).roleCode;
+      return code === 'SALES_REP';
+    });
+  }, [users]);
+
+  // Compute sales rep assignment details to enforce:
+  // 1. Each Area can have multiple Sales Representatives assigned
+  // 2. Each Sales Representative can be assigned to only ONE Area
+  // 3. Show already-assigned sales reps as disabled in dropdown with their assigned Area name
+  const salesRepsWithAssignment = useMemo(() => {
+    return salesReps.map((rep) => {
+      // Find area from rep.areaId or area.salesReps or rep.areaName
+      const assignedArea = areas.find(
+        (a) =>
+          a.id === rep.areaId ||
+          (a.salesReps && a.salesReps.some((r) => r.id === rep.id)) ||
+          (Boolean((rep as any).areaName) && (a.name === (rep as any).areaName || a.areaName === (rep as any).areaName)),
+      );
+
+      const assignedAreaName = assignedArea?.name || assignedArea?.areaName || (rep as any).areaName;
+
+      const isAssignedToThisArea = Boolean(
+        editingArea &&
+          ((rep.areaId && rep.areaId === editingArea.id) ||
+            (editingArea.salesReps && editingArea.salesReps.some((r) => r.id === rep.id))),
+      );
+
+      const isAssignedToOtherArea = Boolean(
+        assignedAreaName &&
+          (!editingArea ||
+            (assignedArea && assignedArea.id !== editingArea.id) ||
+            (editingArea.name !== assignedAreaName && editingArea.areaName !== assignedAreaName)),
+      );
+
+      return {
+        ...rep,
+        assignedArea,
+        assignedAreaName,
+        isAssignedToThisArea,
+        isAssignedToOtherArea,
+        disabled: isAssignedToOtherArea,
+      };
+    });
+  }, [salesReps, areas, editingArea]);
 
   // Compute combined team info (Area Managers & Sales Reps) for any given area
   const getAreaTeam = useCallback(
@@ -266,15 +329,18 @@ export function AreaListPage() {
   const handleOpenModal = (area?: Area) => {
     if (area) {
       setEditingArea(area);
+      const team = getAreaTeam(area);
+      const repIds = team.salesReps.map((r) => r.id);
       setFormData({
         code: area.code || '',
         name: area.name,
         region: area.region || '',
         areaManagerId: area.areaManagerId || '',
+        salesRepIds: repIds,
       });
     } else {
       setEditingArea(null);
-      setFormData({ code: '', name: '', region: '', areaManagerId: '' });
+      setFormData({ code: '', name: '', region: '', areaManagerId: '', salesRepIds: [] });
     }
     setIsModalOpen(true);
   };
@@ -295,6 +361,19 @@ export function AreaListPage() {
       }
     }
 
+    if (formData.salesRepIds && formData.salesRepIds.length > 0) {
+      for (const repId of formData.salesRepIds) {
+        const selected = salesRepsWithAssignment.find((r) => r.id === repId);
+        if (selected?.disabled) {
+          const areaName = selected.assignedAreaName || selected.assignedArea?.name || selected.assignedArea?.areaName || 'another area';
+          toast.error(
+            `Cannot assign ${selected.name}: already assigned to "${areaName}". Each Sales Representative can be assigned to only ONE Area.`,
+          );
+          return;
+        }
+      }
+    }
+
     const selectedManager = areaManagers.find((u) => u.id === formData.areaManagerId);
     let finalManagerName = 'Unassigned';
     let finalManagerId = '';
@@ -312,6 +391,7 @@ export function AreaListPage() {
         ...formData,
         areaManagerId: finalManagerId,
         areaManagerName: finalManagerName,
+        salesRepIds: formData.salesRepIds,
         updatedAt: editingArea.updatedAt,
       });
     } else {
@@ -319,6 +399,7 @@ export function AreaListPage() {
         ...formData,
         areaManagerId: finalManagerId,
         areaManagerName: finalManagerName,
+        salesRepIds: formData.salesRepIds,
       });
     }
     setIsModalOpen(false);
@@ -549,7 +630,7 @@ export function AreaListPage() {
 
       {/* ── CREATE / EDIT AREA MODAL ── */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <div className="sm:max-w-[425px]">
+        <div className="sm:max-w-lg">
           <DialogHeader className="mb-4">
             <DialogTitle className="text-xl font-bold">
               {editingArea ? 'Edit Area' : 'Create New Area'}
@@ -557,7 +638,7 @@ export function AreaListPage() {
             <p className="text-sm text-slate-500 mt-1">
               {editingArea
                 ? 'Update the details of the operational area below.'
-                : 'Define a new operational area and assign a manager.'}
+                : 'Define a new operational area and assign staff.'}
             </p>
           </DialogHeader>
           <div className="space-y-4 py-2">
@@ -602,6 +683,7 @@ export function AreaListPage() {
                 <span className="text-xs font-normal text-slate-400">Optional</span>
               </label>
               <Select
+                data-testid="area-manager-select"
                 value={formData.areaManagerId}
                 onChange={(e) => setFormData({ ...formData, areaManagerId: e.target.value })}
                 className="focus-visible:ring-indigo-500"
@@ -625,6 +707,85 @@ export function AreaListPage() {
                     {editingArea?.areaManagerName || 'Unknown'} (Role Changed)
                   </option>
                 )}
+              </Select>
+            </div>
+
+            {/* Sales Representatives Section */}
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-slate-700 flex items-center justify-between">
+                <span className="flex items-center gap-1.5">
+                  <Users className="h-3.5 w-3.5 text-slate-400" /> Sales Representatives
+                </span>
+                <span className="text-xs font-normal text-slate-400">Optional (Multiple)</span>
+              </label>
+
+              {/* Selected Sales Reps Chips */}
+              {formData.salesRepIds.length > 0 ? (
+                <div className="flex flex-wrap gap-1.5 p-2 bg-slate-50 border border-slate-200 rounded-lg max-h-32 overflow-y-auto">
+                  {formData.salesRepIds.map((repId) => {
+                    const rep = salesReps.find((r) => r.id === repId);
+                    const name = rep?.name || rep?.displayName || 'Unknown Rep';
+                    return (
+                      <span
+                        key={repId}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-emerald-50 text-emerald-800 border border-emerald-200"
+                      >
+                        <UserCheck className="h-3 w-3 text-emerald-600" />
+                        <span>{name}</span>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setFormData({
+                              ...formData,
+                              salesRepIds: formData.salesRepIds.filter((id) => id !== repId),
+                            })
+                          }
+                          className="text-emerald-700 hover:text-emerald-900 rounded-full hover:bg-emerald-100 p-0.5 transition-colors"
+                          title="Remove representative"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </span>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="text-xs text-slate-400 italic">No Sales Representatives assigned yet.</p>
+              )}
+
+              {/* Add Sales Rep Select Dropdown */}
+              <Select
+                data-testid="sales-rep-select"
+                value=""
+                onChange={(e) => {
+                  const selectedId = e.target.value;
+                  if (selectedId && !formData.salesRepIds.includes(selectedId)) {
+                    setFormData({
+                      ...formData,
+                      salesRepIds: [...formData.salesRepIds, selectedId],
+                    });
+                  }
+                }}
+                className="focus-visible:ring-indigo-500"
+              >
+                <option value="">-- Add Sales Representative (Optional) --</option>
+                {salesRepsWithAssignment.map((rep) => {
+                  const isAlreadySelected = formData.salesRepIds.includes(rep.id);
+                  const isDisabled = rep.disabled || isAlreadySelected;
+                  return (
+                    <option key={rep.id} value={rep.id} disabled={isDisabled}>
+                      <span>{rep.name}</span>
+                      {isAlreadySelected && (
+                        <span className="ml-1 text-slate-500 font-normal"> (Already Added)</span>
+                      )}
+                      {!isAlreadySelected && rep.isAssignedToOtherArea && (
+                        <span className="ml-1 text-slate-500 font-normal">
+                          {` — (Assigned to: ${rep.assignedAreaName || rep.assignedArea?.name || rep.assignedArea?.areaName || 'Another Area'})`}
+                        </span>
+                      )}
+                    </option>
+                  );
+                })}
               </Select>
             </div>
           </div>
@@ -879,7 +1040,22 @@ export function AreaListPage() {
             </div>
           </div>
 
-          <DialogFooter className="border-t border-slate-100 pt-3">
+          <DialogFooter className="border-t border-slate-100 pt-3 flex items-center justify-between sm:justify-between w-full">
+            {canEdit && selectedAreaForTeam ? (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const areaToEdit = selectedAreaForTeam;
+                  setSelectedAreaForTeam(null);
+                  handleOpenModal(areaToEdit);
+                }}
+                className="text-xs border-indigo-200 text-indigo-700 hover:bg-indigo-50 flex items-center gap-1.5"
+              >
+                <Edit3 className="h-3.5 w-3.5" />
+                Manage Team Assignments
+              </Button>
+            ) : <div />}
             <Button variant="outline" size="sm" onClick={() => setSelectedAreaForTeam(null)}>
               Close
             </Button>

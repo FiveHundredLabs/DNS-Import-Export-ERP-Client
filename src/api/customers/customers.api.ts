@@ -83,7 +83,9 @@ export const customersApi = {
     payload?: CustomerApprovalActionPayload,
     signal?: AbortSignal,
   ): Promise<Customer> => {
-    return apiPost<Customer>(`/customers/${id}/approve`, payload || {}, {
+    const reason = payload?.reason ?? payload?.comments;
+    const body = reason !== undefined ? { reason } : {};
+    return apiPost<Customer>(`/customers/${id}/approve`, body, {
       signal,
       successMessage: 'Customer approved successfully',
     });
@@ -94,7 +96,9 @@ export const customersApi = {
     payload?: CustomerApprovalActionPayload,
     signal?: AbortSignal,
   ): Promise<Customer> => {
-    return apiPost<Customer>(`/customers/${id}/reject`, payload || {}, {
+    const reason = payload?.reason ?? payload?.comments;
+    const body = reason !== undefined ? { reason } : {};
+    return apiPost<Customer>(`/customers/${id}/reject`, body, {
       signal,
       successMessage: 'Customer rejected',
     });
