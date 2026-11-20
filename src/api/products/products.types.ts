@@ -88,7 +88,7 @@ export interface CreateProductPayload {
   categoryId: string;
   unitOfMeasure: ProductUnitOfMeasure;
   warrantyPeriod?: number;
-  costPrice: number;
+  costPrice?: number;
   sellingPrice?: number;
   minimumSellingPrice?: number;
   minFloorPricePercentage?: number;
