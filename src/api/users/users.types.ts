@@ -1,4 +1,4 @@
-export type UserStatus = 'ACTIVE' | 'INACTIVE' | 'SUSPENDED';
+export type UserStatus = "ACTIVE" | "INACTIVE" | "SUSPENDED";
 
 export interface UserSummary {
   id: string;
@@ -7,11 +7,13 @@ export interface UserSummary {
   email: string;
   roleId?: string;
   roleCode?: string;
-  role?: {
-    id: string;
-    code: string;
-    name: string;
-  } | string;
+  role?:
+    | {
+        id: string;
+        code: string;
+        name: string;
+      }
+    | string;
   phone?: string | null;
   areaId?: string | null;
   area?: {
@@ -24,6 +26,7 @@ export interface UserSummary {
   birthday?: string | null;
   createdAt?: string;
   updatedAt?: string;
+  welcomeEmailSent?: boolean;
 }
 
 export interface ListUsersParams {
@@ -33,8 +36,8 @@ export interface ListUsersParams {
   roleCode?: string;
   areaId?: string;
   status?: UserStatus;
-  sortBy?: 'fullName' | 'email' | 'createdAt' | 'status';
-  sortOrder?: 'asc' | 'desc';
+  sortBy?: "fullName" | "email" | "createdAt" | "status";
+  sortOrder?: "asc" | "desc";
 }
 
 export interface PaginatedUsersResponse {
