@@ -142,9 +142,12 @@ export interface GRN {
   receivingLocationBay?: string;
   status: GRNStatus;
   items: GRNItem[];
+  backendManaged?: boolean;
   totalValue: number;
   receivedById: string;
   receivedByName?: string;
+  createdAt?: string;
+  updatedAt?: string;
   verifiedById?: string;
   verifiedByName?: string;
   approvedById?: string;

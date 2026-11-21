@@ -1,5 +1,5 @@
 import { useParams, useNavigate } from 'react-router-dom';
-import { usePurchaseOrders } from '../../hooks/usePurchaseOrders';
+import { usePurchaseOrder } from '../../hooks/usePurchaseOrders';
 import { A4PurchaseOrderViewer } from './components/A4PurchaseOrderViewer';
 import { TableLoadingSkeleton } from '../../components/common/LoadingSkeleton';
 import { Button } from '../../components/ui/button';
@@ -8,9 +8,7 @@ import { AlertCircle, ArrowLeft } from 'lucide-react';
 export function PurchaseOrderPrintPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { purchaseOrders, loading } = usePurchaseOrders();
-
-  const po = purchaseOrders.find((p) => p.id === id);
+  const { purchaseOrder: po, loading, error } = usePurchaseOrder(id);
 
   if (loading && !po) {
     return (
@@ -24,7 +22,8 @@ export function PurchaseOrderPrintPage() {
     return (
       <div className="p-8 text-center space-y-4">
         <AlertCircle className="h-10 w-10 text-rose-500 mx-auto" />
-        <h2 className="text-xl font-bold text-slate-900">Purchase Order Not Found</h2>
+        <h2 className="text-xl font-bold text-slate-900">{error ? 'Unable to Load Purchase Order' : 'Purchase Order Not Found'}</h2>
+        {error && <p role="alert" className="text-sm text-slate-600">{error}</p>}
         <Button onClick={() => navigate('/purchasing/orders')}>Back to Orders</Button>
       </div>
     );

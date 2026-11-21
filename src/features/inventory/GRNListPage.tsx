@@ -36,7 +36,7 @@ import {
 } from 'lucide-react';
 
 export function GRNListPage() {
-  const { grns, loading } = useGRN();
+  const { grns, loading, error, refetch } = useGRN();
   const { currentUser, role } = useAuth();
   const navigate = useNavigate();
   const [filter, setFilter] = useState('All');
@@ -179,6 +179,17 @@ export function GRNListPage() {
       />
 
       {/* ── Warehouse Isolation Mode Banner for Stock Keeper ── */}
+      {error && (
+        <Card className="border-rose-200 bg-rose-50/60">
+          <CardContent className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4">
+            <p className="text-sm text-rose-800">Unable to load GRNs from the server: {error}</p>
+            <Button variant="outline" size="sm" onClick={() => void refetch()} className="shrink-0">
+              Retry
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
       {isStockKeeper && (
         <div className="rounded-xl border border-emerald-200 bg-emerald-50/50 p-3.5 flex items-center justify-between text-xs text-emerald-800">
           <div className="flex items-center gap-2">

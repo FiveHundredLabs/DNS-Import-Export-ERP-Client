@@ -3,6 +3,7 @@ import { UserRole } from './auth';
 
 export type PurchaseOrderStatus =
   | 'DRAFT'
+  | 'PENDING_VERIFICATION'
   | 'PENDING_APPROVAL'
   | 'APPROVED'
   | 'REJECTED'
@@ -20,6 +21,8 @@ export interface PurchaseOrderItem {
   unitPrice: number;
   discountPercent: number;
   discountAmount: number;
+  discountType?: 'PERCENTAGE' | 'FIXED_AMOUNT' | null;
+  discountValue?: number;
   taxRate: number; // e.g. 18 for 18% VAT
   taxAmount: number;
   total: number;
@@ -43,6 +46,7 @@ export interface PurchaseOrder extends BaseEntity {
   currency: string;
   status: PurchaseOrderStatus;
   items: PurchaseOrderItem[];
+  itemCount?: number;
   subtotal: number;
   totalDiscount: number;
   taxTotal: number;

@@ -53,6 +53,7 @@ import {
   SlidersHorizontal,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { PurchaseOrderApprovalQueue } from '../PurchaseOrderApprovalQueue';
 
 interface UnifiedPaymentRow {
   id: string;
@@ -399,6 +400,8 @@ export const PurchasingApprovalHub: React.FC = () => {
       setIsSubmitting(false);
     }
   };
+
+  if (activeTab === 'po-approvals') return <PurchaseOrderApprovalQueue />;
 
   return (
     <div className="space-y-5 pb-12">

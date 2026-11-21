@@ -69,6 +69,7 @@ const AP_BILLS_STORAGE_KEY = 'dns_finance_ap_vendor_bills';
 const GRN_STATUS_STORAGE_KEY = 'dns_finance_grn_status_map';
 const AP_ADVANCES_STORAGE_KEY = 'dns_finance_ap_supplier_advances';
 const AP_DEBIT_NOTES_STORAGE_KEY = 'dns_finance_ap_supplier_debit_notes';
+type APGRNStatus = 'COSTED' | 'SUBMITTED' | 'APPROVED' | 'PRICED' | 'REJECTED' | 'STOCK_MANAGER_REJECTED';
 
 const INITIAL_ADVANCES: SupplierAdvance[] = [
   {
@@ -404,7 +405,7 @@ class AccountsPayableService {
   }
 
   private bills: VendorBill[] = [];
-  private grnStatuses: Record<string, 'COSTED' | 'SUBMITTED' | 'APPROVED' | 'PRICED'> = {};
+  private grnStatuses: Record<string, APGRNStatus> = {};
   private advances: SupplierAdvance[] = [];
   private debitNotes: SupplierDebitNote[] = [];
 
@@ -631,7 +632,7 @@ class AccountsPayableService {
     return all.find((g) => g.id === grnId || g.grnNumber === grnId) || null;
   }
 
-  setGRNStatus(grnId: string, status: 'COSTED' | 'SUBMITTED' | 'APPROVED' | 'PRICED') {
+  setGRNStatus(grnId: string, status: APGRNStatus) {
     this.grnStatuses[grnId] = status === 'PRICED' ? 'APPROVED' : status;
     this.save();
   }
