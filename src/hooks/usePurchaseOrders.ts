@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { isRequestCanceled, extractErrorMessage } from '../api/client';
 import { PurchaseOrder, PurchaseOrderFilter, CreatePurchaseOrderDTO } from '../types/purchasing';
 import { purchaseOrderService } from '../services/PurchaseOrderService';
 import { useAuth } from './useAuth';
@@ -18,7 +19,8 @@ export function usePurchaseOrders(initialFilters?: PurchaseOrderFilter) {
       const data = await purchaseOrderService.getAll(filters);
       setPurchaseOrders(data);
     } catch (err: any) {
-      const msg = err.message || 'Failed to load purchase orders';
+      if (isRequestCanceled(err)) return;
+      const msg = extractErrorMessage(err, 'Failed to load purchase orders');
       setError(msg);
       toast.error(msg);
     } finally {

@@ -1,6 +1,6 @@
-import { useState, useMemo, useEffect, FormEvent } from "react";
-import { toast } from "sonner";
-import { isAxiosError } from "axios";
+import { useState, useMemo, useEffect, useCallback, FormEvent } from 'react';
+import { toast } from 'sonner';
+import { isAxiosError } from 'axios';
 import {
   Plus,
   Search,
@@ -196,6 +196,20 @@ export function TeamListPage() {
     );
   }, [areas, quickAreaId]);
 
+  // Check which active user with role AREA_MANAGER is currently assigned to each area
+  const getAreaManagerOccupant = useCallback(
+    (areaId: string, excludeUserId?: string) => {
+      return users.find(
+        (u) =>
+          u.areaId === areaId &&
+          u.id !== excludeUserId &&
+          u.isActive !== false &&
+          ((typeof u.role === 'object' && u.role ? (u.role as any).code : u.role) === 'AREA_MANAGER' || (u as any).roleCode === 'AREA_MANAGER'),
+      );
+    },
+    [users],
+  );
+
   // Check authorization: only DIRECTOR and MANAGER have access (when authenticated)
   const isAuthorized =
     !currentUser ||
@@ -340,6 +354,14 @@ export function TeamListPage() {
       return;
     }
 
+    if (showAreaInCreate && createForm.areaId && selectedCreateRole?.code === 'AREA_MANAGER') {
+      const occupant = getAreaManagerOccupant(createForm.areaId);
+      if (occupant) {
+        toast.error(`Area already has an assigned Area Manager (${occupant.name}). Each Area can have only ONE Area Manager.`);
+        return;
+      }
+    }
+
     setIsSubmitting(true);
     try {
       const payload: CreateUserPayload = {
@@ -388,7 +410,14 @@ export function TeamListPage() {
 
   const handleEditSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!selectedUser) return;
+    const isEditingAM = selectedUser && ((typeof selectedUser.role === 'object' && selectedUser.role ? (selectedUser.role as any).code : selectedUser.role) === 'AREA_MANAGER' || (selectedUser as any).roleCode === 'AREA_MANAGER');
+    if (isEditingAM && editForm.areaId && editForm.areaId !== selectedUser.areaId) {
+      const occupant = getAreaManagerOccupant(editForm.areaId, selectedUser.id);
+      if (occupant) {
+        toast.error(`Area already has an assigned Area Manager (${occupant.name}). Each Area can have only ONE Area Manager.`);
+        return;
+      }
+    }
 
     setIsSubmitting(true);
     try {
@@ -429,6 +458,16 @@ export function TeamListPage() {
 
   const handleQuickAreaSubmit = async () => {
     if (!selectedUser) return;
+
+    const isQuickAM = selectedUser && ((typeof selectedUser.role === 'object' && selectedUser.role ? (selectedUser.role as any).code : selectedUser.role) === 'AREA_MANAGER' || (selectedUser as any).roleCode === 'AREA_MANAGER');
+    if (isQuickAM && quickAreaId && quickAreaId !== selectedUser.areaId) {
+      const occupant = getAreaManagerOccupant(quickAreaId, selectedUser.id);
+      if (occupant) {
+        toast.error(`Area already has an assigned Area Manager (${occupant.name}). Each Area can have only ONE Area Manager.`);
+        return;
+      }
+    }
+
     setIsSubmitting(true);
     try {
       const rawUser = rawUsers.find((r) => r.id === selectedUser.id);
@@ -985,11 +1024,15 @@ export function TeamListPage() {
                   className="h-9 text-sm bg-white"
                 >
                   <option value="">-- No Area Assigned (Optional) --</option>
-                  {activeAreas.map((a) => (
-                    <option key={a.id} value={a.id}>
-                      {a.name} ({a.code})
-                    </option>
-                  ))}
+                  {activeAreas.map((a) => {
+                    const isAM = selectedCreateRole?.code === 'AREA_MANAGER';
+                    const occupant = isAM ? getAreaManagerOccupant(a.id) : null;
+                    return (
+                      <option key={a.id} value={a.id} disabled={Boolean(occupant)}>
+                        {a.name} ({a.code}){occupant ? ` — (Manager: ${occupant.name})` : ''}
+                      </option>
+                    );
+                  })}
                 </Select>
                 <p className="text-[11px] text-sky-700">
                   Orders and customers mapped to this area will be linked to
@@ -1091,12 +1134,21 @@ export function TeamListPage() {
                   className="h-9 text-sm bg-white"
                 >
                   <option value="">-- No Area Assigned (Unassigned) --</option>
-                  {editSelectableAreas.map((a) => (
-                    <option key={a.id} value={a.id}>
-                      {a.name} ({a.code}){" "}
-                      {a.status === "INACTIVE" ? "(Inactive)" : ""}
-                    </option>
-                  ))}
+                  {editSelectableAreas.map((a) => {
+                    const isAM =
+                      selectedUser &&
+                      ((typeof selectedUser.role === 'object' && selectedUser.role
+                        ? (selectedUser.role as any).code
+                        : selectedUser.role) === 'AREA_MANAGER' ||
+                        (selectedUser as any).roleCode === 'AREA_MANAGER');
+                    const occupant = isAM ? getAreaManagerOccupant(a.id, selectedUser?.id) : null;
+                    return (
+                      <option key={a.id} value={a.id} disabled={Boolean(occupant)}>
+                        {a.name} ({a.code}) {a.status === 'INACTIVE' ? '(Inactive)' : ''}
+                        {occupant ? ` — (Manager: ${occupant.name})` : ''}
+                      </option>
+                    );
+                  })}
                 </Select>
               </div>
             )}
@@ -1147,12 +1199,21 @@ export function TeamListPage() {
                 className="h-9 text-sm"
               >
                 <option value="">-- No Area Assigned (Unassigned) --</option>
-                {quickSelectableAreas.map((a) => (
-                  <option key={a.id} value={a.id}>
-                    {a.name} ({a.code}){" "}
-                    {a.status === "INACTIVE" ? "(Inactive)" : ""}
-                  </option>
-                ))}
+                {quickSelectableAreas.map((a) => {
+                  const isAM =
+                    selectedUser &&
+                    ((typeof selectedUser.role === 'object' && selectedUser.role
+                      ? (selectedUser.role as any).code
+                      : selectedUser.role) === 'AREA_MANAGER' ||
+                      (selectedUser as any).roleCode === 'AREA_MANAGER');
+                  const occupant = isAM ? getAreaManagerOccupant(a.id, selectedUser?.id) : null;
+                  return (
+                    <option key={a.id} value={a.id} disabled={Boolean(occupant)}>
+                      {a.name} ({a.code}) {a.status === 'INACTIVE' ? '(Inactive)' : ''}
+                      {occupant ? ` — (Manager: ${occupant.name})` : ''}
+                    </option>
+                  );
+                })}
               </Select>
             </div>
           </div>

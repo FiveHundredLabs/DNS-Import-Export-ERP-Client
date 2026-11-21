@@ -4,6 +4,7 @@ import {
   useCreateCategory,
   useUpdateCategory,
   useUpdateCategoryStatus,
+  useDeleteCategory,
 } from '../../api/categories/categories.hooks';
 import { Category, CategoryStatus } from '../../api/categories/categories.types';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../../components/ui/table';
@@ -15,8 +16,10 @@ import { Dialog, DialogHeader, DialogTitle, DialogDescription, DialogFooter } fr
 import { TableLoadingSkeleton } from '../../components/common/LoadingSkeleton';
 import { EmptyState } from '../../components/common/EmptyState';
 import { ErrorState } from '../../components/common/ErrorState';
-import { Search, Plus, Edit2, Power, RefreshCw, FolderTree, AlertCircle } from 'lucide-react';
+import { Search, Plus, Edit2, Power, RefreshCw, FolderTree, AlertCircle, Trash2 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
+import { toast } from 'sonner';
+import { extractErrorMessage } from '../../api/client';
 
 export function CategoryListTab() {
   const { role, hasPermission } = useAuth();
@@ -38,10 +41,14 @@ export function CategoryListTab() {
   // Status toggle confirmation modal
   const [statusTargetCategory, setStatusTargetCategory] = useState<Category | null>(null);
 
+  // Delete confirmation modal
+  const [categoryToDelete, setCategoryToDelete] = useState<Category | null>(null);
+
   const { data: categories = [], isLoading, error, refetch } = useCategories();
   const createCategoryMutation = useCreateCategory();
   const updateCategoryMutation = useUpdateCategory();
   const updateStatusMutation = useUpdateCategoryStatus();
+  const deleteCategoryMutation = useDeleteCategory();
 
   // Filtered categories
   const filteredCategories = useMemo(() => {
@@ -272,6 +279,15 @@ export function CategoryListTab() {
                           >
                             <Power className="h-3.5 w-3.5" />
                           </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setCategoryToDelete(cat)}
+                            title="Delete Category"
+                            className="text-rose-600 hover:text-rose-700 hover:bg-rose-50"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
                         </div>
                       </TableCell>
                     )}
@@ -435,6 +451,61 @@ export function CategoryListTab() {
               ? 'Deactivate'
               : 'Activate'}
           </Button>
+        </DialogFooter>
+      </Dialog>
+
+      {/* Delete Category Confirmation Modal */}
+      <Dialog open={Boolean(categoryToDelete)} onOpenChange={(open) => !open && setCategoryToDelete(null)}>
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-rose-700">
+            <Trash2 className="h-5 w-5 text-rose-600" />
+            Delete Category
+          </DialogTitle>
+          <DialogDescription>
+            {categoryToDelete && (categoryToDelete._count?.products ?? (categoryToDelete as any).productCount ?? 0) > 0 ? (
+              <div className="space-y-3 pt-2 text-xs">
+                <div className="p-3 bg-amber-50 text-amber-900 border border-amber-200 rounded-lg">
+                  <strong>Cannot Delete Category:</strong> Category <strong>"{categoryToDelete.name}"</strong> is currently referenced by <strong>{categoryToDelete._count?.products ?? (categoryToDelete as any).productCount}</strong> product(s).
+                </div>
+                <p className="text-slate-600">
+                  To prevent orphaned products, please reassign or delete the associated products before attempting to delete this category.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-2 pt-2 text-xs text-slate-600">
+                <p>
+                  Are you sure you want to delete category <strong>"{categoryToDelete?.name}"</strong>?
+                </p>
+                <p className="text-slate-500">
+                  This category has no associated products and will be removed from the system.
+                </p>
+              </div>
+            )}
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter className="mt-4 gap-2 sm:gap-0">
+          <Button variant="outline" onClick={() => setCategoryToDelete(null)}>
+            {(categoryToDelete && (categoryToDelete._count?.products ?? (categoryToDelete as any).productCount ?? 0) > 0) ? 'Close' : 'Cancel'}
+          </Button>
+          {Boolean(categoryToDelete && (categoryToDelete._count?.products ?? (categoryToDelete as any).productCount ?? 0) === 0) && (
+            <Button
+              variant="destructive"
+              disabled={deleteCategoryMutation.isPending}
+              onClick={async () => {
+                if (!categoryToDelete) return;
+                try {
+                  await deleteCategoryMutation.mutateAsync(categoryToDelete.id);
+                  toast.success(`Category "${categoryToDelete.name}" deleted successfully.`);
+                  setCategoryToDelete(null);
+                } catch (err: unknown) {
+                  toast.error(extractErrorMessage(err, 'Failed to delete category'));
+                }
+              }}
+              className="bg-rose-600 hover:bg-rose-700 text-white"
+            >
+              {deleteCategoryMutation.isPending ? 'Deleting...' : 'Delete Category'}
+            </Button>
+          )}
         </DialogFooter>
       </Dialog>
     </div>

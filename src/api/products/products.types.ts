@@ -24,6 +24,127 @@ export interface ProductPricing {
   showroomDiscountPercentage: number;
   taxRatePercentage: number;
   discountLevels: number[];
+  latestBatchCostPrice?: number | null;
+  latestBatchSellingPrice?: number | null;
+  latestBatchFloorPct?: number | null;
+  hasBatchPricing?: boolean;
+  batchNumber?: string | null;
+}
+
+export interface StockBatchItem {
+  id: string;
+  batchNumber: string;
+  grnId: string;
+  grnNumber: string;
+  grnDate: string;
+  grnStatus: string;
+  supplierName: string | null;
+  unitCost: number;
+  sellingPrice: number;
+  minFloorPricePercentage: number;
+  initialQuantity: number;
+  availableQuantity: number;
+  status: 'ACTIVE' | 'HOLD' | 'DEPLETED';
+  receivedDate: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface BatchPricingSummary {
+  totalBatches: number;
+  activeBatches: number;
+  holdBatches: number;
+  depletedBatches: number;
+  totalAvailableQty: number;
+  latestCostPrice: number | null;
+  latestSellingPrice: number | null;
+  eligibleForPriceUpdate: number;
+}
+
+export interface ProductBatchPricingResponse {
+  productId: string;
+  productName: string;
+  sku: string;
+  barcode: string;
+  batches: StockBatchItem[];
+  summary: BatchPricingSummary;
+}
+
+export interface EligibleBatchPreviewItem {
+  id: string;
+  batchNumber: string;
+  grnNumber: string;
+  grnDate: string;
+  status: 'ACTIVE' | 'HOLD';
+  availableQuantity: number;
+  unitCost: number;
+  currentSellingPrice: number;
+  minFloorPricePercentage: number;
+}
+
+export interface BatchPricePreviewResponse {
+  productId: string;
+  productName: string;
+  sku: string;
+  count: number;
+  batches: EligibleBatchPreviewItem[];
+}
+
+export interface UpdateBatchPricePayload {
+  newSellingPrice: number;
+  reason?: string;
+  batchIds?: string[];
+}
+
+export interface UpdateBatchPriceResponse {
+  success: boolean;
+  productId: string;
+  updatedCount: number;
+  newSellingPrice: number;
+  updatedBatches: Array<{
+    id: string;
+    batchNumber: string;
+    previousPrice: number;
+    newPrice: number;
+    status: string;
+    availableQuantity: number;
+  }>;
+}
+
+export interface FloorPercentagePreviewItem {
+  id: string;
+  batchNumber: string;
+  grnNumber: string;
+  grnDate: string;
+  status: 'ACTIVE' | 'HOLD';
+  availableQuantity: number;
+  unitCost: number;
+  sellingPrice: number;
+  currentFloorPercentage: number;
+}
+
+export interface FloorPercentagePreviewResponse {
+  productId: string;
+  productName: string;
+  sku: string;
+  currentProductFloorPercentage: number;
+  count: number;
+  batches: FloorPercentagePreviewItem[];
+}
+
+export interface UpdateProductFloorPercentagePayload {
+  newFloorPercentage: number;
+  propagateToBatches?: boolean;
+  batchIds?: string[];
+  reason?: string;
+}
+
+export interface UpdateProductFloorPercentageResponse {
+  success: boolean;
+  productId: string;
+  newFloorPercentage: number;
+  propagateToBatches: boolean;
+  updatedBatchesCount: number;
 }
 
 export interface Product {
@@ -88,7 +209,7 @@ export interface CreateProductPayload {
   categoryId: string;
   unitOfMeasure: ProductUnitOfMeasure;
   warrantyPeriod?: number;
-  costPrice: number;
+  costPrice?: number;
   sellingPrice?: number;
   minimumSellingPrice?: number;
   minFloorPricePercentage?: number;

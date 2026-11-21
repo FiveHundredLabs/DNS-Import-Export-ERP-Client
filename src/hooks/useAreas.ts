@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { areasApi } from '../api/areas/areas.api';
 import { usersApi } from '../api/users/users.api';
+import { extractErrorMessage, isRequestCanceled } from '../api/client';
 import { AreaCustomer, AreaStatus, AreaUser } from '../api/areas/areas.types';
 import { toast } from 'sonner';
 
@@ -16,6 +17,7 @@ export interface AreaItem {
   areaManagerName?: string;
   areaManagers?: AreaUser[];
   salesReps?: AreaUser[];
+  salesRepIds?: string[];
   customers?: AreaCustomer[];
   salesManagerId?: string;
   salesManagerName?: string;
@@ -77,7 +79,8 @@ export function useAreas() {
       });
       setAreas(mapped);
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : 'Failed to fetch areas from server';
+      if (isRequestCanceled(e)) return;
+      const msg = extractErrorMessage(e, 'Failed to fetch areas from server');
       setError(msg);
       toast.error(msg);
     } finally {
@@ -98,6 +101,8 @@ export function useAreas() {
       const created = await areasApi.createArea({
         areaName,
         description: desc,
+        areaManagerId: data.areaManagerId || undefined,
+        salesRepIds: data.salesRepIds && data.salesRepIds.length > 0 ? data.salesRepIds : undefined,
       });
 
       // If an Area Manager was selected, assign the user to this area
@@ -151,6 +156,8 @@ export function useAreas() {
       const updated = await areasApi.updateArea(id, {
         areaName: areaName || undefined,
         description: desc,
+        areaManagerId: data.areaManagerId !== undefined ? (data.areaManagerId || null) : undefined,
+        salesRepIds: data.salesRepIds !== undefined ? data.salesRepIds : undefined,
         updatedAt,
       });
 

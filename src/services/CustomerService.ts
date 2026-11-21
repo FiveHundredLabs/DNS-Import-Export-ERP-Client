@@ -54,7 +54,20 @@ function mapBackendCustomer(c: any): Customer {
 }
 
 export class CustomerService {
+  private repo?: any;
+
+  constructor(repo?: any) {
+    this.repo = repo;
+  }
+
   async listCustomers(filters?: CustomerFilters): Promise<PaginatedResult<Customer>> {
+    if (this.repo?.getAll) {
+      return this.repo.getAll(filters);
+    }
+    if (this.repo?.list) {
+      return this.repo.list(filters);
+    }
+
     const res = await customersApi.listCustomers({
       page: filters?.page || 1,
       pageSize: filters?.pageSize ? Math.min(filters.pageSize, 100) : 20,
@@ -75,6 +88,13 @@ export class CustomerService {
   }
 
   async getCustomer(id: string): Promise<Customer | null> {
+    if (this.repo?.getById) {
+      return this.repo.getById(id);
+    }
+    if (this.repo?.findById) {
+      return this.repo.findById(id);
+    }
+
     try {
       const c = await customersApi.getCustomerById(id);
       return mapBackendCustomer(c);
@@ -85,8 +105,12 @@ export class CustomerService {
 
   async createCustomer(
     data: Omit<Customer, 'id' | 'createdAt' | 'updatedAt' | 'financials'>,
-    _user?: User
+    user?: User
   ): Promise<Customer> {
+    if (this.repo?.create) {
+      return this.repo.create(data);
+    }
+
     const created = await customersApi.createCustomerStep1({
       displayName: data.displayName || data.name,
       companyName: data.companyName || data.displayName || data.name,
@@ -105,6 +129,10 @@ export class CustomerService {
   }
 
   async updateCustomer(id: string, updates: Partial<Customer>): Promise<Customer> {
+    if (this.repo?.update) {
+      return this.repo.update(id, updates);
+    }
+
     if (updates.approvalStage === 'REJECT') {
       const rejected = await customersApi.rejectCustomer(id);
       return mapBackendCustomer(rejected);
@@ -120,8 +148,26 @@ export class CustomerService {
   async setCommercialTerms(
     customerId: string,
     terms: CommercialTerms,
-    _user?: User
+    user?: User
   ): Promise<{ customer: Customer; targetApprovalRole: string; isExceptional: boolean }> {
+    if (user && !['SALES_MANAGER', 'MANAGER', 'DIRECTOR'].includes(user.role)) {
+      throw new Error(`Role ${user.role} is not authorized to configure commercial terms`);
+    }
+
+    if ((this.repo?.getById || this.repo?.findById) && this.repo?.update) {
+      const existing = this.repo.getById
+        ? await this.repo.getById(customerId)
+        : await this.repo.findById(customerId);
+      if (!existing) throw new Error('Customer not found');
+      const isExceptional = (terms.creditDays || 0) > 30 || (terms.creditLimit || 0) > 500000;
+      const updated = await this.repo.update(customerId, { commercialTerms: terms });
+      return {
+        customer: updated,
+        targetApprovalRole: isExceptional ? 'DIRECTOR' : 'MANAGER',
+        isExceptional,
+      };
+    }
+
     const updated = await customersApi.updateCommercialTerms(customerId, {
       creditPeriod: terms.creditDays,
       creditLimit: terms.creditLimit,

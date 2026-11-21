@@ -122,53 +122,238 @@ export function ProductDetailPage() {
           <TabsTrigger value="warranty">Warranty Terms</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="overview">
+        <TabsContent value="overview" className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* 1. Core Master Specification & Identity */}
             <Card>
-              <CardHeader>
-                <CardTitle className="text-sm">Specification & Identity</CardTitle>
+              <CardHeader className="pb-3 border-b border-slate-100">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <Package className="h-4 w-4 text-indigo-600" />
+                  Product Master Identity & Specification
+                </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3 text-xs">
+              <CardContent className="space-y-2.5 text-xs pt-3">
+                <div className="flex justify-between py-1.5 border-b border-slate-100">
+                  <span className="text-slate-500">Product Name:</span>
+                  <span className="font-semibold text-slate-900">{product.name}</span>
+                </div>
+                <div className="flex justify-between py-1.5 border-b border-slate-100">
+                  <span className="text-slate-500">SKU Code:</span>
+                  <span className="font-mono font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded">
+                    {product.sku}
+                  </span>
+                </div>
+                <div className="flex justify-between py-1.5 border-b border-slate-100">
+                  <span className="text-slate-500">Brand / Label:</span>
+                  <span className="font-semibold text-slate-900">
+                    {product.brandName ? (
+                      <span className="inline-flex items-center gap-1 text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded font-medium">
+                        <Tag className="h-3 w-3" />
+                        {product.brandName}
+                      </span>
+                    ) : (
+                      <span className="text-slate-400 italic">None</span>
+                    )}
+                  </span>
+                </div>
                 <div className="flex justify-between py-1.5 border-b border-slate-100">
                   <span className="text-slate-500">Category:</span>
                   <span className="font-semibold text-slate-900">{product.categoryName}</span>
                 </div>
                 <div className="flex justify-between py-1.5 border-b border-slate-100">
-                  <span className="text-slate-500">Unit of Measure:</span>
+                  <span className="text-slate-500">Unit of Measure (UOM):</span>
                   <span className="font-semibold text-slate-900">{product.uomCode}</span>
                 </div>
                 <div className="flex justify-between py-1.5 border-b border-slate-100">
                   <span className="text-slate-500">Barcode / EAN:</span>
-                  <span className="font-mono font-semibold text-slate-900">{product.barcode}</span>
+                  <span className="font-mono font-semibold text-slate-900">{product.barcode || '—'}</span>
+                </div>
+                <div className="flex justify-between py-1.5 border-b border-slate-100">
+                  <span className="text-slate-500">Serial Number Tracking:</span>
+                  <span className="font-semibold text-slate-900">
+                    {product.requiresSerialNumber ? (
+                      <span className="text-emerald-700 font-medium">Tracked per unit</span>
+                    ) : (
+                      <span className="text-slate-500">Not tracked</span>
+                    )}
+                  </span>
+                </div>
+                <div className="flex justify-between py-1.5 border-b border-slate-100">
+                  <span className="text-slate-500">Warranty Coverage:</span>
+                  <span className="font-semibold text-slate-900">
+                    {product.warrantyPeriodMonths > 0
+                      ? `${product.warrantyPeriodMonths} Months Commercial Warranty`
+                      : 'No Warranty'}
+                  </span>
                 </div>
 
                 <div className="pt-2">
-                  <span className="text-slate-500 block mb-1">Description:</span>
-                  <p className="text-slate-700 bg-slate-50 p-2.5 rounded border border-slate-100">
-                    {product.description}
+                  <span className="text-slate-500 block mb-1">Catalog Description:</span>
+                  <p className="text-slate-700 bg-slate-50 p-2.5 rounded border border-slate-100 whitespace-pre-wrap">
+                    {product.description || 'No description provided.'}
                   </p>
                 </div>
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-sm">Stock Snapshot</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-3 text-xs">
-                  <div className="p-3 bg-primary-light/50 rounded-lg border border-primary-border/40">
-                    <span className="text-primary block text-xs uppercase font-semibold">Available for Sale</span>
-                    <span className="text-xl font-semibold tabular-nums text-indigo-900">{product.stockOnHand} {product.uomCode}</span>
+            {/* 2. Commercial Pricing Governance & Floor Limits */}
+            <div className="space-y-6">
+              <Card>
+                <CardHeader className="pb-3 border-b border-slate-100">
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <TrendingUp className="h-4 w-4 text-emerald-600" />
+                    Commercial & Floor Price Governance
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3 pt-3 text-xs">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="p-3 rounded-xl border border-violet-100 bg-violet-50/50">
+                      <span className="text-violet-700 block text-[11px] font-semibold uppercase">
+                        Default Floor Markup %
+                      </span>
+                      <span className="text-2xl font-bold font-mono text-violet-900 tabular-nums">
+                        {product.minFloorPricePercentage ?? product.pricing?.minFloorPricePercentage ?? 0}%
+                      </span>
+                      <span className="text-[10px] text-violet-600 block mt-0.5">
+                        Minimum price barrier applied to batches
+                      </span>
+                    </div>
+
+                    <div className="p-3 rounded-xl border border-slate-200 bg-slate-50">
+                      <span className="text-slate-500 block text-[11px] font-semibold uppercase">
+                        Showroom Discount
+                      </span>
+                      <span className="text-2xl font-bold font-mono text-slate-900 tabular-nums">
+                        {product.pricing?.showroomDiscountPercentage ?? 0}%
+                      </span>
+                      <span className="text-[10px] text-slate-500 block mt-0.5">
+                        Standard showroom customer allowance
+                      </span>
+                    </div>
                   </div>
-                  <div className="p-3 bg-rose-50/50 rounded-lg border border-rose-100">
-                    <span className="text-rose-600 block text-xs uppercase font-semibold">Damaged / Non-Sale</span>
-                    <span className="text-xl font-semibold tabular-nums text-rose-900">{product.damagedStock} {product.uomCode}</span>
+
+                  <div className="flex justify-between py-1.5 border-b border-slate-100">
+                    <span className="text-slate-500">Default Minimum Floor Price (Absolute):</span>
+                    <span className="font-semibold font-mono text-slate-900">
+                      {formatCurrency(product.pricing?.minimumSellingPrice || 0)}
+                    </span>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
+
+                  <div className="flex justify-between py-1.5 border-b border-slate-100">
+                    <span className="text-slate-500">Maximum Allowed Rep Discount:</span>
+                    <span className="font-semibold font-mono text-slate-900">
+                      {product.pricing?.maxDiscountPercentage ?? 0}%
+                    </span>
+                  </div>
+
+                  {/* Stock Snapshot (Product-level available & damaged counts) */}
+                  <div className="pt-2">
+                    <span className="text-slate-500 block text-xs font-semibold uppercase mb-2">
+                      Inventory Stock Snapshot
+                    </span>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-100">
+                        <span className="text-emerald-700 block text-[11px] uppercase font-semibold">
+                          Available for Sale
+                        </span>
+                        <span className="text-xl font-bold tabular-nums text-emerald-900">
+                          {product.stockOnHand} {product.uomCode}
+                        </span>
+                      </div>
+                      <div className="p-3 bg-rose-50/50 rounded-xl border border-rose-100">
+                        <span className="text-rose-600 block text-[11px] uppercase font-semibold">
+                          Damaged / Quarantine
+                        </span>
+                        <span className="text-xl font-bold tabular-nums text-rose-900">
+                          {product.damagedStock} {product.uomCode}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </div>
+
+          {/* 3. Product Discount Levels (Customer Loyalty Tiers) */}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-3 border-b border-slate-100">
+              <div>
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <Percent className="h-4 w-4 text-indigo-600" />
+                  Structured Discount Levels (Up to 3 Levels)
+                </CardTitle>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Controls allowed discounts dynamically by customer loyalty level (New = Level 1, Premium = Levels 1 & 2, Platinum = All 3).
+                </p>
+              </div>
+              {(role === 'DIRECTOR' || role === 'MANAGER') && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const levels = product.discountLevels || product.pricing?.discountLevels || [];
+                    setEditL1(levels[0] !== undefined ? String(levels[0]) : '');
+                    setEditL2(levels[1] !== undefined ? String(levels[1]) : '');
+                    setEditL3(levels[2] !== undefined ? String(levels[2]) : '');
+                    setIsDiscountModalOpen(true);
+                  }}
+                  className="h-8 text-xs gap-1.5"
+                >
+                  <Edit3 className="h-3.5 w-3.5 text-slate-500" />
+                  Configure Levels
+                </Button>
+              )}
+            </CardHeader>
+            <CardContent className="pt-4">
+              {(() => {
+                const levels = product.discountLevels || product.pricing?.discountLevels || [];
+                if (levels.length === 0) {
+                  return (
+                    <div className="rounded-xl border border-dashed border-amber-300 bg-amber-50/50 p-4 text-xs text-amber-900 flex items-start gap-3">
+                      <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+                      <div>
+                        <div className="font-semibold">0 Discount Levels Configured</div>
+                        <p className="text-amber-800 mt-0.5 text-[11px]">
+                          No direct discounts are configured for this product. Sales representatives must request Management Special Approval for any discounts on orders.
+                        </p>
+                      </div>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    {levels.map((lvl, idx) => (
+                      <div
+                        key={idx}
+                        className="p-3.5 rounded-xl border border-slate-200 bg-slate-50/70 space-y-1"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] font-semibold text-slate-500 uppercase">
+                            Discount Level {idx + 1}
+                          </span>
+                          <Badge variant="secondary" className="text-[10px] font-mono">
+                            Tier {idx + 1}
+                          </Badge>
+                        </div>
+                        <div className="text-2xl font-bold font-mono text-slate-900 tabular-nums">
+                          {lvl}%
+                        </div>
+                        <p className="text-[10px] text-slate-500 leading-tight pt-0.5">
+                          {idx === 0
+                            ? 'Accessible by: New, Premium, Platinum'
+                            : idx === 1
+                            ? 'Accessible by: Premium, Platinum'
+                            : 'Accessible by: Platinum Only'}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="pricing">
