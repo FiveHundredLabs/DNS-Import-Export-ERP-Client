@@ -11,6 +11,7 @@ import { formatCurrency, formatDate } from '../../utils/formatters';
 import { AlertCircle, ArrowLeft, CheckCircle2, Edit, Package, Printer, Send, ShieldCheck, Truck, XCircle } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { ConfirmButton } from '../../components/ui/confirm-button';
+import { Dialog, DialogDescription, DialogFooter, DialogTitle } from '../../components/ui/dialog';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Textarea } from '../../components/ui/textarea';
 import { TableLoadingSkeleton } from '../../components/common/LoadingSkeleton';
@@ -62,17 +63,31 @@ export function PurchaseOrderDetailPage() {
   const { submitPO, verifyPO, approvePO, rejectPO, issuePO } = usePurchaseOrderActions();
   const [comment, setComment] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
+  const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
+  const [dialogRejectionReason, setDialogRejectionReason] = useState('');
 
   const timeline = useMemo(() => (activityQuery.data ?? []).map(toTimelineEntry).reverse(), [activityQuery.data]);
   const role = currentUser?.role;
-  const canManageOrders = role === 'PURCHASING_OFFICER' || role === 'PURCHASING_MANAGER' || role === 'MANAGER' || role === 'DIRECTOR';
-  const canIssueOrders = role === 'PURCHASING_MANAGER' || role === 'MANAGER' || role === 'DIRECTOR';
+  const isManagerOrDirector = role === 'MANAGER' || role === 'DIRECTOR';
+  const canManageOrders = role === 'PURCHASING_OFFICER' || role === 'PURCHASING_MANAGER' || isManagerOrDirector;
+  const canIssueOrders = role === 'PURCHASING_MANAGER' || isManagerOrDirector;
   const isCreator = Boolean(po && currentUser?.id === po.createdBy);
+
   const canVerify = role === 'PURCHASING_MANAGER' && po?.status === 'PENDING_VERIFICATION' && !isCreator;
-  const canFinalApprove = (role === 'MANAGER' || role === 'DIRECTOR') && po?.status === 'PENDING_APPROVAL' && (role === 'DIRECTOR' || !isCreator);
   const canStageReject = role === 'PURCHASING_MANAGER' && po?.status === 'PENDING_VERIFICATION' && !isCreator;
-  const canFinalReject = (role === 'MANAGER' || role === 'DIRECTOR') && po?.status === 'PENDING_APPROVAL' && (role === 'DIRECTOR' || !isCreator);
-  const canReview = canVerify || canFinalApprove || canStageReject || canFinalReject;
+
+  // Managers and Directors have the authority to approve or reject at ANY approval stage (PENDING_VERIFICATION or PENDING_APPROVAL)
+  const canFinalApprove = isManagerOrDirector &&
+    (po?.status === 'PENDING_APPROVAL' || po?.status === 'PENDING_VERIFICATION') &&
+    (role === 'DIRECTOR' || !isCreator);
+
+  const canFinalReject = isManagerOrDirector &&
+    (po?.status === 'PENDING_APPROVAL' || po?.status === 'PENDING_VERIFICATION') &&
+    (role === 'DIRECTOR' || !isCreator);
+
+  const canApprove = canFinalApprove;
+  const canReject = canStageReject || canFinalReject;
+  const canReview = canVerify || canApprove || canReject;
 
   const runAction = async (action: () => Promise<unknown>, successMessage: string) => {
     setActionLoading(true);
@@ -155,6 +170,61 @@ export function PurchaseOrderDetailPage() {
                 : 'Submit'}
           </ConfirmButton>
         )}
+        {canVerify && (
+          <ConfirmButton
+            variant="default"
+            dialogVariant="info"
+            confirmTitle="Verify Purchase Order"
+            confirmMessage={`Verify ${po.poNumber} and forward it for final Manager/Director approval?`}
+            confirmText="Verify & Forward"
+            disabled={actionLoading}
+            onConfirm={() =>
+              runAction(
+                () => verifyPO(po.id, comment),
+                `${po.poNumber} verified and forwarded for final approval.`,
+              )
+            }
+          >
+            <CheckCircle2 className="mr-2 h-4 w-4" />
+            Verify & Forward
+          </ConfirmButton>
+        )}
+        {canApprove && (
+          <ConfirmButton
+            variant="default"
+            dialogVariant="success"
+            confirmTitle="Approve Purchase Order"
+            confirmMessage={
+              po.status === 'PENDING_VERIFICATION'
+                ? `Directly authorize and approve ${po.poNumber}? Stage 1 verification will be bypassed.`
+                : `Approve ${po.poNumber} for issue to supplier?`
+            }
+            confirmText="Approve PO"
+            disabled={actionLoading}
+            onConfirm={() =>
+              runAction(
+                () => approvePO(po.id, comment, role === 'DIRECTOR'),
+                `${po.poNumber} approved.`,
+              )
+            }
+          >
+            <CheckCircle2 className="mr-2 h-4 w-4" />
+            Approve
+          </ConfirmButton>
+        )}
+        {canReject && (
+          <Button
+            variant="destructive"
+            disabled={actionLoading}
+            onClick={() => {
+              setDialogRejectionReason(comment);
+              setRejectDialogOpen(true);
+            }}
+          >
+            <XCircle className="mr-2 h-4 w-4" />
+            Reject
+          </Button>
+        )}
         {canIssueOrders && po.status === 'APPROVED' && <ConfirmButton variant="default" dialogVariant="warning" confirmTitle="Issue to supplier" confirmMessage={`Record ${po.poNumber} as issued to ${po.supplierName}? This does not update inventory.`} confirmText="Issue to supplier" disabled={actionLoading || Boolean(po.sentAt)} onConfirm={() => runAction(() => issuePO(po.id, comment), `${po.poNumber} issued to supplier.`)}><Truck className="mr-2 h-4 w-4" />{po.sentAt ? 'Issued to supplier' : 'Issue to supplier'}</ConfirmButton>}
       </div>}
     />
@@ -190,12 +260,18 @@ export function PurchaseOrderDetailPage() {
         {canReview && <Card className="border-indigo-200">
           <CardHeader><CardTitle className="flex items-center gap-2 text-base"><ShieldCheck className="h-4 w-4 text-indigo-600" />Approval action</CardTitle></CardHeader>
           <CardContent className="space-y-3">
-            <p className="text-sm text-slate-600">{canVerify ? 'Verify this order and forward it for final approval.' : canStageReject ? 'Reject this order during Purchasing Manager verification.' : 'Complete the final approval decision.'}</p>
-            <Textarea value={comment} onChange={(event) => setComment(event.target.value)} placeholder={canStageReject || canFinalReject ? 'Rejection reason is required' : 'Optional approval comment'} rows={3} maxLength={4000} />
+            <p className="text-sm text-slate-600">
+              {canVerify
+                ? 'Verify this order and forward it for final approval.'
+                : po.status === 'PENDING_VERIFICATION'
+                  ? 'Review this order. As Manager/Director, you may directly approve or reject it at this verification stage.'
+                  : 'Review this order and complete the final approval or rejection decision.'}
+            </p>
+            <Textarea value={comment} onChange={(event) => setComment(event.target.value)} placeholder={canReject ? 'Approval comment (or rejection reason if rejecting)' : 'Optional approval comment'} rows={3} maxLength={4000} />
             <div className="flex flex-wrap gap-2">
               {canVerify && <Button disabled={actionLoading} onClick={() => runAction(() => verifyPO(po.id, comment), `${po.poNumber} verified and forwarded for final approval.`)}><CheckCircle2 className="mr-2 h-4 w-4" />Verify and forward</Button>}
-              {canFinalApprove && <Button disabled={actionLoading} onClick={() => runAction(() => approvePO(po.id, comment, role === 'DIRECTOR'), `${po.poNumber} approved.`)}><CheckCircle2 className="mr-2 h-4 w-4" />Approve</Button>}
-              {(canStageReject || canFinalReject) && <Button variant="destructive" disabled={actionLoading || comment.trim().length < 3} onClick={() => runAction(() => rejectPO(po.id, comment.trim(), po.status), `${po.poNumber} rejected.`)}><XCircle className="mr-2 h-4 w-4" />Reject</Button>}
+              {canApprove && <Button disabled={actionLoading} onClick={() => runAction(() => approvePO(po.id, comment, role === 'DIRECTOR'), `${po.poNumber} approved.`)}><CheckCircle2 className="mr-2 h-4 w-4" />Approve</Button>}
+              {canReject && <Button variant="destructive" disabled={actionLoading || comment.trim().length < 3} onClick={() => runAction(() => rejectPO(po.id, comment.trim(), po.status), `${po.poNumber} rejected.`)}><XCircle className="mr-2 h-4 w-4" />Reject</Button>}
             </div>
           </CardContent>
         </Card>}
@@ -228,5 +304,43 @@ export function PurchaseOrderDetailPage() {
         <p className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">Purchase orders record supplier commitments. Receiving and inventory changes occur through the Goods Received Note workflow.</p>
       </aside>
     </div>
+
+    <Dialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen} size="md">
+      <DialogTitle className="flex items-center gap-2 text-rose-600">
+        <XCircle className="h-5 w-5" /> Reject Purchase Order
+      </DialogTitle>
+      <DialogDescription className="mt-2 text-sm text-slate-600">
+        Please provide a reason for rejecting order <span className="font-mono font-semibold">{po.poNumber}</span>. Rejection reason is required.
+      </DialogDescription>
+      <div className="mt-4">
+        <Textarea
+          value={dialogRejectionReason}
+          onChange={(e) => setDialogRejectionReason(e.target.value)}
+          placeholder="Enter mandatory rejection reason (at least 3 characters)..."
+          rows={4}
+          maxLength={4000}
+          className="w-full"
+          autoFocus
+        />
+      </div>
+      <DialogFooter className="mt-6 flex justify-end gap-2">
+        <Button variant="outline" onClick={() => setRejectDialogOpen(false)} disabled={actionLoading}>
+          Cancel
+        </Button>
+        <Button
+          variant="destructive"
+          disabled={actionLoading || dialogRejectionReason.trim().length < 3}
+          onClick={() =>
+            runAction(async () => {
+              await rejectPO(po.id, dialogRejectionReason.trim(), po.status);
+              setRejectDialogOpen(false);
+              setDialogRejectionReason('');
+            }, `${po.poNumber} rejected.`)
+          }
+        >
+          Confirm Rejection
+        </Button>
+      </DialogFooter>
+    </Dialog>
   </div>;
 }
