@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
@@ -7,6 +8,8 @@ import { ConfirmButton } from '../../components/ui/confirm-button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table';
 import { Skeleton } from '../../components/ui/skeleton';
 import { useGRN } from '../../hooks/useGRN';
+import { grnsApi } from '../../api/grns/grns.api';
+import { purchaseOrderQueryKeys } from '../../hooks/usePurchaseOrders';
 import { useAuth } from '../../hooks/useAuth';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 import { UnitBarcodeModal } from '../../components/inventory/UnitBarcodeModal';
@@ -209,7 +212,8 @@ export function GRNDetailPage({ backUrl, backTitle }: GRNDetailPageProps = {}) {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const location = useLocation();
-  const { grnService } = useGRN();
+  const { grnService, refetch: refetchGRNs } = useGRN();
+  const queryClient = useQueryClient();
   const { user } = useAuth();
 
   const isPurchasingRoute = location.pathname.startsWith('/purchasing/grn');
@@ -236,7 +240,8 @@ export function GRNDetailPage({ backUrl, backTitle }: GRNDetailPageProps = {}) {
     if (!id) return;
     try {
       setLoading(true);
-      const data = await grnService.getGRNById(id);
+      const localData = await grnService.getGRNById(id);
+      const data = localData || await grnsApi.getById(id);
       if (!data) {
         setError('GRN record not found');
       } else {
@@ -253,13 +258,22 @@ export function GRNDetailPage({ backUrl, backTitle }: GRNDetailPageProps = {}) {
     fetchGRN();
   }, [fetchGRN]);
 
+  const refreshAfterGRNAction = async () => {
+    await refetchGRNs();
+    if (grn?.backendManaged) {
+      await queryClient.invalidateQueries({ queryKey: purchaseOrderQueryKeys.all });
+    }
+  };
+
   // Ensure all GRN items have unitRecords populated and categorical classifications
   const preparedItems = useMemo(() => {
     if (!grn?.items) return [];
-    const itemsWithRecords = unitBarcodeService.generateAllForGRN(
-      grn.items,
-      grn.grnNumber || grn.id || 'GRN-2025-001'
-    );
+    const itemsWithRecords = grn.backendManaged
+      ? grn.items
+      : unitBarcodeService.generateAllForGRN(
+          grn.items,
+          grn.grnNumber || grn.id || 'GRN-2025-001'
+        );
 
     return itemsWithRecords.map((item: any) => {
       // Automatic category inference for imported electrical items
@@ -387,8 +401,14 @@ export function GRNDetailPage({ backUrl, backTitle }: GRNDetailPageProps = {}) {
   const handleApprove = async () => {
     if (!id || !user) return;
     try {
-      await grnService.approveGRN(id, user.id, user.name || 'Finance Officer', user.role);
-      toast.success('Goods Received Note approved by Finance and posted to inventory.');
+      if (grn?.backendManaged) await grnsApi.approve(id);
+      else await grnService.approveGRN(id, user.id, user.name || 'Finance Officer', user.role);
+      await refreshAfterGRNAction();
+      toast.success(
+        grn?.backendManaged
+          ? 'Goods Received Note approved. The PO receipt quantities are updated; inventory changes remain in the GRN costing and stock processing workflow.'
+          : 'Goods Received Note approved by Finance and posted to inventory.',
+      );
       fetchGRN();
     } catch (err: any) {
       toast.error(err.message || 'Failed to approve GRN');
@@ -402,8 +422,10 @@ export function GRNDetailPage({ backUrl, backTitle }: GRNDetailPageProps = {}) {
       return;
     }
     try {
-      await grnService.rejectGRN(id, comment, user.id, user.name || 'Finance Officer', user.role);
-      toast.error('GRN rejected and returned for inspection resolution.');
+      if (grn?.backendManaged) await grnsApi.reject(id, { rejectionReason: comment });
+      else await grnService.rejectGRN(id, comment, user.id, user.name || 'Finance Officer', user.role);
+      await refreshAfterGRNAction();
+      toast.success('GRN rejected and returned for inspection resolution.');
       fetchGRN();
     } catch (err: any) {
       toast.error(err.message || 'Failed to reject GRN');
@@ -413,7 +435,9 @@ export function GRNDetailPage({ backUrl, backTitle }: GRNDetailPageProps = {}) {
   const handleStockManagerApprove = async (remarks?: string) => {
     if (!id || !user) return;
     try {
-      await grnService.verifyAndApproveGRN(id, { id: user.id, name: user.name, role: user.role }, remarks);
+      if (grn?.backendManaged) await grnsApi.verify(id, { remark: remarks });
+      else await grnService.verifyAndApproveGRN(id, { id: user.id, name: user.name, role: user.role }, remarks);
+      await refreshAfterGRNAction();
       toast.success('GRN physical verification approved! Forwarded to Finance for approval.');
       fetchGRN();
     } catch (err: any) {
@@ -424,8 +448,10 @@ export function GRNDetailPage({ backUrl, backTitle }: GRNDetailPageProps = {}) {
   const handleStockManagerReject = async (reason: string) => {
     if (!id || !user) return;
     try {
-      await grnService.rejectGRNVerification(id, { id: user.id, name: user.name, role: user.role }, reason);
-      toast.error('GRN verification rejected. Shipment returned to Stock Keeper for inspection resolution.');
+      if (grn?.backendManaged) await grnsApi.reject(id, { rejectionReason: reason });
+      else await grnService.rejectGRNVerification(id, { id: user.id, name: user.name, role: user.role }, reason);
+      await refreshAfterGRNAction();
+      toast.success('GRN verification rejected. Shipment returned to Stock Keeper for inspection resolution.');
       fetchGRN();
     } catch (err: any) {
       toast.error(err.message || 'Failed to reject GRN');
@@ -475,7 +501,8 @@ export function GRNDetailPage({ backUrl, backTitle }: GRNDetailPageProps = {}) {
   const supplierInvoice = grn.supplierInvoiceNumber || 'INV-2025-8841';
   const supplierDN = grn.supplierDeliveryNoteNumber || 'DN-LOG-99214';
   const poDate = grn.poDate || '15 May 2025';
-  const expectedDate = grn.expectedDeliveryDate || formatDate(grn.receivedDate || grn.createdAt);
+  const grnDate = grn.receivedDate || grn.createdAt || new Date().toISOString();
+  const expectedDate = grn.expectedDeliveryDate || formatDate(grnDate);
   const locationBay = grn.receivingLocationBay || `${grn.warehouseId || 'WH-MAIN'} (Receiving Bay 01)`;
   const receivedBy = grn.receivedByName || grn.receivedById || 'Nimal Perera (Warehouse Lead)';
   const verifiedBy = grn.verifiedByName || grn.verifiedById || 'Sunil Weerasinghe (Quality Inspector)';
@@ -486,7 +513,7 @@ export function GRNDetailPage({ backUrl, backTitle }: GRNDetailPageProps = {}) {
   const inspection = grn.inspection || {
     status: metrics.totalDamaged > 0 ? 'PASSED_WITH_EXCEPTION' : 'PASSED',
     inspectorName: verifiedBy,
-    inspectedAt: formatDate(grn.receivedDate || grn.createdAt),
+    inspectedAt: formatDate(grnDate),
     packagingCondition: metrics.totalDamaged > 0 ? 'DAMAGED' : 'INTACT',
     visualInspectionPassed: true,
     specVerificationPassed: true,
@@ -595,6 +622,10 @@ export function GRNDetailPage({ backUrl, backTitle }: GRNDetailPageProps = {}) {
               variant="outline"
               size="sm"
               onClick={() => {
+                if (grn.backendManaged) {
+                  toast.info('Canonical unit barcodes are generated by inventory after GRN approval and can then be managed from the unit registry.');
+                  return;
+                }
                 const stickersPath = isPurchasingRoute
                   ? `/purchasing/grn/${id}/stickers`
                   : `/inventory/grn/${id}/stickers`;
@@ -831,7 +862,7 @@ export function GRNDetailPage({ backUrl, backTitle }: GRNDetailPageProps = {}) {
             </div>
             <div>
               <span className="text-slate-400 block text-[11px]">Received Date &amp; Time</span>
-              <span className="font-semibold text-slate-800">{formatDate(grn.receivedDate || grn.createdAt)} 10:30 AM</span>
+              <span className="font-semibold text-slate-800">{formatDate(grnDate)} 10:30 AM</span>
             </div>
             <div>
               <span className="text-slate-400 block text-[11px]">Lifecycle Status</span>
@@ -1112,7 +1143,11 @@ export function GRNDetailPage({ backUrl, backTitle }: GRNDetailPageProps = {}) {
                                 variant="outline"
                                 onClick={() => {
                                   setSelectedProductForModal(item.productId);
-                                  setIsBarcodeModalOpen(true);
+                                  if (grn?.backendManaged) {
+                                    toast.info('Canonical unit barcodes are generated by inventory after GRN approval.');
+                                  } else {
+                                    setIsBarcodeModalOpen(true);
+                                  }
                                 }}
                                 className="h-6 text-[11px] px-2 text-primary hover:bg-primary/5 font-semibold gap-1 border-primary/30"
                               >
@@ -1152,7 +1187,11 @@ export function GRNDetailPage({ backUrl, backTitle }: GRNDetailPageProps = {}) {
                                   grnNumber={grn.grnNumber || grn.id}
                                   onOpenModal={() => {
                                     setSelectedProductForModal(item.productId);
-                                    setIsBarcodeModalOpen(true);
+                                    if (grn?.backendManaged) {
+                                      toast.info('Canonical unit barcodes are generated by inventory after GRN approval.');
+                                    } else {
+                                      setIsBarcodeModalOpen(true);
+                                    }
                                   }}
                                 />
                               </TableCell>
@@ -1184,17 +1223,19 @@ export function GRNDetailPage({ backUrl, backTitle }: GRNDetailPageProps = {}) {
       )}
 
       {/* Unit Barcode & Sticker Printing Studio Modal */}
-      {isBarcodeModalOpen && (
+      {isBarcodeModalOpen && !grn.backendManaged && (
         <UnitBarcodeModal
-          open={isBarcodeModalOpen}
-          onOpenChange={setIsBarcodeModalOpen}
+          isOpen={isBarcodeModalOpen}
+          onClose={() => setIsBarcodeModalOpen(false)}
           items={preparedItems}
           grnNumber={grn.grnNumber || grn.id}
-          selectedProductId={selectedProductForModal}
-          onConfirmAll={async () => {
+          supplierName={grn.supplierName}
+          warehouseId={grn.warehouseId}
+          initialProductId={selectedProductForModal}
+          onConfirmLabeled={async (updatedItems) => {
             if (id) {
-              await grnService.confirmBarcodes(id, user?.id || 'admin');
-              setGrn((prev) => (prev ? { ...prev, barcodesConfirmed: true } : prev));
+              await grnService.confirmBarcodes(id, user?.id || 'admin', updatedItems);
+              setGrn((prev) => (prev ? { ...prev, items: updatedItems, barcodesConfirmed: true } : prev));
               toast.success('All unit barcode stickers marked as printed and physically affixed.');
             }
           }}

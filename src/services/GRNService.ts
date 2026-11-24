@@ -5,6 +5,7 @@ import { validateGRNReceipt } from '../rules/inventoryRules';
 import { MockGRNRepository } from '../repositories/mock/MockGRNRepository';
 import { MockInventoryRepository } from '../repositories/mock/MockInventoryRepository';
 import { apService } from '../features/finance/services/apService';
+import { unitBarcodeService } from './UnitBarcodeService';
 
 export class GRNService {
   constructor(private grnRepo: IGRNRepository, private invRepo: IInventoryRepository) {}
@@ -215,6 +216,17 @@ export class GRNService {
 
   async getGRNById(id: string): Promise<GRN | null> {
     return this.grnRepo.getById(id);
+  }
+
+  async confirmBarcodes(grnId: string, userId: string, updatedItems?: GRN['items']): Promise<void> {
+    const grn = await this.grnRepo.getById(grnId);
+    if (!grn) throw new Error('GRN not found');
+
+    grn.items = updatedItems ?? unitBarcodeService.confirmAllAffixed(grn.items);
+    grn.barcodesConfirmed = true;
+    grn.barcodesConfirmedAt = new Date().toISOString();
+    grn.barcodesConfirmedBy = userId;
+    await this.grnRepo.save(grn);
   }
 
   async createGRN(grn: GRN, user?: any): Promise<GRN> {

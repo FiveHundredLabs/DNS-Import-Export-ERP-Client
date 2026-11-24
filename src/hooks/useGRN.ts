@@ -1,24 +1,19 @@
-import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { grnService } from '../services/GRNService';
+import { grnsApi, mapGrn } from '../api/grns/grns.api';
 
 export function useGRN() {
-  const [grns, setGRNs] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const query = useQuery({
+    queryKey: ['grns', 'list'],
+    queryFn: ({ signal }) => grnsApi.list({ page: 1, limit: 100 }, signal),
+    staleTime: 15_000,
+  });
 
-  const fetchGRNs = async () => {
-    try {
-      setLoading(true);
-      const data = await grnService.getGRNs();
-      setGRNs(data);
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
+  return {
+    grns: (query.data?.data ?? []).map((record) => mapGrn(record)),
+    loading: query.isLoading,
+    error: query.error instanceof Error ? query.error.message : null,
+    grnService,
+    refetch: query.refetch,
   };
-
-  useEffect(() => { fetchGRNs(); }, []);
-
-  return { grns, loading, error, grnService, refetch: fetchGRNs };
 }

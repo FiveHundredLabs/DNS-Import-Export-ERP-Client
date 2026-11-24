@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { PurchaseOrderService } from '../services/PurchaseOrderService';
 import { MockPurchaseOrderRepository } from '../repositories/mock/MockPurchaseOrderRepository';
 import { formatCurrency } from '../utils/formatters';
@@ -9,6 +10,8 @@ import { SUPPORTED_CURRENCIES } from '../types/purchasing';
 import { PurchaseOrderCreateEditPage } from '../features/purchasing/PurchaseOrderCreateEditPage';
 import { StandardPurchaseOrderTemplate } from '../features/purchasing/components/StandardPurchaseOrderTemplate';
 import { paginatePurchaseOrder } from '../features/purchasing/utils/purchaseOrderPaginator';
+import { supplierQueryKeys } from '../api/suppliers/suppliers.hooks';
+import { productQueryKeys } from '../api/products/products.hooks';
 import { User } from '../types';
 
 const mockUser: User = {
@@ -309,19 +312,50 @@ describe('Purchase Order Multi-Currency Support', () => {
   });
 
   describe('PurchaseOrderCreateEditPage Form Currency Configuration', () => {
-    it('sets LKR only and does not render a currency selection dropdown', () => {
-      render(
-        <MemoryRouter>
-          <PurchaseOrderCreateEditPage />
-        </MemoryRouter>
+    it('sets LKR only and does not render a currency selection dropdown', async () => {
+      const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+      queryClient.setQueryData(supplierQueryKeys.lookup(), [
+        {
+          id: 'sup-001',
+          name: 'DNS Global Logistics & Electronics Ltd',
+          supplierCode: 'SUP-001',
+          paymentTerms: 'Net 30',
+          status: 'ACTIVE',
+        },
+      ]);
+      queryClient.setQueryData(
+        productQueryKeys.list({ page: 1, pageSize: 100, status: 'ACTIVE', sortBy: 'name', sortOrder: 'asc' }),
+        {
+          data: [
+            {
+              id: 'prod-001',
+              sku: 'SWG-MCB-16A',
+              name: 'Schneider 16A MCB',
+              status: 'ACTIVE',
+              sellingPrice: 2500,
+            },
+          ],
+          meta: { page: 1, pageSize: 100, total: 1, totalPages: 1 },
+        }
       );
+
+      render(
+        <QueryClientProvider client={queryClient}>
+          <MemoryRouter>
+            <PurchaseOrderCreateEditPage />
+          </MemoryRouter>
+        </QueryClientProvider>
+      );
+
+      // Verify table headers and summary consistently display LKR after loading
+      await waitFor(() => {
+        expect(screen.getByText(/Unit Price \(LKR\)/i)).toBeDefined();
+      });
 
       // Verify currency dropdown is removed
       const currencySelect = screen.queryByLabelText(/Currency/i);
       expect(currencySelect).toBeNull();
 
-      // Verify table headers and summary consistently display LKR
-      expect(screen.getByText(/Unit Price \(LKR\)/i)).toBeDefined();
       expect(screen.getByText(/Line Total \(LKR\)/i)).toBeDefined();
       expect(screen.getByText(/Grand Total \(LKR\)/i)).toBeDefined();
     });

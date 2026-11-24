@@ -142,6 +142,8 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
   ],
   FINANCE_MANAGER: [
     'view:finance_dashboard',
+    'purchasing:suppliers_view',
+    'purchasing:suppliers_manage',
     'customers:view',
     'invoices:view',
     'payments:view',
