@@ -424,7 +424,39 @@ export function PurchaseOrderCreateEditPage() {
         leftActions={<Button variant="ghost" onClick={() => navigate('/purchasing/orders')}><ArrowLeft className="mr-2 h-4 w-4" />Cancel</Button>}
         rightActions={<>
           <ConfirmButton variant="outline" confirmTitle="Save Draft Purchase Order" confirmMessage="Save the current purchase order as a draft?" confirmText="Save Draft" disabled={submitting} onConfirm={() => void handleSaveOrder(false)}><Save className="mr-2 h-4 w-4" />Save Draft</ConfirmButton>
-          <ConfirmButton variant="default" confirmTitle="Submit Purchase Order" confirmMessage="Submit this purchase order to the Purchasing Manager for review?" confirmText="Submit for Review" disabled={submitting} onConfirm={() => void handleSaveOrder(true)}><Send className="mr-2 h-4 w-4" />Submit for Review</ConfirmButton>
+          <ConfirmButton
+            variant="default"
+            confirmTitle={
+              role === 'DIRECTOR' || role === 'MANAGER'
+                ? 'Approve & Create Purchase Order'
+                : role === 'PURCHASING_MANAGER'
+                  ? 'Submit for Manager Approval'
+                  : 'Submit Purchase Order'
+            }
+            confirmMessage={
+              role === 'DIRECTOR' || role === 'MANAGER'
+                ? 'Create and directly approve this purchase order without additional review stages?'
+                : role === 'PURCHASING_MANAGER'
+                  ? 'Submit this purchase order directly for Manager/Director review? Stage 1 verification will be skipped.'
+                  : 'Submit this purchase order to the Purchasing Manager for review?'
+            }
+            confirmText={
+              role === 'DIRECTOR' || role === 'MANAGER'
+                ? 'Approve & Create'
+                : role === 'PURCHASING_MANAGER'
+                  ? 'Submit for Approval'
+                  : 'Submit for Review'
+            }
+            disabled={submitting}
+            onConfirm={() => void handleSaveOrder(true)}
+          >
+            <Send className="mr-2 h-4 w-4" />
+            {role === 'DIRECTOR' || role === 'MANAGER'
+              ? 'Approve & Create PO'
+              : role === 'PURCHASING_MANAGER'
+                ? 'Submit for Approval'
+                : 'Submit for Review'}
+          </ConfirmButton>
         </>}
       />
 
