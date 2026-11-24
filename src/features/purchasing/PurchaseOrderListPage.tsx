@@ -6,13 +6,17 @@ import { useSuppliers } from '../../api/suppliers/suppliers.hooks';
 import type { ApiPurchaseOrderStatus } from '../../api/purchase-orders/purchase-orders.types';
 import { PurchaseOrderStatusBadge } from './components/PurchaseOrderStatusBadge';
 import { formatCurrency, formatDate } from '../../utils/formatters';
-import { AlertCircle, Edit, Eye, FileText, Plus, Printer, RefreshCw, Search, Trash2 } from 'lucide-react';
+import { AlertCircle, Edit, Eye, FileText, Plus, Printer, RefreshCw, Search, Trash2, XCircle } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { ConfirmButton } from '../../components/ui/confirm-button';
+import { Dialog, DialogDescription, DialogFooter, DialogTitle } from '../../components/ui/dialog';
 import { Input } from '../../components/ui/input';
+import { Textarea } from '../../components/ui/textarea';
 import { Card, CardContent } from '../../components/ui/card';
 import { TableLoadingSkeleton } from '../../components/common/LoadingSkeleton';
 import { PageHeader } from '../../components/common/PageHeader';
+import { toast } from 'sonner';
+import type { PurchaseOrder } from '../../types/purchasing';
 
 const PAGE_SIZE = 10;
 const statusOptions: Array<{ value: ApiPurchaseOrderStatus; label: string }> = [
@@ -57,7 +61,12 @@ export function PurchaseOrderListPage() {
     sortOrder: 'desc' as const,
   }), [page, status, supplierId, serverSearch]);
 
-  const { purchaseOrders, pagination, loading, error, refetch, submitPO, deletePO } = usePurchaseOrders(params);
+  const isManagerOrDirector = role === 'MANAGER' || role === 'DIRECTOR';
+  const [rejectPoTarget, setRejectPoTarget] = useState<PurchaseOrder | null>(null);
+  const [listRejectionReason, setListRejectionReason] = useState('');
+  const [actionLoading, setActionLoading] = useState(false);
+
+  const { purchaseOrders, pagination, loading, error, refetch, submitPO, verifyPO, approvePO, rejectPO, deletePO } = usePurchaseOrders(params);
   const supplierQuery = useSuppliers({ page: 1, limit: 100, status: 'ACTIVE', sortBy: 'name', sortOrder: 'asc' });
   const suppliers = supplierQuery.data?.data ?? [];
   const totalPages = Math.max(1, pagination.totalPages);
@@ -154,28 +163,87 @@ export function PurchaseOrderListPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {purchaseOrders.map((po) => (
-                      <tr key={po.id} className="hover:bg-slate-50">
-                        <td className="px-4 py-3 font-mono font-semibold text-slate-900">{po.poNumber}</td>
-                        <td className="px-4 py-3"><div className="font-medium text-slate-800">{po.supplierName}</div><div className="text-xs text-slate-500">{po.supplierCode}</div></td>
-                        <td className="px-4 py-3 text-slate-600">{formatDate(po.orderDate)}</td>
-                        <td className="px-4 py-3 text-slate-600">{po.expectedDeliveryDate ? formatDate(po.expectedDeliveryDate) : '—'}</td>
-                        <td className="px-4 py-3 text-center">{po.itemCount ?? po.items.length}</td>
-                        <td className="px-4 py-3 text-right font-mono font-semibold">{formatCurrency(po.grandTotal, 'LKR')}</td>
-                        <td className="px-4 py-3"><div className="flex flex-col items-start gap-1"><PurchaseOrderStatusBadge status={po.status} />{po.sentAt && <span className="text-xs text-slate-500">Issued to supplier</span>}</div></td>
-                        <td className="px-4 py-3">
-                          <div className="flex justify-end gap-1">
-                            <Button variant="ghost" size="icon-sm" title="View details" onClick={() => navigate(`/purchasing/orders/${po.id}`)}><Eye className="h-4 w-4" /></Button>
-                            <Button variant="ghost" size="icon-sm" title="Print purchase order" onClick={() => navigate(`/purchasing/orders/${po.id}/print`)}><Printer className="h-4 w-4" /></Button>
-                            {canManageOrders && (po.status === 'DRAFT' || po.status === 'REJECTED') && <Button variant="ghost" size="icon-sm" title="Edit purchase order" onClick={() => navigate(`/purchasing/orders/${po.id}/edit`)}><Edit className="h-4 w-4" /></Button>}
-                            {canManageOrders && po.status === 'DRAFT' && <>
-                              <ConfirmButton variant="outline" size="xs" dialogVariant="warning" confirmTitle="Submit Purchase Order" confirmMessage={`Submit ${po.poNumber} for verification?`} confirmText="Submit for verification" onConfirm={async () => { await submitPO(po.id); }}>Submit</ConfirmButton>
-                              <ConfirmButton variant="ghost" size="icon-sm" dialogVariant="destructive" confirmTitle="Delete Draft Purchase Order" confirmMessage={`Delete ${po.poNumber}? This action cannot be undone.`} confirmText="Delete draft" onConfirm={async () => { await deletePO(po.id); }} title="Delete draft"><Trash2 className="h-4 w-4 text-rose-600" /></ConfirmButton>
-                            </>}
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
+                    {purchaseOrders.map((po) => {
+                      const isPoCreator = Boolean(currentUser?.id === po.createdBy);
+                      const canVerifyThis = role === 'PURCHASING_MANAGER' && po.status === 'PENDING_VERIFICATION' && !isPoCreator;
+                      const canApproveThis = isManagerOrDirector && (po.status === 'PENDING_APPROVAL' || po.status === 'PENDING_VERIFICATION') && (role === 'DIRECTOR' || !isPoCreator);
+                      const canRejectThis = canVerifyThis || canApproveThis;
+
+                      return (
+                        <tr key={po.id} className="hover:bg-slate-50">
+                          <td className="px-4 py-3 font-mono font-semibold text-slate-900">{po.poNumber}</td>
+                          <td className="px-4 py-3"><div className="font-medium text-slate-800">{po.supplierName}</div><div className="text-xs text-slate-500">{po.supplierCode}</div></td>
+                          <td className="px-4 py-3 text-slate-600">{formatDate(po.orderDate)}</td>
+                          <td className="px-4 py-3 text-slate-600">{po.expectedDeliveryDate ? formatDate(po.expectedDeliveryDate) : '—'}</td>
+                          <td className="px-4 py-3 text-center">{po.itemCount ?? po.items.length}</td>
+                          <td className="px-4 py-3 text-right font-mono font-semibold">{formatCurrency(po.grandTotal, 'LKR')}</td>
+                          <td className="px-4 py-3"><div className="flex flex-col items-start gap-1"><PurchaseOrderStatusBadge status={po.status} />{po.sentAt && <span className="text-xs text-slate-500">Issued to supplier</span>}</div></td>
+                          <td className="px-4 py-3">
+                            <div className="flex justify-end gap-1">
+                              <Button variant="ghost" size="icon-sm" title="View details" onClick={() => navigate(`/purchasing/orders/${po.id}`)}><Eye className="h-4 w-4" /></Button>
+                              <Button variant="ghost" size="icon-sm" title="Print purchase order" onClick={() => navigate(`/purchasing/orders/${po.id}/print`)}><Printer className="h-4 w-4" /></Button>
+                              {canManageOrders && (po.status === 'DRAFT' || po.status === 'REJECTED') && <Button variant="ghost" size="icon-sm" title="Edit purchase order" onClick={() => navigate(`/purchasing/orders/${po.id}/edit`)}><Edit className="h-4 w-4" /></Button>}
+                              {canManageOrders && po.status === 'DRAFT' && <>
+                                <ConfirmButton variant="outline" size="xs" dialogVariant="warning" confirmTitle="Submit Purchase Order" confirmMessage={`Submit ${po.poNumber} for verification?`} confirmText="Submit for verification" onConfirm={async () => { await submitPO(po.id); }}>Submit</ConfirmButton>
+                                <ConfirmButton variant="ghost" size="icon-sm" dialogVariant="destructive" confirmTitle="Delete Draft Purchase Order" confirmMessage={`Delete ${po.poNumber}? This action cannot be undone.`} confirmText="Delete draft" onConfirm={async () => { await deletePO(po.id); }} title="Delete draft"><Trash2 className="h-4 w-4 text-rose-600" /></ConfirmButton>
+                              </>}
+                              {canVerifyThis && (
+                                <ConfirmButton
+                                  variant="outline"
+                                  size="xs"
+                                  dialogVariant="info"
+                                  confirmTitle="Verify Purchase Order"
+                                  confirmMessage={`Verify ${po.poNumber} and forward it for final approval?`}
+                                  confirmText="Verify PO"
+                                  disabled={actionLoading}
+                                  onConfirm={async () => {
+                                    await verifyPO(po.id);
+                                    toast.success(`${po.poNumber} verified and forwarded.`);
+                                  }}
+                                >
+                                  Verify
+                                </ConfirmButton>
+                              )}
+                              {canApproveThis && (
+                                <ConfirmButton
+                                  variant="outline"
+                                  size="xs"
+                                  dialogVariant="success"
+                                  confirmTitle="Approve Purchase Order"
+                                  confirmMessage={
+                                    po.status === 'PENDING_VERIFICATION'
+                                      ? `Directly approve ${po.poNumber}? Stage 1 verification will be bypassed.`
+                                      : `Approve ${po.poNumber}?`
+                                  }
+                                  confirmText="Approve PO"
+                                  disabled={actionLoading}
+                                  onConfirm={async () => {
+                                    await approvePO(po.id, undefined, role === 'DIRECTOR');
+                                    toast.success(`${po.poNumber} approved.`);
+                                  }}
+                                >
+                                  Approve
+                                </ConfirmButton>
+                              )}
+                              {canRejectThis && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon-sm"
+                                  title="Reject purchase order"
+                                  disabled={actionLoading}
+                                  onClick={() => {
+                                    setRejectPoTarget(po);
+                                    setListRejectionReason('');
+                                  }}
+                                >
+                                  <XCircle className="h-4 w-4 text-rose-600" />
+                                </Button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -191,6 +259,51 @@ export function PurchaseOrderListPage() {
           </CardContent>
         </Card>
       )}
+
+      <Dialog open={Boolean(rejectPoTarget)} onOpenChange={(open) => { if (!open) setRejectPoTarget(null); }} size="md">
+        <DialogTitle className="flex items-center gap-2 text-rose-600">
+          <XCircle className="h-5 w-5" /> Reject Purchase Order
+        </DialogTitle>
+        <DialogDescription className="mt-2 text-sm text-slate-600">
+          Please provide a reason for rejecting order <span className="font-mono font-semibold">{rejectPoTarget?.poNumber}</span>. Rejection reason is required.
+        </DialogDescription>
+        <div className="mt-4">
+          <Textarea
+            value={listRejectionReason}
+            onChange={(e) => setListRejectionReason(e.target.value)}
+            placeholder="Enter mandatory rejection reason (at least 3 characters)..."
+            rows={4}
+            maxLength={4000}
+            className="w-full"
+            autoFocus
+          />
+        </div>
+        <DialogFooter className="mt-6 flex justify-end gap-2">
+          <Button variant="outline" onClick={() => setRejectPoTarget(null)} disabled={actionLoading}>
+            Cancel
+          </Button>
+          <Button
+            variant="destructive"
+            disabled={actionLoading || listRejectionReason.trim().length < 3}
+            onClick={async () => {
+              if (!rejectPoTarget) return;
+              setActionLoading(true);
+              try {
+                await rejectPO(rejectPoTarget.id, listRejectionReason.trim(), rejectPoTarget.status);
+                toast.success(`${rejectPoTarget.poNumber} rejected.`);
+                setRejectPoTarget(null);
+                setListRejectionReason('');
+              } catch {
+                // error handled by hook
+              } finally {
+                setActionLoading(false);
+              }
+            }}
+          >
+            Confirm Rejection
+          </Button>
+        </DialogFooter>
+      </Dialog>
     </div>
   );
 }
