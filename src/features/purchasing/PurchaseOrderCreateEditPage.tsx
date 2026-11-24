@@ -1,43 +1,26 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { usePurchaseOrders } from '../../hooks/usePurchaseOrders';
-import { useFinanceLedger } from '../finance/hooks/useFinanceLedger';
-import { purchaseOrderService } from '../../services/PurchaseOrderService';
-import { useProducts } from '../../hooks/useProducts';
+import { z } from 'zod';
+import { useSuppliers, useSupplierLookup, useCreateSupplier } from '../../api/suppliers/suppliers.hooks';
+import type { Supplier, CreateSupplierPayload } from '../../api/suppliers/suppliers.types';
+import { SupplierFormDialog } from '../suppliers/SupplierFormDialog';
+import { useProducts as useApiProducts } from '../../api/products/products.hooks';
+import { usePurchaseOrder, usePurchaseOrderActions } from '../../hooks/usePurchaseOrders';
+import { useAuth } from '../../hooks/useAuth';
+import type { CreatePurchaseOrderPayload } from '../../api/purchase-orders/purchase-orders.types';
 import { formatCurrency } from '../../utils/formatters';
-import {
-  ShoppingCart,
-  Plus,
-  Trash2,
-  Save,
-  Send,
-  ArrowLeft,
-  Building2,
-  Calendar,
-  AlertCircle,
-  Package,
-} from 'lucide-react';
+import { AlertCircle, ArrowLeft, Building2, Package, Plus, Save, Send, Trash2, UserPlus } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { ConfirmButton } from '../../components/ui/confirm-button';
 import { Input } from '../../components/ui/input';
 import { Textarea } from '../../components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
-import {
-  PageHeader,
-  FormSection,
-  FormField,
-  DocumentActionBar,
-  StatusBadge,
-  ProductSelector,
-} from '../../components';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '../../components/ui/dialog';
+import { PageHeader, FormSection, FormField, DocumentActionBar } from '../../components';
+import { TableLoadingSkeleton } from '../../components/common/LoadingSkeleton';
 import { toast } from 'sonner';
+
+type DiscountType = 'PERCENTAGE' | 'FIXED_AMOUNT';
 
 interface LineFormState {
   id: string;
@@ -46,664 +29,409 @@ interface LineFormState {
   productName: string;
   quantity: number;
   unitPrice: number;
-  discountPercent: number;
-  taxRate: number;
-  notes?: string;
+  discountType: DiscountType;
+  discountValue: number;
+  notes: string;
+}
+
+const purchaseOrderFormSchema = z.object({
+  supplierId: z.string().uuid('Select an active supplier.'),
+  orderDate: z.string().min(1, 'PO date is required.'),
+  expectedDeliveryDate: z.string().optional(),
+  paymentTerms: z.string().max(100, 'Payment terms must be 100 characters or fewer.'),
+  note: z.string().max(5000, 'Notes must be 5,000 characters or fewer.'),
+  deliveryInstructions: z.string().max(5000, 'Delivery instructions must be 5,000 characters or fewer.'),
+  items: z.array(z.object({
+    productId: z.string().uuid('Select a product for each line.'),
+    quantity: z.number().int('Quantity must be a whole number.').min(1, 'Quantity must be at least 1.'),
+    unitPrice: z.number().min(0, 'Unit cost cannot be negative.'),
+    discountType: z.enum(['PERCENTAGE', 'FIXED_AMOUNT']),
+    discountValue: z.number().min(0, 'Discount cannot be negative.'),
+    notes: z.string().max(2000, 'Line notes must be 2,000 characters or fewer.'),
+  })).min(1, 'Add at least one product line.'),
+}).superRefine((values, ctx) => {
+  if (values.expectedDeliveryDate && values.expectedDeliveryDate < values.orderDate) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['expectedDeliveryDate'], message: 'Expected delivery cannot be earlier than the PO date.' });
+  }
+  values.items.forEach((line, index) => {
+    if (line.discountType === 'PERCENTAGE' && line.discountValue > 100) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['items', index, 'discountValue'], message: 'Percentage discount cannot exceed 100%.' });
+    }
+    if (line.discountType === 'FIXED_AMOUNT' && line.discountValue > line.quantity * line.unitPrice) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['items', index, 'discountValue'], message: 'Discount cannot exceed the line amount.' });
+    }
+  });
+  const selectedProducts = values.items.map((line) => line.productId).filter(Boolean);
+  if (new Set(selectedProducts).size !== selectedProducts.length) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['items'], message: 'Each product can appear only once. Combine quantities on a single line.' });
+  }
+});
+
+function makeLine(): LineFormState {
+  return {
+    id: `line-${crypto.randomUUID()}`,
+    productId: '',
+    productCode: '',
+    productName: '',
+    quantity: 1,
+    unitPrice: 0,
+    discountType: 'PERCENTAGE',
+    discountValue: 0,
+    notes: '',
+  };
+}
+
+function asLocalDate(value?: string | null) {
+  if (!value) return '';
+  return value.slice(0, 10);
 }
 
 export function PurchaseOrderCreateEditPage() {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
+  const { currentUser, role } = useAuth();
   const [searchParams] = useSearchParams();
-  const initialSupplierId = searchParams.get('supplierId');
-
   const isEdit = Boolean(id);
-  const { purchaseOrders, createPO, updatePO } = usePurchaseOrders();
-  const { suppliers } = useFinanceLedger();
-  const { products } = useProducts({ page: 1, pageSize: 200 });
+  const canManageOrders = role === 'PURCHASING_OFFICER' || role === 'PURCHASING_MANAGER' || role === 'MANAGER' || role === 'DIRECTOR';
+  const initialSupplierId = searchParams.get('supplierId') ?? '';
+  const today = new Date().toISOString().slice(0, 10);
 
-  // Form states
-  const [selectedSupplierId, setSelectedSupplierId] = useState<string>(initialSupplierId || '');
-  const [orderDate, setOrderDate] = useState<string>(new Date().toISOString().split('T')[0]);
-  const [expectedDeliveryDate, setExpectedDeliveryDate] = useState<string>(
-    new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-  );
-  const [paymentTerms, setPaymentTerms] = useState<string>('Net 30');
-  const currency = 'LKR';
-  const [notes, setNotes] = useState<string>('');
+  const { purchaseOrder: existing, loading: poLoading, error: poError } = usePurchaseOrder(id);
+  const { createPO, updatePO, revisePO } = usePurchaseOrderActions();
+  const supplierQuery = useSupplierLookup();
+  const productQuery = useApiProducts({ page: 1, pageSize: 100, status: 'ACTIVE', sortBy: 'name', sortOrder: 'asc' });
+  const suppliers = supplierQuery.data ?? [];
+  const products = productQuery.data?.data ?? [];
 
-  const [lines, setLines] = useState<LineFormState[]>([
-    {
-      id: `line-${Date.now()}`,
-      productId: '',
-      productCode: '',
-      productName: '',
-      quantity: 1,
-      unitPrice: 0,
-      discountPercent: 0,
-      taxRate: 18,
-    },
-  ]);
-
+  const [selectedSupplierId, setSelectedSupplierId] = useState(initialSupplierId);
+  const [isNewSupplierModalOpen, setIsNewSupplierModalOpen] = useState(false);
+  const createSupplierMutation = useCreateSupplier();
+  const [orderDate, setOrderDate] = useState(today);
+  const [expectedDeliveryDate, setExpectedDeliveryDate] = useState('');
+  const [paymentTerms, setPaymentTerms] = useState('');
+  const [deliveryInstructions, setDeliveryInstructions] = useState('');
+  const [note, setNote] = useState('');
+  const [lines, setLines] = useState<LineFormState[]>([makeLine()]);
   const [submitting, setSubmitting] = useState(false);
-  const [isProductSelectorOpen, setIsProductSelectorOpen] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
-  const handleSelectProductFromMaster = (product: any) => {
-    setLines((prev) => {
-      // If the first line is empty, replace it; otherwise append
-      if (prev.length === 1 && !prev[0].productId) {
-        return [
-          {
-            id: prev[0].id,
-            productId: product.id,
-            productCode: product.sku,
-            productName: product.name,
-            quantity: 1,
-            unitPrice: product.pricing?.costPrice || product.pricing?.wholesalePrice || 100,
-            discountPercent: 0,
-            taxRate: 18,
-          },
-        ];
-      }
-      return [
-        ...prev,
-        {
-          id: `line-${Date.now()}-${prev.length}`,
-          productId: product.id,
-          productCode: product.sku,
-          productName: product.name,
-          quantity: 1,
-          unitPrice: product.pricing?.costPrice || product.pricing?.wholesalePrice || 100,
-          discountPercent: 0,
-          taxRate: 18,
-        },
-      ];
-    });
-    setIsProductSelectorOpen(false);
-  };
-
-  // Load existing PO if in edit mode
   useEffect(() => {
-    if (isEdit && id) {
-      const existing = purchaseOrders.find((p) => p.id === id);
-      if (existing) {
-        setSelectedSupplierId(existing.supplierId);
-        setOrderDate(existing.orderDate);
-        setExpectedDeliveryDate(existing.expectedDeliveryDate);
-        setPaymentTerms(existing.paymentTerms);
-        setNotes(existing.notes || '');
-        setLines(
-          existing.items.map((item) => ({
-            id: item.id,
-            productId: item.productId,
-            productCode: item.productCode,
-            productName: item.productName,
-            quantity: item.quantity,
-            unitPrice: item.unitPrice,
-            discountPercent: item.discountPercent || 0,
-            taxRate: item.taxRate || 18,
-            notes: item.notes,
-          }))
-        );
-      }
-    }
-  }, [isEdit, id, purchaseOrders]);
+    if (!existing || !isEdit) return;
+    setSelectedSupplierId(existing.supplierId);
+    setOrderDate(asLocalDate(existing.orderDate) || today);
+    setExpectedDeliveryDate(asLocalDate(existing.expectedDeliveryDate));
+    setPaymentTerms(existing.paymentTerms || '');
+    setDeliveryInstructions(existing.deliveryInstructions || '');
+    setNote(existing.notes || '');
+    setLines(existing.items.length > 0 ? existing.items.map((item) => ({
+      id: item.id || `line-${crypto.randomUUID()}`,
+      productId: item.productId,
+      productCode: item.productCode,
+      productName: item.productName,
+      quantity: item.quantity,
+      unitPrice: item.unitPrice,
+      discountType: item.discountType ?? (item.discountPercent > 0 ? 'PERCENTAGE' : 'FIXED_AMOUNT'),
+      discountValue: item.discountValue ?? (item.discountPercent > 0 ? item.discountPercent : item.discountAmount),
+      notes: item.notes || '',
+    })) : [makeLine()]);
+  }, [existing?.id, isEdit]);
 
-  // Selected supplier details
-  const selectedSupplier = useMemo(() => {
-    return suppliers.find((s) => s.id === selectedSupplierId) || null;
-  }, [suppliers, selectedSupplierId]);
+  const selectedSupplier = useMemo<Supplier | null>(
+    () => suppliers.find((supplier) => supplier.id === selectedSupplierId) ?? null,
+    [suppliers, selectedSupplierId],
+  );
 
-  // Auto-fill supplier payment terms when supplier changes (on new form)
   useEffect(() => {
-    if (selectedSupplier && !isEdit) {
-      if (selectedSupplier.paymentTerms) {
-        setPaymentTerms(selectedSupplier.paymentTerms);
-      }
-    }
-  }, [selectedSupplier, isEdit]);
+    if (!isEdit && selectedSupplier?.paymentTerms) setPaymentTerms(selectedSupplier.paymentTerms);
+  }, [selectedSupplier?.id, isEdit]);
 
-  // Live calculation of financial totals
   const calculation = useMemo(() => {
-    const rawItems = lines.filter((l) => l.productId).map((l) => ({
-      id: l.id,
-      productId: l.productId,
-      productCode: l.productCode,
-      productName: l.productName,
-      quantity: l.quantity,
-      unitPrice: l.unitPrice,
-      discountPercent: l.discountPercent,
-      taxRate: l.taxRate,
-      notes: l.notes,
-    }));
-
-    return purchaseOrderService.calculateTotals(
-      rawItems,
-      0,
-      0
-    );
+    const rows = lines.filter((line) => line.productId).map((line) => {
+      const gross = line.quantity * line.unitPrice;
+      const discount = line.discountType === 'PERCENTAGE'
+        ? gross * line.discountValue / 100
+        : line.discountValue;
+      return { gross, discount, net: Math.max(0, gross - discount) };
+    });
+    const subtotal = rows.reduce((total, row) => total + row.gross, 0);
+    const totalDiscount = rows.reduce((total, row) => total + row.discount, 0);
+    return { subtotal, totalDiscount, grandTotal: subtotal - totalDiscount };
   }, [lines]);
 
-  // Line helpers
-  const handleProductChange = (lineId: string, productId: string) => {
-    const prod = products.find((p) => p.id === productId);
-    if (!prod) return;
+  if (!canManageOrders) {
+    return <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-6 text-sm text-rose-900">Your role is not authorized to create or edit purchase orders.</div>;
+  }
 
-    // Check if supplier has negotiated historical price
-    let unitPrice = prod.pricing?.costPrice || 1000;
-    if (selectedSupplier?.historicalPrices?.[productId]) {
-      unitPrice = selectedSupplier.historicalPrices[productId];
-    }
-
-    setLines((prev) =>
-      prev.map((line) => {
-        if (line.id !== lineId) return line;
-        return {
-          ...line,
-          productId: prod.id,
-          productCode: prod.sku,
-          productName: prod.name,
-          unitPrice,
-          taxRate: prod.pricing?.taxRatePercentage ?? 18,
-        };
-      })
-    );
+  const updateLine = (lineId: string, patch: Partial<LineFormState>) => {
+    setLines((current) => current.map((line) => line.id === lineId ? { ...line, ...patch } : line));
+    setFormError(null);
   };
 
-  const handleUpdateLine = (lineId: string, updates: Partial<LineFormState>) => {
-    setLines((prev) =>
-      prev.map((l) => (l.id === lineId ? { ...l, ...updates } : l))
-    );
-  };
-
-  const handleAddLine = () => {
-    setLines((prev) => [
-      ...prev,
-      {
-        id: `line-${Date.now()}-${prev.length}`,
-        productId: '',
-        productCode: '',
-        productName: '',
-        quantity: 1,
-        unitPrice: 0,
-        discountPercent: 0,
-        taxRate: 18,
-      },
-    ]);
-  };
-
-  const handleRemoveLine = (lineId: string) => {
-    if (lines.length <= 1) {
-      toast.error('A Purchase Order must contain at least one line item.');
-      return;
-    }
-    setLines((prev) => prev.filter((l) => l.id !== lineId));
+  const chooseProduct = (lineId: string, productId: string) => {
+    const product = products.find((candidate) => candidate.id === productId);
+    if (!product) return;
+    updateLine(lineId, {
+      productId: product.id,
+      productCode: product.sku,
+      productName: product.name,
+      unitPrice: Number(product.pricing?.costPrice ?? 0),
+    });
   };
 
   const handleSaveOrder = async (submitForApproval: boolean) => {
-    if (!selectedSupplier) {
-      toast.error('Please select a supplier.');
+    setFormError(null);
+    const form = {
+      supplierId: selectedSupplierId,
+      orderDate,
+      expectedDeliveryDate,
+      paymentTerms,
+      note,
+      deliveryInstructions,
+      items: lines.map((line) => ({
+        productId: line.productId,
+        quantity: Number(line.quantity),
+        unitPrice: Number(line.unitPrice),
+        discountType: line.discountType,
+        discountValue: Number(line.discountValue),
+        notes: line.notes,
+      })),
+    };
+    const parsed = purchaseOrderFormSchema.safeParse(form);
+    if (!parsed.success) {
+      setFormError(parsed.error.issues[0]?.message || 'Review the highlighted purchase order details.');
+      return;
+    }
+    if (!selectedSupplier || (selectedSupplier.status && selectedSupplier.status !== 'ACTIVE')) {
+      setFormError('Select an active supplier.');
       return;
     }
 
-    const validLines = lines.filter((l) => l.productId && l.quantity > 0);
-    if (validLines.length === 0) {
-      toast.error('Please add at least one valid product line with quantity > 0.');
-      return;
-    }
+    const payload: CreatePurchaseOrderPayload = {
+      supplierId: selectedSupplier.id,
+      orderDate: `${orderDate}T00:00:00.000Z`,
+      expectedDeliveryDate: expectedDeliveryDate ? `${expectedDeliveryDate}T00:00:00.000Z` : null,
+      paymentTerms: paymentTerms.trim() || undefined,
+      deliveryInstructions: deliveryInstructions.trim() || undefined,
+      note: note.trim() || undefined,
+      items: parsed.data.items.map((line) => ({
+        productId: line.productId,
+        qty: line.quantity,
+        unitPrice: line.unitPrice,
+        discountType: line.discountValue > 0 ? line.discountType : undefined,
+        discountAmount: line.discountValue,
+        notes: line.notes.trim() || undefined,
+      })),
+      submitForApproval,
+    };
 
     setSubmitting(true);
+    let revisionId: string | undefined;
     try {
-      const payload = {
-        supplierId: selectedSupplier.id,
-        supplierName: selectedSupplier.name,
-        supplierCode: selectedSupplier.code,
-        supplierContactPerson: selectedSupplier.contactPerson,
-        supplierEmail: selectedSupplier.email,
-        supplierPhone: selectedSupplier.phone,
-        supplierAddress: selectedSupplier.address,
-        supplierVatNumber: selectedSupplier.taxNumber,
-        orderDate,
-        expectedDeliveryDate,
-        paymentTerms,
-        currency,
-        items: validLines.map((l) => ({
-          productId: l.productId,
-          productCode: l.productCode,
-          productName: l.productName,
-          quantity: Number(l.quantity),
-          unitPrice: Number(l.unitPrice),
-          discountPercent: Number(l.discountPercent) || 0,
-          taxRate: Number(l.taxRate) || 0,
-          notes: l.notes,
-        })),
-        shippingCharges: 0,
-        otherCharges: 0,
-        notes,
-        submitForApproval,
-      };
-
-      if (isEdit && id) {
-        await updatePO(id, payload);
-        if (submitForApproval) {
-          await purchaseOrderService.submitForApproval(id, {} as any);
-        }
-        navigate(`/purchasing/orders/${id}`);
+      let result;
+      if (!isEdit) {
+        result = await createPO(payload);
+      } else if (existing?.status === 'REJECTED' && id) {
+        const revision = await revisePO(id);
+        revisionId = revision.id;
+        result = await updatePO(revision.id, payload);
+      } else if (id && existing?.status === 'DRAFT') {
+        result = await updatePO(id, payload);
       } else {
-        const created = await createPO(payload);
-        navigate(`/purchasing/orders/${created.id}`);
+        setFormError('Only draft purchase orders can be edited. Create a revision for a rejected order.');
+        return;
       }
-    } catch (err) {
-      // toast shown in hook
+      navigate(`/purchasing/orders/${result.id}`);
+    } catch {
+      if (revisionId) {
+        toast.error('A draft revision was created but could not be updated. Continue editing the new revision.');
+        navigate(`/purchasing/orders/${revisionId}/edit`);
+      } else {
+        setFormError('The purchase order could not be saved. Review the server error and try again.');
+      }
     } finally {
       setSubmitting(false);
     }
   };
 
+  const handleQuickCreateSupplier = async (payload: CreateSupplierPayload) => {
+    const created = await createSupplierMutation.mutateAsync(payload);
+    toast.success(`Supplier "${created.name}" created.`);
+    setSelectedSupplierId(created.id);
+    setIsNewSupplierModalOpen(false);
+  };
+
+  if ((isEdit && poLoading) || supplierQuery.isLoading || productQuery.isLoading) {
+    return <TableLoadingSkeleton />;
+  }
+
+  if (isEdit && poError) {
+    return (
+      <div className="space-y-4">
+        <Button variant="outline" onClick={() => navigate('/purchasing/orders')}><ArrowLeft className="mr-2 h-4 w-4" />Orders</Button>
+        <p role="alert" className="rounded-lg border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">{poError}</p>
+      </div>
+    );
+  }
+
+  if (isEdit && !poLoading && !existing) {
+    return <div className="space-y-4 rounded-xl border border-rose-200 bg-rose-50 p-6">
+      <h2 className="font-semibold text-rose-950">Purchase order not found</h2>
+      <p className="text-sm text-rose-900">The requested purchase order could not be loaded.</p>
+      <Button onClick={() => navigate('/purchasing/orders')}>Back to Purchase Orders</Button>
+    </div>;
+  }
+
+  if (isEdit && existing && !['DRAFT', 'REJECTED'].includes(existing.status)) {
+    return (
+      <div className="space-y-4 rounded-xl border border-amber-200 bg-amber-50 p-6">
+        <h2 className="font-semibold text-amber-950">This purchase order is locked</h2>
+        <p className="text-sm text-amber-900">Only draft purchase orders can be edited. Its current status is {existing.status}.</p>
+        <Button onClick={() => navigate(`/purchasing/orders/${existing.id}`)}>Return to Purchase Order</Button>
+      </div>
+    );
+  }
+
+  if (supplierQuery.isError || productQuery.isError) {
+    return <div className="space-y-4 rounded-xl border border-rose-200 bg-rose-50 p-6">
+      <h2 className="font-semibold text-rose-950">Supplier or product data could not be loaded</h2>
+      <p className="text-sm text-rose-900">Reload the required purchasing data before saving a purchase order.</p>
+      <div className="flex gap-2">
+        {supplierQuery.isError && <Button variant="outline" onClick={() => void supplierQuery.refetch()}>Retry Suppliers</Button>}
+        {productQuery.isError && <Button variant="outline" onClick={() => void productQuery.refetch()}>Retry Products</Button>}
+      </div>
+    </div>;
+  }
+
+  if (!supplierQuery.isLoading && suppliers.length === 0) {
+    return (
+      <div className="space-y-4 rounded-xl border border-slate-200 bg-white p-8 text-center">
+        <Building2 className="mx-auto h-8 w-8 text-slate-400" />
+        <h2 className="font-semibold text-slate-900">No active suppliers</h2>
+        <p className="text-sm text-slate-500">Add or activate a supplier before creating a purchase order.</p>
+        <Button onClick={() => navigate('/purchasing/suppliers')}>Manage Suppliers</Button>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6 pb-12">
-      {/* Top Standardized Page Header */}
       <PageHeader
-        title={isEdit ? 'Edit Purchase Order' : 'Create Purchase Order'}
-        subtitle="Draft procurement order with line-item discounts, taxes, and internal managerial approval."
+        title={isEdit ? existing?.status === 'REJECTED' ? 'Create Purchase Order Revision' : 'Edit Draft Purchase Order' : 'Create Purchase Order'}
+        subtitle="Prepare supplier, delivery, product, and discount details. Totals are recalculated by the server."
         backUrl="/purchasing/orders"
         backLabel="Orders"
-        badge={<StatusBadge status={isEdit ? 'DRAFT' : 'NEW'} />}
-        actions={
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              disabled={submitting}
-              onClick={() => handleSaveOrder(false)}
-              className="gap-1.5 text-xs bg-white hover:bg-slate-50"
-            >
-              <Save className="h-3.5 w-3.5 text-slate-600" />
-              <span>Save as Draft</span>
-            </Button>
-
-            <Button
-              variant="default"
-              disabled={submitting}
-              onClick={() => handleSaveOrder(true)}
-              className="gap-1.5 text-xs bg-primary hover:bg-primary-hover text-primary-foreground font-semibold shadow-xs"
-            >
-              <Send className="h-3.5 w-3.5" />
-              <span>Submit for Approval</span>
-            </Button>
-          </div>
-        }
+        badge={<Badge variant="outline">{isEdit ? existing?.status : 'DRAFT'}</Badge>}
+        actions={<div className="flex gap-2"><Button variant="outline" disabled={submitting} onClick={() => void handleSaveOrder(false)}><Save className="mr-2 h-4 w-4" />Save Draft</Button><Button disabled={submitting} onClick={() => void handleSaveOrder(true)}><Send className="mr-2 h-4 w-4" />Submit for Review</Button></div>}
       />
 
-      {/* Supplier & Header Parameters Section */}
-      <FormSection
-        icon={Building2}
-        title="Vendor & Purchase Order Details"
-        description="Specify supplier particulars, terms, and expected delivery timetable."
-      >
-        <div className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Supplier Selector */}
-            <FormField label="Supplier / Vendor" required>
-              <select
-                value={selectedSupplierId}
-                onChange={(e) => setSelectedSupplierId(e.target.value)}
-                className="w-full h-9 text-xs rounded-md border border-slate-300 bg-white px-3 text-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-400"
-              >
-                <option value="">Select Registered Supplier...</option>
-                {suppliers.map((sup) => (
-                  <option key={sup.id} value={sup.id}>
-                    {sup.name} ({sup.code})
-                  </option>
-                ))}
+      {(supplierQuery.error || productQuery.error) && (
+        <div role="alert" className="flex items-center gap-2 rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">
+          <AlertCircle className="h-4 w-4" />
+          Supplier or product data could not be loaded. Refresh and try again.
+        </div>
+      )}
+      {formError && <p role="alert" className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">{formError}</p>}
+
+      <FormSection icon={Building2} title="Supplier & Order Details" description="Supplier and delivery terms are captured on this purchase order.">
+        <div className="grid gap-4 md:grid-cols-3">
+          <FormField label="Supplier" required>
+            <div className="flex gap-2">
+              <select value={selectedSupplierId} onChange={(event) => setSelectedSupplierId(event.target.value)} className="h-9 w-full rounded-md border border-slate-300 bg-white px-3 text-sm">
+                <option value="">Select an active supplier</option>
+                {suppliers.map((supplier) => <option key={supplier.id} value={supplier.id}>{supplier.name}{supplier.supplierCode ? ` (${supplier.supplierCode})` : ''}</option>)}
               </select>
-            </FormField>
-
-            {/* Order Date */}
-            <FormField label="PO Issue Date">
-              <Input
-                type="date"
-                value={orderDate}
-                onChange={(e) => setOrderDate(e.target.value)}
-                className="h-9 text-xs"
-              />
-            </FormField>
-
-            {/* Expected Delivery Date */}
-            <FormField label="Expected Delivery Date">
-              <Input
-                type="date"
-                value={expectedDeliveryDate}
-                onChange={(e) => setExpectedDeliveryDate(e.target.value)}
-                className="h-9 text-xs"
-              />
-            </FormField>
-          </div>
-
-          {/* Supplier Auto-Filled Context */}
-          {selectedSupplier && (
-            <div className="p-3 bg-slate-50 rounded-lg border border-slate-200/80 text-xs text-slate-600 grid grid-cols-1 sm:grid-cols-4 gap-2">
-              <div>
-                <span className="text-[10px] uppercase font-bold text-slate-400 block">Contact</span>
-                <span className="font-semibold text-slate-800">{selectedSupplier.contactPerson}</span> ({selectedSupplier.phone})
-              </div>
-              <div>
-                <span className="text-[10px] uppercase font-bold text-slate-400 block">Payment Terms</span>
-                <span className="font-mono text-slate-800">{selectedSupplier.paymentTerms}</span>
-              </div>
-              <div>
-                <span className="text-[10px] uppercase font-bold text-slate-400 block">Tax / VAT No</span>
-                <span>{selectedSupplier.taxNumber || 'Non-VAT'}</span>
-              </div>
-              <div>
-                <span className="text-[10px] uppercase font-bold text-slate-400 block">Address</span>
-                <span className="truncate block">{selectedSupplier.address || 'Colombo, Sri Lanka'}</span>
-              </div>
+              <Button type="button" size="sm" variant="outline" className="shrink-0 text-xs gap-1" onClick={() => setIsNewSupplierModalOpen(true)}>
+                <Plus className="h-3.5 w-3.5" />
+                New
+              </Button>
             </div>
-          )}
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
-            <FormField label="Payment Terms">
-              <Input
-                placeholder="e.g. Net 30, Net 15, Advance Prepayment..."
-                value={paymentTerms}
-                onChange={(e) => setPaymentTerms(e.target.value)}
-                className="h-9 text-xs"
-              />
-            </FormField>
-          </div>
+          </FormField>
+          <FormField label="PO Date" required>
+            <Input type="date" value={orderDate} onChange={(event) => setOrderDate(event.target.value)} />
+          </FormField>
+          <FormField label="Expected Delivery Date">
+            <Input type="date" value={expectedDeliveryDate} onChange={(event) => setExpectedDeliveryDate(event.target.value)} />
+          </FormField>
+          <FormField label="Payment Terms">
+            <Input maxLength={100} placeholder="e.g. Net 30" value={paymentTerms} onChange={(event) => setPaymentTerms(event.target.value)} />
+          </FormField>
+          {selectedSupplier && <div className="md:col-span-2 rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600">
+            <div className="font-semibold text-slate-900">{selectedSupplier.name}</div>
+            <div>{selectedSupplier.contactPerson || 'No contact person'}{selectedSupplier.phone ? ` · ${selectedSupplier.phone}` : ''}</div>
+            <div>{selectedSupplier.address || 'No registered address'}</div>
+            <div>Supplier terms: {selectedSupplier.paymentTerms || 'Not specified'}</div>
+          </div>}
+          <FormField label="Delivery Instructions" className="md:col-span-3">
+            <Textarea maxLength={5000} rows={2} value={deliveryInstructions} onChange={(event) => setDeliveryInstructions(event.target.value)} placeholder="Delivery location and instructions" />
+          </FormField>
         </div>
       </FormSection>
 
-      {/* Product Lines Section */}
-      <FormSection
-        icon={Package}
-        title="Product Line Items"
-        description="Line-item order quantities, contracted unit prices, discounts, and tax rates."
-        noPadding={true}
-        actions={
-          <div className="flex items-center gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => setIsProductSelectorOpen(true)}
-              className="h-7 text-xs gap-1 bg-white hover:bg-slate-50 text-slate-700"
-            >
-              <Package className="h-3.5 w-3.5 text-primary" />
-              <span>Browse Catalog</span>
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={handleAddLine}
-              className="h-7 text-xs gap-1 bg-white hover:bg-slate-50 text-slate-700"
-            >
-              <Plus className="h-3.5 w-3.5" />
-              <span>Add Line</span>
-            </Button>
-          </div>
-        }
-      >
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs text-left">
-              <thead className="bg-slate-50/80 text-[11px] uppercase tracking-wider text-slate-500 border-b border-slate-200">
-                <tr>
-                  <th className="py-2.5 px-3 w-8 text-center">#</th>
-                  <th className="py-2.5 px-3 min-w-[260px]">Product / Description</th>
-                  <th className="py-2.5 px-3 w-24 text-right">Quantity</th>
-                  <th className="py-2.5 px-3 w-32 text-right">Unit Price ({currency})</th>
-                  <th className="py-2.5 px-3 w-20 text-right">Disc %</th>
-                  <th className="py-2.5 px-3 w-20 text-right">Tax %</th>
-                  <th className="py-2.5 px-3 w-32 text-right">Line Total ({currency})</th>
-                  <th className="py-2.5 px-2 w-10 text-center"></th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {lines.map((line, idx) => {
-                  const lineTotal =
-                    (line.quantity * line.unitPrice * (1 - line.discountPercent / 100)) *
-                    (1 + line.taxRate / 100);
-
-                  return (
-                    <tr key={line.id} className="hover:bg-slate-50/40">
-                      <td className="py-2.5 px-3 text-center text-slate-400 font-mono">
-                        {idx + 1}
-                      </td>
-                      <td className="py-2.5 px-3">
-                        <select
-                          value={line.productId}
-                          onChange={(e) => handleProductChange(line.id, e.target.value)}
-                          className="w-full h-8 text-xs rounded border border-slate-300 bg-white px-2 focus:ring-1 focus:ring-slate-400"
-                        >
-                          <option value="">Select Catalog Product...</option>
-                          {products.map((prod) => (
-                            <option key={prod.id} value={prod.id}>
-                              {prod.sku} - {prod.name}
-                            </option>
-                          ))}
-                        </select>
-                        <Input
-                          placeholder="Optional line notes (specifications, serial codes)..."
-                          value={line.notes || ''}
-                          onChange={(e) => handleUpdateLine(line.id, { notes: e.target.value })}
-                          className="h-6 text-[10px] mt-1 text-slate-600"
-                        />
-                      </td>
-                      <td className="py-2.5 px-3 text-right">
-                        <Input
-                          type="number"
-                          min="1"
-                          value={line.quantity}
-                          onChange={(e) =>
-                            handleUpdateLine(line.id, { quantity: Math.max(1, parseInt(e.target.value, 10) || 1) })
-                          }
-                          className="h-8 text-xs text-right font-mono"
-                        />
-                      </td>
-                      <td className="py-2.5 px-3 text-right">
-                        <Input
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          value={line.unitPrice}
-                          onChange={(e) =>
-                            handleUpdateLine(line.id, { unitPrice: Math.max(0, parseFloat(e.target.value) || 0) })
-                          }
-                          className="h-8 text-xs text-right font-mono"
-                        />
-                      </td>
-                      <td className="py-2.5 px-3 text-right">
-                        <Input
-                          type="number"
-                          min="0"
-                          max="100"
-                          value={line.discountPercent}
-                          onChange={(e) =>
-                            handleUpdateLine(line.id, {
-                              discountPercent: Math.min(100, Math.max(0, parseFloat(e.target.value) || 0)),
-                            })
-                          }
-                          className="h-8 text-xs text-right font-mono"
-                        />
-                      </td>
-                      <td className="py-2.5 px-3 text-right">
-                        <Input
-                          type="number"
-                          min="0"
-                          max="100"
-                          value={line.taxRate}
-                          onChange={(e) =>
-                            handleUpdateLine(line.id, {
-                              taxRate: Math.max(0, parseFloat(e.target.value) || 0),
-                            })
-                          }
-                          className="h-8 text-xs text-right font-mono"
-                        />
-                      </td>
-                      <td className="py-2.5 px-3 text-right font-mono font-bold text-slate-900 tabular-nums">
-                        {formatCurrency(lineTotal || 0, currency)}
-                      </td>
-                      <td className="py-2.5 px-2 text-center">
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveLine(line.id)}
-                          className="text-slate-400 hover:text-rose-600 transition-colors"
-                          title="Remove Line"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+      <FormSection icon={Package} title="Product Lines" description="Enter quantities, unit costs, and any line discount agreed with the supplier.">
+        <div className="mb-3 flex justify-end"><Button type="button" size="sm" variant="outline" onClick={() => setLines((current) => [...current, makeLine()])}><Plus className="mr-2 h-4 w-4" />Add Product</Button></div>
+        <div className="overflow-x-auto rounded-lg border border-slate-200">
+          <table className="w-full min-w-[850px] text-sm">
+            <thead className="bg-slate-50 text-left text-xs uppercase text-slate-500"><tr>
+              <th className="p-3">Product</th><th className="w-24 p-3 text-right">Qty</th><th className="w-36 p-3 text-right">Unit Price (LKR)</th><th className="w-36 p-3">Discount</th><th className="w-36 p-3 text-right">Line Total (LKR)</th><th className="w-10 p-3" />
+            </tr></thead>
+            <tbody className="divide-y divide-slate-100">
+              {lines.map((line) => {
+                const gross = line.quantity * line.unitPrice;
+                const discount = line.discountType === 'PERCENTAGE' ? gross * line.discountValue / 100 : line.discountValue;
+                return <tr key={line.id}>
+                  <td className="space-y-1 p-3">
+                    <select value={line.productId} onChange={(event) => chooseProduct(line.id, event.target.value)} className="h-9 w-full rounded-md border border-slate-300 bg-white px-2">
+                      <option value="">Select a product</option>
+                      {products.map((product) => <option key={product.id} value={product.id}>{product.sku} · {product.name}</option>)}
+                      {line.productId && !products.some((product) => product.id === line.productId) && <option value={line.productId}>{line.productCode} · {line.productName} (inactive)</option>}
+                    </select>
+                    <Input maxLength={2000} placeholder="Optional line notes" value={line.notes} onChange={(event) => updateLine(line.id, { notes: event.target.value })} />
+                  </td>
+                  <td className="p-3"><Input type="number" min="1" step="1" value={line.quantity} onChange={(event) => updateLine(line.id, { quantity: Math.max(1, Number.parseInt(event.target.value, 10) || 1) })} className="text-right" /></td>
+                  <td className="p-3"><Input type="number" min="0" step="0.0001" value={line.unitPrice} onChange={(event) => updateLine(line.id, { unitPrice: Math.max(0, Number.parseFloat(event.target.value) || 0) })} className="text-right" /></td>
+                  <td className="p-3"><div className="flex gap-1">
+                    <select value={line.discountType} onChange={(event) => updateLine(line.id, { discountType: event.target.value as DiscountType })} className="h-9 rounded-md border border-slate-300 bg-white px-1 text-xs"><option value="PERCENTAGE">%</option><option value="FIXED_AMOUNT">LKR</option></select>
+                    <Input type="number" min="0" step="0.0001" max={line.discountType === 'PERCENTAGE' ? 100 : undefined} value={line.discountValue} onChange={(event) => updateLine(line.id, { discountValue: Math.max(0, Number.parseFloat(event.target.value) || 0) })} aria-label="Line discount" />
+                  </div></td>
+                  <td className="p-3 text-right font-mono font-semibold">{formatCurrency(Math.max(0, gross - discount), 'LKR')}</td>
+                  <td className="p-3"><Button type="button" variant="ghost" size="icon-sm" aria-label="Remove product line" disabled={lines.length === 1} onClick={() => setLines((current) => current.filter((candidate) => candidate.id !== line.id))}><Trash2 className="h-4 w-4 text-rose-600" /></Button></td>
+                </tr>;
+              })}
+            </tbody>
+          </table>
+        </div>
       </FormSection>
 
-      {/* Instructions & Financial Summary Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        <div className="lg:col-span-7 space-y-4">
-          <Card className="border-slate-200">
-            <CardHeader className="p-4 border-b border-slate-100">
-              <CardTitle className="text-xs font-semibold text-slate-900 uppercase tracking-wider">
-                Notes & Receiving Instructions
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-4 space-y-3">
-              <div className="space-y-1">
-                <label className="text-xs font-medium text-slate-700">Internal Order Notes</label>
-                <Textarea
-                  placeholder="Additional order terms, stock replenishment rationale, project allocation..."
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  rows={2}
-                  className="text-xs"
-                />
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="lg:col-span-5">
-          <Card className="border-slate-200 bg-slate-50/70 shadow-2xs">
-            <CardHeader className="p-4 border-b border-slate-200/80">
-              <CardTitle className="text-sm font-semibold text-slate-900">
-                Purchase Order Totals
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-4 space-y-3 text-xs">
-              <div className="flex justify-between text-slate-600">
-                <span>Subtotal ({lines.length} lines):</span>
-                <span className="font-mono font-semibold tabular-nums">
-                  {formatCurrency(calculation.subtotal, currency)}
-                </span>
-              </div>
-
-              {calculation.totalDiscount > 0 && (
-                <div className="flex justify-between text-emerald-600">
-                  <span>Total Line Discounts:</span>
-                  <span className="font-mono font-semibold tabular-nums">
-                    -{formatCurrency(calculation.totalDiscount, currency)}
-                  </span>
-                </div>
-              )}
-
-              <div className="flex justify-between text-slate-600">
-                <span>Applicable Tax Total (VAT/SSCL):</span>
-                <span className="font-mono font-semibold tabular-nums">
-                  {formatCurrency(calculation.taxTotal, currency)}
-                </span>
-              </div>
-
-              <div className="border-t-2 border-slate-900 pt-3 flex justify-between items-baseline text-slate-900">
-                <span className="font-bold text-sm">Grand Total ({currency}):</span>
-                <span className="font-mono font-black text-xl tabular-nums">
-                  {formatCurrency(calculation.grandTotal, currency)}
-                </span>
-              </div>
-
-              {calculation.grandTotal > 500000 && (
-                <div className="p-2.5 bg-amber-50 rounded-lg border border-amber-200 text-[11px] text-amber-800 flex items-start gap-1.5">
-                  <AlertCircle className="h-4 w-4 shrink-0 text-amber-600 mt-0.5" />
-                  <span>
-                    Orders exceeding {currency} 500,000 equivalent require executive <strong>Director Authorization</strong> under ERP financial delegation rules.
-                  </span>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+      <div className="grid gap-4 lg:grid-cols-12">
+        <Card className="lg:col-span-7">
+          <CardHeader><CardTitle className="text-sm">Notes</CardTitle></CardHeader>
+          <CardContent><Textarea maxLength={5000} rows={4} value={note} onChange={(event) => setNote(event.target.value)} placeholder="Internal purchasing notes and commercial terms" /></CardContent>
+        </Card>
+        <Card className="bg-slate-50 lg:col-span-5">
+          <CardHeader><CardTitle className="text-sm">Order Preview (LKR)</CardTitle></CardHeader>
+          <CardContent className="space-y-3 text-sm">
+            <div className="flex justify-between"><span>Gross line total</span><span className="font-mono">{formatCurrency(calculation.subtotal, 'LKR')}</span></div>
+            <div className="flex justify-between text-emerald-700"><span>Line discounts</span><span className="font-mono">−{formatCurrency(calculation.totalDiscount, 'LKR')}</span></div>
+            <div className="flex justify-between border-t border-slate-300 pt-3 text-base font-bold"><span>Grand Total (LKR)</span><span className="font-mono">{formatCurrency(calculation.grandTotal, 'LKR')}</span></div>
+            <p className="text-xs text-slate-500">The backend recalculates all discounts and totals before saving. Tax and additional charges are not configured for purchase orders.</p>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Product Catalog Modal */}
-      <Dialog open={isProductSelectorOpen} onOpenChange={setIsProductSelectorOpen}>
-        <DialogContent className="max-w-xl">
-          <DialogHeader>
-            <DialogTitle>Select Product from Master Catalog</DialogTitle>
-          </DialogHeader>
-          <ProductSelector onSelect={handleSelectProductFromMaster} />
-        </DialogContent>
-      </Dialog>
-
-      {/* Sticky Bottom Action Bar */}
       <DocumentActionBar
-        status={<StatusBadge status={isEdit ? 'DRAFT' : 'NEW'} />}
-        summary={
-          <span>
-            Total ({lines.length} lines):{' '}
-            <strong className="text-slate-900 font-mono text-sm ml-1">
-              {formatCurrency(calculation.grandTotal, currency)}
-            </strong>
-          </span>
-        }
-        leftActions={
-          <ConfirmButton
-            type="button"
-            variant="ghost"
-            size="sm"
-            dialogVariant="destructive"
-            confirmTitle="Discard Changes"
-            confirmMessage="Are you sure you want to discard your changes and return to purchase orders?"
-            confirmText="Discard Changes"
-            onConfirm={() => navigate('/purchasing/orders')}
-            className="text-xs text-slate-600 hover:text-slate-900"
-          >
-            Discard & Return
-          </ConfirmButton>
-        }
-        rightActions={
-          <>
-            <ConfirmButton
-              variant="outline"
-              size="sm"
-              confirmTitle="Save Draft Purchase Order"
-              confirmMessage="Save current purchase order line items and details as a draft?"
-              confirmText="Save Draft"
-              disabled={submitting}
-              onConfirm={() => handleSaveOrder(false)}
-              className="gap-1.5 text-xs bg-white hover:bg-slate-50"
-            >
-              <Save className="h-3.5 w-3.5 text-slate-600" />
-              <span>Save as Draft</span>
-            </ConfirmButton>
+        status={<Badge variant="outline">{isEdit ? existing?.status : 'DRAFT'}</Badge>}
+        summary={<span>Estimated total: <strong className="ml-1 font-mono">{formatCurrency(calculation.grandTotal, 'LKR')}</strong></span>}
+        leftActions={<Button variant="ghost" onClick={() => navigate('/purchasing/orders')}><ArrowLeft className="mr-2 h-4 w-4" />Cancel</Button>}
+        rightActions={<>
+          <ConfirmButton variant="outline" confirmTitle="Save Draft Purchase Order" confirmMessage="Save the current purchase order as a draft?" confirmText="Save Draft" disabled={submitting} onConfirm={() => void handleSaveOrder(false)}><Save className="mr-2 h-4 w-4" />Save Draft</ConfirmButton>
+          <ConfirmButton variant="default" confirmTitle="Submit Purchase Order" confirmMessage="Submit this purchase order to the Purchasing Manager for review?" confirmText="Submit for Review" disabled={submitting} onConfirm={() => void handleSaveOrder(true)}><Send className="mr-2 h-4 w-4" />Submit for Review</ConfirmButton>
+        </>}
+      />
 
-            <ConfirmButton
-              variant="default"
-              size="sm"
-              confirmTitle="Submit Purchase Order"
-              confirmMessage={`Submit Purchase Order totaling ${formatCurrency(calculation.grandTotal, currency)} for internal manager approval?`}
-              confirmText="Submit for Approval"
-              disabled={submitting}
-              onConfirm={() => handleSaveOrder(true)}
-              className="gap-1.5 text-xs bg-primary hover:bg-primary-hover text-primary-foreground font-semibold shadow-xs"
-            >
-              <Send className="h-3.5 w-3.5" />
-              <span>Submit for Approval</span>
-            </ConfirmButton>
-          </>
-        }
+      <SupplierFormDialog
+        open={isNewSupplierModalOpen}
+        onOpenChange={setIsNewSupplierModalOpen}
+        onSave={handleQuickCreateSupplier}
       />
     </div>
   );

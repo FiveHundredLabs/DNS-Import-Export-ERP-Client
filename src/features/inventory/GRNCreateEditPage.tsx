@@ -1,4 +1,5 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
@@ -17,7 +18,10 @@ import { PaginationControls } from '../../components/common/PaginationControls';
 import { useGRN } from '../../hooks/useGRN';
 import { useAuth } from '../../hooks/useAuth';
 import { useProducts } from '../../hooks/useProducts';
-import { usePurchaseOrders } from '../../hooks/usePurchaseOrders';
+import { purchaseOrderQueryKeys, usePurchaseOrders } from '../../hooks/usePurchaseOrders';
+import { purchaseOrdersApi } from '../../api/purchase-orders/purchase-orders.api';
+import { grnsApi } from '../../api/grns/grns.api';
+import { extractErrorMessage } from '../../api/client';
 import { GRN, GRNItem, UnitBarcodeRecord } from '../../types/inventory';
 import { unitBarcodeService } from '../../services/UnitBarcodeService';
 import { serialNumberService } from '../../services/SerialNumberService';
@@ -71,6 +75,7 @@ const LOCATIONS = [
 interface LineItem extends GRNItem {
   _tempId: string;
   unitCost: number;
+  requiresSerialNumber?: boolean;
 }
 
 export const checkProductRequiresSerial = (item: {
@@ -89,10 +94,17 @@ export const checkProductRequiresSerial = (item: {
 export function GRNCreateEditPage() {
   const navigate = useNavigate();
   const { id } = useParams<{ id?: string }>();
-  const { grnService } = useGRN();
+  const { refetch: refetchGrns } = useGRN();
+  const queryClient = useQueryClient();
   const { user, currentUser } = useAuth();
   const { products } = useProducts({ page: 1, pageSize: 200 });
-  const { purchaseOrders } = usePurchaseOrders();
+  const approvedPurchaseOrders = usePurchaseOrders({ status: 'APPROVED' });
+  const partiallyReceivedPurchaseOrders = usePurchaseOrders({ status: 'PARTIALLY_RECEIVED' });
+  const purchaseOrders = useMemo(
+    () => [...approvedPurchaseOrders.purchaseOrders, ...partiallyReceivedPurchaseOrders.purchaseOrders],
+    [approvedPurchaseOrders.purchaseOrders, partiallyReceivedPurchaseOrders.purchaseOrders],
+  );
+  const purchaseOrdersLoading = approvedPurchaseOrders.loading || partiallyReceivedPurchaseOrders.loading;
 
   // Stepper state: 1: Inbound Details, 2: Product Counts, 3: Serial Numbers, 4: Barcode Stickers, 5: Review & Sign-Off
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4 | 5>(1);
@@ -108,6 +120,7 @@ export function GRNCreateEditPage() {
   // PO-specific state
   const [selectedPoId, setSelectedPoId] = useState<string>('');
   const [poNumber, setPoNumber] = useState<string>('');
+  const [selectedSupplierId, setSelectedSupplierId] = useState<string>('');
 
   // General GRN Header State
   const [supplierName, setSupplierName] = useState<string>('');
@@ -119,6 +132,7 @@ export function GRNCreateEditPage() {
 
   // Line items
   const [items, setItems] = useState<LineItem[]>([]);
+  const poSelectionRequest = useRef(0);
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [submitConfirmOpen, setSubmitConfirmOpen] = useState<boolean>(false);
 
@@ -165,21 +179,24 @@ export function GRNCreateEditPage() {
     purchaseOrderNumber: poNumber,
     poNumber: poNumber,
     poId: selectedPoId,
+    supplierId: selectedSupplierId,
     supplierName: supplierName || 'Unspecified Supplier',
     supplierInvoiceNumber: deliveryNoteRef,
     warehouseId: warehouseId || 'WH-MAIN',
     status: 'DRAFT',
+    totalValue: items.reduce((sum, item) => sum + item.lineValue, 0),
     receivedDate: receivedDate || new Date().toISOString(),
     submittedAt: new Date().toISOString(),
     receivedById: activeUser?.name || 'Stock Keeper',
     notes: notes,
     items: items.map((it) => ({
       productId: it.productId,
-      productNameSnapshot: it.productName,
-      skuSnapshot: it.sku,
+      productNameSnapshot: it.productNameSnapshot,
+      skuSnapshot: it.skuSnapshot,
       expectedQuantity: it.expectedQuantity,
       receivedQuantity: it.receivedQuantity,
       damagedQuantity: it.damagedQuantity || 0,
+      lineValue: it.lineValue,
       uom: it.uom || 'PCS',
       unitCostSnapshot: it.unitCostSnapshot || 0,
       unitRecords: it.unitRecords || [],
@@ -200,44 +217,59 @@ export function GRNCreateEditPage() {
   });
 
   // Handle selecting an existing Purchase Order (PO)
-  const handleSelectPO = (poId: string) => {
+  const handleSelectPO = async (poId: string) => {
+    const requestId = ++poSelectionRequest.current;
     setSelectedPoId(poId);
+    setItems([]);
     const po = purchaseOrders.find((p) => p.id === poId);
     if (!po) return;
 
-    setSupplierName(po.supplierName);
-    setPoNumber(po.poNumber);
-    setWarehouseId(po.warehouseId || 'WH-MAIN');
+    try {
+      const remaining = await purchaseOrdersApi.remainingItems(poId);
+      if (requestId !== poSelectionRequest.current) return;
+      setSelectedSupplierId(remaining.supplierId);
+      setSupplierName(remaining.supplierName);
+      setPoNumber(remaining.poNumber);
+      setWarehouseId('WH-MAIN');
 
-    const poItems: LineItem[] = po.items.map((pItem) => {
-      const product = products.find((p) => p.id === pItem.productId);
-      const cost = pItem.unitCost || product?.pricing?.costPrice || 0;
-      const initialItem: LineItem = {
-        _tempId: generateId(),
-        productId: pItem.productId,
-        productNameSnapshot: pItem.productName,
-        skuSnapshot: pItem.sku,
-        expectedQuantity: pItem.expectedQuantity,
-        receivedQuantity: pItem.expectedQuantity,
-        damagedQuantity: 0,
-        unitCostSnapshot: cost,
-        unitCost: cost,
-        lineValue: pItem.expectedQuantity * cost,
-      };
+      const poItems: LineItem[] = remaining.items
+        .filter((pItem) => pItem.remainingQty > 0)
+        .map((pItem) => {
+          const product = products.find((p) => p.id === pItem.productId);
+          const cost = Number(pItem.unitPrice) || product?.pricing?.costPrice || 0;
+          const initialItem: LineItem = {
+            _tempId: generateId(),
+            productId: pItem.productId,
+            productNameSnapshot: pItem.productName,
+            skuSnapshot: pItem.sku,
+            expectedQuantity: pItem.remainingQty,
+            previouslyReceivedQuantity: pItem.receivedQty,
+            receivedQuantity: pItem.remainingQty,
+            damagedQuantity: 0,
+            unitCostSnapshot: cost,
+            unitCost: cost,
+            lineValue: pItem.remainingQty * cost,
+            uom: pItem.unitOfMeasure,
+            requiresSerialNumber: pItem.hasSerialNumber,
+          };
 
-      // Automatically generate unit barcodes for the expected quantity
-      const unitRecords = unitBarcodeService.generateUnitBarcodesForLine(
-        initialItem,
-        po.poNumber
-      );
-      initialItem.unitRecords = unitRecords;
-      initialItem.unitBarcodes = unitRecords.map((r) => r.unitBarcode);
+          return initialItem;
+        });
 
-      return initialItem;
-    });
-
-    setItems(poItems);
-    toast.success(`Loaded PO "${po.poNumber}" with ${po.items.length} line items`);
+      setItems(poItems);
+      if (poItems.length === 0) {
+        toast.info(`Purchase Order ${remaining.poNumber} has no outstanding quantities.`);
+      } else {
+        toast.success(`Loaded ${poItems.length} outstanding line(s) from PO "${remaining.poNumber}"`);
+      }
+    } catch (error: any) {
+      if (requestId !== poSelectionRequest.current) return;
+      setSelectedPoId('');
+      setSelectedSupplierId('');
+      setSupplierName('');
+      setPoNumber('');
+      toast.error(error.message || 'Unable to load outstanding Purchase Order quantities.');
+    }
   };
 
   // Add product one-by-one in manual mode
@@ -248,6 +280,11 @@ export function GRNCreateEditPage() {
     }
     const product = products.find((p) => p.id === manualProductId);
     if (!product) return;
+
+    if (selectedPoId) {
+      toast.error('A PO-linked GRN can only receive products listed on the selected Purchase Order.');
+      return;
+    }
 
     if (manualReceivedQty <= 0) {
       toast.error('Received quantity must be greater than 0');
@@ -325,6 +362,10 @@ export function GRNCreateEditPage() {
   const addProduct = (productId: string, qty: number = 1) => {
     const product = products.find((p) => p.id === productId);
     if (!product) return;
+    if (selectedPoId) {
+      toast.error('A PO-linked GRN can only receive products listed on the selected Purchase Order.');
+      return;
+    }
     if (items.some((i) => i.productId === productId)) {
       toast.info('Product already added. Adjust quantity in the table.');
       return;
@@ -366,7 +407,7 @@ export function GRNCreateEditPage() {
 
         if (field === 'receivedQuantity' || field === 'damagedQuantity') {
           const goodQty = Math.max(0, updated.receivedQuantity - updated.damagedQuantity);
-          if (!updated.unitRecords || updated.unitRecords.length !== goodQty) {
+        if (!selectedPoId && (!updated.unitRecords || updated.unitRecords.length !== goodQty)) {
             const records = unitBarcodeService.generateUnitBarcodesForLine(
               updated,
               poNumber || deliveryNoteRef || 'GRN-INTAKE'
@@ -398,8 +439,12 @@ export function GRNCreateEditPage() {
 
   // Step 3 Confirm All Affixed in Bay
   const handleConfirmAllAffixedInStudio = () => {
+    if (selectedPoId) {
+      toast.info('Inventory assigns unit barcodes when the GRN is approved. Serial numbers are recorded with this receipt.');
+      return;
+    }
     const updated = unitBarcodeService.confirmAllAffixed(items);
-    setItems(updated);
+    setItems(updated.map((item, index) => ({ ...items[index], ...item })));
     toast.success(
       `✓ Confirmed! All ${barcodeSummary.totalUnits} physical unit stickers affixed in warehouse bay.`
     );
@@ -731,6 +776,10 @@ export function GRNCreateEditPage() {
 
   // Bulk print all stickers (50mm x 30mm standard thermal labels)
   const handlePrintBulk = () => {
+    if (selectedPoId) {
+      toast.info('Inventory assigns scannable unit barcodes after GRN approval; no provisional labels were printed.');
+      return;
+    }
     if (allStickers.length === 0) {
       toast.error('No barcode stickers available to print');
       return;
@@ -762,6 +811,10 @@ export function GRNCreateEditPage() {
 
   // Product-wise print (50mm x 30mm standard thermal labels)
   const handlePrintProduct = (productId: string, productName: string) => {
+    if (selectedPoId) {
+      toast.info('Inventory assigns scannable unit barcodes after GRN approval; no provisional labels were printed.');
+      return;
+    }
     const pStickers = allStickers.filter((s) => s.productId === productId);
     if (pStickers.length === 0) {
       toast.error(`No stickers found for ${productName}`);
@@ -793,6 +846,10 @@ export function GRNCreateEditPage() {
 
   // Individual unit sticker print (50mm x 30mm single thermal label)
   const handlePrintSingleUnit = (unitBarcode: string, unitIndex: number, productName: string) => {
+    if (selectedPoId) {
+      toast.info('Inventory assigns scannable unit barcodes after GRN approval; no provisional labels were printed.');
+      return;
+    }
     const target = allStickers.find((s) => s.record.unitBarcode === unitBarcode);
     if (!target) return;
     setStep4PrintScope({ mode: 'UNIT', unitBarcode });
@@ -947,6 +1004,9 @@ export function GRNCreateEditPage() {
       if (item.receivedQuantity <= 0) {
         return `Received quantity must be > 0 for ${item.productNameSnapshot}`;
       }
+      if (selectedPoId && item.receivedQuantity > item.expectedQuantity) {
+        return `Received quantity for ${item.productNameSnapshot} cannot exceed the ${item.expectedQuantity} units still outstanding on this PO.`;
+      }
       if (item.damagedQuantity > item.receivedQuantity) {
         return `Damaged qty cannot exceed received qty for ${item.productNameSnapshot}`;
       }
@@ -1001,66 +1061,46 @@ export function GRNCreateEditPage() {
         barcodesConfirmedAt: i.barcodesConfirmedAt,
       }));
 
-      const grnId = generateId();
-      const generatedGrnNumber = `GRN-${Date.now().toString().slice(-6)}`;
-      const isFullyLabeled = unitBarcodeService.isGRNFullyLabeled(grnItems);
-
-      const grn: GRN = {
-        id: grnId,
-        grnNumber: generatedGrnNumber,
-        sourceType: 'PO',
-        poId: selectedPoId,
-        poNumber: poNumber,
-        purchaseOrderId: selectedPoId,
-        purchaseOrderNumber: poNumber,
-        supplierId: 'sup-manual',
-        supplierName: supplierName.trim(),
-        supplierInvoiceNumber: supplierInvoiceNumber.trim() || undefined,
-        receivedDate,
-        warehouseId,
-        status: 'DRAFT' as const,
-        items: grnItems,
-        totalValue,
-        receivedById: activeUser.id,
-        notes: notes.trim() || undefined,
-        barcodesGenerated: grnItems.some((i) => i.unitRecords && i.unitRecords.length > 0),
-        barcodesConfirmed: isFullyLabeled,
-        barcodesConfirmedAt: isFullyLabeled ? new Date().toISOString() : undefined,
-        barcodesConfirmedBy: isFullyLabeled ? activeUser.name : undefined,
-      };
-
-      if (status === 'SUBMITTED') {
-        await grnService.submitGRN(grn, activeUser);
-      } else {
-        await grnService.createGRN(grn, activeUser);
+      if (!selectedPoId || !selectedSupplierId) {
+        throw new Error('Select an approved Purchase Order before saving this GRN.');
       }
 
-      // Register serial numbers with SerialNumberService
-      for (const item of grnItems) {
-        if (item.serialNumbers && item.serialNumbers.length > 0) {
-          const validSerials = item.serialNumbers.map((s) => s?.trim()).filter(Boolean);
-          if (validSerials.length > 0) {
-            serialNumberService.registerBatch({
-              productId: item.productId,
-              locationId: warehouseId,
-              locationName: warehouseId === 'WH-MAIN' ? 'Central Distribution Hub' : warehouseId,
-              grnId,
-              grnNumber: generatedGrnNumber,
-              receivedBy: activeUser.name,
-              serialNumbers: validSerials as string[],
-            });
-          }
+      const created = await grnsApi.create({
+        poId: selectedPoId,
+        supplierId: selectedSupplierId,
+        supplierInvoiceNumber: supplierInvoiceNumber.trim() || undefined,
+        receivedDate,
+        notes: notes.trim() || undefined,
+        products: itemsToSave.map((item) => ({
+          productId: item.productId,
+          receivedQuantity: item.receivedQuantity,
+          damagedQuantity: item.damagedQuantity,
+          unitCost: item.unitCost,
+          serialNumbers: item.serialNumbers?.map((serial) => serial.trim()).filter(Boolean),
+        })),
+      });
+
+      let saved = created;
+      if (status === 'SUBMITTED') {
+        try {
+          saved = await grnsApi.submit(created.id);
+        } catch (submitError) {
+          await queryClient.invalidateQueries({ queryKey: purchaseOrderQueryKeys.all });
+          await refetchGrns();
+          toast.error(
+            `GRN ${created.grnNumber} was saved as a draft, but submission failed: ${extractErrorMessage(submitError)}`,
+          );
+          navigate(`/inventory/grn/${created.id}`);
+          return;
         }
       }
 
-      toast.success(
-        `GRN ${generatedGrnNumber} saved as ${status}${
-          isFullyLabeled ? ' with all unit barcodes confirmed' : ''
-        }`
-      );
-      navigate('/inventory/grn');
+      await queryClient.invalidateQueries({ queryKey: purchaseOrderQueryKeys.all });
+      await refetchGrns();
+      toast.success(`GRN ${saved.grnNumber} saved as ${saved.status}`);
+      navigate(`/inventory/grn/${saved.id}`);
     } catch (e: any) {
-      toast.error(e.message ?? 'Error saving GRN');
+      toast.error(extractErrorMessage(e) || e.message || 'Error saving GRN');
     } finally {
       setSubmitting(false);
     }
@@ -1073,7 +1113,7 @@ export function GRNCreateEditPage() {
       return;
     }
 
-    if (status === 'SUBMITTED' && isStockKeeper) {
+    if (status === 'SUBMITTED' && isStockKeeper && !selectedPoId) {
       const isFullyConfirmed = unitBarcodeService.isGRNFullyLabeled(items);
       if (!isFullyConfirmed) {
         setUnlabeledPromptOpen(true);
@@ -1091,7 +1131,7 @@ export function GRNCreateEditPage() {
 
   const handleConfirmAffixedAndSubmit = async () => {
     const updated = unitBarcodeService.confirmAllAffixed(items);
-    setItems(updated);
+    setItems(updated.map((item, index) => ({ ...items[index], ...item })));
     setUnlabeledPromptOpen(false);
     toast.success('Confirmed all physical unit barcode stickers affixed in receiving bay.');
     setSubmitConfirmOpen(true);
@@ -1277,17 +1317,28 @@ export function GRNCreateEditPage() {
                     </span>
                   </label>
                   <Select value={selectedPoId} onValueChange={handleSelectPO}>
-                    <SelectTrigger className="h-9 text-xs">
+                    <SelectTrigger className="h-9 text-xs" disabled={purchaseOrdersLoading || purchaseOrders.length === 0}>
                       <SelectValue placeholder="Choose Purchase Order (e.g. PO-2026-0891)" />
                     </SelectTrigger>
                     <SelectContent>
                       {purchaseOrders.map((po) => (
                         <SelectItem key={po.id} value={po.id} className="text-xs">
-                          <span className="font-mono font-semibold">{po.poNumber}</span> · {po.supplierName} ({po.items.length} lines)
+                          <span className="font-mono font-semibold">{po.poNumber}</span> · {po.supplierName} ({po.itemCount} lines)
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
+                  {purchaseOrdersLoading && (
+                    <p className="text-[11px] text-slate-500">Loading approved and partially received Purchase Orders…</p>
+                  )}
+                  {!purchaseOrdersLoading && purchaseOrders.length === 0 && (
+                    <p className="text-[11px] text-amber-700">No approved Purchase Orders with open receiving status are available.</p>
+                  )}
+                  {(approvedPurchaseOrders.error || partiallyReceivedPurchaseOrders.error) && (
+                    <p className="text-[11px] text-rose-700">
+                      {approvedPurchaseOrders.error || partiallyReceivedPurchaseOrders.error}
+                    </p>
+                  )}
                   {selectedPoId === '' && purchaseOrders.length > 0 && (
                     <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
                       <span className="text-[10px] text-slate-400 font-medium">Quick select:</span>
@@ -1599,7 +1650,7 @@ export function GRNCreateEditPage() {
                   <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold uppercase text-[10.5px]">
                     <tr>
                       <th className="py-2.5 px-3 text-left">Product</th>
-                      <th className="py-2.5 px-3 text-right">Expected Qty</th>
+                      <th className="py-2.5 px-3 text-right">{selectedPoId ? 'Outstanding Qty' : 'Expected Qty'}</th>
                       <th className="py-2.5 px-3 text-right">Received Qty</th>
                       <th className="py-2.5 px-3 text-right">Damaged Qty</th>
                       <th className="py-2.5 px-3 text-right">Good Units</th>
@@ -1632,6 +1683,7 @@ export function GRNCreateEditPage() {
                               type="number"
                               min="0"
                               value={item.expectedQuantity}
+                              disabled={Boolean(selectedPoId)}
                               onChange={(e) =>
                                 updateItem(
                                   item._tempId,
@@ -1646,6 +1698,7 @@ export function GRNCreateEditPage() {
                             <Input
                               type="number"
                               min="0"
+                              max={selectedPoId ? item.expectedQuantity : undefined}
                               value={item.receivedQuantity}
                               onChange={(e) =>
                                 updateItem(
@@ -2399,6 +2452,11 @@ export function GRNCreateEditPage() {
             </div>
 
             {/* ── Physical Tagging Confirmation Card ── */}
+            {selectedPoId ? (
+              <div className="p-4 rounded-xl border border-blue-200 bg-blue-50/60 text-xs text-blue-900">
+                Inventory assigns scannable unit barcodes when the GRN is approved. Serial numbers entered above are saved with this receipt; provisional labels are not printed here.
+              </div>
+            ) : (
             <div className="p-4 rounded-xl border border-emerald-200 bg-emerald-50/50 space-y-3">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                 <div className="flex items-center gap-2">
@@ -2426,6 +2484,7 @@ export function GRNCreateEditPage() {
                 Confirm: All {barcodeSummary.totalUnits} Barcode Stickers Affixed in Receiving Bay
               </Button>
             </div>
+            )}
 
             {/* Step 4 Actions */}
             <div className="flex items-center justify-between pt-4 border-t border-slate-100">
@@ -2514,6 +2573,11 @@ export function GRNCreateEditPage() {
             </div>
 
             {/* Barcode Tagging Compliance Badge */}
+            {selectedPoId ? (
+              <div className="p-4 rounded-xl border border-blue-200 bg-blue-50/60 text-xs text-blue-900">
+                Serial numbers are recorded on this GRN. Inventory creates the canonical unit barcodes during GRN approval, so labels are printed after approval from the inventory unit registry.
+              </div>
+            ) : (
             <div
               className={cn(
                 'p-4 rounded-xl border flex items-center justify-between gap-3',
@@ -2554,6 +2618,7 @@ export function GRNCreateEditPage() {
                 </Button>
               )}
             </div>
+            )}
 
             {/* Items Summary Table */}
             <div className="border rounded-xl overflow-x-auto w-full text-xs">
@@ -2604,7 +2669,11 @@ export function GRNCreateEditPage() {
                           )}
                         </td>
                         <td className="py-2 px-3 text-center">
-                          <Badge
+                          {selectedPoId ? (
+                            <Badge variant="outline" className="text-[10px] font-mono bg-blue-50 text-blue-700 border-blue-200">
+                              Assigned on approval
+                            </Badge>
+                          ) : <Badge
                             variant="outline"
                             className={cn(
                               'text-[10px] font-mono',
@@ -2612,7 +2681,7 @@ export function GRNCreateEditPage() {
                             )}
                           >
                             {i.unitRecords?.length || 0} Units {i.barcodesConfirmed ? '✓' : 'Pending'}
-                          </Badge>
+                          </Badge>}
                         </td>
                       </tr>
                     );

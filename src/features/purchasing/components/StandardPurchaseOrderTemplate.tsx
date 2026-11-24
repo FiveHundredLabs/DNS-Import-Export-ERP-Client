@@ -72,8 +72,7 @@ export function POPageSheet({ purchaseOrder, page }: POPageSheetProps) {
                   <TableHead className="w-28 text-right font-bold text-slate-900 whitespace-nowrap">
                     Unit Price ({purchaseOrder.currency})
                   </TableHead>
-                  <TableHead className="w-16 text-right font-bold text-slate-900">Disc %</TableHead>
-                  <TableHead className="w-16 text-right font-bold text-slate-900">Tax %</TableHead>
+                  <TableHead className="w-24 text-right font-bold text-slate-900">Discount</TableHead>
                   <TableHead className="w-32 text-right font-bold text-slate-900 whitespace-nowrap">
                     Line Total ({purchaseOrder.currency})
                   </TableHead>
@@ -300,10 +299,11 @@ function POItemRow({
         {formatCurrency(item.unitPrice, currency)}
       </TableCell>
       <TableCell className="text-right font-mono text-slate-600 tabular-nums align-top py-2">
-        {item.discountPercent > 0 ? `${item.discountPercent}%` : '-'}
-      </TableCell>
-      <TableCell className="text-right font-mono text-slate-600 tabular-nums align-top py-2">
-        {item.taxRate > 0 ? `${item.taxRate}%` : '-'}
+        {item.discountType === 'PERCENTAGE' && (item.discountValue ?? item.discountPercent) > 0
+          ? `${item.discountValue ?? item.discountPercent}%`
+          : item.discountType === 'FIXED_AMOUNT' && (item.discountValue ?? item.discountAmount) > 0
+            ? formatCurrency(item.discountValue ?? item.discountAmount, currency)
+            : '-'}
       </TableCell>
       <TableCell className="text-right font-mono font-bold tabular-nums text-slate-900 whitespace-nowrap align-top py-2">
         {formatCurrency(item.total, currency)}
@@ -355,12 +355,6 @@ function POFinancialSummaryAndTerms({
             </span>
           </div>
         )}
-        <div className="flex justify-between text-slate-600">
-          <span>Applicable Taxes (VAT/SSCL):</span>
-          <span className="font-mono font-semibold tabular-nums">
-            {formatCurrency(purchaseOrder.taxTotal, purchaseOrder.currency)}
-          </span>
-        </div>
         {purchaseOrder.shippingCharges > 0 && (
           <div className="flex justify-between text-slate-600">
             <span>Freight / Shipping Charges:</span>
