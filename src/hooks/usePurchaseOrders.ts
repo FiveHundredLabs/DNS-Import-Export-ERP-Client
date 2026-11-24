@@ -55,7 +55,11 @@ export function usePurchaseOrderActions() {
     const po = mapPurchaseOrder(record);
     toast.success(
       submitForApproval
-        ? `Purchase Order ${po.poNumber} created and submitted for verification.`
+        ? po.status === 'APPROVED'
+          ? `Purchase Order ${po.poNumber} created and directly approved.`
+          : po.status === 'PENDING_APPROVAL'
+            ? `Purchase Order ${po.poNumber} created and submitted for Manager/Director approval.`
+            : `Purchase Order ${po.poNumber} created and submitted for Purchasing Manager verification.`
         : `Purchase Order ${po.poNumber} saved as draft.`,
     );
     return po;
@@ -66,14 +70,30 @@ export function usePurchaseOrderActions() {
     let record = await withActionError(() => purchaseOrdersApi.update(id, body), 'Failed to update purchase order.');
     if (submitForApproval) record = await withActionError(() => purchaseOrdersApi.submit(id), 'Failed to submit purchase order.');
     await invalidate(id);
-    return mapPurchaseOrder(record);
+    const po = mapPurchaseOrder(record);
+    if (submitForApproval) {
+      toast.success(
+        po.status === 'APPROVED'
+          ? `Purchase Order ${po.poNumber} updated and directly approved.`
+          : po.status === 'PENDING_APPROVAL'
+            ? `Purchase Order ${po.poNumber} updated and submitted for Manager/Director approval.`
+            : `Purchase Order ${po.poNumber} updated and submitted for Purchasing Manager verification.`
+      );
+    }
+    return po;
   };
 
   const submitPO = async (id: string, remark?: string) => {
     const record = await withActionError(() => purchaseOrdersApi.submit(id, { remark }), 'Failed to submit purchase order.');
     await invalidate(id);
     const po = mapPurchaseOrder(record);
-    toast.success(`Purchase Order ${po.poNumber} submitted for Purchasing Manager verification.`);
+    toast.success(
+      po.status === 'APPROVED'
+        ? `Purchase Order ${po.poNumber} directly approved.`
+        : po.status === 'PENDING_APPROVAL'
+          ? `Purchase Order ${po.poNumber} submitted for Manager/Director approval.`
+          : `Purchase Order ${po.poNumber} submitted for Purchasing Manager verification.`
+    );
     return po;
   };
 

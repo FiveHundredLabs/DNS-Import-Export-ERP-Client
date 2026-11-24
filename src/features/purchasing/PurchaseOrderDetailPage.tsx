@@ -110,7 +110,51 @@ export function PurchaseOrderDetailPage() {
       actions={<div className="flex flex-wrap gap-2">
         <Button variant="outline" onClick={() => navigate(`/purchasing/orders/${po.id}/print`)}><Printer className="mr-2 h-4 w-4" />Print / PDF</Button>
         {canManageOrders && (po.status === 'DRAFT' || po.status === 'REJECTED') && <Button variant="outline" onClick={() => navigate(`/purchasing/orders/${po.id}/edit`)}><Edit className="mr-2 h-4 w-4" />{po.status === 'REJECTED' ? 'Create revision' : 'Edit draft'}</Button>}
-        {canManageOrders && po.status === 'DRAFT' && <ConfirmButton variant="default" dialogVariant="warning" confirmTitle="Submit for verification" confirmMessage={`Submit ${po.poNumber} to the Purchasing Manager?`} confirmText="Submit PO" disabled={actionLoading} onConfirm={() => runAction(() => submitPO(po.id, comment), `${po.poNumber} submitted for verification.`)}><Send className="mr-2 h-4 w-4" />Submit</ConfirmButton>}
+        {canManageOrders && po.status === 'DRAFT' && (
+          <ConfirmButton
+            variant="default"
+            dialogVariant="warning"
+            confirmTitle={
+              role === 'DIRECTOR' || role === 'MANAGER'
+                ? 'Approve Purchase Order'
+                : role === 'PURCHASING_MANAGER'
+                  ? 'Submit for Manager Approval'
+                  : 'Submit for verification'
+            }
+            confirmMessage={
+              role === 'DIRECTOR' || role === 'MANAGER'
+                ? `Directly authorize and approve ${po.poNumber}?`
+                : role === 'PURCHASING_MANAGER'
+                  ? `Submit ${po.poNumber} directly for Manager/Director review? Stage 1 verification will be skipped.`
+                  : `Submit ${po.poNumber} to the Purchasing Manager?`
+            }
+            confirmText={
+              role === 'DIRECTOR' || role === 'MANAGER'
+                ? 'Approve PO'
+                : role === 'PURCHASING_MANAGER'
+                  ? 'Submit for Approval'
+                  : 'Submit PO'
+            }
+            disabled={actionLoading}
+            onConfirm={() =>
+              runAction(
+                () => submitPO(po.id, comment),
+                role === 'DIRECTOR' || role === 'MANAGER'
+                  ? `${po.poNumber} directly approved.`
+                  : role === 'PURCHASING_MANAGER'
+                    ? `${po.poNumber} submitted for Manager/Director approval.`
+                    : `${po.poNumber} submitted for verification.`,
+              )
+            }
+          >
+            <Send className="mr-2 h-4 w-4" />
+            {role === 'DIRECTOR' || role === 'MANAGER'
+              ? 'Approve PO'
+              : role === 'PURCHASING_MANAGER'
+                ? 'Submit for Approval'
+                : 'Submit'}
+          </ConfirmButton>
+        )}
         {canIssueOrders && po.status === 'APPROVED' && <ConfirmButton variant="default" dialogVariant="warning" confirmTitle="Issue to supplier" confirmMessage={`Record ${po.poNumber} as issued to ${po.supplierName}? This does not update inventory.`} confirmText="Issue to supplier" disabled={actionLoading || Boolean(po.sentAt)} onConfirm={() => runAction(() => issuePO(po.id, comment), `${po.poNumber} issued to supplier.`)}><Truck className="mr-2 h-4 w-4" />{po.sentAt ? 'Issued to supplier' : 'Issue to supplier'}</ConfirmButton>}
       </div>}
     />
