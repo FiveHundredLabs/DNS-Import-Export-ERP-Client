@@ -71,7 +71,7 @@ export function PurchaseOrderDetailPage() {
   const canVerify = role === 'PURCHASING_MANAGER' && po?.status === 'PENDING_VERIFICATION' && !isCreator;
   const canFinalApprove = (role === 'MANAGER' || role === 'DIRECTOR') && po?.status === 'PENDING_APPROVAL' && (role === 'DIRECTOR' || !isCreator);
   const canStageReject = role === 'PURCHASING_MANAGER' && po?.status === 'PENDING_VERIFICATION' && !isCreator;
-  const canFinalReject = (role === 'MANAGER' || role === 'DIRECTOR') && po?.status === 'PENDING_APPROVAL' && !isCreator;
+  const canFinalReject = (role === 'MANAGER' || role === 'DIRECTOR') && po?.status === 'PENDING_APPROVAL' && (role === 'DIRECTOR' || !isCreator);
   const canReview = canVerify || canFinalApprove || canStageReject || canFinalReject;
 
   const runAction = async (action: () => Promise<unknown>, successMessage: string) => {

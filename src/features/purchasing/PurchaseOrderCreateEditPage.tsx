@@ -1,14 +1,15 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { z } from 'zod';
-import { useSuppliers } from '../../api/suppliers/suppliers.hooks';
-import type { Supplier } from '../../api/suppliers/suppliers.types';
+import { useSuppliers, useSupplierLookup, useCreateSupplier } from '../../api/suppliers/suppliers.hooks';
+import type { Supplier, CreateSupplierPayload } from '../../api/suppliers/suppliers.types';
+import { SupplierFormDialog } from '../suppliers/SupplierFormDialog';
 import { useProducts as useApiProducts } from '../../api/products/products.hooks';
 import { usePurchaseOrder, usePurchaseOrderActions } from '../../hooks/usePurchaseOrders';
 import { useAuth } from '../../hooks/useAuth';
 import type { CreatePurchaseOrderPayload } from '../../api/purchase-orders/purchase-orders.types';
 import { formatCurrency } from '../../utils/formatters';
-import { AlertCircle, ArrowLeft, Building2, Package, Plus, Save, Send, Trash2 } from 'lucide-react';
+import { AlertCircle, ArrowLeft, Building2, Package, Plus, Save, Send, Trash2, UserPlus } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { ConfirmButton } from '../../components/ui/confirm-button';
 import { Input } from '../../components/ui/input';
@@ -88,21 +89,23 @@ function asLocalDate(value?: string | null) {
 export function PurchaseOrderCreateEditPage() {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
-  const { currentUser } = useAuth();
+  const { currentUser, role } = useAuth();
   const [searchParams] = useSearchParams();
   const isEdit = Boolean(id);
-  const canManageOrders = currentUser?.role === 'PURCHASING_OFFICER' || currentUser?.role === 'PURCHASING_MANAGER' || currentUser?.role === 'MANAGER' || currentUser?.role === 'DIRECTOR';
+  const canManageOrders = role === 'PURCHASING_OFFICER' || role === 'PURCHASING_MANAGER' || role === 'MANAGER' || role === 'DIRECTOR';
   const initialSupplierId = searchParams.get('supplierId') ?? '';
   const today = new Date().toISOString().slice(0, 10);
 
   const { purchaseOrder: existing, loading: poLoading, error: poError } = usePurchaseOrder(id);
   const { createPO, updatePO, revisePO } = usePurchaseOrderActions();
-  const supplierQuery = useSuppliers({ page: 1, limit: 100, status: 'ACTIVE', sortBy: 'name', sortOrder: 'asc' });
+  const supplierQuery = useSupplierLookup();
   const productQuery = useApiProducts({ page: 1, pageSize: 100, status: 'ACTIVE', sortBy: 'name', sortOrder: 'asc' });
-  const suppliers = supplierQuery.data?.data ?? [];
+  const suppliers = supplierQuery.data ?? [];
   const products = productQuery.data?.data ?? [];
 
   const [selectedSupplierId, setSelectedSupplierId] = useState(initialSupplierId);
+  const [isNewSupplierModalOpen, setIsNewSupplierModalOpen] = useState(false);
+  const createSupplierMutation = useCreateSupplier();
   const [orderDate, setOrderDate] = useState(today);
   const [expectedDeliveryDate, setExpectedDeliveryDate] = useState('');
   const [paymentTerms, setPaymentTerms] = useState('');
@@ -250,6 +253,13 @@ export function PurchaseOrderCreateEditPage() {
     }
   };
 
+  const handleQuickCreateSupplier = async (payload: CreateSupplierPayload) => {
+    const created = await createSupplierMutation.mutateAsync(payload);
+    toast.success(`Supplier "${created.name}" created.`);
+    setSelectedSupplierId(created.id);
+    setIsNewSupplierModalOpen(false);
+  };
+
   if ((isEdit && poLoading) || supplierQuery.isLoading || productQuery.isLoading) {
     return <TableLoadingSkeleton />;
   }
@@ -325,10 +335,16 @@ export function PurchaseOrderCreateEditPage() {
       <FormSection icon={Building2} title="Supplier & Order Details" description="Supplier and delivery terms are captured on this purchase order.">
         <div className="grid gap-4 md:grid-cols-3">
           <FormField label="Supplier" required>
-            <select value={selectedSupplierId} onChange={(event) => setSelectedSupplierId(event.target.value)} className="h-9 w-full rounded-md border border-slate-300 bg-white px-3 text-sm">
-              <option value="">Select an active supplier</option>
-              {suppliers.map((supplier) => <option key={supplier.id} value={supplier.id}>{supplier.name}{supplier.supplierCode ? ` (${supplier.supplierCode})` : ''}</option>)}
-            </select>
+            <div className="flex gap-2">
+              <select value={selectedSupplierId} onChange={(event) => setSelectedSupplierId(event.target.value)} className="h-9 w-full rounded-md border border-slate-300 bg-white px-3 text-sm">
+                <option value="">Select an active supplier</option>
+                {suppliers.map((supplier) => <option key={supplier.id} value={supplier.id}>{supplier.name}{supplier.supplierCode ? ` (${supplier.supplierCode})` : ''}</option>)}
+              </select>
+              <Button type="button" size="sm" variant="outline" className="shrink-0 text-xs gap-1" onClick={() => setIsNewSupplierModalOpen(true)}>
+                <Plus className="h-3.5 w-3.5" />
+                New
+              </Button>
+            </div>
           </FormField>
           <FormField label="PO Date" required>
             <Input type="date" value={orderDate} onChange={(event) => setOrderDate(event.target.value)} />
@@ -356,7 +372,7 @@ export function PurchaseOrderCreateEditPage() {
         <div className="overflow-x-auto rounded-lg border border-slate-200">
           <table className="w-full min-w-[850px] text-sm">
             <thead className="bg-slate-50 text-left text-xs uppercase text-slate-500"><tr>
-              <th className="p-3">Product</th><th className="w-24 p-3 text-right">Qty</th><th className="w-36 p-3 text-right">Unit Cost (LKR)</th><th className="w-36 p-3">Discount</th><th className="w-36 p-3 text-right">Line Preview (LKR)</th><th className="w-10 p-3" />
+              <th className="p-3">Product</th><th className="w-24 p-3 text-right">Qty</th><th className="w-36 p-3 text-right">Unit Price (LKR)</th><th className="w-36 p-3">Discount</th><th className="w-36 p-3 text-right">Line Total (LKR)</th><th className="w-10 p-3" />
             </tr></thead>
             <tbody className="divide-y divide-slate-100">
               {lines.map((line) => {
@@ -396,7 +412,7 @@ export function PurchaseOrderCreateEditPage() {
           <CardContent className="space-y-3 text-sm">
             <div className="flex justify-between"><span>Gross line total</span><span className="font-mono">{formatCurrency(calculation.subtotal, 'LKR')}</span></div>
             <div className="flex justify-between text-emerald-700"><span>Line discounts</span><span className="font-mono">−{formatCurrency(calculation.totalDiscount, 'LKR')}</span></div>
-            <div className="flex justify-between border-t border-slate-300 pt-3 text-base font-bold"><span>Estimated Total</span><span className="font-mono">{formatCurrency(calculation.grandTotal, 'LKR')}</span></div>
+            <div className="flex justify-between border-t border-slate-300 pt-3 text-base font-bold"><span>Grand Total (LKR)</span><span className="font-mono">{formatCurrency(calculation.grandTotal, 'LKR')}</span></div>
             <p className="text-xs text-slate-500">The backend recalculates all discounts and totals before saving. Tax and additional charges are not configured for purchase orders.</p>
           </CardContent>
         </Card>
@@ -410,6 +426,12 @@ export function PurchaseOrderCreateEditPage() {
           <ConfirmButton variant="outline" confirmTitle="Save Draft Purchase Order" confirmMessage="Save the current purchase order as a draft?" confirmText="Save Draft" disabled={submitting} onConfirm={() => void handleSaveOrder(false)}><Save className="mr-2 h-4 w-4" />Save Draft</ConfirmButton>
           <ConfirmButton variant="default" confirmTitle="Submit Purchase Order" confirmMessage="Submit this purchase order to the Purchasing Manager for review?" confirmText="Submit for Review" disabled={submitting} onConfirm={() => void handleSaveOrder(true)}><Send className="mr-2 h-4 w-4" />Submit for Review</ConfirmButton>
         </>}
+      />
+
+      <SupplierFormDialog
+        open={isNewSupplierModalOpen}
+        onOpenChange={setIsNewSupplierModalOpen}
+        onSave={handleQuickCreateSupplier}
       />
     </div>
   );

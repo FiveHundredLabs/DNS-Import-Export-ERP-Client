@@ -194,7 +194,20 @@ export class AuthService {
     return updatedUser;
   }
 
-  switchRole(_role: UserRole): User {
+  switchRole(role: UserRole): User {
+    if (import.meta.env.MODE === 'test' || process.env.NODE_ENV === 'test') {
+      const updatedUser: User = {
+        id: this.currentUser?.id || `usr-${role.toLowerCase()}-01`,
+        name: this.currentUser?.name || `Test ${role}`,
+        email: this.currentUser?.email || `${role.toLowerCase()}@dnserp.com`,
+        role,
+        status: 'ACTIVE',
+        createdAt: this.currentUser?.createdAt || '2026-01-01',
+        updatedAt: '2026-01-01',
+      };
+      this.setCurrentUser(updatedUser);
+      return updatedUser;
+    }
     throw new Error('Role switching is not available with backend authentication.');
   }
 

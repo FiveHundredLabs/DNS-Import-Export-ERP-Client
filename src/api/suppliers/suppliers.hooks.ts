@@ -10,9 +10,18 @@ export const supplierQueryKeys = {
   all: ['suppliers'] as const,
   lists: () => [...supplierQueryKeys.all, 'list'] as const,
   list: (params: SupplierListParams = {}) => [...supplierQueryKeys.lists(), params] as const,
+  lookup: () => [...supplierQueryKeys.all, 'lookup'] as const,
   details: () => [...supplierQueryKeys.all, 'detail'] as const,
   detail: (id: string) => [...supplierQueryKeys.details(), id] as const,
 };
+
+export function useSupplierLookup() {
+  return useQuery({
+    queryKey: supplierQueryKeys.lookup(),
+    queryFn: ({ signal }) => suppliersApi.lookup(signal),
+    staleTime: 60_000,
+  });
+}
 
 export function useSuppliers(params: SupplierListParams = {}) {
   return useQuery({
@@ -36,6 +45,7 @@ export function useCreateSupplier() {
     mutationFn: (payload: CreateSupplierPayload) => suppliersApi.create(payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: supplierQueryKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: supplierQueryKeys.lookup() });
     },
   });
 }
@@ -47,6 +57,7 @@ export function useUpdateSupplier() {
       suppliersApi.update(id, payload),
     onSuccess: (_supplier, { id }) => {
       queryClient.invalidateQueries({ queryKey: supplierQueryKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: supplierQueryKeys.lookup() });
       queryClient.invalidateQueries({ queryKey: supplierQueryKeys.detail(id) });
     },
   });
@@ -58,6 +69,7 @@ export function useDeleteSupplier() {
     mutationFn: (id: string) => suppliersApi.delete(id),
     onSuccess: (_response, id) => {
       queryClient.invalidateQueries({ queryKey: supplierQueryKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: supplierQueryKeys.lookup() });
       queryClient.removeQueries({ queryKey: supplierQueryKeys.detail(id) });
     },
   });

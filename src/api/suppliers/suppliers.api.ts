@@ -36,6 +36,13 @@ export const suppliersApi = {
     };
   },
 
+  lookup: async (signal?: AbortSignal): Promise<Supplier[]> => {
+    return apiGet<Supplier[]>('/suppliers/lookup', {
+      signal,
+      suppressErrorToast: true,
+    });
+  },
+
   getById: (id: string, signal?: AbortSignal): Promise<Supplier> =>
     apiGet<Supplier>('/suppliers/' + encodeURIComponent(id), {
       signal,
