@@ -201,7 +201,7 @@ export function PurchaseOrderCreateEditPage() {
       setFormError(parsed.error.issues[0]?.message || 'Review the highlighted purchase order details.');
       return;
     }
-    if (!selectedSupplier || selectedSupplier.status !== 'ACTIVE') {
+    if (!selectedSupplier || (selectedSupplier.status && selectedSupplier.status !== 'ACTIVE')) {
       setFormError('Select an active supplier.');
       return;
     }
