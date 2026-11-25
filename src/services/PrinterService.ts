@@ -28,6 +28,7 @@ export interface BarcodeStickerData {
   companyName?: string;
   productName: string;
   sku: string;
+  unitId?: string;
   unitBarcode: string;
   serialNumber?: string;
   unitIndex?: number;
@@ -133,6 +134,7 @@ export class ThermalPrinterService implements IPrinterService {
               <div class="product-name" title="${escapeHtml(s.productName)}">${escapeHtml(s.productName)}</div>
               <div class="sku-row">
                 <span>SKU: ${escapeHtml(s.sku)}</span>
+                ${s.unitId ? `<span>&bull; ${escapeHtml(s.unitId)}</span>` : ''}
                 ${s.batchNumber ? `<span>&bull; BATCH: ${escapeHtml(s.batchNumber)}</span>` : ''}
               </div>
             </div>

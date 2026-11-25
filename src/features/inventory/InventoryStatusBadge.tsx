@@ -126,7 +126,7 @@ export function InventoryStatusBadge({ status, className, label }: InventoryStat
           )}
         >
           <Clock className="h-3 w-3 text-amber-600 shrink-0" />
-          <span>{label || 'Pending Manager Verification'}</span>
+          <span>{label || 'Pending Stock Manager'}</span>
         </Badge>
       );
 
@@ -140,7 +140,7 @@ export function InventoryStatusBadge({ status, className, label }: InventoryStat
           )}
         >
           <AlertTriangle className="h-3 w-3 text-rose-600 shrink-0" />
-          <span>{label || 'Manager Rejected'}</span>
+          <span>{label || 'Stock Manager Rejected'}</span>
         </Badge>
       );
 
@@ -149,12 +149,12 @@ export function InventoryStatusBadge({ status, className, label }: InventoryStat
         <Badge
           variant="warning"
           className={cn(
-            'gap-1 font-semibold bg-amber-50 text-amber-700 border-amber-200 text-xs py-0.5 px-2.5 shadow-2xs',
+            'gap-1 font-semibold bg-blue-50 text-blue-700 border-blue-200 text-xs py-0.5 px-2.5 shadow-2xs',
             className
           )}
         >
-          <Clock className="h-3 w-3 text-amber-600 shrink-0" />
-          <span>{label || 'Submitted'}</span>
+          <Clock className="h-3 w-3 text-blue-600 shrink-0" />
+          <span>{label || 'Pending Finance Manager'}</span>
         </Badge>
       );
 
