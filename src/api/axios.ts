@@ -96,27 +96,99 @@ function redirectTo(path: '/login' | '/404' | '/500'): void {
   }
 }
 
+export function isRequestCanceled(error: unknown): boolean {
+  if (!error) return false;
+  if (typeof error === 'string') {
+    const lower = error.trim().toLowerCase();
+    return lower === 'canceled' || lower === 'cancelled';
+  }
+  if (axios.isCancel(error)) return true;
+  if (typeof error === 'object') {
+    const anyErr = error as any;
+    if (
+      anyErr.code === 'ERR_CANCELED' ||
+      anyErr.name === 'CanceledError' ||
+      anyErr.name === 'AbortError' ||
+      anyErr.__CANCEL__ ||
+      (typeof anyErr.message === 'string' &&
+        (anyErr.message.toLowerCase() === 'canceled' || anyErr.message.toLowerCase() === 'cancelled'))
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
+export function extractErrorMessage(error: unknown, fallback = 'An unexpected error occurred.'): string {
+  if (!error) return fallback;
+  if (isRequestCanceled(error)) return '';
+
+  if (typeof error === 'string' && error.trim()) {
+    return error;
+  }
+
+  if (typeof error === 'object') {
+    const anyErr = error as any;
+    const responseData = anyErr.response?.data;
+
+    if (responseData) {
+      if (typeof responseData.message === 'string' && responseData.message.trim()) {
+        return responseData.message;
+      }
+      if (Array.isArray(responseData.message) && responseData.message.length > 0) {
+        return responseData.message.filter(Boolean).join(', ');
+      }
+      if (Array.isArray(responseData.details) && responseData.details.length > 0) {
+        return responseData.details.filter(Boolean).join(', ');
+      }
+      if (typeof responseData.error === 'string' && responseData.error.trim()) {
+        return responseData.error;
+      }
+    }
+
+    if (
+      typeof anyErr.message === 'string' &&
+      anyErr.message.trim() &&
+      !anyErr.message.startsWith('Request failed with status code')
+    ) {
+      return anyErr.message;
+    }
+  }
+
+  return fallback;
+}
+
 function getErrorPayload(error: AxiosError<ApiErrorResponse>): ApiErrorResponse {
-  const responseData = error.response?.data;
+  const responseData = error.response?.data as any;
 
   if (responseData && typeof responseData === 'object') {
-    return responseData;
+    const message = extractErrorMessage(error, error.message || 'A network error occurred.');
+
+    return {
+      statusCode: responseData.statusCode || error.response?.status || 0,
+      code: responseData.code || 'ERROR',
+      message,
+      details: responseData.details,
+      requestId: responseData.requestId,
+    };
   }
 
   return {
     statusCode: error.response?.status || 0,
     code: error.code || 'NETWORK_ERROR',
-    message: error.message || 'A network error occurred.',
+    message: extractErrorMessage(error, error.message || 'A network error occurred.'),
   };
 }
 
 function notifyError(error: AxiosError<ApiErrorResponse>): void {
-  if (error.config?.suppressErrorToast) {
+  if (error.config?.suppressErrorToast || isRequestCanceled(error)) {
     return;
   }
 
   const payload = getErrorPayload(error);
-  toast.error(payload.message);
+  if (payload.message && !isRequestCanceled(payload.message)) {
+    toast.error(payload.message);
+  }
 }
 
 function redirectForError(
@@ -132,9 +204,10 @@ function redirectForError(
 
   if (status === 404) {
     redirectTo('/404');
-  } else if (status !== undefined && status >= 500) {
-    redirectTo('/500');
   }
+  // Note: 500 server errors do NOT perform hard page redirects (redirectTo('/500')),
+  // which would destroy in-memory authentication and reload the application.
+  // Instead, 500 errors are surfaced via notifyError() toast or component error boundaries.
 }
 
 export async function refreshAccessToken(): Promise<string> {
@@ -187,8 +260,21 @@ apiClient.interceptors.response.use(
     return response;
   },
   async (error: AxiosError<ApiErrorResponse>) => {
+    // 1. If request was intentionally aborted or cancelled (e.g. via AbortController,
+    // component unmounting, navigation, React StrictMode, or TanStack Query cancellation),
+    // do NOT treat it as an API failure. Do NOT show toasts or redirect.
+    if (isRequestCanceled(error)) {
+      return Promise.reject(error);
+    }
+
     const config = error.config as ApiRequestConfig | undefined;
     const status = error.response?.status;
+
+    // Normalize error.message to the server's descriptive message instead of generic Axios message
+    const payload = getErrorPayload(error);
+    if (payload.message && typeof payload.message === 'string') {
+      error.message = payload.message;
+    }
 
     if (
       status === 401 &&
@@ -209,14 +295,16 @@ apiClient.interceptors.response.use(
         // Session has expired — redirect to login silently. The login page is
         // sufficient feedback; a toast here would be noisy and confusing on boot.
         redirectTo('/login');
-        throw refreshError;
+        return Promise.reject(refreshError);
       }
     }
 
     notifyError(error);
     redirectForError(error);
 
-    if (status === 401) {
+    // Only clear session and redirect to /login when an authenticated business request gets 401
+    // (do not redirect on login/refresh failures where the user is already on /login or refreshing)
+    if (status === 401 && !isAuthEndpoint(config?.url)) {
       clearAccessToken();
       clearAppCache();
       redirectTo('/login');

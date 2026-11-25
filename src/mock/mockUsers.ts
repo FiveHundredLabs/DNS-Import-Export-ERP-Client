@@ -182,4 +182,20 @@ export const MOCK_USERS: User[] = [
     phone: '+94 77 876 5432',
     isActive: true,
   },
+  {
+    id: 'usr-120',
+    name: 'Suresh Gamage',
+    email: 'rep.unassigned1@dnserp.com',
+    role: 'SALES_REP',
+    phone: '+94 77 111 2233',
+    isActive: true,
+  },
+  {
+    id: 'usr-121',
+    name: 'Tharindu Fernando',
+    email: 'rep.unassigned2@dnserp.com',
+    role: 'SALES_REP',
+    phone: '+94 77 222 3344',
+    isActive: true,
+  },
 ];

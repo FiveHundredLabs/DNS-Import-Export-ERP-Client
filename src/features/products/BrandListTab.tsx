@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { useBrands, useCreateBrand, useUpdateBrand, useUpdateBrandStatus } from '../../api/brands/brands.hooks';
+import { useBrands, useCreateBrand, useUpdateBrand, useUpdateBrandStatus, useDeleteBrand } from '../../api/brands/brands.hooks';
 import { Brand, BrandStatus } from '../../api/brands/brands.types';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../../components/ui/table';
 import { Badge } from '../../components/ui/badge';
@@ -10,8 +10,10 @@ import { Dialog, DialogHeader, DialogTitle, DialogDescription, DialogFooter } fr
 import { TableLoadingSkeleton } from '../../components/common/LoadingSkeleton';
 import { EmptyState } from '../../components/common/EmptyState';
 import { ErrorState } from '../../components/common/ErrorState';
-import { Search, Plus, Edit2, Power, RefreshCw, Tag, AlertCircle } from 'lucide-react';
+import { Search, Plus, Edit2, Power, RefreshCw, Tag, AlertCircle, Trash2 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
+import { toast } from 'sonner';
+import { extractErrorMessage } from '../../api/client';
 
 export function BrandListTab() {
   const { role, hasPermission } = useAuth();
@@ -29,10 +31,14 @@ export function BrandListTab() {
   // Status toggle confirmation modal
   const [statusTargetBrand, setStatusTargetBrand] = useState<Brand | null>(null);
 
+  // Delete confirmation modal
+  const [brandToDelete, setBrandToDelete] = useState<Brand | null>(null);
+
   const { data: brands = [], isLoading, error, refetch } = useBrands();
   const createBrandMutation = useCreateBrand();
   const updateBrandMutation = useUpdateBrand();
   const updateStatusMutation = useUpdateBrandStatus();
+  const deleteBrandMutation = useDeleteBrand();
 
   // Filtered brands
   const filteredBrands = useMemo(() => {
@@ -241,6 +247,15 @@ export function BrandListTab() {
                           >
                             <Power className="h-3.5 w-3.5" />
                           </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setBrandToDelete(brand)}
+                            title="Delete Brand"
+                            className="text-rose-600 hover:text-rose-700 hover:bg-rose-50"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
                         </div>
                       </TableCell>
                     )}
@@ -362,6 +377,61 @@ export function BrandListTab() {
               ? 'Deactivate'
               : 'Activate'}
           </Button>
+        </DialogFooter>
+      </Dialog>
+
+      {/* Delete Brand Confirmation Modal */}
+      <Dialog open={Boolean(brandToDelete)} onOpenChange={(open) => !open && setBrandToDelete(null)}>
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-rose-700">
+            <Trash2 className="h-5 w-5 text-rose-600" />
+            Delete Brand
+          </DialogTitle>
+          <DialogDescription>
+            {brandToDelete && (brandToDelete._count?.products ?? (brandToDelete as any).productCount ?? 0) > 0 ? (
+              <div className="space-y-3 pt-2 text-xs">
+                <div className="p-3 bg-amber-50 text-amber-900 border border-amber-200 rounded-lg">
+                  <strong>Cannot Delete Brand:</strong> Brand <strong>"{brandToDelete.name}"</strong> is currently referenced by <strong>{brandToDelete._count?.products ?? (brandToDelete as any).productCount}</strong> product(s).
+                </div>
+                <p className="text-slate-600">
+                  To prevent breaking product references, please reassign or delete the associated products before attempting to delete this brand.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-2 pt-2 text-xs text-slate-600">
+                <p>
+                  Are you sure you want to delete brand <strong>"{brandToDelete?.name}"</strong>?
+                </p>
+                <p className="text-slate-500">
+                  This brand has no associated products and will be removed from the system.
+                </p>
+              </div>
+            )}
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter className="mt-4 gap-2 sm:gap-0">
+          <Button variant="outline" onClick={() => setBrandToDelete(null)}>
+            {(brandToDelete && (brandToDelete._count?.products ?? (brandToDelete as any).productCount ?? 0) > 0) ? 'Close' : 'Cancel'}
+          </Button>
+          {Boolean(brandToDelete && (brandToDelete._count?.products ?? (brandToDelete as any).productCount ?? 0) === 0) && (
+            <Button
+              variant="destructive"
+              disabled={deleteBrandMutation.isPending}
+              onClick={async () => {
+                if (!brandToDelete) return;
+                try {
+                  await deleteBrandMutation.mutateAsync(brandToDelete.id);
+                  toast.success(`Brand "${brandToDelete.name}" deleted successfully.`);
+                  setBrandToDelete(null);
+                } catch (err: unknown) {
+                  toast.error(extractErrorMessage(err, 'Failed to delete brand'));
+                }
+              }}
+              className="bg-rose-600 hover:bg-rose-700 text-white"
+            >
+              {deleteBrandMutation.isPending ? 'Deleting...' : 'Delete Brand'}
+            </Button>
+          )}
         </DialogFooter>
       </Dialog>
     </div>

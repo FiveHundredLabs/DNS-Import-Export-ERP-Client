@@ -1,464 +1,309 @@
-import { useState, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { usePurchaseOrders } from '../../hooks/usePurchaseOrders';
-import { useFinanceLedger } from '../finance/hooks/useFinanceLedger';
+import { useAuth } from '../../hooks/useAuth';
+import { useSuppliers } from '../../api/suppliers/suppliers.hooks';
+import type { ApiPurchaseOrderStatus } from '../../api/purchase-orders/purchase-orders.types';
 import { PurchaseOrderStatusBadge } from './components/PurchaseOrderStatusBadge';
 import { formatCurrency, formatDate } from '../../utils/formatters';
-import {
-  ShoppingCart,
-  Plus,
-  Search,
-  Filter,
-  Eye,
-  Edit,
-  Printer,
-  Clock,
-  CheckCircle2,
-  Send,
-  FileText,
-  Trash2,
-  Calendar,
-} from 'lucide-react';
+import { AlertCircle, Edit, Eye, FileText, Plus, Printer, RefreshCw, Search, Trash2, XCircle } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { ConfirmButton } from '../../components/ui/confirm-button';
+import { Dialog, DialogDescription, DialogFooter, DialogTitle } from '../../components/ui/dialog';
 import { Input } from '../../components/ui/input';
-import { Badge } from '../../components/ui/badge';
+import { Textarea } from '../../components/ui/textarea';
 import { Card, CardContent } from '../../components/ui/card';
 import { TableLoadingSkeleton } from '../../components/common/LoadingSkeleton';
 import { PageHeader } from '../../components/common/PageHeader';
-import { StatCard } from '../../components/common/StatCard';
-import { PurchaseOrderStatus } from '../../types/purchasing';
+import { toast } from 'sonner';
+import type { PurchaseOrder } from '../../types/purchasing';
+
+const PAGE_SIZE = 10;
+const statusOptions: Array<{ value: ApiPurchaseOrderStatus; label: string }> = [
+  { value: 'DRAFT', label: 'Draft' },
+  { value: 'PENDING_VERIFICATION', label: 'Pending verification' },
+  { value: 'PENDING_APPROVAL', label: 'Pending final approval' },
+  { value: 'APPROVED', label: 'Approved' },
+  { value: 'REJECTED', label: 'Rejected' },
+  { value: 'PARTIALLY_RECEIVED', label: 'Partially received' },
+  { value: 'COMPLETED', label: 'Completed' },
+  { value: 'CANCELLED', label: 'Cancelled' },
+];
 
 export function PurchaseOrderListPage() {
   const navigate = useNavigate();
+  const { currentUser } = useAuth();
+  const role = currentUser?.role;
+  const canManageOrders = role === 'PURCHASING_OFFICER' || role === 'PURCHASING_MANAGER' || role === 'MANAGER' || role === 'DIRECTOR';
   const [searchParams] = useSearchParams();
-  const initialStatus = searchParams.get('status') as PurchaseOrderStatus | null;
-
-  const { purchaseOrders, loading, submitPO, deletePO } = usePurchaseOrders();
-  const { suppliers } = useFinanceLedger();
-
+  const requestedStatus = searchParams.get('status');
+  const initialStatus = statusOptions.some((status) => status.value === requestedStatus)
+    ? requestedStatus as ApiPurchaseOrderStatus
+    : 'ALL';
+  const [status, setStatus] = useState<ApiPurchaseOrderStatus | 'ALL'>(initialStatus);
+  const [supplierId, setSupplierId] = useState('ALL');
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<PurchaseOrderStatus | 'ALL'>(
-    initialStatus || 'ALL'
-  );
-  const [selectedSupplierId, setSelectedSupplierId] = useState<string>('ALL');
-
-  // Pagination
+  const [serverSearch, setServerSearch] = useState('');
   const [page, setPage] = useState(1);
-  const pageSize = 10;
 
-  const filteredOrders = useMemo(() => {
-    return purchaseOrders.filter((po) => {
-      if (statusFilter !== 'ALL' && po.status !== statusFilter) return false;
-      if (selectedSupplierId !== 'ALL' && po.supplierId !== selectedSupplierId) return false;
-      if (!search.trim()) return true;
+  useEffect(() => {
+    const timer = window.setTimeout(() => setServerSearch(search.trim()), 250);
+    return () => window.clearTimeout(timer);
+  }, [search]);
 
-      const q = search.toLowerCase();
-      return (
-        po.poNumber.toLowerCase().includes(q) ||
-        po.supplierName.toLowerCase().includes(q) ||
-        po.supplierCode.toLowerCase().includes(q) ||
-        po.createdByName?.toLowerCase().includes(q) ||
-        po.items.some(
-          (item) =>
-            item.productName.toLowerCase().includes(q) ||
-            item.productCode.toLowerCase().includes(q)
-        )
-      );
-    });
-  }, [purchaseOrders, search, statusFilter, selectedSupplierId]);
+  const params = useMemo(() => ({
+    page,
+    limit: PAGE_SIZE,
+    ...(status === 'ALL' ? {} : { status }),
+    ...(supplierId === 'ALL' ? {} : { supplierId }),
+    ...(serverSearch ? { search: serverSearch } : {}),
+    sortBy: 'createdAt' as const,
+    sortOrder: 'desc' as const,
+  }), [page, status, supplierId, serverSearch]);
 
-  const totalPages = Math.ceil(filteredOrders.length / pageSize) || 1;
-  const paginatedOrders = useMemo(() => {
-    const start = (page - 1) * pageSize;
-    return filteredOrders.slice(start, start + pageSize);
-  }, [filteredOrders, page, pageSize]);
+  const isManagerOrDirector = role === 'MANAGER' || role === 'DIRECTOR';
+  const [rejectPoTarget, setRejectPoTarget] = useState<PurchaseOrder | null>(null);
+  const [listRejectionReason, setListRejectionReason] = useState('');
+  const [actionLoading, setActionLoading] = useState(false);
 
-  const metrics = useMemo(() => {
-    return {
-      all: purchaseOrders.length,
-      draft: purchaseOrders.filter((p) => p.status === 'DRAFT').length,
-      pending: purchaseOrders.filter((p) => p.status === 'PENDING_APPROVAL').length,
-      approved: purchaseOrders.filter((p) => p.status === 'APPROVED').length,
-      sent: purchaseOrders.filter((p) => p.status === 'SENT_TO_SUPPLIER').length,
-      rejected: purchaseOrders.filter((p) => p.status === 'REJECTED').length,
-    };
-  }, [purchaseOrders]);
+  const { purchaseOrders, pagination, loading, error, refetch, submitPO, verifyPO, approvePO, rejectPO, deletePO } = usePurchaseOrders(params);
+  const supplierQuery = useSuppliers({ page: 1, limit: 100, status: 'ACTIVE', sortBy: 'name', sortOrder: 'asc' });
+  const suppliers = supplierQuery.data?.data ?? [];
+  const totalPages = Math.max(1, pagination.totalPages);
 
-  const handleSubmitDraft = async (id: string) => {
-    await submitPO(id);
+  const updateFilter = (update: () => void) => {
+    update();
+    setPage(1);
   };
-
-  const handleDeleteDraft = async (id: string) => {
-    await deletePO(id);
-  };
-
-  if (loading && purchaseOrders.length === 0) {
-    return (
-      <div className="space-y-6">
-        <TableLoadingSkeleton />
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6">
-      {/* Standardized PageHeader */}
       <PageHeader
         title="Purchase Orders"
-        subtitle="Manage procurement requests, internal approvals, vendor dispatches, and print A4 documents."
-        badge={
-          <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 text-xs font-mono">
-            Procurement Lifecycle
-          </Badge>
-        }
-        breadcrumbs={[
-          { label: 'Purchasing', href: '/purchasing' },
-          { label: 'Purchase Orders' },
-        ]}
-        actions={
-          <Button
-            onClick={() => navigate('/purchasing/orders/new')}
-            className="gap-1.5 bg-primary hover:bg-primary-hover text-primary-foreground font-semibold shadow-xs text-xs h-9 px-4 rounded-lg"
-          >
-            <Plus className="h-4 w-4" />
-            <span>New Purchase Order</span>
+        subtitle="Create and track supplier orders through verification, approval, and supplier issue."
+        breadcrumbs={[{ label: 'Purchasing', href: '/purchasing' }, { label: 'Purchase Orders' }]}
+        actions={canManageOrders ? (
+          <Button onClick={() => navigate('/purchasing/orders/new')} className="gap-2">
+            <Plus className="h-4 w-4" /> New Purchase Order
           </Button>
-        }
+        ) : undefined}
       />
 
-      {/* Metric Tabs Bar */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-        {[
-          { id: 'ALL', label: 'All Orders', count: metrics.all, icon: ShoppingCart, variant: 'indigo' as const },
-          { id: 'DRAFT', label: 'Drafts', count: metrics.draft, icon: FileText, variant: 'default' as const },
-          { id: 'PENDING_APPROVAL', label: 'Pending Approval', count: metrics.pending, icon: Clock, variant: 'amber' as const },
-          { id: 'APPROVED', label: 'Approved', count: metrics.approved, icon: CheckCircle2, variant: 'emerald' as const },
-          { id: 'SENT_TO_SUPPLIER', label: 'Sent to Vendor', count: metrics.sent, icon: Send, variant: 'blue' as const },
-          { id: 'REJECTED', label: 'Rejected', count: metrics.rejected, icon: Filter, variant: 'rose' as const },
-        ].map((tab) => (
-          <StatCard
-            key={tab.id}
-            title={tab.label}
-            value={tab.count}
-            icon={tab.icon}
-            variant={tab.variant}
-            selected={statusFilter === tab.id}
-            onClick={() => {
-              setStatusFilter(tab.id as any);
-              setPage(1);
-            }}
-          />
-        ))}
-      </div>
-
-      {/* Filter Toolbar */}
-      <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-          <Input
-            placeholder="Search PO#, supplier, product code, name..."
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setPage(1);
-            }}
-            className="pl-9 h-9 text-xs"
-          />
-        </div>
-
-        <div className="flex items-center gap-2">
-          {/* Supplier Dropdown Filter */}
+      <Card className="border-slate-200">
+        <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center">
+          <div className="relative min-w-0 flex-1">
+            <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+            <Input
+              value={search}
+              onChange={(event) => updateFilter(() => setSearch(event.target.value))}
+              placeholder="Search PO number, supplier, product, or note"
+              className="pl-9"
+              aria-label="Search purchase orders"
+            />
+          </div>
           <select
-            value={selectedSupplierId}
-            onChange={(e) => {
-              setSelectedSupplierId(e.target.value);
-              setPage(1);
-            }}
-            className="h-9 text-xs rounded-md border border-slate-200 bg-white px-3 text-slate-700 focus:outline-none focus:ring-1 focus:ring-slate-400"
+            aria-label="Filter by status"
+            value={status}
+            onChange={(event) => updateFilter(() => setStatus(event.target.value as ApiPurchaseOrderStatus | 'ALL'))}
+            className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-700"
           >
-            <option value="ALL">All Suppliers</option>
-            {suppliers.map((sup) => (
-              <option key={sup.id} value={sup.id}>
-                {sup.name}
-              </option>
-            ))}
+            <option value="ALL">All statuses</option>
+            {statusOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
           </select>
-        </div>
-      </div>
-
-      {/* Purchase Orders Table */}
-      <Card className="border-slate-200 shadow-2xs overflow-hidden">
-        <CardContent className="p-0">
-          {/* Mobile Card List (block md:hidden) */}
-          <div className="block md:hidden p-3 space-y-3">
-            {paginatedOrders.length === 0 ? (
-              <div className="py-8 text-center text-slate-400 text-xs">
-                No Purchase Orders found matching your criteria.
-              </div>
-            ) : (
-              paginatedOrders.map((po) => (
-                <div
-                  key={po.id}
-                  onClick={() => navigate(`/purchasing/orders/${po.id}`)}
-                  className="rounded-2xl border border-slate-200/90 bg-white p-3.5 shadow-xs hover:border-primary/50 transition-all cursor-pointer active:scale-[0.99] space-y-3"
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-1.5 min-w-0">
-                      <span className="font-mono text-xs font-bold text-slate-900 truncate">
-                        {po.poNumber}
-                      </span>
-                      <span className="text-[10px] text-slate-400 font-mono shrink-0">
-                        • {po.items.length} {po.items.length === 1 ? 'item' : 'items'}
-                      </span>
-                    </div>
-                    <div className="shrink-0" onClick={(e) => e.stopPropagation()}>
-                      <PurchaseOrderStatusBadge status={po.status} />
-                    </div>
-                  </div>
-
-                  <div>
-                    <div className="font-semibold text-xs text-slate-900 truncate">{po.supplierName}</div>
-                    <div className="text-[10px] text-slate-400 font-mono mt-0.5">Vendor: {po.supplierCode}</div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2 bg-slate-50 p-2.5 rounded-xl border border-slate-100 text-xs">
-                    <div>
-                      <span className="text-[10px] text-slate-400 block">Order Date</span>
-                      <span className="font-medium text-slate-700">{formatDate(po.orderDate)}</span>
-                      <span className="text-[10px] text-slate-400 block mt-0.5">Due: {formatDate(po.expectedDeliveryDate)}</span>
-                    </div>
-                    <div className="text-right">
-                      <span className="text-[10px] text-slate-400 block">Grand Total</span>
-                      <span className="font-mono font-bold text-slate-900 text-sm">
-                        {formatCurrency(po.grandTotal, po.currency)}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-1" onClick={(e) => e.stopPropagation()}>
-                    <div className="flex items-center gap-1">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => navigate(`/purchasing/orders/${po.id}`)}
-                        className="h-8 px-2.5 text-xs text-slate-700 gap-1"
-                      >
-                        <Eye className="h-3.5 w-3.5" />
-                        <span>View</span>
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => navigate(`/purchasing/orders/${po.id}/print`)}
-                        className="h-8 px-2 text-xs text-slate-600"
-                        title="Print PO"
-                      >
-                        <Printer className="h-3.5 w-3.5" />
-                      </Button>
-                      {(po.status === 'DRAFT' || po.status === 'REJECTED') && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => navigate(`/purchasing/orders/${po.id}/edit`)}
-                          className="h-8 px-2 text-xs text-slate-600"
-                          title="Edit PO"
-                        >
-                          <Edit className="h-3.5 w-3.5" />
-                        </Button>
-                      )}
-                    </div>
-                    {po.status === 'DRAFT' && (
-                      <div className="flex items-center gap-1">
-                        <ConfirmButton
-                          variant="outline"
-                          size="xs"
-                          dialogVariant="warning"
-                          confirmTitle="Submit Purchase Order"
-                          confirmMessage={`Submit Purchase Order ${po.poNumber} for management approval?`}
-                          confirmText="Submit"
-                          onConfirm={() => handleSubmitDraft(po.id)}
-                          className="text-amber-800 border-amber-300 hover:bg-amber-50 font-medium h-7 text-[11px]"
-                        >
-                          Submit
-                        </ConfirmButton>
-                        <ConfirmButton
-                          variant="ghost"
-                          size="icon-sm"
-                          dialogVariant="destructive"
-                          confirmTitle="Delete Draft Purchase Order"
-                          confirmMessage={`Are you sure you want to permanently delete draft Purchase Order ${po.poNumber}? This cannot be undone.`}
-                          confirmText="Delete"
-                          onConfirm={() => handleDeleteDraft(po.id)}
-                          className="text-rose-500 hover:text-rose-700 h-7 w-7 p-0"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </ConfirmButton>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-
-          {/* Desktop Table View (hidden md:block) */}
-          <div className="hidden md:block overflow-x-auto">
-            <table className="w-full text-xs text-left text-slate-600 min-w-[850px]">
-              <thead className="bg-slate-50/80 text-[11px] uppercase tracking-wider text-slate-500 border-b border-slate-200">
-                <tr>
-                  <th className="py-3 px-4 font-semibold">PO Number</th>
-                  <th className="py-3 px-4 font-semibold">Supplier</th>
-                  <th className="py-3 px-4 font-semibold">Order Date</th>
-                  <th className="py-3 px-4 font-semibold">Delivery Due</th>
-                  <th className="py-3 px-4 text-center font-semibold">Items</th>
-                  <th className="py-3 px-4 text-right font-semibold">Grand Total</th>
-                  <th className="py-3 px-4 text-center font-semibold">Status</th>
-                  <th className="py-3 px-4 text-right font-semibold">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {paginatedOrders.length === 0 ? (
-                  <tr>
-                    <td colSpan={8} className="py-12 text-center text-slate-400">
-                      No Purchase Orders found matching your criteria.
-                    </td>
-                  </tr>
-                ) : (
-                  paginatedOrders.map((po) => (
-                    <tr
-                      key={po.id}
-                      className="hover:bg-slate-50/60 transition-colors cursor-pointer"
-                      onClick={() => navigate(`/purchasing/orders/${po.id}`)}
-                    >
-                      <td className="py-3 px-4 font-mono font-bold text-slate-900">
-                        {po.poNumber}
-                      </td>
-                      <td className="py-3 px-4 font-medium text-slate-900 max-w-[200px] truncate">
-                        <div>{po.supplierName}</div>
-                        <div className="text-[10px] text-slate-400 font-mono">{po.supplierCode}</div>
-                      </td>
-                      <td className="py-3 px-4 text-slate-500 font-medium">
-                        {formatDate(po.orderDate)}
-                      </td>
-                      <td className="py-3 px-4 text-slate-500">
-                        {formatDate(po.expectedDeliveryDate)}
-                      </td>
-                      <td className="py-3 px-4 text-center font-mono">
-                        {po.items.length}
-                      </td>
-                      <td className="py-3 px-4 text-right font-mono font-bold text-slate-900 tabular-nums">
-                        {formatCurrency(po.grandTotal, po.currency)}
-                      </td>
-                      <td className="py-3 px-4 text-center">
-                        <PurchaseOrderStatusBadge status={po.status} />
-                      </td>
-                      <td
-                        className="py-3 px-4 text-right space-x-1"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <Button
-                          variant="ghost"
-                          size="icon-sm"
-                          onClick={() => navigate(`/purchasing/orders/${po.id}`)}
-                          className="text-slate-600 hover:text-slate-900"
-                          title="View PO Details"
-                        >
-                          <Eye className="h-3.5 w-3.5" />
-                        </Button>
-
-                        <Button
-                          variant="ghost"
-                          size="icon-sm"
-                          onClick={() => navigate(`/purchasing/orders/${po.id}/print`)}
-                          className="text-slate-600 hover:text-slate-900"
-                          title="Print / View A4 Purchase Order"
-                        >
-                          <Printer className="h-3.5 w-3.5" />
-                        </Button>
-
-                        {(po.status === 'DRAFT' || po.status === 'REJECTED') && (
-                          <Button
-                            variant="ghost"
-                            size="icon-sm"
-                            onClick={() => navigate(`/purchasing/orders/${po.id}/edit`)}
-                            className="text-slate-600 hover:text-slate-900"
-                            title="Edit Purchase Order"
-                          >
-                            <Edit className="h-3.5 w-3.5" />
-                          </Button>
-                        )}
-
-                        {po.status === 'DRAFT' && (
-                          <>
-                            <ConfirmButton
-                              variant="outline"
-                              size="xs"
-                              dialogVariant="warning"
-                              confirmTitle="Submit Purchase Order"
-                              confirmMessage={`Submit Purchase Order ${po.poNumber} for management approval?`}
-                              confirmText="Submit for Approval"
-                              onConfirm={() => handleSubmitDraft(po.id)}
-                              className="text-amber-800 border-amber-300 hover:bg-amber-50 font-medium"
-                              title="Submit for Approval"
-                            >
-                              Submit
-                            </ConfirmButton>
-                            <ConfirmButton
-                              variant="ghost"
-                              size="icon-sm"
-                              dialogVariant="destructive"
-                              confirmTitle="Delete Draft Purchase Order"
-                              confirmMessage={`Are you sure you want to permanently delete draft Purchase Order ${po.poNumber}? This cannot be undone.`}
-                              confirmText="Delete Draft"
-                              onConfirm={() => handleDeleteDraft(po.id)}
-                              className="text-rose-500 hover:text-rose-700 hover:bg-rose-50"
-                              title="Delete Draft"
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </ConfirmButton>
-                          </>
-                        )}
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="flex items-center justify-between p-3.5 border-t border-slate-200 text-xs text-slate-600">
-              <div>
-                Showing {(page - 1) * pageSize + 1} to{' '}
-                {Math.min(page * pageSize, filteredOrders.length)} of {filteredOrders.length}{' '}
-                orders
-              </div>
-              <div className="flex gap-1.5">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={page === 1}
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  className="h-7 text-xs px-2.5"
-                >
-                  Previous
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={page >= totalPages}
-                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                  className="h-7 text-xs px-2.5"
-                >
-                  Next
-                </Button>
-              </div>
-            </div>
-          )}
+          <select
+            aria-label="Filter by supplier"
+            value={supplierId}
+            onChange={(event) => updateFilter(() => setSupplierId(event.target.value))}
+            className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-700"
+          >
+            <option value="ALL">All active suppliers</option>
+            {suppliers.map((supplier) => <option key={supplier.id} value={supplier.id}>{supplier.name}</option>)}
+          </select>
         </CardContent>
       </Card>
+
+      {supplierQuery.isError && (
+        <div role="alert" className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+          Supplier filters could not be loaded. Purchase order search is still available.
+        </div>
+      )}
+
+      {error ? (
+        <Card className="border-rose-200">
+          <CardContent className="flex flex-col items-center gap-3 p-10 text-center">
+            <AlertCircle className="h-8 w-8 text-rose-500" />
+            <p role="alert" className="text-sm text-rose-800">{error}</p>
+            <Button variant="outline" onClick={() => void refetch()} className="gap-2"><RefreshCw className="h-4 w-4" /> Retry</Button>
+          </CardContent>
+        </Card>
+      ) : loading && purchaseOrders.length === 0 ? (
+        <TableLoadingSkeleton />
+      ) : (
+        <Card className="overflow-hidden border-slate-200">
+          <CardContent className="p-0">
+            {purchaseOrders.length === 0 ? (
+              <div className="flex flex-col items-center gap-2 py-14 text-center">
+                <FileText className="h-8 w-8 text-slate-300" />
+                <p className="font-medium text-slate-700">No purchase orders found</p>
+                <p className="text-sm text-slate-500">Try changing the filters or create a purchase order.</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[850px] text-left text-sm">
+                  <thead className="border-b bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                    <tr>
+                      <th className="px-4 py-3">PO number</th>
+                      <th className="px-4 py-3">Supplier</th>
+                      <th className="px-4 py-3">Order date</th>
+                      <th className="px-4 py-3">Expected delivery</th>
+                      <th className="px-4 py-3 text-center">Items</th>
+                      <th className="px-4 py-3 text-right">Total (LKR)</th>
+                      <th className="px-4 py-3">Status</th>
+                      <th className="px-4 py-3 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {purchaseOrders.map((po) => {
+                      const isPoCreator = Boolean(currentUser?.id === po.createdBy);
+                      const canVerifyThis = role === 'PURCHASING_MANAGER' && po.status === 'PENDING_VERIFICATION' && !isPoCreator;
+                      const canApproveThis = isManagerOrDirector && (po.status === 'PENDING_APPROVAL' || po.status === 'PENDING_VERIFICATION') && (role === 'DIRECTOR' || !isPoCreator);
+                      const canRejectThis = canVerifyThis || canApproveThis;
+
+                      return (
+                        <tr key={po.id} className="hover:bg-slate-50">
+                          <td className="px-4 py-3 font-mono font-semibold text-slate-900">{po.poNumber}</td>
+                          <td className="px-4 py-3"><div className="font-medium text-slate-800">{po.supplierName}</div><div className="text-xs text-slate-500">{po.supplierCode}</div></td>
+                          <td className="px-4 py-3 text-slate-600">{formatDate(po.orderDate)}</td>
+                          <td className="px-4 py-3 text-slate-600">{po.expectedDeliveryDate ? formatDate(po.expectedDeliveryDate) : '—'}</td>
+                          <td className="px-4 py-3 text-center">{po.itemCount ?? po.items.length}</td>
+                          <td className="px-4 py-3 text-right font-mono font-semibold">{formatCurrency(po.grandTotal, 'LKR')}</td>
+                          <td className="px-4 py-3"><div className="flex flex-col items-start gap-1"><PurchaseOrderStatusBadge status={po.status} />{po.sentAt && <span className="text-xs text-slate-500">Issued to supplier</span>}</div></td>
+                          <td className="px-4 py-3">
+                            <div className="flex justify-end gap-1">
+                              <Button variant="ghost" size="icon-sm" title="View details" onClick={() => navigate(`/purchasing/orders/${po.id}`)}><Eye className="h-4 w-4" /></Button>
+                              <Button variant="ghost" size="icon-sm" title="Print purchase order" onClick={() => navigate(`/purchasing/orders/${po.id}/print`)}><Printer className="h-4 w-4" /></Button>
+                              {canManageOrders && (po.status === 'DRAFT' || po.status === 'REJECTED') && <Button variant="ghost" size="icon-sm" title="Edit purchase order" onClick={() => navigate(`/purchasing/orders/${po.id}/edit`)}><Edit className="h-4 w-4" /></Button>}
+                              {canManageOrders && po.status === 'DRAFT' && <>
+                                <ConfirmButton variant="outline" size="xs" dialogVariant="warning" confirmTitle="Submit Purchase Order" confirmMessage={`Submit ${po.poNumber} for verification?`} confirmText="Submit for verification" onConfirm={async () => { await submitPO(po.id); }}>Submit</ConfirmButton>
+                                <ConfirmButton variant="ghost" size="icon-sm" dialogVariant="destructive" confirmTitle="Delete Draft Purchase Order" confirmMessage={`Delete ${po.poNumber}? This action cannot be undone.`} confirmText="Delete draft" onConfirm={async () => { await deletePO(po.id); }} title="Delete draft"><Trash2 className="h-4 w-4 text-rose-600" /></ConfirmButton>
+                              </>}
+                              {canVerifyThis && (
+                                <ConfirmButton
+                                  variant="outline"
+                                  size="xs"
+                                  dialogVariant="info"
+                                  confirmTitle="Verify Purchase Order"
+                                  confirmMessage={`Verify ${po.poNumber} and forward it for final approval?`}
+                                  confirmText="Verify PO"
+                                  disabled={actionLoading}
+                                  onConfirm={async () => {
+                                    await verifyPO(po.id);
+                                    toast.success(`${po.poNumber} verified and forwarded.`);
+                                  }}
+                                >
+                                  Verify
+                                </ConfirmButton>
+                              )}
+                              {canApproveThis && (
+                                <ConfirmButton
+                                  variant="outline"
+                                  size="xs"
+                                  dialogVariant="success"
+                                  confirmTitle="Approve Purchase Order"
+                                  confirmMessage={
+                                    po.status === 'PENDING_VERIFICATION'
+                                      ? `Directly approve ${po.poNumber}? Stage 1 verification will be bypassed.`
+                                      : `Approve ${po.poNumber}?`
+                                  }
+                                  confirmText="Approve PO"
+                                  disabled={actionLoading}
+                                  onConfirm={async () => {
+                                    await approvePO(po.id, undefined, role === 'DIRECTOR');
+                                    toast.success(`${po.poNumber} approved.`);
+                                  }}
+                                >
+                                  Approve
+                                </ConfirmButton>
+                              )}
+                              {canRejectThis && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon-sm"
+                                  title="Reject purchase order"
+                                  disabled={actionLoading}
+                                  onClick={() => {
+                                    setRejectPoTarget(po);
+                                    setListRejectionReason('');
+                                  }}
+                                >
+                                  <XCircle className="h-4 w-4 text-rose-600" />
+                                </Button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            {pagination.total > 0 && <div className="flex flex-col gap-3 border-t border-slate-200 p-4 text-sm sm:flex-row sm:items-center sm:justify-between">
+              <span className="text-slate-600">Showing {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, pagination.total)} of {pagination.total} orders</span>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" disabled={page <= 1 || loading} onClick={() => setPage((value) => Math.max(1, value - 1))}>Previous</Button>
+                <span className="self-center px-2 text-slate-600">Page {page} of {totalPages}</span>
+                <Button variant="outline" size="sm" disabled={page >= totalPages || loading} onClick={() => setPage((value) => Math.min(totalPages, value + 1))}>Next</Button>
+              </div>
+            </div>}
+          </CardContent>
+        </Card>
+      )}
+
+      <Dialog open={Boolean(rejectPoTarget)} onOpenChange={(open) => { if (!open) setRejectPoTarget(null); }} size="md">
+        <DialogTitle className="flex items-center gap-2 text-rose-600">
+          <XCircle className="h-5 w-5" /> Reject Purchase Order
+        </DialogTitle>
+        <DialogDescription className="mt-2 text-sm text-slate-600">
+          Please provide a reason for rejecting order <span className="font-mono font-semibold">{rejectPoTarget?.poNumber}</span>. Rejection reason is required.
+        </DialogDescription>
+        <div className="mt-4">
+          <Textarea
+            value={listRejectionReason}
+            onChange={(e) => setListRejectionReason(e.target.value)}
+            placeholder="Enter mandatory rejection reason (at least 3 characters)..."
+            rows={4}
+            maxLength={4000}
+            className="w-full"
+            autoFocus
+          />
+        </div>
+        <DialogFooter className="mt-6 flex justify-end gap-2">
+          <Button variant="outline" onClick={() => setRejectPoTarget(null)} disabled={actionLoading}>
+            Cancel
+          </Button>
+          <Button
+            variant="destructive"
+            disabled={actionLoading || listRejectionReason.trim().length < 3}
+            onClick={async () => {
+              if (!rejectPoTarget) return;
+              setActionLoading(true);
+              try {
+                await rejectPO(rejectPoTarget.id, listRejectionReason.trim(), rejectPoTarget.status);
+                toast.success(`${rejectPoTarget.poNumber} rejected.`);
+                setRejectPoTarget(null);
+                setListRejectionReason('');
+              } catch {
+                // error handled by hook
+              } finally {
+                setActionLoading(false);
+              }
+            }}
+          >
+            Confirm Rejection
+          </Button>
+        </DialogFooter>
+      </Dialog>
     </div>
   );
 }

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
@@ -7,6 +8,8 @@ import { ConfirmButton } from '../../components/ui/confirm-button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table';
 import { Skeleton } from '../../components/ui/skeleton';
 import { useGRN } from '../../hooks/useGRN';
+import { grnsApi } from '../../api/grns/grns.api';
+import { purchaseOrderQueryKeys } from '../../hooks/usePurchaseOrders';
 import { useAuth } from '../../hooks/useAuth';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 import { UnitBarcodeModal } from '../../components/inventory/UnitBarcodeModal';
@@ -55,6 +58,7 @@ import {
   Info,
   DollarSign,
   Send,
+  FileEdit,
   Lock,
 } from 'lucide-react';
 
@@ -209,7 +213,8 @@ export function GRNDetailPage({ backUrl, backTitle }: GRNDetailPageProps = {}) {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const location = useLocation();
-  const { grnService } = useGRN();
+  const { refetch: refetchGRNs } = useGRN();
+  const queryClient = useQueryClient();
   const { user } = useAuth();
 
   const isPurchasingRoute = location.pathname.startsWith('/purchasing/grn');
@@ -236,7 +241,7 @@ export function GRNDetailPage({ backUrl, backTitle }: GRNDetailPageProps = {}) {
     if (!id) return;
     try {
       setLoading(true);
-      const data = await grnService.getGRNById(id);
+      const data = await grnsApi.getById(id);
       if (!data) {
         setError('GRN record not found');
       } else {
@@ -247,19 +252,28 @@ export function GRNDetailPage({ backUrl, backTitle }: GRNDetailPageProps = {}) {
     } finally {
       setLoading(false);
     }
-  }, [id, grnService]);
+  }, [id]);
 
   useEffect(() => {
     fetchGRN();
   }, [fetchGRN]);
 
+  const refreshAfterGRNAction = async () => {
+    await refetchGRNs();
+    if (grn?.backendManaged) {
+      await queryClient.invalidateQueries({ queryKey: purchaseOrderQueryKeys.all });
+    }
+  };
+
   // Ensure all GRN items have unitRecords populated and categorical classifications
   const preparedItems = useMemo(() => {
     if (!grn?.items) return [];
-    const itemsWithRecords = unitBarcodeService.generateAllForGRN(
-      grn.items,
-      grn.grnNumber || grn.id || 'GRN-2025-001'
-    );
+    const itemsWithRecords = grn.backendManaged
+      ? grn.items
+      : unitBarcodeService.generateAllForGRN(
+          grn.items,
+          grn.grnNumber || grn.id || 'GRN-2025-001'
+        );
 
     return itemsWithRecords.map((item: any) => {
       // Automatic category inference for imported electrical items
@@ -387,8 +401,9 @@ export function GRNDetailPage({ backUrl, backTitle }: GRNDetailPageProps = {}) {
   const handleApprove = async () => {
     if (!id || !user) return;
     try {
-      await grnService.approveGRN(id, user.id, user.name || 'Finance Officer', user.role);
-      toast.success('Goods Received Note approved by Finance and posted to inventory.');
+      await grnsApi.approve(id);
+      await refreshAfterGRNAction();
+      toast.success('Goods Received Note approved. Physical stock accepted.');
       fetchGRN();
     } catch (err: any) {
       toast.error(err.message || 'Failed to approve GRN');
@@ -402,8 +417,9 @@ export function GRNDetailPage({ backUrl, backTitle }: GRNDetailPageProps = {}) {
       return;
     }
     try {
-      await grnService.rejectGRN(id, comment, user.id, user.name || 'Finance Officer', user.role);
-      toast.error('GRN rejected and returned for inspection resolution.');
+      await grnsApi.reject(id, { rejectionReason: comment });
+      await refreshAfterGRNAction();
+      toast.success('GRN rejected and returned for inspection resolution.');
       fetchGRN();
     } catch (err: any) {
       toast.error(err.message || 'Failed to reject GRN');
@@ -413,8 +429,9 @@ export function GRNDetailPage({ backUrl, backTitle }: GRNDetailPageProps = {}) {
   const handleStockManagerApprove = async (remarks?: string) => {
     if (!id || !user) return;
     try {
-      await grnService.verifyAndApproveGRN(id, { id: user.id, name: user.name, role: user.role }, remarks);
-      toast.success('GRN physical verification approved! Forwarded to Finance for approval.');
+      await grnsApi.verify(id, { remark: remarks });
+      await refreshAfterGRNAction();
+      toast.success('GRN physical verification approved! Forwarded for approval.');
       fetchGRN();
     } catch (err: any) {
       toast.error(err.message || 'Failed to verify GRN');
@@ -424,11 +441,24 @@ export function GRNDetailPage({ backUrl, backTitle }: GRNDetailPageProps = {}) {
   const handleStockManagerReject = async (reason: string) => {
     if (!id || !user) return;
     try {
-      await grnService.rejectGRNVerification(id, { id: user.id, name: user.name, role: user.role }, reason);
-      toast.error('GRN verification rejected. Shipment returned to Stock Keeper for inspection resolution.');
+      await grnsApi.reject(id, { rejectionReason: reason });
+      await refreshAfterGRNAction();
+      toast.success('GRN verification rejected.');
       fetchGRN();
     } catch (err: any) {
       toast.error(err.message || 'Failed to reject GRN');
+    }
+  };
+
+  const handleSubmitDraft = async () => {
+    if (!id || !user) return;
+    try {
+      await grnsApi.submit(id);
+      await refreshAfterGRNAction();
+      toast.success('GRN submitted for Stock Manager physical verification.');
+      fetchGRN();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to submit GRN for approval');
     }
   };
 
@@ -438,8 +468,12 @@ export function GRNDetailPage({ backUrl, backTitle }: GRNDetailPageProps = {}) {
 
   const isStockKeeper = user?.role === 'STOCK_KEEPER';
   const isStockManager = user?.role === 'STOCK_MANAGER';
+  const isFinanceManager = user?.role === 'FINANCE_MANAGER';
+  const isManagerOrDirector = user?.role === 'MANAGER' || user?.role === 'DIRECTOR';
+  const canVerifyPhysical = isStockManager || isManagerOrDirector;
+  const canApproveCommercial = isFinanceManager || isManagerOrDirector;
   const isFinanceRole = ['FINANCE_OFFICER', 'FINANCE_MANAGER', 'DIRECTOR', 'ADMIN', 'MANAGER'].includes(user?.role || '');
-  const isManagementApprover = ['DIRECTOR', 'MANAGER', 'FINANCE_MANAGER', 'FINANCE_OFFICER'].includes(user?.role || '');
+  const canEditDraft = ['STOCK_KEEPER', 'STOCK_MANAGER', 'MANAGER', 'DIRECTOR'].includes(user?.role || '');
 
   if (loading) {
     return (
@@ -475,8 +509,9 @@ export function GRNDetailPage({ backUrl, backTitle }: GRNDetailPageProps = {}) {
   const supplierInvoice = grn.supplierInvoiceNumber || 'INV-2025-8841';
   const supplierDN = grn.supplierDeliveryNoteNumber || 'DN-LOG-99214';
   const poDate = grn.poDate || '15 May 2025';
-  const expectedDate = grn.expectedDeliveryDate || formatDate(grn.receivedDate || grn.createdAt);
-  const locationBay = grn.receivingLocationBay || `${grn.warehouseId || 'WH-MAIN'} (Receiving Bay 01)`;
+  const grnDate = grn.receivedDate || grn.createdAt || new Date().toISOString();
+  const expectedDate = grn.expectedDeliveryDate || formatDate(grnDate);
+  const locationBay = grn.receivingLocationBay || 'Main Receiving Bay 01';
   const receivedBy = grn.receivedByName || grn.receivedById || 'Nimal Perera (Warehouse Lead)';
   const verifiedBy = grn.verifiedByName || grn.verifiedById || 'Sunil Weerasinghe (Quality Inspector)';
   const approvedBy = grn.approvedByName || grn.approvedById || 'Anura De Silva (Logistics Director)';
@@ -486,7 +521,7 @@ export function GRNDetailPage({ backUrl, backTitle }: GRNDetailPageProps = {}) {
   const inspection = grn.inspection || {
     status: metrics.totalDamaged > 0 ? 'PASSED_WITH_EXCEPTION' : 'PASSED',
     inspectorName: verifiedBy,
-    inspectedAt: formatDate(grn.receivedDate || grn.createdAt),
+    inspectedAt: formatDate(grnDate),
     packagingCondition: metrics.totalDamaged > 0 ? 'DAMAGED' : 'INTACT',
     visualInspectionPassed: true,
     specVerificationPassed: true,
@@ -595,6 +630,10 @@ export function GRNDetailPage({ backUrl, backTitle }: GRNDetailPageProps = {}) {
               variant="outline"
               size="sm"
               onClick={() => {
+                if (grn.backendManaged) {
+                  toast.info('Canonical unit barcodes are generated by inventory after GRN approval and can then be managed from the unit registry.');
+                  return;
+                }
                 const stickersPath = isPurchasingRoute
                   ? `/purchasing/grn/${id}/stickers`
                   : `/inventory/grn/${id}/stickers`;
@@ -607,8 +646,36 @@ export function GRNDetailPage({ backUrl, backTitle }: GRNDetailPageProps = {}) {
             </Button>
 
             {/* Approval Workflow Actions */}
-            {/* 1. STOCK MANAGER WORKFLOW: Verifies and forwards to Finance; NEVER posts directly to Inventory */}
-            {isStockManager && grn.status === 'PENDING_STOCK_MANAGER_APPROVAL' && (
+            {/* 0. DRAFT WORKFLOW: Edit draft or submit for Stock Manager approval */}
+            {canEditDraft && grn.status === 'DRAFT' && (
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => navigate(`/inventory/grn/${id}/edit`)}
+                  className="gap-1.5 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-50 border-slate-300 shadow-2xs"
+                >
+                  <FileEdit className="h-3.5 w-3.5 text-slate-600" />
+                  <span>Edit GRN</span>
+                </Button>
+                <ConfirmButton
+                  variant="default"
+                  size="sm"
+                  dialogVariant="success"
+                  confirmTitle="Submit GRN for Approval"
+                  confirmMessage={`Are you sure you want to submit ${grn.grnNumber || grn.id} for Stock Manager physical verification? Once submitted, the draft cannot be edited until reviewed.`}
+                  confirmText="Submit for Approval"
+                  onConfirm={handleSubmitDraft}
+                  className="gap-1.5 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs"
+                >
+                  <Send className="h-3.5 w-3.5" />
+                  <span>Submit for Approval</span>
+                </ConfirmButton>
+              </>
+            )}
+
+            {/* 1. STOCK MANAGER WORKFLOW: Verifies physical intake and forwards to Finance */}
+            {canVerifyPhysical && grn.status === 'PENDING_STOCK_MANAGER_APPROVAL' && (
               <>
                 <ConfirmButton
                   variant="default"
@@ -641,14 +708,14 @@ export function GRNDetailPage({ backUrl, backTitle }: GRNDetailPageProps = {}) {
 
             {/* If Stock Manager is viewing a GRN that has already been approved and forwarded to Finance */}
             {isStockManager && (grn.status === 'SUBMITTED' || grn.status === 'COSTED') && (
-              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-50 border border-amber-300 text-amber-800 text-xs font-semibold select-none">
-                <Clock className="h-3.5 w-3.5 text-amber-600" />
-                <span>Forwarded to Finance for Approval</span>
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 border border-blue-300 text-blue-800 text-xs font-semibold select-none">
+                <Clock className="h-3.5 w-3.5 text-blue-600" />
+                <span>Physical Intake Verified • Forwarded to Finance Manager</span>
               </div>
             )}
 
-            {/* 2. FINANCE / MANAGEMENT WORKFLOW: Only Finance approves and posts to Inventory */}
-            {!isStockManager && isManagementApprover && (grn.status === 'SUBMITTED' || grn.status === 'COSTED') && (
+            {/* 2. FINANCE / MANAGEMENT WORKFLOW: Only Finance Manager / Manager / Director approves and posts to Inventory */}
+            {canApproveCommercial && (grn.status === 'SUBMITTED' || grn.status === 'COSTED') && (
               <>
                 <ConfirmButton
                   variant="default"
@@ -725,17 +792,17 @@ export function GRNDetailPage({ backUrl, backTitle }: GRNDetailPageProps = {}) {
             <span className="text-slate-300">→</span>
             <span className={cn('flex items-center gap-1.5', grn.status ? 'text-emerald-700 font-semibold' : 'text-slate-400')}>
               <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
-              2. Warehouse Intake
+              2. Warehouse Intake &amp; Barcodes
             </span>
             <span className="text-slate-300">→</span>
-            <span className={cn('flex items-center gap-1.5', inspection.status.startsWith('PASSED') ? 'text-emerald-700 font-semibold' : 'text-amber-700 font-semibold')}>
-              <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
-              3. Quality Inspection ({inspection.status.replace(/_/g, ' ')})
+            <span className={cn('flex items-center gap-1.5', ['SUBMITTED', 'APPROVED', 'COSTED'].includes(grn.status) ? 'text-emerald-700 font-semibold' : grn.status === 'PENDING_STOCK_MANAGER_APPROVAL' ? 'text-amber-700 font-semibold' : 'text-slate-400')}>
+              {['SUBMITTED', 'APPROVED', 'COSTED'].includes(grn.status) ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" /> : <Clock className="h-3.5 w-3.5" />}
+              3. Stock Manager Physical Verification
             </span>
             <span className="text-slate-300">→</span>
             <span className={cn('flex items-center gap-1.5', grn.status === 'APPROVED' || grn.status === 'COSTED' ? 'text-emerald-700 font-semibold' : 'text-slate-400')}>
               {grn.status === 'APPROVED' || grn.status === 'COSTED' ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" /> : <Clock className="h-3.5 w-3.5" />}
-              4. Manager Approval
+              4. Finance Manager Commercial Approval
             </span>
             <span className="text-slate-300">→</span>
             <span className={cn('flex items-center gap-1.5', grn.status === 'COSTED' ? 'text-emerald-700 font-semibold' : 'text-slate-400')}>
@@ -821,7 +888,7 @@ export function GRNDetailPage({ backUrl, backTitle }: GRNDetailPageProps = {}) {
               </CardTitle>
             </div>
             <Badge variant="outline" className="text-[10px] bg-white font-mono">
-              Bay Code: {grn.warehouseId || 'WH-MAIN'}
+              Receiving Bay: Main
             </Badge>
           </CardHeader>
           <CardContent className="p-4 grid grid-cols-2 sm:grid-cols-3 gap-3.5 text-xs">
@@ -831,7 +898,7 @@ export function GRNDetailPage({ backUrl, backTitle }: GRNDetailPageProps = {}) {
             </div>
             <div>
               <span className="text-slate-400 block text-[11px]">Received Date &amp; Time</span>
-              <span className="font-semibold text-slate-800">{formatDate(grn.receivedDate || grn.createdAt)} 10:30 AM</span>
+              <span className="font-semibold text-slate-800">{formatDate(grnDate)} 10:30 AM</span>
             </div>
             <div>
               <span className="text-slate-400 block text-[11px]">Lifecycle Status</span>
@@ -1112,7 +1179,11 @@ export function GRNDetailPage({ backUrl, backTitle }: GRNDetailPageProps = {}) {
                                 variant="outline"
                                 onClick={() => {
                                   setSelectedProductForModal(item.productId);
-                                  setIsBarcodeModalOpen(true);
+                                  if (grn?.backendManaged) {
+                                    toast.info('Canonical unit barcodes are generated by inventory after GRN approval.');
+                                  } else {
+                                    setIsBarcodeModalOpen(true);
+                                  }
                                 }}
                                 className="h-6 text-[11px] px-2 text-primary hover:bg-primary/5 font-semibold gap-1 border-primary/30"
                               >
@@ -1152,7 +1223,11 @@ export function GRNDetailPage({ backUrl, backTitle }: GRNDetailPageProps = {}) {
                                   grnNumber={grn.grnNumber || grn.id}
                                   onOpenModal={() => {
                                     setSelectedProductForModal(item.productId);
-                                    setIsBarcodeModalOpen(true);
+                                    if (grn?.backendManaged) {
+                                      toast.info('Canonical unit barcodes are generated by inventory after GRN approval.');
+                                    } else {
+                                      setIsBarcodeModalOpen(true);
+                                    }
                                   }}
                                 />
                               </TableCell>
@@ -1184,19 +1259,17 @@ export function GRNDetailPage({ backUrl, backTitle }: GRNDetailPageProps = {}) {
       )}
 
       {/* Unit Barcode & Sticker Printing Studio Modal */}
-      {isBarcodeModalOpen && (
+      {isBarcodeModalOpen && grn && (
         <UnitBarcodeModal
-          open={isBarcodeModalOpen}
-          onOpenChange={setIsBarcodeModalOpen}
+          isOpen={isBarcodeModalOpen}
+          onClose={() => setIsBarcodeModalOpen(false)}
           items={preparedItems}
           grnNumber={grn.grnNumber || grn.id}
-          selectedProductId={selectedProductForModal}
-          onConfirmAll={async () => {
-            if (id) {
-              await grnService.confirmBarcodes(id, user?.id || 'admin');
-              setGrn((prev) => (prev ? { ...prev, barcodesConfirmed: true } : prev));
-              toast.success('All unit barcode stickers marked as printed and physically affixed.');
-            }
+          supplierName={grn.supplierName}
+          initialProductId={selectedProductForModal}
+          onConfirmLabeled={async (updatedItems) => {
+            setGrn((prev) => (prev ? { ...prev, items: updatedItems, barcodesConfirmed: true } : prev));
+            toast.success('All unit barcode stickers marked as printed and physically affixed.');
           }}
         />
       )}

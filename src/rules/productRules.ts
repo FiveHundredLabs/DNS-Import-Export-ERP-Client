@@ -31,19 +31,21 @@ export function validateProductData(input: {
     errors.barcode = 'A valid barcode of at least 6 digits is required if provided.';
   }
 
-  if (input.pricing.costPrice <= 0) {
-    errors.costPrice = 'Cost price must be greater than zero.';
+  const costPrice = input.pricing?.costPrice ?? 0;
+  const sellingPrice = input.pricing?.currentSellingPrice ?? 0;
+
+  if (costPrice < 0) {
+    errors.costPrice = 'Cost price cannot be negative.';
   }
 
-  const sellingPrice = input.pricing.currentSellingPrice ?? 0;
-  if (sellingPrice > 0) {
-    if (sellingPrice < input.pricing.costPrice) {
+  if (sellingPrice > 0 && costPrice > 0) {
+    if (sellingPrice < costPrice) {
       errors.sellingPrice = 'Selling price cannot be less than cost price.';
     }
 
     if (
       input.pricing.minimumSellingPrice > 0 &&
-      input.pricing.minimumSellingPrice < input.pricing.costPrice
+      input.pricing.minimumSellingPrice < costPrice
     ) {
       errors.minimumSellingPrice = 'Minimum selling price cannot be lower than cost price.';
     }

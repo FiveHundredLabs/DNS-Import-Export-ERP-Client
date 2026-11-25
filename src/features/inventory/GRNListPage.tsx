@@ -8,6 +8,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { Skeleton } from '../../components/ui/skeleton';
 import { StatCard } from '../../components/common/StatCard';
 import { PageHeader } from '../../components/common/PageHeader';
+import { ConfirmButton } from '../../components/ui/confirm-button';
+import { grnsApi } from '../../api/grns/grns.api';
+import { toast } from 'sonner';
 import { useGRN } from '../../hooks/useGRN';
 import { useAuth } from '../../hooks/useAuth';
 import { formatCurrency, formatDate } from '../../utils/formatters';
@@ -33,10 +36,12 @@ import {
   Activity,
   Search,
   ChevronRight,
+  FileEdit,
+  Send,
 } from 'lucide-react';
 
 export function GRNListPage() {
-  const { grns, loading } = useGRN();
+  const { grns, loading, error, refetch } = useGRN();
   const { currentUser, role } = useAuth();
   const navigate = useNavigate();
   const [filter, setFilter] = useState('All');
@@ -45,6 +50,16 @@ export function GRNListPage() {
   const isStockKeeper = role === 'STOCK_KEEPER';
   const isDirector = role === 'DIRECTOR';
   const isManager = role === 'MANAGER';
+
+  const handleSubmitDraft = async (grnId: string) => {
+    try {
+      await grnsApi.submit(grnId);
+      toast.success('GRN submitted for Stock Manager verification.');
+      refetch();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to submit GRN for approval');
+    }
+  };
 
   // ─── Summary KPI Metrics & Visual Data ──────────────────────────────────────
   const stats = useMemo(() => {
@@ -179,6 +194,17 @@ export function GRNListPage() {
       />
 
       {/* ── Warehouse Isolation Mode Banner for Stock Keeper ── */}
+      {error && (
+        <Card className="border-rose-200 bg-rose-50/60">
+          <CardContent className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4">
+            <p className="text-sm text-rose-800">Unable to load GRNs from the server: {error}</p>
+            <Button variant="outline" size="sm" onClick={() => void refetch()} className="shrink-0">
+              Retry
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
       {isStockKeeper && (
         <div className="rounded-xl border border-emerald-200 bg-emerald-50/50 p-3.5 flex items-center justify-between text-xs text-emerald-800">
           <div className="flex items-center gap-2">
@@ -358,6 +384,33 @@ export function GRNListPage() {
                           <span className="font-bold font-mono text-slate-900">{formatCurrency(totalValue)}</span>
                         </div>
                       )}
+
+                      {g.status === 'DRAFT' && (
+                        <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100" onClick={(e) => e.stopPropagation()}>
+                          <Button
+                            variant="outline"
+                            size="xs"
+                            onClick={() => navigate(`/inventory/grn/${g.id}/edit`)}
+                            className="text-xs gap-1 text-slate-700 h-7 font-medium"
+                          >
+                            <FileEdit className="h-3 w-3" />
+                            <span>Edit</span>
+                          </Button>
+                          <ConfirmButton
+                            variant="default"
+                            size="xs"
+                            dialogVariant="success"
+                            confirmTitle="Submit GRN for Approval"
+                            confirmMessage={`Submit ${g.grnNumber || g.id} for Stock Manager physical verification? Once submitted, the draft cannot be edited.`}
+                            confirmText="Submit for Approval"
+                            onConfirm={() => handleSubmitDraft(g.id)}
+                            className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs gap-1 h-7 font-semibold"
+                          >
+                            <Send className="h-3 w-3" />
+                            <span>Submit</span>
+                          </ConfirmButton>
+                        </div>
+                      )}
                     </div>
                   );
                 })}
@@ -378,7 +431,7 @@ export function GRNListPage() {
                         <TableHead className="text-right text-xs font-semibold w-36">Total Value</TableHead>
                       )}
                       <TableHead className="text-center text-xs font-semibold w-28">Status</TableHead>
-                      <TableHead className="text-right text-xs font-semibold w-24">Actions</TableHead>
+                      <TableHead className="text-right text-xs font-semibold w-36">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -449,19 +502,47 @@ export function GRNListPage() {
                             {getStatusBadge(g.status)}
                           </TableCell>
                           <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
-                            <Button
-                              variant="ghost"
-                              size="xs"
-                              onClick={() => navigate(`/inventory/grn/${g.id}`)}
-                              className="text-slate-600 hover:text-slate-900 font-medium gap-1"
-                            >
-                            <span>Details</span>
-                            <ChevronRight className="h-3 w-3" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
+                            <div className="flex items-center justify-end gap-1">
+                              {g.status === 'DRAFT' && (
+                                <>
+                                  <Button
+                                    variant="outline"
+                                    size="xs"
+                                    onClick={() => navigate(`/inventory/grn/${g.id}/edit`)}
+                                    className="text-slate-700 hover:text-slate-900 font-medium gap-1 h-7 text-xs"
+                                  >
+                                    <FileEdit className="h-3 w-3 text-slate-500" />
+                                    <span>Edit</span>
+                                  </Button>
+                                  <ConfirmButton
+                                    variant="default"
+                                    size="xs"
+                                    dialogVariant="success"
+                                    confirmTitle="Submit GRN for Approval"
+                                    confirmMessage={`Submit ${g.grnNumber || g.id} for Stock Manager physical verification? Once submitted, the draft cannot be edited.`}
+                                    confirmText="Submit for Approval"
+                                    onConfirm={() => handleSubmitDraft(g.id)}
+                                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium gap-1 h-7 text-xs"
+                                  >
+                                    <Send className="h-3 w-3" />
+                                    <span>Submit</span>
+                                  </ConfirmButton>
+                                </>
+                              )}
+                              <Button
+                                variant="ghost"
+                                size="xs"
+                                onClick={() => navigate(`/inventory/grn/${g.id}`)}
+                                className="text-slate-600 hover:text-slate-900 font-medium gap-1 h-7 text-xs"
+                              >
+                                <span>Details</span>
+                                <ChevronRight className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
                 </TableBody>
               </Table>
             </div>

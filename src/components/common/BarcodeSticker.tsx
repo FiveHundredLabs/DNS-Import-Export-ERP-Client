@@ -6,6 +6,7 @@ export interface BarcodeStickerProps {
   companyName?: string;
   productName: string;
   sku: string;
+  unitId?: string;
   unitBarcode: string;
   serialNumber?: string;
   unitIndex?: number;
@@ -33,6 +34,7 @@ export const BarcodeSticker: React.FC<BarcodeStickerProps> = ({
   companyName = 'DNS Import & Export (Pvt) Ltd',
   productName,
   sku,
+  unitId,
   unitBarcode,
   serialNumber,
   unitIndex,
@@ -95,6 +97,7 @@ export const BarcodeSticker: React.FC<BarcodeStickerProps> = ({
         </div>
         <div className="flex items-center justify-center text-[7px] sm:text-[7.5px] font-mono text-black/90 font-semibold mt-[1px] text-center">
           <span className="truncate">SKU: {sku}</span>
+          {unitId && <span className="shrink-0 ml-1.5 font-bold">&bull; {unitId}</span>}
           {batchNumber && <span className="shrink-0 ml-1.5">&bull; BATCH: {batchNumber}</span>}
         </div>
       </div>

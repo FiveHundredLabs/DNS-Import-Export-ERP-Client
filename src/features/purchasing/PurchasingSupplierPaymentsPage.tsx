@@ -223,7 +223,7 @@ export function PurchasingSupplierPaymentsPage() {
         <Info className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" />
         <div className="space-y-0.5 leading-relaxed">
           <p className="font-semibold text-blue-950">
-            Procurement Payment Transparency Mode ({currentUser.role.replace('_', ' ')})
+            Procurement Payment Transparency Mode ({currentUser?.role ? currentUser.role.replace('_', ' ') : 'Procurement'})
           </p>
           <p className="text-blue-800 text-[11px]">
             You have verified view-only visibility into supplier settlements and advance deposits. All disbursements are posted and governed by Finance AP.

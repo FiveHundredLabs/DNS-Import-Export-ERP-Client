@@ -28,7 +28,7 @@ interface UnitBarcodeModalProps {
   items: any[];
   grnNumber: string;
   supplierName: string;
-  warehouseId: string;
+  warehouseId?: string;
   onConfirmLabeled: (updatedItems: any[]) => void;
   initialProductId?: string;
 }
@@ -43,12 +43,19 @@ export function UnitBarcodeModal({
   onConfirmLabeled,
   initialProductId,
 }: UnitBarcodeModalProps) {
-  // Ensure all items have unitRecords populated
+  // Ensure all items have unitRecords populated, preserving backend canonical units
   const preparedItems = useMemo(() => {
+    const hasExistingRecords = items.some((i) => i.unitRecords && i.unitRecords.length > 0);
+    if (hasExistingRecords) {
+      return items;
+    }
     return unitBarcodeService.generateAllForGRN(items, grnNumber || 'GRN-NEW');
   }, [items, grnNumber]);
 
   const [activeItems, setActiveItems] = useState<any[]>(preparedItems);
+  React.useEffect(() => {
+    setActiveItems(preparedItems);
+  }, [preparedItems]);
   const [selectedProductFilter, setSelectedProductFilter] = useState<string>(
     initialProductId || 'ALL'
   );
@@ -92,6 +99,7 @@ export function UnitBarcodeModal({
       productName: string;
       sku: string;
       unitIndex: number;
+      unitId?: string;
       totalUnitsForProduct: number;
       record: UnitBarcodeRecord;
     }[] = [];
@@ -101,14 +109,21 @@ export function UnitBarcodeModal({
         return;
       }
       const records = item.unitRecords || [];
-      records.forEach((r: UnitBarcodeRecord) => {
+      records.forEach((r: UnitBarcodeRecord, rIdx: number) => {
+        const uIdx = r.unitIndex ?? (rIdx + 1);
+        const uId = r.unitId || (r.unitSeq ? `UNIT${String(r.unitSeq).padStart(6, '0')}` : undefined);
         list.push({
           productId: item.productId,
           productName: item.productNameSnapshot,
           sku: item.skuSnapshot,
-          unitIndex: r.unitIndex,
+          unitIndex: uIdx,
+          unitId: uId,
           totalUnitsForProduct: records.length,
-          record: r,
+          record: {
+            ...r,
+            unitIndex: uIdx,
+            unitId: uId,
+          },
         });
       });
     });
@@ -294,11 +309,16 @@ export function UnitBarcodeModal({
             : 'border-amber-200/90 shadow-2xs'
         )}
       >
-        {/* Unit counter badge outside sticker card */}
+        {/* Unit counter badge & Unit ID badge outside sticker card */}
         <div className="flex items-center justify-between mb-2 px-0.5">
           <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-mono font-bold bg-slate-100 text-slate-700 border border-slate-200">
-            {`Unit ${sticker.unitIndex}/${sticker.totalUnitsForProduct}`}
+            {`Unit ${sticker.unitIndex ?? 1}/${sticker.totalUnitsForProduct || 1}`}
           </span>
+          {sticker.unitId && (
+            <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-mono font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
+              {sticker.unitId}
+            </span>
+          )}
           {isVerified && (
             <Badge className="bg-emerald-600 text-white text-[9px] px-1.5 py-0">
               Verified
@@ -312,6 +332,7 @@ export function UnitBarcodeModal({
             companyName="DNS Import & Export (Pvt) Ltd"
             productName={sticker.productName}
             sku={sticker.sku}
+            unitId={sticker.unitId}
             unitBarcode={sticker.record.unitBarcode}
             serialNumber={sticker.record.serialNumber}
             unitIndex={sticker.unitIndex}

@@ -1,4 +1,5 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
@@ -17,7 +18,11 @@ import { PaginationControls } from '../../components/common/PaginationControls';
 import { useGRN } from '../../hooks/useGRN';
 import { useAuth } from '../../hooks/useAuth';
 import { useProducts } from '../../hooks/useProducts';
-import { usePurchaseOrders } from '../../hooks/usePurchaseOrders';
+import { purchaseOrderQueryKeys, usePurchaseOrders } from '../../hooks/usePurchaseOrders';
+import { purchaseOrdersApi } from '../../api/purchase-orders/purchase-orders.api';
+import { useSupplierLookup } from '../../api/suppliers/suppliers.hooks';
+import { grnsApi, IntakeUnitsPayload, CreateGrnPayload } from '../../api/grns/grns.api';
+import { extractErrorMessage } from '../../api/client';
 import { GRN, GRNItem, UnitBarcodeRecord } from '../../types/inventory';
 import { unitBarcodeService } from '../../services/UnitBarcodeService';
 import { serialNumberService } from '../../services/SerialNumberService';
@@ -54,23 +59,10 @@ import {
 
 const generateId = () => Math.random().toString(36).substring(2, 9);
 
-const SUPPLIERS = [
-  { id: 'sup-01', name: 'Schneider Electric Lanka (Pvt) Ltd' },
-  { id: 'sup-02', name: 'ABB Power Products' },
-  { id: 'sup-03', name: 'Havells India Limited' },
-  { id: 'sup-04', name: 'Siemens Industrial Automation' },
-];
-
-const LOCATIONS = [
-  { value: 'WH-MAIN', label: 'Colombo Central Warehouse (Bay 1)' },
-  { value: 'WH-KANDY', label: 'Kandy Regional Depot (Bay 2)' },
-  { value: 'WH-GALLE', label: 'Galle Distribution Hub (Bay 3)' },
-  { value: 'WH-BOND', label: 'Peliyagoda Bonded Logistics Bay' },
-];
-
 interface LineItem extends GRNItem {
   _tempId: string;
   unitCost: number;
+  requiresSerialNumber?: boolean;
 }
 
 export const checkProductRequiresSerial = (item: {
@@ -89,10 +81,28 @@ export const checkProductRequiresSerial = (item: {
 export function GRNCreateEditPage() {
   const navigate = useNavigate();
   const { id } = useParams<{ id?: string }>();
-  const { grnService } = useGRN();
+  const { refetch: refetchGrns } = useGRN();
+  const queryClient = useQueryClient();
   const { user, currentUser } = useAuth();
   const { products } = useProducts({ page: 1, pageSize: 200 });
-  const { purchaseOrders } = usePurchaseOrders();
+  const { data: supplierLookup = [] } = useSupplierLookup();
+
+  // Track active persisted draft GRN id for multi-step intake
+  const [activeGrnId, setActiveGrnId] = useState<string | null>(id || null);
+
+  const approvedPurchaseOrders = usePurchaseOrders({ status: 'APPROVED' });
+  const purchaseOrders = useMemo(
+    () =>
+      (approvedPurchaseOrders.purchaseOrders || []).filter((po: any) => {
+        // Enforce 1 GRN per PO: Exclude POs that already have a GRN, unless editing that specific GRN
+        if (po.grn && (!activeGrnId || po.grn.id !== activeGrnId)) {
+          return false;
+        }
+        return true;
+      }),
+    [approvedPurchaseOrders.purchaseOrders, activeGrnId],
+  );
+  const purchaseOrdersLoading = approvedPurchaseOrders.loading;
 
   // Stepper state: 1: Inbound Details, 2: Product Counts, 3: Serial Numbers, 4: Barcode Stickers, 5: Review & Sign-Off
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4 | 5>(1);
@@ -108,19 +118,21 @@ export function GRNCreateEditPage() {
   // PO-specific state
   const [selectedPoId, setSelectedPoId] = useState<string>('');
   const [poNumber, setPoNumber] = useState<string>('');
+  const [selectedSupplierId, setSelectedSupplierId] = useState<string>('');
 
   // General GRN Header State
   const [supplierName, setSupplierName] = useState<string>('');
   const [supplierInvoiceNumber, setSupplierInvoiceNumber] = useState<string>('');
   const [receivedDate, setReceivedDate] = useState<string>(new Date().toISOString().slice(0, 10));
   const [deliveryNoteRef, setDeliveryNoteRef] = useState<string>('');
-  const [warehouseId, setWarehouseId] = useState<string>('WH-MAIN');
   const [notes, setNotes] = useState<string>('');
 
   // Line items
   const [items, setItems] = useState<LineItem[]>([]);
+  const poSelectionRequest = useRef(0);
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [submitConfirmOpen, setSubmitConfirmOpen] = useState<boolean>(false);
+  const [isConfirmedForSubmit, setIsConfirmedForSubmit] = useState<boolean>(false);
 
   // Manual intake: One-by-one product + quantity selection state
   const [manualProductId, setManualProductId] = useState<string>('');
@@ -158,6 +170,92 @@ export function GRNCreateEditPage() {
     }
   }, [activeUser?.role, id, navigate]);
 
+  // Load existing DRAFT GRN for editing
+  React.useEffect(() => {
+    if (!id) return;
+    let isCancelled = false;
+
+    async function loadExistingDraft() {
+      try {
+        setSubmitting(true);
+        const existing = await grnsApi.getById(id);
+        if (isCancelled || !existing) return;
+
+        if (existing.status !== 'DRAFT') {
+          toast.error(`Only DRAFT GRNs can be edited. Current status is ${existing.status}.`);
+          navigate(`/inventory/grn/${id}`, { replace: true });
+          return;
+        }
+
+        setActiveGrnId(existing.id);
+        if (existing.poId) {
+          setSourceType('PO');
+          setSelectedPoId(existing.poId);
+          setPoNumber(existing.poNumber || '');
+        } else {
+          setSourceType('MANUAL');
+        }
+
+        setSelectedSupplierId(existing.supplierId);
+        setSupplierName(existing.supplierName);
+        setSupplierInvoiceNumber(existing.supplierInvoiceNumber || '');
+        if (existing.receivedDate) {
+          setReceivedDate(existing.receivedDate.slice(0, 10));
+        }
+        setNotes(existing.notes || '');
+
+        const sourceItems = (existing.items && existing.items.length > 0) ? existing.items : (existing.grnProducts || []);
+        if (sourceItems.length > 0) {
+          const loadedLines: LineItem[] = sourceItems.map((it: any) => {
+            const rawUnits = it.unitRecords || it.cableSpecs?.units || [];
+            const mappedUnits = rawUnits.map((u: any, idx: number) => ({
+              id: u.id || `unit-${idx}`,
+              unitId: u.unitId || (u.unitSeq ? `UNIT${String(u.unitSeq).padStart(6, '0')}` : undefined),
+              unitSeq: u.unitSeq,
+              unitIndex: u.unitIndex || idx + 1,
+              unitBarcode: u.barcode || u.unitBarcode || '',
+              barcode: u.barcode || u.unitBarcode || '',
+              serialNumber: u.serialNumber || undefined,
+              isDamaged: Boolean(u.isDamaged),
+              status: u.status || 'PENDING_LABEL',
+            }));
+
+            return {
+              _tempId: generateId(),
+              productId: it.productId,
+              productNameSnapshot: it.productNameSnapshot || it.productName || it.product?.name || '',
+              skuSnapshot: it.skuSnapshot || it.sku || it.product?.sku || '',
+              expectedQuantity: it.expectedQuantity ?? it.receivedQuantity,
+              receivedQuantity: it.receivedQuantity,
+              damagedQuantity: it.damagedQuantity || 0,
+              unitCostSnapshot: Number(it.unitCostSnapshot || it.unitCost || 0),
+              unitCost: Number(it.unitCostSnapshot || it.unitCost || 0),
+              lineValue: Number(it.lineValue || ((it.receivedQuantity - (it.damagedQuantity || 0)) * (it.unitCostSnapshot || it.unitCost || 0))),
+              barcode: it.barcode || '',
+              serialNumber: it.serialNumber || '',
+              uom: it.uom || it.product?.unitOfMeasure || 'PCS',
+              unitRecords: mappedUnits,
+              unitBarcodes: mappedUnits.map((r: any) => r.unitBarcode).filter(Boolean),
+              serialNumbers: it.serialNumbers || it.cableSpecs?.serialNumbers || [],
+              barcodesConfirmed: it.barcodesConfirmed ?? false,
+            };
+          });
+          setItems(loadedLines);
+        }
+      } catch (err: any) {
+        toast.error(extractErrorMessage(err) || 'Failed to load draft GRN');
+        navigate('/inventory/grn', { replace: true });
+      } finally {
+        if (!isCancelled) setSubmitting(false);
+      }
+    }
+
+    loadExistingDraft();
+    return () => {
+      isCancelled = true;
+    };
+  }, [id, navigate]);
+
   // Reconstructed preview GRN for physical print before submission
   const previewGRN: GRN = useMemo(() => ({
     id: id || `grn-preview-${Date.now()}`,
@@ -165,21 +263,23 @@ export function GRNCreateEditPage() {
     purchaseOrderNumber: poNumber,
     poNumber: poNumber,
     poId: selectedPoId,
+    supplierId: selectedSupplierId,
     supplierName: supplierName || 'Unspecified Supplier',
     supplierInvoiceNumber: deliveryNoteRef,
-    warehouseId: warehouseId || 'WH-MAIN',
     status: 'DRAFT',
+    totalValue: items.reduce((sum, item) => sum + item.lineValue, 0),
     receivedDate: receivedDate || new Date().toISOString(),
     submittedAt: new Date().toISOString(),
     receivedById: activeUser?.name || 'Stock Keeper',
     notes: notes,
     items: items.map((it) => ({
       productId: it.productId,
-      productNameSnapshot: it.productName,
-      skuSnapshot: it.sku,
+      productNameSnapshot: it.productNameSnapshot,
+      skuSnapshot: it.skuSnapshot,
       expectedQuantity: it.expectedQuantity,
       receivedQuantity: it.receivedQuantity,
       damagedQuantity: it.damagedQuantity || 0,
+      lineValue: it.lineValue,
       uom: it.uom || 'PCS',
       unitCostSnapshot: it.unitCostSnapshot || 0,
       unitRecords: it.unitRecords || [],
@@ -187,7 +287,7 @@ export function GRNCreateEditPage() {
     })),
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
-  }), [id, poNumber, selectedPoId, supplierName, deliveryNoteRef, warehouseId, receivedDate, activeUser, notes, items]);
+  }), [id, poNumber, selectedPoId, supplierName, deliveryNoteRef, receivedDate, activeUser, notes, items]);
 
   const filteredProducts = products.filter((p) => {
     if (!productSearch) return true;
@@ -200,44 +300,58 @@ export function GRNCreateEditPage() {
   });
 
   // Handle selecting an existing Purchase Order (PO)
-  const handleSelectPO = (poId: string) => {
+  const handleSelectPO = async (poId: string) => {
+    const requestId = ++poSelectionRequest.current;
     setSelectedPoId(poId);
+    setItems([]);
     const po = purchaseOrders.find((p) => p.id === poId);
     if (!po) return;
 
-    setSupplierName(po.supplierName);
-    setPoNumber(po.poNumber);
-    setWarehouseId(po.warehouseId || 'WH-MAIN');
+    try {
+      const remaining = await purchaseOrdersApi.remainingItems(poId);
+      if (requestId !== poSelectionRequest.current) return;
+      setSelectedSupplierId(remaining.supplierId);
+      setSupplierName(remaining.supplierName);
+      setPoNumber(remaining.poNumber);
 
-    const poItems: LineItem[] = po.items.map((pItem) => {
-      const product = products.find((p) => p.id === pItem.productId);
-      const cost = pItem.unitCost || product?.pricing?.costPrice || 0;
-      const initialItem: LineItem = {
-        _tempId: generateId(),
-        productId: pItem.productId,
-        productNameSnapshot: pItem.productName,
-        skuSnapshot: pItem.sku,
-        expectedQuantity: pItem.expectedQuantity,
-        receivedQuantity: pItem.expectedQuantity,
-        damagedQuantity: 0,
-        unitCostSnapshot: cost,
-        unitCost: cost,
-        lineValue: pItem.expectedQuantity * cost,
-      };
+      const poItems: LineItem[] = remaining.items
+        .filter((pItem) => pItem.remainingQty > 0)
+        .map((pItem) => {
+          const product = products.find((p) => p.id === pItem.productId);
+          const cost = Number(pItem.unitPrice) || product?.pricing?.costPrice || 0;
+          const initialItem: LineItem = {
+            _tempId: generateId(),
+            productId: pItem.productId,
+            productNameSnapshot: pItem.productName,
+            skuSnapshot: pItem.sku,
+            expectedQuantity: pItem.remainingQty,
+            previouslyReceivedQuantity: pItem.receivedQty,
+            receivedQuantity: pItem.remainingQty,
+            damagedQuantity: 0,
+            unitCostSnapshot: cost,
+            unitCost: cost,
+            lineValue: pItem.remainingQty * cost,
+            uom: pItem.unitOfMeasure,
+            requiresSerialNumber: pItem.hasSerialNumber,
+          };
 
-      // Automatically generate unit barcodes for the expected quantity
-      const unitRecords = unitBarcodeService.generateUnitBarcodesForLine(
-        initialItem,
-        po.poNumber
-      );
-      initialItem.unitRecords = unitRecords;
-      initialItem.unitBarcodes = unitRecords.map((r) => r.unitBarcode);
+          return initialItem;
+        });
 
-      return initialItem;
-    });
-
-    setItems(poItems);
-    toast.success(`Loaded PO "${po.poNumber}" with ${po.items.length} line items`);
+      setItems(poItems);
+      if (poItems.length === 0) {
+        toast.info(`Purchase Order ${remaining.poNumber} has no outstanding quantities.`);
+      } else {
+        toast.success(`Loaded ${poItems.length} outstanding line(s) from PO "${remaining.poNumber}"`);
+      }
+    } catch (error: any) {
+      if (requestId !== poSelectionRequest.current) return;
+      setSelectedPoId('');
+      setSelectedSupplierId('');
+      setSupplierName('');
+      setPoNumber('');
+      toast.error(error.message || 'Unable to load outstanding Purchase Order quantities.');
+    }
   };
 
   // Add product one-by-one in manual mode
@@ -248,6 +362,11 @@ export function GRNCreateEditPage() {
     }
     const product = products.find((p) => p.id === manualProductId);
     if (!product) return;
+
+    if (selectedPoId) {
+      toast.error('A PO-linked GRN can only receive products listed on the selected Purchase Order.');
+      return;
+    }
 
     if (manualReceivedQty <= 0) {
       toast.error('Received quantity must be greater than 0');
@@ -325,6 +444,10 @@ export function GRNCreateEditPage() {
   const addProduct = (productId: string, qty: number = 1) => {
     const product = products.find((p) => p.id === productId);
     if (!product) return;
+    if (selectedPoId) {
+      toast.error('A PO-linked GRN can only receive products listed on the selected Purchase Order.');
+      return;
+    }
     if (items.some((i) => i.productId === productId)) {
       toast.info('Product already added. Adjust quantity in the table.');
       return;
@@ -366,7 +489,7 @@ export function GRNCreateEditPage() {
 
         if (field === 'receivedQuantity' || field === 'damagedQuantity') {
           const goodQty = Math.max(0, updated.receivedQuantity - updated.damagedQuantity);
-          if (!updated.unitRecords || updated.unitRecords.length !== goodQty) {
+        if (!selectedPoId && (!updated.unitRecords || updated.unitRecords.length !== goodQty)) {
             const records = unitBarcodeService.generateUnitBarcodesForLine(
               updated,
               poNumber || deliveryNoteRef || 'GRN-INTAKE'
@@ -398,8 +521,21 @@ export function GRNCreateEditPage() {
 
   // Step 3 Confirm All Affixed in Bay
   const handleConfirmAllAffixedInStudio = () => {
-    const updated = unitBarcodeService.confirmAllAffixed(items);
-    setItems(updated);
+    setItems((prev) =>
+      prev.map((item) => {
+        const records = (item.unitRecords || []).map((r) => ({
+          ...r,
+          status: 'LABELED' as const,
+          labeledAt: new Date().toISOString(),
+        }));
+        return {
+          ...item,
+          unitRecords: records,
+          barcodesConfirmed: true,
+          barcodesConfirmedAt: new Date().toISOString(),
+        };
+      })
+    );
     toast.success(
       `✓ Confirmed! All ${barcodeSummary.totalUnits} physical unit stickers affixed in warehouse bay.`
     );
@@ -667,13 +803,14 @@ export function GRNCreateEditPage() {
     toast.info('Cleared serial numbers');
   };
 
-  // Flattened stickers list for Step 3 preview
+  // Flattened stickers list for Step 4 preview
   const allStickers = useMemo(() => {
     const list: {
       productId: string;
       productName: string;
       sku: string;
       unitIndex: number;
+      unitId?: string;
       totalUnitsForProduct: number;
       record: UnitBarcodeRecord;
     }[] = [];
@@ -683,14 +820,23 @@ export function GRNCreateEditPage() {
         return;
       }
       const records = item.unitRecords || [];
-      records.forEach((r: UnitBarcodeRecord) => {
+      records.forEach((r: UnitBarcodeRecord, rIdx: number) => {
+        const uIdx = r.unitIndex || rIdx + 1;
+        const uId = r.unitId || (r.unitSeq ? `UNIT${String(r.unitSeq).padStart(6, '0')}` : undefined);
+        const bCode = r.unitBarcode || r.barcode || '';
         list.push({
           productId: item.productId,
           productName: item.productNameSnapshot,
           sku: item.skuSnapshot,
-          unitIndex: r.unitIndex,
+          unitIndex: uIdx,
+          unitId: uId,
           totalUnitsForProduct: records.length,
-          record: r,
+          record: {
+            ...r,
+            unitIndex: uIdx,
+            unitId: uId,
+            unitBarcode: bCode,
+          },
         });
       });
     });
@@ -698,7 +844,7 @@ export function GRNCreateEditPage() {
     return list;
   }, [items, selectedProductFilter]);
 
-  // Paginated barcode stickers for Step 3
+  // Paginated barcode stickers for Step 4
   const totalBarcodeStickers = allStickers.length;
   const totalBarcodePages = Math.max(1, Math.ceil(totalBarcodeStickers / barcodePageSize));
   const safeBarcodePage = Math.min(Math.max(1, barcodePage), totalBarcodePages);
@@ -743,6 +889,7 @@ export function GRNCreateEditPage() {
         companyName: 'DNS Import & Export (Pvt) Ltd',
         productName: s.productName,
         sku: s.sku,
+        unitId: s.unitId,
         unitBarcode: s.record.unitBarcode,
         serialNumber: s.record.serialNumber,
         unitIndex: s.unitIndex,
@@ -775,6 +922,7 @@ export function GRNCreateEditPage() {
         companyName: 'DNS Import & Export (Pvt) Ltd',
         productName: s.productName,
         sku: s.sku,
+        unitId: s.unitId,
         unitBarcode: s.record.unitBarcode,
         serialNumber: s.record.serialNumber,
         unitIndex: s.unitIndex,
@@ -803,6 +951,7 @@ export function GRNCreateEditPage() {
         companyName: 'DNS Import & Export (Pvt) Ltd',
         productName: target.productName,
         sku: target.sku,
+        unitId: target.unitId,
         unitBarcode: target.record.unitBarcode,
         serialNumber: target.record.serialNumber,
         unitIndex: target.unitIndex,
@@ -864,11 +1013,16 @@ export function GRNCreateEditPage() {
             : 'border-amber-200/90 shadow-2xs'
         )}
       >
-        {/* Unit counter badge outside sticker card */}
+        {/* Unit counter badge & Unit ID badge outside sticker card */}
         <div className="flex items-center justify-between mb-2 px-0.5">
           <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-mono font-bold bg-slate-100 text-slate-700 border border-slate-200">
-            {`Unit ${sticker.unitIndex}/${sticker.totalUnitsForProduct}`}
+            {`Unit ${sticker.unitIndex ?? (idx + 1)}/${sticker.totalUnitsForProduct || 1}`}
           </span>
+          {sticker.unitId && (
+            <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-mono font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
+              {sticker.unitId}
+            </span>
+          )}
           {isVerified && (
             <Badge className="bg-emerald-600 text-white text-[9px] px-1.5 py-0">
               Verified
@@ -882,6 +1036,7 @@ export function GRNCreateEditPage() {
             companyName="DNS Import & Export (Pvt) Ltd"
             productName={sticker.productName}
             sku={sticker.sku}
+            unitId={sticker.unitId}
             unitBarcode={sticker.record.unitBarcode}
             serialNumber={sticker.record.serialNumber}
             unitIndex={sticker.unitIndex}
@@ -941,11 +1096,13 @@ export function GRNCreateEditPage() {
       return 'An approved Purchase Order is required to generate a Goods Received Note (BR-01).';
     }
     if (!supplierName.trim()) return 'Supplier name is required';
-    if (!warehouseId) return 'Warehouse is required';
     if (items.length === 0) return 'At least one product line is required';
     for (const item of items) {
       if (item.receivedQuantity <= 0) {
         return `Received quantity must be > 0 for ${item.productNameSnapshot}`;
+      }
+      if (selectedPoId && item.receivedQuantity > item.expectedQuantity) {
+        return `Received quantity for ${item.productNameSnapshot} cannot exceed the ${item.expectedQuantity} units still outstanding on this PO.`;
       }
       if (item.damagedQuantity > item.receivedQuantity) {
         return `Damaged qty cannot exceed received qty for ${item.productNameSnapshot}`;
@@ -1001,66 +1158,145 @@ export function GRNCreateEditPage() {
         barcodesConfirmedAt: i.barcodesConfirmedAt,
       }));
 
-      const grnId = generateId();
-      const generatedGrnNumber = `GRN-${Date.now().toString().slice(-6)}`;
-      const isFullyLabeled = unitBarcodeService.isGRNFullyLabeled(grnItems);
-
-      const grn: GRN = {
-        id: grnId,
-        grnNumber: generatedGrnNumber,
-        sourceType: 'PO',
-        poId: selectedPoId,
-        poNumber: poNumber,
-        purchaseOrderId: selectedPoId,
-        purchaseOrderNumber: poNumber,
-        supplierId: 'sup-manual',
-        supplierName: supplierName.trim(),
-        supplierInvoiceNumber: supplierInvoiceNumber.trim() || undefined,
-        receivedDate,
-        warehouseId,
-        status: 'DRAFT' as const,
-        items: grnItems,
-        totalValue,
-        receivedById: activeUser.id,
-        notes: notes.trim() || undefined,
-        barcodesGenerated: grnItems.some((i) => i.unitRecords && i.unitRecords.length > 0),
-        barcodesConfirmed: isFullyLabeled,
-        barcodesConfirmedAt: isFullyLabeled ? new Date().toISOString() : undefined,
-        barcodesConfirmedBy: isFullyLabeled ? activeUser.name : undefined,
-      };
-
-      if (status === 'SUBMITTED') {
-        await grnService.submitGRN(grn, activeUser);
-      } else {
-        await grnService.createGRN(grn, activeUser);
+      if (!selectedPoId && !poNumber) {
+        throw new Error('Select an approved Purchase Order before saving this GRN.');
       }
 
-      // Register serial numbers with SerialNumberService
-      for (const item of grnItems) {
-        if (item.serialNumbers && item.serialNumbers.length > 0) {
-          const validSerials = item.serialNumbers.map((s) => s?.trim()).filter(Boolean);
-          if (validSerials.length > 0) {
-            serialNumberService.registerBatch({
-              productId: item.productId,
-              locationId: warehouseId,
-              locationName: warehouseId === 'WH-MAIN' ? 'Central Distribution Hub' : warehouseId,
-              grnId,
-              grnNumber: generatedGrnNumber,
-              receivedBy: activeUser.name,
-              serialNumbers: validSerials as string[],
-            });
-          }
+      let saved: any;
+      const isSubmitting = status === 'SUBMITTED';
+
+      const commonProducts = itemsToSave.map((item) => ({
+        productId: item.productId,
+        receivedQuantity: item.receivedQuantity,
+        damagedQuantity: item.damagedQuantity || 0,
+        unitCost: item.unitCost,
+        serialNumbers: item.serialNumbers?.map((serial) => serial.trim()).filter(Boolean),
+      }));
+
+      if (activeGrnId) {
+        // Step 3 intakeUnits payload strictly accepts only whitelisted properties
+        const intakePayload: IntakeUnitsPayload = {
+          supplierInvoiceNumber: supplierInvoiceNumber.trim() || undefined,
+          receivedDate,
+          notes: notes.trim() || undefined,
+          submitForVerification: isSubmitting,
+          products: commonProducts,
+        };
+
+        saved = await grnsApi.intakeUnits(activeGrnId, intakePayload);
+      } else {
+        // Initial creation payload includes poId and supplierId
+        const createPayload: CreateGrnPayload = {
+          poId: selectedPoId,
+          supplierId: selectedSupplierId,
+          supplierInvoiceNumber: supplierInvoiceNumber.trim() || undefined,
+          receivedDate,
+          notes: notes.trim() || undefined,
+          submitForVerification: isSubmitting,
+          products: commonProducts,
+        };
+
+        saved = await grnsApi.create(createPayload);
+      }
+
+      await queryClient.invalidateQueries({ queryKey: purchaseOrderQueryKeys.all });
+      await refetchGrns();
+      toast.success(`GRN ${saved.grnNumber} saved as ${saved.status}`);
+      navigate(`/inventory/grn/${saved.id}`);
+    } catch (e: any) {
+      toast.error(extractErrorMessage(e) || e.message || 'Error saving GRN');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleProceedFromStep3 = async () => {
+    if (serialDuplicateStats.hasAnyDuplicate) {
+      toast.error(
+        'Duplicate serial numbers detected! Each unit serial number must be unique before proceeding.'
+      );
+      return;
+    }
+    if (!isSerialStepComplete) {
+      toast.error(
+        `Please enter all ${totalSerialsRequired} serial numbers before proceeding (${totalSerialsEntered}/${totalSerialsRequired} entered)`
+      );
+      return;
+    }
+
+    if (!selectedPoId && !poNumber) {
+      toast.error('An approved Purchase Order is required to generate unit barcodes.');
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      let savedGrn: any;
+
+      const commonProducts = items.map((item) => ({
+        productId: item.productId,
+        receivedQuantity: item.receivedQuantity,
+        damagedQuantity: item.damagedQuantity || 0,
+        unitCost: item.unitCost,
+        serialNumbers: item.serialNumbers?.map((s) => s.trim()).filter(Boolean),
+      }));
+
+      if (activeGrnId) {
+        const intakePayload: IntakeUnitsPayload = {
+          supplierInvoiceNumber: supplierInvoiceNumber.trim() || undefined,
+          receivedDate,
+          notes: notes.trim() || undefined,
+          products: commonProducts,
+        };
+        savedGrn = await grnsApi.intakeUnits(activeGrnId, intakePayload);
+      } else {
+        const createPayload: CreateGrnPayload = {
+          poId: selectedPoId,
+          supplierId: selectedSupplierId,
+          supplierInvoiceNumber: supplierInvoiceNumber.trim() || undefined,
+          receivedDate,
+          notes: notes.trim() || undefined,
+          products: commonProducts,
+        };
+        savedGrn = await grnsApi.create(createPayload);
+        if (savedGrn?.id) {
+          setActiveGrnId(savedGrn.id);
         }
       }
 
-      toast.success(
-        `GRN ${generatedGrnNumber} saved as ${status}${
-          isFullyLabeled ? ' with all unit barcodes confirmed' : ''
-        }`
-      );
-      navigate('/inventory/grn');
-    } catch (e: any) {
-      toast.error(e.message ?? 'Error saving GRN');
+      if (savedGrn?.grnProducts) {
+        setItems((prev) =>
+          prev.map((item) => {
+            const matchedProduct = savedGrn.grnProducts?.find(
+              (gp: any) => gp.productId === item.productId
+            );
+            const units = matchedProduct?.cableSpecs?.units;
+            if (units && Array.isArray(units)) {
+              return {
+                ...item,
+                unitRecords: units.map((u: any, idx: number) => ({
+                  id: u.id,
+                  unitId: u.unitId || (u.unitSeq ? `UNIT${String(u.unitSeq).padStart(6, '0')}` : undefined),
+                  unitSeq: u.unitSeq,
+                  unitIndex: u.unitIndex || idx + 1,
+                  unitBarcode: u.barcode,
+                  barcode: u.barcode,
+                  serialNumber: u.serialNumber,
+                  isDamaged: u.isDamaged,
+                  status: u.status || 'PENDING_LABEL',
+                })),
+                unitBarcodes: units.map((u: any) => u.barcode).filter(Boolean),
+              };
+            }
+            return item;
+          })
+        );
+      }
+
+      toast.success('Physical units allocated & barcodes generated.');
+      setCurrentStep(4);
+    } catch (err: any) {
+      toast.error(extractErrorMessage(err) || err.message || 'Failed to intake units and generate barcodes');
     } finally {
       setSubmitting(false);
     }
@@ -1073,15 +1309,11 @@ export function GRNCreateEditPage() {
       return;
     }
 
-    if (status === 'SUBMITTED' && isStockKeeper) {
-      const isFullyConfirmed = unitBarcodeService.isGRNFullyLabeled(items);
-      if (!isFullyConfirmed) {
-        setUnlabeledPromptOpen(true);
+    if (status === 'SUBMITTED') {
+      if (!isConfirmedForSubmit) {
+        toast.error('Please check the verification checklist box in Step 5 before submitting for manager approval.');
         return;
       }
-    }
-
-    if (status === 'SUBMITTED') {
       setSubmitConfirmOpen(true);
       return;
     }
@@ -1091,10 +1323,43 @@ export function GRNCreateEditPage() {
 
   const handleConfirmAffixedAndSubmit = async () => {
     const updated = unitBarcodeService.confirmAllAffixed(items);
-    setItems(updated);
+    setItems(updated.map((item, index) => ({ ...items[index], ...item })));
     setUnlabeledPromptOpen(false);
     toast.success('Confirmed all physical unit barcode stickers affixed in receiving bay.');
     setSubmitConfirmOpen(true);
+  };
+
+  const handleStepClick = (targetStep: 1 | 2 | 3 | 4 | 5) => {
+    if (targetStep === currentStep) return;
+    if (targetStep < currentStep) {
+      setCurrentStep(targetStep);
+      return;
+    }
+    if (targetStep >= 2 && !supplierName.trim()) {
+      toast.error('Supplier name is required before proceeding to product counts');
+      return;
+    }
+    if (targetStep >= 3 && items.length === 0) {
+      toast.error('At least one product line is required before proceeding');
+      return;
+    }
+    if (targetStep >= 4) {
+      if (serialDuplicateStats.hasAnyDuplicate) {
+        toast.error('Resolve duplicate serial numbers in Step 3 before proceeding');
+        return;
+      }
+      if (!isSerialStepComplete) {
+        toast.error(`Please enter all ${totalSerialsRequired} serial numbers in Step 3 before proceeding`);
+        return;
+      }
+      const hasUnits = items.some((it) => it.unitRecords && it.unitRecords.length > 0);
+      if (!hasUnits) {
+        toast.info('Please click "Next Step: Generate Barcodes & Proceed" to allocate units first');
+        setCurrentStep(3);
+        return;
+      }
+    }
+    setCurrentStep(targetStep);
   };
 
   // Stepper definition metadata (5-step workflow)
@@ -1104,7 +1369,7 @@ export function GRNCreateEditPage() {
       title: 'Inbound Details',
       subtitle: poNumber || 'Select Approved PO',
       icon: Truck,
-      isComplete: Boolean(supplierName.trim() && warehouseId && (selectedPoId || poNumber)),
+      isComplete: Boolean(supplierName.trim() && (selectedPoId || poNumber)),
     },
     {
       step: 2 as const,
@@ -1160,18 +1425,6 @@ export function GRNCreateEditPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {items.length > 0 && (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => setCurrentStep(3)}
-              className="gap-1.5 text-xs font-semibold shadow-xs text-primary border-primary/30 hover:bg-primary/5"
-            >
-              <Printer className="h-3.5 w-3.5" />
-              Unit Barcode Stickers ({barcodeSummary.totalUnits})
-            </Button>
-          )}
           <Button variant="outline" size="sm" onClick={() => navigate('/inventory/grn')}>
             Cancel
           </Button>
@@ -1205,7 +1458,7 @@ export function GRNCreateEditPage() {
               <button
                 key={s.step}
                 type="button"
-                onClick={() => setCurrentStep(s.step)}
+                onClick={() => handleStepClick(s.step)}
                 className={cn(
                   'flex items-center gap-3 p-2.5 sm:p-3 rounded-xl text-left transition-all relative overflow-hidden select-none',
                   isActive
@@ -1277,17 +1530,28 @@ export function GRNCreateEditPage() {
                     </span>
                   </label>
                   <Select value={selectedPoId} onValueChange={handleSelectPO}>
-                    <SelectTrigger className="h-9 text-xs">
+                    <SelectTrigger className="h-9 text-xs" disabled={purchaseOrdersLoading || purchaseOrders.length === 0}>
                       <SelectValue placeholder="Choose Purchase Order (e.g. PO-2026-0891)" />
                     </SelectTrigger>
                     <SelectContent>
                       {purchaseOrders.map((po) => (
                         <SelectItem key={po.id} value={po.id} className="text-xs">
-                          <span className="font-mono font-semibold">{po.poNumber}</span> · {po.supplierName} ({po.items.length} lines)
+                          <span className="font-mono font-semibold">{po.poNumber}</span> · {po.supplierName} ({po.itemCount} lines)
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
+                  {purchaseOrdersLoading && (
+                    <p className="text-[11px] text-slate-500">Loading approved and partially received Purchase Orders…</p>
+                  )}
+                  {!purchaseOrdersLoading && purchaseOrders.length === 0 && (
+                    <p className="text-[11px] text-amber-700">No approved Purchase Orders with open receiving status are available.</p>
+                  )}
+                  {approvedPurchaseOrders.error && (
+                    <p className="text-[11px] text-rose-700">
+                      {approvedPurchaseOrders.error}
+                    </p>
+                  )}
                   {selectedPoId === '' && purchaseOrders.length > 0 && (
                     <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
                       <span className="text-[10px] text-slate-400 font-medium">Quick select:</span>
@@ -1323,13 +1587,16 @@ export function GRNCreateEditPage() {
                   onChange={(e) => setSupplierName(e.target.value)}
                   className="h-9 text-xs"
                 />
-                {supplierName === '' && (
+                {supplierName === '' && supplierLookup.length > 0 && (
                   <div className="flex flex-wrap gap-1 mt-1">
-                    {SUPPLIERS.slice(0, 4).map((s) => (
+                    {supplierLookup.slice(0, 4).map((s) => (
                       <button
                         key={s.id}
                         type="button"
-                        onClick={() => setSupplierName(s.name)}
+                        onClick={() => {
+                          setSupplierName(s.name);
+                          setSelectedSupplierId(s.id);
+                        }}
                         className="text-[11px] px-2 py-0.5 border border-slate-200 rounded-md hover:bg-slate-100 text-slate-600 transition-colors"
                       >
                         {s.name}
@@ -1365,27 +1632,6 @@ export function GRNCreateEditPage() {
                   className="text-xs resize-none"
                 />
               </div>
-            </div>
-
-            {/* Step 1 Actions */}
-            <div className="flex items-center justify-between pt-4 border-t border-slate-100">
-              <span className="text-xs text-slate-500">
-                Next: Count received products and physical units.
-              </span>
-              <Button
-                type="button"
-                onClick={() => {
-                  if (!supplierName.trim()) {
-                    toast.error('Supplier name is required before continuing');
-                    return;
-                  }
-                  setCurrentStep(2);
-                }}
-                className="gap-2 text-xs font-semibold h-9"
-              >
-                Continue to Product Counts
-                <ArrowRight className="h-4 w-4" />
-              </Button>
             </div>
           </CardContent>
         </Card>
@@ -1599,7 +1845,7 @@ export function GRNCreateEditPage() {
                   <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold uppercase text-[10.5px]">
                     <tr>
                       <th className="py-2.5 px-3 text-left">Product</th>
-                      <th className="py-2.5 px-3 text-right">Expected Qty</th>
+                      <th className="py-2.5 px-3 text-right">{selectedPoId ? 'Outstanding Qty' : 'Expected Qty'}</th>
                       <th className="py-2.5 px-3 text-right">Received Qty</th>
                       <th className="py-2.5 px-3 text-right">Damaged Qty</th>
                       <th className="py-2.5 px-3 text-right">Good Units</th>
@@ -1632,6 +1878,7 @@ export function GRNCreateEditPage() {
                               type="number"
                               min="0"
                               value={item.expectedQuantity}
+                              disabled={Boolean(selectedPoId)}
                               onChange={(e) =>
                                 updateItem(
                                   item._tempId,
@@ -1646,6 +1893,7 @@ export function GRNCreateEditPage() {
                             <Input
                               type="number"
                               min="0"
+                              max={selectedPoId ? item.expectedQuantity : undefined}
                               value={item.receivedQuantity}
                               onChange={(e) =>
                                 updateItem(
@@ -1795,29 +2043,6 @@ export function GRNCreateEditPage() {
                 </table>
               </div>
             )}
-
-            {/* Step 2 Actions */}
-            <div className="flex items-center justify-between pt-4 border-t border-slate-100">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentStep(1)}
-                className="gap-1.5 text-xs h-9"
-              >
-                <ArrowLeft className="h-4 w-4" />
-                Back to Details
-              </Button>
-              <Button
-                type="button"
-                disabled={items.length === 0}
-                onClick={() => setCurrentStep(3)}
-                className="gap-2 text-xs font-semibold h-9"
-              >
-                Continue to Serial Numbers ({totalSerialsRequired > 0 ? `${totalSerialsRequired} Units` : 'Step 3'})
-                <ArrowRight className="h-4 w-4" />
-              </Button>
-            </div>
           </CardContent>
         </Card>
       </div>
@@ -1878,10 +2103,11 @@ export function GRNCreateEditPage() {
                 </div>
                 <Button
                   type="button"
-                  onClick={() => setCurrentStep(4)}
+                  disabled={submitting}
+                  onClick={handleProceedFromStep3}
                   className="gap-2 text-xs font-semibold h-9 mt-2"
                 >
-                  Continue to Barcode Stickers
+                  {submitting ? 'Generating Barcodes...' : 'Generate Barcodes & Proceed to Stickers'}
                   <ArrowRight className="h-4 w-4" />
                 </Button>
               </div>
@@ -2130,42 +2356,6 @@ export function GRNCreateEditPage() {
                 })}
               </div>
             )}
-
-            {/* Step 3 Actions */}
-            <div className="flex items-center justify-between pt-4 border-t border-slate-100">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentStep(2)}
-                className="gap-1.5 text-xs h-9"
-              >
-                <ArrowLeft className="h-4 w-4" />
-                Back to Product Counts
-              </Button>
-              <Button
-                type="button"
-                onClick={() => {
-                  if (serialDuplicateStats.hasAnyDuplicate) {
-                    toast.error(
-                      'Duplicate serial numbers detected! Each unit serial number must be unique before proceeding.'
-                    );
-                    return;
-                  }
-                  if (!isSerialStepComplete) {
-                    toast.error(
-                      `Please enter all ${totalSerialsRequired} serial numbers before proceeding (${totalSerialsEntered}/${totalSerialsRequired} entered)`
-                    );
-                    return;
-                  }
-                  setCurrentStep(4);
-                }}
-                className="gap-2 text-xs font-semibold h-9 bg-primary text-primary-foreground"
-              >
-                Continue to Barcode Stickers Studio
-                <ArrowRight className="h-4 w-4" />
-              </Button>
-            </div>
           </CardContent>
         </Card>
       </div>
@@ -2426,28 +2616,6 @@ export function GRNCreateEditPage() {
                 Confirm: All {barcodeSummary.totalUnits} Barcode Stickers Affixed in Receiving Bay
               </Button>
             </div>
-
-            {/* Step 4 Actions */}
-            <div className="flex items-center justify-between pt-4 border-t border-slate-100">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentStep(3)}
-                className="gap-1.5 text-xs h-9"
-              >
-                <ArrowLeft className="h-4 w-4" />
-                Back to Serial Numbers
-              </Button>
-              <Button
-                type="button"
-                onClick={() => setCurrentStep(5)}
-                className="gap-2 text-xs font-semibold h-9"
-              >
-                Continue to Review &amp; Approval
-                <ArrowRight className="h-4 w-4" />
-              </Button>
-            </div>
           </CardContent>
         </Card>
       </div>
@@ -2489,7 +2657,7 @@ export function GRNCreateEditPage() {
               </div>
               <div>
                 <span className="text-[10px] text-slate-400 font-bold uppercase block">Receiving Bay</span>
-                <span className="font-semibold text-slate-800">{warehouseId}</span>
+                <span className="font-semibold text-slate-800">Main Receiving Bay</span>
               </div>
               <div>
                 <span className="text-[10px] text-slate-400 font-bold uppercase block">Stock Keeper</span>
@@ -2547,7 +2715,7 @@ export function GRNCreateEditPage() {
                   type="button"
                   size="sm"
                   variant="outline"
-                  onClick={() => setCurrentStep(3)}
+                  onClick={() => setCurrentStep(4)}
                   className="text-xs h-8 text-amber-800 border-amber-300 bg-white shrink-0"
                 >
                   Go to Sticker Studio
@@ -2604,7 +2772,11 @@ export function GRNCreateEditPage() {
                           )}
                         </td>
                         <td className="py-2 px-3 text-center">
-                          <Badge
+                          {selectedPoId ? (
+                            <Badge variant="outline" className="text-[10px] font-mono bg-blue-50 text-blue-700 border-blue-200">
+                              Assigned on approval
+                            </Badge>
+                          ) : <Badge
                             variant="outline"
                             className={cn(
                               'text-[10px] font-mono',
@@ -2612,7 +2784,7 @@ export function GRNCreateEditPage() {
                             )}
                           >
                             {i.unitRecords?.length || 0} Units {i.barcodesConfirmed ? '✓' : 'Pending'}
-                          </Badge>
+                          </Badge>}
                         </td>
                       </tr>
                     );
@@ -2621,126 +2793,110 @@ export function GRNCreateEditPage() {
               </table>
             </div>
 
-            {/* Step 5 Actions */}
-            <div className="flex items-center justify-between pt-4 border-t border-slate-100">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentStep(4)}
-                className="gap-1.5 text-xs h-9"
-              >
-                <ArrowLeft className="h-4 w-4" />
-                Back to Stickers Studio
-              </Button>
-
-              <div className="flex items-center gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setIsPrintPreviewOpen(true)}
-                  className="h-9 text-xs font-bold gap-1.5 border-slate-300 text-slate-800 hover:bg-slate-100 shadow-xs"
+            {/* ── Step 5 Physical Intake Verification & Sign-off Checklist ── */}
+            <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/80 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <ShieldCheck className="h-4 w-4 text-emerald-600" />
+                  <span className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                    Stock Keeper Sign-Off &amp; Verification Checklist
+                  </span>
+                </div>
+                <Badge
+                  variant={isConfirmedForSubmit ? 'default' : 'outline'}
+                  className={isConfirmedForSubmit ? 'bg-emerald-600 text-white text-[10px]' : 'text-slate-500 text-[10px]'}
                 >
-                  <Printer className="h-4 w-4 text-primary" />
-                  Preview &amp; Print GRN (A4)
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={submitting}
-                  onClick={() => handleSave('DRAFT')}
-                  className="h-9 text-xs"
-                >
-                  {submitting ? 'Saving...' : 'Save as Draft'}
-                </Button>
-                <Button
-                  type="button"
-                  disabled={submitting}
-                  onClick={() => handleSave('SUBMITTED')}
-                  className="h-9 text-xs font-semibold shadow-xs bg-primary text-primary-foreground gap-1.5"
-                >
-                  <CheckCircle2 className="h-4 w-4" />
-                  {submitting ? 'Submitting...' : 'Sign & Complete Submission'}
-                </Button>
+                  {isConfirmedForSubmit ? '✓ Confirmed' : 'Action Required'}
+                </Badge>
               </div>
+              <p className="text-xs text-slate-600 leading-relaxed">
+                Before submitting this Goods Receipt Note for Manager Approval, verify that physical quantities, serial numbers, and unit barcodes match the shipment. Once submitted, the intake cannot be edited by Stock Keepers.
+              </p>
+              <label
+                className={cn(
+                  'flex items-start gap-3 p-3.5 rounded-xl border cursor-pointer transition-all',
+                  isConfirmedForSubmit
+                    ? 'border-emerald-500 bg-emerald-50/60 shadow-xs'
+                    : 'border-slate-300 bg-white hover:border-slate-400'
+                )}
+              >
+                <input
+                  type="checkbox"
+                  checked={isConfirmedForSubmit}
+                  onChange={(e) => setIsConfirmedForSubmit(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                />
+                <div className="text-xs space-y-0.5">
+                  <span className="font-semibold text-slate-900 block">
+                    I confirm that all received items have been physically inspected, counted, serial numbers registered, and barcodes verified.
+                  </span>
+                  <span className="text-slate-500 text-[11px] block">
+                    Checking this confirmation enables the &ldquo;Submit for Manager Approval&rdquo; button.
+                  </span>
+                </div>
+              </label>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* ── Persistent Floating Sticky Bar for Quick Navigation & Submission ── */}
+      {/* ── Unified Floating Sticky Action Bar ── */}
       <div className="sticky bottom-3 z-30 bg-white/95 backdrop-blur-md border border-slate-200/90 rounded-2xl p-3 shadow-lg flex flex-col sm:flex-row items-center justify-between gap-3">
+        {/* Left: Step Info */}
         <div className="text-xs text-slate-600 flex items-center gap-2 w-full sm:w-auto">
           <Badge variant="outline" className="text-[11px] bg-slate-50 font-mono">
             Step {currentStep} of 5
           </Badge>
-          <span className="truncate">
+          <span className="truncate font-medium">
             {currentStep === 1 && 'Step 1: Inbound Source & Supplier'}
             {currentStep === 2 && `Step 2: ${items.length} Product(s) · ${totalReceivedUnits} Units Counted`}
             {currentStep === 3 && `Step 3: Serial Numbers · ${totalSerialsEntered}/${totalSerialsRequired} Recorded`}
             {currentStep === 4 && `Step 4: Barcode Studio · ${barcodeSummary.confirmedUnits}/${barcodeSummary.totalUnits} Stickers Affixed`}
-            {currentStep === 5 && 'Step 5: Final Sign-off & Manager Approval'}
+            {currentStep === 5 && 'Step 5: Review & Manager Approval Submission'}
           </span>
         </div>
 
+        {/* Right: Actions */}
         <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+          {/* Back Button */}
           {currentStep > 1 && (
             <Button
               type="button"
               variant="outline"
               size="sm"
+              disabled={submitting}
               onClick={() => setCurrentStep((prev) => (prev - 1) as any)}
-              className="h-8 text-xs gap-1"
+              className="h-8.5 text-xs gap-1.5"
             >
-              <ArrowLeft className="h-3 w-3" />
+              <ArrowLeft className="h-3.5 w-3.5" />
               Back
             </Button>
           )}
 
-          {currentStep < 5 ? (
-            <Button
-              type="button"
-              size="sm"
-              onClick={() => {
-                if (currentStep === 1 && !supplierName.trim()) {
-                  toast.error('Supplier name is required');
-                  return;
-                }
-                if (currentStep === 2 && items.length === 0) {
-                  toast.error('At least one product line is required');
-                  return;
-                }
-                if (currentStep === 3) {
-                  if (serialDuplicateStats.hasAnyDuplicate) {
-                    toast.error(
-                      'Duplicate serial numbers detected! Each unit serial number must be unique before proceeding.'
-                    );
-                    return;
-                  }
-                  if (!isSerialStepComplete) {
-                    toast.error(
-                      `Please enter all ${totalSerialsRequired} serial numbers before proceeding (${totalSerialsEntered}/${totalSerialsRequired} entered)`
-                    );
-                    return;
-                  }
-                }
-                setCurrentStep((prev) => (prev + 1) as any);
-              }}
-              className="h-8 text-xs font-semibold gap-1"
-            >
-              Next Step
-              <ArrowRight className="h-3 w-3" />
-            </Button>
-          ) : null}
-
+          {/* Secondary Action: Save Draft */}
           {items.length > 0 && (
             <Button
               type="button"
               variant="outline"
               size="sm"
+              disabled={submitting}
+              onClick={() => handleSave('DRAFT')}
+              className="h-8.5 text-xs text-slate-700 hover:bg-slate-100"
+              title="Save current progress as Draft"
+            >
+              Save Draft
+            </Button>
+          )}
+
+          {/* Secondary Action: Print GRN (A4) Preview */}
+          {items.length > 0 && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={submitting}
               onClick={() => setIsPrintPreviewOpen(true)}
-              className="h-8 text-xs font-bold gap-1.5 border-slate-300 text-slate-800 hover:bg-slate-100 shadow-2xs"
+              className="h-8.5 text-xs font-bold gap-1.5 border-slate-300 text-slate-800 hover:bg-slate-100 shadow-2xs"
               title="Preview & Print Official GRN before submission"
             >
               <Printer className="h-3.5 w-3.5 text-primary" />
@@ -2748,25 +2904,93 @@ export function GRNCreateEditPage() {
             </Button>
           )}
 
-          <Button
-            type="button"
-            variant="outline"
-            disabled={submitting}
-            onClick={() => handleSave('DRAFT')}
-            className="h-8 text-xs"
-          >
-            Draft
-          </Button>
+          {/* Primary Action Button (Contextual per step) */}
+          {currentStep === 1 && (
+            <Button
+              type="button"
+              size="sm"
+              disabled={submitting}
+              onClick={() => {
+                if (!supplierName.trim()) {
+                  toast.error('Supplier name is required before continuing');
+                  return;
+                }
+                setCurrentStep(2);
+              }}
+              className="h-8.5 text-xs font-semibold gap-1.5"
+            >
+              Next Step: Continue to Products
+              <ArrowRight className="h-3.5 w-3.5" />
+            </Button>
+          )}
 
-          <Button
-            type="button"
-            disabled={submitting}
-            onClick={() => handleSave('SUBMITTED')}
-            className="h-8 text-xs font-semibold shadow-xs bg-emerald-700 hover:bg-emerald-800 text-white gap-1"
-          >
-            <CheckCircle2 className="h-3.5 w-3.5" />
-            Submit for Manager Approval
-          </Button>
+          {currentStep === 2 && (
+            <Button
+              type="button"
+              size="sm"
+              disabled={submitting || items.length === 0}
+              onClick={() => {
+                if (items.length === 0) {
+                  toast.error('Please add at least one received product line');
+                  return;
+                }
+                setCurrentStep(3);
+              }}
+              className="h-8.5 text-xs font-semibold gap-1.5"
+            >
+              Next Step: Continue to Serials ({totalSerialsRequired > 0 ? `${totalSerialsRequired} Units` : 'Step 3'})
+              <ArrowRight className="h-3.5 w-3.5" />
+            </Button>
+          )}
+
+          {currentStep === 3 && (
+            <Button
+              type="button"
+              size="sm"
+              disabled={submitting || !isSerialStepComplete || serialDuplicateStats.hasAnyDuplicate}
+              onClick={handleProceedFromStep3}
+              className="h-8.5 text-xs font-semibold gap-1.5 bg-primary text-primary-foreground shadow-xs"
+            >
+              {submitting ? 'Generating Barcodes...' : `Next Step: Generate Barcodes & Proceed (${totalReceivedUnits} Units)`}
+              <ArrowRight className="h-3.5 w-3.5" />
+            </Button>
+          )}
+
+          {currentStep === 4 && (
+            <Button
+              type="button"
+              size="sm"
+              disabled={submitting}
+              onClick={() => setCurrentStep(5)}
+              className="h-8.5 text-xs font-semibold gap-1.5"
+            >
+              Next Step: Proceed to Final Review
+              <ArrowRight className="h-3.5 w-3.5" />
+            </Button>
+          )}
+
+          {currentStep === 5 && (
+            <Button
+              type="button"
+              size="sm"
+              disabled={submitting || !isConfirmedForSubmit}
+              onClick={() => handleSave('SUBMITTED')}
+              className={cn(
+                'h-8.5 text-xs font-semibold shadow-xs gap-1.5 transition-all',
+                isConfirmedForSubmit
+                  ? 'bg-emerald-700 hover:bg-emerald-800 text-white'
+                  : 'bg-slate-200 text-slate-400 cursor-not-allowed border-slate-300'
+              )}
+              title={
+                isConfirmedForSubmit
+                  ? 'Submit GRN for Manager Approval'
+                  : 'Check the confirmation box above in Step 5 to enable submission'
+              }
+            >
+              <CheckCircle2 className="h-3.5 w-3.5" />
+              {submitting ? 'Submitting...' : 'Submit for Manager Approval'}
+            </Button>
+          )}
         </div>
       </div>
 
@@ -2778,7 +3002,6 @@ export function GRNCreateEditPage() {
           items={items}
           grnNumber={poNumber || deliveryNoteRef || 'GRN-INBOUND'}
           supplierName={supplierName}
-          warehouseId={warehouseId}
           initialProductId={selectedProductFilter}
           onConfirmLabeled={(updated) => setItems(updated)}
         />

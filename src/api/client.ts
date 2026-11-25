@@ -6,6 +6,8 @@ export {
   setAccessToken,
   clearAccessToken,
   refreshAccessToken,
+  extractErrorMessage,
+  isRequestCanceled,
 } from './axios';
 
 export type {
@@ -25,13 +27,15 @@ export async function apiGetPaginated<T>(
   config?: ApiRequestConfig,
 ): Promise<{ data: T[]; meta: { total: number; page: number; pageSize: number } }> {
   const response = await apiClient.get<ApiSuccessResponse<T[]>>(url, config);
-  const rawMeta = response.data.meta as { total?: number; page?: number; pageSize?: number } | undefined;
+  const rawMeta = response.data.meta as
+    | { total?: number; page?: number; pageSize?: number; limit?: number }
+    | undefined;
   return {
     data: response.data.data,
     meta: {
       total: rawMeta?.total ?? response.data.data.length,
       page: rawMeta?.page ?? 1,
-      pageSize: rawMeta?.pageSize ?? response.data.data.length,
+      pageSize: rawMeta?.pageSize ?? rawMeta?.limit ?? response.data.data.length,
     },
   };
 }

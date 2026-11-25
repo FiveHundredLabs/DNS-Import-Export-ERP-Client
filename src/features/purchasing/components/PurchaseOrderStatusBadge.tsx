@@ -33,6 +33,11 @@ export function PurchaseOrderStatusBadge({
       className: 'bg-slate-100 text-slate-700 border-slate-300',
       icon: FileText,
     },
+    PENDING_VERIFICATION: {
+      label: 'Pending Verification',
+      className: 'bg-sky-50 text-sky-800 border-sky-300 animate-pulse',
+      icon: Clock,
+    },
     PENDING_APPROVAL: {
       label: 'Pending Approval',
       className: 'bg-amber-50 text-amber-800 border-amber-300 animate-pulse',
