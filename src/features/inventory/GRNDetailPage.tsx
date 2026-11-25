@@ -212,7 +212,7 @@ export function GRNDetailPage({ backUrl, backTitle }: GRNDetailPageProps = {}) {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const location = useLocation();
-  const { grnService, refetch: refetchGRNs } = useGRN();
+  const { refetch: refetchGRNs } = useGRN();
   const queryClient = useQueryClient();
   const { user } = useAuth();
 
@@ -240,8 +240,7 @@ export function GRNDetailPage({ backUrl, backTitle }: GRNDetailPageProps = {}) {
     if (!id) return;
     try {
       setLoading(true);
-      const localData = await grnService.getGRNById(id);
-      const data = localData || await grnsApi.getById(id);
+      const data = await grnsApi.getById(id);
       if (!data) {
         setError('GRN record not found');
       } else {
@@ -252,7 +251,7 @@ export function GRNDetailPage({ backUrl, backTitle }: GRNDetailPageProps = {}) {
     } finally {
       setLoading(false);
     }
-  }, [id, grnService]);
+  }, [id]);
 
   useEffect(() => {
     fetchGRN();
@@ -401,14 +400,9 @@ export function GRNDetailPage({ backUrl, backTitle }: GRNDetailPageProps = {}) {
   const handleApprove = async () => {
     if (!id || !user) return;
     try {
-      if (grn?.backendManaged) await grnsApi.approve(id);
-      else await grnService.approveGRN(id, user.id, user.name || 'Finance Officer', user.role);
+      await grnsApi.approve(id);
       await refreshAfterGRNAction();
-      toast.success(
-        grn?.backendManaged
-          ? 'Goods Received Note approved. The PO receipt quantities are updated; inventory changes remain in the GRN costing and stock processing workflow.'
-          : 'Goods Received Note approved by Finance and posted to inventory.',
-      );
+      toast.success('Goods Received Note approved. Physical stock accepted.');
       fetchGRN();
     } catch (err: any) {
       toast.error(err.message || 'Failed to approve GRN');
@@ -422,8 +416,7 @@ export function GRNDetailPage({ backUrl, backTitle }: GRNDetailPageProps = {}) {
       return;
     }
     try {
-      if (grn?.backendManaged) await grnsApi.reject(id, { rejectionReason: comment });
-      else await grnService.rejectGRN(id, comment, user.id, user.name || 'Finance Officer', user.role);
+      await grnsApi.reject(id, { rejectionReason: comment });
       await refreshAfterGRNAction();
       toast.success('GRN rejected and returned for inspection resolution.');
       fetchGRN();
@@ -435,10 +428,9 @@ export function GRNDetailPage({ backUrl, backTitle }: GRNDetailPageProps = {}) {
   const handleStockManagerApprove = async (remarks?: string) => {
     if (!id || !user) return;
     try {
-      if (grn?.backendManaged) await grnsApi.verify(id, { remark: remarks });
-      else await grnService.verifyAndApproveGRN(id, { id: user.id, name: user.name, role: user.role }, remarks);
+      await grnsApi.verify(id, { remark: remarks });
       await refreshAfterGRNAction();
-      toast.success('GRN physical verification approved! Forwarded to Finance for approval.');
+      toast.success('GRN physical verification approved! Forwarded for approval.');
       fetchGRN();
     } catch (err: any) {
       toast.error(err.message || 'Failed to verify GRN');
@@ -448,10 +440,9 @@ export function GRNDetailPage({ backUrl, backTitle }: GRNDetailPageProps = {}) {
   const handleStockManagerReject = async (reason: string) => {
     if (!id || !user) return;
     try {
-      if (grn?.backendManaged) await grnsApi.reject(id, { rejectionReason: reason });
-      else await grnService.rejectGRNVerification(id, { id: user.id, name: user.name, role: user.role }, reason);
+      await grnsApi.reject(id, { rejectionReason: reason });
       await refreshAfterGRNAction();
-      toast.success('GRN verification rejected. Shipment returned to Stock Keeper for inspection resolution.');
+      toast.success('GRN verification rejected.');
       fetchGRN();
     } catch (err: any) {
       toast.error(err.message || 'Failed to reject GRN');
@@ -503,7 +494,7 @@ export function GRNDetailPage({ backUrl, backTitle }: GRNDetailPageProps = {}) {
   const poDate = grn.poDate || '15 May 2025';
   const grnDate = grn.receivedDate || grn.createdAt || new Date().toISOString();
   const expectedDate = grn.expectedDeliveryDate || formatDate(grnDate);
-  const locationBay = grn.receivingLocationBay || `${grn.warehouseId || 'WH-MAIN'} (Receiving Bay 01)`;
+  const locationBay = grn.receivingLocationBay || 'Main Receiving Bay 01';
   const receivedBy = grn.receivedByName || grn.receivedById || 'Nimal Perera (Warehouse Lead)';
   const verifiedBy = grn.verifiedByName || grn.verifiedById || 'Sunil Weerasinghe (Quality Inspector)';
   const approvedBy = grn.approvedByName || grn.approvedById || 'Anura De Silva (Logistics Director)';
@@ -852,7 +843,7 @@ export function GRNDetailPage({ backUrl, backTitle }: GRNDetailPageProps = {}) {
               </CardTitle>
             </div>
             <Badge variant="outline" className="text-[10px] bg-white font-mono">
-              Bay Code: {grn.warehouseId || 'WH-MAIN'}
+              Receiving Bay: Main
             </Badge>
           </CardHeader>
           <CardContent className="p-4 grid grid-cols-2 sm:grid-cols-3 gap-3.5 text-xs">
@@ -1223,21 +1214,17 @@ export function GRNDetailPage({ backUrl, backTitle }: GRNDetailPageProps = {}) {
       )}
 
       {/* Unit Barcode & Sticker Printing Studio Modal */}
-      {isBarcodeModalOpen && !grn.backendManaged && (
+      {isBarcodeModalOpen && grn && (
         <UnitBarcodeModal
           isOpen={isBarcodeModalOpen}
           onClose={() => setIsBarcodeModalOpen(false)}
           items={preparedItems}
           grnNumber={grn.grnNumber || grn.id}
           supplierName={grn.supplierName}
-          warehouseId={grn.warehouseId}
           initialProductId={selectedProductForModal}
           onConfirmLabeled={async (updatedItems) => {
-            if (id) {
-              await grnService.confirmBarcodes(id, user?.id || 'admin', updatedItems);
-              setGrn((prev) => (prev ? { ...prev, items: updatedItems, barcodesConfirmed: true } : prev));
-              toast.success('All unit barcode stickers marked as printed and physically affixed.');
-            }
+            setGrn((prev) => (prev ? { ...prev, items: updatedItems, barcodesConfirmed: true } : prev));
+            toast.success('All unit barcode stickers marked as printed and physically affixed.');
           }}
         />
       )}

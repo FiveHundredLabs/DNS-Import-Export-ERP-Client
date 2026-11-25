@@ -44,10 +44,25 @@ export interface GrnApiRecord {
 
 export interface CreateGrnPayload {
   poId: string;
-  supplierId: string;
+  supplierId?: string;
   supplierInvoiceNumber?: string;
   receivedDate?: string;
   notes?: string;
+  submitForVerification?: boolean;
+  products: Array<{
+    productId: string;
+    receivedQuantity: number;
+    damagedQuantity: number;
+    unitCost: number;
+    serialNumbers?: string[];
+  }>;
+}
+
+export interface IntakeUnitsPayload {
+  supplierInvoiceNumber?: string;
+  receivedDate?: string;
+  notes?: string;
+  submitForVerification?: boolean;
   products: Array<{
     productId: string;
     receivedQuantity: number;
@@ -69,6 +84,22 @@ function mapGrnProduct(record: GrnProductApiRecord): GRNItem {
     ? record.cableSpecs.serialNumbers.map(String)
     : [];
 
+  const rawUnits = Array.isArray((record.cableSpecs as any)?.units)
+    ? ((record.cableSpecs as any).units as Array<any>)
+    : [];
+
+  const unitRecords = rawUnits.map((u: any, idx: number) => ({
+    id: u.id || `unit-${idx}`,
+    unitBarcode: u.barcode || '',
+    barcode: u.barcode || '',
+    serialNumber: u.serialNumber || undefined,
+    unitIndex: u.unitIndex || idx + 1,
+    isDamaged: Boolean(u.isDamaged),
+    unitSeq: u.unitSeq,
+  }));
+
+  const unitBarcodes = unitRecords.map((u) => u.unitBarcode).filter(Boolean);
+
   return {
     productId: record.productId,
     productNameSnapshot: record.productName || record.product?.name || record.productId,
@@ -80,6 +111,9 @@ function mapGrnProduct(record: GrnProductApiRecord): GRNItem {
     unitCostSnapshot: unitCost,
     lineValue: unitCost * acceptedQuantity,
     serialNumbers,
+    unitBarcodes,
+    unitRecords,
+    barcodesConfirmed: unitBarcodes.length > 0,
     uom: record.uom || record.product?.unitOfMeasure || 'PCS',
     cableSpecs: record.cableSpecs as GRNItem['cableSpecs'],
   };
@@ -148,6 +182,9 @@ export const grnsApi = {
 
   create: (payload: CreateGrnPayload) =>
     apiPost<GrnApiRecord>('/grns', payload, { suppressErrorToast: true }),
+
+  intakeUnits: (id: string, payload: IntakeUnitsPayload) =>
+    apiPost<GrnApiRecord>(`/grns/${encodeURIComponent(id)}/intake-units`, payload, { suppressErrorToast: true }),
 
   submit: (id: string, payload: GrnActionPayload = {}) =>
     apiPost<GrnApiRecord>(`/grns/${encodeURIComponent(id)}/submit`, payload, { suppressErrorToast: true }),

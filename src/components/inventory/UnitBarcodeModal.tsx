@@ -28,7 +28,7 @@ interface UnitBarcodeModalProps {
   items: any[];
   grnNumber: string;
   supplierName: string;
-  warehouseId: string;
+  warehouseId?: string;
   onConfirmLabeled: (updatedItems: any[]) => void;
   initialProductId?: string;
 }
@@ -43,12 +43,19 @@ export function UnitBarcodeModal({
   onConfirmLabeled,
   initialProductId,
 }: UnitBarcodeModalProps) {
-  // Ensure all items have unitRecords populated
+  // Ensure all items have unitRecords populated, preserving backend canonical units
   const preparedItems = useMemo(() => {
+    const hasExistingRecords = items.some((i) => i.unitRecords && i.unitRecords.length > 0);
+    if (hasExistingRecords) {
+      return items;
+    }
     return unitBarcodeService.generateAllForGRN(items, grnNumber || 'GRN-NEW');
   }, [items, grnNumber]);
 
   const [activeItems, setActiveItems] = useState<any[]>(preparedItems);
+  React.useEffect(() => {
+    setActiveItems(preparedItems);
+  }, [preparedItems]);
   const [selectedProductFilter, setSelectedProductFilter] = useState<string>(
     initialProductId || 'ALL'
   );
