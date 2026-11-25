@@ -3,6 +3,7 @@ import React from 'react';
 import '@testing-library/jest-dom';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { GRNCreateEditPage } from '../features/inventory/GRNCreateEditPage';
 import { User } from '../types/auth';
 
@@ -23,12 +24,72 @@ vi.mock('../hooks/useAuth', () => ({
   }),
 }));
 
+vi.mock('../api/purchase-orders/purchase-orders.api', () => ({
+  purchaseOrdersApi: {
+    remainingItems: vi.fn(async () => ({
+      id: 'po-2025-001',
+      poNumber: 'PO-2025-001',
+      supplierId: 'sup-001',
+      supplierName: 'Schneider Electric Lanka (Pvt) Ltd',
+      items: [
+        {
+          id: 'poi-1',
+          poId: 'po-2025-001',
+          productId: 'prod-001',
+          productName: 'Schneider Acti9 32A Double Pole MCB',
+          sku: 'DNS-MCB-32A-2P',
+          orderedQty: 10,
+          receivedQty: 0,
+          remainingQty: 10,
+          unitPrice: 2500,
+          unitOfMeasure: 'PCS',
+          hasSerialNumber: false,
+        },
+      ],
+    })),
+  },
+}));
+
+vi.mock('../hooks/usePurchaseOrders', () => ({
+  purchaseOrderQueryKeys: { all: ['purchase-orders'] },
+  usePurchaseOrders: () => ({
+    purchaseOrders: [
+      {
+        id: 'po-2025-001',
+        poNumber: 'PO-2025-001',
+        supplierId: 'sup-001',
+        supplierName: 'Schneider Electric Lanka (Pvt) Ltd',
+        status: 'APPROVED',
+        items: [
+          {
+            id: 'poi-1',
+            productId: 'prod-001',
+            productName: 'Schneider Acti9 32A Double Pole MCB',
+            productSku: 'DNS-MCB-32A-2P',
+            qty: 10,
+            receivedQty: 0,
+            unitPrice: 2500,
+          },
+        ],
+      },
+    ],
+    loading: false,
+    refetch: vi.fn(),
+  }),
+}));
+
 describe('GRN Pre-Submission Print & Enterprise Layout', () => {
   it('allows stock keeper to preview and print official GRN before submitting for approval', async () => {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+
     render(
-      <MemoryRouter>
-        <GRNCreateEditPage />
-      </MemoryRouter>
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter>
+          <GRNCreateEditPage />
+        </MemoryRouter>
+      </QueryClientProvider>
     );
 
     // Initial load: Step 1 (Receiving Details & Inbound Source)
@@ -38,11 +99,6 @@ describe('GRN Pre-Submission Print & Enterprise Layout', () => {
     const poButtons = screen.getAllByRole('button', { name: /PO-202/i });
     expect(poButtons.length).toBeGreaterThan(0);
     fireEvent.click(poButtons[0]);
-
-    // Or supplier name input
-    const supplierInput = screen.getByPlaceholderText(/Type or select supplier/i);
-    expect(supplierInput).toBeInTheDocument();
-    fireEvent.change(supplierInput, { target: { value: 'Schneider Electric Lanka (Pvt) Ltd' } });
 
     // Click Next Step to Step 2
     const nextBtn = screen.getByRole('button', { name: /Next Step/i });

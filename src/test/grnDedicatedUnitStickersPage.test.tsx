@@ -2,15 +2,24 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import '@testing-library/jest-dom';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { GRNDetailPage } from '../features/inventory/GRNDetailPage';
 import { GRNUnitStickersPage } from '../features/inventory/GRNUnitStickersPage';
 import { MockGRNRepository } from '../repositories/mock/MockGRNRepository';
 import { GRN } from '../types/inventory';
 import { grnRepository } from '../services/GRNService';
+import { grnsApi } from '../api/grns/grns.api';
 
 describe('GRN Dedicated Unit Stickers Page Workflow', () => {
+  let queryClient: QueryClient;
+
   beforeEach(() => {
     MockGRNRepository.getInstance().reset();
+    queryClient = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+      },
+    });
   });
 
   const setupTestGRN = async (id: string, qty: number = 450): Promise<GRN> => {
@@ -43,6 +52,7 @@ describe('GRN Dedicated Unit Stickers Page Workflow', () => {
       ],
     };
     await grnRepository.save(grn);
+    vi.spyOn(grnsApi, 'getById').mockImplementation(async () => grn);
     return grn;
   };
 
@@ -50,12 +60,14 @@ describe('GRN Dedicated Unit Stickers Page Workflow', () => {
     const grn = await setupTestGRN('GRN-STICKERS-001', 450);
 
     render(
-      <MemoryRouter initialEntries={[`/inventory/grn/${grn.id}`]}>
-        <Routes>
-          <Route path="/inventory/grn/:id" element={<GRNDetailPage />} />
-          <Route path="/inventory/grn/:id/stickers" element={<GRNUnitStickersPage />} />
-        </Routes>
-      </MemoryRouter>
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={[`/inventory/grn/${grn.id}`]}>
+          <Routes>
+            <Route path="/inventory/grn/:id" element={<GRNDetailPage />} />
+            <Route path="/inventory/grn/:id/stickers" element={<GRNUnitStickersPage />} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>
     );
 
     // Wait for GRN detail to load
