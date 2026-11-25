@@ -84,8 +84,12 @@ export interface GRNQualityInspection {
 }
 
 export interface UnitBarcodeRecord {
+  id?: string;
+  unitId?: string;
+  unitSeq?: number;
   unitIndex: number;
   unitBarcode: string;
+  barcode?: string;
   serialNumber?: string;
   status: 'PENDING_LABEL' | 'LABELED';
   labeledAt?: string;

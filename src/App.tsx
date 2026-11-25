@@ -604,6 +604,14 @@ export function App() {
           }
         />
         <Route
+          path="inventory/grn/:id/edit"
+          element={
+            <ProtectedRoute>
+              <GRNCreateEditPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="inventory/grn/:id"
           element={
             <ProtectedRoute>

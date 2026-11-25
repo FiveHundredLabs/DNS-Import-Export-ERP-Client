@@ -86,16 +86,23 @@ export function GRNCreateEditPage() {
   const { user, currentUser } = useAuth();
   const { products } = useProducts({ page: 1, pageSize: 200 });
   const { data: supplierLookup = [] } = useSupplierLookup();
-  const approvedPurchaseOrders = usePurchaseOrders({ status: 'APPROVED' });
-  const partiallyReceivedPurchaseOrders = usePurchaseOrders({ status: 'PARTIALLY_RECEIVED' });
-  const purchaseOrders = useMemo(
-    () => [...approvedPurchaseOrders.purchaseOrders, ...partiallyReceivedPurchaseOrders.purchaseOrders],
-    [approvedPurchaseOrders.purchaseOrders, partiallyReceivedPurchaseOrders.purchaseOrders],
-  );
-  const purchaseOrdersLoading = approvedPurchaseOrders.loading || partiallyReceivedPurchaseOrders.loading;
 
   // Track active persisted draft GRN id for multi-step intake
   const [activeGrnId, setActiveGrnId] = useState<string | null>(id || null);
+
+  const approvedPurchaseOrders = usePurchaseOrders({ status: 'APPROVED' });
+  const purchaseOrders = useMemo(
+    () =>
+      (approvedPurchaseOrders.purchaseOrders || []).filter((po: any) => {
+        // Enforce 1 GRN per PO: Exclude POs that already have a GRN, unless editing that specific GRN
+        if (po.grn && (!activeGrnId || po.grn.id !== activeGrnId)) {
+          return false;
+        }
+        return true;
+      }),
+    [approvedPurchaseOrders.purchaseOrders, activeGrnId],
+  );
+  const purchaseOrdersLoading = approvedPurchaseOrders.loading;
 
   // Stepper state: 1: Inbound Details, 2: Product Counts, 3: Serial Numbers, 4: Barcode Stickers, 5: Review & Sign-Off
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4 | 5>(1);
@@ -162,6 +169,92 @@ export function GRNCreateEditPage() {
       }
     }
   }, [activeUser?.role, id, navigate]);
+
+  // Load existing DRAFT GRN for editing
+  React.useEffect(() => {
+    if (!id) return;
+    let isCancelled = false;
+
+    async function loadExistingDraft() {
+      try {
+        setSubmitting(true);
+        const existing = await grnsApi.getById(id);
+        if (isCancelled || !existing) return;
+
+        if (existing.status !== 'DRAFT') {
+          toast.error(`Only DRAFT GRNs can be edited. Current status is ${existing.status}.`);
+          navigate(`/inventory/grn/${id}`, { replace: true });
+          return;
+        }
+
+        setActiveGrnId(existing.id);
+        if (existing.poId) {
+          setSourceType('PO');
+          setSelectedPoId(existing.poId);
+          setPoNumber(existing.poNumber || '');
+        } else {
+          setSourceType('MANUAL');
+        }
+
+        setSelectedSupplierId(existing.supplierId);
+        setSupplierName(existing.supplierName);
+        setSupplierInvoiceNumber(existing.supplierInvoiceNumber || '');
+        if (existing.receivedDate) {
+          setReceivedDate(existing.receivedDate.slice(0, 10));
+        }
+        setNotes(existing.notes || '');
+
+        const sourceItems = (existing.items && existing.items.length > 0) ? existing.items : (existing.grnProducts || []);
+        if (sourceItems.length > 0) {
+          const loadedLines: LineItem[] = sourceItems.map((it: any) => {
+            const rawUnits = it.unitRecords || it.cableSpecs?.units || [];
+            const mappedUnits = rawUnits.map((u: any, idx: number) => ({
+              id: u.id || `unit-${idx}`,
+              unitId: u.unitId || (u.unitSeq ? `UNIT${String(u.unitSeq).padStart(6, '0')}` : undefined),
+              unitSeq: u.unitSeq,
+              unitIndex: u.unitIndex || idx + 1,
+              unitBarcode: u.barcode || u.unitBarcode || '',
+              barcode: u.barcode || u.unitBarcode || '',
+              serialNumber: u.serialNumber || undefined,
+              isDamaged: Boolean(u.isDamaged),
+              status: u.status || 'PENDING_LABEL',
+            }));
+
+            return {
+              _tempId: generateId(),
+              productId: it.productId,
+              productNameSnapshot: it.productNameSnapshot || it.productName || it.product?.name || '',
+              skuSnapshot: it.skuSnapshot || it.sku || it.product?.sku || '',
+              expectedQuantity: it.expectedQuantity ?? it.receivedQuantity,
+              receivedQuantity: it.receivedQuantity,
+              damagedQuantity: it.damagedQuantity || 0,
+              unitCostSnapshot: Number(it.unitCostSnapshot || it.unitCost || 0),
+              unitCost: Number(it.unitCostSnapshot || it.unitCost || 0),
+              lineValue: Number(it.lineValue || ((it.receivedQuantity - (it.damagedQuantity || 0)) * (it.unitCostSnapshot || it.unitCost || 0))),
+              barcode: it.barcode || '',
+              serialNumber: it.serialNumber || '',
+              uom: it.uom || it.product?.unitOfMeasure || 'PCS',
+              unitRecords: mappedUnits,
+              unitBarcodes: mappedUnits.map((r: any) => r.unitBarcode).filter(Boolean),
+              serialNumbers: it.serialNumbers || it.cableSpecs?.serialNumbers || [],
+              barcodesConfirmed: it.barcodesConfirmed ?? false,
+            };
+          });
+          setItems(loadedLines);
+        }
+      } catch (err: any) {
+        toast.error(extractErrorMessage(err) || 'Failed to load draft GRN');
+        navigate('/inventory/grn', { replace: true });
+      } finally {
+        if (!isCancelled) setSubmitting(false);
+      }
+    }
+
+    loadExistingDraft();
+    return () => {
+      isCancelled = true;
+    };
+  }, [id, navigate]);
 
   // Reconstructed preview GRN for physical print before submission
   const previewGRN: GRN = useMemo(() => ({
@@ -428,12 +521,21 @@ export function GRNCreateEditPage() {
 
   // Step 3 Confirm All Affixed in Bay
   const handleConfirmAllAffixedInStudio = () => {
-    if (selectedPoId) {
-      toast.info('Inventory assigns unit barcodes when the GRN is approved. Serial numbers are recorded with this receipt.');
-      return;
-    }
-    const updated = unitBarcodeService.confirmAllAffixed(items);
-    setItems(updated.map((item, index) => ({ ...items[index], ...item })));
+    setItems((prev) =>
+      prev.map((item) => {
+        const records = (item.unitRecords || []).map((r) => ({
+          ...r,
+          status: 'LABELED' as const,
+          labeledAt: new Date().toISOString(),
+        }));
+        return {
+          ...item,
+          unitRecords: records,
+          barcodesConfirmed: true,
+          barcodesConfirmedAt: new Date().toISOString(),
+        };
+      })
+    );
     toast.success(
       `✓ Confirmed! All ${barcodeSummary.totalUnits} physical unit stickers affixed in warehouse bay.`
     );
@@ -701,13 +803,14 @@ export function GRNCreateEditPage() {
     toast.info('Cleared serial numbers');
   };
 
-  // Flattened stickers list for Step 3 preview
+  // Flattened stickers list for Step 4 preview
   const allStickers = useMemo(() => {
     const list: {
       productId: string;
       productName: string;
       sku: string;
       unitIndex: number;
+      unitId?: string;
       totalUnitsForProduct: number;
       record: UnitBarcodeRecord;
     }[] = [];
@@ -717,14 +820,23 @@ export function GRNCreateEditPage() {
         return;
       }
       const records = item.unitRecords || [];
-      records.forEach((r: UnitBarcodeRecord) => {
+      records.forEach((r: UnitBarcodeRecord, rIdx: number) => {
+        const uIdx = r.unitIndex || rIdx + 1;
+        const uId = r.unitId || (r.unitSeq ? `UNIT${String(r.unitSeq).padStart(6, '0')}` : undefined);
+        const bCode = r.unitBarcode || r.barcode || '';
         list.push({
           productId: item.productId,
           productName: item.productNameSnapshot,
           sku: item.skuSnapshot,
-          unitIndex: r.unitIndex,
+          unitIndex: uIdx,
+          unitId: uId,
           totalUnitsForProduct: records.length,
-          record: r,
+          record: {
+            ...r,
+            unitIndex: uIdx,
+            unitId: uId,
+            unitBarcode: bCode,
+          },
         });
       });
     });
@@ -732,7 +844,7 @@ export function GRNCreateEditPage() {
     return list;
   }, [items, selectedProductFilter]);
 
-  // Paginated barcode stickers for Step 3
+  // Paginated barcode stickers for Step 4
   const totalBarcodeStickers = allStickers.length;
   const totalBarcodePages = Math.max(1, Math.ceil(totalBarcodeStickers / barcodePageSize));
   const safeBarcodePage = Math.min(Math.max(1, barcodePage), totalBarcodePages);
@@ -765,10 +877,6 @@ export function GRNCreateEditPage() {
 
   // Bulk print all stickers (50mm x 30mm standard thermal labels)
   const handlePrintBulk = () => {
-    if (selectedPoId) {
-      toast.info('Inventory assigns scannable unit barcodes after GRN approval; no provisional labels were printed.');
-      return;
-    }
     if (allStickers.length === 0) {
       toast.error('No barcode stickers available to print');
       return;
@@ -781,6 +889,7 @@ export function GRNCreateEditPage() {
         companyName: 'DNS Import & Export (Pvt) Ltd',
         productName: s.productName,
         sku: s.sku,
+        unitId: s.unitId,
         unitBarcode: s.record.unitBarcode,
         serialNumber: s.record.serialNumber,
         unitIndex: s.unitIndex,
@@ -813,6 +922,7 @@ export function GRNCreateEditPage() {
         companyName: 'DNS Import & Export (Pvt) Ltd',
         productName: s.productName,
         sku: s.sku,
+        unitId: s.unitId,
         unitBarcode: s.record.unitBarcode,
         serialNumber: s.record.serialNumber,
         unitIndex: s.unitIndex,
@@ -841,6 +951,7 @@ export function GRNCreateEditPage() {
         companyName: 'DNS Import & Export (Pvt) Ltd',
         productName: target.productName,
         sku: target.sku,
+        unitId: target.unitId,
         unitBarcode: target.record.unitBarcode,
         serialNumber: target.record.serialNumber,
         unitIndex: target.unitIndex,
@@ -902,11 +1013,16 @@ export function GRNCreateEditPage() {
             : 'border-amber-200/90 shadow-2xs'
         )}
       >
-        {/* Unit counter badge outside sticker card */}
+        {/* Unit counter badge & Unit ID badge outside sticker card */}
         <div className="flex items-center justify-between mb-2 px-0.5">
           <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-mono font-bold bg-slate-100 text-slate-700 border border-slate-200">
-            {`Unit ${sticker.unitIndex}/${sticker.totalUnitsForProduct}`}
+            {`Unit ${sticker.unitIndex ?? (idx + 1)}/${sticker.totalUnitsForProduct || 1}`}
           </span>
+          {sticker.unitId && (
+            <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-mono font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
+              {sticker.unitId}
+            </span>
+          )}
           {isVerified && (
             <Badge className="bg-emerald-600 text-white text-[9px] px-1.5 py-0">
               Verified
@@ -920,6 +1036,7 @@ export function GRNCreateEditPage() {
             companyName="DNS Import & Export (Pvt) Ltd"
             productName={sticker.productName}
             sku={sticker.sku}
+            unitId={sticker.unitId}
             unitBarcode={sticker.record.unitBarcode}
             serialNumber={sticker.record.serialNumber}
             unitIndex={sticker.unitIndex}
@@ -1157,12 +1274,16 @@ export function GRNCreateEditPage() {
             if (units && Array.isArray(units)) {
               return {
                 ...item,
-                unitRecords: units.map((u: any) => ({
+                unitRecords: units.map((u: any, idx: number) => ({
                   id: u.id,
+                  unitId: u.unitId || (u.unitSeq ? `UNIT${String(u.unitSeq).padStart(6, '0')}` : undefined),
+                  unitSeq: u.unitSeq,
+                  unitIndex: u.unitIndex || idx + 1,
+                  unitBarcode: u.barcode,
                   barcode: u.barcode,
                   serialNumber: u.serialNumber,
                   isDamaged: u.isDamaged,
-                  status: u.status,
+                  status: u.status || 'PENDING_LABEL',
                 })),
                 unitBarcodes: units.map((u: any) => u.barcode).filter(Boolean),
               };
@@ -1426,9 +1547,9 @@ export function GRNCreateEditPage() {
                   {!purchaseOrdersLoading && purchaseOrders.length === 0 && (
                     <p className="text-[11px] text-amber-700">No approved Purchase Orders with open receiving status are available.</p>
                   )}
-                  {(approvedPurchaseOrders.error || partiallyReceivedPurchaseOrders.error) && (
+                  {approvedPurchaseOrders.error && (
                     <p className="text-[11px] text-rose-700">
-                      {approvedPurchaseOrders.error || partiallyReceivedPurchaseOrders.error}
+                      {approvedPurchaseOrders.error}
                     </p>
                   )}
                   {selectedPoId === '' && purchaseOrders.length > 0 && (
@@ -1982,10 +2103,11 @@ export function GRNCreateEditPage() {
                 </div>
                 <Button
                   type="button"
-                  onClick={() => setCurrentStep(4)}
+                  disabled={submitting}
+                  onClick={handleProceedFromStep3}
                   className="gap-2 text-xs font-semibold h-9 mt-2"
                 >
-                  Continue to Barcode Stickers
+                  {submitting ? 'Generating Barcodes...' : 'Generate Barcodes & Proceed to Stickers'}
                   <ArrowRight className="h-4 w-4" />
                 </Button>
               </div>
@@ -2467,11 +2589,6 @@ export function GRNCreateEditPage() {
             </div>
 
             {/* ── Physical Tagging Confirmation Card ── */}
-            {selectedPoId ? (
-              <div className="p-4 rounded-xl border border-blue-200 bg-blue-50/60 text-xs text-blue-900">
-                Inventory assigns scannable unit barcodes when the GRN is approved. Serial numbers entered above are saved with this receipt; provisional labels are not printed here.
-              </div>
-            ) : (
             <div className="p-4 rounded-xl border border-emerald-200 bg-emerald-50/50 space-y-3">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                 <div className="flex items-center gap-2">
@@ -2499,7 +2616,6 @@ export function GRNCreateEditPage() {
                 Confirm: All {barcodeSummary.totalUnits} Barcode Stickers Affixed in Receiving Bay
               </Button>
             </div>
-            )}
           </CardContent>
         </Card>
       </div>
@@ -2566,11 +2682,6 @@ export function GRNCreateEditPage() {
             </div>
 
             {/* Barcode Tagging Compliance Badge */}
-            {selectedPoId ? (
-              <div className="p-4 rounded-xl border border-blue-200 bg-blue-50/60 text-xs text-blue-900">
-                Serial numbers are recorded on this GRN. Inventory creates the canonical unit barcodes during GRN approval, so labels are printed after approval from the inventory unit registry.
-              </div>
-            ) : (
             <div
               className={cn(
                 'p-4 rounded-xl border flex items-center justify-between gap-3',
@@ -2604,14 +2715,13 @@ export function GRNCreateEditPage() {
                   type="button"
                   size="sm"
                   variant="outline"
-                  onClick={() => setCurrentStep(3)}
+                  onClick={() => setCurrentStep(4)}
                   className="text-xs h-8 text-amber-800 border-amber-300 bg-white shrink-0"
                 >
                   Go to Sticker Studio
                 </Button>
               )}
             </div>
-            )}
 
             {/* Items Summary Table */}
             <div className="border rounded-xl overflow-x-auto w-full text-xs">

@@ -90,12 +90,14 @@ function mapGrnProduct(record: GrnProductApiRecord): GRNItem {
 
   const unitRecords = rawUnits.map((u: any, idx: number) => ({
     id: u.id || `unit-${idx}`,
-    unitBarcode: u.barcode || '',
-    barcode: u.barcode || '',
+    unitId: u.unitId || (u.unitSeq ? `UNIT${String(u.unitSeq).padStart(6, '0')}` : undefined),
+    unitBarcode: u.barcode || u.unitBarcode || '',
+    barcode: u.barcode || u.unitBarcode || '',
     serialNumber: u.serialNumber || undefined,
     unitIndex: u.unitIndex || idx + 1,
     isDamaged: Boolean(u.isDamaged),
     unitSeq: u.unitSeq,
+    status: u.status || 'PENDING_LABEL',
   }));
 
   const unitBarcodes = unitRecords.map((u) => u.unitBarcode).filter(Boolean);
