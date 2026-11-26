@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ManualJournalPage } from '../features/finance/pages/journal/ManualJournalPage';
 import { financeRepository } from '../features/finance/api';
 import { periodLockService } from '../features/finance/services/periodLockService';
@@ -149,12 +150,15 @@ describe('Journal Entry Re-Correction & Reclassification Module', () => {
         ],
       });
 
+      const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
       render(
-        <MemoryRouter initialEntries={[`/finance/journal?id=${original.id}`]}>
-          <Routes>
-            <Route path="/finance/journal" element={<ManualJournalPage />} />
-          </Routes>
-        </MemoryRouter>
+        <QueryClientProvider client={qc}>
+          <MemoryRouter initialEntries={[`/finance/journal?id=${original.id}`]}>
+            <Routes>
+              <Route path="/finance/journal" element={<ManualJournalPage />} />
+            </Routes>
+          </MemoryRouter>
+        </QueryClientProvider>
       );
 
       // Verify loaded journal is audit locked
@@ -200,12 +204,15 @@ describe('Journal Entry Re-Correction & Reclassification Module', () => {
         ],
       });
 
+      const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
       render(
-        <MemoryRouter initialEntries={[`/finance/journal?id=${original.id}`]}>
-          <Routes>
-            <Route path="/finance/journal" element={<ManualJournalPage />} />
-          </Routes>
-        </MemoryRouter>
+        <QueryClientProvider client={qc}>
+          <MemoryRouter initialEntries={[`/finance/journal?id=${original.id}`]}>
+            <Routes>
+              <Route path="/finance/journal" element={<ManualJournalPage />} />
+            </Routes>
+          </MemoryRouter>
+        </QueryClientProvider>
       );
 
       await waitFor(() => {

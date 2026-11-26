@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { cashBookService } from '../../../services/CashBookService';
 import { apService } from '../services/apService';
+import { useVouchers, FinanceVoucher } from '../../../api/finance';
 import { PaymentVoucher } from '../../../types/cashbook';
 import { formatCurrency, formatDate } from '../../../utils/formatters';
 import { cn } from '../../../utils/cn';
 import { Button } from '../../../components/ui/button';
+import { ConfirmButton } from '../../../components/ui/confirm-button';
 import { Input } from '../../../components/ui/input';
 import { Select } from '../../../components/ui/select';
 import { Badge } from '../../../components/ui/badge';
@@ -64,6 +66,8 @@ export function PaymentVouchersRegistry({
   const [selectedVoucherForPrint, setSelectedVoucherForPrint] = useState<PaymentVoucher | null>(null);
   const [cbVouchers, setCbVouchers] = useState<PaymentVoucher[]>([]);
 
+  const { data: apiVouchers = [], refetch: refetchVouchers } = useVouchers();
+
   const effectiveUser = useMemo(() => {
     return (
       currentUser || {
@@ -76,6 +80,7 @@ export function PaymentVouchersRegistry({
   }, [currentUser]);
 
   const loadData = () => {
+    refetchVouchers();
     cashBookService
       .getVouchers()
       .then((vouchers) => {
@@ -110,25 +115,61 @@ export function PaymentVouchersRegistry({
     }
   };
 
-  // Load vouchers from CashBookService and AP Advances
+  // Load vouchers from API, CashBookService, and AP Advances
   const vouchersList: UnifiedPaymentVoucherRow[] = useMemo(() => {
     const rows: UnifiedPaymentVoucherRow[] = [];
 
+    // Live API Vouchers
+    if (apiVouchers && apiVouchers.length > 0) {
+      apiVouchers.forEach((v) => {
+        rows.push({
+          id: v.id,
+          auditNumber: v.voucherNumber,
+          voucherNumber: v.voucherNumber,
+          date: v.transactionDate.slice(0, 10),
+          paidTo: v.partyName || 'General Payee',
+          account: `${v.offsetAccount?.code || ''} (${v.offsetAccount?.name || ''}) / ${v.liquidAccount?.code || ''}`,
+          remarks: v.narration || '-',
+          method: v.paymentMethod === 'CASH' ? 'CASH' : v.paymentMethod === 'CHEQUE' ? 'CHEQUE' : 'BANK',
+          amount: Number(v.amount),
+          status: 'POSTED',
+          rawVoucher: {
+            id: v.id,
+            voucherNumber: v.voucherNumber,
+            date: v.transactionDate.slice(0, 10),
+            type: v.type,
+            amount: Number(v.amount),
+            payeeOrPayer: v.partyName || '',
+            description: v.narration,
+            cashAccountId: v.liquidAccountId,
+            cashAccountCode: v.liquidAccount?.code,
+            offsetAccountId: v.offsetAccountId,
+            offsetAccountCode: v.offsetAccount?.code,
+            status: 'POSTED',
+            createdAt: v.createdAt,
+            journalEntryId: v.journalEntryId,
+          } as any,
+        });
+      });
+    }
+
     // From CashBookService
     cbVouchers.forEach((v, idx) => {
-      rows.push({
-        id: v.id,
-        auditNumber: `AUD-${(1000 + idx).toString()}`,
-        voucherNumber: v.voucherNumber,
-        date: v.date,
-        paidTo: v.payeeOrPayer || 'General Vendor',
-        account: `${v.offsetAccountCode || '5000'} / ${v.cashAccountCode || '1010'}`,
-        remarks: v.description || '-',
-        method: v.cashAccountCode === '1040' ? 'CASH' : 'BANK',
-        amount: v.amount,
-        status: v.status as any,
-        rawVoucher: v,
-      });
+      if (!rows.some((r) => r.id === v.id || r.voucherNumber === v.voucherNumber)) {
+        rows.push({
+          id: v.id,
+          auditNumber: `AUD-${(1000 + idx).toString()}`,
+          voucherNumber: v.voucherNumber,
+          date: v.date,
+          paidTo: v.payeeOrPayer || 'General Vendor',
+          account: `${v.offsetAccountCode || '5000'} / ${v.cashAccountCode || '1010'}`,
+          remarks: v.description || '-',
+          method: v.cashAccountCode === '1040' ? 'CASH' : 'BANK',
+          amount: v.amount,
+          status: v.status as any,
+          rawVoucher: v,
+        });
+      }
     });
 
     // From AP Advances
@@ -499,29 +540,36 @@ export function PaymentVouchersRegistry({
                         <div className="flex items-center justify-end gap-1.5">
                           {isPending && (
                             <>
-                              <Button
-                                variant="outline"
+                              <ConfirmButton
                                 size="sm"
                                 type="button"
-                                onClick={() => handleApproveVoucher(v.id)}
-                                className="h-7 px-2 text-[11px] bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100 font-semibold gap-1"
+                                confirmTitle="Approve Payment Voucher?"
+                                confirmMessage={`Are you sure you want to approve voucher ${v.voucherNumber} for ${formatCurrency(v.amount)}? This will post the disbursement to the General Ledger.`}
+                                confirmLabel="Approve Voucher"
+                                variant="success"
+                                dialogVariant="success"
+                                onConfirm={() => handleApproveVoucher(v.id)}
+                                className="h-7 px-2 text-[11px] bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100 font-semibold gap-1 cursor-pointer"
                                 title="1-Click Authorize & Post GL"
                               >
                                 <CheckCircle2 className="h-3 w-3 text-emerald-600" />
                                 <span>Approve</span>
-                              </Button>
+                              </ConfirmButton>
 
-                              <Button
-                                variant="outline"
+                              <ConfirmButton
                                 size="sm"
                                 type="button"
-                                onClick={() => handleRejectVoucher(v.id)}
-                                className="h-7 px-2 text-[11px] bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100 font-semibold gap-1"
+                                confirmTitle="Reject Payment Voucher?"
+                                confirmMessage={`Are you sure you want to reject voucher ${v.voucherNumber}?`}
+                                confirmLabel="Reject Voucher"
+                                dialogVariant="destructive"
+                                onConfirm={() => handleRejectVoucher(v.id)}
+                                className="h-7 px-2 text-[11px] bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100 font-semibold gap-1 cursor-pointer"
                                 title="Reject Voucher"
                               >
                                 <XCircle className="h-3 w-3 text-rose-500" />
                                 <span>Reject</span>
-                              </Button>
+                              </ConfirmButton>
                             </>
                           )}
 

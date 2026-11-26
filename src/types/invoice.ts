@@ -60,6 +60,8 @@ export interface Invoice extends BaseEntity {
   status: InvoiceStatus;
   notes?: string;
   paymentTerms?: string;
+  journalEntryId?: string;
+  totalCostAmount?: number;
 }
 
 export type InvoicePaymentFilterType =

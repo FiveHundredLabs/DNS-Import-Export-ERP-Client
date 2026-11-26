@@ -1,7 +1,16 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { extractErrorMessage } from '../api/client';
+import { queryClient as globalQueryClient } from '../api/queryClient';
 import { purchaseOrdersApi } from '../api/purchase-orders/purchase-orders.api';
+
+function useSafeQueryClient() {
+  try {
+    return useQueryClient();
+  } catch {
+    return globalQueryClient;
+  }
+}
 import type {
   ApiPurchaseOrderStatus,
   CreatePurchaseOrderPayload,
@@ -32,7 +41,7 @@ export const purchaseOrderQueryKeys = {
 };
 
 export function usePurchaseOrderActions() {
-  const queryClient = useQueryClient();
+  const queryClient = useSafeQueryClient();
   const invalidate = async (id?: string) => {
     await queryClient.invalidateQueries({ queryKey: purchaseOrderQueryKeys.lists() });
     if (id) await queryClient.invalidateQueries({ queryKey: purchaseOrderQueryKeys.detail(id) });
@@ -140,11 +149,12 @@ export function usePurchaseOrderActions() {
 }
 
 export function usePurchaseOrders(params: PurchaseOrderListParams = {}) {
+  const qc = useSafeQueryClient();
   const query = useQuery({
     queryKey: purchaseOrderQueryKeys.list(params),
     queryFn: ({ signal }) => purchaseOrdersApi.list({ limit: 100, ...params }, signal),
     staleTime: 15_000,
-  });
+  }, qc);
   const actions = usePurchaseOrderActions();
 
   return {
@@ -160,12 +170,13 @@ export function usePurchaseOrders(params: PurchaseOrderListParams = {}) {
 }
 
 export function usePurchaseOrder(id: string | undefined) {
+  const qc = useSafeQueryClient();
   const query = useQuery({
     queryKey: purchaseOrderQueryKeys.detail(id ?? ''),
     queryFn: ({ signal }) => purchaseOrdersApi.getById(id!, signal),
     enabled: Boolean(id),
     staleTime: 15_000,
-  });
+  }, qc);
 
   return {
     purchaseOrder: query.data,

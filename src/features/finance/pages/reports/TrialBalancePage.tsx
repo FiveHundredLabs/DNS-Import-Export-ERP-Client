@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useFinanceLedger } from '../../hooks/useFinanceLedger';
-import { TrialBalanceReport } from '../../api/types';
+import { useTrialBalanceReport } from '../../../../api/finance';
+import { TrialBalanceReport, TrialBalanceItem, AccountClass, AccountSubClass } from '../../api/types';
 import { ReportHeaderNav } from './ReportHeaderNav';
 import { ReportDateFilterBar, DateFilterState } from './ReportDateFilterBar';
 import { reportPdfService } from '../../services/reportPdfService';
@@ -12,23 +13,67 @@ import { TableLoadingSkeleton } from '../../../../components/common/LoadingSkele
 
 export function TrialBalancePage() {
   const { getTrialBalance } = useFinanceLedger();
-  const [report, setReport] = useState<TrialBalanceReport | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [localReport, setLocalReport] = useState<TrialBalanceReport | null>(null);
+  const [isLocalLoading, setIsLocalLoading] = useState(false);
   const [dateFilter, setDateFilter] = useState<DateFilterState>({
     preset: 'THIS_MONTH',
     startDate: `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-01`,
     endDate: new Date().toISOString().slice(0, 10),
   });
 
+  // TanStack Query Hook for Trial Balance API
+  const { data: apiTrialBalance, isLoading: isApiLoading } = useTrialBalanceReport({
+    asAtDate: dateFilter.endDate,
+  });
+
+  const loading = (isApiLoading && !localReport) || isLocalLoading;
+
+  const activeReport: TrialBalanceReport | null = useMemo(() => {
+    if (apiTrialBalance) {
+      const items: TrialBalanceItem[] = apiTrialBalance.rows.map((r) => {
+        const rootClass = (r.rootClass || 'ASSET') as AccountClass;
+        return {
+          accountId: r.accountId,
+          code: r.accountCode,
+          name: r.accountName,
+          accountClass: rootClass,
+          accountSubClass: (rootClass === 'ASSET'
+            ? 'CURRENT_ASSET'
+            : rootClass === 'LIABILITY'
+            ? 'CURRENT_LIABILITY'
+            : rootClass === 'EQUITY'
+            ? 'EQUITY'
+            : rootClass === 'REVENUE'
+            ? 'OPERATING_REVENUE'
+            : 'OPERATING_EXPENSE') as AccountSubClass,
+          debit: parseFloat(r.netDebit) || 0,
+          credit: parseFloat(r.netCredit) || 0,
+        };
+      });
+
+      return {
+        asOfDate: apiTrialBalance.asAtDate,
+        items,
+        totalDebit: parseFloat(apiTrialBalance.grandNetDebit || apiTrialBalance.grandTotalDebit) || 0,
+        totalCredit: parseFloat(apiTrialBalance.grandNetCredit || apiTrialBalance.grandTotalCredit) || 0,
+        isBalanced: apiTrialBalance.isBalanced,
+        discrepancy: parseFloat(apiTrialBalance.variance) || 0,
+      };
+    }
+    return localReport;
+  }, [apiTrialBalance, localReport]);
+
+  const report = activeReport;
+
   const loadReport = useCallback(async () => {
-    setLoading(true);
+    setIsLocalLoading(true);
     try {
       const data = await getTrialBalance(dateFilter.endDate);
-      setReport(data);
+      setLocalReport(data);
     } catch {
       // Handled
     } finally {
-      setLoading(false);
+      setIsLocalLoading(false);
     }
   }, [getTrialBalance, dateFilter.endDate]);
 

@@ -2,6 +2,7 @@ import { formatCurrency } from '../../../utils/formatters';
 import { CheckCircle2, AlertCircle, Scale, Wand2 } from 'lucide-react';
 import { cn } from '../../../utils/cn';
 import { Button } from '../../../components/ui/button';
+import { ConfirmButton } from '../../../components/ui/confirm-button';
 
 interface BalancingBarProps {
   totalDebit: number;
@@ -120,30 +121,39 @@ export function BalancingBar({
 
         <div className="flex items-center gap-2">
           {onReset && (
-            <Button
+            <ConfirmButton
               type="button"
               variant="outline"
               size="sm"
-              onClick={onReset}
+              confirmTitle="Clear Journal Entry Form?"
+              confirmMessage="Are you sure you want to discard all entered lines and reset the journal form?"
+              confirmLabel="Clear Form"
+              dialogVariant="warning"
+              onConfirm={onReset}
               disabled={isSubmitting}
-              className="text-xs"
+              className="text-xs cursor-pointer"
             >
               Clear
-            </Button>
+            </ConfirmButton>
           )}
 
-          <Button
+          <ConfirmButton
             type="button"
             size="sm"
-            onClick={onPost}
+            confirmTitle="Post General Journal Entry?"
+            confirmMessage={`Are you sure you want to commit this journal entry (${formatCurrency(totalDebit)}) to the General Ledger? This action writes permanent accounting records.`}
+            confirmLabel="Post Entry (Commit)"
+            variant="success"
+            dialogVariant="success"
+            onConfirm={onPost}
             disabled={!isBalanced || isSubmitting}
             className={cn(
-              'min-w-[130px] font-semibold text-xs shadow-xs',
+              'min-w-[130px] font-semibold text-xs shadow-xs cursor-pointer',
               isBalanced ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : 'bg-slate-200 text-slate-400 cursor-not-allowed'
             )}
           >
             {isSubmitting ? 'Posting...' : 'Post Entry (Commit)'}
-          </Button>
+          </ConfirmButton>
         </div>
       </div>
     </div>

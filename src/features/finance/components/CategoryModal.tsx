@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../../../components/ui/dialog';
 import { Button } from '../../../components/ui/button';
+import { ConfirmButton } from '../../../components/ui/confirm-button';
 import { Input } from '../../../components/ui/input';
 import { Select } from '../../../components/ui/select';
 import { Textarea } from '../../../components/ui/textarea';
@@ -15,6 +16,15 @@ interface CategoryModalProps {
   categoryToEdit?: FinanceCategory | null;
   defaultParentId?: string | null;
   onSuccess: (cat: FinanceCategory) => void;
+  onSave?: (catData: {
+    code: string;
+    name: string;
+    parentId?: string | null;
+    accountClass: AccountClass;
+    accountSubClass?: AccountSubClass;
+    description?: string;
+  }) => Promise<any>;
+  categoriesList?: FinanceCategory[];
 }
 
 export function CategoryModal({
@@ -23,6 +33,8 @@ export function CategoryModal({
   categoryToEdit = null,
   defaultParentId = null,
   onSuccess,
+  onSave,
+  categoriesList,
 }: CategoryModalProps) {
   const isEditing = Boolean(categoryToEdit);
   const isLockedSystem = Boolean(categoryToEdit?.isSystem);
@@ -56,7 +68,9 @@ export function CategoryModal({
 
   useEffect(() => {
     if (open) {
-      const allCats = categoryService.getCategories();
+      const allCats = categoriesList && categoriesList.length > 0
+        ? categoriesList
+        : categoryService.getCategories();
       setCategories(allCats);
 
       if (categoryToEdit) {
@@ -103,7 +117,7 @@ export function CategoryModal({
     setAccountSubClass(getDefaultSubClassForClass(newClass));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!code.trim()) {
       setError('Category Code is required (e.g. 1001, 2001).');
@@ -120,7 +134,25 @@ export function CategoryModal({
 
       const subClass = accountSubClass || getDefaultSubClassForClass(accountClass);
 
-      if (isEditing && categoryToEdit) {
+      if (onSave) {
+        await onSave({
+          code: code.trim(),
+          name: name.trim(),
+          parentId: parentId || null,
+          accountClass,
+          accountSubClass: subClass,
+          description: description.trim() || undefined,
+        });
+        onSuccess({
+          id: categoryToEdit?.id || `cat-${Date.now()}`,
+          code: code.trim(),
+          name: name.trim(),
+          accountClass,
+          accountSubClass: subClass,
+          parentId: parentId || null,
+          description: description.trim() || undefined,
+        });
+      } else if (isEditing && categoryToEdit) {
         const updated = categoryService.updateCategory(categoryToEdit.id, {
           code: code.trim(),
           name: name.trim(),
@@ -305,9 +337,22 @@ export function CategoryModal({
           <Button type="button" variant="outline" size="sm" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button type="submit" size="sm" disabled={submitting} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+          <ConfirmButton
+            type="button"
+            size="sm"
+            confirmTitle={isEditing ? 'Update Category?' : 'Create Category?'}
+            confirmMessage={
+              isEditing
+                ? `Are you sure you want to update category "${code} - ${name}"?`
+                : `Are you sure you want to create category "${code} - ${name}"?`
+            }
+            confirmLabel={isEditing ? 'Update Category' : 'Create Category'}
+            onConfirm={handleSubmit}
+            disabled={submitting}
+            className="bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer"
+          >
             {submitting ? 'Saving...' : isEditing ? 'Update Category' : 'Save Category'}
-          </Button>
+          </ConfirmButton>
         </DialogFooter>
       </form>
     </Dialog>

@@ -1,6 +1,12 @@
 import { BaseEntity } from './common';
 
-export type PaymentStatus = 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED' | 'BOUNCED' | 'DISHONOURED';
+export type PaymentStatus =
+  | 'PENDING_APPROVAL'
+  | 'APPROVED'
+  | 'REJECTED'
+  | 'BOUNCED'
+  | 'DISHONOURED'
+  | 'REVERSED';
 
 export type PaymentMethod = 'CASH' | 'CHEQUE' | 'BANK_TRANSFER';
 
@@ -48,6 +54,12 @@ export interface Payment extends BaseEntity {
   rejectedById?: string;
   rejectedByName?: string;
   rejectedAt?: string;
+  journalEntryId?: string;
+  reversalJournalId?: string;
+  reversedById?: string;
+  reversedByName?: string;
+  reversedAt?: string;
+  reversalReason?: string;
 }
 
 export interface CreatePaymentInput {
