@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
@@ -16,11 +16,8 @@ import { Skeleton } from '../../components/ui/skeleton';
 import { StatCard } from '../../components/common/StatCard';
 import { PageHeader } from '../../components/common/PageHeader';
 import { useInventory } from '../../hooks/useInventory';
+import { useDebounce } from '../../hooks/useDebounce';
 import { useAuth } from '../../hooks/useAuth';
-import { orderService } from '../../services/OrderService';
-import { SalesOrder } from '../../types/order';
-import { useProducts } from '../../hooks/useProducts';
-import { calculateAvailableForSale } from '../../rules/inventoryRules';
 import { formatCurrency } from '../../utils/formatters';
 import { InventoryStatusBadge } from './InventoryStatusBadge';
 import { exportToCSV } from '../../utils/exportUtils';
@@ -48,76 +45,52 @@ interface StockRow {
 
 export function StockBalancePage() {
   const navigate = useNavigate();
-  const { stockBalances, loading } = useInventory();
-  const { products } = useProducts({ page: 1, pageSize: 200 });
+  const [search, setSearch] = useState('');
+  const debouncedSearch = useDebounce(search, 300);
+  const { stockBalances, loading } = useInventory({
+    page: 1,
+    pageSize: 100,
+    search: debouncedSearch || undefined,
+  });
   const { user, role } = useAuth();
   const isStockStaff =
     role === 'STOCK_KEEPER' ||
     role === 'STOCK_MANAGER' ||
     user?.role === 'STOCK_KEEPER' ||
     user?.role === 'STOCK_MANAGER';
-  const [orders, setOrders] = useState<SalesOrder[]>([]);
 
-  useEffect(() => {
-    orderService.getOrders().then(setOrders).catch(console.error);
-  }, []);
-
-  const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('All');
   const [locationFilter, setLocationFilter] = useState('All');
   const [lowStockOnly, setLowStockOnly] = useState(false);
 
-  // Map product sales orders
-  const productOrderStats = useMemo(() => {
-    const map: Record<string, { reserved: number; dispatched: number; delivered: number }> = {};
-    orders.forEach((ord) => {
-      ord.items?.forEach((it) => {
-        if (!map[it.productId]) {
-          map[it.productId] = { reserved: 0, dispatched: 0, delivered: 0 };
-        }
-        const qty = it.approvedQuantity || it.orderedQuantity || 0;
-        if (['APPROVED', 'PICKING', 'PARTIALLY_ISSUED', 'ISSUED', 'INVOICED'].includes(ord.status)) {
-          map[it.productId].reserved += qty;
-        } else if (ord.status === 'DISPATCHED') {
-          map[it.productId].dispatched += qty;
-        } else if (ord.status === 'DELIVERED') {
-          map[it.productId].delivered += qty;
-        }
-      });
-    });
-    return map;
-  }, [orders]);
-
   const enrichedBalances: StockRow[] = useMemo(() => {
     return (stockBalances ?? []).map((b: any, idx: number) => {
-      const product = b.product || products.find(p => p.id === b.productId);
       const availRaw = typeof b.availableQuantity === 'number' ? b.availableQuantity : 0;
-      const resRaw = typeof b.reservedQuantity === 'number' ? b.reservedQuantity : 0;
-      const stats = productOrderStats[b.productId] || { reserved: 0, dispatched: 0, delivered: 0 };
-      const reservedQty = Math.max(resRaw, stats.reserved);
-      const calculatedAvail = Math.max(0, availRaw - reservedQty);
-      const availableForSale = isNaN(calculatedAvail) ? 0 : calculatedAvail;
+      const reservedQty = typeof b.reservedQuantity === 'number' ? b.reservedQuantity : 0;
+      const dispatchedQty = typeof b.dispatchQuantity === 'number' ? b.dispatchQuantity : 0;
+      const deliveredQty = typeof b.deliveredQuantity === 'number' ? b.deliveredQuantity : 0;
+      const damagedQty = typeof b.damagedQuantity === 'number' ? b.damagedQuantity : 0;
 
       return {
         id: b.id || `${b.productId}-${b.locationId || idx}-${idx}`,
         productId: b.productId,
-        locationId: b.locationId,
-        locationType: b.locationType,
-        productName: product?.name ?? b.productName ?? b.productId,
-        sku: product?.sku ?? b.sku ?? 'N/A',
-        category: product?.categoryName ?? b.category ?? 'N/A',
-        warehouseQuantity: b.locationType === 'WAREHOUSE' ? availRaw : 0,
-        showroomQuantity: b.locationType === 'SHOWROOM' ? availRaw : 0,
-        damagedQuantity: b.damagedQuantity ?? 0,
+        locationId: b.locationId || 'WH-MAIN',
+        locationType: b.locationType || 'WAREHOUSE',
+        productName: b.productName ?? b.productId,
+        sku: b.sku ?? 'N/A',
+        category: b.category ?? 'General',
+        warehouseQuantity: availRaw,
+        showroomQuantity: 0,
+        damagedQuantity: damagedQty,
         reservedQuantity: reservedQty,
-        dispatchedQuantity: stats.dispatched,
-        deliveredQuantity: stats.delivered,
-        availableForSale,
-        physicalStock: availRaw,
-        costPrice: product?.pricing?.costPrice ?? b.costPrice ?? 0,
+        dispatchedQuantity: dispatchedQty,
+        deliveredQuantity: deliveredQty,
+        availableForSale: availRaw,
+        physicalStock: availRaw + reservedQty,
+        costPrice: b.costPrice ?? 0,
       } as StockRow;
     });
-  }, [stockBalances, productOrderStats, products]);
+  }, [stockBalances]);
 
   const categories = useMemo(() => {
     const cats = new Set(enrichedBalances.map(b => b.category));
