@@ -469,10 +469,11 @@ export function GRNDetailPage({ backUrl, backTitle }: GRNDetailPageProps = {}) {
   const isStockKeeper = user?.role === 'STOCK_KEEPER';
   const isStockManager = user?.role === 'STOCK_MANAGER';
   const isFinanceManager = user?.role === 'FINANCE_MANAGER';
+  const isFinanceOfficer = user?.role === 'FINANCE_OFFICER';
   const isManagerOrDirector = user?.role === 'MANAGER' || user?.role === 'DIRECTOR';
   const canVerifyPhysical = isStockManager || isManagerOrDirector;
-  const canApproveCommercial = isFinanceManager || isManagerOrDirector;
-  const isFinanceRole = ['FINANCE_OFFICER', 'FINANCE_MANAGER', 'DIRECTOR', 'ADMIN', 'MANAGER'].includes(user?.role || '');
+  const canApproveCommercial = isFinanceManager; // Strictly Finance side only; Directors and Managers cannot execute Finance approval
+  const isFinanceRole = isFinanceManager || isFinanceOfficer;
   const canEditDraft = ['STOCK_KEEPER', 'STOCK_MANAGER', 'MANAGER', 'DIRECTOR'].includes(user?.role || '');
 
   if (loading) {
@@ -714,7 +715,15 @@ export function GRNDetailPage({ backUrl, backTitle }: GRNDetailPageProps = {}) {
               </div>
             )}
 
-            {/* 2. FINANCE / MANAGEMENT WORKFLOW: Only Finance Manager / Manager / Director approves and posts to Inventory */}
+            {/* If Director or Manager is viewing a GRN awaiting Finance approval */}
+            {isManagerOrDirector && (grn.status === 'SUBMITTED' || grn.status === 'COSTED') && (
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 border border-blue-300 text-blue-800 text-xs font-semibold select-none">
+                <Clock className="h-3.5 w-3.5 text-blue-600" />
+                <span>Awaiting Finance Manager Commercial Approval</span>
+              </div>
+            )}
+
+            {/* 2. FINANCE SIDE WORKFLOW: Strictly Finance Manager approves and posts to Inventory */}
             {canApproveCommercial && (grn.status === 'SUBMITTED' || grn.status === 'COSTED') && (
               <>
                 <ConfirmButton

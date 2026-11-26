@@ -28,6 +28,9 @@ const CustomerDetailPage = React.lazy(() =>
 const ApprovalsPage = React.lazy(() =>
   import('./features/approvals/ApprovalsPage').then(m => ({ default: m.ApprovalsPage || m.default }))
 );
+const ApprovalEnginePage = React.lazy(() =>
+  import('./features/approvals/ApprovalEnginePage').then(m => ({ default: m.ApprovalEnginePage || m.default }))
+);
 const StockManagerApprovalHub = React.lazy(() =>
   import('./features/inventory/components/StockManagerApprovalHub').then(m => ({ default: m.StockManagerApprovalHub || m.default }))
 );
@@ -460,17 +463,33 @@ export function App() {
           }
         />
 
-        {/* Multi-Tier Approval Engine */}
+        {/* Multi-Tier Approval Engine & My Approvals */}
+        <Route
+          path="admin/approval-engine"
+          element={
+            <ProtectedRoute>
+              <ApprovalEnginePage />
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="approvals"
           element={
             <ProtectedRoute>
-              <ApprovalsPage />
+              <ApprovalEnginePage />
             </ProtectedRoute>
           }
         />
         <Route
           path="approvals/my-approvals"
+          element={
+            <ProtectedRoute>
+              <MyApprovalsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="my-approvals"
           element={
             <ProtectedRoute>
               <MyApprovalsPage />

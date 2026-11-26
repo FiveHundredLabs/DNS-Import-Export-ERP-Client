@@ -191,9 +191,9 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const directorFinanceItems: SidebarItem[] = [];
 
   const directorApprovalItems: SidebarItem[] = [
-    { id: 'approvals', name: 'Approval Engine', path: '/approvals', icon: CheckCircle, category: 'approvals' },
-    { id: 'warranty', name: 'Warranty Hub', path: '/warranty', icon: ShieldCheck, category: 'approvals' },
+    { id: 'approvals-engine', name: 'Approval Engine', path: '/admin/approval-engine', icon: ShieldCheck, category: 'approvals', allowedRoles: ['DIRECTOR', 'MANAGER'] },
     { id: 'my-approvals', name: 'My Approvals', path: '/approvals/my-approvals', icon: CheckSquare, category: 'approvals', badge: 'Assigned' },
+    { id: 'warranty', name: 'Warranty Hub', path: '/warranty', icon: ShieldCheck, category: 'approvals' },
   ];
 
   const directorReportItems: SidebarItem[] = [
@@ -255,21 +255,12 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     { id: 'quotations', name: 'Quotations', path: '/quotations', icon: FileSpreadsheet, category: 'sales' },
     { id: 'orders', name: 'Sales Orders', path: '/orders', icon: ShoppingCart, category: 'sales' },
     {
-      id: 'approvals',
-      name:
-        role === 'STOCK_MANAGER'
-          ? 'Stock Manager Approvals'
-          : role === 'PURCHASING_MANAGER'
-          ? 'Purchasing Approvals'
-          : role === 'AREA_MANAGER'
-          ? 'Order Approvals'
-          : role === 'SALES_MANAGER'
-          ? 'My Approvals'
-          : 'Approvals Engine',
-      path: '/approvals',
-      icon: role === 'STOCK_MANAGER' || role === 'PURCHASING_MANAGER' ? ShieldCheck : CheckCircle,
+      id: 'approval-engine',
+      name: 'Approval Engine',
+      path: '/admin/approval-engine',
+      icon: ShieldCheck,
       category: 'approvals',
-      excludedRoles: ['SHOWROOM_MANAGER', 'SALES_REP', 'STOCK_KEEPER', 'CASHIER', 'PURCHASING_OFFICER'],
+      allowedRoles: ['DIRECTOR', 'MANAGER'],
     },
     {
       id: 'my-approvals',
@@ -278,7 +269,17 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       icon: CheckSquare,
       category: 'approvals',
       badge: 'Assigned',
-      allowedRoles: ['DIRECTOR', 'MANAGER'],
+      allowedRoles: [
+        'DIRECTOR',
+        'MANAGER',
+        'FINANCE_MANAGER',
+        'STOCK_MANAGER',
+        'SALES_MANAGER',
+        'PURCHASING_MANAGER',
+        'PURCHASING_OFFICER',
+        'AREA_MANAGER',
+        'ACCOUNTS_EXECUTIVE',
+      ],
     },
     { id: 'warranty', name: 'Warranty Hub', path: '/warranty', icon: ShieldCheck, category: 'approvals' },
     { id: 'warranty-verification', name: 'Warranty Verification', path: '/warranty/verification', icon: Barcode, category: 'sales', allowedRoles: ['SALES_REP', 'AREA_MANAGER'] },
