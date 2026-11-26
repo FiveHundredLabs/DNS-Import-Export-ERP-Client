@@ -26,6 +26,7 @@ export const customersApi = {
     if (params?.salesRepId) query.set('salesRepId', params.salesRepId);
     if (params?.areaManagerId) query.set('areaManagerId', params.areaManagerId);
     if (params?.approvalStage) query.set('approvalStage', params.approvalStage);
+    if (params?.approvalStages?.length) query.set('approvalStages', params.approvalStages.join(','));
     if (params?.loyaltyLevel) query.set('loyaltyLevel', params.loyaltyLevel);
     if (params?.sortBy) query.set('sortBy', params.sortBy);
     if (params?.sortOrder) query.set('sortOrder', params.sortOrder);

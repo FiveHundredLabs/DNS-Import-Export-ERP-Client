@@ -5,7 +5,13 @@ import { useAuth } from '../../hooks/useAuth';
 import { useAreas } from '../../hooks/useAreas';
 import { useUsers } from '../../hooks/useUsers';
 import { useCreditTermsConfig } from '../../api/credit-terms/credit-terms.hooks';
-import { customersApi } from '../../api/customers/customers.api';
+import {
+  useCustomers,
+  useCustomer,
+  useCreateCustomerStep1,
+  useCompleteCustomerStep2,
+  useRejectCustomer,
+} from '../../api/customers/customers.hooks';
 import { CreateCustomerStep1Payload, CompleteCustomerStep2Payload } from '../../api/customers/customers.types';
 import { creditTermsConfigService } from '../../services/CreditTermsConfigService';
 import { determineCustomerApprovalRoute, canApproveCustomerStage } from '../../rules/approvalRules';
@@ -181,42 +187,37 @@ export function CustomerOnboardingPage() {
   const canEditStep2 = ['SALES_MANAGER', 'MANAGER', 'DIRECTOR'].includes(role);
   const canDoStep2 = canEditStep2;
 
-  // ── Pending Queue State ──────────────────────────────────────────────────
-  const [pendingCustomers, setPendingCustomers] = useState<Customer[]>([]);
-  const [pendingLoading, setPendingLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'normal' | 'special'>('normal');
-  const [queueSearch, setQueueSearch] = useState('');
-
-  const loadPending = useCallback(async () => {
-    setPendingLoading(true);
-    try {
-      const stages: CustomerApprovalStage[] = isAreaManager
+  // ── Pending Queue State (Single batched TanStack Query) ──────────────────
+  const pendingStages = useMemo<CustomerApprovalStage[]>(
+    () =>
+      isAreaManager
         ? ['PENDING_SALES_REVIEW', 'PENDING_MANAGER_APPROVAL']
         : role === 'SALES_MANAGER'
         ? ['PENDING_SALES_REVIEW']
-        : ['PENDING_SALES_REVIEW', 'PENDING_MANAGER_APPROVAL', 'PENDING_DIRECTOR_APPROVAL'];
+        : ['PENDING_SALES_REVIEW', 'PENDING_MANAGER_APPROVAL', 'PENDING_DIRECTOR_APPROVAL'],
+    [isAreaManager, role],
+  );
 
-      if (stages.length === 0) {
-        setPendingCustomers([]);
-        setPendingLoading(false);
-        return;
-      }
+  const {
+    data: pendingResponse,
+    isLoading: pendingLoading,
+    refetch: refetchPending,
+  } = useCustomers(
+    { approvalStages: pendingStages, page: 1, pageSize: 100 },
+    { enabled: pendingStages.length > 0 },
+  );
 
-      const results = await Promise.all(
-        stages.map((s) => customersApi.listCustomers({ approvalStage: s, page: 1, pageSize: 50 }))
-      );
-      const all = results.flatMap((r) => r.data as unknown as Customer[]);
-      setPendingCustomers(all);
-    } catch {
-      setPendingCustomers([]);
-    } finally {
-      setPendingLoading(false);
-    }
-  }, [isAreaManager, role]);
+  const pendingCustomers = useMemo(
+    () => (pendingResponse?.data as unknown as Customer[]) ?? [],
+    [pendingResponse],
+  );
 
-  useEffect(() => {
-    loadPending();
-  }, [loadPending]);
+  const loadPending = useCallback(async () => {
+    await refetchPending();
+  }, [refetchPending]);
+
+  const [activeTab, setActiveTab] = useState<'normal' | 'special'>('normal');
+  const [queueSearch, setQueueSearch] = useState('');
 
   // Tab Filtering
   const normalPending = useMemo(() => {
@@ -277,10 +278,15 @@ export function CustomerOnboardingPage() {
   const [maxDiscount, setMaxDiscount] = useState(10);
   const [paymentTermNotes, setPaymentTermNotes] = useState('');
 
-  const { data: backendCreditConfig } = useCreditTermsConfig();
+  const canViewCreditTermsConfig = role === 'DIRECTOR' || role === 'MANAGER';
+  const { data: backendCreditConfig } = useCreditTermsConfig({ enabled: canViewCreditTermsConfig });
   const defaultConfig = creditTermsConfigService.getCreditTermsConfig();
   const defaultCreditDays = backendCreditConfig?.defaultCreditDays ?? defaultConfig.defaultCreditDays;
   const defaultCreditLimit = backendCreditConfig?.defaultCreditLimit ?? defaultConfig.defaultCreditLimit;
+
+  const createStep1Mutation = useCreateCustomerStep1();
+  const completeStep2Mutation = useCompleteCustomerStep2();
+  const rejectCustomerMutation = useRejectCustomer();
 
   const approvalRoute = determineCustomerApprovalRoute(creditDays, creditLimit, defaultCreditDays, defaultCreditLimit, role, loyaltyLevel);
   const isSpecialApproval = approvalRoute.isExceptional;
@@ -307,7 +313,10 @@ export function CustomerOnboardingPage() {
     }
     setIsRejecting(true);
     try {
-      await customersApi.rejectCustomer(rejectTargetId, { reason: rejectReason.trim() });
+      await rejectCustomerMutation.mutateAsync({
+        id: rejectTargetId,
+        payload: { reason: rejectReason.trim() },
+      });
       toast.success('Customer onboarding application rejected.');
       setRejectModalOpen(false);
       setRejectTargetId(null);
@@ -315,7 +324,6 @@ export function CustomerOnboardingPage() {
       if (selectedCustomer?.id === rejectTargetId) {
         handleReset();
       }
-      await loadPending();
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : 'Failed to reject customer application.');
     } finally {
@@ -323,13 +331,15 @@ export function CustomerOnboardingPage() {
     }
   };
 
-  // Initialize defaults
+  // Initialize defaults (only when creating a new customer so loaded customer terms are preserved)
   useEffect(() => {
-    setCreditDays(defaultCreditDays);
-    setCreditLimit(defaultCreditLimit);
-    setDefaultDiscount(defaultConfig.defaultDiscountPercentage);
-    setMaxDiscount(defaultConfig.maxDiscountPercentage);
-  }, [defaultCreditDays, defaultCreditLimit]);
+    if (!selectedCustomer) {
+      setCreditDays(defaultCreditDays);
+      setCreditLimit(defaultCreditLimit);
+      setDefaultDiscount(defaultConfig.defaultDiscountPercentage);
+      setMaxDiscount(defaultConfig.maxDiscountPercentage);
+    }
+  }, [defaultCreditDays, defaultCreditLimit, selectedCustomer, defaultConfig.defaultDiscountPercentage, defaultConfig.maxDiscountPercentage]);
 
   const handleLoyaltyTierChange = (tier: CustomerLoyaltyLevel) => {
     setLoyaltyLevel(tier);
@@ -362,16 +372,13 @@ export function CustomerOnboardingPage() {
     }
   }, [areaId, areas, users, areaManagerId]);
 
-  // Load customer if URL contains customerId
+  // Load customer if URL contains customerId (via TanStack Query with AbortSignal & caching)
+  const { data: routeCustomer } = useCustomer(customerId ?? '');
   useEffect(() => {
-    if (customerId) {
-      customersApi.getCustomerById(customerId).then((c) => {
-        if (c) {
-          handleSelectCustomer(c as unknown as Customer);
-        }
-      });
+    if (routeCustomer && selectedCustomer?.id !== routeCustomer.id) {
+      handleSelectCustomer(routeCustomer as unknown as Customer);
     }
-  }, [customerId]);
+  }, [routeCustomer, selectedCustomer?.id]);
 
   function handleSelectCustomer(c: Customer) {
     setSelectedCustomer(c);
@@ -438,9 +445,10 @@ export function CustomerOnboardingPage() {
     setErrors({});
   }
 
-  const areaManagers = users.filter((u) => u.role === 'AREA_MANAGER');
-  const salesRepsInArea = users.filter(
-    (u) => u.role === 'SALES_REP' && (!areaId || u.areaId === areaId)
+  const areaManagers = useMemo(() => users.filter((u) => u.role === 'AREA_MANAGER'), [users]);
+  const salesRepsInArea = useMemo(
+    () => users.filter((u) => u.role === 'SALES_REP' && (!areaId || u.areaId === areaId)),
+    [users, areaId],
   );
 
   // ── Validation ───────────────────────────────────────────────────────────
@@ -504,10 +512,9 @@ export function CustomerOnboardingPage() {
           customerType: customerType || 'DEALER',
         };
 
-        await customersApi.createCustomerStep1(payload);
+        await createStep1Mutation.mutateAsync(payload);
         toast.success(`Customer draft "${displayName}" submitted for Sales Manager review!`);
         handleReset();
-        await loadPending();
       } catch (err: unknown) {
         toast.error(err instanceof Error ? err.message : 'Failed to submit customer draft.');
       } finally {
@@ -544,7 +551,7 @@ export function CustomerOnboardingPage() {
           vatNumber: vatNumber.trim() || undefined,
           customerType: customerType || 'DEALER',
         };
-        const draft = await customersApi.createCustomerStep1(step1Payload);
+        const draft = await createStep1Mutation.mutateAsync(step1Payload);
         targetCustomerId = draft.id;
       }
 
@@ -558,7 +565,10 @@ export function CustomerOnboardingPage() {
         status: 'ACTIVE',
       };
 
-      const completed = await customersApi.completeCustomerStep2(targetCustomerId, step2Payload);
+      const completed = await completeStep2Mutation.mutateAsync({
+        id: targetCustomerId,
+        payload: step2Payload,
+      });
 
       if (completed.approvalStage === 'PENDING_DIRECTOR_APPROVAL' || completed.approvalStage === 'PENDING_MANAGER_APPROVAL') {
         toast.success(
@@ -570,7 +580,6 @@ export function CustomerOnboardingPage() {
         );
       }
 
-      await loadPending();
       handleReset();
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : 'Failed to finalize customer onboarding.');

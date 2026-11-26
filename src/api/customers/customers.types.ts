@@ -113,6 +113,7 @@ export interface ListCustomersParams {
   salesRepId?: string;
   areaManagerId?: string;
   approvalStage?: CustomerApprovalStage;
+  approvalStages?: CustomerApprovalStage[];
   loyaltyLevel?: CustomerLoyaltyLevel;
   sortBy?: 'companyName' | 'displayName' | 'customerCode' | 'createdAt' | 'updatedAt';
   sortOrder?: 'asc' | 'desc';

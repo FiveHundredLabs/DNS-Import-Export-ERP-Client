@@ -19,10 +19,14 @@ export const customerQueryKeys = {
   detail: (id: string) => [...customerQueryKeys.details(), id] as const,
 };
 
-export function useCustomers(params?: ListCustomersParams): UseQueryResult<PaginatedCustomersResponse, Error> {
+export function useCustomers(
+  params?: ListCustomersParams,
+  options?: { enabled?: boolean },
+): UseQueryResult<PaginatedCustomersResponse, Error> {
   return useQuery({
     queryKey: customerQueryKeys.list(params),
     queryFn: ({ signal }) => customersApi.listCustomers(params, signal),
+    enabled: options?.enabled ?? true,
     staleTime: 60_000,
   });
 }
