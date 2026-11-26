@@ -25,13 +25,7 @@ interface QuickLoginAccount {
 const QUICK_LOGIN_ACCOUNTS: QuickLoginAccount[] = [
   {
     role: 'DIRECTOR',
-    label: 'Director (Admin)',
-    email: 'admin@example.com',
-    password: 'Admin@123',
-  },
-  {
-    role: 'DIRECTOR',
-    label: 'Director (Local)',
+    label: 'Director',
     email: 'director@erp.dns.local',
     password: 'DirectorChangeMe123!',
   },
