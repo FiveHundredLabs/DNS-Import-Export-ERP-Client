@@ -1,4 +1,5 @@
 import { customersApi } from '../api/customers/customers.api';
+import { UpdateCustomerPayload } from '../api/customers/customers.types';
 import { Customer, CommercialTerms, CustomerApprovalStage, CustomerStatus } from '../types/customer';
 import { PaginatedResult } from '../types/common';
 import { CustomerFilters } from '../repositories/ICustomerRepository';
@@ -128,7 +129,7 @@ export class CustomerService {
     return mapBackendCustomer(created);
   }
 
-  async updateCustomer(id: string, updates: Partial<Customer>): Promise<Customer> {
+  async updateCustomer(id: string, updates: Partial<Customer>, _user?: User): Promise<Customer> {
     if (this.repo?.update) {
       return this.repo.update(id, updates);
     }
@@ -141,8 +142,53 @@ export class CustomerService {
       const approved = await customersApi.approveCustomer(id);
       return mapBackendCustomer(approved);
     }
-    const existing = await this.getCustomer(id);
-    return existing || ({} as Customer);
+
+    const payload: UpdateCustomerPayload = {};
+    if (updates.displayName || updates.name) payload.displayName = updates.displayName || updates.name;
+    if (updates.companyName !== undefined) payload.companyName = updates.companyName;
+    if (updates.contactPerson !== undefined) payload.contactPerson = updates.contactPerson;
+    if (updates.email !== undefined && updates.email.trim()) payload.email = updates.email.trim();
+    if (updates.primaryContactNumber || updates.phone) {
+      payload.primaryContactNumber = updates.primaryContactNumber || updates.phone;
+    }
+    if (updates.whatsappNumber !== undefined && updates.whatsappNumber.trim()) {
+      payload.whatsappNumber = updates.whatsappNumber.trim();
+    }
+    if (updates.secondaryContactNumber || updates.secondaryPhone) {
+      payload.secondaryContactNumber = updates.secondaryContactNumber || updates.secondaryPhone;
+    }
+    if (updates.registrationAddress || updates.address) {
+      payload.registrationAddress = updates.registrationAddress || updates.address;
+    }
+    if (updates.areaId) payload.areaId = updates.areaId;
+    if (updates.assignedRepId || updates.salesRepId) {
+      payload.salesRepId = updates.assignedRepId || updates.salesRepId;
+    }
+    if (updates.areaManagerId) payload.areaManagerId = updates.areaManagerId;
+    if (updates.loyaltyLevel) payload.loyaltyLevel = updates.loyaltyLevel;
+    if (updates.customerType || updates.type) {
+      payload.customerType = (updates.customerType || updates.type) as any;
+    }
+    if (updates.tinNumber || updates.taxNumber) {
+      payload.tinNumber = updates.tinNumber || updates.taxNumber;
+    }
+    if (updates.vatNumber !== undefined) payload.vatNumber = updates.vatNumber;
+    if (updates.commercialTerms?.creditDays !== undefined) {
+      payload.creditPeriod = updates.commercialTerms.creditDays;
+    } else if (updates.creditPeriod !== undefined) {
+      payload.creditPeriod = updates.creditPeriod;
+    }
+    if (updates.commercialTerms?.creditLimit !== undefined) {
+      payload.creditLimit = updates.commercialTerms.creditLimit;
+    } else if (updates.creditLimit !== undefined) {
+      payload.creditLimit = updates.creditLimit;
+    }
+    if (updates.commercialTerms?.paymentTermNotes !== undefined) {
+      payload.paymentTermNotes = updates.commercialTerms.paymentTermNotes;
+    }
+
+    const updated = await customersApi.updateCustomer(id, payload);
+    return mapBackendCustomer(updated);
   }
 
   async setCommercialTerms(

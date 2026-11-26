@@ -421,6 +421,9 @@ export function canAccessRoute(role: UserRole, path: string): boolean {
       if (path.startsWith('/purchasing/suppliers')) {
         return hasPermission(role, 'purchasing:suppliers_view');
       }
+      if (path.startsWith('/purchasing/approvals') || /^\/purchasing\/orders\/[^/]+\/approval(\/|$)/.test(path)) {
+        return false;
+      }
       if (path.startsWith('/purchasing/orders')) {
         return hasPermission(role, 'purchasing:po_view');
       }

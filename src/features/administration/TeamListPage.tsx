@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useCallback, FormEvent } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { isAxiosError } from 'axios';
 import {
@@ -137,11 +138,33 @@ export function TeamListPage() {
   } = useUsers();
   const { areas } = useAreas();
 
-  // Assignable roles dynamically fetched based on the logged-in actor's role
-  const [assignableRoles, setAssignableRoles] = useState<Role[]>(
-    DEFAULT_ASSIGNABLE_ROLES,
+  // Assignable roles dynamically fetched & cached via TanStack Query
+  const isAuthorized =
+    !currentUser ||
+    currentUser?.role === "DIRECTOR" ||
+    currentUser?.role === "MANAGER";
+
+  const { data: queriedRoles, isLoading: loadingRoles } = useQuery({
+    queryKey: ["roles", "assignable", currentUser?.role],
+    queryFn: async () => {
+      try {
+        return await rolesApi.getAssignableRoles();
+      } catch {
+        const all = await rolesApi.listRoles();
+        return currentUser?.role === "MANAGER"
+          ? all.filter((r) => r.code !== "DIRECTOR" && r.code !== "MANAGER")
+          : all;
+      }
+    },
+    enabled: isAuthorized,
+    staleTime: 5 * 60_000,
+    retry: false,
+  });
+
+  const assignableRoles = useMemo(
+    () => (queriedRoles && queriedRoles.length > 0 ? queriedRoles : DEFAULT_ASSIGNABLE_ROLES),
+    [queriedRoles],
   );
-  const [loadingRoles, setLoadingRoles] = useState(false);
 
   // Filters state
   const [search, setSearch] = useState("");
@@ -210,61 +233,14 @@ export function TeamListPage() {
     [users],
   );
 
-  // Check authorization: only DIRECTOR and MANAGER have access (when authenticated)
-  const isAuthorized =
-    !currentUser ||
-    currentUser?.role === "DIRECTOR" ||
-    currentUser?.role === "MANAGER";
-
-  // Fetch assignable roles on mount
+  // Ensure createForm.roleId defaults to SALES_REP once roles load
   useEffect(() => {
-    let mounted = true;
-    async function loadAssignableRoles() {
-      if (!isAuthorized) return;
-      setLoadingRoles(true);
-      try {
-        const roles = await rolesApi.getAssignableRoles();
-        if (mounted) {
-          setAssignableRoles(roles);
-          if (roles.length > 0 && !createForm.roleId) {
-            const salesRepRole =
-              roles.find((r) => r.code === "SALES_REP") || roles[0];
-            setCreateForm((prev) => ({ ...prev, roleId: salesRepRole.id }));
-          }
-        }
-      } catch (err) {
-        console.error("Failed to load assignable roles:", err);
-        // Fallback: list all roles if assignable endpoint has issues
-        try {
-          const all = await rolesApi.listRoles();
-          if (mounted) {
-            // If actor is MANAGER, filter out DIRECTOR and MANAGER
-            const filtered =
-              currentUser?.role === "MANAGER"
-                ? all.filter(
-                    (r) => r.code !== "DIRECTOR" && r.code !== "MANAGER",
-                  )
-                : all;
-            setAssignableRoles(filtered);
-            if (filtered.length > 0 && !createForm.roleId) {
-              const salesRepRole =
-                filtered.find((r) => r.code === "SALES_REP") || filtered[0];
-              setCreateForm((prev) => ({ ...prev, roleId: salesRepRole.id }));
-            }
-          }
-        } catch (e2) {
-          console.error("Failed to list roles:", e2);
-          if (mounted) setAssignableRoles(DEFAULT_ASSIGNABLE_ROLES);
-        }
-      } finally {
-        if (mounted) setLoadingRoles(false);
-      }
+    if (queriedRoles && queriedRoles.length > 0 && !createForm.roleId) {
+      const salesRepRole =
+        queriedRoles.find((r) => r.code === "SALES_REP") || queriedRoles[0];
+      setCreateForm((prev) => ({ ...prev, roleId: salesRepRole.id }));
     }
-    loadAssignableRoles();
-    return () => {
-      mounted = false;
-    };
-  }, [isAuthorized, currentUser?.role]);
+  }, [queriedRoles, createForm.roleId]);
 
   // Selected role for Create Modal conditional logic
   const selectedCreateRole = useMemo(() => {

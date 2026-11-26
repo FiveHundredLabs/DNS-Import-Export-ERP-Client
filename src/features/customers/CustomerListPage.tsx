@@ -38,11 +38,11 @@ export function CustomerListPage() {
     return {
       page: 1,
       pageSize: 50,
-      assignedRepId: role === 'SALES_REP' ? currentUser.id : undefined,
+      salesRepId: role === 'SALES_REP' ? currentUser.id : undefined,
       areaId: role === 'AREA_MANAGER' ? currentUser.areaId : undefined,
       approvalStage: 'APPROVED' as CustomerApprovalStage,
     };
-  }, [role, currentUser]);
+  }, [role, currentUser.id, currentUser.areaId]);
 
   const {
     customers,
@@ -60,16 +60,32 @@ export function CustomerListPage() {
     return customers.filter((c) => c.approvalStage === 'APPROVED');
   }, [customers]);
 
+  // Only update filters when debouncedSearch or selectedType actually changes (avoids duplicate fetch on mount)
   useEffect(() => {
-    setFilters((prev) => ({
-      ...prev,
-      search: debouncedSearch || undefined,
-      page: 1,
-      assignedRepId: role === 'SALES_REP' ? currentUser.id : prev.assignedRepId,
-      areaId: role === 'AREA_MANAGER' ? currentUser.areaId : prev.areaId,
-      approvalStage: 'APPROVED',
-    }));
-  }, [debouncedSearch, role, currentUser, setFilters]);
+    const nextSearch = debouncedSearch.trim() || undefined;
+    const nextType = (selectedType || undefined) as any;
+    setFilters((prev) => {
+      const nextSalesRepId = role === 'SALES_REP' ? currentUser.id : undefined;
+      const nextAreaId = role === 'AREA_MANAGER' ? currentUser.areaId : undefined;
+      if (
+        prev.search === nextSearch &&
+        prev.customerType === nextType &&
+        prev.salesRepId === nextSalesRepId &&
+        prev.areaId === nextAreaId
+      ) {
+        return prev;
+      }
+      return {
+        ...prev,
+        search: nextSearch,
+        customerType: nextType,
+        page: 1,
+        salesRepId: nextSalesRepId,
+        areaId: nextAreaId,
+        approvalStage: 'APPROVED',
+      };
+    });
+  }, [debouncedSearch, selectedType, role, currentUser.id, currentUser.areaId, setFilters]);
 
   const handleSearch = (q: string) => {
     setSearchTerm(q);
@@ -77,14 +93,6 @@ export function CustomerListPage() {
 
   const handleTypeChange = (type: string) => {
     setSelectedType(type);
-    setFilters((prev) => ({
-      ...prev,
-      type: type || undefined,
-      page: 1,
-      assignedRepId: role === 'SALES_REP' ? currentUser.id : prev.assignedRepId,
-      areaId: role === 'AREA_MANAGER' ? currentUser.areaId : prev.areaId,
-      approvalStage: 'APPROVED',
-    }));
   };
 
   const canCreate = hasPermission('customers:create');

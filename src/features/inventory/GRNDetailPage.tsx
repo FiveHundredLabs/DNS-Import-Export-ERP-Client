@@ -11,6 +11,8 @@ import { useGRN } from '../../hooks/useGRN';
 import { grnsApi } from '../../api/grns/grns.api';
 import { purchaseOrderQueryKeys } from '../../hooks/usePurchaseOrders';
 import { useAuth } from '../../hooks/useAuth';
+import { getOriginalReturnTo, getReturnLabel } from '../../utils/navigationContext';
+import { useNavigationContext } from '../../hooks/useSmartBack';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 import { UnitBarcodeModal } from '../../components/inventory/UnitBarcodeModal';
 import { unitBarcodeService } from '../../services/UnitBarcodeService';
@@ -218,10 +220,20 @@ export function GRNDetailPage({ backUrl, backTitle }: GRNDetailPageProps = {}) {
   const { user } = useAuth();
 
   const isPurchasingRoute = location.pathname.startsWith('/purchasing/grn');
-  const statFrom = (location.state as { from?: string } | null)?.from;
+  const defaultGrnListPath = isPurchasingRoute ? '/purchasing/grn' : '/inventory/grn';
+  const { getChildState } = useNavigationContext(defaultGrnListPath);
+  const statFrom = getOriginalReturnTo(location.state, location.pathname);
   const isFromMyApprovals = Boolean(statFrom?.includes('my-approvals'));
-  const resolvedBackPath = backUrl || (statFrom && statFrom !== location.pathname ? statFrom : null) || (isPurchasingRoute ? '/purchasing/grn' : '/inventory/grn');
-  const resolvedBackTitle = backTitle || (isFromMyApprovals ? 'Back to My Approvals' : isPurchasingRoute ? 'Back to Goods Received Notes' : 'Back to Inward GRN Registry');
+  const resolvedBackPath = statFrom || backUrl || defaultGrnListPath;
+  const resolvedBackTitle =
+    backTitle ||
+    (isFromMyApprovals
+      ? 'Back to My Approvals'
+      : statFrom
+        ? `Back to ${getReturnLabel(location.state, isPurchasingRoute ? 'Goods Received Notes' : 'Inward GRN Registry')}`
+        : isPurchasingRoute
+          ? 'Back to Goods Received Notes'
+          : 'Back to Inward GRN Registry');
 
   const [grn, setGrn] = useState<GRN | null>(null);
   const [loading, setLoading] = useState(true);
@@ -639,7 +651,7 @@ export function GRNDetailPage({ backUrl, backTitle }: GRNDetailPageProps = {}) {
                 const stickersPath = isPurchasingRoute
                   ? `/purchasing/grn/${id}/stickers`
                   : `/inventory/grn/${id}/stickers`;
-                navigate(stickersPath);
+                navigate(stickersPath, { state: getChildState() });
               }}
               className="gap-1.5 text-xs font-semibold text-primary border-primary/30 hover:bg-primary/5 shadow-2xs"
             >
@@ -654,7 +666,7 @@ export function GRNDetailPage({ backUrl, backTitle }: GRNDetailPageProps = {}) {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => navigate(`/inventory/grn/${id}/edit`)}
+                  onClick={() => navigate(`/inventory/grn/${id}/edit`, { state: getChildState() })}
                   className="gap-1.5 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-50 border-slate-300 shadow-2xs"
                 >
                   <FileEdit className="h-3.5 w-3.5 text-slate-600" />

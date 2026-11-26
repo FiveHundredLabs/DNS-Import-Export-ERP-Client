@@ -50,7 +50,7 @@ export function CustomerCreditTermsSettings() {
   const { role, currentUser } = useAuth();
   const isAuthorized = role === 'DIRECTOR' || role === 'MANAGER';
 
-  const { data: backendConfig } = useCreditTermsConfig();
+  const { data: backendConfig } = useCreditTermsConfig({ enabled: isAuthorized });
   const updateConfigMutation = useUpdateCreditTermsConfig();
 
   const [config, setConfig] = useState<CustomerCreditTermsConfig>(() =>
@@ -107,8 +107,13 @@ export function CustomerCreditTermsSettings() {
     );
   }
 
-  // Live approval evaluation based on draft values
-  const approvalEvaluation = determineCustomerApprovalRoute(draftDays, draftLimit);
+  // Live approval evaluation based on draft values against current backend/configured defaults
+  const approvalEvaluation = determineCustomerApprovalRoute(
+    draftDays,
+    draftLimit,
+    config.defaultCreditDays,
+    config.defaultCreditLimit,
+  );
 
   const handleSave = async () => {
     if (draftDays <= 0 || draftDays > 365) {
@@ -159,22 +164,25 @@ export function CustomerCreditTermsSettings() {
   };
 
   const handleReset = async () => {
+    setIsSaving(true);
     try {
       await updateConfigMutation.mutateAsync({
         defaultCreditDays: 30,
         defaultCreditLimit: 500000,
       });
-    } catch {
-      // Best-effort backend sync
+      const res = creditTermsConfigService.resetToDefaults(currentUser);
+      setConfig(res);
+      setDraftDays(res.defaultCreditDays);
+      setDraftLimit(res.defaultCreditLimit);
+      setDraftGraceDays(res.gracePeriodDays);
+      setDraftDiscount(res.defaultDiscountPercentage);
+      setDraftMaxDiscount(res.maxDiscountPercentage);
+      toast.info('Restored default corporate credit terms (30 Days, LKR 500,000 Limit).');
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Failed to reset credit terms configuration on server.');
+    } finally {
+      setIsSaving(false);
     }
-    const res = creditTermsConfigService.resetToDefaults(currentUser);
-    setConfig(res);
-    setDraftDays(res.defaultCreditDays);
-    setDraftLimit(res.defaultCreditLimit);
-    setDraftGraceDays(res.gracePeriodDays);
-    setDraftDiscount(res.defaultDiscountPercentage);
-    setDraftMaxDiscount(res.maxDiscountPercentage);
-    toast.info('Restored default corporate credit terms (30 Days, LKR 500,000 Limit).');
   };
 
   return (

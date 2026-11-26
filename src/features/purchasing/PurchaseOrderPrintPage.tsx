@@ -1,4 +1,5 @@
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
+import { useNavigationContext } from '../../hooks/useSmartBack';
 import { usePurchaseOrder } from '../../hooks/usePurchaseOrders';
 import { A4PurchaseOrderViewer } from './components/A4PurchaseOrderViewer';
 import { TableLoadingSkeleton } from '../../components/common/LoadingSkeleton';
@@ -7,7 +8,7 @@ import { AlertCircle, ArrowLeft } from 'lucide-react';
 
 export function PurchaseOrderPrintPage() {
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
+  const { goBack, goBackToParent } = useNavigationContext('/purchasing/orders');
   const { purchaseOrder: po, loading, error } = usePurchaseOrder(id);
 
   if (loading && !po) {
@@ -24,7 +25,7 @@ export function PurchaseOrderPrintPage() {
         <AlertCircle className="h-10 w-10 text-rose-500 mx-auto" />
         <h2 className="text-xl font-bold text-slate-900">{error ? 'Unable to Load Purchase Order' : 'Purchase Order Not Found'}</h2>
         {error && <p role="alert" className="text-sm text-slate-600">{error}</p>}
-        <Button onClick={() => navigate('/purchasing/orders')}>Back to Orders</Button>
+        <Button onClick={goBack}>Back to Orders</Button>
       </div>
     );
   }
@@ -33,7 +34,7 @@ export function PurchaseOrderPrintPage() {
     <div className="py-2">
       <A4PurchaseOrderViewer
         purchaseOrder={po}
-        onBack={() => navigate(`/purchasing/orders/${po.id}`)}
+        onBack={() => goBackToParent(`/purchasing/orders/${po.id}`)}
       />
     </div>
   );

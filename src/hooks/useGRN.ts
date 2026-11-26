@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { grnService } from '../services/GRNService';
-import { grnsApi, mapGrn } from '../api/grns/grns.api';
+import { grnsApi } from '../api/grns/grns.api';
 import { queryClient as globalQueryClient } from '../api/queryClient';
 import { MockGRNRepository } from '../repositories/mock/MockGRNRepository';
 
@@ -26,7 +26,7 @@ export function useGRN() {
   );
 
   const localItems = isTest ? MockGRNRepository.getInstance().getAllSync() : [];
-  const apiItems = (query.data?.data ?? []).map((record) => mapGrn(record));
+  const apiItems = query.data?.data ?? [];
   const combinedGrns = apiItems.length > 0 ? apiItems : localItems;
 
   return {

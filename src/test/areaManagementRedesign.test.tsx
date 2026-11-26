@@ -3,8 +3,16 @@ import React from 'react';
 import '@testing-library/jest-dom';
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AreaListPage } from '../features/administration/AreaListPage';
 import { AreaStatus } from '../api/areas/areas.types';
+
+function renderWithQuery(ui: React.ReactElement) {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
+}
 
 function createMockAreasList() {
   return [
@@ -113,7 +121,7 @@ describe('Area Management Redesign: Inactive Visibility, Status Toggle, Soft Del
   });
 
   it('renders both ACTIVE and INACTIVE areas in the list with appropriate status badges', async () => {
-    render(
+    renderWithQuery(
       <MemoryRouter initialEntries={['/areas']}>
         <AreaListPage />
       </MemoryRouter>
@@ -134,7 +142,7 @@ describe('Area Management Redesign: Inactive Visibility, Status Toggle, Soft Del
   });
 
   it('filters areas by status when using the status filter dropdown', async () => {
-    render(
+    renderWithQuery(
       <MemoryRouter initialEntries={['/areas']}>
         <AreaListPage />
       </MemoryRouter>
@@ -179,7 +187,7 @@ describe('Area Management Redesign: Inactive Visibility, Status Toggle, Soft Del
   });
 
   it('provides dedicated Activate/Deactivate action that calls updateAreaStatus without deleting', async () => {
-    render(
+    renderWithQuery(
       <MemoryRouter initialEntries={['/areas']}>
         <AreaListPage />
       </MemoryRouter>
@@ -200,7 +208,7 @@ describe('Area Management Redesign: Inactive Visibility, Status Toggle, Soft Del
   });
 
   it('provides separate Delete action with confirmation modal and removes area from list on confirm', async () => {
-    render(
+    renderWithQuery(
       <MemoryRouter initialEntries={['/areas']}>
         <AreaListPage />
       </MemoryRouter>

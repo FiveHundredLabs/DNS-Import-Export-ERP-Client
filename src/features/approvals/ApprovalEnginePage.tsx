@@ -1,9 +1,14 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from '../../hooks/useAuth';
+import { useDebounce } from '../../hooks/useDebounce';
 import { approvalsApi } from '../../api/approvals/approvals.api';
+import {
+  useApprovalEngineOverview,
+  useApprovalEngineRequests,
+  useExecuteAdminApprovalAction,
+} from '../../api/approvals/approvals.hooks';
 import type {
   ApprovalItem,
-  ApprovalEngineOverview,
   ApprovalQueryParams,
   ApprovalActionPayload,
   ApprovalPipeline,
@@ -44,32 +49,58 @@ import {
   MessageSquare,
   History,
 } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
+import { buildEntryNavigationState } from '../../utils/navigationContext';
 
 export function ApprovalEnginePage() {
   const { currentUser, role } = useAuth();
+  const location = useLocation();
 
   const isAuthorized = role === 'DIRECTOR' || role === 'MANAGER';
 
-  const [overview, setOverview] = useState<ApprovalEngineOverview | null>(null);
-  const [requests, setRequests] = useState<ApprovalItem[]>([]);
-  const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [pageSize] = useState(15);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   // Filters
   const [search, setSearch] = useState('');
+  const debouncedSearch = useDebounce(search, 300);
   const [entityFilter, setEntityFilter] = useState<string>('ALL');
   const [urgencyFilter, setUrgencyFilter] = useState<string>('ALL');
+
+  // Reset to page 1 when debounced search changes
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch]);
+
+  const queryParams = useMemo<ApprovalQueryParams>(
+    () => ({
+      page,
+      limit: pageSize,
+      search: debouncedSearch.trim() || undefined,
+      entityType: entityFilter !== 'ALL' ? entityFilter : undefined,
+      urgency: urgencyFilter !== 'ALL' ? urgencyFilter : undefined,
+      sortBy: 'requestedAt',
+      sortOrder: 'desc',
+    }),
+    [page, pageSize, debouncedSearch, entityFilter, urgencyFilter],
+  );
+
+  const overviewQuery = useApprovalEngineOverview(isAuthorized);
+  const requestsQuery = useApprovalEngineRequests(queryParams, isAuthorized);
+  const executeAdminMutation = useExecuteAdminApprovalAction();
+
+  const overview = overviewQuery.data ?? null;
+  const requests = requestsQuery.data?.data ?? [];
+  const total = requestsQuery.data?.meta?.total ?? 0;
+  const loading = requestsQuery.isLoading;
+  const error = requestsQuery.error ? requestsQuery.error.message : null;
 
   // Action Dialog State
   const [activeItem, setActiveItem] = useState<ApprovalItem | null>(null);
   const [dialogAction, setDialogAction] = useState<'APPROVE' | 'REJECT' | null>(null);
   const [actionComment, setActionComment] = useState('');
-  const [submitting, setSubmitting] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+  const submitting = executeAdminMutation.isPending;
 
   // Expanded Pipeline State
   const [expandedKey, setExpandedKey] = useState<string | null>(null);
@@ -101,44 +132,20 @@ export function ApprovalEnginePage() {
     }
   };
 
-  const fetchOverview = useCallback(async () => {
-    try {
-      const data = await approvalsApi.getEngineOverview();
-      setOverview(data);
-    } catch (err: any) {
-      console.error('Failed to fetch approval engine overview:', err);
-    }
+  const fetchOverview = useCallback(() => {
+    overviewQuery.refetch();
+  }, [overviewQuery]);
+
+  const fetchRequests = useCallback(() => {
+    requestsQuery.refetch();
+  }, [requestsQuery]);
+
+  const closeActionDialog = useCallback(() => {
+    setActiveItem(null);
+    setDialogAction(null);
+    setActionComment('');
+    setActionError(null);
   }, []);
-
-  const fetchRequests = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const params: ApprovalQueryParams = {
-        page,
-        limit: pageSize,
-        search: search.trim() || undefined,
-        entityType: entityFilter !== 'ALL' ? entityFilter : undefined,
-        urgency: urgencyFilter !== 'ALL' ? urgencyFilter : undefined,
-        sortBy: 'requestedAt',
-        sortOrder: 'desc',
-      };
-      const res = await approvalsApi.getEngineRequests(params);
-      setRequests(Array.isArray(res?.data) ? res.data : []);
-      setTotal(res?.meta?.total ?? 0);
-    } catch (err: any) {
-      setError(err?.message || 'Failed to load approval requests');
-    } finally {
-      setLoading(false);
-    }
-  }, [page, pageSize, search, entityFilter, urgencyFilter]);
-
-  useEffect(() => {
-    if (isAuthorized) {
-      fetchOverview();
-      fetchRequests();
-    }
-  }, [isAuthorized, fetchOverview, fetchRequests]);
 
   const handleOpenAction = (item: ApprovalItem, action: 'APPROVE' | 'REJECT') => {
     setActiveItem(item);
@@ -155,7 +162,6 @@ export function ApprovalEnginePage() {
     }
 
     try {
-      setSubmitting(true);
       setActionError(null);
       const payload: ApprovalActionPayload = {
         action: dialogAction,
@@ -163,7 +169,11 @@ export function ApprovalEnginePage() {
         rejectionReason: dialogAction === 'REJECT' ? actionComment.trim() : undefined,
       };
 
-      await approvalsApi.executeAdminAction(activeItem.entityType, activeItem.id, payload);
+      await executeAdminMutation.mutateAsync({
+        entityType: activeItem.entityType,
+        entityId: activeItem.id,
+        payload,
+      });
 
       const actedKey = `${activeItem.entityType}:${activeItem.id}`;
       setPipelines((prev) => {
@@ -175,15 +185,9 @@ export function ApprovalEnginePage() {
         setExpandedKey(null);
       }
 
-      setActiveItem(null);
-      setDialogAction(null);
-      // Refresh overview and feed
-      fetchOverview();
-      fetchRequests();
+      closeActionDialog();
     } catch (err: any) {
       setActionError(err?.message || 'Failed to execute administrative action');
-    } finally {
-      setSubmitting(false);
     }
   };
 
@@ -620,6 +624,7 @@ export function ApprovalEnginePage() {
                         <div className="min-w-0">
                           <Link
                             to={getDocumentLink(item)}
+                            state={buildEntryNavigationState(location, 'Approval Engine')}
                             className="font-semibold text-sm text-slate-900 hover:text-blue-600 transition inline-flex items-center gap-1"
                           >
                             <span className="truncate">{item.referenceNumber}</span>
@@ -780,6 +785,7 @@ export function ApprovalEnginePage() {
                             <div className="min-w-0">
                               <Link
                                 to={getDocumentLink(item)}
+                                state={buildEntryNavigationState(location, 'Approval Engine')}
                                 className="font-semibold text-slate-900 hover:text-blue-600 transition inline-flex items-center gap-1 break-all"
                               >
                                 <span>{item.referenceNumber}</span>
@@ -986,7 +992,7 @@ export function ApprovalEnginePage() {
                 </div>
               </div>
               <button
-                onClick={() => setActiveItem(null)}
+                onClick={closeActionDialog}
                 className="text-slate-400 hover:text-slate-600 p-1 rounded-md"
               >
                 <X className="h-5 w-5" />
@@ -1043,7 +1049,7 @@ export function ApprovalEnginePage() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setActiveItem(null)}
+                onClick={closeActionDialog}
                 disabled={submitting}
                 className="text-xs"
               >
