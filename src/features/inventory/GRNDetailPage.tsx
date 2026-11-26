@@ -219,8 +219,9 @@ export function GRNDetailPage({ backUrl, backTitle }: GRNDetailPageProps = {}) {
 
   const isPurchasingRoute = location.pathname.startsWith('/purchasing/grn');
   const statFrom = (location.state as { from?: string } | null)?.from;
+  const isFromMyApprovals = Boolean(statFrom?.includes('my-approvals'));
   const resolvedBackPath = backUrl || (statFrom && statFrom !== location.pathname ? statFrom : null) || (isPurchasingRoute ? '/purchasing/grn' : '/inventory/grn');
-  const resolvedBackTitle = backTitle || (isPurchasingRoute ? 'Back to Goods Received Notes' : 'Back to Inward GRN Registry');
+  const resolvedBackTitle = backTitle || (isFromMyApprovals ? 'Back to My Approvals' : isPurchasingRoute ? 'Back to Goods Received Notes' : 'Back to Inward GRN Registry');
 
   const [grn, setGrn] = useState<GRN | null>(null);
   const [loading, setLoading] = useState(true);

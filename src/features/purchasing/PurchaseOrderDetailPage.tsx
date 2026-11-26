@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useSmartBack } from '../../hooks/useSmartBack';
 import { useAuth } from '../../hooks/useAuth';
 import { usePurchaseOrder, usePurchaseOrderActions, usePurchaseOrderActivity } from '../../hooks/usePurchaseOrders';
@@ -56,7 +56,10 @@ function toTimelineEntry(record: PurchaseOrderRecord): TimelineEntry {
 export function PurchaseOrderDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const goBack = useSmartBack('/purchasing/orders');
+  const fromPath = (location.state as { from?: string } | null)?.from;
+  const isFromMyApprovals = Boolean(fromPath?.includes('my-approvals'));
   const { currentUser } = useAuth();
   const { purchaseOrder: po, loading, error, refetch } = usePurchaseOrder(id);
   const activityQuery = usePurchaseOrderActivity(id);
@@ -119,8 +122,8 @@ export function PurchaseOrderDetailPage() {
       title={<span className="font-mono">{po.poNumber}</span>}
       subtitle={`Order date ${formatDate(po.orderDate)}${po.expectedDeliveryDate ? ` · Expected delivery ${formatDate(po.expectedDeliveryDate)}` : ''}`}
       badge={<PurchaseOrderStatusBadge status={po.status} />}
-      backUrl="/purchasing/orders"
-      backLabel="Orders"
+      backUrl={isFromMyApprovals && fromPath ? fromPath : '/purchasing/orders'}
+      backLabel={isFromMyApprovals ? 'My Approvals' : 'Orders'}
       breadcrumbs={[{ label: 'Purchasing', href: '/purchasing' }, { label: 'Purchase Orders', href: '/purchasing/orders' }, { label: po.poNumber }]}
       actions={<div className="flex flex-wrap gap-2">
         <Button variant="outline" onClick={() => navigate(`/purchasing/orders/${po.id}/print`)}><Printer className="mr-2 h-4 w-4" />Print / PDF</Button>
