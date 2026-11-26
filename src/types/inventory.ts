@@ -96,6 +96,7 @@ export interface UnitBarcodeRecord {
 }
 
 export interface GRNItem {
+  id?: string;
   productId: string;
   productNameSnapshot: string;
   skuSnapshot: string;
@@ -162,6 +163,19 @@ export interface GRN {
   inspection?: GRNQualityInspection;
   attachments?: GRNAttachment[];
   barcodesGenerated?: boolean;
+  costing?: {
+    id?: string;
+    totalLandedCost?: string | number | null;
+    apportionMethod?: 'BY_VALUE' | 'BY_QUANTITY';
+    freightCharges?: string | number | null;
+    otherLandingCosts?: string | number | null;
+    vatAmount?: string | number | null;
+    isVatRecoverable?: boolean | null;
+    appliedAdvanceAmount?: string | number | null;
+    itemsSubtotal?: string | number | null;
+    postedToGL?: boolean;
+    journalEntryId?: string | null;
+  } | null;
   barcodesConfirmed?: boolean;
   barcodesConfirmedAt?: string;
   barcodesConfirmedBy?: string;

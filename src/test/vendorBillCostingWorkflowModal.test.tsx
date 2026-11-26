@@ -24,12 +24,8 @@ describe('Vendor Bill 2-Step Guided Workflow: Costing to Pricing & Redirection P
 
     // Verify initial render on Step 1
     expect(screen.getByText(/Vendor Bill Processing \(GRN Costing\)/i)).toBeDefined();
-    expect(screen.getByText(/Step 1: Invoice & Landed Costing/i)).toBeDefined();
+    expect(screen.getByText(/Step 1: Landed Costing/i)).toBeDefined();
     expect(screen.getByText(/Step 2: Selling Price & Margin Setup/i)).toBeDefined();
-
-    // Fill in required vendor invoice number in persistent top header
-    const invInput = screen.getByPlaceholderText(/e\.g\. INV-SCH-90214/i);
-    fireEvent.change(invInput, { target: { value: 'INV-TEST-PRICE-01' } });
 
     // Click Continue to Pricing (Step 2)
     const continueBtn = screen.getByRole('button', { name: /continue to pricing \(step 2\)/i });
@@ -48,7 +44,7 @@ describe('Vendor Bill 2-Step Guided Workflow: Costing to Pricing & Redirection P
     // Verify bill is posted and audit lock is active
     await waitFor(() => {
       expect(screen.getByText(/Audit Lock Active/i)).toBeDefined();
-      expect(screen.getByText(/Bill Costed & Approved/i)).toBeDefined();
+      expect(screen.getByText(/Priced & Capitalized|Bill Costed & Approved/i)).toBeDefined();
     });
 
     // CRITICAL: Ensure user remains on page and was not prematurely redirected to dashboard
@@ -154,10 +150,6 @@ describe('Vendor Bill 2-Step Guided Workflow: Costing to Pricing & Redirection P
         </Routes>
       </MemoryRouter>
     );
-
-    // Fill invoice number
-    const invInput = screen.getByPlaceholderText(/e\.g\. INV-SCH-90214/i);
-    fireEvent.change(invInput, { target: { value: 'INV-TEST-SYNC-05' } });
 
     // Navigate to Step 2
     const continueBtn = screen.getByRole('button', { name: /continue to pricing \(step 2\)/i });

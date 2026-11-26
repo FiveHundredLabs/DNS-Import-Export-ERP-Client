@@ -18,6 +18,7 @@ import {
   Calendar,
 } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
+import { ConfirmButton } from '../../../components/ui/confirm-button';
 import { Input } from '../../../components/ui/input';
 import { Badge } from '../../../components/ui/badge';
 import { Card } from '../../../components/ui/card';
@@ -535,15 +536,20 @@ export function PaymentApprovalPage() {
               <Button type="button" variant="outline" size="sm" onClick={() => setApproveItem(null)}>
                 Cancel
               </Button>
-              <Button
+              <ConfirmButton
                 type="button"
                 size="sm"
-                onClick={handleConfirmApproval}
+                confirmTitle="Confirm Receipt Approval?"
+                confirmMessage={`Are you sure you want to approve receipt ${approveItem.receiptNumber} (${formatCurrency(approveItem.totalAmount)}) and post to ledger?`}
+                confirmLabel="Confirm & Post"
+                variant="success"
+                dialogVariant="success"
+                onConfirm={handleConfirmApproval}
                 disabled={approving}
-                className="bg-emerald-600 hover:bg-emerald-700"
+                className="bg-emerald-600 hover:bg-emerald-700 cursor-pointer text-white font-medium"
               >
                 {approving ? 'Posting Entry...' : 'Confirm & Post to Ledger'}
-              </Button>
+              </ConfirmButton>
               <DoubleEntryHoverBadge
                 align="right"
                 title="Payment GL Posting Impact"
@@ -601,15 +607,19 @@ export function PaymentApprovalPage() {
               <Button type="button" variant="outline" size="sm" onClick={() => setRejectItem(null)}>
                 Cancel
               </Button>
-              <Button
+              <ConfirmButton
                 type="button"
                 size="sm"
-                onClick={handleConfirmRejection}
+                confirmTitle="Confirm Receipt Rejection?"
+                confirmMessage={`Are you sure you want to reject receipt ${rejectItem.receiptNumber}? It will be returned to the sales rep.`}
+                confirmLabel="Confirm Rejection"
+                dialogVariant="destructive"
+                onConfirm={handleConfirmRejection}
                 disabled={rejecting}
-                className="bg-rose-600 hover:bg-rose-700"
+                className="bg-rose-600 hover:bg-rose-700 cursor-pointer text-white font-medium"
               >
                 {rejecting ? 'Rejecting...' : 'Confirm Rejection'}
-              </Button>
+              </ConfirmButton>
             </DialogFooter>
           </div>
         )}

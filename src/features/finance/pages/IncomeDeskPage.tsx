@@ -7,9 +7,11 @@ import { useAuth } from '../../../hooks/useAuth';
 import { useFinanceLedger } from '../hooks/useFinanceLedger';
 import { evaluate24hHandoverStatus } from '../../../rules/paymentRules';
 import { useCustomers } from '../../../hooks/useCustomers';
+import { useCreateVoucher } from '../../../api/finance';
 import { PageHeader } from '../../../components/common/PageHeader';
 import { StatCard } from '../../../components/common/StatCard';
 import { Button } from '../../../components/ui/button';
+import { ConfirmButton } from '../../../components/ui/confirm-button';
 import { Input } from '../../../components/ui/input';
 import { Badge } from '../../../components/ui/badge';
 import { Card, CardContent } from '../../../components/ui/card';
@@ -67,6 +69,7 @@ export function IncomeDeskPage({ defaultTab }: IncomeDeskPageProps) {
   const { currentUser } = useAuth();
   const { accounts } = useFinanceLedger();
   const { customers } = useCustomers();
+  const createVoucherMutation = useCreateVoucher();
 
   const queryTab = searchParams.get('tab');
   const [deskTab, setDeskTab] = useState<'HANDOVERS_QUEUE' | 'CUSTOMER_RECEIPTS'>(() => {
@@ -102,7 +105,6 @@ export function IncomeDeskPage({ defaultTab }: IncomeDeskPageProps) {
     } catch {
       // fallback
     }
-    setRefreshKey((k) => k + 1);
   };
 
   useEffect(() => {
@@ -500,6 +502,24 @@ export function IncomeDeskPage({ defaultTab }: IncomeDeskPageProps) {
     try {
       setSavingReceipt(true);
       const selectedIncomeAcc = accounts.find((a) => a.id === newReceiptIncomeAccount);
+
+      // Sync Direct Receipt Voucher to backend API
+      try {
+        await createVoucherMutation.mutateAsync({
+          type: 'RECEIPT',
+          transactionDate: newReceiptDate,
+          amount: newReceiptAmount,
+          liquidAccountId: newReceiptDepositAccount || 'acc-1010',
+          offsetAccountId: newReceiptIncomeAccount || 'acc-1020',
+          partyName: cust.name,
+          narration: newReceiptRemarks.trim() || `Customer receipt - ${cust.name}`,
+          paymentMethod: newReceiptMethod === 'CHEQUE' ? 'CHEQUE' : newReceiptMethod === 'CASH' ? 'CASH' : 'BANK_TRANSFER',
+          referenceNumber: newReceiptChequeNo.trim() || undefined,
+        });
+      } catch (voucherApiErr) {
+        console.warn('Backend create voucher (receipt) skipped/failed:', voucherApiErr);
+      }
+
       const created = await arService.createReceipt({
         customerId: cust.id,
         customerName: cust.name,
@@ -554,7 +574,7 @@ export function IncomeDeskPage({ defaultTab }: IncomeDeskPageProps) {
               variant="outline"
               size="sm"
               onClick={() => navigate('/finance/ar/pdc-vault')}
-              className="text-xs h-8 gap-1.5 font-medium"
+              className="text-xs h-8 gap-1.5 font-medium border-border"
             >
               <Clock className="h-3.5 w-3.5 text-primary" />
               <span>PDC Vault (1018)</span>
@@ -564,20 +584,30 @@ export function IncomeDeskPage({ defaultTab }: IncomeDeskPageProps) {
               variant="outline"
               size="sm"
               onClick={() => navigate('/finance/notes?tab=credit')}
-              className="text-xs h-8 gap-1.5 font-medium"
+              className="text-xs h-8 gap-1.5 font-medium border-border"
             >
               <RotateCcw className="h-3.5 w-3.5 text-primary" />
-              <span>Credit Notes</span>
+              <span>Credit Notes (AR)</span>
             </Button>
 
             <Button
               variant="outline"
               size="sm"
               onClick={() => navigate('/finance/ar/allocate')}
-              className="text-xs h-8 gap-1.5 font-medium"
+              className="text-xs h-8 gap-1.5 font-medium border-border"
             >
               <SlidersHorizontal className="h-3.5 w-3.5 text-primary" />
               <span>Batch Allocation</span>
+            </Button>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate('/customers')}
+              className="text-xs h-8 gap-1.5 font-medium border-border"
+            >
+              <User className="h-3.5 w-3.5 text-primary" />
+              <span>Customers</span>
             </Button>
           </div>
         }
@@ -585,7 +615,7 @@ export function IncomeDeskPage({ defaultTab }: IncomeDeskPageProps) {
 
       {/* Al Akleel-Style 2-Tab Segmented Desk Switcher */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-1 border-b border-border/60">
-        <div className="flex items-center p-1 bg-muted/60 rounded-xl border border-border/80">
+        <div className="flex items-center p-1 bg-muted/60 rounded-xl border border-border/80 overflow-x-auto max-w-full">
           <button
             type="button"
             onClick={() => handleDeskTabChange('HANDOVERS_QUEUE')}
@@ -849,7 +879,7 @@ export function IncomeDeskPage({ defaultTab }: IncomeDeskPageProps) {
                                     size="sm"
                                     onClick={() => handleFastApprove(item)}
                                     disabled={processingId === item.id}
-                                    className="h-7 px-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold gap-1 shadow-2xs"
+                                    className="h-7 px-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold gap-1 shadow-2xs cursor-pointer"
                                   >
                                     <CheckCircle2 className="h-3.5 w-3.5" />
                                     <span>Verify & Approve</span>
@@ -906,50 +936,82 @@ export function IncomeDeskPage({ defaultTab }: IncomeDeskPageProps) {
                   <Wallet className="h-4 w-4" />
                 </div>
               </div>
-              <div className="mt-1 text-lg font-bold font-mono text-foreground">
+              <div className="mt-1 text-base sm:text-lg font-bold font-mono text-foreground">
                 {formatCurrency(totalReceiptsValue)}
               </div>
-              <span className="text-[10px] text-muted-foreground">Audit cleared receipts total</span>
+              <p className="text-[10px] text-muted-foreground mt-0.5">Audit cleared receipts total</p>
             </Card>
 
-            <StatCard
-              title="Cash Receipts"
-              value={cashReceiptsCount}
-              icon={Coins}
-              variant="amber"
-              selected={receiptsMethodFilter === 'CASH'}
+            <Card
               onClick={() => setReceiptsMethodFilter((prev) => (prev === 'CASH' ? 'ALL' : 'CASH'))}
-            />
+              className={cn(
+                "p-3 border-border bg-card shadow-2xs cursor-pointer transition-all hover:border-amber-300",
+                receiptsMethodFilter === 'CASH' && "ring-2 ring-amber-500/50 border-amber-400 bg-amber-50/20"
+              )}
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Cash Receipts</span>
+                <Coins className="h-4 w-4 text-amber-500" />
+              </div>
+              <div className="mt-1 text-base sm:text-lg font-bold font-mono text-foreground">
+                {cashReceiptsCount}
+              </div>
+              <p className="text-[10px] text-muted-foreground mt-0.5">Filter by Cash (1040)</p>
+            </Card>
 
-            <StatCard
-              title="Bank Transfers"
-              value={bankReceiptsCount}
-              icon={Landmark}
-              variant="indigo"
-              selected={receiptsMethodFilter === 'BANK_TRANSFER'}
+            <Card
               onClick={() => setReceiptsMethodFilter((prev) => (prev === 'BANK_TRANSFER' ? 'ALL' : 'BANK_TRANSFER'))}
-            />
+              className={cn(
+                "p-3 border-border bg-card shadow-2xs cursor-pointer transition-all hover:border-sky-300",
+                receiptsMethodFilter === 'BANK_TRANSFER' && "ring-2 ring-sky-500/50 border-sky-400 bg-sky-50/20"
+              )}
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Bank Transfers</span>
+                <Landmark className="h-4 w-4 text-sky-600" />
+              </div>
+              <div className="mt-1 text-base sm:text-lg font-bold font-mono text-foreground">
+                {bankReceiptsCount}
+              </div>
+              <p className="text-[10px] text-muted-foreground mt-0.5">Filter by Bank (1010)</p>
+            </Card>
 
-            <StatCard
-              title="Cheques (PDC)"
-              value={chequeReceiptsCount}
-              icon={CreditCard}
-              variant="purple"
-              selected={receiptsMethodFilter === 'CHEQUE'}
+            <Card
               onClick={() => setReceiptsMethodFilter((prev) => (prev === 'CHEQUE' ? 'ALL' : 'CHEQUE'))}
-            />
+              className={cn(
+                "p-3 border-border bg-card shadow-2xs cursor-pointer transition-all hover:border-purple-300",
+                receiptsMethodFilter === 'CHEQUE' && "ring-2 ring-purple-500/50 border-purple-400 bg-purple-50/20"
+              )}
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Cheques (PDC)</span>
+                <CreditCard className="h-4 w-4 text-purple-600" />
+              </div>
+              <div className="mt-1 text-base sm:text-lg font-bold font-mono text-foreground">
+                {chequeReceiptsCount}
+              </div>
+              <p className="text-[10px] text-muted-foreground mt-0.5">Filter by Cheques (1018)</p>
+            </Card>
 
-            <StatCard
-              title="Total Receipts"
-              value={receipts.length}
-              icon={CheckCircle2}
-              variant="emerald"
-              selected={receiptsMethodFilter === 'ALL' && receiptsStatusFilter === 'ALL'}
+            <Card
               onClick={() => {
                 setReceiptsMethodFilter('ALL');
                 setReceiptsStatusFilter('ALL');
               }}
-            />
+              className={cn(
+                "p-3 border-border bg-card shadow-2xs cursor-pointer transition-all hover:border-emerald-300",
+                receiptsMethodFilter === 'ALL' && receiptsStatusFilter === 'ALL' && "ring-2 ring-emerald-500/50 border-emerald-400 bg-emerald-50/20"
+              )}
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Total Receipts</span>
+                <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+              </div>
+              <div className="mt-1 text-base sm:text-lg font-bold font-mono text-foreground">
+                {receipts.length}
+              </div>
+              <p className="text-[10px] text-muted-foreground mt-0.5">Reset to all receipts</p>
+            </Card>
           </div>
 
           {/* Industrial Single-Row Filter Bar */}
@@ -1385,15 +1447,19 @@ export function IncomeDeskPage({ defaultTab }: IncomeDeskPageProps) {
                   >
                     Auto-FIFO Allocate
                   </Button>
-                  <Button
+                  <ConfirmButton
                     type="button"
                     variant="ghost"
                     size="sm"
-                    onClick={handleClearAllocations}
-                    className="h-7 text-xs px-2 text-muted-foreground"
+                    confirmTitle="Clear Invoice Allocations?"
+                    confirmMessage="Are you sure you want to clear all invoice allocations for this receipt?"
+                    confirmLabel="Clear Allocations"
+                    dialogVariant="warning"
+                    onConfirm={handleClearAllocations}
+                    className="h-7 text-xs px-2 text-muted-foreground cursor-pointer"
                   >
                     Clear
-                  </Button>
+                  </ConfirmButton>
                 </div>
               </div>
 
@@ -1511,15 +1577,20 @@ export function IncomeDeskPage({ defaultTab }: IncomeDeskPageProps) {
             >
               Cancel
             </Button>
-            <Button
+            <ConfirmButton
               type="button"
               size="sm"
-              onClick={handleSaveNewReceipt}
+              confirmTitle="Post Payment Receipt?"
+              confirmMessage={`Are you sure you want to post payment receipt for ${formatCurrency(newReceiptAmount)}? This will record the double-entry postings in the General Ledger.`}
+              confirmLabel="Post Receipt"
+              variant="default"
+              dialogVariant="success"
+              onConfirm={handleSaveNewReceipt}
               disabled={savingReceipt || newReceiptAmount <= 0}
-              className="bg-primary hover:bg-primary-dark text-white font-semibold"
+              className="bg-primary hover:bg-primary-dark text-white font-semibold cursor-pointer"
             >
               {savingReceipt ? 'Posting...' : 'Save & Post Receipt'}
-            </Button>
+            </ConfirmButton>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -1562,6 +1633,7 @@ export function IncomeDeskPage({ defaultTab }: IncomeDeskPageProps) {
               size="sm"
               onClick={handleConfirmReject}
               disabled={!rejectionReason.trim()}
+              className="cursor-pointer"
             >
               Confirm Rejection
             </Button>

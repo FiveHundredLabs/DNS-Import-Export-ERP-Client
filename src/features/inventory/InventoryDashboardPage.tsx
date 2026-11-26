@@ -67,7 +67,7 @@ interface FlatGRNStockItem {
   reservedQuantity: number;
   dispatchedQuantity: number;
   deliveredQuantity: number;
-  primaryStatus: 'AVAILABLE' | 'RESERVED' | 'DISPATCHED' | 'DELIVERED' | 'REJECTED';
+  primaryStatus: 'AVAILABLE' | 'RESERVED' | 'DISPATCHED' | 'DELIVERED' | 'REJECTED' | 'PENDING_PRICING';
   unitCost: number;
   lineValue: number;
   serialNumbers: string[];
@@ -118,25 +118,21 @@ export function InventoryDashboardPage() {
 
 // Helper: Strict Power Tools classification filter for Stock Keeper Inventory Hub
 function isPowerToolItem(item: { productId?: string; sku?: string; categoryName?: string; productName?: string }): boolean {
-  if (item.productId?.startsWith('prod-pt-')) return true;
-  if (item.sku?.startsWith('DNS-PT-')) return true;
-  if (item.categoryName?.toLowerCase().includes('power tool')) return true;
+  // Strictly filter out electrical wiring / inverter test fixtures to preserve storekeeper mock division realism
   const name = (item.productName || '').toLowerCase();
-  return (
-    name.includes('bosch') ||
-    name.includes('makita') ||
-    name.includes('dewalt') ||
-    name.includes('milwaukee') ||
-    name.includes('stanley') ||
-    name.includes('rotary hammer') ||
-    name.includes('angle grinder') ||
-    name.includes('impact wrench') ||
-    name.includes('circular saw') ||
-    name.includes('demolition breaker') ||
-    name.includes('jigsaw') ||
-    name.includes('router') ||
-    name.includes('multi-tool')
-  );
+  if (
+    name.includes('schneider') ||
+    name.includes('kelani') ||
+    name.includes('growatt') ||
+    name.includes('philips') ||
+    item.productId === 'prod-001' ||
+    item.productId === 'prod-002' ||
+    item.productId === 'prod-003' ||
+    item.productId === 'prod-004'
+  ) {
+    return false;
+  }
+  return true;
 }
 
   // Compute product-level sales order commitments (Reserved, Dispatched, Delivered)
@@ -179,13 +175,16 @@ function isPowerToolItem(item: { productId?: string; sku?: string; categoryName?
         const goodQty = Math.max(0, (item.receivedQuantity || 0) - damagedQty);
         const stats = productOrderStats[item.productId] || { reserved: 0, dispatched: 0, delivered: 0 };
 
-        // Available for Sale = Net Good intake minus reserved for active orders
-        const availableQty = Math.max(0, goodQty - stats.reserved);
+        // Available for Sale = Inbound goods become commercially available strictly once GRN is PRICED
+        const isCapitalized = grn.status === 'PRICED';
+        const availableQty = isCapitalized ? Math.max(0, goodQty - stats.reserved) : 0;
 
         // Determine primary status for status-wise representation
-        let primaryStatus: 'AVAILABLE' | 'RESERVED' | 'DISPATCHED' | 'DELIVERED' | 'REJECTED' = 'AVAILABLE';
+        let primaryStatus: 'AVAILABLE' | 'RESERVED' | 'DISPATCHED' | 'DELIVERED' | 'REJECTED' | 'PENDING_PRICING' = 'AVAILABLE';
         if (damagedQty > 0 && availableQty === 0) {
           primaryStatus = 'REJECTED';
+        } else if (!isCapitalized) {
+          primaryStatus = 'PENDING_PRICING';
         } else if (stats.reserved > 0 && availableQty === 0) {
           primaryStatus = 'RESERVED';
         } else if (availableQty > 0) {
@@ -201,10 +200,9 @@ function isPowerToolItem(item: { productId?: string; sku?: string; categoryName?
         const barcodesCount = item.unitRecords?.length || item.unitBarcodes?.length || goodQty;
         const pName = product?.name || item.productNameSnapshot || item.productId;
         const pSku = product?.sku || item.skuSnapshot || 'N/A';
-        const pCategory = product?.categoryName || 'Electrical Components';
+        const pCategory = product?.categoryName || 'General Stock';
 
-        // Filter: Storekeeper inventory hub strictly keeps ONLY realistic power tools!
-        if (!isPowerToolItem({ productId: item.productId, sku: pSku, categoryName: pCategory, productName: pName })) {
+        if (role === 'STOCK_KEEPER' && !isPowerToolItem({ productId: item.productId, sku: pSku, categoryName: pCategory, productName: pName })) {
           return;
         }
 
@@ -240,33 +238,50 @@ function isPowerToolItem(item: { productId?: string; sku?: string; categoryName?
     });
 
     return list;
-  }, [grns, productOrderStats]);
+  }, [grns, products, productOrderStats]);
 
-  // Power tool filtered GRNs for Storekeeper inventory hub
-  const powerToolGrns = useMemo(() => {
-    return (grns || []).filter((g) =>
-      g.items?.some((item: any) => {
-        const prod = item.product || products.find((p) => p.id === item.productId);
-        return isPowerToolItem({
-          productId: item.productId,
-          sku: prod?.sku || item.skuSnapshot,
-          categoryName: prod?.categoryName,
-          productName: prod?.name || item.productNameSnapshot,
+  // All GRNs for Storekeeper inventory hub
+  const allGrns = useMemo(() => grns || [], [grns]);
+
+  // All serials for Storekeeper inventory hub
+  const allSerials = useMemo(() => {
+    let source = serials;
+    if (source.length === 0) {
+      // Derive serial records directly from intake GRN items if service is unseeded
+      const derived: SerialNumberRecord[] = [];
+      flatStockItems.forEach((item) => {
+        item.serialNumbers?.forEach((sn, idx) => {
+          derived.push({
+            id: `${item.keyId}-sn-${idx}`,
+            serialNumber: sn,
+            productId: item.productId,
+            productName: item.productName,
+            sku: item.sku,
+            grnId: item.grnId,
+            grnNumber: item.grnNumber,
+            status: item.primaryStatus === 'REJECTED' ? 'DAMAGED' : 'IN_STOCK',
+            receivedDate: item.grnDate,
+            locationId: item.warehouseId,
+            locationName: 'Main Warehouse',
+            binLocation: 'Main Warehouse',
+            barcode: item.unitRecords?.[idx]?.unitBarcode || sn,
+          });
         });
-      })
-    );
-  }, [grns, products]);
+      });
+      source = derived;
+    }
 
-  // Power tool filtered serials for Storekeeper inventory hub
-  const powerToolSerials = useMemo(() => {
-    return serials.filter((sn) =>
-      isPowerToolItem({
-        productId: sn.productId,
-        sku: sn.sku,
-        productName: sn.productName,
-      })
-    );
-  }, [serials]);
+    if (role === 'STOCK_KEEPER') {
+      return source.filter((sn) =>
+        isPowerToolItem({
+          productId: sn.productId,
+          sku: sn.sku,
+          productName: sn.productName,
+        })
+      );
+    }
+    return source;
+  }, [serials, flatStockItems, role]);
 
   // Operational KPIs
   const kpis = useMemo(() => {
@@ -315,7 +330,7 @@ function isPowerToolItem(item: { productId?: string; sku?: string; categoryName?
       pendingGRNs,
       approvedGRNs,
     };
-  }, [flatStockItems, powerToolGrns]);
+  }, [flatStockItems, grns]);
 
   // Filtered stock items based on search, GRN, and status-wise quick filters
   const filteredStockItems = useMemo(() => {
@@ -600,7 +615,7 @@ function isPowerToolItem(item: { productId?: string; sku?: string; categoryName?
             )}
           >
             <Warehouse className="h-4 w-4" />
-            Inward GRN Shipments ({powerToolGrns.length})
+            Inward GRN Shipments ({allGrns.length})
           </button>
 
           <button
@@ -628,7 +643,7 @@ function isPowerToolItem(item: { productId?: string; sku?: string; categoryName?
             )}
           >
             <Hash className="h-4 w-4" />
-            Serial Registry ({powerToolSerials.length})
+            Serial Registry ({allSerials.length})
           </button>
         </div>
       </div>
@@ -975,7 +990,7 @@ function isPowerToolItem(item: { productId?: string; sku?: string; categoryName?
       {activeTab === 'GRN_LIST' && (
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {powerToolGrns.map((grn) => {
+            {allGrns.map((grn) => {
               const itemsCount = grn.items?.length || 0;
               const totalUnits =
                 grn.items?.reduce(
@@ -1192,7 +1207,7 @@ function isPowerToolItem(item: { productId?: string; sku?: string; categoryName?
                   </TableRow>
                 </TableHeader>
                 <TableBody className="divide-y divide-slate-100 font-mono">
-                  {powerToolSerials.map((sn) => (
+                  {allSerials.map((sn) => (
                     <TableRow key={sn.id} className="hover:bg-slate-50">
                       <TableCell className="font-bold text-indigo-800">{sn.serialNumber}</TableCell>
                       <TableCell className="font-sans font-medium text-slate-900">{sn.productName}</TableCell>

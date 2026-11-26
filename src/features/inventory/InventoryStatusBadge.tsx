@@ -116,6 +116,35 @@ export function InventoryStatusBadge({ status, className, label }: InventoryStat
         </Badge>
       );
 
+    case 'PRICED':
+      return (
+        <Badge
+          variant="outline"
+          className={cn(
+            'gap-1 font-semibold bg-indigo-50 text-indigo-700 border-indigo-200 text-xs py-0.5 px-2.5 shadow-2xs',
+            className
+          )}
+        >
+          <CheckCircle2 className="h-3 w-3 text-indigo-600 shrink-0" />
+          <span>{label || 'Priced'}</span>
+        </Badge>
+      );
+
+    case 'PENDING_PRICING':
+    case 'PENDING PRICING':
+      return (
+        <Badge
+          variant="outline"
+          className={cn(
+            'gap-1 font-semibold bg-blue-50 text-blue-700 border-blue-200 text-xs py-0.5 px-2.5 shadow-2xs',
+            className
+          )}
+        >
+          <Clock className="h-3 w-3 text-blue-600 shrink-0" />
+          <span>{label || 'Pending Pricing'}</span>
+        </Badge>
+      );
+
     case 'PENDING_STOCK_MANAGER_APPROVAL':
       return (
         <Badge

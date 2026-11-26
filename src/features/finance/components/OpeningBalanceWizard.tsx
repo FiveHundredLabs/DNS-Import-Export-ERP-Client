@@ -3,6 +3,7 @@ import Decimal from 'decimal.js';
 import { Account } from '../api/types';
 import { CurrencyInput } from './CurrencyInput';
 import { Button } from '../../../components/ui/button';
+import { ConfirmButton } from '../../../components/ui/confirm-button';
 import { Badge } from '../../../components/ui/badge';
 import { Card } from '../../../components/ui/card';
 import { formatCurrency } from '../../../utils/formatters';
@@ -177,15 +178,19 @@ export function OpeningBalanceWizard({ accounts, onSave, onClose }: OpeningBalan
           <Button variant="outline" size="sm" onClick={onClose} disabled={submitting}>
             Cancel
           </Button>
-          <Button
+          <ConfirmButton
             size="sm"
-            onClick={handleSave}
+            confirmTitle="Save & Post Opening Balances?"
+            confirmMessage="Are you sure you want to commit these opening balances to the general ledger? This will create an opening balance journal entry and adjust initial account equity."
+            confirmLabel="Post Opening Balances"
+            dialogVariant="default"
+            onConfirm={handleSave}
             disabled={!hasAnyValues || submitting}
-            className="gap-1.5 bg-primary hover:bg-primary-hover text-white"
+            className="gap-1.5 bg-primary hover:bg-primary-hover text-white cursor-pointer"
           >
             <Save className="h-4 w-4" />
             <span>{submitting ? 'Posting...' : 'Save Opening Balances'}</span>
-          </Button>
+          </ConfirmButton>
         </div>
       </div>
 

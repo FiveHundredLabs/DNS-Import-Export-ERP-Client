@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useFinanceLedger } from '../../hooks/useFinanceLedger';
+import { useProfitLossReport } from '../../../../api/finance';
 import { ProfitLossReport } from '../../api/types';
 import { ReportDateFilterBar, DateFilterState } from './ReportDateFilterBar';
 import { ReportHeaderNav } from './ReportHeaderNav';
@@ -51,10 +52,10 @@ function calculateVariance(current: number, prior: number) {
 
 export function ProfitLossPage() {
   const { getProfitLoss } = useFinanceLedger();
-  const [report, setReport] = useState<ProfitLossReport | null>(null);
-  const [priorReport, setPriorReport] = useState<ProfitLossReport | null>(null);
+  const [localReport, setLocalReport] = useState<ProfitLossReport | null>(null);
+  const [localPriorReport, setLocalPriorReport] = useState<ProfitLossReport | null>(null);
   const [comparePrior, setComparePrior] = useState<boolean>(false);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [isLocalLoading, setIsLocalLoading] = useState<boolean>(false);
 
   const [dateFilter, setDateFilter] = useState<DateFilterState>({
     preset: 'THIS_MONTH',
@@ -65,6 +66,96 @@ export function ProfitLossPage() {
   const [priorDateFilter, setPriorDateFilter] = useState<{ startDate: string; endDate: string }>(
     () => computePriorPeriod('2026-09-01', '2026-09-30')
   );
+
+  // TanStack Query Hooks for Profit & Loss API
+  const { data: apiProfitLoss, isLoading: isApiLoading } = useProfitLossReport({
+    startDate: dateFilter.startDate,
+    endDate: dateFilter.endDate,
+  });
+
+  const { data: apiPriorProfitLoss } = useProfitLossReport(
+    comparePrior
+      ? {
+          startDate: priorDateFilter.startDate,
+          endDate: priorDateFilter.endDate,
+        }
+      : undefined
+  );
+
+  const loading = (isApiLoading && !localReport) || isLocalLoading;
+
+  const activeReport: ProfitLossReport | null = useMemo(() => {
+    if (apiProfitLoss) {
+      return {
+        dateRange: {
+          start: apiProfitLoss.period.startDate,
+          end: apiProfitLoss.period.endDate,
+        },
+        revenueItems: apiProfitLoss.revenue.rows.map((r) => ({
+          accountId: r.accountId,
+          code: r.accountCode,
+          accountName: r.accountName,
+          amount: parseFloat(r.amount) || 0,
+        })),
+        totalRevenue: parseFloat(apiProfitLoss.revenue.total) || 0,
+        cogsItems: apiProfitLoss.cogs.rows.map((r) => ({
+          accountId: r.accountId,
+          code: r.accountCode,
+          accountName: r.accountName,
+          amount: parseFloat(r.amount) || 0,
+        })),
+        totalCogs: parseFloat(apiProfitLoss.cogs.total) || 0,
+        grossProfit: parseFloat(apiProfitLoss.grossProfit) || 0,
+        expenseItems: apiProfitLoss.operatingExpenses.rows.map((r) => ({
+          accountId: r.accountId,
+          code: r.accountCode,
+          accountName: r.accountName,
+          amount: parseFloat(r.amount) || 0,
+        })),
+        totalOperatingExpenses: parseFloat(apiProfitLoss.operatingExpenses.total) || 0,
+        netOperatingProfit: parseFloat(apiProfitLoss.netProfit || apiProfitLoss.operatingIncome) || 0,
+      };
+    }
+    return localReport;
+  }, [apiProfitLoss, localReport]);
+
+  const activePriorReport: ProfitLossReport | null = useMemo(() => {
+    if (apiPriorProfitLoss && comparePrior) {
+      return {
+        dateRange: {
+          start: apiPriorProfitLoss.period.startDate,
+          end: apiPriorProfitLoss.period.endDate,
+        },
+        revenueItems: apiPriorProfitLoss.revenue.rows.map((r) => ({
+          accountId: r.accountId,
+          code: r.accountCode,
+          accountName: r.accountName,
+          amount: parseFloat(r.amount) || 0,
+        })),
+        totalRevenue: parseFloat(apiPriorProfitLoss.revenue.total) || 0,
+        cogsItems: apiPriorProfitLoss.cogs.rows.map((r) => ({
+          accountId: r.accountId,
+          code: r.accountCode,
+          accountName: r.accountName,
+          amount: parseFloat(r.amount) || 0,
+        })),
+        totalCogs: parseFloat(apiPriorProfitLoss.cogs.total) || 0,
+        grossProfit: parseFloat(apiPriorProfitLoss.grossProfit) || 0,
+        expenseItems: apiPriorProfitLoss.operatingExpenses.rows.map((r) => ({
+          accountId: r.accountId,
+          code: r.accountCode,
+          accountName: r.accountName,
+          amount: parseFloat(r.amount) || 0,
+        })),
+        totalOperatingExpenses: parseFloat(apiPriorProfitLoss.operatingExpenses.total) || 0,
+        netOperatingProfit: parseFloat(apiPriorProfitLoss.netProfit || apiPriorProfitLoss.operatingIncome) || 0,
+      };
+    }
+    return localPriorReport;
+  }, [apiPriorProfitLoss, comparePrior, localPriorReport]);
+
+  const report = activeReport;
+  const priorReport = activePriorReport;
 
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
     revenue: true,
@@ -77,27 +168,27 @@ export function ProfitLossPage() {
   };
 
   const loadReport = useCallback(async () => {
-    setLoading(true);
+    setIsLocalLoading(true);
     try {
       const data = await getProfitLoss({
         startDate: dateFilter.startDate,
         endDate: dateFilter.endDate,
       });
-      setReport(data);
+      setLocalReport(data);
 
       if (comparePrior) {
         const priorData = await getProfitLoss({
           startDate: priorDateFilter.startDate,
           endDate: priorDateFilter.endDate,
         });
-        setPriorReport(priorData);
+        setLocalPriorReport(priorData);
       } else {
-        setPriorReport(null);
+        setLocalPriorReport(null);
       }
     } catch {
       // Handled
     } finally {
-      setLoading(false);
+      setIsLocalLoading(false);
     }
   }, [getProfitLoss, dateFilter.startDate, dateFilter.endDate, comparePrior, priorDateFilter.startDate, priorDateFilter.endDate]);
 

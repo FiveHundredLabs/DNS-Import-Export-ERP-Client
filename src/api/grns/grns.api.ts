@@ -1,81 +1,18 @@
 import { apiGet, apiGetPaginated, apiPost } from '../client';
 import type { GRN, GRNItem } from '../../types/inventory';
-
-export interface GrnProductApiRecord {
-  id?: string;
-  productId: string;
-  productName: string;
-  sku: string;
-  uom: string;
-  expectedQuantity: number;
-  receivedQuantity: number;
-  damagedQuantity: number;
-  acceptedQuantity: number;
-  unitCost: string | number;
-  cableSpecs?: Record<string, unknown> | null;
-  product?: { name?: string; sku?: string; unitOfMeasure?: string | null };
-}
-
-export interface GrnApiRecord {
-  id: string;
-  grnNumber: string;
-  poId?: string | null;
-  poNumber?: string | null;
-  supplierId: string;
-  supplierName: string;
-  supplier?: { name?: string; address?: string | null; phone?: string | null; email?: string | null };
-  supplierInvoiceNumber?: string | null;
-  receivedDate: string;
-  createdAt?: string;
-  updatedAt?: string;
-  status: GRN['status'];
-  notes?: string | null;
-  receivedById: string;
-  receivedByName?: string | null;
-  verifiedById?: string | null;
-  verifiedByName?: string | null;
-  approvedById?: string | null;
-  approvedByName?: string | null;
-  approvedAt?: string | null;
-  grnProducts?: GrnProductApiRecord[];
-  costing?: { totalLandedCost?: string | number | null } | null;
-  _count?: { grnProducts?: number; stockBatches?: number };
-}
-
-export interface CreateGrnPayload {
-  poId: string;
-  supplierId?: string;
-  supplierInvoiceNumber?: string;
-  receivedDate?: string;
-  notes?: string;
-  submitForVerification?: boolean;
-  products: Array<{
-    productId: string;
-    receivedQuantity: number;
-    damagedQuantity: number;
-    unitCost: number;
-    serialNumbers?: string[];
-  }>;
-}
-
-export interface IntakeUnitsPayload {
-  supplierInvoiceNumber?: string;
-  receivedDate?: string;
-  notes?: string;
-  submitForVerification?: boolean;
-  products: Array<{
-    productId: string;
-    receivedQuantity: number;
-    damagedQuantity: number;
-    unitCost: number;
-    serialNumbers?: string[];
-  }>;
-}
-
-export interface GrnActionPayload {
-  remark?: string;
-  rejectionReason?: string;
-}
+import type {
+  CapitalizeGrnResponse,
+  CreateGrnPayload,
+  GrnActionPayload,
+  GrnApiRecord,
+  GrnCostingCalculationResponse,
+  GrnListQueryParams,
+  GrnProductApiRecord,
+  GrnStockBatchItem,
+  IntakeUnitsPayload,
+  UpdateGrnCostingPayload,
+  UpdateGrnPricingPayload,
+} from './grns.types';
 
 function mapGrnProduct(record: GrnProductApiRecord): GRNItem {
   const acceptedQuantity = record.acceptedQuantity ?? Math.max(0, record.receivedQuantity - record.damagedQuantity);
@@ -103,6 +40,7 @@ function mapGrnProduct(record: GrnProductApiRecord): GRNItem {
   const unitBarcodes = unitRecords.map((u) => u.unitBarcode).filter(Boolean);
 
   return {
+    id: record.id,
     productId: record.productId,
     productNameSnapshot: record.productName || record.product?.name || record.productId,
     skuSnapshot: record.sku || record.product?.sku || '',
@@ -154,10 +92,11 @@ export function mapGrn(record: GrnApiRecord): GRN {
     approvedByName: record.approvedByName ?? undefined,
     notes: record.notes ?? undefined,
     backendManaged: true,
+    costing: (record.costing as any) ?? undefined,
   };
 }
 
-function queryString(params: { page?: number; limit?: number; status?: string; poId?: string; search?: string } = {}) {
+function queryString(params: GrnListQueryParams = {}) {
   const query = new URLSearchParams();
   if (params.page) query.set('page', String(params.page));
   if (params.limit) query.set('limit', String(Math.min(params.limit, 100)));
@@ -168,36 +107,95 @@ function queryString(params: { page?: number; limit?: number; status?: string; p
 }
 
 export const grnsApi = {
-  list: async (params: { page?: number; limit?: number; status?: string; poId?: string; search?: string } = {}, signal?: AbortSignal) => {
+  list: async (params: GrnListQueryParams = {}, signal?: AbortSignal) => {
     const qs = queryString(params);
-    return apiGetPaginated<GrnApiRecord>(`/grns${qs ? `?${qs}` : ''}`, {
+    const result = await apiGetPaginated<GrnApiRecord>(`/grns${qs ? `?${qs}` : ''}`, {
       signal,
       suppressErrorToast: true,
     });
+    return {
+      ...result,
+      data: result.data.map(mapGrn),
+    };
   },
 
-  getById: async (id: string, signal?: AbortSignal) =>
-    mapGrn(await apiGet<GrnApiRecord>(`/grns/${encodeURIComponent(id)}`, {
-      signal,
-      suppressErrorToast: true,
-    })),
+  getById: async (id: string, signal?: AbortSignal): Promise<GRN> =>
+    mapGrn(
+      await apiGet<GrnApiRecord>(`/grns/${encodeURIComponent(id)}`, {
+        signal,
+        suppressErrorToast: true,
+      }),
+    ),
 
   create: (payload: CreateGrnPayload) =>
     apiPost<GrnApiRecord>('/grns', payload, { suppressErrorToast: true }),
 
   intakeUnits: (id: string, payload: IntakeUnitsPayload) =>
-    apiPost<GrnApiRecord>(`/grns/${encodeURIComponent(id)}/intake-units`, payload, { suppressErrorToast: true }),
+    apiPost<GrnApiRecord>(`/grns/${encodeURIComponent(id)}/intake-units`, payload, {
+      suppressErrorToast: true,
+    }),
 
   submit: (id: string, payload: GrnActionPayload = {}) =>
-    apiPost<GrnApiRecord>(`/grns/${encodeURIComponent(id)}/submit`, payload, { suppressErrorToast: true }),
+    apiPost<GrnApiRecord>(`/grns/${encodeURIComponent(id)}/submit`, payload, {
+      suppressErrorToast: true,
+    }),
 
   verify: (id: string, payload: GrnActionPayload = {}) =>
-    apiPost<GrnApiRecord>(`/grns/${encodeURIComponent(id)}/verify`, payload, { suppressErrorToast: true }),
+    apiPost<GrnApiRecord>(`/grns/${encodeURIComponent(id)}/verify`, payload, {
+      suppressErrorToast: true,
+    }),
 
   approve: (id: string, payload: GrnActionPayload = {}) =>
-    apiPost<GrnApiRecord>(`/grns/${encodeURIComponent(id)}/approve`, payload, { suppressErrorToast: true }),
+    apiPost<GrnApiRecord>(`/grns/${encodeURIComponent(id)}/approve`, payload, {
+      suppressErrorToast: true,
+    }),
 
   reject: (id: string, payload: GrnActionPayload) =>
-    apiPost<GrnApiRecord>(`/grns/${encodeURIComponent(id)}/reject`, payload, { suppressErrorToast: true }),
-};
+    apiPost<GrnApiRecord>(`/grns/${encodeURIComponent(id)}/reject`, payload, {
+      suppressErrorToast: true,
+    }),
 
+  // Costing & Landed Apportionment APIs
+  updateCosting: (id: string, payload: UpdateGrnCostingPayload) =>
+    apiPost<GrnApiRecord>(`/grns/${encodeURIComponent(id)}/costing`, payload, {
+      suppressErrorToast: true,
+    }),
+
+  completeCosting: (id: string) =>
+    apiPost<GrnApiRecord>(`/grns/${encodeURIComponent(id)}/complete-costing`, {}, {
+      suppressErrorToast: true,
+    }),
+
+  getCosting: (id: string, signal?: AbortSignal): Promise<GrnCostingCalculationResponse> =>
+    apiGet<GrnCostingCalculationResponse>(`/grns/${encodeURIComponent(id)}/costing`, {
+      signal,
+      suppressErrorToast: true,
+    }),
+
+  // Pricing & Stock Batch Generation APIs
+  assignPricing: (id: string, payload: UpdateGrnPricingPayload) =>
+    apiPost<GrnApiRecord>(`/grns/${encodeURIComponent(id)}/pricing`, payload, {
+      suppressErrorToast: true,
+    }),
+
+  completePricing: (id: string) =>
+    apiPost<CapitalizeGrnResponse>(`/grns/${encodeURIComponent(id)}/complete-pricing`, {}, {
+      suppressErrorToast: true,
+    }),
+
+  capitalize: (id: string): Promise<CapitalizeGrnResponse> =>
+    apiPost<CapitalizeGrnResponse>(`/grns/${encodeURIComponent(id)}/capitalize`, {}, {
+      suppressErrorToast: true,
+    }),
+
+  reverseCapitalize: (id: string, payload: { reversalReason: string; reversalDate?: string }): Promise<GrnApiRecord> =>
+    apiPost<GrnApiRecord>(`/grns/${encodeURIComponent(id)}/reverse`, payload, {
+      suppressErrorToast: true,
+    }),
+
+  getBatches: (id: string, signal?: AbortSignal): Promise<GrnStockBatchItem[]> =>
+    apiGet<GrnStockBatchItem[]>(`/grns/${encodeURIComponent(id)}/batches`, {
+      signal,
+      suppressErrorToast: true,
+    }),
+};

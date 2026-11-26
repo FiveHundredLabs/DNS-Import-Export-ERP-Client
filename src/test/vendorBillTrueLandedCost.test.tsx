@@ -108,7 +108,7 @@ describe('Vendor Bill True Landed Cost Recalculation Engine', () => {
       );
 
       // Verify 2-step guided workflow is visible
-      expect(screen.getByText(/Step 1: Invoice & Landed Costing/i)).toBeDefined();
+      expect(screen.getByText(/Step 1: Landed Costing/i)).toBeDefined();
 
       // Click "+ Detail" to open custom expense breakdown
       const detailBtn = screen.getByText('+ Detail');

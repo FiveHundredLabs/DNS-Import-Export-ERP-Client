@@ -15,6 +15,7 @@ import { Dialog, DialogHeader, DialogTitle, DialogDescription, DialogFooter } fr
 import { Textarea } from '../../../../components/ui/textarea';
 import { PageHeader } from '../../../../components/common/PageHeader';
 import { formatCurrency, formatDate } from '../../../../utils/formatters';
+import { cn } from '../../../../utils/cn';
 import Decimal from 'decimal.js';
 import { DoubleEntryHoverBadge } from '../../components/DoubleEntryHoverBadge';
 import {
@@ -344,119 +345,104 @@ export function CustomerCreditNotesPage({ hideTopSwitcher = false }: { hideTopSw
 
   return (
     <div className="space-y-6">
+      {/* Standalone Page Header - Hidden when embedded in Commercial Notes desk */}
       {!hideTopSwitcher && (
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-2 border-b border-border/60">
-          <div className="flex items-center p-1 bg-muted/60 rounded-xl border border-border/80">
-            <button
-              type="button"
-              className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-background text-foreground shadow-xs border border-border/50"
-            >
-              <RotateCcw className="h-3.5 w-3.5 text-primary" />
-              <span>Customer Credit Notes (AR)</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => navigate('/finance/notes?tab=debit')}
-              className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold text-muted-foreground hover:text-foreground transition-all"
-            >
-              <Undo2 className="h-3.5 w-3.5 text-amber-600" />
-              <span>Supplier Debit Notes (AP)</span>
-            </button>
-          </div>
-          <span className="text-xs text-muted-foreground hidden sm:inline">
-            Unified Commercial Notes Desk
-          </span>
-        </div>
-      )}
-
-      {/* Header */}
-      <PageHeader
-        title="Customer Credit Notes"
-        badge={
-          <Badge variant="outline" className="bg-primary-light text-primary-text border-primary-border text-xs">
-            AR Returns & Revenue Reversal
-          </Badge>
-        }
-        breadcrumbs={[
-          { label: 'Finance', href: '/finance' },
-          { label: 'Accounts Receivable', href: '/finance/ar' },
-          { label: 'Credit Notes' },
-        ]}
-        actions={
-          <div className="flex items-center gap-2">
-            {activeTab === 'REGISTRY' ? (
-              <Button
-                size="sm"
-                onClick={() => setActiveTab('CREATE')}
-                className="text-xs gap-1.5 bg-primary hover:bg-primary-hover text-white shadow-xs font-semibold"
-              >
-                <Plus className="h-3.5 w-3.5" />
-                <span>Issue Credit Note</span>
-              </Button>
-            ) : (
+        <PageHeader
+          title="Customer Credit Notes"
+          badge={
+            <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 text-xs">
+              AR Returns & Revenue Reversal
+            </Badge>
+          }
+          breadcrumbs={[
+            { label: 'Finance', href: '/finance' },
+            { label: 'Accounts Receivable', href: '/finance/income' },
+            { label: 'Credit Notes' },
+          ]}
+          onBack={() => navigate('/finance/notes')}
+          actions={
+            <div className="flex items-center gap-2">
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setActiveTab('REGISTRY')}
-                className="text-xs gap-1.5"
+                onClick={() => navigate('/finance/ar/approvals')}
+                className="text-xs h-8 gap-1.5 font-medium border-border"
               >
-                <ArrowLeft className="h-3.5 w-3.5" />
-                <span>Back to Registry</span>
+                <Receipt className="h-3.5 w-3.5 text-primary" />
+                <span>Receipt Approvals</span>
               </Button>
-            )}
 
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => navigate('/finance/ar/approvals')}
-              className="text-xs gap-1.5"
-            >
-              <Receipt className="h-3.5 w-3.5 text-primary" />
-              <span>Receipt Approvals</span>
-            </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigate('/finance/ar/pdc-vault')}
+                className="text-xs h-8 gap-1.5 font-medium border-border"
+              >
+                <Landmark className="h-3.5 w-3.5 text-primary" />
+                <span>PDC Vault (1018)</span>
+              </Button>
+            </div>
+          }
+        />
+      )}
 
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => navigate('/finance/ar/pdc-vault')}
-              className="text-xs gap-1.5"
-            >
-              <Landmark className="h-3.5 w-3.5 text-primary" />
-              <span>PDC Vault (1018)</span>
-            </Button>
-          </div>
-        }
-      />
-
-      {/* Tabs Header */}
-      <div className="flex items-center justify-between border-b border-slate-200">
-        <div className="flex items-center gap-4">
+      {/* Uniform Segmented Inner Tabs & Primary Action Row */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-1 border-b border-border/60">
+        <div className="flex items-center p-1 bg-muted/60 rounded-xl border border-border/80 overflow-x-auto">
           <button
+            type="button"
             onClick={() => setActiveTab('REGISTRY')}
-            className={`pb-3 text-xs font-semibold border-b-2 transition-colors flex items-center gap-1.5 ${
+            className={cn(
+              'flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap',
               activeTab === 'REGISTRY'
-                ? 'border-primary text-primary'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
-            }`}
+                ? 'bg-background text-foreground shadow-xs border border-border/50'
+                : 'text-muted-foreground hover:text-foreground'
+            )}
           >
-            <RotateCcw className="h-4 w-4" />
+            <RotateCcw className="h-3.5 w-3.5 text-primary" />
             <span>Credit Notes Registry</span>
-            <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-700">
+            <span className="ml-1 px-1.5 py-0.2 rounded-full text-[10px] bg-muted text-muted-foreground font-mono">
               {creditNotes.length}
             </span>
           </button>
 
           <button
+            type="button"
             onClick={() => setActiveTab('CREATE')}
-            className={`pb-3 text-xs font-semibold border-b-2 transition-colors flex items-center gap-1.5 ${
+            className={cn(
+              'flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap',
               activeTab === 'CREATE'
-                ? 'border-primary text-primary'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
-            }`}
+                ? 'bg-background text-foreground shadow-xs border border-border/50'
+                : 'text-muted-foreground hover:text-foreground'
+            )}
           >
-            <Plus className="h-4 w-4" />
+            <Plus className="h-3.5 w-3.5 text-emerald-600" />
             <span>Issue Credit Note (Returns)</span>
           </button>
+        </div>
+
+        {/* Primary Action Button - Always uniform top-right location */}
+        <div className="flex items-center gap-2">
+          {activeTab === 'REGISTRY' ? (
+            <Button
+              size="sm"
+              onClick={() => setActiveTab('CREATE')}
+              className="h-8 px-3 text-xs bg-primary hover:bg-primary-hover text-white font-semibold gap-1.5 shadow-2xs cursor-pointer"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              <span>Issue Credit Note</span>
+            </Button>
+          ) : (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setActiveTab('REGISTRY')}
+              className="h-8 text-xs gap-1.5 font-medium border-border"
+            >
+              <ArrowLeft className="h-3.5 w-3.5" />
+              <span>Back to Registry</span>
+            </Button>
+          )}
         </div>
       </div>
 

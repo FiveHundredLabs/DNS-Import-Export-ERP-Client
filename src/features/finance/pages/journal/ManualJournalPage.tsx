@@ -4,6 +4,12 @@ import { useAuth } from '../../../../hooks/useAuth';
 import { useFinanceLedger } from '../../hooks/useFinanceLedger';
 import { financeRepository } from '../../api';
 import { periodLockService } from '../../services/periodLockService';
+import {
+  usePostDirectJournal,
+  usePostDraftJournal,
+  useCreateDraftJournal,
+  useReverseJournal,
+} from '../../../../api/finance';
 import { JournalEntry, JournalEntryStatus } from '../../api/types';
 import { CurrencyInput } from '../../components/CurrencyInput';
 import { DoubleEntryHoverBadge } from '../../components/DoubleEntryHoverBadge';
@@ -14,6 +20,7 @@ import { Input } from '../../../../components/ui/input';
 import { Select } from '../../../../components/ui/select';
 import { Badge } from '../../../../components/ui/badge';
 import { Card } from '../../../../components/ui/card';
+import { PageHeader } from '../../../../components/common/PageHeader';
 import { formatCurrency, formatDate } from '../../../../utils/formatters';
 import { useCustomers } from '../../../../hooks/useCustomers';
 import Decimal from 'decimal.js';
@@ -219,6 +226,11 @@ export function ManualJournalPage() {
 
   const journalIdParam = searchParams.get('id');
   const [loadedJournal, setLoadedJournal] = useState<JournalEntry | null>(null);
+
+  const postDirectMutation = usePostDirectJournal();
+  const createDraftMutation = useCreateDraftJournal();
+  const postDraftMutation = usePostDraftJournal();
+  const reverseMutation = useReverseJournal();
 
   // Re-correction & Reissue Dialog State
   const [reissueDialogOpen, setReissueDialogOpen] = useState(false);
@@ -786,30 +798,24 @@ export function ManualJournalPage() {
 
     try {
       setSubmitting(true);
-      const entry = await postJournalEntry({
-        date: journalDate,
-        reference: referenceNumber.trim() || undefined,
+      const payload = {
+        transactionDate: journalDate,
         description: memo.trim(),
-        source: 'MANUAL',
-        status,
         lines: lines.map((l) => ({
           accountId: l.accountId,
           debit: Number(new Decimal(l.debit || 0).toFixed(2)),
           credit: Number(new Decimal(l.credit || 0).toFixed(2)),
           description: l.description.trim() || undefined,
-          customerId: l.customerId,
-          customerName: l.customerName,
-          supplierId: l.supplierId,
-          supplierName: l.supplierName,
         })),
-      });
+        idempotencyKey: referenceNumber.trim() || undefined,
+      };
 
       if (status === 'POSTED') {
-        toast.success(`Journal Voucher ${entry.entryNumber} successfully committed to the General Ledger!`);
-      } else if (status === 'PENDING_APPROVAL') {
-        toast.success(`Journal Voucher ${entry.entryNumber} submitted for Finance Manager review!`);
+        const res = await postDirectMutation.mutateAsync(payload);
+        toast.success(`Journal Voucher ${res.entryNumber} successfully committed to the General Ledger!`);
       } else {
-        toast.success(`Draft Voucher ${entry.entryNumber} saved.`);
+        const res = await createDraftMutation.mutateAsync(payload);
+        toast.success(`Draft Voucher ${res.entryNumber} saved.`);
       }
 
       handleResetForm();
@@ -825,7 +831,7 @@ export function ManualJournalPage() {
     if (!loadedJournal) return;
     try {
       setSubmitting(true);
-      await approveJournalEntry(loadedJournal.id, currentUser?.name || 'Finance Manager');
+      await postDraftMutation.mutateAsync(loadedJournal.id);
       setLoadedJournal((prev) => (prev ? { ...prev, status: 'POSTED' } : null));
       toast.success(`Journal Entry ${loadedJournal.entryNumber} approved and posted to General Ledger!`);
     } catch (err: unknown) {
@@ -840,8 +846,13 @@ export function ManualJournalPage() {
     if (!loadedJournal) return;
     try {
       setSubmitting(true);
-      periodLockService.assertCanEditOrVoid(loadedJournal.date, currentUser?.role);
-      await voidJournalEntry(loadedJournal.id);
+      await reverseMutation.mutateAsync({
+        id: loadedJournal.id,
+        payload: {
+          reversalReason: reissueReason || 'Reversal requested by user',
+          reversalDate: journalDate,
+        },
+      });
       handleResetForm();
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : 'Failed to void journal entry');
@@ -982,14 +993,17 @@ export function ManualJournalPage() {
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-slate-200 pb-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-              Manual Journal Entry
-            </h1>
-            <Badge variant="outline" className="bg-primary-light text-primary-text border-primary-border text-xs">
+      {/* Canonical Page Header */}
+      <PageHeader
+        title="Manual Journal Entry"
+        breadcrumbs={[
+          { label: 'Finance', href: '/finance' },
+          { label: 'Journal Entry Voucher' },
+        ]}
+        onBack={() => navigate('/finance')}
+        badge={
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 text-xs">
               Universal Journal Desk
             </Badge>
             {isAuditLocked && (
@@ -1006,47 +1020,45 @@ export function ManualJournalPage() {
               </Badge>
             )}
           </div>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Manual adjustments, accruals, overheads, and Maker-Checker double-entry postings.
-          </p>
-        </div>
-
-        {!isAuditLocked && (
-          <div className="flex flex-wrap items-center gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => handleOpenCreateTemplate(true)}
-              className="text-xs gap-1.5 border-slate-200 bg-white hover:bg-slate-50 text-slate-700 shadow-2xs"
-              title="Save currently configured lines as a template"
-            >
-              <BookmarkPlus className="h-3.5 w-3.5 text-primary" />
-              <span>Save as Template</span>
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => handleOpenCreateTemplate(false)}
-              className="text-xs gap-1.5 border-slate-200 bg-white hover:bg-slate-50 text-slate-700 shadow-2xs"
-            >
-              <Plus className="h-3.5 w-3.5 text-primary" />
-              <span>New Template</span>
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => setIsTemplatesOpen(!isTemplatesOpen)}
-              className="text-xs gap-1.5 shadow-2xs"
-            >
-              <Bookmark className="h-3.5 w-3.5 text-primary" />
-              <span>{isTemplatesOpen ? 'Hide Templates' : 'Templates Library'}</span>
-            </Button>
-          </div>
-        )}
-      </div>
+        }
+        actions={
+          !isAuditLocked ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => handleOpenCreateTemplate(true)}
+                className="text-xs gap-1.5 border-border bg-white hover:bg-slate-50 text-slate-700 shadow-2xs h-8"
+                title="Save currently configured lines as a template"
+              >
+                <BookmarkPlus className="h-3.5 w-3.5 text-primary" />
+                <span>Save as Template</span>
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => handleOpenCreateTemplate(false)}
+                className="text-xs gap-1.5 border-border bg-white hover:bg-slate-50 text-slate-700 shadow-2xs h-8"
+              >
+                <Plus className="h-3.5 w-3.5 text-primary" />
+                <span>New Template</span>
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setIsTemplatesOpen(!isTemplatesOpen)}
+                className="text-xs gap-1.5 shadow-2xs h-8"
+              >
+                <Bookmark className="h-3.5 w-3.5 text-primary" />
+                <span>{isTemplatesOpen ? 'Hide Templates' : 'Templates Library'}</span>
+              </Button>
+            </div>
+          ) : undefined
+        }
+      />
 
       {/* Quick Journal Presets Bar (Merged from The Finance Desk) */}
       {!isAuditLocked && (
@@ -1240,15 +1252,20 @@ export function ManualJournalPage() {
             </div>
           </div>
           {isFinanceManager && (
-            <Button
+            <ConfirmButton
               size="sm"
-              onClick={handleApprovePending}
+              confirmTitle="Approve Journal Voucher?"
+              confirmMessage="Are you sure you want to approve this pending journal entry? This will commit the double-entry postings to the General Ledger."
+              confirmLabel="Approve & Post to GL"
+              variant="success"
+              dialogVariant="success"
+              onConfirm={handleApprovePending}
               disabled={submitting}
-              className="gap-1.5 text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shrink-0"
+              className="gap-1.5 text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shrink-0 cursor-pointer"
             >
               <CheckCircle2 className="h-3.5 w-3.5" />
               <span>Approve & Post to GL</span>
-            </Button>
+            </ConfirmButton>
           )}
         </div>
       )}
@@ -1694,15 +1711,18 @@ export function ManualJournalPage() {
                   )
                 ) : (
                   <>
-                    <Button
+                    <ConfirmButton
                       variant="outline"
                       size="sm"
-                      onClick={() => handleSaveEntry('DRAFT')}
+                      confirmTitle="Save Journal Draft?"
+                      confirmMessage="Save this journal entry as an unposted draft? Draft entries do not affect General Ledger account balances."
+                      confirmLabel="Save Draft"
+                      onConfirm={() => handleSaveEntry('DRAFT')}
                       disabled={submitting || !memo.trim()}
-                      className="text-xs text-slate-700"
+                      className="text-xs text-slate-700 cursor-pointer"
                     >
                       Save Draft
-                    </Button>
+                    </ConfirmButton>
 
                     {!isFinanceManager ? (
                       <ConfirmButton
@@ -1710,7 +1730,7 @@ export function ManualJournalPage() {
                         confirmTitle="Submit Journal for Approval?"
                         confirmMessage="This manual journal voucher will be submitted to the Finance Manager for ledger review and posting."
                         confirmLabel="Submit for Approval"
-                        variant="warning"
+                        dialogVariant="warning"
                         onConfirm={() => handleSaveEntry('PENDING_APPROVAL')}
                         disabled={!isFormValid || submitting}
                         className="bg-amber-600 hover:bg-amber-700 text-white shadow-xs font-semibold gap-1.5 text-xs"
@@ -1956,18 +1976,20 @@ export function ManualJournalPage() {
 
                         <div className="flex items-center gap-1 shrink-0">
                           {tmpl.isCustom && (
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDeleteTemplate(tmpl.id, tmpl.name);
-                              }}
-                              className="p-1 text-slate-400 hover:text-rose-600 rounded hover:bg-rose-50 transition-colors"
+                            <ConfirmButton
+                              variant="ghost"
+                              size="sm"
+                              confirmTitle="Delete Journal Template?"
+                              confirmMessage={`Are you sure you want to delete template "${tmpl.name}"?`}
+                              confirmLabel="Delete Template"
+                              dialogVariant="destructive"
+                              onConfirm={() => handleDeleteTemplate(tmpl.id, tmpl.name)}
+                              className="h-7 w-7 p-0 text-slate-400 hover:text-rose-600 rounded hover:bg-rose-50 transition-colors cursor-pointer"
                               title="Delete template"
                               aria-label={`Delete ${tmpl.name}`}
                             >
                               <Trash2 className="h-3.5 w-3.5" />
-                            </button>
+                            </ConfirmButton>
                           )}
                           <button
                             type="button"

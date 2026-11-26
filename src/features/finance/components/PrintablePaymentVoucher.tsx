@@ -6,6 +6,7 @@ import {
   DialogTitle,
 } from '../../../components/ui/dialog';
 import { Button } from '../../../components/ui/button';
+import { ConfirmButton } from '../../../components/ui/confirm-button';
 import { Badge } from '../../../components/ui/badge';
 import { PaymentVoucher } from '../../../types/cashbook';
 import { formatCurrency, formatDate, numberToWordsLKR } from '../../../utils/formatters';
@@ -143,9 +144,14 @@ export function PrintablePaymentVoucher({
             {voucher.status === 'PENDING_APPROVAL' && canApprove && (
               <>
                 {onApprove && (
-                  <Button
+                  <ConfirmButton
                     size="sm"
-                    onClick={() => {
+                    confirmTitle="Approve Payment Voucher?"
+                    confirmMessage={`Are you sure you want to approve voucher ${voucher.voucherNumber} for ${formatCurrency(voucher.amount)}? This will post the transaction to the ledger.`}
+                    confirmLabel="Approve Voucher"
+                    variant="success"
+                    dialogVariant="success"
+                    onConfirm={() => {
                       onApprove(voucher.id);
                       onOpenChange(false);
                     }}
@@ -153,13 +159,17 @@ export function PrintablePaymentVoucher({
                   >
                     <CheckCircle2 className="h-3.5 w-3.5" />
                     Approve Voucher
-                  </Button>
+                  </ConfirmButton>
                 )}
                 {onReject && (
-                  <Button
+                  <ConfirmButton
                     variant="outline"
                     size="sm"
-                    onClick={() => {
+                    confirmTitle="Reject Payment Voucher?"
+                    confirmMessage={`Are you sure you want to reject voucher ${voucher.voucherNumber}?`}
+                    confirmLabel="Reject Voucher"
+                    dialogVariant="destructive"
+                    onConfirm={() => {
                       onReject(voucher);
                       onOpenChange(false);
                     }}
@@ -167,7 +177,7 @@ export function PrintablePaymentVoucher({
                   >
                     <XCircle className="h-3.5 w-3.5" />
                     Reject
-                  </Button>
+                  </ConfirmButton>
                 )}
               </>
             )}

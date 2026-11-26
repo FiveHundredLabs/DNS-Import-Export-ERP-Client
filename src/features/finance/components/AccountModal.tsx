@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../../../components/ui/dialog';
 import { Button } from '../../../components/ui/button';
+import { ConfirmButton } from '../../../components/ui/confirm-button';
 import { Input } from '../../../components/ui/input';
 import { Select } from '../../../components/ui/select';
 import { Textarea } from '../../../components/ui/textarea';
@@ -12,13 +13,14 @@ import { categoryService, FinanceCategory } from '../services/categoryService';
 interface AccountModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onCreate: (dto: CreateAccountDTO) => Promise<Account>;
-  onUpdate?: (id: string, dto: Partial<CreateAccountDTO>) => Promise<Account>;
+  onCreate: (dto: CreateAccountDTO & { categoryId?: string }) => Promise<any>;
+  onUpdate?: (id: string, dto: Partial<CreateAccountDTO> & { categoryId?: string; isActive?: boolean }) => Promise<any>;
   accountToEdit?: Account | null;
   existingAccounts?: Account[];
   defaultClass?: AccountClass;
   defaultSubClass?: AccountSubClass;
   defaultHeaderCategoryId?: string;
+  categoriesList?: FinanceCategory[];
 }
 
 const CLASS_DISPLAY_NAMES: Record<AccountClass, string> = {
@@ -39,6 +41,7 @@ export function AccountModal({
   defaultClass = 'EXPENSE',
   defaultSubClass = 'OPERATING_EXPENSE',
   defaultHeaderCategoryId,
+  categoriesList,
 }: AccountModalProps) {
   const isEditing = Boolean(accountToEdit);
   const isLockedSystemAccount = Boolean(accountToEdit?.isSystem);
@@ -58,7 +61,9 @@ export function AccountModal({
   // Load categories whenever modal opens
   useEffect(() => {
     if (open) {
-      const allCats = categoryService.getCategories();
+      const allCats = categoriesList && categoriesList.length > 0
+        ? categoriesList
+        : categoryService.getCategories();
       setCategories(allCats);
 
       if (accountToEdit) {
@@ -160,6 +165,7 @@ export function AccountModal({
         await onUpdate(accountToEdit.id, {
           name: name.trim(),
           description: description.trim() || undefined,
+          categoryId: selectedHeaderCategory || (accountToEdit as any).categoryId || accountToEdit.parentId,
           accountSubType: effectiveSubType,
           ...(!isLockedSystemAccount ? { accountClass, accountSubClass, parentId: parentId || undefined } : {}),
         });
@@ -167,6 +173,7 @@ export function AccountModal({
         await onCreate({
           code: code.trim(),
           name: name.trim(),
+          categoryId: selectedHeaderCategory,
           classification: accountClass,
           accountClass,
           accountType: accountSubClass,
@@ -344,9 +351,22 @@ export function AccountModal({
           <Button type="button" variant="outline" size="sm" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button type="submit" size="sm" disabled={submitting} className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium">
+          <ConfirmButton
+            type="button"
+            size="sm"
+            confirmTitle={isEditing ? 'Save Changes to Account?' : 'Create Account?'}
+            confirmMessage={
+              isEditing
+                ? `Are you sure you want to update account "${code} - ${name}"?`
+                : `Are you sure you want to create account "${code} - ${name}"?`
+            }
+            confirmLabel={isEditing ? 'Save Changes' : 'Create Account'}
+            onConfirm={handleSubmit}
+            disabled={submitting}
+            className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium cursor-pointer"
+          >
             {submitting ? 'Saving...' : isEditing ? 'Save Changes' : 'Create Account'}
-          </Button>
+          </ConfirmButton>
         </DialogFooter>
       </form>
     </Dialog>
