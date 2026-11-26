@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useSmartBack } from '../../hooks/useSmartBack';
+import { useNavigationContext } from '../../hooks/useSmartBack';
 import { useAuth } from '../../hooks/useAuth';
 import { useQuotations } from '../../hooks/useQuotations';
 import { quotationService } from '../../services/QuotationService';
@@ -37,7 +37,7 @@ import {
 export function QuotationDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const goBack = useSmartBack('/quotations');
+  const { goBack, getChildState } = useNavigationContext('/quotations');
   const { currentUser } = useAuth();
   const {
     approveQuotation,
@@ -221,7 +221,7 @@ export function QuotationDetailPage() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => navigate(`/quotations/${quotation.id}/edit`)}
+              onClick={() => navigate(`/quotations/${quotation.id}/edit`, { state: getChildState() })}
               className="text-xs gap-1.5"
             >
               <Edit className="h-3.5 w-3.5" />
@@ -335,7 +335,7 @@ export function QuotationDetailPage() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => navigate(`/orders/${quotation.convertedToOrderId}`)}
+                onClick={() => navigate(`/orders/${quotation.convertedToOrderId}`, { state: getChildState() })}
                 className="mt-2 text-xs border-blue-300 text-blue-800 hover:bg-blue-100"
               >
                 View Sales Order

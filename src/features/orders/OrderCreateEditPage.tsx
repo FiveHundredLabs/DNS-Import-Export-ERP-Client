@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useNavigationContext } from '../../hooks/useSmartBack';
 import { useAuth } from '../../hooks/useAuth';
 import { useOrders } from '../../hooks/useOrders';
 import { useTax } from '../../hooks/useTax';
@@ -83,6 +84,9 @@ export function OrderCreateEditPage() {
   const { taxEnabled, taxRate, taxName } = useTax();
 
   const isEdit = Boolean(id);
+  const { goBack, goBackToParent, getParentReturnState } = useNavigationContext(
+    isEdit && id ? `/orders/${id}` : '/orders',
+  );
   const quotationId = searchParams.get('quotationId');
   const initialCustomerId = searchParams.get('customerId');
 
@@ -463,7 +467,7 @@ export function OrderCreateEditPage() {
           );
         }
 
-        navigate(`/orders/${id}`);
+        navigate(`/orders/${id}`, { state: getParentReturnState() });
       } else {
         const created = await createOrder({
           customerId: selectedCustomer.id,
@@ -529,7 +533,7 @@ export function OrderCreateEditPage() {
           { label: 'Sales Orders', href: '/orders' },
           { label: isEdit ? 'Edit Order' : 'New Order' },
         ]}
-        onBack={() => navigate('/orders')}
+        onBack={() => (isEdit && id ? goBackToParent(`/orders/${id}`) : goBack())}
         badge={
           quotationNumber ? (
             <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 text-xs font-mono">

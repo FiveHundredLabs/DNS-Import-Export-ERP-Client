@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { buildEntryNavigationState } from '../../utils/navigationContext';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
@@ -44,6 +45,8 @@ export function GRNListPage() {
   const { grns, loading, error, refetch } = useGRN();
   const { currentUser, role } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const entryNavState = buildEntryNavigationState(location, 'Inward GRN Registry');
   const [filter, setFilter] = useState('All');
   const [search, setSearch] = useState('');
 
@@ -347,7 +350,7 @@ export function GRNListPage() {
                   return (
                     <div
                       key={g.id}
-                      onClick={() => navigate(`/inventory/grn/${g.id}`)}
+                      onClick={() => navigate(`/inventory/grn/${g.id}`, { state: entryNavState })}
                       className="p-3 rounded-xl border border-slate-200/90 bg-white shadow-2xs space-y-2.5 active:bg-slate-50 transition-colors cursor-pointer"
                     >
                       <div className="flex items-start justify-between gap-2">
@@ -390,7 +393,7 @@ export function GRNListPage() {
                           <Button
                             variant="outline"
                             size="xs"
-                            onClick={() => navigate(`/inventory/grn/${g.id}/edit`)}
+                            onClick={() => navigate(`/inventory/grn/${g.id}/edit`, { state: entryNavState })}
                             className="text-xs gap-1 text-slate-700 h-7 font-medium"
                           >
                             <FileEdit className="h-3 w-3" />
@@ -460,7 +463,7 @@ export function GRNListPage() {
                           key={g.id}
                           className="cursor-pointer hover:bg-slate-50/80 transition-colors focus:outline-hidden focus:bg-slate-50"
                           tabIndex={0}
-                          onClick={() => navigate(`/inventory/grn/${g.id}`)}
+                          onClick={() => navigate(`/inventory/grn/${g.id}`, { state: entryNavState })}
                           onKeyDown={(e) => {
                             if (e.key === 'Enter' || e.key === ' ') {
                               e.preventDefault();
@@ -508,7 +511,7 @@ export function GRNListPage() {
                                   <Button
                                     variant="outline"
                                     size="xs"
-                                    onClick={() => navigate(`/inventory/grn/${g.id}/edit`)}
+                                    onClick={() => navigate(`/inventory/grn/${g.id}/edit`, { state: entryNavState })}
                                     className="text-slate-700 hover:text-slate-900 font-medium gap-1 h-7 text-xs"
                                   >
                                     <FileEdit className="h-3 w-3 text-slate-500" />
@@ -532,7 +535,7 @@ export function GRNListPage() {
                               <Button
                                 variant="ghost"
                                 size="xs"
-                                onClick={() => navigate(`/inventory/grn/${g.id}`)}
+                                onClick={() => navigate(`/inventory/grn/${g.id}`, { state: entryNavState })}
                                 className="text-slate-600 hover:text-slate-900 font-medium gap-1 h-7 text-xs"
                               >
                                 <span>Details</span>

@@ -421,7 +421,9 @@ export function OrderListPage() {
                             type="button"
                             onClick={(e) => {
                               e.stopPropagation();
-                              navigate(`/orders/${order.id}/activity-log`);
+                              navigate(`/orders/${order.id}/activity-log`, {
+                                state: { from: location.pathname + location.search },
+                              });
                             }}
                             className="flex items-center text-teal-700 font-semibold gap-1 hover:underline p-1"
                           >

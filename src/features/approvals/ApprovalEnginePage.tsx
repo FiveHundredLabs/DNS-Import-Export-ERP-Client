@@ -44,10 +44,12 @@ import {
   MessageSquare,
   History,
 } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
+import { buildEntryNavigationState } from '../../utils/navigationContext';
 
 export function ApprovalEnginePage() {
   const { currentUser, role } = useAuth();
+  const location = useLocation();
 
   const isAuthorized = role === 'DIRECTOR' || role === 'MANAGER';
 
@@ -620,6 +622,7 @@ export function ApprovalEnginePage() {
                         <div className="min-w-0">
                           <Link
                             to={getDocumentLink(item)}
+                            state={buildEntryNavigationState(location, 'Approval Engine')}
                             className="font-semibold text-sm text-slate-900 hover:text-blue-600 transition inline-flex items-center gap-1"
                           >
                             <span className="truncate">{item.referenceNumber}</span>
@@ -780,6 +783,7 @@ export function ApprovalEnginePage() {
                             <div className="min-w-0">
                               <Link
                                 to={getDocumentLink(item)}
+                                state={buildEntryNavigationState(location, 'Approval Engine')}
                                 className="font-semibold text-slate-900 hover:text-blue-600 transition inline-flex items-center gap-1 break-all"
                               >
                                 <span>{item.referenceNumber}</span>

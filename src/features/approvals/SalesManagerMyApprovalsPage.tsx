@@ -91,13 +91,13 @@ export function SalesManagerMyApprovalsPage() {
     switch (app.documentType) {
       case 'SALES_ORDER':
       case 'SPECIAL_SALES_ORDER':
-        navigate(`/orders/${app.documentId}`, { state: { from: '/approvals' } });
+        navigate(`/orders/${app.documentId}`, { state: { returnTo: '/approvals', from: '/approvals', returnLabel: 'My Approvals' } });
         break;
       case 'QUOTATION_DISCOUNT':
-        navigate(`/quotations/${app.documentId}`, { state: { from: '/approvals' } });
+        navigate(`/quotations/${app.documentId}`, { state: { returnTo: '/approvals', from: '/approvals', returnLabel: 'My Approvals' } });
         break;
       case 'CUSTOMER_CREATION':
-        navigate(`/customers/onboarding/${app.documentId}`, { state: { from: '/approvals' } });
+        navigate(`/customers/onboarding/${app.documentId}`, { state: { returnTo: '/approvals', from: '/approvals', returnLabel: 'My Approvals' } });
         break;
       default:
         break;

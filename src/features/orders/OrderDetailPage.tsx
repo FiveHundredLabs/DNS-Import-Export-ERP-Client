@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useSmartBack } from '../../hooks/useSmartBack';
+import { useNavigationContext } from '../../hooks/useSmartBack';
 import { useAuth } from '../../hooks/useAuth';
 import { orderService } from '../../services/OrderService';
 import { invoiceService } from '../../services/InvoiceService';
@@ -58,7 +58,7 @@ import {
 
 export function OrderDetailPage() {
   const navigate = useNavigate();
-  const goBack = useSmartBack('/orders');
+  const { goBack, getChildState } = useNavigationContext('/orders');
   const { id } = useParams<{ id: string }>();
   const { currentUser } = useAuth();
   const isSalesRep = currentUser.role === 'SALES_REP';
@@ -164,11 +164,11 @@ export function OrderDetailPage() {
     try {
       setLoading(true);
       if (orderInvoice) {
-        navigate(`/invoices/${orderInvoice.id}`);
+        navigate(`/invoices/${orderInvoice.id}`, { state: getChildState() });
         return;
       }
       const invoice = await invoiceService.createInvoiceFromOrder(order.id, currentUser, { asDraft: true });
-      navigate(`/invoices/${invoice.id}`);
+      navigate(`/invoices/${invoice.id}`, { state: getChildState() });
     } catch (err: unknown) {
       alert(err instanceof Error ? err.message : 'Unable to open draft invoice.');
     } finally {
@@ -336,7 +336,7 @@ export function OrderDetailPage() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => navigate(`/orders/${order.id}/activity-log`)}
+            onClick={() => navigate(`/orders/${order.id}/activity-log`, { state: getChildState() })}
             className="text-xs gap-1.5 border-teal-300 text-teal-800 hover:bg-teal-50"
           >
             <Clock className="h-3.5 w-3.5 text-teal-600" />
@@ -348,7 +348,7 @@ export function OrderDetailPage() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => navigate(`/orders/${order.id}/edit`)}
+              onClick={() => navigate(`/orders/${order.id}/edit`, { state: getChildState() })}
               className="text-xs gap-1.5"
             >
               <Edit className="h-3.5 w-3.5" />
@@ -609,7 +609,7 @@ export function OrderDetailPage() {
               variant="outline"
               onClick={() => {
                 if (orderInvoices.length === 1) {
-                  navigate(`/invoices/${orderInvoices[0].id}`);
+                  navigate(`/invoices/${orderInvoices[0].id}`, { state: getChildState() });
                 } else {
                   navigate(`/invoices?search=${encodeURIComponent(order.orderNumber)}`);
                 }
@@ -1111,7 +1111,7 @@ export function OrderDetailPage() {
                   size="sm"
                   onClick={() => {
                     setActionType(null);
-                    navigate(`/orders/${order.id}/edit?action=approve`);
+                    navigate(`/orders/${order.id}/edit?action=approve`, { state: getChildState() });
                   }}
                   className="text-xs gap-1.5 text-primary border-primary/30 hover:bg-primary/5 mr-auto"
                 >

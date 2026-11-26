@@ -16,6 +16,7 @@ import { TableLoadingSkeleton } from '../../components/common/LoadingSkeleton';
 import { EmptyState } from '../../components/common/EmptyState';
 import { formatDateTime } from '../../utils/formatters';
 import { cn } from '../../utils/cn';
+import { buildEntryNavigationState } from '../../utils/navigationContext';
 import {
   CheckCircle,
   Clock,
@@ -189,10 +190,7 @@ export function MyApprovalsPage() {
       sessionStorage.setItem(SCROLL_STORAGE_KEY, String(scrollContainerRef.current.scrollTop));
     }
     navigate(target, {
-      state: {
-        from: `${location.pathname}${location.search}`,
-        fromMyApprovals: true,
-      },
+      state: buildEntryNavigationState(location, 'My Approvals'),
     });
   };
 

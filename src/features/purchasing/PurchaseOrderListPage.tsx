@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import { buildEntryNavigationState } from '../../utils/navigationContext';
 import { usePurchaseOrders } from '../../hooks/usePurchaseOrders';
 import { useAuth } from '../../hooks/useAuth';
 import { useSuppliers } from '../../api/suppliers/suppliers.hooks';
@@ -32,6 +33,7 @@ const statusOptions: Array<{ value: ApiPurchaseOrderStatus; label: string }> = [
 
 export function PurchaseOrderListPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { currentUser } = useAuth();
   const role = currentUser?.role;
   const canManageOrders = role === 'PURCHASING_OFFICER' || role === 'PURCHASING_MANAGER' || role === 'MANAGER' || role === 'DIRECTOR';
@@ -180,9 +182,9 @@ export function PurchaseOrderListPage() {
                           <td className="px-4 py-3"><div className="flex flex-col items-start gap-1"><PurchaseOrderStatusBadge status={po.status} />{po.sentAt && <span className="text-xs text-slate-500">Issued to supplier</span>}</div></td>
                           <td className="px-4 py-3">
                             <div className="flex justify-end gap-1">
-                              <Button variant="ghost" size="icon-sm" title="View details" onClick={() => navigate(`/purchasing/orders/${po.id}`)}><Eye className="h-4 w-4" /></Button>
-                              <Button variant="ghost" size="icon-sm" title="Print purchase order" onClick={() => navigate(`/purchasing/orders/${po.id}/print`)}><Printer className="h-4 w-4" /></Button>
-                              {canManageOrders && (po.status === 'DRAFT' || po.status === 'REJECTED') && <Button variant="ghost" size="icon-sm" title="Edit purchase order" onClick={() => navigate(`/purchasing/orders/${po.id}/edit`)}><Edit className="h-4 w-4" /></Button>}
+                              <Button variant="ghost" size="icon-sm" title="View details" onClick={() => navigate(`/purchasing/orders/${po.id}`, { state: buildEntryNavigationState(location, 'Orders') })}><Eye className="h-4 w-4" /></Button>
+                              <Button variant="ghost" size="icon-sm" title="Print purchase order" onClick={() => navigate(`/purchasing/orders/${po.id}/print`, { state: buildEntryNavigationState(location, 'Orders') })}><Printer className="h-4 w-4" /></Button>
+                              {canManageOrders && (po.status === 'DRAFT' || po.status === 'REJECTED') && <Button variant="ghost" size="icon-sm" title="Edit purchase order" onClick={() => navigate(`/purchasing/orders/${po.id}/edit`, { state: buildEntryNavigationState(location, 'Orders') })}><Edit className="h-4 w-4" /></Button>}
                               {canManageOrders && po.status === 'DRAFT' && <>
                                 <ConfirmButton variant="outline" size="xs" dialogVariant="warning" confirmTitle="Submit Purchase Order" confirmMessage={`Submit ${po.poNumber} for verification?`} confirmText="Submit for verification" onConfirm={async () => { await submitPO(po.id); }}>Submit</ConfirmButton>
                                 <ConfirmButton variant="ghost" size="icon-sm" dialogVariant="destructive" confirmTitle="Delete Draft Purchase Order" confirmMessage={`Delete ${po.poNumber}? This action cannot be undone.`} confirmText="Delete draft" onConfirm={async () => { await deletePO(po.id); }} title="Delete draft"><Trash2 className="h-4 w-4 text-rose-600" /></ConfirmButton>

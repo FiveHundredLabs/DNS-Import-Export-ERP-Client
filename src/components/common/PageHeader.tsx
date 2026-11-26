@@ -3,6 +3,7 @@ import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { ArrowLeft, ChevronRight } from 'lucide-react';
 import { Button } from '../ui/button';
 import { cn } from '../../utils/cn';
+import { getOriginalReturnTo } from '../../utils/navigationContext';
 
 export interface BreadcrumbItem {
   label: string;
@@ -57,8 +58,8 @@ export function PageHeader({
     if (onBack) {
       onBack();
     } else if (backUrl) {
-      const stateFrom = (location.state as { from?: string } | null)?.from;
-      navigate(stateFrom && stateFrom !== location.pathname ? stateFrom : backUrl);
+      const preserved = getOriginalReturnTo(location.state, location.pathname);
+      navigate(preserved || backUrl);
     }
   };
 
