@@ -220,10 +220,18 @@ export function BatchPricingHistoryModal({
                               {formatCurrency(b.unitCost)}
                             </TableCell>
                             <TableCell className="text-right font-mono font-bold text-slate-900">
-                              {formatCurrency(b.sellingPrice)}
+                              <div>{formatCurrency(b.sellingPrice)}</div>
+                              {b.unitCost > 0 && b.sellingPrice > b.unitCost && (
+                                <div className="text-[10px] text-emerald-600 font-normal">
+                                  +{(((b.sellingPrice - b.unitCost) / b.unitCost) * 100).toFixed(1)}% profit
+                                </div>
+                              )}
                             </TableCell>
                             <TableCell className="text-right font-mono text-slate-600">
-                              {b.minFloorPricePercentage}%
+                              <div className="font-semibold">{b.minFloorPricePercentage}%</div>
+                              <div className="text-[10px] text-slate-400 font-mono">
+                                Min: {formatCurrency(b.unitCost * (1 + (b.minFloorPricePercentage || 0) / 100))}
+                              </div>
                             </TableCell>
                             <TableCell className="text-center text-[11px] text-slate-500 font-mono">
                               {formatDate(b.receivedDate)}
