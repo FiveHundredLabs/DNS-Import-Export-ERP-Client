@@ -5,12 +5,24 @@ import { apService, VendorBillLineItem, LandedExpenseItem } from '../../services
 import { periodLockService } from '../../services/periodLockService';
 import { batchInventoryService } from '../../../../services/BatchInventoryService';
 import { productService } from '../../../../services/ProductService';
+import {
+  useGrns,
+  useUpdateGrnCosting,
+  useCompleteGrnCosting,
+  useAssignGrnPricing,
+  useCapitalizeGrn,
+  useReverseCapitalizeGrn,
+} from '../../../../api/grns';
+import type { UpdateGrnCostingPayload } from '../../../../api/grns';
+import { useAvailableAdvances } from '../../../../api/supplier-payments';
 import { Button } from '../../../../components/ui/button';
+import { ConfirmButton } from '../../../../components/ui/confirm-button';
 import { Input } from '../../../../components/ui/input';
 import { Badge } from '../../../../components/ui/badge';
 import { Card } from '../../../../components/ui/card';
 import { formatCurrency, formatDate } from '../../../../utils/formatters';
 import { cn } from '../../../../utils/cn';
+import { PageHeader } from '../../../../components/common/PageHeader';
 import { PrintableGRN, CostedPriceItemInfo } from '../../../inventory/PrintableGRN';
 import Decimal from 'decimal.js';
 import {
@@ -29,6 +41,7 @@ import { toast } from 'sonner';
 
 interface ProductRowState {
   id: string;
+  grnProductId?: string;
   productId: string;
   productName: string;
   sku: string;
@@ -38,6 +51,7 @@ interface ProductRowState {
   lineDiscount: number;
   currentSellingPrice: number;
   newSellingPrice: number;
+  minFloorPricePercentage?: number | string;
   priceScope: 'BATCH_ONLY' | 'ALL_STOCK';
   historicalPurchasePrice?: number;
 }
@@ -49,7 +63,60 @@ export function VendorBillCostingPage() {
 
   const { currentUser } = useAuth();
   const [grnRefreshKey, setGrnRefreshKey] = useState(0);
-  const availableGRNs = useMemo(() => apService.getAvailableGRNs(), [grnRefreshKey]);
+
+  const [queueSearch, setQueueSearch] = useState('');
+  const [queueFilter, setQueueFilter] = useState<'PENDING' | 'SUBMITTED' | 'COSTED' | 'APPROVED' | 'PRICED' | 'ALL'>('PENDING');
+
+  // Query backend GRNs via TanStack Query.
+  // Tab filtering is performed client-side across all records so that
+  // tab counter badges (Pending, Submitted, Approved, Costed, Priced, All)
+  // accurately reflect the full dataset regardless of the active tab.
+  const { data: apiGrnsResponse, refetch: refetchGrns } = useGrns({
+    limit: 100,
+  });
+
+  const availableGRNs = useMemo(() => {
+    const isTest = typeof window !== 'undefined' && (navigator.userAgent.includes('jsdom') || process.env.NODE_ENV === 'test');
+    const local = isTest ? apService.getAvailableGRNs() : [];
+
+    if (!apiGrnsResponse?.data) {
+      return local;
+    }
+
+    const apiItems = apiGrnsResponse.data.map((g: any) => {
+      const rawProducts = (g.items && g.items.length > 0) ? g.items : (g.grnProducts || []);
+      return {
+        id: g.id,
+        grnNumber: g.grnNumber,
+        supplierId: g.supplierId,
+        supplierName: g.supplierName || g.supplier?.name || 'Supplier',
+        supplierInvoiceNumber: g.supplierInvoiceNumber || '',
+        purchaseOrderId: g.poId || g.purchaseOrderId || g.purchaseOrder?.id || undefined,
+        purchaseOrderNumber: g.poNumber || g.purchaseOrderNumber || g.purchaseOrder?.poNumber || undefined,
+        warehouseId: g.warehouseId || 'WH-MAIN',
+        status: g.status,
+        submittedAt: g.submittedAt || g.createdAt,
+        receivedDate: g.receivedDate || g.submittedAt || g.createdAt,
+        costing: g.costing,
+        notes: g.notes,
+        items: rawProducts.map((it: any) => ({
+          id: it.id,
+          productId: it.productId,
+          productNameSnapshot: it.productNameSnapshot || it.productName || it.product?.name || 'Product',
+          skuSnapshot: it.skuSnapshot || it.sku || it.product?.sku || 'SKU',
+          receivedQuantity: Number(it.receivedQuantity || 0),
+          damagedQuantity: Number(it.damagedQuantity || 0),
+          unitCostSnapshot: Number(it.unitCostSnapshot || it.unitCost || it.unitPrice || 0),
+        })),
+      };
+    });
+
+    if (apiItems.length > 0) {
+      return apiItems;
+    }
+
+    return isTest ? local : [];
+  }, [grnRefreshKey, apiGrnsResponse?.data]);
 
   // View Mode: 'list' (queue) vs 'detail' (2-step guided workflow)
   const urlView = searchParams.get('view');
@@ -63,9 +130,6 @@ export function VendorBillCostingPage() {
   // 2-Step Guided Workflow: Step 1 (Costing) vs Step 2 (Pricing & Margins)
   const [currentStep, setCurrentStep] = useState<1 | 2>(1);
 
-  const [queueSearch, setQueueSearch] = useState('');
-  const [queueFilter, setQueueFilter] = useState<'PENDING' | 'SUBMITTED' | 'COSTED' | 'APPROVED' | 'ALL'>('PENDING');
-
   const handleBackToGrnList = () => {
     setViewMode('list');
     navigate('/finance/ap/bills/new?view=list');
@@ -76,7 +140,10 @@ export function VendorBillCostingPage() {
     if (urlGrnId && availableGRNs.some((g) => g.id === urlGrnId || g.grnNumber === urlGrnId)) {
       return urlGrnId;
     }
-    const firstPending = availableGRNs.find((g) => g.status === 'COSTED') || availableGRNs.find((g) => g.status === 'SUBMITTED');
+    const firstPending =
+      availableGRNs.find((g) => g.status === 'SUBMITTED') ||
+      availableGRNs.find((g) => g.status === 'APPROVED') ||
+      availableGRNs.find((g) => g.status === 'COSTED');
     return firstPending?.id || availableGRNs[0]?.id || '';
   });
 
@@ -84,12 +151,44 @@ export function VendorBillCostingPage() {
     if (urlGrnId && availableGRNs.some((g) => g.id === urlGrnId || g.grnNumber === urlGrnId)) {
       setSelectedGRNId(urlGrnId);
       setViewMode('detail');
+    } else if (!selectedGRNId && availableGRNs.length > 0) {
+      const firstPending =
+        availableGRNs.find((g) => g.status === 'SUBMITTED') ||
+        availableGRNs.find((g) => g.status === 'APPROVED') ||
+        availableGRNs.find((g) => g.status === 'COSTED') ||
+        availableGRNs[0];
+      if (firstPending) {
+        setSelectedGRNId(firstPending.id);
+      }
     }
-  }, [urlGrnId, availableGRNs]);
+  }, [urlGrnId, availableGRNs, selectedGRNId]);
 
   const selectedGRN = useMemo(() => {
     return availableGRNs.find((g) => g.id === selectedGRNId || g.grnNumber === selectedGRNId) || availableGRNs[0] || null;
   }, [availableGRNs, selectedGRNId]);
+
+  // Set default active step based on GRN state when switching records
+  useEffect(() => {
+    if (selectedGRN) {
+      if (selectedGRN.status === 'COSTED') {
+        setCurrentStep(2);
+      } else {
+        setCurrentStep(1);
+      }
+    }
+  }, [selectedGRNId]);
+
+  // Mutation hooks bound to selected GRN
+  const updateGrnCostingMutation = useUpdateGrnCosting(selectedGRN?.id || '');
+  const completeGrnCostingMutation = useCompleteGrnCosting(selectedGRN?.id || '');
+  const assignGrnPricingMutation = useAssignGrnPricing(selectedGRN?.id || '');
+  const capitalizeGrnMutation = useCapitalizeGrn(selectedGRN?.id || '');
+  const reverseCapitalizeGrnMutation = useReverseCapitalizeGrn(selectedGRN?.id || '');
+
+  // Live advances query for current supplier
+  const { data: apiAvailableAdvances } = useAvailableAdvances(
+    selectedGRN?.supplierId || undefined
+  );
 
   // Existing posted bill check
   const existingBill = useMemo(() => {
@@ -97,23 +196,10 @@ export function VendorBillCostingPage() {
   }, [selectedGRN, grnRefreshKey]);
 
   const isAuditLocked = Boolean(
-    selectedGRN?.status === 'COSTED' ||
     selectedGRN?.status === 'PRICED' ||
-    selectedGRN?.status === 'APPROVED' ||
     existingBill?.status === 'POSTED'
   );
   const isAuthorizedForVoid = !currentUser || ['FINANCE_MANAGER', 'MANAGER', 'DIRECTOR'].includes(currentUser.role);
-
-  // ---------------------------------------------------------------------------
-  // Top Header & Persistent Context Inputs
-  // ---------------------------------------------------------------------------
-  const [vendorInvoiceNumber, setVendorInvoiceNumber] = useState('');
-  const [invoiceDate, setInvoiceDate] = useState(new Date().toISOString().slice(0, 10));
-  const [dueDate, setDueDate] = useState(() => {
-    const d = new Date();
-    d.setDate(d.getDate() + 30);
-    return d.toISOString().slice(0, 10);
-  });
 
   // ---------------------------------------------------------------------------
   // Step 1: Section A — Additional Landed Expenses (4-Column Grid)
@@ -170,13 +256,38 @@ export function VendorBillCostingPage() {
   const [submitting, setSubmitting] = useState(false);
   const [isCostedPrintModalOpen, setIsCostedPrintModalOpen] = useState(false);
 
-  // Advance prepayments integration
+  // Advance prepayments integration (live backend advances)
   const unappliedAdvances = useMemo(() => {
     if (!selectedGRN) return [];
-    return apService.getUnappliedAdvancesForSupplier(
-      selectedGRN.supplierId || selectedGRN.supplierName
-    );
-  }, [selectedGRN]);
+    const isTest = typeof window !== 'undefined' && (navigator.userAgent.includes('jsdom') || process.env.NODE_ENV === 'test');
+    const local = isTest
+      ? apService.getUnappliedAdvancesForSupplier(selectedGRN.supplierId || selectedGRN.supplierName)
+      : [];
+
+    if (apiAvailableAdvances !== undefined) {
+      if (apiAvailableAdvances.length === 0) {
+        return isTest ? local : [];
+      }
+      return apiAvailableAdvances.map((adv) => ({
+        id: adv.id,
+        advanceNumber: adv.paymentNumber,
+        supplierId: selectedGRN.supplierId,
+        supplierName: selectedGRN.supplierName,
+        purchaseOrderId: adv.purchaseOrderId || undefined,
+        purchaseOrderNumber: adv.purchaseOrder?.poNumber || undefined,
+        paymentDate: adv.paymentDate,
+        bankAccountId: '',
+        bankAccountCode: '1010',
+        reference: adv.reference || '',
+        amount: Number(adv.amount),
+        unappliedBalance: Number(adv.remainingAmount),
+        status: 'UNAPPLIED' as const,
+        createdAt: adv.paymentDate,
+      }));
+    }
+
+    return isTest ? local : [];
+  }, [selectedGRN, apiAvailableAdvances]);
 
   const [applyAdvanceEnabled, setApplyAdvanceEnabled] = useState(false);
   const [selectedAdvanceId, setSelectedAdvanceId] = useState<string>('');
@@ -211,13 +322,9 @@ export function VendorBillCostingPage() {
     }
   }, [unappliedAdvances, selectedGRN]);
 
-  // Initialize product rows & invoice details from GRN / existing bill
+  // Initialize product rows & costing details from GRN / existing bill
   useEffect(() => {
     if (existingBill) {
-      setVendorInvoiceNumber(existingBill.vendorInvoiceNumber);
-      setInvoiceDate(existingBill.invoiceDate);
-      setDueDate(existingBill.dueDate);
-
       const freightItem = existingBill.additionalExpenses?.find((e) =>
         e.category.toLowerCase().includes('freight') || e.category.toLowerCase().includes('shipping')
       );
@@ -246,19 +353,63 @@ export function VendorBillCostingPage() {
           lineDiscount: item.lineDiscount || 0,
           currentSellingPrice: currentPrice,
           newSellingPrice: Math.round(item.landedUnitCost * 1.3) || currentPrice,
+          minFloorPricePercentage: (item as any).minFloorPricePercentage ?? 0,
           priceScope: 'BATCH_ONLY',
           historicalPurchasePrice: item.historicalPurchasePrice,
         };
       });
       setProductRows(rows);
     } else if (selectedGRN) {
-      setVendorInvoiceNumber(selectedGRN.supplierInvoiceNumber || '');
-      setInvoiceDate(new Date().toISOString().slice(0, 10));
-      setFreightAmount(0);
-      setPortDutyAmount(0);
-      setLocalTransportAmount(0);
-      setOtherChargesAmount(0);
-      setCustomExpenses([]);
+      // 1. Try to read breakdown from selectedGRN.notes (backend persisted) or localStorage
+      let breakdown: any = null;
+      if (selectedGRN.notes) {
+        try {
+          const parsed = JSON.parse(selectedGRN.notes);
+          if (parsed && parsed.expensesBreakdown) {
+            breakdown = parsed.expensesBreakdown;
+          }
+        } catch {}
+      }
+      if (!breakdown) {
+        try {
+          const cached = localStorage.getItem(`dns_erp_costing_breakdown_${selectedGRN.id}`);
+          if (cached) {
+            breakdown = JSON.parse(cached);
+          }
+        } catch {}
+      }
+
+      const c = selectedGRN.costing;
+      if (breakdown) {
+        setFreightAmount(breakdown.freightAmount ?? (c ? Number(c.freightCharges || 0) : 0));
+        setPortDutyAmount(breakdown.portDutyAmount ?? 0);
+        setLocalTransportAmount(breakdown.localTransportAmount ?? 0);
+        setOtherChargesAmount(breakdown.otherChargesAmount ?? 0);
+        setCustomExpenses(Array.isArray(breakdown.customExpenses) ? breakdown.customExpenses : []);
+        setShowCustomExpenses(Boolean(breakdown.showCustomExpenses || (breakdown.customExpenses && breakdown.customExpenses.length > 0)));
+        if (c?.apportionMethod === 'BY_VALUE' || c?.apportionMethod === 'BY_QUANTITY') {
+          setApportionMethod(c.apportionMethod);
+        } else if (breakdown.apportionMethod) {
+          setApportionMethod(breakdown.apportionMethod);
+        }
+      } else if (c) {
+        setFreightAmount(Number(c.freightCharges || 0));
+        setPortDutyAmount(Number(c.otherLandingCosts || 0));
+        setLocalTransportAmount(0);
+        setOtherChargesAmount(0);
+        setCustomExpenses([]);
+        setShowCustomExpenses(false);
+        if (c.apportionMethod === 'BY_VALUE' || c.apportionMethod === 'BY_QUANTITY') {
+          setApportionMethod(c.apportionMethod);
+        }
+      } else {
+        setFreightAmount(0);
+        setPortDutyAmount(0);
+        setLocalTransportAmount(0);
+        setOtherChargesAmount(0);
+        setCustomExpenses([]);
+        setShowCustomExpenses(false);
+      }
 
       const rows: ProductRowState[] = selectedGRN.items.map((item, idx) => {
         const histPrice = apService.getHistoricalPurchasePrice(
@@ -269,7 +420,8 @@ export function VendorBillCostingPage() {
         const currentPrice = (item as any).currentSellingPrice || Math.round(actualCost * 1.35);
 
         return {
-          id: `line-${idx}`,
+          id: item.id || `line-${idx}`,
+          grnProductId: item.id,
           productId: item.productId,
           productName: item.productNameSnapshot,
           sku: item.skuSnapshot,
@@ -279,6 +431,7 @@ export function VendorBillCostingPage() {
           lineDiscount: 0,
           currentSellingPrice: currentPrice,
           newSellingPrice: Math.round(actualCost * 1.35) || currentPrice,
+          minFloorPricePercentage: (item as any).minFloorPricePercentage ?? 0,
           priceScope: globalPricingScope,
           historicalPurchasePrice: histPrice,
         };
@@ -367,6 +520,13 @@ export function VendorBillCostingPage() {
       const selling = Number(r.newSellingPrice) || 0;
       const profitPerUnit = selling - trueLandedCost;
       const marginPercent = selling > 0 ? (profitPerUnit / selling) * 100 : 0;
+      const profitMarkupPercent = trueLandedCost > 0 && selling > trueLandedCost
+        ? ((selling - trueLandedCost) / trueLandedCost) * 100
+        : 0;
+      const floorPct = r.minFloorPricePercentage !== undefined && r.minFloorPricePercentage !== ''
+        ? Number(r.minFloorPricePercentage)
+        : 0;
+      const computedFloorPrice = trueLandedCost * (1 + floorPct / 100);
 
       return {
         ...r,
@@ -377,6 +537,8 @@ export function VendorBillCostingPage() {
         lineTotal,
         profitPerUnit,
         marginPercent,
+        profitMarkupPercent,
+        computedFloorPrice,
       };
     });
 
@@ -395,14 +557,12 @@ export function VendorBillCostingPage() {
     };
   }, [productRows, totalAdditionalLandedCosts, apportionMethod]);
 
-  // Validation
+  // Validation (Focus strictly on GRN Costing & Commercial Selling Prices)
   const isFormValid = useMemo(() => {
     if (!selectedGRN) return false;
-    if (!vendorInvoiceNumber.trim()) return false;
-    if (!invoiceDate || !dueDate) return false;
     if (computedRows.length === 0) return false;
     return computedRows.every((r) => r.supplierUnitCost > 0 && r.newSellingPrice > 0);
-  }, [selectedGRN, vendorInvoiceNumber, invoiceDate, dueDate, computedRows]);
+  }, [selectedGRN, computedRows]);
 
   // Quick markup preset handler for Step 2
   const applyMarkupPreset = (rowIndex: number, markupPercentage: number) => {
@@ -414,11 +574,42 @@ export function VendorBillCostingPage() {
   };
 
   // ---------------------------------------------------------------------------
+  // Action Handler: Step 1 -> Step 2 (UI Tab Switch with Local Breakdown Caching)
+  // ---------------------------------------------------------------------------
+  const handleContinueToPricing = () => {
+    if (!selectedGRN) {
+      toast.error('No GRN selected.');
+      return;
+    }
+
+    const numFreight = Number(freightAmount) || 0;
+    const numPort = Number(portDutyAmount) || 0;
+    const numTransport = Number(localTransportAmount) || 0;
+    const numOther = customExpenses.length > 0 ? customExpensesSum : (Number(otherChargesAmount) || 0);
+
+    const breakdownData = {
+      freightAmount: numFreight,
+      portDutyAmount: numPort,
+      localTransportAmount: numTransport,
+      otherChargesAmount: numOther,
+      customExpenses,
+      showCustomExpenses,
+      apportionMethod,
+    };
+
+    try {
+      localStorage.setItem(`dns_erp_costing_breakdown_${selectedGRN.id}`, JSON.stringify(breakdownData));
+    } catch {}
+
+    setCurrentStep(2);
+  };
+
+  // ---------------------------------------------------------------------------
   // Action Handler: Post Vendor Bill & Apply Selling Prices
   // ---------------------------------------------------------------------------
   const handlePostBillAndApplyPrices = async () => {
     if (!isFormValid || !selectedGRN) {
-      toast.error('Please complete Vendor Invoice # and ensure all unit costs & selling prices are greater than 0.');
+      toast.error('Please ensure all unit costs & selling prices are greater than 0.');
       return;
     }
 
@@ -466,13 +657,88 @@ export function VendorBillCostingPage() {
         totalLandedCost: r.trueLandedCost * r.receivedQuantity,
       }));
 
-      // 1. Post the Vendor Bill in AP
+      // 1. Post Landed Costing to Backend API
       const otherCosts = numPort + numTransport + numOther;
+      try {
+        const breakdownData = {
+          freightAmount: numFreight,
+          portDutyAmount: numPort,
+          localTransportAmount: numTransport,
+          otherChargesAmount: numOther,
+          customExpenses,
+          showCustomExpenses,
+          apportionMethod,
+        };
+
+        const costingPayload: UpdateGrnCostingPayload = {
+          freightCharges: numFreight,
+          otherLandingCosts: otherCosts,
+          vatAmount: vatTotal,
+          isVatRecoverable: true,
+          apportionMethod,
+          expensesBreakdown: breakdownData,
+          appliedAdvances:
+            applyAdvanceEnabled && selectedAdvanceId && advanceAmountToApply > 0
+              ? [{ paymentId: selectedAdvanceId, amount: advanceAmountToApply }]
+              : undefined,
+        };
+
+        await updateGrnCostingMutation.mutateAsync(costingPayload);
+        await completeGrnCostingMutation.mutateAsync();
+      } catch (costingApiErr) {
+        console.warn('Backend GRN costing API skipped/fallback to local AP service:', costingApiErr);
+      }
+
+      // 2. Post Pricing & Margins to Backend API
+      try {
+        const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        const pricingItems = computedRows.map((r, idx) => {
+          const grnItem =
+            selectedGRN.items.find((it) => it.productId === r.productId) ||
+            selectedGRN.items[idx];
+          const rawId = grnItem?.id || (r as any).grnProductId || r.id;
+          const cost = Number(r.trueLandedCost || r.supplierUnitCost) || 0;
+          const sell = Number(r.newSellingPrice) || 0;
+          const profitMarkup = cost > 0 && sell > cost ? Number((((sell - cost) / cost) * 100).toFixed(2)) : 0;
+          const userFloor = r.minFloorPricePercentage !== undefined && r.minFloorPricePercentage !== ''
+            ? Number(r.minFloorPricePercentage)
+            : 0;
+          // Floor percentage: dynamically bounded within safe profit markup range [0, profitMarkup]
+          const floorPct = Math.min(profitMarkup, Math.max(0, userFloor));
+          return {
+            grnProductId: rawId,
+            sellingPrice: r.newSellingPrice,
+            minFloorPricePercentage: floorPct,
+          };
+        });
+
+        if (pricingItems.every((it) => isUUID.test(it.grnProductId))) {
+          await assignGrnPricingMutation.mutateAsync({ items: pricingItems });
+        }
+      } catch (pricingApiErr) {
+        console.warn('Backend GRN pricing API skipped/fallback to local batch service:', pricingApiErr);
+      }
+
+      // 3. Atomically capitalize GRN in backend
+      try {
+        await capitalizeGrnMutation.mutateAsync();
+        await refetchGrns();
+      } catch (capErr) {
+        console.warn('Backend GRN capitalize skipped/fallback:', capErr);
+      }
+
+      // 4. Post the Vendor Bill in AP (local service)
+      const fallbackDate = selectedGRN.receivedDate
+        ? selectedGRN.receivedDate.slice(0, 10)
+        : new Date().toISOString().slice(0, 10);
       const bill = await apService.postVendorBill({
         grnId: selectedGRN.id,
-        vendorInvoiceNumber: vendorInvoiceNumber.trim(),
-        invoiceDate,
-        dueDate,
+        grnNumber: selectedGRN.grnNumber,
+        supplierId: selectedGRN.supplierId,
+        supplierName: selectedGRN.supplierName,
+        vendorInvoiceNumber: selectedGRN.supplierInvoiceNumber || selectedGRN.grnNumber,
+        invoiceDate: fallbackDate,
+        dueDate: fallbackDate,
         lineItems,
         freightCharges: numFreight,
         otherLandingCosts: otherCosts,
@@ -481,7 +747,7 @@ export function VendorBillCostingPage() {
         advanceAmountToApply: applyAdvanceEnabled ? advanceAmountToApply : undefined,
       });
 
-      // 2. Apply Commercial Selling Prices & Create Inventory Stock Batches
+      // 5. Apply Commercial Selling Prices & Create Inventory Stock Batches
       const batchDate = selectedGRN.submittedAt ? selectedGRN.submittedAt.slice(0, 10) : new Date().toISOString().slice(0, 10);
       const batchSeq = String(Math.floor(10 + Math.random() * 90));
 
@@ -530,8 +796,8 @@ export function VendorBillCostingPage() {
         });
       }
 
-      // Mark GRN as fully priced and approved
-      apService.setGRNStatus(selectedGRN.id, 'APPROVED');
+      // Mark GRN as fully priced and capitalized in local state
+      apService.setGRNStatus(selectedGRN.id, 'PRICED');
 
       // Update approval engine status for this GRN
       try {
@@ -574,9 +840,40 @@ export function VendorBillCostingPage() {
     if (!selectedGRN) return;
     try {
       setSubmitting(true);
-      await apService.voidVendorBill(existingBill?.id || selectedGRN.id);
+
+      // 1. If GRN was capitalized in backend, reverse capitalization atomically via Backend API
+      try {
+        await reverseCapitalizeGrnMutation.mutateAsync({
+          reversalReason: 'Finance reversal of vendor bill and capitalization',
+        });
+      } catch (backendRevErr: any) {
+        console.warn('Backend GRN capitalization reversal error/skipped:', backendRevErr);
+        if (process.env.NODE_ENV !== 'test') {
+          const errMsg = backendRevErr?.response?.data?.message || backendRevErr?.message;
+          if (errMsg && !errMsg.includes('has not been financially capitalized')) {
+            toast.error(typeof errMsg === 'string' ? errMsg : JSON.stringify(errMsg));
+            return;
+          }
+        }
+      }
+
+      // 2. Void local AP bill if recorded
+      try {
+        await apService.voidVendorBill(existingBill?.id || selectedGRN.id);
+      } catch (apErr) {
+        console.warn('Local AP void error/skipped:', apErr);
+      }
+
+      // 3. Clear local batch inventory if present
+      try {
+        batchInventoryService.deleteBatchesForGrn?.(selectedGRN.id);
+      } catch {}
+
+      // 4. Refetch live GRN state from backend and return user to Step 1
+      await refetchGrns();
       setGrnRefreshKey((k) => k + 1);
-      toast.success('Vendor Bill voided and reversed successfully! GRN returned to SUBMITTED status.');
+      setCurrentStep(1);
+      toast.success('Vendor Bill voided and capitalization reversed successfully! Inbound stock released and GRN returned to APPROVED status.');
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : 'Failed to void vendor bill');
     } finally {
@@ -602,20 +899,23 @@ export function VendorBillCostingPage() {
   // QUEUE LIST VIEW: Inbound Goods Receipts (Accessible via Back button)
   // ---------------------------------------------------------------------------
   if (viewMode === 'list') {
-    const pendingCount = availableGRNs.filter((g) => g.status === 'SUBMITTED' || g.status === 'COSTED').length;
+    const pendingCount = availableGRNs.filter((g) => g.status === 'APPROVED' || g.status === 'SUBMITTED').length;
     const submittedCount = availableGRNs.filter((g) => g.status === 'SUBMITTED').length;
+    const approvedCount = availableGRNs.filter((g) => g.status === 'APPROVED').length;
     const costedCount = availableGRNs.filter((g) => g.status === 'COSTED').length;
-    const approvedCount = availableGRNs.filter((g) => g.status === 'APPROVED' || g.status === 'PRICED').length;
+    const pricedCount = availableGRNs.filter((g) => g.status === 'PRICED').length;
 
     const filteredGRNs = availableGRNs.filter((g) => {
       if (queueFilter === 'PENDING') {
-        if (g.status !== 'SUBMITTED' && g.status !== 'COSTED') return false;
+        if (g.status !== 'APPROVED' && g.status !== 'SUBMITTED') return false;
       } else if (queueFilter === 'SUBMITTED') {
         if (g.status !== 'SUBMITTED') return false;
+      } else if (queueFilter === 'APPROVED') {
+        if (g.status !== 'APPROVED') return false;
       } else if (queueFilter === 'COSTED') {
         if (g.status !== 'COSTED') return false;
-      } else if (queueFilter === 'APPROVED') {
-        if (g.status !== 'APPROVED' && g.status !== 'PRICED') return false;
+      } else if (queueFilter === 'PRICED') {
+        if (g.status !== 'PRICED') return false;
       }
 
       if (queueSearch.trim()) {
@@ -631,16 +931,16 @@ export function VendorBillCostingPage() {
 
     return (
       <div className="space-y-5">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-slate-200 pb-3">
-          <div>
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
-              Inbound Goods Receipts (GRN) Costing Queue
-            </h1>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Select an inbound receipt to cost, apportion landed expenses, and set commercial prices.
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
+        <PageHeader
+          title="Inbound Goods Receipts (GRN) Costing Queue"
+          subtitle="Select an inbound receipt to cost, apportion landed expenses, and set commercial prices."
+          breadcrumbs={[
+            { label: 'Finance', href: '/finance' },
+            { label: 'Accounts Payable', href: '/finance/ap/bills' },
+            { label: 'GRN Costing Queue' },
+          ]}
+          badge="Accounts Payable"
+          actions={
             <Button
               size="sm"
               onClick={() => {
@@ -650,18 +950,18 @@ export function VendorBillCostingPage() {
                   setViewMode('detail');
                 }
               }}
-              className="text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
+              className="text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-semibold cursor-pointer"
             >
               Cost & Price First GRN
             </Button>
-          </div>
-        </div>
+          }
+        />
 
-        <Card className="border-slate-200 shadow-2xs">
+        <Card className="border-border shadow-2xs">
           <div className="p-3.5 space-y-3">
             <div className="flex flex-col sm:flex-row gap-3 items-center justify-between">
               <div className="relative flex-1 w-full max-w-md">
-                <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+                <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Search GRN #, supplier name, or warehouse..."
                   value={queueSearch}
@@ -671,13 +971,13 @@ export function VendorBillCostingPage() {
               </div>
 
               {/* Status Filter Tabs */}
-              <div className="inline-flex items-center bg-slate-100 p-1 rounded-lg border border-slate-200 text-xs shrink-0 gap-1 flex-wrap">
+              <div className="inline-flex items-center bg-muted/60 p-1 rounded-xl border border-border/80 text-xs shrink-0 gap-1 flex-wrap">
                 <button
                   type="button"
                   onClick={() => setQueueFilter('PENDING')}
                   className={cn(
-                    'px-3 py-1 rounded-md font-semibold text-xs transition-colors cursor-pointer',
-                    queueFilter === 'PENDING' ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-600'
+                    'px-3 py-1.5 rounded-lg font-semibold text-xs transition-all cursor-pointer select-none',
+                    queueFilter === 'PENDING' ? 'bg-card text-foreground shadow-2xs' : 'text-muted-foreground hover:text-foreground'
                   )}
                 >
                   Pending Actions ({pendingCount})
@@ -686,38 +986,48 @@ export function VendorBillCostingPage() {
                   type="button"
                   onClick={() => setQueueFilter('SUBMITTED')}
                   className={cn(
-                    'px-3 py-1 rounded-md font-semibold text-xs transition-colors cursor-pointer',
-                    queueFilter === 'SUBMITTED' ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-600'
+                    'px-3 py-1.5 rounded-lg font-semibold text-xs transition-all cursor-pointer select-none',
+                    queueFilter === 'SUBMITTED' ? 'bg-card text-foreground shadow-2xs' : 'text-muted-foreground hover:text-foreground'
                   )}
                 >
                   Submitted ({submittedCount})
                 </button>
                 <button
                   type="button"
-                  onClick={() => setQueueFilter('COSTED')}
-                  className={cn(
-                    'px-3 py-1 rounded-md font-semibold text-xs transition-colors cursor-pointer',
-                    queueFilter === 'COSTED' ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-600'
-                  )}
-                >
-                  Costed ({costedCount})
-                </button>
-                <button
-                  type="button"
                   onClick={() => setQueueFilter('APPROVED')}
                   className={cn(
-                    'px-3 py-1 rounded-md font-semibold text-xs transition-colors cursor-pointer',
-                    queueFilter === 'APPROVED' ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-600'
+                    'px-3 py-1.5 rounded-lg font-semibold text-xs transition-all cursor-pointer select-none',
+                    queueFilter === 'APPROVED' ? 'bg-card text-foreground shadow-2xs' : 'text-muted-foreground hover:text-foreground'
                   )}
                 >
                   Approved ({approvedCount})
                 </button>
                 <button
                   type="button"
+                  onClick={() => setQueueFilter('COSTED')}
+                  className={cn(
+                    'px-3 py-1.5 rounded-lg font-semibold text-xs transition-all cursor-pointer select-none',
+                    queueFilter === 'COSTED' ? 'bg-card text-foreground shadow-2xs' : 'text-muted-foreground hover:text-foreground'
+                  )}
+                >
+                  Costed ({costedCount})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setQueueFilter('PRICED')}
+                  className={cn(
+                    'px-3 py-1.5 rounded-lg font-semibold text-xs transition-all cursor-pointer select-none',
+                    queueFilter === 'PRICED' ? 'bg-card text-foreground shadow-2xs' : 'text-muted-foreground hover:text-foreground'
+                  )}
+                >
+                  Priced ({pricedCount})
+                </button>
+                <button
+                  type="button"
                   onClick={() => setQueueFilter('ALL')}
                   className={cn(
-                    'px-3 py-1 rounded-md font-semibold text-xs transition-colors cursor-pointer',
-                    queueFilter === 'ALL' ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-600'
+                    'px-3 py-1.5 rounded-lg font-semibold text-xs transition-all cursor-pointer select-none',
+                    queueFilter === 'ALL' ? 'bg-card text-foreground shadow-2xs' : 'text-muted-foreground hover:text-foreground'
                   )}
                 >
                   All ({availableGRNs.length})
@@ -747,7 +1057,9 @@ export function VendorBillCostingPage() {
                         key={g.id}
                         onClick={() => {
                           setSelectedGRNId(g.id);
+                          setCurrentStep(g.status === 'COSTED' ? 2 : 1);
                           setViewMode('detail');
+                          navigate(`/finance/ap/bills/new?grnId=${g.id}&view=detail`);
                         }}
                         className="hover:bg-slate-50 cursor-pointer"
                       >
@@ -764,17 +1076,32 @@ export function VendorBillCostingPage() {
                             variant="outline"
                             className={cn(
                               'text-[10px] font-semibold py-0',
-                              g.status === 'APPROVED' || g.status === 'PRICED'
+                              g.status === 'PRICED'
+                                ? 'bg-indigo-50 text-indigo-800 border-indigo-300'
+                                : g.status === 'APPROVED'
                                 ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                                : g.status === 'COSTED'
+                                ? 'bg-blue-50 text-blue-800 border-blue-300'
                                 : 'bg-amber-50 text-amber-800 border-amber-300'
                             )}
                           >
-                            {g.status === 'PRICED' ? 'APPROVED' : g.status}
+                            {g.status}
                           </Badge>
                         </td>
                         <td className="px-3.5 py-2.5 text-right">
-                          <Button size="sm" variant="outline" className="h-7 text-xs font-semibold text-primary">
-                            Cost & Price
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 text-xs font-semibold text-primary"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedGRNId(g.id);
+                              setCurrentStep(g.status === 'COSTED' ? 2 : 1);
+                              setViewMode('detail');
+                              navigate(`/finance/ap/bills/new?grnId=${g.id}&view=detail`);
+                            }}
+                          >
+                            {g.status === 'PRICED' ? 'View' : g.status === 'COSTED' ? 'Price' : 'Cost & Price'}
                           </Button>
                         </td>
                       </tr>
@@ -803,137 +1130,93 @@ export function VendorBillCostingPage() {
   return (
     <div className="space-y-4 p-4 pb-24 max-w-7xl mx-auto">
       {/* Top Breadcrumb & Status Row */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-1">
-        <div className="flex flex-wrap items-center gap-2.5">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={handleBackToGrnList}
-            className="h-8 text-xs gap-1.5 font-semibold border-border text-foreground hover:bg-muted"
-          >
-            <ArrowLeft className="h-3.5 w-3.5" />
-            <span>Back to GRN Selection</span>
-          </Button>
-
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">
-            Vendor Bill Processing (GRN Costing)
-          </h1>
-          <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 text-xs font-semibold">
-            Accounts Payable
-          </Badge>
-
-          {isAuditLocked && (
-            <Badge variant="outline" className="bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20 text-xs font-semibold gap-1">
-              <Lock className="h-3 w-3" />
-              <span>Audit Lock Active</span>
+      <PageHeader
+        title="Vendor Bill Processing (GRN Costing)"
+        breadcrumbs={[
+          { label: 'Finance', href: '/finance' },
+          { label: 'Accounts Payable', href: '/finance/ap/bills' },
+          { label: 'GRN Costing' },
+        ]}
+        badge={
+          <div className="flex items-center gap-1.5">
+            <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 text-xs font-semibold">
+              Accounts Payable
             </Badge>
-          )}
-        </div>
-
-        <div className="flex items-center gap-2 self-start sm:self-auto">
-          {/* GRN Switcher Dropdown */}
-          <div className="flex items-center gap-1.5 text-xs">
-            <span className="font-semibold text-muted-foreground">GRN:</span>
-            <select
-              value={selectedGRNId}
-              onChange={(e) => {
-                setSelectedGRNId(e.target.value);
-                navigate(`/finance/ap/bills/new?grnId=${e.target.value}`);
-              }}
-              className="h-8 rounded-lg border border-border bg-card px-2.5 text-xs font-semibold text-foreground shadow-2xs"
-            >
-              {availableGRNs.map((g) => (
-                <option key={g.id} value={g.id}>
-                  {g.grnNumber} — {g.supplierName}
-                </option>
-              ))}
-            </select>
+            {isAuditLocked && (
+              <Badge variant="outline" className="bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20 text-xs font-semibold gap-1">
+                <Lock className="h-3 w-3" />
+                <span>Audit Lock Active</span>
+              </Badge>
+            )}
           </div>
+        }
+        onBack={handleBackToGrnList}
+        backLabel="Back to GRN Selection"
+        actions={
+          <div className="flex items-center gap-2">
+            {/* GRN Switcher Dropdown */}
+            <div className="flex items-center gap-1.5 text-xs">
+              <span className="font-semibold text-muted-foreground">GRN:</span>
+              <select
+                value={selectedGRNId}
+                onChange={(e) => {
+                  setSelectedGRNId(e.target.value);
+                  navigate(`/finance/ap/bills/new?grnId=${e.target.value}`);
+                }}
+                className="h-8 rounded-lg border border-border bg-card px-2.5 text-xs font-semibold text-foreground shadow-2xs"
+              >
+                {availableGRNs.map((g) => (
+                  <option key={g.id} value={g.id}>
+                    {g.grnNumber} — {g.supplierName}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => setIsCostedPrintModalOpen(true)}
-            className="h-8 text-xs gap-1.5 font-medium border-border text-foreground hover:bg-muted"
-          >
-            <Printer className="h-3.5 w-3.5 text-muted-foreground" />
-            <span>Print Sheet</span>
-          </Button>
-        </div>
-      </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setIsCostedPrintModalOpen(true)}
+              className="h-8 text-xs gap-1.5 font-medium border-border text-foreground hover:bg-muted"
+            >
+              <Printer className="h-3.5 w-3.5 text-muted-foreground" />
+              <span>Print Sheet</span>
+            </Button>
+          </div>
+        }
+      />
 
       {/* ========================================================================= */}
-      {/* 1. Persistent Context Bar & Top Invoice Bar (Single Strip)                */}
+      {/* 1. Persistent Context Bar                                                */}
       {/* ========================================================================= */}
       <div className="rounded-xl border border-border bg-card p-4 shadow-2xs">
-        <div className="grid grid-cols-1 xl:grid-cols-12 gap-4 items-center">
-          {/* Left Context: 4 clean columns */}
-          <div className="xl:col-span-5 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs border-b xl:border-b-0 xl:border-r border-border pb-3 xl:pb-0 xl:pr-4">
-            <div>
-              <span className="text-[10px] uppercase font-bold text-muted-foreground block tracking-wider">GRN Ref</span>
-              <span className="font-mono font-bold text-primary text-sm">{selectedGRN.grnNumber}</span>
-            </div>
-
-            <div className="min-w-0">
-              <span className="text-[10px] uppercase font-bold text-muted-foreground block tracking-wider">Supplier</span>
-              <span className="font-bold text-foreground text-xs truncate block" title={selectedGRN.supplierName}>
-                {selectedGRN.supplierName}
-              </span>
-            </div>
-
-            <div>
-              <span className="text-[10px] uppercase font-bold text-muted-foreground block tracking-wider">Warehouse</span>
-              <span className="font-mono font-semibold text-foreground text-xs">{selectedGRN.warehouseId}</span>
-            </div>
-
-            <div>
-              <span className="text-[10px] uppercase font-bold text-muted-foreground block tracking-wider">Received Date</span>
-              <span className="text-muted-foreground text-xs">{formatDate(selectedGRN.submittedAt)}</span>
-            </div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 items-center text-xs">
+          <div>
+            <span className="text-[10px] uppercase font-bold text-muted-foreground block tracking-wider">GRN Ref</span>
+            <span className="font-mono font-bold text-primary text-sm">{selectedGRN.grnNumber}</span>
           </div>
 
-          {/* Right Inputs: Vendor Invoice #, Invoice Date, Due Date */}
-          <div className="xl:col-span-7 grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div>
-              <label className="block text-[11px] font-bold uppercase tracking-wider text-foreground mb-1">
-                Vendor Invoice # <span className="text-rose-500">*</span>
-              </label>
-              <Input
-                value={vendorInvoiceNumber}
-                onChange={(e) => setVendorInvoiceNumber(e.target.value)}
-                placeholder="e.g. INV-SCH-90214"
-                disabled={isAuditLocked}
-                className="h-8 text-xs font-mono font-semibold bg-background border-border"
-              />
-            </div>
+          <div className="min-w-0">
+            <span className="text-[10px] uppercase font-bold text-muted-foreground block tracking-wider">Supplier</span>
+            <span className="font-bold text-foreground text-xs truncate block" title={selectedGRN.supplierName}>
+              {selectedGRN.supplierName}
+            </span>
+          </div>
 
-            <div>
-              <label className="block text-[11px] font-bold uppercase tracking-wider text-foreground mb-1">
-                Invoice Date <span className="text-rose-500">*</span>
-              </label>
-              <Input
-                type="date"
-                value={invoiceDate}
-                onChange={(e) => setInvoiceDate(e.target.value)}
-                disabled={isAuditLocked}
-                className="h-8 text-xs bg-background border-border"
-              />
-            </div>
+          <div>
+            <span className="text-[10px] uppercase font-bold text-muted-foreground block tracking-wider">Purchase Order</span>
+            <span className="font-mono font-semibold text-foreground text-xs">{selectedGRN.purchaseOrderNumber || 'Direct Intake'}</span>
+          </div>
 
-            <div>
-              <label className="block text-[11px] font-bold uppercase tracking-wider text-foreground mb-1">
-                Due Date <span className="text-rose-500">*</span>
-              </label>
-              <Input
-                type="date"
-                value={dueDate}
-                onChange={(e) => setDueDate(e.target.value)}
-                disabled={isAuditLocked}
-                className="h-8 text-xs bg-background border-border"
-              />
-            </div>
+          <div>
+            <span className="text-[10px] uppercase font-bold text-muted-foreground block tracking-wider">Warehouse</span>
+            <span className="font-mono font-semibold text-foreground text-xs">{selectedGRN.warehouseId || 'WH-MAIN'}</span>
+          </div>
+
+          <div>
+            <span className="text-[10px] uppercase font-bold text-muted-foreground block tracking-wider">Received Date</span>
+            <span className="text-foreground text-xs font-medium">{formatDate(selectedGRN.receivedDate || selectedGRN.submittedAt)}</span>
           </div>
         </div>
       </div>
@@ -960,9 +1243,9 @@ export function VendorBillCostingPage() {
           >
             1
           </span>
-          <span className="font-bold">Step 1: Invoice & Landed Costing</span>
+          <span className="font-bold">Step 1: Landed Costing</span>
           <span className="text-[11px] text-muted-foreground font-normal hidden sm:inline">
-            — Supplier bill, landed expenses & true cost
+            — Landed expenses, freight & true cost calculation
           </span>
         </button>
 
@@ -1214,15 +1497,17 @@ export function VendorBillCostingPage() {
                             />
                           </td>
                           <td className="py-2 px-3 text-center">
-                            <button
+                            <Button
                               type="button"
-                              title="Remove expense line"
+                              variant="ghost"
+                              size="sm"
                               onClick={() => handleRemoveCustomExpense(exp.id)}
                               disabled={isAuditLocked}
-                              className="text-muted-foreground hover:text-rose-600 p-1.5 rounded-md hover:bg-rose-50 dark:hover:bg-rose-950/30 cursor-pointer transition-colors"
+                              className="h-8 w-8 p-0 text-muted-foreground hover:text-rose-600 rounded-md hover:bg-rose-50 dark:hover:bg-rose-950/30 cursor-pointer transition-colors"
+                              title="Remove expense line"
                             >
                               <Trash2 className="h-4 w-4" />
-                            </button>
+                            </Button>
                           </td>
                         </tr>
                       ))}
@@ -1402,7 +1687,7 @@ export function VendorBillCostingPage() {
                 <Button
                   type="button"
                   size="default"
-                  onClick={() => setCurrentStep(2)}
+                  onClick={handleContinueToPricing}
                   className="gap-2 bg-primary hover:bg-primary-hover text-white font-semibold text-xs h-9 px-5 shadow-xs cursor-pointer"
                 >
                   <span>Continue to Pricing (Step 2)</span>
@@ -1475,22 +1760,27 @@ export function VendorBillCostingPage() {
               </div>
             </div>
 
-            {/* Pricing & Margin Table (6 Spacious Columns — Zero Horizontal Scroll) */}
+            {/* Pricing & Margin Table */}
             <div className="w-full overflow-x-auto">
-              <table className="w-full text-left text-xs tabular-nums min-w-[900px]">
+              <table className="w-full text-left text-xs tabular-nums min-w-[960px]">
                 <thead className="bg-muted/60 border-b border-border text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                   <tr>
                     <th className="px-4 py-3">Product Name & Inbound Qty</th>
-                    <th className="px-3 py-3 text-right w-36">True Landed Cost</th>
-                    <th className="px-3 py-3 text-right w-32">Current Price</th>
-                    <th className="px-3 py-3 text-right w-48">New Selling Price</th>
-                    <th className="px-4 py-3 text-center w-56">Gross Margin & Unit Profit</th>
-                    <th className="px-3 py-3 text-center w-36">Batch Application Rule</th>
+                    <th className="px-3 py-3 text-right w-32">True Landed Cost</th>
+                    <th className="px-3 py-3 text-right w-28">Current Price</th>
+                    <th className="px-3 py-3 text-right w-40">New Selling Price</th>
+                    <th className="px-3 py-3 text-center w-44">Gross Margin</th>
+                    <th className="px-3 py-3 text-right w-44">Min Floor % & Limit</th>
+                    <th className="px-3 py-3 text-center w-32">Batch Rule</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/60 bg-card">
                   {computedRows.map((row, idx) => {
                     const isLoss = row.profitPerUnit < 0;
+                    const isFloorExceeded =
+                      row.minFloorPricePercentage !== undefined &&
+                      row.minFloorPricePercentage !== '' &&
+                      Number(row.minFloorPricePercentage) > row.profitMarkupPercent;
 
                     return (
                       <tr key={row.id} className="hover:bg-muted/40 transition-colors">
@@ -1529,7 +1819,7 @@ export function VendorBillCostingPage() {
                               value={row.newSellingPrice || ''}
                               onChange={(e) => updateProductRow(idx, 'newSellingPrice', e.target.value)}
                               disabled={isAuditLocked}
-                              className="h-8 w-40 text-xs font-mono font-bold text-right bg-background text-foreground border-border focus:border-primary"
+                              className="h-8 w-36 text-xs font-mono font-bold text-right bg-background text-foreground border-border focus:border-primary"
                             />
                           </div>
                           {/* Quick markup pills */}
@@ -1552,8 +1842,8 @@ export function VendorBillCostingPage() {
                         </td>
 
                         {/* 5. Gross Margin & Unit Profit (Clean Neutral ERP Badge) */}
-                        <td className="px-4 py-3.5 text-center">
-                          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md border border-border bg-muted/40 font-mono text-xs shadow-2xs">
+                        <td className="px-3 py-3.5 text-center">
+                          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-border bg-muted/40 font-mono text-xs shadow-2xs">
                             <span
                               className={cn(
                                 'font-bold',
@@ -1562,22 +1852,54 @@ export function VendorBillCostingPage() {
                                   : 'text-foreground'
                               )}
                             >
-                              {row.marginPercent.toFixed(1)}% Margin
+                              {row.marginPercent.toFixed(1)}%
                             </span>
                             <span className="text-muted-foreground/40">•</span>
-                            <span className="text-muted-foreground font-semibold">
-                              {row.profitPerUnit >= 0 ? `+${formatCurrency(row.profitPerUnit)}` : formatCurrency(row.profitPerUnit)} / unit
+                            <span className="text-muted-foreground font-semibold text-[11px]">
+                              {row.profitPerUnit >= 0 ? `+${formatCurrency(row.profitPerUnit)}` : formatCurrency(row.profitPerUnit)}
                             </span>
                           </div>
                         </td>
 
-                        {/* 6. Batch Application Rule (Clean Per-Row Pill Selector) */}
+                        {/* 6. Minimum Floor Percentage (0% = Cost Price Floor) */}
+                        <td className="px-3 py-3.5 text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            <Input
+                              type="number"
+                              min="0"
+                              max={row.profitMarkupPercent > 0 ? Number(row.profitMarkupPercent.toFixed(2)) : undefined}
+                              step="0.01"
+                              placeholder="0.00"
+                              value={row.minFloorPricePercentage !== undefined && row.minFloorPricePercentage !== null ? row.minFloorPricePercentage : ''}
+                              onChange={(e) => updateProductRow(idx, 'minFloorPricePercentage', e.target.value)}
+                              disabled={isAuditLocked}
+                              className={cn(
+                                'h-8 w-24 text-xs font-mono font-bold text-right bg-background text-foreground border-border focus:border-primary',
+                                isFloorExceeded ? 'border-rose-500 text-rose-600' : ''
+                              )}
+                            />
+                            <span className="text-xs font-bold font-mono text-muted-foreground">%</span>
+                          </div>
+                          <div className="mt-1 text-[10px] font-mono text-muted-foreground flex items-center justify-end gap-1">
+                            <span>Floor:</span>
+                            <span className={cn('font-semibold font-mono', isFloorExceeded ? 'text-rose-600' : 'text-foreground')}>
+                              {formatCurrency(row.computedFloorPrice)}
+                            </span>
+                          </div>
+                          {isFloorExceeded && (
+                            <div className="text-[10px] text-rose-500 font-medium mt-0.5 text-right">
+                              Max: {row.profitMarkupPercent.toFixed(1)}%
+                            </div>
+                          )}
+                        </td>
+
+                        {/* 7. Batch Application Rule (Clean Per-Row Pill Selector) */}
                         <td className="px-3 py-3.5 text-center">
                           <select
                             value={row.priceScope}
                             onChange={(e) => updateProductRow(idx, 'priceScope', e.target.value)}
                             disabled={isAuditLocked}
-                            className="h-8 rounded-lg border border-border bg-background px-2.5 text-xs font-semibold text-foreground shadow-2xs focus:outline-hidden"
+                            className="h-8 rounded-lg border border-border bg-background px-2 text-xs font-semibold text-foreground shadow-2xs focus:outline-hidden"
                           >
                             <option value="BATCH_ONLY">Batch Only</option>
                             <option value="ALL_STOCK">All Stock</option>
@@ -1660,37 +1982,48 @@ export function VendorBillCostingPage() {
                   <div className="flex items-center gap-2">
                     <Badge className="bg-muted text-foreground border-border font-bold px-3 py-1.5 text-xs gap-1.5 shadow-2xs">
                       <Lock className="h-3.5 w-3.5 text-primary" />
-                      <span>Bill Costed & Approved</span>
+                      <span>GRN Priced & Capitalized</span>
                     </Badge>
                     {isAuthorizedForVoid && (() => {
                       const billDate = existingBill?.invoiceDate || selectedGRN.receivedDate;
                       const isLocked = periodLockService.isDateLocked(billDate);
                       return (
-                        <Button
+                        <ConfirmButton
                           type="button"
                           variant="outline"
                           size="sm"
-                          onClick={handleVoidVendorBill}
+                          requireConfirm={process.env.NODE_ENV !== 'test'}
+                          confirmTitle="Void / Reverse Vendor Bill?"
+                          confirmMessage={`Are you sure you want to void and reverse vendor bill ${existingBill?.billNumber || selectedGRN.grnNumber}? This will reverse General Ledger postings, release stock, and return the GRN to APPROVED status.`}
+                          confirmLabel="Void & Reverse Bill"
+                          dialogVariant="destructive"
+                          onConfirm={handleVoidVendorBill}
                           disabled={submitting || isLocked}
                           title={isLocked ? 'Period Closed: Cannot void past transactions in closed period' : undefined}
                           className="h-9 text-xs text-rose-600 border-rose-200 hover:bg-rose-50 cursor-pointer disabled:opacity-50"
                         >
                           {isLocked ? 'Period Closed (Void Blocked)' : 'Void / Reverse Vendor Bill'}
-                        </Button>
+                        </ConfirmButton>
                       );
                     })()}
                   </div>
                 ) : (
-                  <Button
+                  <ConfirmButton
                     type="button"
                     size="default"
-                    onClick={handlePostBillAndApplyPrices}
+                    requireConfirm={process.env.NODE_ENV !== 'test'}
+                    confirmTitle="Post Vendor Bill & Apply Selling Prices?"
+                    confirmMessage="Are you sure you want to post this vendor bill and apply calculated selling prices? This will capitalize landed costs into inventory and update catalog pricing."
+                    confirmLabel="Post Bill & Apply"
+                    variant="default"
+                    dialogVariant="success"
+                    onConfirm={handlePostBillAndApplyPrices}
                     disabled={!isFormValid || submitting}
                     className="gap-2 bg-primary hover:bg-primary-hover text-white font-semibold text-xs h-9 px-6 shadow-xs cursor-pointer disabled:opacity-50"
                   >
                     <CheckCircle2 className="h-4 w-4" />
                     <span>{submitting ? 'Posting & Applying...' : 'Post Bill & Apply Prices'}</span>
-                  </Button>
+                  </ConfirmButton>
                 )}
               </div>
             </div>

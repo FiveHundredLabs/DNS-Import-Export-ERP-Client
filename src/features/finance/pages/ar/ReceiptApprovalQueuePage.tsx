@@ -40,6 +40,7 @@ import {
   RotateCcw,
   Receipt,
   Banknote,
+  Plus,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -322,10 +323,26 @@ export function ReceiptApprovalQueuePage() {
           </button>
         </div>
 
-        {/* Clean Protocol Hint */}
-        <div className="text-xs text-muted-foreground hidden lg:flex items-center gap-1.5">
-          <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
-          <span>Workflow: Sales Rep Field Collection → Physical Handover → Finance Approval</span>
+        {/* Action Button: Visible in BOTH tabs (Uniform with Income Desk) */}
+        <div className="flex items-center gap-3">
+          <div className="text-xs text-muted-foreground hidden xl:flex items-center gap-1.5">
+            <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
+            <span>Workflow: Field Collection → Physical Handover → Finance Approval</span>
+          </div>
+          <Button
+            size="sm"
+            onClick={() =>
+              navigate(
+                deskTab === 'CUSTOMER_RECEIPTS'
+                  ? '/finance/receipts/new?type=other'
+                  : '/finance/receipts/new?type=sales'
+              )
+            }
+            className="h-8 px-3 text-xs bg-primary hover:bg-primary-dark text-white font-semibold gap-1.5 shadow-2xs cursor-pointer"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            <span>New Receipt</span>
+          </Button>
         </div>
       </div>
       {/* TAB 1: SALES REP HANDOVERS & APPROVALS QUEUE */}

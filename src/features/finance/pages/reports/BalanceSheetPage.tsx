@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useFinanceLedger } from '../../hooks/useFinanceLedger';
+import { useBalanceSheetReport } from '../../../../api/finance';
 import { BalanceSheetReport } from '../../api/types';
 import { ReportHeaderNav } from './ReportHeaderNav';
 import { CorporateReportHeader } from '../../components/CorporateReportHeader';
@@ -45,14 +46,148 @@ function calculateVariance(current: number, prior: number) {
 
 export function BalanceSheetPage() {
   const { getBalanceSheet } = useFinanceLedger();
-  const [report, setReport] = useState<BalanceSheetReport | null>(null);
-  const [priorReport, setPriorReport] = useState<BalanceSheetReport | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [localReport, setLocalReport] = useState<BalanceSheetReport | null>(null);
+  const [localPriorReport, setLocalPriorReport] = useState<BalanceSheetReport | null>(null);
+  const [isLocalLoading, setIsLocalLoading] = useState<boolean>(false);
   const [asOfDate, setAsOfDate] = useState<string>(new Date().toISOString().slice(0, 10));
   const [comparePrior, setComparePrior] = useState<boolean>(false);
   const [priorAsOfDate, setPriorAsOfDate] = useState<string>(() =>
     computePriorDate(new Date().toISOString().slice(0, 10))
   );
+
+  // TanStack Query Hooks for Balance Sheet API
+  const { data: apiBalanceSheet, isLoading: isApiLoading } = useBalanceSheetReport({ asOfDate });
+  const { data: apiPriorBalanceSheet } = useBalanceSheetReport(
+    comparePrior ? { asOfDate: priorAsOfDate } : undefined
+  );
+  const loading = (isApiLoading && !localReport) || isLocalLoading;
+
+  const activeReport: BalanceSheetReport | null = useMemo(() => {
+    if (apiBalanceSheet) {
+      const curAssets = apiBalanceSheet.assets.currentAssets.rows.map((r) => ({
+        accountId: r.accountId,
+        code: r.accountCode,
+        accountName: r.accountName,
+        amount: parseFloat(r.amount) || 0,
+      }));
+      const nonCurAssets = apiBalanceSheet.assets.nonCurrentAssets.rows.map((r) => ({
+        accountId: r.accountId,
+        code: r.accountCode,
+        accountName: r.accountName,
+        amount: parseFloat(r.amount) || 0,
+      }));
+      const totalAssets = parseFloat(apiBalanceSheet.assets.totalAssets) || 0;
+
+      const curLiab = apiBalanceSheet.liabilities.currentLiabilities.rows.map((r) => ({
+        accountId: r.accountId,
+        code: r.accountCode,
+        accountName: r.accountName,
+        amount: parseFloat(r.amount) || 0,
+      }));
+      const nonCurLiab = apiBalanceSheet.liabilities.nonCurrentLiabilities.rows.map((r) => ({
+        accountId: r.accountId,
+        code: r.accountCode,
+        accountName: r.accountName,
+        amount: parseFloat(r.amount) || 0,
+      }));
+      const totalLiabilities = parseFloat(apiBalanceSheet.liabilities.totalLiabilities) || 0;
+
+      const equityItems = apiBalanceSheet.equity.rows.map((r) => ({
+        accountId: r.accountId,
+        code: r.accountCode,
+        accountName: r.accountName,
+        amount: parseFloat(r.amount) || 0,
+      }));
+      const retainedEarnings = parseFloat(apiBalanceSheet.equity.unclosedNetIncome) || 0;
+      const totalEquity = parseFloat(apiBalanceSheet.equity.totalEquity) || 0;
+
+      return {
+        asOfDate: apiBalanceSheet.asAtDate,
+        currentAssets: curAssets,
+        totalCurrentAssets: parseFloat(apiBalanceSheet.assets.currentAssets.total) || 0,
+        nonCurrentAssets: nonCurAssets,
+        totalNonCurrentAssets: parseFloat(apiBalanceSheet.assets.nonCurrentAssets.total) || 0,
+        totalAssets,
+        currentLiabilities: curLiab,
+        totalCurrentLiabilities: parseFloat(apiBalanceSheet.liabilities.currentLiabilities.total) || 0,
+        longTermLiabilities: nonCurLiab,
+        totalLongTermLiabilities: parseFloat(apiBalanceSheet.liabilities.nonCurrentLiabilities.total) || 0,
+        totalLiabilities,
+        equityItems,
+        retainedEarnings,
+        totalEquity,
+        totalLiabilitiesAndEquity: totalLiabilities + totalEquity,
+        isBalanced: apiBalanceSheet.isBalanced,
+        discrepancy: parseFloat(apiBalanceSheet.variance) || 0,
+      };
+    }
+    return localReport;
+  }, [apiBalanceSheet, localReport]);
+
+  const activePriorReport: BalanceSheetReport | null = useMemo(() => {
+    if (apiPriorBalanceSheet && comparePrior) {
+      const curAssets = apiPriorBalanceSheet.assets.currentAssets.rows.map((r) => ({
+        accountId: r.accountId,
+        code: r.accountCode,
+        accountName: r.accountName,
+        amount: parseFloat(r.amount) || 0,
+      }));
+      const nonCurAssets = apiPriorBalanceSheet.assets.nonCurrentAssets.rows.map((r) => ({
+        accountId: r.accountId,
+        code: r.accountCode,
+        accountName: r.accountName,
+        amount: parseFloat(r.amount) || 0,
+      }));
+      const totalAssets = parseFloat(apiPriorBalanceSheet.assets.totalAssets) || 0;
+
+      const curLiab = apiPriorBalanceSheet.liabilities.currentLiabilities.rows.map((r) => ({
+        accountId: r.accountId,
+        code: r.accountCode,
+        accountName: r.accountName,
+        amount: parseFloat(r.amount) || 0,
+      }));
+      const nonCurLiab = apiPriorBalanceSheet.liabilities.nonCurrentLiabilities.rows.map((r) => ({
+        accountId: r.accountId,
+        code: r.accountCode,
+        accountName: r.accountName,
+        amount: parseFloat(r.amount) || 0,
+      }));
+      const totalLiabilities = parseFloat(apiPriorBalanceSheet.liabilities.totalLiabilities) || 0;
+
+      const equityItems = apiPriorBalanceSheet.equity.rows.map((r) => ({
+        accountId: r.accountId,
+        code: r.accountCode,
+        accountName: r.accountName,
+        amount: parseFloat(r.amount) || 0,
+      }));
+      const retainedEarnings = parseFloat(apiPriorBalanceSheet.equity.unclosedNetIncome) || 0;
+      const totalEquity = parseFloat(apiPriorBalanceSheet.equity.totalEquity) || 0;
+
+      return {
+        asOfDate: apiPriorBalanceSheet.asAtDate,
+        currentAssets: curAssets,
+        totalCurrentAssets: parseFloat(apiPriorBalanceSheet.assets.currentAssets.total) || 0,
+        nonCurrentAssets: nonCurAssets,
+        totalNonCurrentAssets: parseFloat(apiPriorBalanceSheet.assets.nonCurrentAssets.total) || 0,
+        totalAssets,
+        currentLiabilities: curLiab,
+        totalCurrentLiabilities: parseFloat(apiPriorBalanceSheet.liabilities.currentLiabilities.total) || 0,
+        longTermLiabilities: nonCurLiab,
+        totalLongTermLiabilities: parseFloat(apiPriorBalanceSheet.liabilities.nonCurrentLiabilities.total) || 0,
+        totalLiabilities,
+        equityItems,
+        retainedEarnings,
+        totalEquity,
+        totalLiabilitiesAndEquity: totalLiabilities + totalEquity,
+        isBalanced: apiPriorBalanceSheet.isBalanced,
+        discrepancy: parseFloat(apiPriorBalanceSheet.variance) || 0,
+      };
+    }
+    return localPriorReport;
+  }, [apiPriorBalanceSheet, comparePrior, localPriorReport]);
+
+  const report = activeReport;
+  const priorReport = activePriorReport;
 
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
     currentAssets: true,
@@ -67,21 +202,21 @@ export function BalanceSheetPage() {
   };
 
   const loadReport = useCallback(async () => {
-    setLoading(true);
+    setIsLocalLoading(true);
     try {
       const data = await getBalanceSheet(asOfDate);
-      setReport(data);
+      setLocalReport(data);
 
       if (comparePrior) {
         const priorData = await getBalanceSheet(priorAsOfDate);
-        setPriorReport(priorData);
+        setLocalPriorReport(priorData);
       } else {
-        setPriorReport(null);
+        setLocalPriorReport(null);
       }
     } catch {
       // Handled
     } finally {
-      setLoading(false);
+      setIsLocalLoading(false);
     }
   }, [getBalanceSheet, asOfDate, comparePrior, priorAsOfDate]);
 

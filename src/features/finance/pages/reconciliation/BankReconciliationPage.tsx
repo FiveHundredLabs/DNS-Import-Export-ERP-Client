@@ -1,7 +1,17 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { PageHeader } from '../../../../components/common/PageHeader';
 import { useFinanceLedger } from '../../hooks/useFinanceLedger';
 import { CurrencyInput } from '../../components/CurrencyInput';
+import {
+  useStartReconciliationSession,
+  useCompleteReconciliation,
+  useAddBankAdjustment,
+  useToggleClearance,
+  useReconciliationHistory,
+} from '../../../../api/finance';
 import { Button } from '../../../../components/ui/button';
+import { ConfirmButton } from '../../../../components/ui/confirm-button';
 import { Input } from '../../../../components/ui/input';
 import { Select } from '../../../../components/ui/select';
 import { Badge } from '../../../../components/ui/badge';
@@ -187,6 +197,7 @@ const INITIAL_STATEMENT_ROWS: BankStatementTransaction[] = [
 ];
 
 export function BankReconciliationPage() {
+  const navigate = useNavigate();
   const { accounts, postJournalEntry } = useFinanceLedger();
 
   // Filter bank accounts (1010/1015/Bank)
@@ -257,6 +268,30 @@ export function BankReconciliationPage() {
   // Prior Audit History Drawer / Modal
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const [reconciliationHistory, setReconciliationHistory] = useState<ReconciliationPeriod[]>([]);
+  const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
+
+  // TanStack Query Hooks for Bank Reconciliation API
+  const startSessionMutation = useStartReconciliationSession();
+  const completeReconciliationMutation = useCompleteReconciliation(activeSessionId || '');
+  const addAdjustmentMutation = useAddBankAdjustment(activeSessionId || '');
+  const toggleClearanceMutation = useToggleClearance(activeSessionId || '');
+
+  const queryAccountId = useMemo(() => {
+    if (!selectedAccountId) return undefined;
+    const found = bankAccounts.find((b) => b.id === selectedAccountId || b.code === selectedAccountId);
+    return found?.id || selectedAccountId;
+  }, [bankAccounts, selectedAccountId]);
+
+  const { data: apiHistory } = useReconciliationHistory(
+    queryAccountId ? { accountId: queryAccountId } : undefined
+  );
+
+  // Auto-select first real bank account when accounts load
+  useEffect(() => {
+    if (bankAccounts.length > 0 && selectedAccountId === 'acc-1010') {
+      setSelectedAccountId(bankAccounts[0].id);
+    }
+  }, [bankAccounts, selectedAccountId]);
 
   // Update Beginning Balance dynamically from prior reconciled period whenever account changes
   useEffect(() => {
@@ -271,6 +306,31 @@ export function BankReconciliationPage() {
     // Refresh history
     setReconciliationHistory(bankReconciliationService.getReconciliationHistory(accId));
   }, [bankAccounts, selectedAccountId]);
+
+  useEffect(() => {
+    if (Array.isArray(apiHistory) && apiHistory.length > 0) {
+      setReconciliationHistory(
+        apiHistory.map((item) => ({
+          id: item.id,
+          accountId: (item as any).accountId || item.bankAccountId || item.bankAccount?.code || '',
+          accountCode: (item as any).accountCode || item.bankAccount?.code || '',
+          accountName: (item as any).accountName || item.bankAccount?.name || 'Bank Account',
+          statementEndingDate: item.statementEndingDate,
+          beginningBalance: 0,
+          endingBalance: parseFloat(item.statementEndingBalance) || 0,
+          clearedDeposits: 0,
+          clearedPayments: 0,
+          clearedBalance: parseFloat(item.statementEndingBalance) || 0,
+          difference: 0,
+          clearedCount: (item as any).clearedCount || 0,
+          status: item.status === 'RECONCILED' ? 'RECONCILED' : 'IN_PROGRESS',
+          reconciledBy: item.reconciledBy || 'Finance Auditor',
+          reconciledAt: item.reconciledAt || item.createdAt,
+          notes: item.notes || undefined,
+        }))
+      );
+    }
+  }, [apiHistory]);
 
   // Sync selected bank account with fallback to prevent null during initial async load
   const selectedBankAccount = useMemo(() => {
@@ -288,7 +348,7 @@ export function BankReconciliationPage() {
     };
   }, [accounts, selectedAccountId, bankAccounts, beginningBalance]);
 
-  const handleStartReconciliation = () => {
+  const handleStartReconciliation = async () => {
     const accId = selectedAccountId || bankAccounts[0]?.id || 'acc-1010';
     if (!accId) {
       toast.error('Please select a bank account.');
@@ -301,16 +361,33 @@ export function BankReconciliationPage() {
     if (!selectedAccountId) {
       setSelectedAccountId(accId);
     }
+
+    try {
+      const session = await startSessionMutation.mutateAsync({
+        financeAccountId: accId,
+        statementEndingDate,
+        statementEndingBalance: targetStatementBalance,
+        notes: `Reconciliation initiated for ${statementEndingDate}`,
+      });
+      if (session?.id) {
+        setActiveSessionId(session.id);
+      }
+    } catch (err) {
+      console.warn('Backend start reconciliation session unavailable, continuing with local workspace:', err);
+    }
+
     setIsWorkspaceActive(true);
     toast.success('Bank reconciliation workspace initialized.');
   };
 
   // Toggle single system transaction cleared
-  const handleToggleSystemCleared = (id: string) => {
+  const handleToggleSystemCleared = async (id: string) => {
+    const targetTx = systemTransactions.find((t) => t.id === id);
+    const nextCleared = targetTx ? !targetTx.isCleared : true;
+
     setSystemTransactions((prev) =>
       prev.map((t) => {
         if (t.id === id) {
-          const nextCleared = !t.isCleared;
           // If unchecking, clear pairing link
           return {
             ...t,
@@ -321,6 +398,17 @@ export function BankReconciliationPage() {
         return t;
       })
     );
+
+    if (activeSessionId) {
+      try {
+        await toggleClearanceMutation.mutateAsync({
+          journalLineIds: [id],
+          action: nextCleared ? 'CLEAR' : 'UNCLEAR',
+        });
+      } catch (err) {
+        console.warn('Backend toggleClearance mutation skipped:', err);
+      }
+    }
   };
 
   // Toggle single statement line cleared
@@ -402,7 +490,7 @@ export function BankReconciliationPage() {
   }, [difference]);
 
   // Phase 4: Complete Reconciliation and lock ending balance for subsequent period
-  const handleFinishReconciliation = () => {
+  const handleFinishReconciliation = async () => {
     if (!isReconciled) {
       toast.error('Reconciliation error: Difference must equal exactly 0.00 before closing.');
       return;
@@ -413,6 +501,18 @@ export function BankReconciliationPage() {
     }
 
     try {
+      if (activeSessionId) {
+        try {
+          await completeReconciliationMutation.mutateAsync({
+            reconciliationNotes: `Month-end reconciliation closed with zero audit variance. Target ending balance: ${formatCurrency(
+              targetStatementBalance
+            )}`,
+          });
+        } catch (apiErr) {
+          console.warn('Backend completeReconciliation failed, falling back to local service:', apiErr);
+        }
+      }
+
       const clearedCount = systemTransactions.filter((t) => t.isCleared).length;
 
       const savedPeriod = bankReconciliationService.completeReconciliation({
@@ -645,6 +745,21 @@ export function BankReconciliationPage() {
           : 'Direct Bank Payment'
       }`;
 
+      if (activeSessionId) {
+        try {
+          await addAdjustmentMutation.mutateAsync({
+            transactionDate: statementEndingDate,
+            type: isPayment ? 'PAYMENT' : 'RECEIPT',
+            offsetAccountId: resolvedAdjAccountId,
+            amount: adjustmentAmount,
+            description: journalDesc,
+            referenceNumber: `ADJ-REC-${Date.now().toString().slice(-4)}`,
+          });
+        } catch (adjErr) {
+          console.warn('Backend addAdjustment API skipped/failed, falling back to local posting:', adjErr);
+        }
+      }
+
       await postJournalEntry({
         date: statementEndingDate,
         description: journalDesc,
@@ -785,46 +900,45 @@ export function BankReconciliationPage() {
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-slate-200 pb-4">
-        <div>
+      {/* Canonical Page Header */}
+      <PageHeader
+        title="Bank Reconciliation Workspace"
+        breadcrumbs={[
+          { label: 'Finance', href: '/finance' },
+          { label: 'Bank Reconciliation' },
+        ]}
+        onBack={() => navigate('/finance')}
+        badge={
+          <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 text-xs">
+            Phase 4 Treasury & Audit Control
+          </Badge>
+        }
+        actions={
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-              Bank Reconciliation Workspace
-            </h1>
-            <Badge variant="outline" className="bg-primary-light text-primary-text border-primary-border text-xs">
-              Phase 4 Treasury & Audit Control
-            </Badge>
-          </div>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Electronic statement parsing, heuristic auto-matching, and balance reconciliation.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setIsHistoryModalOpen(true)}
-            className="text-xs gap-1.5"
-          >
-            <History className="h-3.5 w-3.5 text-slate-500" />
-            <span>Audit History</span>
-          </Button>
-
-          {isWorkspaceActive && (
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setIsWorkspaceActive(false)}
-              className="text-xs gap-1.5"
+              onClick={() => setIsHistoryModalOpen(true)}
+              className="text-xs h-8 gap-1.5 font-medium border-border"
             >
-              <RotateCcw className="h-3.5 w-3.5" />
-              <span>Reset Setup</span>
+              <History className="h-3.5 w-3.5 text-slate-500" />
+              <span>Audit History</span>
             </Button>
-          )}
-        </div>
-      </div>
+
+            {isWorkspaceActive && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsWorkspaceActive(false)}
+                className="text-xs h-8 gap-1.5 font-medium border-border"
+              >
+                <RotateCcw className="h-3.5 w-3.5" />
+                <span>Reset Setup</span>
+              </Button>
+            )}
+          </div>
+        }
+      />
 
       {/* 3-Step Reconciliation Workflow Progress Guide */}
       <div className="bg-white rounded-lg border border-slate-200 p-3 shadow-2xs">
@@ -1202,14 +1316,18 @@ export function BankReconciliationPage() {
                       </Select>
                     </div>
 
-                    <Button
+                    <ConfirmButton
                       variant="ghost"
                       size="sm"
-                      onClick={handleResetMatches}
-                      className="h-7 px-2 text-[11px] text-slate-500 hover:text-slate-800"
+                      confirmTitle="Reset Auto-Matches?"
+                      confirmMessage="Are you sure you want to reset all cleared auto-matches in this reconciliation workspace?"
+                      confirmLabel="Reset Matches"
+                      dialogVariant="warning"
+                      onConfirm={handleResetMatches}
+                      className="h-7 px-2 text-[11px] text-slate-500 hover:text-slate-800 cursor-pointer"
                     >
                       Reset
-                    </Button>
+                    </ConfirmButton>
                   </div>
 
                   {/* Upload Statement Button */}
@@ -1299,15 +1417,20 @@ export function BankReconciliationPage() {
                   ]}
                   title="Reconciliation Audit Period Lock"
                 />
-                <Button
+                <ConfirmButton
                   size="sm"
-                  onClick={handleFinishReconciliation}
+                  confirmTitle="Finalize Bank Reconciliation?"
+                  confirmMessage={`Are you sure you want to finalize reconciliation for ${selectedBankAccount?.name || 'this bank account'} as of ${statementEndingDate}? Ending balance ${formatCurrency(clearedBalance)} will be certified with zero variance.`}
+                  confirmLabel="Confirm & Reconcile"
+                  variant="default"
+                  dialogVariant="success"
+                  onConfirm={handleFinishReconciliation}
                   disabled={!isReconciled}
-                  className="gap-1.5 bg-primary hover:bg-primary-hover text-white text-xs font-semibold shadow-xs disabled:opacity-50 h-8"
+                  className="gap-1.5 bg-primary hover:bg-primary-hover text-white text-xs font-semibold shadow-xs disabled:opacity-50 h-8 cursor-pointer"
                 >
                   <ShieldCheck className="h-4 w-4" />
                   <span>Reconcile Account</span>
-                </Button>
+                </ConfirmButton>
               </div>
             </div>
           </div>
@@ -1571,14 +1694,19 @@ export function BankReconciliationPage() {
                                 </Badge>
                               )}
                               {tx.id.startsWith('tx-adj-') && (
-                                <button
-                                  type="button"
-                                  onClick={(e) => handleDeleteAdjustment(tx.id, e)}
+                                <ConfirmButton
+                                  variant="ghost"
+                                  size="sm"
+                                  confirmTitle="Delete Bank Adjustment?"
+                                  confirmMessage="Are you sure you want to delete this bank adjustment transaction?"
+                                  confirmLabel="Delete Adjustment"
+                                  dialogVariant="destructive"
+                                  onConfirm={(e) => handleDeleteAdjustment(tx.id, e)}
                                   title="Delete accidental adjustment"
-                                  className="p-1 rounded text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                                  className="h-7 w-7 p-0 rounded text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
                                 >
                                   <Trash2 className="h-3.5 w-3.5" />
-                                </button>
+                                </ConfirmButton>
                               )}
                             </div>
                           </td>

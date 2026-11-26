@@ -4,9 +4,11 @@ import { arService, AROpenInvoice } from '../../services/arService';
 import { CurrencyInput } from '../../components/CurrencyInput';
 import { DoubleEntryHoverBadge } from '../../components/DoubleEntryHoverBadge';
 import { Button } from '../../../../components/ui/button';
+import { ConfirmButton } from '../../../../components/ui/confirm-button';
 import { Select } from '../../../../components/ui/select';
 import { Badge } from '../../../../components/ui/badge';
 import { Card } from '../../../../components/ui/card';
+import { PageHeader } from '../../../../components/common/PageHeader';
 import { formatCurrency, formatDate } from '../../../../utils/formatters';
 import Decimal from 'decimal.js';
 import {
@@ -127,51 +129,40 @@ export function ARCollectionAllocationPage() {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-slate-200 pb-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => navigate('/finance/ar/approvals')}
-              className="gap-1.5 text-xs mr-1"
+    <div className="space-y-6 w-full pb-16">
+      {/* Canonical Page Header */}
+      <PageHeader
+        title="AR Batch Collection Allocation"
+        breadcrumbs={[
+          { label: 'Finance', href: '/finance' },
+          { label: 'Accounts Receivable', href: '/finance/income' },
+          { label: 'Allocation' },
+        ]}
+        onBack={() => navigate('/finance/ar/approvals')}
+        badge={
+          <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 text-xs">
+            Sub-Ledger Invoices
+          </Badge>
+        }
+        actions={
+          <div className="flex items-center gap-3">
+            <label className="text-xs font-semibold text-slate-600 whitespace-nowrap">
+              Select Receipt:
+            </label>
+            <Select
+              value={selectedReceiptId}
+              onChange={(e) => setSelectedReceiptId(e.target.value)}
+              className="text-xs h-8 min-w-64"
             >
-              <ArrowLeft className="h-3.5 w-3.5" />
-              <span>Back to Approvals</span>
-            </Button>
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-              AR Batch Collection Allocation
-            </h1>
-            <Badge variant="outline" className="bg-primary-light text-primary-text border-primary-border text-xs">
-              Sub-Ledger Invoices
-            </Badge>
+              {receipts.map((r) => (
+                <option key={r.id} value={r.id}>
+                  {r.receiptNumber} - {r.customerName} ({formatCurrency(r.amount)})
+                </option>
+              ))}
+            </Select>
           </div>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Auto-FIFO and manual allocation of collection receipts to open invoices.
-          </p>
-        </div>
-
-        {/* Selected Customer Payment Selector */}
-        <div className="flex items-center gap-3">
-          <label className="text-xs font-semibold text-slate-600 whitespace-nowrap">
-            Select Receipt to Allocate:
-          </label>
-          <Select
-            value={selectedReceiptId}
-            onChange={(e) => setSelectedReceiptId(e.target.value)}
-            className="text-xs h-9 min-w-64"
-          >
-            {receipts.map((r) => (
-              <option key={r.id} value={r.id}>
-                {r.receiptNumber} - {r.customerName} ({formatCurrency(r.amount)})
-              </option>
-            ))}
-          </Select>
-        </div>
-      </div>
+        }
+      />
 
       {/* Selected Payment Context Card */}
       {selectedReceipt && (
@@ -348,14 +339,18 @@ export function ARCollectionAllocationPage() {
           </div>
 
           <div className="flex items-center gap-3">
-            <Button
-              onClick={handleApplyAllocation}
+            <ConfirmButton
+              confirmTitle="Commit Invoice Allocations?"
+              confirmMessage={`Are you sure you want to commit allocations of ${formatCurrency(totalApplied)} across customer invoices? This will settle open invoice balances.`}
+              confirmLabel="Commit Allocation"
+              dialogVariant="success"
+              onConfirm={handleApplyAllocation}
               disabled={totalApplied <= 0 || submitting}
-              className="bg-primary hover:bg-primary-hover text-white shadow-xs font-semibold gap-1.5"
+              className="bg-primary hover:bg-primary-hover text-white shadow-xs font-semibold gap-1.5 cursor-pointer"
             >
               <FileCheck className="h-4 w-4" />
               <span>{submitting ? 'Applying...' : 'Commit Allocation'}</span>
-            </Button>
+            </ConfirmButton>
 
             {selectedReceipt && (
               <DoubleEntryHoverBadge

@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Dialog, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../../../components/ui/dialog';
 import { Button } from '../../../components/ui/button';
+import { ConfirmButton } from '../../../components/ui/confirm-button';
 import { Input } from '../../../components/ui/input';
 import { Select } from '../../../components/ui/select';
 import { Supplier, CreateSupplierDTO } from '../api/types';
@@ -371,9 +372,22 @@ export function SupplierModal({
           <Button type="button" variant="outline" size="sm" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button type="submit" size="sm" disabled={submitting}>
+          <ConfirmButton
+            type="button"
+            size="sm"
+            confirmTitle={supplierToEdit ? 'Save Changes to Supplier?' : 'Register Supplier?'}
+            confirmMessage={
+              supplierToEdit
+                ? `Are you sure you want to save updates to supplier "${name}"?`
+                : `Are you sure you want to register supplier "${name}"?`
+            }
+            confirmLabel={supplierToEdit ? 'Save Changes' : 'Register Supplier'}
+            onConfirm={handleSubmit}
+            disabled={submitting}
+            className="cursor-pointer"
+          >
             {submitting ? 'Saving...' : supplierToEdit ? 'Save Changes' : 'Register Supplier'}
-          </Button>
+          </ConfirmButton>
         </DialogFooter>
       </form>
     </Dialog>

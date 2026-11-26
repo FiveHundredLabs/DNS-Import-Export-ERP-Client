@@ -335,19 +335,64 @@ export function CashBookPage() {
                 <span className="hidden sm:inline">View</span> General Ledger
               </Button>
             </Link>
-            <Button
-              size="sm"
-              onClick={() => setIsNewVoucherOpen(true)}
-              className="bg-primary hover:bg-primary-hover text-primary-foreground text-xs h-8 gap-1.5 font-semibold shadow-xs cursor-pointer"
-            >
-              <Plus className="h-3.5 w-3.5" />
-              New Payment Voucher
-            </Button>
           </div>
         }
       />
 
-      {/* 2. Executive KPI Metric Cards */}
+      {/* 2. Uniform Sub-Navigation Tabs & Segmented Switcher Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-1 border-b border-border/60">
+        <div className="flex items-center gap-1.5 p-1 bg-muted/60 rounded-xl border border-border/80 overflow-x-auto">
+          <button
+            type="button"
+            onClick={() => setActiveTab('LEDGER')}
+            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
+              activeTab === 'LEDGER'
+                ? 'bg-background text-foreground shadow-xs border border-border/50'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <History className={`h-3.5 w-3.5 ${activeTab === 'LEDGER' ? 'text-primary' : 'text-slate-400'}`} />
+            <span>Cash Book Ledger (Live GL)</span>
+            <span className={`ml-1 px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold ${
+              activeTab === 'LEDGER' ? 'bg-primary/10 text-primary' : 'bg-slate-200 text-slate-600'
+            }`}>
+              {ledgerEntries.length}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('VOUCHERS')}
+            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
+              activeTab === 'VOUCHERS'
+                ? 'bg-background text-foreground shadow-xs border border-border/50'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <Layers className={`h-3.5 w-3.5 ${activeTab === 'VOUCHERS' ? 'text-primary' : 'text-slate-400'}`} />
+            <span>Payment &amp; Receipt Vouchers</span>
+            <span className={`ml-1 px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold ${
+              activeTab === 'VOUCHERS' ? 'bg-primary/10 text-primary' : 'bg-slate-200 text-slate-600'
+            }`}>
+              {vouchers.length}
+            </span>
+          </button>
+        </div>
+
+        {/* Primary Action Button - Uniform top-right positioning */}
+        <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            onClick={() => setIsNewVoucherOpen(true)}
+            className="bg-primary hover:bg-primary-hover text-primary-foreground text-xs h-8 px-3 gap-1.5 font-semibold shadow-xs cursor-pointer"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            <span>New Payment Voucher</span>
+          </Button>
+        </div>
+      </div>
+
+      {/* 3. Executive KPI Metric Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Card 1: Account 1010 Operating Bank Float */}
         <Card
@@ -446,55 +491,6 @@ export function CashBookPage() {
             <span className="text-rose-600 font-semibold text-[10px]">Outflows</span>
           </div>
         </Card>
-      </div>
-
-      {/* 3. Sub-Navigation Tabs & Segmented Switcher */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 pb-3">
-        <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl w-fit border border-slate-200/80">
-          <button
-            type="button"
-            onClick={() => setActiveTab('LEDGER')}
-            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-              activeTab === 'LEDGER'
-                ? 'bg-white text-slate-900 shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <History className={`h-3.5 w-3.5 ${activeTab === 'LEDGER' ? 'text-primary' : 'text-slate-400'}`} />
-            <span>Cash Book Ledger (Live GL)</span>
-            <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold ${
-              activeTab === 'LEDGER' ? 'bg-primary/10 text-primary' : 'bg-slate-200 text-slate-600'
-            }`}>
-              {ledgerEntries.length}
-            </span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab('VOUCHERS')}
-            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-              activeTab === 'VOUCHERS'
-                ? 'bg-white text-slate-900 shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <Layers className={`h-3.5 w-3.5 ${activeTab === 'VOUCHERS' ? 'text-primary' : 'text-slate-400'}`} />
-            <span>Payment &amp; Receipt Vouchers</span>
-            <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold ${
-              activeTab === 'VOUCHERS' ? 'bg-primary/10 text-primary' : 'bg-slate-200 text-slate-600'
-            }`}>
-              {vouchers.length}
-            </span>
-          </button>
-        </div>
-
-        <div className="text-xs text-slate-500 font-medium">
-          {activeTab === 'LEDGER' ? (
-            <span>Showing real-time general ledger postings affecting Cash &amp; Bank accounts</span>
-          ) : (
-            <span>Official dual-authorized cash vouchers &amp; disbursement orders</span>
-          )}
-        </div>
       </div>
 
       {/* 4. Filter and Search Bar */}
@@ -1121,14 +1117,17 @@ export function CashBookPage() {
               >
                 Cancel
               </Button>
-              <Button
+              <ConfirmButton
                 type="submit"
                 size="sm"
+                confirmTitle="Issue Payment Voucher?"
+                confirmMessage="Are you sure you want to issue this payment voucher and record the disbursement?"
+                confirmLabel="Issue Voucher"
                 disabled={isSubmitting}
                 className="bg-primary hover:bg-primary-hover text-primary-foreground text-xs font-semibold cursor-pointer"
               >
                 {isSubmitting ? 'Submitting...' : 'Issue Voucher'}
-              </Button>
+              </ConfirmButton>
             </DialogFooter>
           </form>
         </DialogContent>
@@ -1166,13 +1165,17 @@ export function CashBookPage() {
             >
               Cancel
             </Button>
-            <Button
+            <ConfirmButton
               size="sm"
-              onClick={handleReject}
+              confirmTitle="Reject Payment Voucher?"
+              confirmMessage={`Are you sure you want to reject voucher ${selectedVoucherForReject?.voucherNumber}? The rejection reason will be saved to the permanent audit trail.`}
+              confirmLabel="Reject Voucher"
+              dialogVariant="destructive"
+              onConfirm={handleReject}
               className="bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold cursor-pointer"
             >
               Confirm Rejection
-            </Button>
+            </ConfirmButton>
           </DialogFooter>
         </DialogContent>
       </Dialog>

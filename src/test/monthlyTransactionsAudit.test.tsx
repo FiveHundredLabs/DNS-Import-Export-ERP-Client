@@ -140,6 +140,11 @@ describe('MonthlyTransactionsAuditPage (Finance Manager Audit View)', () => {
 
     // Wait for data to load
     await screen.findByText('Monthly Transactions & Double-Entry Audit');
+
+    // Select October 2026 where JE-1006 exists
+    const selects = screen.getAllByRole('combobox');
+    fireEvent.change(selects[0], { target: { value: '2026-10' } });
+
     await screen.findByText('JE-1006');
 
     // Click on Automated filter button
@@ -167,7 +172,11 @@ describe('MonthlyTransactionsAuditPage (Finance Manager Audit View)', () => {
       </MemoryRouter>
     );
 
-    // Wait for table to load
+    // Wait for page to load and select October 2026
+    await screen.findByText('Monthly Transactions & Double-Entry Audit');
+    const selects = screen.getAllByRole('combobox');
+    fireEvent.change(selects[0], { target: { value: '2026-10' } });
+
     await screen.findByText('JE-1006');
 
     // Click the toggle button for JE-1006
@@ -181,5 +190,32 @@ describe('MonthlyTransactionsAuditPage (Finance Manager Audit View)', () => {
     expect(screen.getByText('journal_lines')).toBeDefined();
     expect(screen.getByText('customer_subledger')).toBeDefined();
     expect(screen.getByText('vat_statutory_schedules')).toBeDefined();
+  });
+
+  it('renders voided vouchers with distinct status styling, line-through amounts, and excludes them from active volume', async () => {
+    // Void an existing entry to test VOIDED rendering
+    await financeRepository.voidJournalEntry('je-1006', 'Reversed by finance audit test');
+
+    render(
+      <MemoryRouter initialEntries={['/finance/reports/monthly-audit']}>
+        <Routes>
+          <Route path="/finance/reports/monthly-audit" element={<MonthlyTransactionsAuditPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    await screen.findByText('Monthly Transactions & Double-Entry Audit');
+    const selects = screen.getAllByRole('combobox');
+    fireEvent.change(selects[0], { target: { value: '2026-10' } });
+
+    // Verify VOIDED badge exists
+    expect(await screen.findByText('VOIDED')).toBeDefined();
+    expect(screen.getAllByText('Reversed in GL').length).toBeGreaterThan(0);
+
+    // Expand voided row and verify void banner
+    const toggleBtn = screen.getByRole('button', { name: 'Toggle JE-1006' });
+    fireEvent.click(toggleBtn);
+    expect(await screen.findByText(/Voucher Cancelled & Voided/i)).toBeDefined();
+    expect(screen.getByText(/Reversed by finance audit test/i)).toBeDefined();
   });
 });
