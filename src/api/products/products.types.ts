@@ -94,6 +94,8 @@ export interface EligibleBatchPreviewItem {
   unitCost: number;
   currentSellingPrice: number;
   minFloorPricePercentage: number;
+  profitMarginPercentage?: number;
+  currentMinFloorPrice?: number;
 }
 
 export interface BatchPricePreviewResponse {
@@ -106,6 +108,7 @@ export interface BatchPricePreviewResponse {
 
 export interface UpdateBatchPricePayload {
   newSellingPrice: number;
+  minFloorPricePercentage?: number;
   reason?: string;
   batchIds?: string[];
 }
@@ -115,11 +118,13 @@ export interface UpdateBatchPriceResponse {
   productId: string;
   updatedCount: number;
   newSellingPrice: number;
+  minFloorPricePercentage?: number;
   updatedBatches: Array<{
     id: string;
     batchNumber: string;
     previousPrice: number;
     newPrice: number;
+    minFloorPricePercentage?: number;
     status: string;
     availableQuantity: number;
   }>;

@@ -184,5 +184,28 @@ describe('Product Master Redesign – Unit Tests', () => {
       expect(editablePayload.warrantyPeriod).toBe(24);
       expect(editablePayload.minFloorPricePercentage).toBe(18);
     });
+
+    it('calculates safe profit markup limit and validates minFloorPricePercentage within [0, profitMarkup]', () => {
+      const unitCost = 1000;
+      const proposedSellingPrice = 1250;
+      // Profit markup: (1250 - 1000) / 1000 = 25%
+      const profitMarkupPct = ((proposedSellingPrice - unitCost) / unitCost) * 100;
+      expect(profitMarkupPct).toBe(25);
+
+      const isValidFloorPct = (floorPct: number, maxMarkup: number) => floorPct >= 0 && floorPct <= maxMarkup;
+
+      expect(isValidFloorPct(0, profitMarkupPct)).toBe(true); // 0% = sold at cost price
+      expect(isValidFloorPct(15, profitMarkupPct)).toBe(true); // 15% <= 25%
+      expect(isValidFloorPct(25, profitMarkupPct)).toBe(true); // 25% = full selling price
+      expect(isValidFloorPct(30, profitMarkupPct)).toBe(false); // 30% exceeds profit markup
+      expect(isValidFloorPct(-5, profitMarkupPct)).toBe(false); // negative not allowed
+
+      // Minimum floor price calculation: cost * (1 + floorPct / 100)
+      const floorPriceAt0 = unitCost * (1 + 0 / 100);
+      expect(floorPriceAt0).toBe(1000); // Cost price floor
+
+      const floorPriceAt25 = unitCost * (1 + 25 / 100);
+      expect(floorPriceAt25).toBe(1250); // Full selling price floor
+    });
   });
 });
