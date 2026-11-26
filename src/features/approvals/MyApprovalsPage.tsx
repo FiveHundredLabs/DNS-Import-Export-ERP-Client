@@ -1,11 +1,13 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate, useLocation, useSearchParams, Link } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { useDebounce } from '../../hooks/useDebounce';
-import { approvalsApi } from '../../api/approvals/approvals.api';
+import {
+  useMyApprovalCounts,
+  useMyPendingApprovals,
+} from '../../api/approvals/approvals.hooks';
 import type {
   ApprovalItem,
-  ApprovalCounts,
   ApprovalQueryParams,
 } from '../../api/approvals/approvals.types';
 import { Card, CardContent } from '../../components/ui/card';
@@ -16,6 +18,7 @@ import { TableLoadingSkeleton } from '../../components/common/LoadingSkeleton';
 import { EmptyState } from '../../components/common/EmptyState';
 import { formatDateTime } from '../../utils/formatters';
 import { cn } from '../../utils/cn';
+import { buildEntryNavigationState } from '../../utils/navigationContext';
 import {
   CheckCircle,
   Clock,
@@ -50,11 +53,27 @@ export function MyApprovalsPage() {
   const page = Math.max(1, Number(searchParams.get('page') || '1') || 1);
   const pageSize = 15;
 
-  const [counts, setCounts] = useState<ApprovalCounts | null>(null);
-  const [requests, setRequests] = useState<ApprovalItem[]>([]);
-  const [total, setTotal] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const queryParams = useMemo<ApprovalQueryParams>(() => {
+    const q = (searchParams.get('q') || '').trim();
+    return {
+      page,
+      limit: pageSize,
+      search: q || undefined,
+      entityType: entityFilter !== 'ALL' ? entityFilter : undefined,
+      sortBy: 'requestedAt',
+      sortOrder: 'desc',
+    };
+  }, [page, pageSize, searchParams, entityFilter]);
+
+  // Counts query is decoupled from pagination/filter changes and cached for 60s
+  const countsQuery = useMyApprovalCounts();
+  const pendingQuery = useMyPendingApprovals(queryParams);
+
+  const counts = countsQuery.data ?? null;
+  const requests = pendingQuery.data?.data ?? [];
+  const total = pendingQuery.data?.meta?.total ?? 0;
+  const loading = pendingQuery.isLoading;
+  const error = pendingQuery.error ? pendingQuery.error.message : null;
 
   // Sync debounced search into URL query params
   useEffect(() => {
@@ -104,42 +123,13 @@ export function MyApprovalsPage() {
     );
   };
 
-  const fetchCounts = useCallback(async () => {
-    try {
-      const data = await approvalsApi.getMyApprovalCounts();
-      setCounts(data);
-    } catch (err: any) {
-      console.error('Failed to fetch approval counts:', err);
-    }
-  }, []);
+  const fetchCounts = useCallback(() => {
+    countsQuery.refetch();
+  }, [countsQuery]);
 
-  const fetchRequests = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const q = (searchParams.get('q') || '').trim();
-      const params: ApprovalQueryParams = {
-        page,
-        limit: pageSize,
-        search: q || undefined,
-        entityType: entityFilter !== 'ALL' ? entityFilter : undefined,
-        sortBy: 'requestedAt',
-        sortOrder: 'desc',
-      };
-      const res = await approvalsApi.getMyPendingApprovals(params);
-      setRequests(Array.isArray(res?.data) ? res.data : []);
-      setTotal(res?.meta?.total ?? 0);
-    } catch (err: any) {
-      setError(err?.message || 'Failed to load pending approvals');
-    } finally {
-      setLoading(false);
-    }
-  }, [page, pageSize, searchParams, entityFilter]);
-
-  useEffect(() => {
-    fetchCounts();
-    fetchRequests();
-  }, [fetchCounts, fetchRequests]);
+  const fetchRequests = useCallback(() => {
+    pendingQuery.refetch();
+  }, [pendingQuery]);
 
   // Restore scroll position after data finishes loading
   useEffect(() => {
@@ -189,10 +179,7 @@ export function MyApprovalsPage() {
       sessionStorage.setItem(SCROLL_STORAGE_KEY, String(scrollContainerRef.current.scrollTop));
     }
     navigate(target, {
-      state: {
-        from: `${location.pathname}${location.search}`,
-        fromMyApprovals: true,
-      },
+      state: buildEntryNavigationState(location, 'My Approvals'),
     });
   };
 

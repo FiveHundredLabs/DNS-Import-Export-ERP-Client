@@ -44,6 +44,7 @@ import {
 } from 'lucide-react';
 import { Product, UnitOfMeasure } from '../../types/product';
 import { useAuth } from '../../hooks/useAuth';
+import { buildEntryNavigationState } from '../../utils/navigationContext';
 
 const DEFAULT_UOMS: UnitOfMeasure[] = [
   { id: 'PCS', name: 'Pieces', code: 'PCS', symbol: 'pcs', createdAt: '', updatedAt: '' },
@@ -251,7 +252,7 @@ export function ProductListPage() {
                 products={products}
                 onView={(p) =>
                   navigate(`/products/${p.id}`, {
-                    state: { from: location.pathname + location.search },
+                    state: buildEntryNavigationState(location, 'Products'),
                   })
                 }
                 onViewBatchPricing={(p) => setSelectedProductForBatchPricing(p)}

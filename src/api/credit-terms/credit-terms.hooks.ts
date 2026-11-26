@@ -7,10 +7,11 @@ export const creditTermsQueryKeys = {
   config: () => [...creditTermsQueryKeys.all, 'config'] as const,
 };
 
-export function useCreditTermsConfig(): UseQueryResult<CreditTermsConfig, Error> {
+export function useCreditTermsConfig(options?: { enabled?: boolean }): UseQueryResult<CreditTermsConfig, Error> {
   return useQuery({
     queryKey: creditTermsQueryKeys.config(),
     queryFn: ({ signal }) => creditTermsApi.getConfig(signal),
+    enabled: options?.enabled ?? true,
     staleTime: 60_000,
   });
 }

@@ -9,12 +9,6 @@ class CreditTermsConfigService {
 
   constructor() {
     this.config = this.loadConfig();
-    // Best-effort async synchronization from backend on startup
-    if (typeof window !== 'undefined') {
-      this.fetchFromBackend().catch(() => {
-        // Silently fall back to cached config if unauthenticated or offline
-      });
-    }
   }
 
   public async fetchFromBackend(): Promise<CustomerCreditTermsConfig> {

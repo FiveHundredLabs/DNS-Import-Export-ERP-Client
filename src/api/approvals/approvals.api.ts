@@ -38,14 +38,14 @@ function normalizePaginatedApprovals(
 
 export const approvalsApi = {
   // ── Approval Engine (Administrative - Directors & Managers) ─────────────
-  getEngineOverview: async (): Promise<ApprovalEngineOverview> => {
-    return apiGet<ApprovalEngineOverview>('/approvals/engine/overview');
+  getEngineOverview: async (signal?: AbortSignal): Promise<ApprovalEngineOverview> => {
+    return apiGet<ApprovalEngineOverview>('/approvals/engine/overview', { signal });
   },
 
-  getEngineRequests: async (params?: ApprovalQueryParams) => {
+  getEngineRequests: async (params?: ApprovalQueryParams, signal?: AbortSignal) => {
     const res = await apiGet<BackendPaginatedApprovals | ApprovalItem[]>(
       '/approvals/engine/requests',
-      { params },
+      { params, signal },
     );
     return normalizePaginatedApprovals(res);
   },
@@ -53,9 +53,11 @@ export const approvalsApi = {
   getEnginePipeline: async (
     entityType: string,
     entityId: string,
+    signal?: AbortSignal,
   ): Promise<ApprovalPipeline> => {
     return apiGet<ApprovalPipeline>(
       `/approvals/engine/${entityType}/${entityId}/pipeline`,
+      { signal },
     );
   },
 
@@ -71,16 +73,16 @@ export const approvalsApi = {
   },
 
   // ── My Approvals (Role-Specific Workspace) ───────────────────────────────
-  getMyPendingApprovals: async (params?: ApprovalQueryParams) => {
+  getMyPendingApprovals: async (params?: ApprovalQueryParams, signal?: AbortSignal) => {
     const res = await apiGet<BackendPaginatedApprovals | ApprovalItem[]>(
       '/approvals/my-approvals/pending',
-      { params },
+      { params, signal },
     );
     return normalizePaginatedApprovals(res);
   },
 
-  getMyApprovalCounts: async (): Promise<ApprovalCounts> => {
-    return apiGet<ApprovalCounts>('/approvals/my-approvals/counts');
+  getMyApprovalCounts: async (signal?: AbortSignal): Promise<ApprovalCounts> => {
+    return apiGet<ApprovalCounts>('/approvals/my-approvals/counts', { signal });
   },
 
   executeRoleAction: async (

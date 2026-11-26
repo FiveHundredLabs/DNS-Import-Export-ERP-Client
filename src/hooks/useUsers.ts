@@ -1,7 +1,9 @@
-import { useState, useEffect, useCallback } from 'react';
-import { isRequestCanceled } from '../api/client';
+import { useMemo, useCallback } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { User, UserRole } from '../types/auth';
 import { usersApi } from '../api/users/users.api';
+import { userQueryKeys } from '../api/users/users.hooks';
+import { areaQueryKeys } from '../api/areas/areas.hooks';
 import { MOCK_USERS } from '../mock/mockUsers';
 import {
   UserSummary,
@@ -38,78 +40,94 @@ function mapUserSummaryToUser(u: UserSummary): User {
 }
 
 export function useUsers(initialParams?: ListUsersParams) {
-  const [users, setUsers] = useState<User[]>(MOCK_USERS);
-  const [rawUsers, setRawUsers] = useState<UserSummary[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
+
+  const mergedParams = useMemo<ListUsersParams>(
+    () => ({ pageSize: 100, ...initialParams }),
+    [initialParams],
+  );
+
+  const {
+    data: response,
+    isLoading: loading,
+    error: queryError,
+    refetch,
+  } = useQuery({
+    queryKey: userQueryKeys.list(mergedParams),
+    queryFn: ({ signal }) => usersApi.listUsers(mergedParams, signal),
+    staleTime: 300_000,
+    retry: 1,
+  });
+
+  const rawUsers = useMemo<UserSummary[]>(
+    () => response?.data ?? [],
+    [response],
+  );
+
+  const users = useMemo<User[]>(
+    () => (response?.data ? response.data.map(mapUserSummaryToUser) : MOCK_USERS),
+    [response],
+  );
+
+  const error = queryError instanceof Error ? queryError.message : queryError ? 'Failed to fetch users' : null;
 
   const fetchUsers = useCallback(async (params?: ListUsersParams) => {
-    setError(null);
-    try {
-      const response = await usersApi.listUsers({
-        pageSize: 100,
-        ...initialParams,
-        ...params,
-      });
-      setRawUsers(response.data);
-      setUsers(response.data.map(mapUserSummaryToUser));
-    } catch (err: unknown) {
-      if (isRequestCanceled(err)) return;
-      const msg = err instanceof Error ? err.message : 'Failed to fetch users';
-      setError(msg);
-      console.warn('Backend users API unavailable, falling back to offline fixtures:', err);
-      setUsers(MOCK_USERS);
-    } finally {
-      setLoading(false);
+    if (params) {
+      await queryClient.invalidateQueries({ queryKey: userQueryKeys.list({ pageSize: 100, ...params }) });
+    } else {
+      await refetch();
     }
-  }, [initialParams]);
+  }, [queryClient, refetch]);
 
-  useEffect(() => {
-    fetchUsers();
-  }, [fetchUsers]);
+  const invalidateUserAndAreaCaches = useCallback(async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: userQueryKeys.lists() }),
+      queryClient.invalidateQueries({ queryKey: areaQueryKeys.lists() }),
+    ]);
+  }, [queryClient]);
 
   const createUser = useCallback(
     async (payload: CreateUserPayload): Promise<UserSummary> => {
       const created = await usersApi.createUser(payload);
-      await fetchUsers();
+      await invalidateUserAndAreaCaches();
       return created;
     },
-    [fetchUsers],
+    [invalidateUserAndAreaCaches],
   );
 
   const updateUser = useCallback(
     async (id: string, payload: UpdateUserPayload): Promise<UserSummary> => {
       const updated = await usersApi.updateUser(id, payload);
-      await fetchUsers();
+      await invalidateUserAndAreaCaches();
       return updated;
     },
-    [fetchUsers],
+    [invalidateUserAndAreaCaches],
   );
 
   const changeRole = useCallback(
     async (id: string, roleId: string, updatedAt: string): Promise<UserSummary> => {
       const updated = await usersApi.changeUserRole(id, { roleId, updatedAt });
-      await fetchUsers();
+      await invalidateUserAndAreaCaches();
       return updated;
     },
-    [fetchUsers],
+    [invalidateUserAndAreaCaches],
   );
 
   const changeStatus = useCallback(
     async (id: string, status: UserStatus, updatedAt: string): Promise<UserSummary> => {
       const updated = await usersApi.changeUserStatus(id, { status, updatedAt });
-      await fetchUsers();
+      await invalidateUserAndAreaCaches();
       return updated;
     },
-    [fetchUsers],
+    [invalidateUserAndAreaCaches],
   );
 
   const deleteUser = useCallback(
     async (id: string): Promise<void> => {
       await usersApi.deleteUser(id);
-      await fetchUsers();
+      await invalidateUserAndAreaCaches();
     },
-    [fetchUsers],
+    [invalidateUserAndAreaCaches],
   );
 
   return {

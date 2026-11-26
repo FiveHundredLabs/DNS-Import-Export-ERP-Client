@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useNavigationContext } from '../../hooks/useSmartBack';
 import { z } from 'zod';
 import { useSuppliers, useSupplierLookup, useCreateSupplier } from '../../api/suppliers/suppliers.hooks';
 import type { Supplier, CreateSupplierPayload } from '../../api/suppliers/suppliers.types';
@@ -92,6 +93,9 @@ export function PurchaseOrderCreateEditPage() {
   const { currentUser, role } = useAuth();
   const [searchParams] = useSearchParams();
   const isEdit = Boolean(id);
+  const { goBack, goBackToParent, getParentReturnState, getReturnLabel } = useNavigationContext(
+    isEdit && id ? `/purchasing/orders/${id}` : '/purchasing/orders',
+  );
   const canManageOrders = role === 'PURCHASING_OFFICER' || role === 'PURCHASING_MANAGER' || role === 'MANAGER' || role === 'DIRECTOR';
   const initialSupplierId = searchParams.get('supplierId') ?? '';
   const today = new Date().toISOString().slice(0, 10);
@@ -240,11 +244,11 @@ export function PurchaseOrderCreateEditPage() {
         setFormError('Only draft purchase orders can be edited. Create a revision for a rejected order.');
         return;
       }
-      navigate(`/purchasing/orders/${result.id}`);
+      navigate(`/purchasing/orders/${result.id}`, { state: getParentReturnState() });
     } catch {
       if (revisionId) {
         toast.error('A draft revision was created but could not be updated. Continue editing the new revision.');
-        navigate(`/purchasing/orders/${revisionId}/edit`);
+        navigate(`/purchasing/orders/${revisionId}/edit`, { state: getParentReturnState() });
       } else {
         setFormError('The purchase order could not be saved. Review the server error and try again.');
       }
@@ -319,7 +323,8 @@ export function PurchaseOrderCreateEditPage() {
         title={isEdit ? existing?.status === 'REJECTED' ? 'Create Purchase Order Revision' : 'Edit Draft Purchase Order' : 'Create Purchase Order'}
         subtitle="Prepare supplier, delivery, product, and discount details. Totals are recalculated by the server."
         backUrl="/purchasing/orders"
-        backLabel="Orders"
+        backLabel={isEdit ? 'Purchase Order' : getReturnLabel('Orders')}
+        onBack={() => (isEdit && id ? goBackToParent(`/purchasing/orders/${id}`) : goBack())}
         badge={<Badge variant="outline">{isEdit ? existing?.status : 'DRAFT'}</Badge>}
         actions={<div className="flex gap-2"><Button variant="outline" disabled={submitting} onClick={() => void handleSaveOrder(false)}><Save className="mr-2 h-4 w-4" />Save Draft</Button><Button disabled={submitting} onClick={() => void handleSaveOrder(true)}><Send className="mr-2 h-4 w-4" />Submit for Review</Button></div>}
       />
