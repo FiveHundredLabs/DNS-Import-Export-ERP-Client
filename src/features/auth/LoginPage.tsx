@@ -1,5 +1,6 @@
 import { FormEvent, useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { useMutation } from '@tanstack/react-query';
 import { isAxiosError } from 'axios';
 import {
   ArrowRight,
@@ -110,11 +111,30 @@ export function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [showDevPanel, setShowDevPanel] = useState(false);
   const devPanelRef = useRef<HTMLDivElement>(null);
   const devBtnRef = useRef<HTMLButtonElement>(null);
+
+  const loginMutation = useMutation({
+    mutationFn: (creds: { email: string; password: string }) =>
+      loginWithEmail(creds.email, creds.password),
+    retry: 0,
+    onSuccess: () => {
+      toast.success('Signed in successfully.');
+      navigate(from, { replace: true });
+    },
+    onError: (error) => {
+      const payload = isAxiosError<ApiErrorResponse>(error)
+        ? error.response?.data
+        : undefined;
+      setErrorMessage(
+        payload?.message || 'Unable to sign in. Check your credentials and try again.',
+      );
+    },
+  });
+
+  const isSubmitting = loginMutation.isPending;
 
   const from = (location.state as { from?: string } | null)?.from || '/';
 
@@ -143,23 +163,9 @@ export function LoginPage() {
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (loginMutation.isPending) return;
     setErrorMessage(null);
-    setIsSubmitting(true);
-
-    try {
-      await loginWithEmail(email, password);
-      toast.success('Signed in successfully.');
-      navigate(from, { replace: true });
-    } catch (error) {
-      const payload = isAxiosError<ApiErrorResponse>(error)
-        ? error.response?.data
-        : undefined;
-      setErrorMessage(
-        payload?.message || 'Unable to sign in. Check your credentials and try again.',
-      );
-    } finally {
-      setIsSubmitting(false);
-    }
+    await loginMutation.mutateAsync({ email, password }).catch(() => undefined);
   }
 
   function fillQuickLogin(account: QuickLoginAccount) {

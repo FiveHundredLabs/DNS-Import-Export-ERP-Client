@@ -68,6 +68,30 @@ function mapUser(user: BackendUser): User {
   };
 }
 
+const SESSION_HINT_KEY = 'dns_erp_session_hint';
+
+function setSessionHint(active: boolean): void {
+  if (typeof window === 'undefined') return;
+  try {
+    if (active) {
+      window.localStorage.setItem(SESSION_HINT_KEY, '1');
+    } else {
+      window.localStorage.removeItem(SESSION_HINT_KEY);
+    }
+  } catch {
+    // Ignore storage errors in restricted contexts
+  }
+}
+
+function hasSessionHint(): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    return window.localStorage.getItem(SESSION_HINT_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
 export class AuthService {
   private currentUser: User | null = null;
   private listeners: Set<AuthListener> = new Set();
@@ -105,6 +129,16 @@ export class AuthService {
 
     if (this.restorePromise) {
       return this.restorePromise;
+    }
+
+    // Avoid firing an unnecessary /auth/refresh (guaranteed 401) on fresh /login visits with no session hint
+    if (
+      typeof window !== 'undefined' &&
+      window.location.pathname === '/login' &&
+      !hasSessionHint()
+    ) {
+      this.initialized = true;
+      return null;
     }
 
     this.restorePromise = (async () => {
@@ -216,11 +250,13 @@ export class AuthService {
   }
 
   private setCurrentUser(user: User): void {
+    setSessionHint(true);
     this.currentUser = user;
     this.notify();
   }
 
   private clearSession(): void {
+    setSessionHint(false);
     clearAccessToken();
     clearAppCache();
     this.currentUser = null;

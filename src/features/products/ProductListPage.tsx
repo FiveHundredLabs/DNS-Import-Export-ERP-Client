@@ -1,8 +1,16 @@
-import { useState, useEffect } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useProducts } from '../../hooks/useProducts';
+import { useQueryClient } from '@tanstack/react-query';
+import {
+  useProducts,
+  useCreateProduct,
+  productQueryKeys,
+} from '../../api/products/products.hooks';
 import { useBrands } from '../../api/brands/brands.hooks';
+import { useCategories } from '../../api/categories/categories.hooks';
 import { useDebounce } from '../../hooks/useDebounce';
+import { productService } from '../../services/ProductService';
+import { CreateProductPayload } from '../../api/products/products.types';
 import { ProductTable } from './ProductTable';
 import { ProductCreateModal } from './ProductCreateModal';
 import { ProductPriceProposalModal } from './ProductPriceProposalModal';
@@ -24,13 +32,34 @@ import {
 import { TableLoadingSkeleton } from '../../components/common/LoadingSkeleton';
 import { EmptyState } from '../../components/common/EmptyState';
 import { ErrorState } from '../../components/common/ErrorState';
-import { Plus, Search, Package, RefreshCw, Tag, FolderTree } from 'lucide-react';
-import { Product } from '../../types/product';
+import {
+  Plus,
+  Search,
+  Package,
+  RefreshCw,
+  Tag,
+  FolderTree,
+  ChevronLeft,
+  ChevronRight,
+} from 'lucide-react';
+import { Product, UnitOfMeasure } from '../../types/product';
 import { useAuth } from '../../hooks/useAuth';
+
+const DEFAULT_UOMS: UnitOfMeasure[] = [
+  { id: 'PCS', name: 'Pieces', code: 'PCS', symbol: 'pcs', createdAt: '', updatedAt: '' },
+  { id: 'BOX', name: 'Boxes', code: 'BOX', symbol: 'box', createdAt: '', updatedAt: '' },
+  { id: 'SET', name: 'Sets', code: 'SET', symbol: 'set', createdAt: '', updatedAt: '' },
+  { id: 'MTR', name: 'Meters', code: 'MTR', symbol: 'm', createdAt: '', updatedAt: '' },
+  { id: 'ROLL', name: 'Rolls', code: 'ROLL', symbol: 'roll', createdAt: '', updatedAt: '' },
+  { id: 'PKT', name: 'Packets', code: 'PKT', symbol: 'pkt', createdAt: '', updatedAt: '' },
+  { id: 'KG', name: 'Kilograms', code: 'KG', symbol: 'kg', createdAt: '', updatedAt: '' },
+  { id: 'LTR', name: 'Liters', code: 'LTR', symbol: 'l', createdAt: '', updatedAt: '' },
+];
 
 export function ProductListPage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const queryClient = useQueryClient();
   const { role, hasPermission } = useAuth();
 
   const [activeTab, setActiveTab] = useState('products');
@@ -38,6 +67,8 @@ export function ProductListPage() {
   const debouncedSearch = useDebounce(searchTerm, 350);
   const [selectedCategory, setSelectedCategory] = useState('');
   const [selectedBrand, setSelectedBrand] = useState('');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [proposalModalOpen, setProposalModalOpen] = useState(false);
@@ -46,29 +77,38 @@ export function ProductListPage() {
   const [selectedProductForEdit, setSelectedProductForEdit] = useState<Product | null>(null);
   const [selectedProductForFloorPct, setSelectedProductForFloorPct] = useState<Product | null>(null);
 
-  const {
-    products,
-    categories,
-    uoms,
-    loading,
-    error,
-    refetch,
-    createProduct,
-    proposePriceChange,
-    setFilters,
-  } = useProducts();
-
-  const { data: brands = [] } = useBrands();
-
+  // Reset to page 1 when debounced search changes
   useEffect(() => {
-    setFilters((prev) => ({
-      ...prev,
+    setPage(1);
+  }, [debouncedSearch]);
+
+  const queryParams = useMemo(
+    () => ({
+      page,
+      pageSize,
       search: debouncedSearch || undefined,
       categoryId: selectedCategory || undefined,
       brandId: selectedBrand || undefined,
-      page: 1,
-    }));
-  }, [debouncedSearch, selectedCategory, selectedBrand, setFilters]);
+    }),
+    [page, pageSize, debouncedSearch, selectedCategory, selectedBrand],
+  );
+
+  const {
+    data: productsRes,
+    isLoading,
+    isFetching,
+    error: queryError,
+    refetch,
+  } = useProducts(queryParams);
+
+  const { data: brands = [] } = useBrands();
+  const { data: categories = [] } = useCategories();
+  const createProductMutation = useCreateProduct();
+
+  const products = (productsRes?.data || []) as unknown as Product[];
+  const total = productsRes?.meta?.total ?? 0;
+  const totalPages = Math.max(1, productsRes?.meta?.totalPages ?? 1);
+  const error = queryError instanceof Error ? queryError.message : null;
 
   const handleSearch = (q: string) => {
     setSearchTerm(q);
@@ -76,10 +116,12 @@ export function ProductListPage() {
 
   const handleCategoryChange = (catId: string) => {
     setSelectedCategory(catId);
+    setPage(1);
   };
 
   const handleBrandChange = (bId: string) => {
     setSelectedBrand(bId);
+    setPage(1);
   };
 
   // Strictly enforce that ONLY DIRECTOR and MANAGER can create and edit products
@@ -99,8 +141,14 @@ export function ProductListPage() {
         <div className="flex items-center gap-2">
           {activeTab === 'products' && (
             <>
-              <Button variant="outline" size="sm" onClick={() => refetch()} className="gap-1.5">
-                <RefreshCw className="h-3.5 w-3.5" /> Refresh
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => refetch()}
+                disabled={isFetching}
+                className="gap-1.5"
+              >
+                <RefreshCw className={`h-3.5 w-3.5 ${isFetching ? 'animate-spin' : ''}`} /> Refresh
               </Button>
               {canCreate && (
                 <Button size="sm" onClick={() => setCreateModalOpen(true)} className="gap-1.5">
@@ -185,7 +233,7 @@ export function ProductListPage() {
           </div>
 
           {/* State views */}
-          {loading ? (
+          {isLoading ? (
             <TableLoadingSkeleton />
           ) : error ? (
             <ErrorState message={error} onRetry={refetch} />
@@ -198,25 +246,70 @@ export function ProductListPage() {
               onAction={canCreate ? () => setCreateModalOpen(true) : undefined}
             />
           ) : (
-            <ProductTable
-              products={products}
-              onView={(p) =>
-                navigate(`/products/${p.id}`, {
-                  state: { from: location.pathname + location.search },
-                })
-              }
-              onViewBatchPricing={(p) => setSelectedProductForBatchPricing(p)}
-              onEdit={canEdit ? (p) => setSelectedProductForEdit(p) : undefined}
-              onUpdateFloorPercentage={canEdit ? (p) => setSelectedProductForFloorPct(p) : undefined}
-              onProposePrice={
-                canEdit
-                  ? (p) => {
-                      setSelectedProductForProposal(p);
-                      setProposalModalOpen(true);
-                    }
-                  : undefined
-              }
-            />
+            <>
+              <ProductTable
+                products={products}
+                onView={(p) =>
+                  navigate(`/products/${p.id}`, {
+                    state: { from: location.pathname + location.search },
+                  })
+                }
+                onViewBatchPricing={(p) => setSelectedProductForBatchPricing(p)}
+                onEdit={canEdit ? (p) => setSelectedProductForEdit(p) : undefined}
+                onUpdateFloorPercentage={canEdit ? (p) => setSelectedProductForFloorPct(p) : undefined}
+                onProposePrice={
+                  canEdit
+                    ? (p) => {
+                        setSelectedProductForProposal(p);
+                        setProposalModalOpen(true);
+                      }
+                    : undefined
+                }
+              />
+
+              {/* Server-Side Pagination Controls */}
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-white px-4 py-3 rounded-xl border border-slate-200 text-xs text-slate-600">
+                <div className="flex items-center gap-3">
+                  <span>
+                    Page <strong>{page}</strong> of <strong>{totalPages}</strong> ({total} products)
+                  </span>
+                  <select
+                    aria-label="Items per page"
+                    value={pageSize}
+                    onChange={(e) => {
+                      setPageSize(Number(e.target.value));
+                      setPage(1);
+                    }}
+                    className="h-7 px-2 rounded-md border border-slate-200 bg-white text-xs text-slate-700"
+                  >
+                    <option value={10}>10 / page</option>
+                    <option value={20}>20 / page</option>
+                    <option value={50}>50 / page</option>
+                  </select>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={page <= 1 || isFetching}
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    className="h-7 text-xs"
+                  >
+                    <ChevronLeft className="h-3.5 w-3.5 mr-1" /> Previous
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={page >= totalPages || isFetching}
+                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                    className="h-7 text-xs"
+                  >
+                    Next <ChevronRight className="h-3.5 w-3.5 ml-1" />
+                  </Button>
+                </div>
+              </div>
+            </>
           )}
         </TabsContent>
 
@@ -236,21 +329,39 @@ export function ProductListPage() {
         <ProductCreateModal
           open={createModalOpen}
           onOpenChange={setCreateModalOpen}
-          uoms={uoms}
-          onCreate={async (data) => {
-            await createProduct(data);
+          uoms={DEFAULT_UOMS}
+          onCreate={async (product: any) => {
+            const payload: CreateProductPayload = {
+              name: product.name,
+              sku: product.sku || undefined,
+              barcode: product.barcode || undefined,
+              description: product.description || undefined,
+              categoryId: product.categoryId,
+              brandId: product.brandId || undefined,
+              unitOfMeasure: (product.uomCode || 'PCS') as any,
+              warrantyPeriod: product.warrantyPeriodMonths || 0,
+              costPrice: product.pricing?.costPrice ?? 0,
+              sellingPrice: product.pricing?.currentSellingPrice ?? 0,
+              minimumSellingPrice: product.pricing?.minimumSellingPrice ?? 0,
+              minFloorPricePercentage:
+                product.pricing?.minFloorPricePercentage ?? product.minFloorPricePercentage ?? 0,
+              hasSerialNumber: product.requiresSerialNumber ?? false,
+              discountLevels: product.discountLevels || product.pricing?.discountLevels,
+              showroomDiscount: product.pricing?.showroomDiscountPercentage || 5,
+            };
+            await createProductMutation.mutateAsync(payload);
           }}
         />
       )}
 
-      {/* Price Change Proposal Modal */}
+      {/* Price Change Proposal Modal (Existing Mock Implementation Preserved) */}
       {canEdit && (
         <ProductPriceProposalModal
           product={selectedProductForProposal}
           open={proposalModalOpen}
           onOpenChange={setProposalModalOpen}
           onSubmitProposal={async (params) => {
-            await proposePriceChange(params);
+            await productService.proposePriceChange(params);
           }}
         />
       )}
@@ -265,7 +376,6 @@ export function ProductListPage() {
           onOpenChange={(open) => {
             if (!open) {
               setSelectedProductForBatchPricing(null);
-              refetch();
             }
           }}
         />
@@ -279,11 +389,10 @@ export function ProductListPage() {
           onOpenChange={(open) => {
             if (!open) {
               setSelectedProductForEdit(null);
-              refetch();
             }
           }}
           onSuccess={() => {
-            refetch();
+            queryClient.invalidateQueries({ queryKey: productQueryKeys.lists() });
           }}
         />
       )}
@@ -303,11 +412,10 @@ export function ProductListPage() {
           onOpenChange={(open) => {
             if (!open) {
               setSelectedProductForFloorPct(null);
-              refetch();
             }
           }}
           onSuccess={() => {
-            refetch();
+            queryClient.invalidateQueries({ queryKey: productQueryKeys.lists() });
           }}
         />
       )}
