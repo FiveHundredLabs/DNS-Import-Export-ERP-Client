@@ -87,6 +87,59 @@ export interface CompleteCustomerStep2Payload {
   status: 'ACTIVE' | 'INACTIVE' | 'REJECT';
 }
 
+export interface UpdateCustomerPayload {
+  contactPerson?: string;
+  companyName?: string;
+  displayName?: string;
+  email?: string;
+  whatsappNumber?: string;
+  primaryContactNumber?: string;
+  secondaryContactNumber?: string;
+  registrationAddress?: string;
+  areaId?: string;
+  areaManagerId?: string;
+  salesRepId?: string;
+  loyaltyLevel?: CustomerLoyaltyLevel;
+  customerType?: CustomerType;
+  tinNumber?: string;
+  vatNumber?: string;
+  creditPeriod?: number;
+  creditLimit?: number;
+  paymentTermNotes?: string;
+}
+
+export interface CustomerFinancialsResponse {
+  totalOutstanding: number;
+  currentDue: number;
+  nearDue: number;
+  overdue: number;
+  availableCredit: number;
+  lastPaymentDate?: string | null;
+  lastPaymentAmount?: number | null;
+}
+
+export interface CustomerOutstandingItem {
+  customer: {
+    id: string;
+    customerCode: string | null;
+    companyName: string;
+    displayName: string;
+    salesRepId: string | null;
+    areaManagerId: string | null;
+  };
+  outstandingInvoices: Array<{
+    id: string;
+    invoiceNumber: string;
+    invoiceDate: string;
+    dueDate: string;
+    status: string;
+    totalAmount: string;
+    paidAmount: string;
+    balanceAmount: string;
+  }>;
+  totalOutstanding: string;
+}
+
 export interface UpdateCommercialTermsPayload {
   creditPeriod?: number;
   creditLimit?: number;

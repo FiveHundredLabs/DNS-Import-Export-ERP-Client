@@ -47,16 +47,25 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 import { whatsAppService } from '../../services/WhatsAppService';
-import { customerService } from '../../services/CustomerService';
+import {
+  useApproveCustomer,
+  useRejectCustomer,
+  useUpdateCustomer,
+} from '../../api/customers/customers.hooks';
+import { UpdateCustomerPayload } from '../../api/customers/customers.types';
 import { CustomerCreateModal } from './CustomerCreateModal';
 import { useAuth } from '../../hooks/useAuth';
 import { toast } from 'sonner';
 
 export function CustomerHubView({ customer: initialCustomer }: { customer: Customer }) {
   const navigate = useNavigate();
-  const { role, hasPermission, currentUser } = useAuth();
+  const { role, hasPermission } = useAuth();
   const canApprove = role === 'SALES_MANAGER' || role === 'MANAGER' || role === 'DIRECTOR';
   const canEdit = hasPermission('customers:edit');
+
+  const updateCustomerMutation = useUpdateCustomer();
+  const approveCustomerMutation = useApproveCustomer();
+  const rejectCustomerMutation = useRejectCustomer();
 
   const [customer, setCustomer] = useState<Customer>(initialCustomer);
   const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
@@ -72,41 +81,99 @@ export function CustomerHubView({ customer: initialCustomer }: { customer: Custo
       return;
     }
     try {
-      const updated = await customerService.updateCustomer(id, updates, currentUser);
-      setCustomer(updated);
+      const payload: UpdateCustomerPayload = {};
+      if (updates.displayName || updates.name) payload.displayName = updates.displayName || updates.name;
+      if (updates.companyName !== undefined) payload.companyName = updates.companyName;
+      if (updates.contactPerson !== undefined) payload.contactPerson = updates.contactPerson;
+      if (updates.email !== undefined && updates.email.trim()) payload.email = updates.email.trim();
+      if (updates.primaryContactNumber || updates.phone) {
+        payload.primaryContactNumber = updates.primaryContactNumber || updates.phone;
+      }
+      if (updates.whatsappNumber !== undefined && updates.whatsappNumber.trim()) {
+        payload.whatsappNumber = updates.whatsappNumber.trim();
+      }
+      if (updates.secondaryContactNumber || updates.secondaryPhone) {
+        payload.secondaryContactNumber = updates.secondaryContactNumber || updates.secondaryPhone;
+      }
+      if (updates.registrationAddress || updates.address) {
+        payload.registrationAddress = updates.registrationAddress || updates.address;
+      }
+      if (updates.areaId) payload.areaId = updates.areaId;
+      if (updates.assignedRepId || updates.salesRepId) {
+        payload.salesRepId = (updates.assignedRepId || updates.salesRepId) ?? undefined;
+      }
+      if (updates.areaManagerId) payload.areaManagerId = updates.areaManagerId;
+      if (updates.loyaltyLevel) payload.loyaltyLevel = updates.loyaltyLevel;
+      if (updates.customerType || updates.type) {
+        payload.customerType = (updates.customerType || updates.type) as any;
+      }
+      if (updates.tinNumber || updates.taxNumber) {
+        payload.tinNumber = updates.tinNumber || updates.taxNumber;
+      }
+      if (updates.vatNumber !== undefined) payload.vatNumber = updates.vatNumber ?? undefined;
+      if (updates.commercialTerms?.creditDays !== undefined) {
+        payload.creditPeriod = updates.commercialTerms.creditDays;
+      } else if (updates.creditPeriod !== undefined && updates.creditPeriod !== null) {
+        payload.creditPeriod = updates.creditPeriod;
+      }
+      if (updates.commercialTerms?.creditLimit !== undefined) {
+        payload.creditLimit = updates.commercialTerms.creditLimit;
+      } else if (updates.creditLimit !== undefined && updates.creditLimit !== null) {
+        payload.creditLimit = Number(updates.creditLimit);
+      }
+      if (updates.commercialTerms?.paymentTermNotes !== undefined) {
+        payload.paymentTermNotes = updates.commercialTerms.paymentTermNotes;
+      }
+
+      const updated = await updateCustomerMutation.mutateAsync({ id, payload });
+      setCustomer((prev) => ({
+        ...prev,
+        ...updated,
+        code: updated.customerCode || prev.code,
+        name: updated.displayName || prev.name,
+        phone: updated.primaryContactNumber || prev.phone,
+        address: updated.registrationAddress || prev.address,
+        areaName: updated.area?.areaName || prev.areaName,
+        assignedRepName: updated.salesRep?.fullName || prev.assignedRepName,
+      }));
       setIsEditDrawerOpen(false);
-      toast.success('Customer details updated successfully.');
     } catch (err: any) {
-      toast.error(err.message || 'Failed to update customer');
+      toast.error(err?.message || 'Failed to update customer');
       console.error('Failed to update customer:', err);
     }
   };
 
-  const handleApproveCustomer = async (id: string, updates: Partial<Customer>) => {
+  const handleApproveCustomer = async (id: string, _updates: Partial<Customer>) => {
     try {
-      const updated = await customerService.updateCustomer(id, {
-        ...updates,
-        approvalStage: 'APPROVED',
-        status: 'ACTIVE',
-      });
-      await customerService.finalizeApproval(id, true);
-      setCustomer(updated);
+      const approved = await approveCustomerMutation.mutateAsync({ id });
+      setCustomer((prev) => ({
+        ...prev,
+        ...approved,
+        approvalStage: approved.approvalStage as any,
+        status: approved.status as any,
+      }));
       setIsEditDrawerOpen(false);
-    } catch (err) {
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to approve customer');
       console.error('Failed to approve customer:', err);
     }
   };
 
   const handleRejectCustomer = async (id: string, reason?: string) => {
     try {
-      const updated = await customerService.updateCustomer(id, {
-        approvalStage: 'REJECT',
-        status: 'REJECT',
+      const rejected = await rejectCustomerMutation.mutateAsync({
+        id,
+        payload: reason ? { reason } : undefined,
       });
-      await customerService.finalizeApproval(id, false);
-      setCustomer(updated);
+      setCustomer((prev) => ({
+        ...prev,
+        ...rejected,
+        approvalStage: rejected.approvalStage as any,
+        status: rejected.status as any,
+      }));
       setIsEditDrawerOpen(false);
-    } catch (err) {
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to reject customer');
       console.error('Failed to reject customer:', err);
     }
   };

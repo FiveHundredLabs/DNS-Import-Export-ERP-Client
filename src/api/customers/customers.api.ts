@@ -3,9 +3,12 @@ import {
   Customer,
   CreateCustomerStep1Payload,
   CompleteCustomerStep2Payload,
+  UpdateCustomerPayload,
   UpdateCommercialTermsPayload,
   CustomerApprovalActionPayload,
   UpdateCustomerStatusPayload,
+  CustomerFinancialsResponse,
+  CustomerOutstandingItem,
   ListCustomersParams,
   PaginatedCustomersResponse,
 } from './customers.types';
@@ -44,7 +47,37 @@ export const customersApi = {
   },
 
   getCustomerById: async (id: string, signal?: AbortSignal): Promise<Customer> => {
-    return apiGet<Customer>(`/customers/${id}`, { signal });
+    return apiGet<Customer>(`/customers/${id}`, { signal, suppressErrorToast: true });
+  },
+
+  getCustomerFinancials: async (
+    id: string,
+    signal?: AbortSignal,
+  ): Promise<CustomerFinancialsResponse> => {
+    return apiGet<CustomerFinancialsResponse>(`/customers/${id}/financials`, {
+      signal,
+      suppressErrorToast: true,
+    });
+  },
+
+  getOutstandingsGrouped: async (
+    signal?: AbortSignal,
+  ): Promise<Record<string, CustomerOutstandingItem>> => {
+    return apiGet<Record<string, CustomerOutstandingItem>>('/customers/outstandings/grouped', {
+      signal,
+      suppressErrorToast: true,
+    });
+  },
+
+  updateCustomer: async (
+    id: string,
+    payload: UpdateCustomerPayload,
+    signal?: AbortSignal,
+  ): Promise<Customer> => {
+    return apiPatch<Customer>(`/customers/${id}`, payload, {
+      signal,
+      successMessage: 'Customer updated successfully',
+    });
   },
 
   createCustomerStep1: async (
