@@ -1,4 +1,10 @@
-import { useMutation, useQuery, useQueryClient, UseQueryResult } from '@tanstack/react-query';
+import {
+  keepPreviousData,
+  useMutation,
+  useQuery,
+  useQueryClient,
+  UseQueryResult,
+} from '@tanstack/react-query';
 import { productsApi } from './products.api';
 import {
   CreateProductPayload,
@@ -34,7 +40,9 @@ export function useProducts(params?: ListProductsParams): UseQueryResult<Paginat
   return useQuery({
     queryKey: productQueryKeys.list(params),
     queryFn: ({ signal }) => productsApi.listProducts(params, signal),
+    placeholderData: keepPreviousData,
     staleTime: 60_000,
+    gcTime: 300_000,
   });
 }
 

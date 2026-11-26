@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link, useLocation } from 'react-router-dom';
 import { useSmartBack } from '../../hooks/useSmartBack';
 import { Customer } from '../../types/customer';
 import { customerService } from '../../services/CustomerService';
@@ -11,8 +11,11 @@ import { useAuth } from '../../hooks/useAuth';
 
 export function CustomerDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const location = useLocation();
   const { role, currentUser } = useAuth();
   const goBack = useSmartBack('/customers');
+  const fromPath = (location.state as { from?: string } | null)?.from;
+  const isFromMyApprovals = Boolean(fromPath?.includes('my-approvals'));
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -69,7 +72,7 @@ export function CustomerDetailPage() {
   return (
     <div className="space-y-4">
       <Button variant="ghost" size="sm" className="gap-1.5 text-xs" onClick={goBack}>
-        <ArrowLeft className="h-4 w-4" /> Back to Customer Master
+        <ArrowLeft className="h-4 w-4" /> {isFromMyApprovals ? 'Back to My Approvals' : 'Back to Customer Master'}
       </Button>
       <CustomerHubView customer={customer} />
     </div>
