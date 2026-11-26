@@ -51,6 +51,7 @@ interface ProductRowState {
   lineDiscount: number;
   currentSellingPrice: number;
   newSellingPrice: number;
+  minFloorPricePercentage?: number | string;
   priceScope: 'BATCH_ONLY' | 'ALL_STOCK';
   historicalPurchasePrice?: number;
 }
@@ -352,6 +353,7 @@ export function VendorBillCostingPage() {
           lineDiscount: item.lineDiscount || 0,
           currentSellingPrice: currentPrice,
           newSellingPrice: Math.round(item.landedUnitCost * 1.3) || currentPrice,
+          minFloorPricePercentage: (item as any).minFloorPricePercentage ?? 0,
           priceScope: 'BATCH_ONLY',
           historicalPurchasePrice: item.historicalPurchasePrice,
         };
@@ -429,6 +431,7 @@ export function VendorBillCostingPage() {
           lineDiscount: 0,
           currentSellingPrice: currentPrice,
           newSellingPrice: Math.round(actualCost * 1.35) || currentPrice,
+          minFloorPricePercentage: (item as any).minFloorPricePercentage ?? 0,
           priceScope: globalPricingScope,
           historicalPurchasePrice: histPrice,
         };
@@ -517,6 +520,13 @@ export function VendorBillCostingPage() {
       const selling = Number(r.newSellingPrice) || 0;
       const profitPerUnit = selling - trueLandedCost;
       const marginPercent = selling > 0 ? (profitPerUnit / selling) * 100 : 0;
+      const profitMarkupPercent = trueLandedCost > 0 && selling > trueLandedCost
+        ? ((selling - trueLandedCost) / trueLandedCost) * 100
+        : 0;
+      const floorPct = r.minFloorPricePercentage !== undefined && r.minFloorPricePercentage !== ''
+        ? Number(r.minFloorPricePercentage)
+        : 0;
+      const computedFloorPrice = trueLandedCost * (1 + floorPct / 100);
 
       return {
         ...r,
@@ -527,6 +537,8 @@ export function VendorBillCostingPage() {
         lineTotal,
         profitPerUnit,
         marginPercent,
+        profitMarkupPercent,
+        computedFloorPrice,
       };
     });
 
@@ -685,10 +697,18 @@ export function VendorBillCostingPage() {
             selectedGRN.items.find((it) => it.productId === r.productId) ||
             selectedGRN.items[idx];
           const rawId = grnItem?.id || (r as any).grnProductId || r.id;
+          const cost = Number(r.trueLandedCost || r.supplierUnitCost) || 0;
+          const sell = Number(r.newSellingPrice) || 0;
+          const profitMarkup = cost > 0 && sell > cost ? Number((((sell - cost) / cost) * 100).toFixed(2)) : 0;
+          const userFloor = r.minFloorPricePercentage !== undefined && r.minFloorPricePercentage !== ''
+            ? Number(r.minFloorPricePercentage)
+            : 0;
+          // Floor percentage: dynamically bounded within safe profit markup range [0, profitMarkup]
+          const floorPct = Math.min(profitMarkup, Math.max(0, userFloor));
           return {
             grnProductId: rawId,
             sellingPrice: r.newSellingPrice,
-            minFloorPricePercentage: 85,
+            minFloorPricePercentage: floorPct,
           };
         });
 
@@ -1740,22 +1760,27 @@ export function VendorBillCostingPage() {
               </div>
             </div>
 
-            {/* Pricing & Margin Table (6 Spacious Columns — Zero Horizontal Scroll) */}
+            {/* Pricing & Margin Table */}
             <div className="w-full overflow-x-auto">
-              <table className="w-full text-left text-xs tabular-nums min-w-[900px]">
+              <table className="w-full text-left text-xs tabular-nums min-w-[960px]">
                 <thead className="bg-muted/60 border-b border-border text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                   <tr>
                     <th className="px-4 py-3">Product Name & Inbound Qty</th>
-                    <th className="px-3 py-3 text-right w-36">True Landed Cost</th>
-                    <th className="px-3 py-3 text-right w-32">Current Price</th>
-                    <th className="px-3 py-3 text-right w-48">New Selling Price</th>
-                    <th className="px-4 py-3 text-center w-56">Gross Margin & Unit Profit</th>
-                    <th className="px-3 py-3 text-center w-36">Batch Application Rule</th>
+                    <th className="px-3 py-3 text-right w-32">True Landed Cost</th>
+                    <th className="px-3 py-3 text-right w-28">Current Price</th>
+                    <th className="px-3 py-3 text-right w-40">New Selling Price</th>
+                    <th className="px-3 py-3 text-center w-44">Gross Margin</th>
+                    <th className="px-3 py-3 text-right w-44">Min Floor % & Limit</th>
+                    <th className="px-3 py-3 text-center w-32">Batch Rule</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/60 bg-card">
                   {computedRows.map((row, idx) => {
                     const isLoss = row.profitPerUnit < 0;
+                    const isFloorExceeded =
+                      row.minFloorPricePercentage !== undefined &&
+                      row.minFloorPricePercentage !== '' &&
+                      Number(row.minFloorPricePercentage) > row.profitMarkupPercent;
 
                     return (
                       <tr key={row.id} className="hover:bg-muted/40 transition-colors">
@@ -1794,7 +1819,7 @@ export function VendorBillCostingPage() {
                               value={row.newSellingPrice || ''}
                               onChange={(e) => updateProductRow(idx, 'newSellingPrice', e.target.value)}
                               disabled={isAuditLocked}
-                              className="h-8 w-40 text-xs font-mono font-bold text-right bg-background text-foreground border-border focus:border-primary"
+                              className="h-8 w-36 text-xs font-mono font-bold text-right bg-background text-foreground border-border focus:border-primary"
                             />
                           </div>
                           {/* Quick markup pills */}
@@ -1817,8 +1842,8 @@ export function VendorBillCostingPage() {
                         </td>
 
                         {/* 5. Gross Margin & Unit Profit (Clean Neutral ERP Badge) */}
-                        <td className="px-4 py-3.5 text-center">
-                          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md border border-border bg-muted/40 font-mono text-xs shadow-2xs">
+                        <td className="px-3 py-3.5 text-center">
+                          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-border bg-muted/40 font-mono text-xs shadow-2xs">
                             <span
                               className={cn(
                                 'font-bold',
@@ -1827,22 +1852,54 @@ export function VendorBillCostingPage() {
                                   : 'text-foreground'
                               )}
                             >
-                              {row.marginPercent.toFixed(1)}% Margin
+                              {row.marginPercent.toFixed(1)}%
                             </span>
                             <span className="text-muted-foreground/40">•</span>
-                            <span className="text-muted-foreground font-semibold">
-                              {row.profitPerUnit >= 0 ? `+${formatCurrency(row.profitPerUnit)}` : formatCurrency(row.profitPerUnit)} / unit
+                            <span className="text-muted-foreground font-semibold text-[11px]">
+                              {row.profitPerUnit >= 0 ? `+${formatCurrency(row.profitPerUnit)}` : formatCurrency(row.profitPerUnit)}
                             </span>
                           </div>
                         </td>
 
-                        {/* 6. Batch Application Rule (Clean Per-Row Pill Selector) */}
+                        {/* 6. Minimum Floor Percentage (0% = Cost Price Floor) */}
+                        <td className="px-3 py-3.5 text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            <Input
+                              type="number"
+                              min="0"
+                              max={row.profitMarkupPercent > 0 ? Number(row.profitMarkupPercent.toFixed(2)) : undefined}
+                              step="0.01"
+                              placeholder="0.00"
+                              value={row.minFloorPricePercentage !== undefined && row.minFloorPricePercentage !== null ? row.minFloorPricePercentage : ''}
+                              onChange={(e) => updateProductRow(idx, 'minFloorPricePercentage', e.target.value)}
+                              disabled={isAuditLocked}
+                              className={cn(
+                                'h-8 w-24 text-xs font-mono font-bold text-right bg-background text-foreground border-border focus:border-primary',
+                                isFloorExceeded ? 'border-rose-500 text-rose-600' : ''
+                              )}
+                            />
+                            <span className="text-xs font-bold font-mono text-muted-foreground">%</span>
+                          </div>
+                          <div className="mt-1 text-[10px] font-mono text-muted-foreground flex items-center justify-end gap-1">
+                            <span>Floor:</span>
+                            <span className={cn('font-semibold font-mono', isFloorExceeded ? 'text-rose-600' : 'text-foreground')}>
+                              {formatCurrency(row.computedFloorPrice)}
+                            </span>
+                          </div>
+                          {isFloorExceeded && (
+                            <div className="text-[10px] text-rose-500 font-medium mt-0.5 text-right">
+                              Max: {row.profitMarkupPercent.toFixed(1)}%
+                            </div>
+                          )}
+                        </td>
+
+                        {/* 7. Batch Application Rule (Clean Per-Row Pill Selector) */}
                         <td className="px-3 py-3.5 text-center">
                           <select
                             value={row.priceScope}
                             onChange={(e) => updateProductRow(idx, 'priceScope', e.target.value)}
                             disabled={isAuditLocked}
-                            className="h-8 rounded-lg border border-border bg-background px-2.5 text-xs font-semibold text-foreground shadow-2xs focus:outline-hidden"
+                            className="h-8 rounded-lg border border-border bg-background px-2 text-xs font-semibold text-foreground shadow-2xs focus:outline-hidden"
                           >
                             <option value="BATCH_ONLY">Batch Only</option>
                             <option value="ALL_STOCK">All Stock</option>
