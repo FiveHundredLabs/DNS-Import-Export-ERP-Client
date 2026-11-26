@@ -11,7 +11,7 @@ describe('Vendor Bill Processing: 2-Step Guided Workflow Without Barcode Clutter
     apService.reset();
   });
 
-  it('1. Renders persistent context header with GRN metadata and vendor invoice inputs', () => {
+  it('1. Renders persistent context header with GRN metadata', () => {
     render(
       <MemoryRouter>
         <VendorBillCostingPage />
@@ -24,7 +24,7 @@ describe('Vendor Bill Processing: 2-Step Guided Workflow Without Barcode Clutter
     expect(screen.getByText(/WH-MAIN/i)).toBeDefined();
 
     // 2-Step guided workflow switcher
-    expect(screen.getByText(/Step 1: Invoice & Landed Costing/i)).toBeDefined();
+    expect(screen.getByText(/Step 1: Landed Costing/i)).toBeDefined();
     expect(screen.getByText(/Step 2: Selling Price & Margin Setup/i)).toBeDefined();
 
     // Essential product details are visible with clean names

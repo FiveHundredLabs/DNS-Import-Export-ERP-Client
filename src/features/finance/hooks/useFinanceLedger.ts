@@ -15,6 +15,7 @@ import {
 } from '../api/types';
 import { financeRepository } from '../api';
 import { coaApi, FinanceAccount } from '../../../api/finance';
+import { isRequestCanceled } from '../../../api/client';
 import { toast } from 'sonner';
 
 function mapFinanceAccountToAccount(acc: FinanceAccount): Account {
@@ -79,6 +80,7 @@ export function useFinanceLedger() {
       setSuppliers(data);
       return data;
     } catch (err: unknown) {
+      if (isRequestCanceled(err)) return [];
       const msg = err instanceof Error ? err.message : 'Failed to fetch suppliers';
       setError(msg);
       toast.error(msg);
@@ -92,6 +94,7 @@ export function useFinanceLedger() {
       setJournals(data);
       return data;
     } catch (err: unknown) {
+      if (isRequestCanceled(err)) return [];
       const msg = err instanceof Error ? err.message : 'Failed to fetch journals';
       setError(msg);
       toast.error(msg);

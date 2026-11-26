@@ -8,6 +8,7 @@ import {
   DialogFooter,
 } from '../../../components/ui/dialog';
 import { Button } from '../../../components/ui/button';
+import { ConfirmButton } from '../../../components/ui/confirm-button';
 import { Input } from '../../../components/ui/input';
 import { Badge } from '../../../components/ui/badge';
 import { Card } from '../../../components/ui/card';
@@ -422,15 +423,19 @@ export function FinancePricingModal({
           <Button variant="ghost" size="sm" onClick={onClose} disabled={isApplying}>
             Skip / Keep Defaults
           </Button>
-          <Button
+          <ConfirmButton
             size="sm"
-            onClick={handleApplyPricing}
+            confirmTitle="Apply Selling Price Strategy?"
+            confirmMessage="Are you sure you want to apply these selling price adjustments? This will update active retail pricing across inventory."
+            confirmLabel="Confirm & Apply"
+            dialogVariant="default"
+            onConfirm={handleApplyPricing}
             disabled={isApplying || decisionList.length === 0}
-            className="bg-primary hover:bg-primary-hover text-primary-foreground font-semibold text-xs gap-1.5"
+            className="bg-primary hover:bg-primary-hover text-primary-foreground font-semibold text-xs gap-1.5 cursor-pointer"
           >
             <CheckCircle2 className="h-4 w-4" />
             <span>Confirm & Apply Selling Price Strategy</span>
-          </Button>
+          </ConfirmButton>
         </DialogFooter>
       </DialogContent>
     </Dialog>

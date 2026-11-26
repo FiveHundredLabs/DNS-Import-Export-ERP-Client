@@ -401,8 +401,6 @@ export const PurchasingApprovalHub: React.FC = () => {
     }
   };
 
-  if (activeTab === 'po-approvals') return <PurchaseOrderApprovalQueue />;
-
   return (
     <div className="space-y-5 pb-12">
       {/* Page Header */}

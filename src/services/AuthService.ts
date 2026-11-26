@@ -18,6 +18,8 @@ const BackendRoleCodes: UserRole[] = [
   'STOCK_MANAGER',
 ];
 
+const SESSION_USER_STORAGE_KEY = 'dns_erp_session_user';
+
 interface BackendRole {
   id: string;
   code: string;
@@ -79,11 +81,29 @@ export class AuthService {
   }
 
   getCurrentUser(): User | null {
-    return this.currentUser;
+    if (this.currentUser) {
+      return this.currentUser;
+    }
+
+    if (typeof window !== 'undefined' && window.localStorage) {
+      const stored = localStorage.getItem(SESSION_USER_STORAGE_KEY);
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored) as User;
+          if (parsed && parsed.id && parsed.role) {
+            return parsed;
+          }
+        } catch {
+          localStorage.removeItem(SESSION_USER_STORAGE_KEY);
+        }
+      }
+    }
+
+    return null;
   }
 
   isAuthenticated(): boolean {
-    return this.currentUser !== null;
+    return this.getCurrentUser() !== null;
   }
 
   subscribe(listener: AuthListener): () => void {
@@ -92,13 +112,13 @@ export class AuthService {
   }
 
   async restoreSession(): Promise<User | null> {
-    // If a valid session is already in memory (e.g. fresh login), do NOT rotate token!
+    // If a valid session is already in memory (e.g. fresh login, test role switch), do not re-run
     if (this.currentUser) {
       this.initialized = true;
       return this.currentUser;
     }
 
-    // If session bootstrap already ran and determined there is no session, don't re-run.
+    // If session bootstrap already ran and determined there is no session, don't re-run
     if (this.initialized) {
       return this.currentUser;
     }
@@ -114,8 +134,9 @@ export class AuthService {
           suppressErrorToast: true,
           suppressErrorRedirect: true,
         });
-        this.setCurrentUser(mapUser(response.data.data));
-        return this.currentUser;
+        const mapped = mapUser(response.data.data);
+        this.setCurrentUser(mapped);
+        return mapped;
       } catch {
         this.clearSession();
         return null;
@@ -217,12 +238,26 @@ export class AuthService {
 
   private setCurrentUser(user: User): void {
     this.currentUser = user;
+    if (typeof window !== 'undefined' && window.localStorage) {
+      try {
+        localStorage.setItem(SESSION_USER_STORAGE_KEY, JSON.stringify(user));
+      } catch {
+        // Safe no-op if quota exceeded or storage unavailable
+      }
+    }
     this.notify();
   }
 
   private clearSession(): void {
     clearAccessToken();
     clearAppCache();
+    if (typeof window !== 'undefined' && window.localStorage) {
+      try {
+        localStorage.removeItem(SESSION_USER_STORAGE_KEY);
+      } catch {
+        // Safe no-op
+      }
+    }
     this.currentUser = null;
     this.initialized = true;
     this.notify();

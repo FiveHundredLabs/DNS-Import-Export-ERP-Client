@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../../../components/ui/dialog';
 import { Button } from '../../../components/ui/button';
+import { ConfirmButton } from '../../../components/ui/confirm-button';
 import { Input } from '../../../components/ui/input';
 import { Select } from '../../../components/ui/select';
 import { Textarea } from '../../../components/ui/textarea';
@@ -350,9 +351,22 @@ export function AccountModal({
           <Button type="button" variant="outline" size="sm" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button type="submit" size="sm" disabled={submitting} className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium">
+          <ConfirmButton
+            type="button"
+            size="sm"
+            confirmTitle={isEditing ? 'Save Changes to Account?' : 'Create Account?'}
+            confirmMessage={
+              isEditing
+                ? `Are you sure you want to update account "${code} - ${name}"?`
+                : `Are you sure you want to create account "${code} - ${name}"?`
+            }
+            confirmLabel={isEditing ? 'Save Changes' : 'Create Account'}
+            onConfirm={handleSubmit}
+            disabled={submitting}
+            className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium cursor-pointer"
+          >
             {submitting ? 'Saving...' : isEditing ? 'Save Changes' : 'Create Account'}
-          </Button>
+          </ConfirmButton>
         </DialogFooter>
       </form>
     </Dialog>

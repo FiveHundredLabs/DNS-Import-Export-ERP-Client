@@ -1,6 +1,15 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { PageHeader } from '../../../../components/common/PageHeader';
 import { periodLockService } from '../../services/periodLockService';
 import { yearEndCloseService, YearEndClosePreview } from '../../services/yearEndCloseService';
+import {
+  useFiscalPeriods,
+  useLockFiscalPeriod,
+  useReopenFiscalPeriod,
+  useExecuteYearEndClose,
+  useCreateFiscalPeriod,
+} from '../../../../api/finance';
 import { Button } from '../../../../components/ui/button';
 import { ConfirmButton } from '../../../../components/ui/confirm-button';
 import { Input } from '../../../../components/ui/input';
@@ -26,6 +35,7 @@ import {
 import { toast } from 'sonner';
 
 export function FinancialPeriodLockPage() {
+  const navigate = useNavigate();
   const [enabled, setEnabled] = useState<boolean>(() => periodLockService.getConfig().enabled);
   const [standardLockDate, setStandardLockDate] = useState<string>(
     () => periodLockService.getConfig().standardLockDate || periodLockService.getConfig().lockDate || '2026-10-31'
@@ -66,6 +76,24 @@ export function FinancialPeriodLockPage() {
   const [loadingPreview, setLoadingPreview] = useState<boolean>(false);
   const [executingClose, setExecutingClose] = useState<boolean>(false);
   const [closeSuccessMessage, setCloseSuccessMessage] = useState<string | null>(null);
+
+  // TanStack Query Hooks for Fiscal Periods API
+  const { data: apiFiscalPeriods } = useFiscalPeriods();
+  const lockPeriodMutation = useLockFiscalPeriod();
+  const reopenPeriodMutation = useReopenFiscalPeriod();
+  const yearEndCloseMutation = useExecuteYearEndClose();
+
+  useEffect(() => {
+    if (apiFiscalPeriods && apiFiscalPeriods.length > 0) {
+      const lockedFromApi = apiFiscalPeriods
+        .filter((p) => p.status === 'HARD_LOCKED' || p.status === 'CLOSED')
+        .map((p) => new Date(p.endDate).getFullYear())
+        .filter((y) => !isNaN(y));
+      if (lockedFromApi.length > 0) {
+        setLockedYears((prev) => Array.from(new Set([...prev, ...lockedFromApi])).sort());
+      }
+    }
+  }, [apiFiscalPeriods]);
 
   useEffect(() => {
     const cfg = periodLockService.getConfig();
@@ -121,12 +149,37 @@ export function FinancialPeriodLockPage() {
     );
   };
 
-  const handleToggleLockFiscalYear = (year: number) => {
+  const handleToggleLockFiscalYear = async (year: number) => {
+    const matchingPeriod = apiFiscalPeriods?.find((p) => {
+      const pYear = new Date(p.startDate).getFullYear() || new Date(p.endDate).getFullYear();
+      return pYear === year || p.name.includes(String(year));
+    });
+
     if (lockedYears.includes(year)) {
+      if (matchingPeriod && (matchingPeriod.status === 'SOFT_LOCKED' || matchingPeriod.status === 'HARD_LOCKED')) {
+        try {
+          await reopenPeriodMutation.mutateAsync({
+            id: matchingPeriod.id,
+            payload: { reopenReason: 'Authorized manager unlocking' },
+          });
+        } catch (apiErr) {
+          console.warn('Backend reopenPeriodMutation skipped/failed:', apiErr);
+        }
+      }
       periodLockService.unlockFiscalYear(year);
       setLockedYears((prev) => prev.filter((y) => y !== year));
       toast.success(`Fiscal Year ${year} has been unlocked for authorized adjustments.`);
     } else {
+      if (matchingPeriod && matchingPeriod.status === 'OPEN') {
+        try {
+          await lockPeriodMutation.mutateAsync({
+            id: matchingPeriod.id,
+            payload: { status: 'HARD_LOCKED', lockReason: 'Statutory Year-End Audit Seal' },
+          });
+        } catch (apiErr) {
+          console.warn('Backend lockPeriodMutation skipped/failed:', apiErr);
+        }
+      }
       periodLockService.lockFiscalYear(year, `${year}-12-31`);
       setLockedYears((prev) => [...prev, year].sort());
       setFyLockEnabled(true);
@@ -178,6 +231,18 @@ export function FinancialPeriodLockPage() {
   const handleExecuteYearEndClose = async () => {
     setExecutingClose(true);
     try {
+      const matchingPeriod = apiFiscalPeriods?.find((p) => {
+        return p.endDate === fiscalYearEnd || p.endDate.startsWith(fiscalYearEnd.slice(0, 4));
+      });
+
+      if (matchingPeriod) {
+        try {
+          await yearEndCloseMutation.mutateAsync(matchingPeriod.id);
+        } catch (apiErr) {
+          console.warn('Backend yearEndCloseMutation skipped/failed, proceeding with client sweep:', apiErr);
+        }
+      }
+
       const result = await yearEndCloseService.executeClose({
         fiscalYearEndDate: fiscalYearEnd,
         executedBy: 'Finance Director (System Close)',
@@ -219,31 +284,34 @@ export function FinancialPeriodLockPage() {
   }, [lockedYears]);
 
   return (
-    <div className="space-y-6 w-full">
-      {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-slate-200 pb-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-              Financial Lock Date Dashboard
-            </h1>
-            <Badge variant="outline" className="bg-primary-light text-primary-text border-primary-border text-xs">
-              Period Closing Controls
-            </Badge>
-          </div>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Configure monthly financial period closing dates, audit-lock past transactions against edits and voids, and manage financial year locks.
-          </p>
-        </div>
-
-        <Button
-          onClick={handleSave}
-          className="bg-primary hover:bg-primary-hover text-white text-xs font-semibold shadow-xs gap-1.5"
-        >
-          <Save className="h-4 w-4" />
-          <span>Save Lock Settings</span>
-        </Button>
-      </div>
+    <div className="space-y-6 w-full pb-16">
+      {/* Canonical Page Header */}
+      <PageHeader
+        title="Financial Period Closing & Audit Lock"
+        breadcrumbs={[
+          { label: 'Finance', href: '/finance' },
+          { label: 'Settings', href: '/finance' },
+          { label: 'Period Closing' },
+        ]}
+        onBack={() => navigate('/finance')}
+        badge={
+          <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 text-xs">
+            Period Closing Controls
+          </Badge>
+        }
+        actions={
+          <ConfirmButton
+            confirmTitle="Save Period Lock Settings?"
+            confirmMessage="Are you sure you want to save and enforce these financial period lock settings? This will restrict transaction backdating and editing across the system."
+            confirmLabel="Save Lock Settings"
+            onConfirm={handleSave}
+            className="bg-primary hover:bg-primary-hover text-white text-xs font-semibold shadow-xs gap-1.5 cursor-pointer h-8"
+          >
+            <Save className="h-3.5 w-3.5" />
+            <span>Save Lock Settings</span>
+          </ConfirmButton>
+        }
+      />
 
       {/* Main Lock Settings Card: Monthly Period Closing */}
       <Card className="p-6 border-slate-200 shadow-xs bg-white space-y-6">

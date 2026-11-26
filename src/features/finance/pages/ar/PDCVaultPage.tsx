@@ -5,6 +5,7 @@ import { PostDatedCheque } from '../../api/types';
 import { useFinanceLedger } from '../../hooks/useFinanceLedger';
 import { useCustomers } from '../../../../hooks/useCustomers';
 import { Button } from '../../../../components/ui/button';
+import { ConfirmButton } from '../../../../components/ui/confirm-button';
 import { Input } from '../../../../components/ui/input';
 import { Badge } from '../../../../components/ui/badge';
 import { Card } from '../../../../components/ui/card';
@@ -12,6 +13,8 @@ import { Dialog, DialogHeader, DialogTitle, DialogDescription, DialogFooter } fr
 import { Textarea } from '../../../../components/ui/textarea';
 import { formatCurrency, formatDate } from '../../../../utils/formatters';
 import { DoubleEntryHoverBadge } from '../../components/DoubleEntryHoverBadge';
+import { PageHeader } from '../../../../components/common/PageHeader';
+import { cn } from '../../../../utils/cn';
 import {
   Clock,
   Landmark,
@@ -204,50 +207,135 @@ export function PDCVaultPage() {
   }, [accounts]);
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-slate-200 pb-4">
-        <div>
+    <div className="space-y-6 w-full pb-16">
+      {/* Canonical Page Header */}
+      <PageHeader
+        title="Post-Dated Cheque (PDC) Vault"
+        badge={
+          <Badge variant="outline" className="bg-amber-50 text-amber-900 border-amber-300 font-mono text-xs">
+            GL Asset Account 1018
+          </Badge>
+        }
+        breadcrumbs={[
+          { label: 'Finance', href: '/finance' },
+          { label: 'Accounts Receivable', href: '/finance/income' },
+          { label: 'PDC Vault (1018)' },
+        ]}
+        onBack={() => navigate('/finance/income')}
+        actions={
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-              Post-Dated Cheque (PDC) Vault
-            </h1>
-            <Badge variant="outline" className="bg-amber-50 text-amber-900 border-amber-300 font-mono text-xs">
-              GL Asset Account 1018
-            </Badge>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate('/finance/ar/approvals')}
+              className="text-xs h-8 gap-1.5 font-medium border-border"
+            >
+              <Receipt className="h-3.5 w-3.5 text-primary" />
+              <span>Receipt Approvals</span>
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate('/finance/ar/credit-notes')}
+              className="text-xs h-8 gap-1.5 font-medium border-border"
+            >
+              <RotateCcw className="h-3.5 w-3.5 text-primary" />
+              <span>Customer Credit Notes</span>
+            </Button>
           </div>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Safe custody, maturity tracking, and bank realization for post-dated cheques.
-          </p>
+        }
+      />
+
+      {/* Uniform Segmented Desk Switcher & Action Row */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-1 border-b border-border/60">
+        <div className="flex items-center p-1 bg-muted/60 rounded-xl border border-border/80 overflow-x-auto">
+          <button
+            type="button"
+            onClick={() => setFilterTab('IN_HAND')}
+            className={cn(
+              'flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap',
+              filterTab === 'IN_HAND'
+                ? 'bg-background text-foreground shadow-xs border border-border/50'
+                : 'text-muted-foreground hover:text-foreground'
+            )}
+          >
+            <span>In Vault (Un-cleared)</span>
+            <span className="rounded-full bg-amber-100 text-amber-800 px-1.5 py-0.2 text-[10px] font-bold">
+              {metrics.totalInHandCount}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setFilterTab('MATURED')}
+            className={cn(
+              'flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap',
+              filterTab === 'MATURED'
+                ? 'bg-background text-foreground shadow-xs border border-border/50'
+                : 'text-muted-foreground hover:text-foreground'
+            )}
+          >
+            <span>Due for Clearing</span>
+            <span className="rounded-full bg-emerald-100 text-emerald-800 px-1.5 py-0.2 text-[10px] font-bold">
+              {metrics.maturedCount}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setFilterTab('FUTURE')}
+            className={cn(
+              'flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap',
+              filterTab === 'FUTURE'
+                ? 'bg-background text-foreground shadow-xs border border-border/50'
+                : 'text-muted-foreground hover:text-foreground'
+            )}
+          >
+            <span>Future Dated</span>
+            <span className="rounded-full bg-blue-100 text-blue-800 px-1.5 py-0.2 text-[10px] font-bold">
+              {metrics.futureCount}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setFilterTab('CLEARED')}
+            className={cn(
+              'flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap',
+              filterTab === 'CLEARED'
+                ? 'bg-background text-foreground shadow-xs border border-border/50'
+                : 'text-muted-foreground hover:text-foreground'
+            )}
+          >
+            <span>Cleared to Bank</span>
+            <span className="rounded-full bg-slate-200 text-slate-800 px-1.5 py-0.2 text-[10px] font-bold">
+              {metrics.clearedCount}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setFilterTab('ALL')}
+            className={cn(
+              'flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap',
+              filterTab === 'ALL'
+                ? 'bg-background text-foreground shadow-xs border border-border/50'
+                : 'text-muted-foreground hover:text-foreground'
+            )}
+          >
+            All Cheques
+          </button>
         </div>
 
+        {/* Primary Action Button - Uniform top-right positioning */}
         <div className="flex items-center gap-2">
           <Button
             size="sm"
             onClick={() => setIsRegisterModalOpen(true)}
-            className="bg-primary hover:bg-primary-hover text-white text-xs gap-1.5 shadow-xs font-semibold"
+            className="h-8 px-3 text-xs bg-primary hover:bg-primary-hover text-white font-semibold gap-1.5 shadow-2xs cursor-pointer"
           >
             <Plus className="h-3.5 w-3.5" />
             <span>Register Received PDC</span>
-          </Button>
-
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => navigate('/finance/ar/approvals')}
-            className="text-xs gap-1.5"
-          >
-            <Receipt className="h-3.5 w-3.5 text-primary" />
-            <span>Receipt Approval Queue</span>
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => navigate('/finance/ar/credit-notes')}
-            className="text-xs gap-1.5"
-          >
-            <RotateCcw className="h-3.5 w-3.5 text-primary" />
-            <span>Customer Credit Notes</span>
           </Button>
         </div>
       </div>
@@ -311,77 +399,8 @@ export function PDCVaultPage() {
         </Card>
       </div>
 
-      {/* Tabs and Search Bar */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-        <div className="flex items-center gap-1.5 p-1 rounded-lg bg-slate-100 border border-slate-200/80 w-full sm:w-auto">
-          <button
-            onClick={() => setFilterTab('IN_HAND')}
-            className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors flex items-center gap-1.5 ${
-              filterTab === 'IN_HAND'
-                ? 'bg-white text-slate-900 shadow-2xs'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <span>In Vault (Un-cleared)</span>
-            <span className="rounded-full bg-amber-100 text-amber-800 px-1.5 py-0.2 text-[10px] font-bold">
-              {metrics.totalInHandCount}
-            </span>
-          </button>
-
-          <button
-            onClick={() => setFilterTab('MATURED')}
-            className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors flex items-center gap-1.5 ${
-              filterTab === 'MATURED'
-                ? 'bg-white text-slate-900 shadow-2xs'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <span>Due for Clearing</span>
-            <span className="rounded-full bg-emerald-100 text-emerald-800 px-1.5 py-0.2 text-[10px] font-bold">
-              {metrics.maturedCount}
-            </span>
-          </button>
-
-          <button
-            onClick={() => setFilterTab('FUTURE')}
-            className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors flex items-center gap-1.5 ${
-              filterTab === 'FUTURE'
-                ? 'bg-white text-slate-900 shadow-2xs'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <span>Future Dated</span>
-            <span className="rounded-full bg-blue-100 text-blue-800 px-1.5 py-0.2 text-[10px] font-bold">
-              {metrics.futureCount}
-            </span>
-          </button>
-
-          <button
-            onClick={() => setFilterTab('CLEARED')}
-            className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors flex items-center gap-1.5 ${
-              filterTab === 'CLEARED'
-                ? 'bg-white text-slate-900 shadow-2xs'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <span>Cleared to Bank</span>
-            <span className="rounded-full bg-slate-200 text-slate-800 px-1.5 py-0.2 text-[10px] font-bold">
-              {metrics.clearedCount}
-            </span>
-          </button>
-
-          <button
-            onClick={() => setFilterTab('ALL')}
-            className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors ${
-              filterTab === 'ALL'
-                ? 'bg-white text-slate-900 shadow-2xs'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            All Cheques
-          </button>
-        </div>
-
+      {/* Cheques Filter & Search */}
+      <div className="flex flex-col sm:flex-row items-center justify-end gap-3">
         <div className="relative w-full sm:w-72">
           <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-400" />
           <Input
@@ -677,15 +696,20 @@ export function PDCVaultPage() {
           >
             Cancel
           </Button>
-          <Button
+          <ConfirmButton
             size="sm"
-            onClick={handleConfirmClear}
+            confirmTitle="Confirm Bank Clearance?"
+            confirmMessage={`Are you sure you want to clear cheque ${clearingCheque?.chequeNumber} for ${clearingCheque ? formatCurrency(clearingCheque.amount) : ''}? This will transfer funds from 1018 Cheques in Hand to 1010 Bank Account.`}
+            confirmLabel="Confirm Clearance"
+            variant="success"
+            dialogVariant="success"
+            onConfirm={handleConfirmClear}
             disabled={clearingProcessing}
-            className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1"
+            className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1 cursor-pointer"
           >
             <CheckCircle2 className="h-3.5 w-3.5" />
             <span>Confirm Bank Clearance</span>
-          </Button>
+          </ConfirmButton>
           {clearingCheque && (
             <DoubleEntryHoverBadge
               align="right"
@@ -755,14 +779,18 @@ export function PDCVaultPage() {
           <Button variant="outline" size="sm" onClick={() => setBouncingCheque(null)}>
             Cancel
           </Button>
-          <Button
+          <ConfirmButton
             size="sm"
-            onClick={handleConfirmBounce}
+            confirmTitle="Confirm Cheque Dishonor?"
+            confirmMessage={`Are you sure you want to mark cheque ${bouncingCheque?.chequeNumber} as dishonored / bounced? This will reverse clearance and reinstate Accounts Receivable debt.`}
+            confirmLabel="Confirm Dishonor"
+            dialogVariant="destructive"
+            onConfirm={handleConfirmBounce}
             disabled={bounceProcessing}
-            className="bg-rose-600 hover:bg-rose-700 text-white"
+            className="bg-rose-600 hover:bg-rose-700 text-white cursor-pointer"
           >
             Confirm Cheque Dishonor
-          </Button>
+          </ConfirmButton>
           {bouncingCheque && (
             <DoubleEntryHoverBadge
               align="right"

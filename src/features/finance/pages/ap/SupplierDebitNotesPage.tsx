@@ -11,6 +11,7 @@ import { Badge } from '../../../../components/ui/badge';
 import { Card } from '../../../../components/ui/card';
 import { PageHeader } from '../../../../components/common/PageHeader';
 import { formatCurrency, formatDate } from '../../../../utils/formatters';
+import { cn } from '../../../../utils/cn';
 import {
   SupplierDebitNote,
   SupplierDebitNoteLineItem,
@@ -280,74 +281,105 @@ export function SupplierDebitNotesPage({ hideTopSwitcher = false }: { hideTopSwi
 
   return (
     <div className="space-y-6">
+      {/* Standalone Page Header - Hidden when embedded in Commercial Notes desk */}
       {!hideTopSwitcher && (
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-2 border-b border-border/60">
-          <div className="flex items-center p-1 bg-muted/60 rounded-xl border border-border/80">
-            <button
-              type="button"
-              onClick={() => navigate('/finance/notes?tab=credit')}
-              className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold text-muted-foreground hover:text-foreground transition-all"
-            >
-              <RotateCcw className="h-3.5 w-3.5 text-primary" />
-              <span>Customer Credit Notes (AR)</span>
-            </button>
-            <button
-              type="button"
-              className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-background text-foreground shadow-xs border border-border/50"
-            >
-              <Undo2 className="h-3.5 w-3.5 text-amber-600" />
-              <span>Supplier Debit Notes (AP)</span>
-            </button>
-          </div>
-          <span className="text-xs text-muted-foreground hidden sm:inline">
-            Unified Commercial Notes Desk
-          </span>
-        </div>
+        <PageHeader
+          title="Supplier Debit Notes (Purchase Returns)"
+          badge={
+            <Badge variant="outline" className="bg-rose-50 text-rose-800 border-rose-300 text-xs">
+              Accounts Payable
+            </Badge>
+          }
+          breadcrumbs={[
+            { label: 'Finance', href: '/finance' },
+            { label: 'Accounts Payable', href: '/finance/expense' },
+            { label: 'Debit Notes' },
+          ]}
+          onBack={() => navigate('/finance/notes?tab=debit')}
+          actions={
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigate('/finance/ap/bills/new')}
+                className="text-xs h-8 gap-1.5 font-medium border-border"
+              >
+                <Receipt className="h-3.5 w-3.5 text-primary" />
+                <span>Vendor Bill Costing</span>
+              </Button>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigate('/finance/suppliers')}
+                className="text-xs h-8 gap-1.5 font-medium border-border"
+              >
+                <Warehouse className="h-3.5 w-3.5 text-primary" />
+                <span>Suppliers</span>
+              </Button>
+            </div>
+          }
+        />
       )}
 
-      {/* Header */}
-      <PageHeader
-        title="Supplier Debit Notes (Purchase Returns)"
-        badge={
-          <Badge variant="outline" className="bg-rose-50 text-rose-800 border-rose-300 text-xs">
-            Accounts Payable
-          </Badge>
-        }
-        breadcrumbs={[
-          { label: 'Finance', href: '/finance' },
-          { label: 'Accounts Payable', href: '/finance/ap' },
-          { label: 'Debit Notes' },
-        ]}
-        actions={
-          <div className="flex items-center gap-2">
+      {/* Uniform Segmented Inner Tabs & Primary Action Row */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-1 border-b border-border/60">
+        <div className="flex items-center p-1 bg-muted/60 rounded-xl border border-border/80 overflow-x-auto">
+          <button
+            type="button"
+            onClick={() => setActiveTab('REGISTRY')}
+            className={cn(
+              'flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap',
+              activeTab === 'REGISTRY'
+                ? 'bg-background text-foreground shadow-xs border border-border/50'
+                : 'text-muted-foreground hover:text-foreground'
+            )}
+          >
+            <Undo2 className="h-3.5 w-3.5 text-amber-600" />
+            <span>Debit Notes Registry</span>
+            <span className="ml-1 px-1.5 py-0.2 rounded-full text-[10px] bg-muted text-muted-foreground font-mono">
+              {debitNotes.length}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('CREATE')}
+            className={cn(
+              'flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap',
+              activeTab === 'CREATE'
+                ? 'bg-background text-foreground shadow-xs border border-border/50'
+                : 'text-muted-foreground hover:text-foreground'
+            )}
+          >
+            <Plus className="h-3.5 w-3.5 text-emerald-600" />
+            <span>Issue Debit Note (Returns)</span>
+          </button>
+        </div>
+
+        {/* Primary Action Button - Always uniform top-right location */}
+        <div className="flex items-center gap-2">
+          {activeTab === 'REGISTRY' ? (
             <Button
-              variant={activeTab === 'REGISTRY' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setActiveTab('REGISTRY')}
-              className="text-xs"
-            >
-              Debit Notes History
-            </Button>
-            <Button
-              variant={activeTab === 'CREATE' ? 'default' : 'outline'}
               size="sm"
               onClick={() => setActiveTab('CREATE')}
-              className="text-xs gap-1.5"
+              className="h-8 px-3 text-xs bg-primary hover:bg-primary-hover text-white font-semibold gap-1.5 shadow-2xs cursor-pointer"
             >
               <Plus className="h-3.5 w-3.5" />
               <span>Issue Debit Note</span>
             </Button>
+          ) : (
             <Button
               variant="outline"
               size="sm"
-              onClick={() => navigate('/finance/ap/bills/new')}
-              className="text-xs text-primary border-primary/30"
+              onClick={() => setActiveTab('REGISTRY')}
+              className="h-8 text-xs gap-1.5 font-medium border-border"
             >
-              Vendor Bill Costing
+              <span>Back to Registry</span>
             </Button>
-          </div>
-        }
-      />
+          )}
+        </div>
+      </div>
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

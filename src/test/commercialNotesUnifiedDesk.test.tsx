@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { CommercialNotesPage } from '../features/finance/pages/CommercialNotesPage';
 import { ChartOfAccountsPage } from '../features/finance/pages/ChartOfAccountsPage';
 import { customerCreditNoteService } from '../features/finance/services/customerCreditNoteService';
@@ -8,6 +9,12 @@ import { apService } from '../features/finance/services/apService';
 import { arService } from '../features/finance/services/arService';
 import { categoryService } from '../features/finance/services/categoryService';
 import { financeRepository } from '../features/finance/api';
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: { retry: false },
+  },
+});
 
 describe('Unified Commercial Notes Desk & Chart of Accounts Category Tree', () => {
   beforeEach(async () => {
@@ -85,9 +92,11 @@ describe('Unified Commercial Notes Desk & Chart of Accounts Category Tree', () =
   describe('2. Chart of Accounts Category Folder Tree Explorer (1000 Assets -> 1001 Current Assets)', () => {
     it('renders the Category Folder Tree explorer with 1000 Assets -> 1001 Current Assets branch', async () => {
       render(
-        <MemoryRouter>
-          <ChartOfAccountsPage />
-        </MemoryRouter>
+        <QueryClientProvider client={queryClient}>
+          <MemoryRouter>
+            <ChartOfAccountsPage />
+          </MemoryRouter>
+        </QueryClientProvider>
       );
 
       // Switch to Categories Tree view (Al Akleel segmented switcher)

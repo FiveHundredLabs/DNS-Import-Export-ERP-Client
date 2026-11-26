@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../../../components/ui/dialog';
 import { Button } from '../../../components/ui/button';
+import { ConfirmButton } from '../../../components/ui/confirm-button';
 import { Input } from '../../../components/ui/input';
 import { Select } from '../../../components/ui/select';
 import { Textarea } from '../../../components/ui/textarea';
@@ -336,9 +337,22 @@ export function CategoryModal({
           <Button type="button" variant="outline" size="sm" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button type="submit" size="sm" disabled={submitting} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+          <ConfirmButton
+            type="button"
+            size="sm"
+            confirmTitle={isEditing ? 'Update Category?' : 'Create Category?'}
+            confirmMessage={
+              isEditing
+                ? `Are you sure you want to update category "${code} - ${name}"?`
+                : `Are you sure you want to create category "${code} - ${name}"?`
+            }
+            confirmLabel={isEditing ? 'Update Category' : 'Create Category'}
+            onConfirm={handleSubmit}
+            disabled={submitting}
+            className="bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer"
+          >
             {submitting ? 'Saving...' : isEditing ? 'Update Category' : 'Save Category'}
-          </Button>
+          </ConfirmButton>
         </DialogFooter>
       </form>
     </Dialog>

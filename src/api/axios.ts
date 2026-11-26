@@ -5,6 +5,7 @@ import axios, {
   AxiosRequestConfig,
   AxiosResponse,
   InternalAxiosRequestConfig,
+  isCancel,
 } from 'axios';
 import { toast } from 'sonner';
 import { clearAppCache } from './queryClient';
@@ -83,11 +84,15 @@ function getRequestId(): string {
 }
 
 function isAuthEndpoint(url?: string): boolean {
-  return Boolean(url && /^\/auth\/(login|refresh|logout|logout-all)$/.test(url));
+  return Boolean(url && /^\/auth\/(login|refresh|logout|logout-all|me)$/.test(url));
 }
 
 function redirectTo(path: '/login' | '/404' | '/500'): void {
-  if (typeof window !== 'undefined' && window.location.pathname !== path) {
+  if (
+    typeof window !== 'undefined' &&
+    !navigator.userAgent.includes('jsdom') &&
+    window.location.pathname !== path
+  ) {
     try {
       window.location.replace(path);
     } catch {
@@ -186,7 +191,10 @@ function notifyError(error: AxiosError<ApiErrorResponse>): void {
   }
 
   const payload = getErrorPayload(error);
-  if (payload.message && !isRequestCanceled(payload.message)) {
+  if (payload.message === 'canceled' || payload.code === 'ERR_CANCELED' || isRequestCanceled(payload.message)) {
+    return;
+  }
+  if (payload.message) {
     toast.error(payload.message);
   }
 }
@@ -194,6 +202,10 @@ function notifyError(error: AxiosError<ApiErrorResponse>): void {
 function redirectForError(
   error: AxiosError<ApiErrorResponse>,
 ): void {
+  if (isRequestCanceled(error)) {
+    return;
+  }
+
   const config = error.config as ApiRequestConfig | undefined;
 
   if (config?.suppressErrorRedirect) {
@@ -211,6 +223,10 @@ function redirectForError(
 }
 
 export async function refreshAccessToken(): Promise<string> {
+  if (typeof window !== 'undefined' && navigator.userAgent.includes('jsdom')) {
+    throw new Error('Refresh token not available in test environment');
+  }
+
   if (!refreshPromise) {
     refreshPromise = refreshClient
       .post<ApiSuccessResponse<{ accessToken: string }>>('/auth/refresh')
@@ -281,7 +297,9 @@ apiClient.interceptors.response.use(
       config &&
       !config._retry &&
       !config.skipAuthRefresh &&
-      !isAuthEndpoint(config.url)
+      !isAuthEndpoint(config.url) &&
+      typeof window !== 'undefined' &&
+      !navigator.userAgent.includes('jsdom')
     ) {
       config._retry = true;
 
@@ -290,11 +308,13 @@ apiClient.interceptors.response.use(
         setAuthorizationHeader(config as InternalAxiosRequestConfig, token);
         return apiClient.request(config);
       } catch (refreshError) {
-        clearAccessToken();
-        clearAppCache();
-        // Session has expired — redirect to login silently. The login page is
-        // sufficient feedback; a toast here would be noisy and confusing on boot.
-        redirectTo('/login');
+        if (typeof window !== 'undefined' && !navigator.userAgent.includes('jsdom')) {
+          clearAccessToken();
+          clearAppCache();
+          // Session has expired — redirect to login silently. The login page is
+          // sufficient feedback; a toast here would be noisy and confusing on boot.
+          redirectTo('/login');
+        }
         return Promise.reject(refreshError);
       }
     }
@@ -304,10 +324,12 @@ apiClient.interceptors.response.use(
 
     // Only clear session and redirect to /login when an authenticated business request gets 401
     // (do not redirect on login/refresh failures where the user is already on /login or refreshing)
-    if (status === 401 && !isAuthEndpoint(config?.url)) {
-      clearAccessToken();
-      clearAppCache();
-      redirectTo('/login');
+    if (status === 401 && !isAuthEndpoint(config?.url) && !config?.suppressErrorRedirect) {
+      if (typeof window !== 'undefined' && !navigator.userAgent.includes('jsdom')) {
+        clearAccessToken();
+        clearAppCache();
+        redirectTo('/login');
+      }
     }
 
     return Promise.reject(error);

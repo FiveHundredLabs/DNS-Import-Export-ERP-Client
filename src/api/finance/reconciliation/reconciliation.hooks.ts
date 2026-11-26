@@ -20,7 +20,7 @@ export const reconciliationKeys = {
   session: (id: string) => [...reconciliationKeys.sessions(), id] as const,
   reports: () => [...reconciliationKeys.all, 'report'] as const,
   report: (sessionId: string) => [...reconciliationKeys.reports(), sessionId] as const,
-  history: () => [...reconciliationKeys.all, 'history'] as const,
+  history: (params?: Record<string, unknown>) => [...reconciliationKeys.all, 'history', params] as const,
 };
 
 export function useReconciliationWorkspace(sessionId: string): UseQueryResult<ReconciliationWorkspaceResponse, Error> {
@@ -52,7 +52,7 @@ export function useBrsReport(sessionId: string): UseQueryResult<BrsReportRespons
 
 export function useReconciliationHistory(params?: Record<string, unknown>): UseQueryResult<ReconciliationHistoryItem[], Error> {
   return useQuery({
-    queryKey: reconciliationKeys.history(),
+    queryKey: reconciliationKeys.history(params),
     queryFn: ({ signal }) => reconciliationApi.getHistory(params, signal),
     staleTime: 60_000,
   });

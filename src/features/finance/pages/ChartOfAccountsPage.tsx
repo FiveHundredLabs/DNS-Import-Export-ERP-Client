@@ -1,4 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { PageHeader } from '../../../components/common/PageHeader';
 import {
   useAccounts,
   useCategories,
@@ -10,6 +12,9 @@ import {
   useDeleteCategory,
   useJournals,
   usePostDirectJournal,
+  useCreateOpeningBalanceBatch,
+  useValidateOpeningBalanceBatch,
+  usePostOpeningBalanceBatch,
   FinanceAccount,
 } from '../../../api/finance';
 import { Account, AccountClass, AccountSubClass } from '../api/types';
@@ -17,6 +22,7 @@ import { AccountModal } from '../components/AccountModal';
 import { CategoryModal } from '../components/CategoryModal';
 import { OpeningBalanceWizard } from '../components/OpeningBalanceWizard';
 import { categoryService, FinanceCategory } from '../services/categoryService';
+import { financeRepository } from '../api';
 import { formatCurrency } from '../../../utils/formatters';
 import { cn } from '../../../utils/cn';
 import {
@@ -39,6 +45,7 @@ import {
   HelpCircle,
 } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
+import { ConfirmButton } from '../../../components/ui/confirm-button';
 import { Input } from '../../../components/ui/input';
 import { Badge } from '../../../components/ui/badge';
 import { Card } from '../../../components/ui/card';
@@ -138,6 +145,7 @@ interface ChartOfAccountsPageProps {
 }
 
 export function ChartOfAccountsPage({ defaultView = 'ACCOUNTS' }: ChartOfAccountsPageProps) {
+  const navigate = useNavigate();
   const { data: rawAccounts = [], isLoading: accountsLoading, refetch: refetchAccounts } = useAccounts({ limit: 100 });
   const { data: apiCategories = [], isLoading: categoriesLoading, refetch: refetchCategories } = useCategories();
   const { data: journals = [] } = useJournals();
@@ -151,6 +159,9 @@ export function ChartOfAccountsPage({ defaultView = 'ACCOUNTS' }: ChartOfAccount
   const updateCategoryMutation = useUpdateCategory();
   const deleteCategoryMutation = useDeleteCategory();
   const postJournalMutation = usePostDirectJournal();
+  const createOpeningBatchMutation = useCreateOpeningBalanceBatch();
+  const validateOpeningBatchMutation = useValidateOpeningBalanceBatch();
+  const postOpeningBatchMutation = usePostOpeningBalanceBatch();
 
   const categories: FinanceCategory[] = useMemo(() => {
     if (apiCategories && apiCategories.length > 0) {
@@ -167,12 +178,21 @@ export function ChartOfAccountsPage({ defaultView = 'ACCOUNTS' }: ChartOfAccount
     return categoryService.getCategories();
   }, [apiCategories]);
 
+  const [fallbackAccounts, setFallbackAccounts] = useState<Account[]>([]);
+  useEffect(() => {
+    if (rawAccounts.length === 0) {
+      financeRepository.getAccounts().then((accs) => {
+        setFallbackAccounts(accs);
+      });
+    }
+  }, [rawAccounts]);
+
   const accounts: Account[] = useMemo(() => {
     if (rawAccounts && rawAccounts.length > 0) {
       return rawAccounts.map(toUiAccount);
     }
-    return [];
-  }, [rawAccounts]);
+    return fallbackAccounts;
+  }, [rawAccounts, fallbackAccounts]);
 
   const [activeMainView, setActiveMainView] = useState<'ACCOUNTS' | 'CATEGORIES'>(() => {
     if (defaultView === 'CATEGORIES') return 'CATEGORIES';
@@ -474,16 +494,40 @@ export function ChartOfAccountsPage({ defaultView = 'ACCOUNTS' }: ChartOfAccount
   const handleSaveOpeningBalances = async (
     lines: { accountId: string; debit: number; credit: number; description?: string }[]
   ) => {
-    await postJournalMutation.mutateAsync({
-      transactionDate: new Date().toISOString().slice(0, 10),
-      description: 'System Setup: Opening Balances Ledger Initiation',
-      lines: lines.map((l) => ({
-        accountId: l.accountId,
-        debit: l.debit || 0,
-        credit: l.credit || 0,
-        description: l.description,
-      })),
-    });
+    let postedViaBatch = false;
+    try {
+      const batch = await createOpeningBatchMutation.mutateAsync({
+        asOfDate: new Date().toISOString().slice(0, 10),
+        description: 'System Setup: Opening Balances Ledger Initiation',
+        items: lines.map((l) => ({
+          accountId: l.accountId,
+          debit: l.debit || 0,
+          credit: l.credit || 0,
+          description: l.description,
+        })),
+      });
+
+      if (batch?.id) {
+        await validateOpeningBatchMutation.mutateAsync(batch.id);
+        await postOpeningBatchMutation.mutateAsync(batch.id);
+        postedViaBatch = true;
+      }
+    } catch (batchErr) {
+      console.warn('Backend opening-balances batch API fallback to direct journal:', batchErr);
+    }
+
+    if (!postedViaBatch) {
+      await postJournalMutation.mutateAsync({
+        transactionDate: new Date().toISOString().slice(0, 10),
+        description: 'System Setup: Opening Balances Ledger Initiation',
+        lines: lines.map((l) => ({
+          accountId: l.accountId,
+          debit: l.debit || 0,
+          credit: l.credit || 0,
+          description: l.description,
+        })),
+      });
+    }
 
     try {
       localStorage.setItem(OPENING_BALANCE_STORAGE_KEY, 'true');
@@ -514,61 +558,69 @@ export function ChartOfAccountsPage({ defaultView = 'ACCOUNTS' }: ChartOfAccount
   }, [masterCategories, categoryTreeFilter]);
 
   return (
-    <div className="space-y-4">
-      {/* Top Header Section — Al Akleel Aesthetic */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b border-slate-200/80 pb-3">
-        <div>
-          <div className="flex items-center gap-2 text-xs text-slate-500 mb-1">
-            <span>Finance</span>
-            <span>/</span>
-            <span className="font-semibold text-slate-700">General Ledger</span>
-          </div>
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
-            {activeMainView === 'ACCOUNTS' ? 'Chart of Accounts' : 'Finance Registry (Categories)'}
-          </h1>
+    <div className="space-y-6">
+      {/* Canonical Page Header */}
+      <PageHeader
+        title={activeMainView === 'ACCOUNTS' ? 'Chart of Accounts' : 'Finance Registry (Categories)'}
+        breadcrumbs={[
+          { label: 'Finance', href: '/finance' },
+          { label: 'General Ledger', href: '/finance' },
+          { label: activeMainView === 'ACCOUNTS' ? 'Chart of Accounts' : 'Categories Registry' },
+        ]}
+        onBack={() => navigate('/finance')}
+        badge={
+          <Badge variant="outline" className="text-xs font-medium bg-primary/5 text-primary border-primary/20">
+            Double-Entry General Ledger
+          </Badge>
+        }
+      />
+
+      {/* Uniform Segmented Inner Tabs & Primary Action Row */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-1 border-b border-border/60">
+        <div className="flex items-center p-1 bg-muted/60 rounded-xl border border-border/80 overflow-x-auto">
+          <button
+            type="button"
+            onClick={() => handleViewChange('ACCOUNTS')}
+            className={cn(
+              'flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap',
+              activeMainView === 'ACCOUNTS'
+                ? 'bg-background text-foreground shadow-xs border border-border/50'
+                : 'text-muted-foreground hover:text-foreground'
+            )}
+          >
+            <BookOpen className="h-3.5 w-3.5 text-primary" />
+            <span>Accounts Registry</span>
+            <span className="ml-1 px-1.5 py-0.2 rounded-full text-[10px] bg-muted text-muted-foreground font-mono">
+              {accounts.length}
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={() => handleViewChange('CATEGORIES')}
+            className={cn(
+              'flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap',
+              activeMainView === 'CATEGORIES'
+                ? 'bg-background text-foreground shadow-xs border border-border/50'
+                : 'text-muted-foreground hover:text-foreground'
+            )}
+          >
+            <FolderOpen className="h-3.5 w-3.5 text-amber-600" />
+            <span>Categories Tree</span>
+          </button>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          {/* View Toggle: Accounts Table vs Categories Tree */}
-          <div className="inline-flex rounded-lg border border-slate-200 bg-slate-100 p-0.5 text-xs font-medium">
-            <button
-              type="button"
-              onClick={() => handleViewChange('ACCOUNTS')}
-              className={cn(
-                'rounded-md px-3 py-1.5 transition-all',
-                activeMainView === 'ACCOUNTS'
-                  ? 'bg-white text-slate-900 shadow-xs font-semibold'
-                  : 'text-slate-600 hover:text-slate-900'
-              )}
-            >
-              Accounts Registry
-            </button>
-            <button
-              type="button"
-              onClick={() => handleViewChange('CATEGORIES')}
-              className={cn(
-                'rounded-md px-3 py-1.5 transition-all',
-                activeMainView === 'CATEGORIES'
-                  ? 'bg-white text-slate-900 shadow-xs font-semibold'
-                  : 'text-slate-600 hover:text-slate-900'
-              )}
-            >
-              Categories Tree
-            </button>
-          </div>
-
-          {/* + Add Category Button */}
+        {/* Action Buttons: Uniform top-right positioning */}
+        <div className="flex items-center gap-2">
           <Button
             size="sm"
             variant="outline"
             onClick={() => openAddCategory(null)}
-            className="gap-1.5 border-emerald-600/30 text-emerald-700 hover:bg-emerald-50 font-semibold text-xs h-9 px-3"
+            className="gap-1.5 font-semibold text-xs h-8 px-3 border-border hover:bg-muted"
           >
-            <FolderPlus className="h-4 w-4 text-emerald-600" />
+            <FolderPlus className="h-3.5 w-3.5 text-emerald-600" />
             <span>+ Add Category</span>
           </Button>
 
-          {/* + Add Account Button */}
           <Button
             size="sm"
             onClick={() => {
@@ -578,9 +630,9 @@ export function ChartOfAccountsPage({ defaultView = 'ACCOUNTS' }: ChartOfAccount
               setSelectedHeaderCategoryForNewAccount(undefined);
               setModalOpen(true);
             }}
-            className="gap-1.5 bg-emerald-600 hover:bg-emerald-700 font-semibold text-white shadow-xs text-xs h-9 px-3.5"
+            className="gap-1.5 bg-primary hover:bg-primary-hover font-semibold text-white shadow-xs text-xs h-8 px-3.5 cursor-pointer"
           >
-            <Plus className="h-4 w-4" />
+            <Plus className="h-3.5 w-3.5" />
             <span>Add Account</span>
           </Button>
         </div>
@@ -722,16 +774,20 @@ export function ChartOfAccountsPage({ defaultView = 'ACCOUNTS' }: ChartOfAccount
                         </Button>
 
                         {!master.isSystem && (
-                          <Button
+                          <ConfirmButton
                             type="button"
                             variant="ghost"
                             size="sm"
-                            onClick={() => handleDeleteCategory(master)}
-                            className="h-7 w-7 p-0 text-slate-400 hover:bg-rose-50 hover:text-rose-600"
+                            confirmTitle="Delete Account Category?"
+                            confirmMessage={`Are you sure you want to delete category "${master.code} - ${master.name}"?`}
+                            confirmText="Delete Category"
+                            dialogVariant="destructive"
+                            onConfirm={() => handleDeleteCategory(master)}
+                            className="h-7 w-7 p-0 text-slate-400 hover:bg-rose-50 hover:text-rose-600 cursor-pointer"
                             title="Delete Category"
                           >
                             <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
+                          </ConfirmButton>
                         )}
                       </div>
                     </div>
@@ -808,16 +864,20 @@ export function ChartOfAccountsPage({ defaultView = 'ACCOUNTS' }: ChartOfAccount
 
                                     {/* Delete Subcategory (if not system) */}
                                     {!sub.isSystem && (
-                                      <Button
+                                      <ConfirmButton
                                         type="button"
                                         variant="ghost"
                                         size="sm"
-                                        onClick={() => handleDeleteCategory(sub)}
-                                        className="h-7 w-7 p-0 text-slate-400 hover:bg-rose-50 hover:text-rose-600"
+                                        confirmTitle="Delete Sub-Category?"
+                                        confirmMessage={`Are you sure you want to delete sub-category "${sub.code} - ${sub.name}"?`}
+                                        confirmText="Delete Sub-Category"
+                                        dialogVariant="destructive"
+                                        onConfirm={() => handleDeleteCategory(sub)}
+                                        className="h-7 w-7 p-0 text-slate-400 hover:bg-rose-50 hover:text-rose-600 cursor-pointer"
                                         title="Delete Sub-Category"
                                       >
                                         <Trash2 className="h-3.5 w-3.5" />
-                                      </Button>
+                                      </ConfirmButton>
                                     )}
                                   </div>
                                 </div>
@@ -1104,11 +1164,19 @@ export function ChartOfAccountsPage({ defaultView = 'ACCOUNTS' }: ChartOfAccount
                                         </Button>
 
                                         {!account.isSystem && (
-                                          <Button
+                                          <ConfirmButton
                                             variant="ghost"
                                             size="sm"
-                                            onClick={() => handleToggleInactive(account)}
-                                            className={`h-7 px-2 text-xs ${
+                                            confirmTitle={account.isActive !== false ? 'Deactivate Account?' : 'Activate Account?'}
+                                            confirmMessage={
+                                              account.isActive !== false
+                                                ? `Are you sure you want to mark account "${account.code} - ${account.name}" as inactive? Inactive accounts will be hidden from new journal entries.`
+                                                : `Are you sure you want to reactivate account "${account.code} - ${account.name}"?`
+                                            }
+                                            confirmText={account.isActive !== false ? 'Mark Inactive' : 'Mark Active'}
+                                            dialogVariant={account.isActive !== false ? 'warning' : 'default'}
+                                            onConfirm={() => handleToggleInactive(account)}
+                                            className={`h-7 px-2 text-xs cursor-pointer ${
                                               account.isActive !== false
                                                 ? 'text-slate-400 hover:text-amber-600'
                                                 : 'text-emerald-600 hover:text-emerald-700'
@@ -1116,19 +1184,23 @@ export function ChartOfAccountsPage({ defaultView = 'ACCOUNTS' }: ChartOfAccount
                                             title={account.isActive !== false ? 'Mark Inactive' : 'Mark Active'}
                                           >
                                             <Power className="h-3.5 w-3.5" />
-                                          </Button>
+                                          </ConfirmButton>
                                         )}
 
                                         {!account.isSystem && (
-                                          <Button
+                                          <ConfirmButton
                                             variant="ghost"
                                             size="sm"
-                                            onClick={() => handleDeleteAccount(account.id)}
-                                            className="h-7 px-2 text-xs text-slate-400 hover:text-rose-600"
+                                            confirmTitle="Delete Account?"
+                                            confirmMessage={`Are you sure you want to delete account "${account.code} - ${account.name}"? This action cannot be undone.`}
+                                            confirmText="Delete Account"
+                                            dialogVariant="destructive"
+                                            onConfirm={() => handleDeleteAccount(account.id)}
+                                            className="h-7 px-2 text-xs text-slate-400 hover:text-rose-600 cursor-pointer"
                                             title="Delete Custom Sub-Account"
                                           >
                                             <Trash2 className="h-3.5 w-3.5" />
-                                          </Button>
+                                          </ConfirmButton>
                                         )}
                                       </div>
                                     </td>

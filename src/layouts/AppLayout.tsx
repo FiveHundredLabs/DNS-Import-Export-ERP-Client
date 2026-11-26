@@ -6,8 +6,16 @@ import { MobileNav } from '../components/common/MobileNav';
 import { useAuth } from '../hooks/useAuth';
 
 export function AppLayout() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isInitializing } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  if (isInitializing) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-950 text-sm text-slate-300">
+        Restoring secure session...
+      </div>
+    );
+  }
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;

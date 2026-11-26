@@ -11,6 +11,8 @@ import {
   ChevronDown,
   ChevronRight,
   ExternalLink,
+  AlertCircle,
+  CheckCircle2,
 } from 'lucide-react';
 import { Card } from '../../../../components/ui/card';
 import { Badge } from '../../../../components/ui/badge';
@@ -149,6 +151,7 @@ export function MonthlyTransactionsAuditPage() {
 
   const [selectedMonth, setSelectedMonth] = useState<string>(defaultMonthStr);
   const [originFilter, setOriginFilter] = useState<TransactionOriginFilter>('ALL');
+  const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE_ONLY' | 'VOIDED_ONLY'>('ALL');
   const [sourceFilter, setSourceFilter] = useState<string>('ALL');
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [expandedRowId, setExpandedRowId] = useState<string | null>(null);
@@ -176,6 +179,9 @@ export function MonthlyTransactionsAuditPage() {
       if (originFilter === 'AUTOMATED' && isManual) return false;
       if (originFilter === 'MANUAL' && !isManual) return false;
 
+      if (statusFilter === 'ACTIVE_ONLY' && j.status === 'VOIDED') return false;
+      if (statusFilter === 'VOIDED_ONLY' && j.status !== 'VOIDED') return false;
+
       if (sourceFilter !== 'ALL' && j.source !== sourceFilter) return false;
 
       if (searchTerm.trim()) {
@@ -196,28 +202,49 @@ export function MonthlyTransactionsAuditPage() {
 
       return true;
     });
-  }, [journals, selectedMonth, originFilter, sourceFilter, searchTerm]);
+  }, [journals, selectedMonth, originFilter, statusFilter, sourceFilter, searchTerm]);
 
   const metrics = useMemo(() => {
     const monthAll = journals.filter((j) => j.date.startsWith(selectedMonth));
     const totalCount = monthAll.length;
     const manualCount = monthAll.filter((j) => j.source === 'MANUAL').length;
     const autoCount = monthAll.filter((j) => j.source !== 'MANUAL').length;
+    const monthVoidedCount = monthAll.filter((j) => j.status === 'VOIDED').length;
 
-    let filteredDebitSum = 0;
-    let filteredCreditSum = 0;
+    let activeDebitSum = 0;
+    let activeCreditSum = 0;
+    let voidedDebitSum = 0;
+    let voidedCreditSum = 0;
+    let filteredActiveCount = 0;
+    let filteredVoidedCount = 0;
+
     filteredJournals.forEach((j) => {
-      filteredDebitSum += j.totalDebit;
-      filteredCreditSum += j.totalCredit;
+      if (j.status === 'VOIDED') {
+        voidedDebitSum += j.totalDebit;
+        voidedCreditSum += j.totalCredit;
+        filteredVoidedCount += 1;
+      } else {
+        activeDebitSum += j.totalDebit;
+        activeCreditSum += j.totalCredit;
+        filteredActiveCount += 1;
+      }
     });
 
     return {
       totalCount,
       manualCount,
       autoCount,
+      monthVoidedCount,
       displayedCount: filteredJournals.length,
-      totalVolumeDebit: filteredDebitSum,
-      totalVolumeCredit: filteredCreditSum,
+      filteredActiveCount,
+      filteredVoidedCount,
+      activeDebitSum,
+      activeCreditSum,
+      voidedDebitSum,
+      voidedCreditSum,
+      // Active financial volume (GL impactful)
+      totalVolumeDebit: activeDebitSum,
+      totalVolumeCredit: activeCreditSum,
     };
   }, [journals, selectedMonth, filteredJournals]);
 
@@ -320,11 +347,25 @@ export function MonthlyTransactionsAuditPage() {
         </div>
 
         <div className="p-3 rounded-lg border border-slate-200 bg-white">
-          <span className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">Filtered Volume</span>
-          <div className="mt-1 text-lg font-bold text-slate-900 tabular-nums font-mono truncate">
-            {formatCurrency(metrics.totalVolumeDebit)}
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">Active Volume</span>
+            {metrics.filteredVoidedCount > 0 && (
+              <Badge variant="outline" className="text-[10px] bg-rose-50 text-rose-700 border-rose-200 px-1 py-0 font-medium">
+                {metrics.filteredVoidedCount} Voided
+              </Badge>
+            )}
           </div>
-          <span className="text-[11px] text-emerald-600 font-medium">Debit = Credit Balanced</span>
+          <div className="mt-1 text-lg font-bold text-slate-900 tabular-nums font-mono truncate">
+            {formatCurrency(metrics.activeDebitSum)}
+          </div>
+          <div className="flex items-center justify-between text-[11px] mt-0.5">
+            <span className="text-emerald-600 font-medium">Debit = Credit Balanced</span>
+            {metrics.voidedDebitSum > 0 && (
+              <span className="text-slate-400 font-mono text-[10px]">
+                Excl. {formatCurrency(metrics.voidedDebitSum)} voided
+              </span>
+            )}
+          </div>
         </div>
       </div>
 
@@ -383,6 +424,17 @@ export function MonthlyTransactionsAuditPage() {
               Manual ({metrics.manualCount})
             </button>
           </div>
+
+          {/* Status Filter */}
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value as any)}
+            className="h-8 rounded-md border border-slate-200 bg-white px-2 py-1 text-xs text-slate-700 hover:border-slate-300 focus:outline-hidden"
+          >
+            <option value="ALL">All Statuses (Audit Trail)</option>
+            <option value="ACTIVE_ONLY">Active Only (Posted)</option>
+            <option value="VOIDED_ONLY">Voided Only</option>
+          </select>
 
           {/* Workflow Sub-Filter */}
           <select
@@ -457,6 +509,7 @@ export function MonthlyTransactionsAuditPage() {
                 filteredJournals.map((journal) => {
                   const isExpanded = expandedRowId === journal.id;
                   const isManual = journal.source === 'MANUAL';
+                  const isVoided = journal.status === 'VOIDED';
                   const affectedTables = getAffectedTablesForJournal(journal);
 
                   return (
@@ -468,7 +521,13 @@ export function MonthlyTransactionsAuditPage() {
                           toggleRow(journal.id);
                         }}
                         className={`text-xs cursor-pointer transition-colors ${
-                          isExpanded ? 'bg-primary-light/40' : 'hover:bg-slate-50'
+                          isVoided
+                            ? isExpanded
+                              ? 'bg-rose-50/50'
+                              : 'bg-slate-50/50 hover:bg-slate-100/70 text-slate-500'
+                            : isExpanded
+                            ? 'bg-primary-light/40'
+                            : 'hover:bg-slate-50'
                         }`}
                       >
                         <td className="py-3 pl-3 pr-1 text-slate-400 text-center">
@@ -494,8 +553,15 @@ export function MonthlyTransactionsAuditPage() {
                         {formatDate(journal.date)}
                       </td>
 
-                      <td className="py-3 px-3 font-mono font-semibold text-primary whitespace-nowrap">
-                        {journal.entryNumber}
+                      <td className="py-3 px-3 font-mono font-semibold whitespace-nowrap">
+                        <span className={isVoided ? 'text-slate-500 line-through decoration-slate-300' : 'text-primary'}>
+                          {journal.entryNumber}
+                        </span>
+                        {isVoided && (
+                          <span className="ml-1.5 text-[9.5px] font-sans font-medium text-rose-700 bg-rose-50 px-1.5 py-0.5 rounded border border-rose-200">
+                            Voided
+                          </span>
+                        )}
                       </td>
 
                         <td className="py-3 px-3 whitespace-nowrap">
@@ -517,30 +583,79 @@ export function MonthlyTransactionsAuditPage() {
                         </td>
 
                         <td className="py-3 px-3 max-w-[280px]">
-                          <div className="font-medium text-slate-900 truncate">{journal.description}</div>
+                          <div className={`font-medium truncate ${isVoided ? 'text-slate-600' : 'text-slate-900'}`}>{journal.description}</div>
                           {journal.reference && (
                             <div className="font-mono text-[10.5px] text-slate-400">Ref: {journal.reference}</div>
                           )}
                         </td>
 
-                        <td className="py-3 px-3 text-right font-mono font-semibold text-primary whitespace-nowrap">
-                          {formatCurrency(journal.totalDebit)}
+                        <td className="py-3 px-3 text-right font-mono font-semibold whitespace-nowrap">
+                          {isVoided ? (
+                            <div>
+                              <span className="line-through text-slate-400 text-[11px]">{formatCurrency(journal.totalDebit)}</span>
+                              <div className="text-[9px] text-rose-600 font-sans font-normal">Reversed in GL</div>
+                            </div>
+                          ) : (
+                            <span className="text-primary">{formatCurrency(journal.totalDebit)}</span>
+                          )}
                         </td>
 
-                        <td className="py-3 px-3 text-right font-mono font-semibold text-slate-800 whitespace-nowrap">
-                          {formatCurrency(journal.totalCredit)}
+                        <td className="py-3 px-3 text-right font-mono font-semibold whitespace-nowrap">
+                          {isVoided ? (
+                            <div>
+                              <span className="line-through text-slate-400 text-[11px]">{formatCurrency(journal.totalCredit)}</span>
+                              <div className="text-[9px] text-rose-600 font-sans font-normal">Reversed in GL</div>
+                            </div>
+                          ) : (
+                            <span className="text-slate-800">{formatCurrency(journal.totalCredit)}</span>
+                          )}
                         </td>
 
                         <td className="py-3 pr-4 pl-3 text-center whitespace-nowrap">
-                          <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[10px]">
-                            {journal.status}
-                          </Badge>
+                          {journal.status === 'POSTED' ? (
+                            <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[10px] font-semibold">
+                              POSTED
+                            </Badge>
+                          ) : journal.status === 'VOIDED' ? (
+                            <Badge variant="outline" className="bg-rose-50 text-rose-700 border-rose-200 text-[10px] font-semibold">
+                              VOIDED
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="bg-slate-50 text-slate-700 border-slate-200 text-[10px] font-semibold">
+                              {journal.status}
+                            </Badge>
+                          )}
                         </td>
                       </tr>
 
                       {isExpanded && (
                         <tr key={`${journal.id}-expanded`} className="bg-slate-50/70 border-b border-slate-200">
                           <td colSpan={9} className="p-4">
+                            {isVoided && (
+                              <div className="mb-3.5 p-3 rounded-lg bg-rose-50 border border-rose-200 flex items-start justify-between gap-3 text-xs text-rose-900">
+                                <div className="flex items-start gap-2">
+                                  <AlertCircle className="h-4 w-4 text-rose-600 shrink-0 mt-0.5" />
+                                  <div>
+                                    <div className="font-semibold text-rose-800">
+                                      Voucher Cancelled & Voided (Zero GL Financial Impact)
+                                    </div>
+                                    <p className="text-[11px] text-rose-700 mt-0.5 leading-relaxed">
+                                      This transaction was voided in the General Ledger. The debits and credits originally recorded below have been completely reversed and inverted in the Chart of Accounts.
+                                    </p>
+                                    {journal.voidReason && (
+                                      <div className="text-[11px] text-rose-800 mt-1 font-medium">
+                                        <strong>Reason:</strong> {journal.voidReason}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                                {journal.voidedAt && (
+                                  <span className="text-[10.5px] font-mono text-rose-700 shrink-0 bg-white px-2 py-0.5 rounded border border-rose-200">
+                                    Voided: {formatDate(journal.voidedAt)}
+                                  </span>
+                                )}
+                              </div>
+                            )}
                             <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
                               {/* Left Panel: Double-Entry Postings */}
                               <div className="lg:col-span-7 bg-white p-3.5 rounded-lg border border-slate-200 shadow-2xs">
@@ -667,7 +782,7 @@ export function MonthlyTransactionsAuditPage() {
                                 </div>
 
                                 <div className="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
-                                  <span>Zero GL discrepancy verified</span>
+                                  <span>{isVoided ? 'Voucher balances reversed to 0 in GL' : 'Zero GL discrepancy verified'}</span>
                                   {isManual ? (
                                     <Link
                                       to={`/finance/journal/new?id=${journal.id}`}
@@ -677,7 +792,9 @@ export function MonthlyTransactionsAuditPage() {
                                       <ExternalLink className="h-3 w-3" />
                                     </Link>
                                   ) : (
-                                    <span className="text-emerald-700 font-medium">Auto-posted by pipeline</span>
+                                    <span className={isVoided ? 'text-rose-700 font-medium' : 'text-emerald-700 font-medium'}>
+                                      {isVoided ? 'Auto-voided by cancellation workflow' : 'Auto-posted by pipeline'}
+                                    </span>
                                   )}
                                 </div>
                               </div>
@@ -693,13 +810,22 @@ export function MonthlyTransactionsAuditPage() {
             <tfoot className="border-t-2 border-slate-300 bg-slate-50 text-xs font-semibold text-slate-900">
               <tr>
                 <td colSpan={6} className="py-2.5 px-3 text-slate-700">
-                  Total Filtered ({filteredJournals.length} Transactions)
+                  <div className="flex items-center justify-between">
+                    <span>
+                      Total Active Postings ({metrics.filteredActiveCount} of {filteredJournals.length} Transactions)
+                    </span>
+                    {metrics.filteredVoidedCount > 0 && (
+                      <span className="text-[11px] font-normal text-rose-700 bg-rose-50 px-2 py-0.5 rounded border border-rose-200">
+                        {metrics.filteredVoidedCount} Voided ({formatCurrency(metrics.voidedDebitSum)} reversed excluded)
+                      </span>
+                    )}
+                  </div>
                 </td>
                 <td className="py-2.5 px-3 text-right font-mono text-primary tabular-nums">
-                  {formatCurrency(metrics.totalVolumeDebit)}
+                  {formatCurrency(metrics.activeDebitSum)}
                 </td>
                 <td className="py-2.5 px-3 text-right font-mono text-slate-800 tabular-nums">
-                  {formatCurrency(metrics.totalVolumeCredit)}
+                  {formatCurrency(metrics.activeCreditSum)}
                 </td>
                 <td className="py-2.5 pr-4 pl-3 text-center text-emerald-700 text-[11px] font-bold">
                   BALANCED
