@@ -657,6 +657,10 @@ export function VendorBillCostingPage() {
         totalLandedCost: r.trueLandedCost * r.receivedQuantity,
       }));
 
+      const isBackendGrn =
+        Boolean(selectedGRN.backendManaged) ||
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(selectedGRN.id);
+
       // 1. Post Landed Costing to Backend API
       const otherCosts = numPort + numTransport + numOther;
       try {
@@ -686,6 +690,9 @@ export function VendorBillCostingPage() {
         await updateGrnCostingMutation.mutateAsync(costingPayload);
         await completeGrnCostingMutation.mutateAsync();
       } catch (costingApiErr) {
+        if (isBackendGrn) {
+          throw costingApiErr;
+        }
         console.warn('Backend GRN costing API skipped/fallback to local AP service:', costingApiErr);
       }
 
@@ -716,6 +723,9 @@ export function VendorBillCostingPage() {
           await assignGrnPricingMutation.mutateAsync({ items: pricingItems });
         }
       } catch (pricingApiErr) {
+        if (isBackendGrn) {
+          throw pricingApiErr;
+        }
         console.warn('Backend GRN pricing API skipped/fallback to local batch service:', pricingApiErr);
       }
 
@@ -724,6 +734,9 @@ export function VendorBillCostingPage() {
         await capitalizeGrnMutation.mutateAsync();
         await refetchGrns();
       } catch (capErr) {
+        if (isBackendGrn) {
+          throw capErr;
+        }
         console.warn('Backend GRN capitalize skipped/fallback:', capErr);
       }
 
