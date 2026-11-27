@@ -138,13 +138,19 @@ export function InventoryDashboardPage() {
     return map;
   }, [stockBalances]);
 
-  // Compute flattened stock items directly generated and received from all GRNs,
+  // Inventory Hub only displays stock & GRNs after Finance has completed pricing (PRICED / postedToGL)
+  const pricedGrns = useMemo(
+    () => (grns || []).filter((grn) => grn.status === 'PRICED' || grn.costing?.postedToGL),
+    [grns]
+  );
+
+  // Compute flattened stock items from priced GRNs,
   // plus any active StockBalance records not already covered by a GRN line
   const flatStockItems: FlatGRNStockItem[] = useMemo(() => {
     const list: FlatGRNStockItem[] = [];
     const coveredProductIds = new Set<string>();
 
-    (grns || []).forEach((grn) => {
+    pricedGrns.forEach((grn) => {
       // Ensure unit records are fully prepared with barcodes
       const itemsWithBarcodes = unitBarcodeService.generateAllForGRN(
         grn.items || [],
@@ -165,8 +171,8 @@ export function InventoryDashboardPage() {
           costPrice: 0,
         };
 
-        // Available for Sale = Inbound goods become commercially available strictly once GRN is PRICED
-        const isCapitalized = grn.status === 'PRICED';
+        // Available for Sale = Inbound goods become commercially available once GRN is PRICED or postedToGL
+        const isCapitalized = grn.status === 'PRICED' || Boolean(grn.costing?.postedToGL);
         const availableQty = isCapitalized ? Math.max(0, goodQty - sb.reserved) : 0;
 
         // Determine primary status for status-wise representation
@@ -272,10 +278,10 @@ export function InventoryDashboardPage() {
     }
 
     return list;
-  }, [grns, products, stockBalanceByProduct, stockBalances]);
+  }, [pricedGrns, products, stockBalanceByProduct, stockBalances]);
 
-  // All GRNs for Storekeeper inventory hub
-  const allGrns = useMemo(() => grns || [], [grns]);
+  // All priced GRNs for Storekeeper inventory hub
+  const allGrns = pricedGrns;
 
   // All serials for Storekeeper inventory hub
   const allSerials = useMemo(() => {
