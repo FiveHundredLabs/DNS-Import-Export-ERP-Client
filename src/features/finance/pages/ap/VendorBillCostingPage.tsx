@@ -521,12 +521,12 @@ export function VendorBillCostingPage() {
       const profitPerUnit = selling - trueLandedCost;
       const marginPercent = selling > 0 ? (profitPerUnit / selling) * 100 : 0;
       const profitMarkupPercent = trueLandedCost > 0 && selling > trueLandedCost
-        ? ((selling - trueLandedCost) / trueLandedCost) * 100
+        ? Number((((selling - trueLandedCost) / trueLandedCost) * 100).toFixed(2))
         : 0;
       const floorPct = r.minFloorPricePercentage !== undefined && r.minFloorPricePercentage !== ''
         ? Number(r.minFloorPricePercentage)
         : 0;
-      const computedFloorPrice = trueLandedCost * (1 + floorPct / 100);
+      const computedFloorPrice = Number((trueLandedCost * (1 + floorPct / 100)).toFixed(2));
 
       return {
         ...r,
@@ -557,11 +557,23 @@ export function VendorBillCostingPage() {
     };
   }, [productRows, totalAdditionalLandedCosts, apportionMethod]);
 
-  // Validation (Focus strictly on GRN Costing & Commercial Selling Prices)
+  // Validation (Focus strictly on GRN Costing, Commercial Selling Prices, and Floor Percentage)
   const isFormValid = useMemo(() => {
     if (!selectedGRN) return false;
     if (computedRows.length === 0) return false;
-    return computedRows.every((r) => r.supplierUnitCost > 0 && r.newSellingPrice > 0);
+    return computedRows.every((r) => {
+      const floorPct =
+        r.minFloorPricePercentage !== undefined && r.minFloorPricePercentage !== ''
+          ? Number(r.minFloorPricePercentage)
+          : 0;
+      return (
+        r.supplierUnitCost > 0 &&
+        r.newSellingPrice > 0 &&
+        !Number.isNaN(floorPct) &&
+        floorPct >= 0 &&
+        floorPct <= r.profitMarkupPercent
+      );
+    });
   }, [selectedGRN, computedRows]);
 
   // Quick markup preset handler for Step 2
@@ -608,7 +620,26 @@ export function VendorBillCostingPage() {
   // Action Handler: Post Vendor Bill & Apply Selling Prices
   // ---------------------------------------------------------------------------
   const handlePostBillAndApplyPrices = async () => {
-    if (!isFormValid || !selectedGRN) {
+    if (!selectedGRN || computedRows.length === 0) {
+      toast.error('No GRN selected.');
+      return;
+    }
+
+    const invalidFloorRow = computedRows.find((r) => {
+      const floorPct =
+        r.minFloorPricePercentage !== undefined && r.minFloorPricePercentage !== ''
+          ? Number(r.minFloorPricePercentage)
+          : 0;
+      return Number.isNaN(floorPct) || floorPct < 0 || floorPct > r.profitMarkupPercent;
+    });
+    if (invalidFloorRow) {
+      toast.error(
+        `Minimum floor percentage for '${invalidFloorRow.productName}' must be between 0% and ${invalidFloorRow.profitMarkupPercent.toFixed(2)}% (based on Landed Cost).`,
+      );
+      return;
+    }
+
+    if (!isFormValid) {
       toast.error('Please ensure all unit costs & selling prices are greater than 0.');
       return;
     }
@@ -704,18 +735,13 @@ export function VendorBillCostingPage() {
             selectedGRN.items.find((it) => it.productId === r.productId) ||
             selectedGRN.items[idx];
           const rawId = grnItem?.id || (r as any).grnProductId || r.id;
-          const cost = Number(r.trueLandedCost || r.supplierUnitCost) || 0;
-          const sell = Number(r.newSellingPrice) || 0;
-          const profitMarkup = cost > 0 && sell > cost ? Number((((sell - cost) / cost) * 100).toFixed(2)) : 0;
           const userFloor = r.minFloorPricePercentage !== undefined && r.minFloorPricePercentage !== ''
             ? Number(r.minFloorPricePercentage)
             : 0;
-          // Floor percentage: dynamically bounded within safe profit markup range [0, profitMarkup]
-          const floorPct = Math.min(profitMarkup, Math.max(0, userFloor));
           return {
             grnProductId: rawId,
             sellingPrice: r.newSellingPrice,
-            minFloorPricePercentage: floorPct,
+            minFloorPricePercentage: userFloor,
           };
         });
 
@@ -1790,10 +1816,13 @@ export function VendorBillCostingPage() {
                 <tbody className="divide-y divide-border/60 bg-card">
                   {computedRows.map((row, idx) => {
                     const isLoss = row.profitPerUnit < 0;
-                    const isFloorExceeded =
-                      row.minFloorPricePercentage !== undefined &&
-                      row.minFloorPricePercentage !== '' &&
-                      Number(row.minFloorPricePercentage) > row.profitMarkupPercent;
+                    const floorPctVal =
+                      row.minFloorPricePercentage !== undefined && row.minFloorPricePercentage !== ''
+                        ? Number(row.minFloorPricePercentage)
+                        : 0;
+                    const isFloorNegative = Number.isNaN(floorPctVal) || floorPctVal < 0;
+                    const isFloorExceeded = !isFloorNegative && floorPctVal > row.profitMarkupPercent;
+                    const isFloorInvalid = isFloorNegative || isFloorExceeded;
 
                     return (
                       <tr key={row.id} className="hover:bg-muted/40 transition-colors">
@@ -1880,7 +1909,7 @@ export function VendorBillCostingPage() {
                             <Input
                               type="number"
                               min="0"
-                              max={row.profitMarkupPercent > 0 ? Number(row.profitMarkupPercent.toFixed(2)) : undefined}
+                              max={Number(row.profitMarkupPercent.toFixed(2))}
                               step="0.01"
                               placeholder="0.00"
                               value={row.minFloorPricePercentage !== undefined && row.minFloorPricePercentage !== null ? row.minFloorPricePercentage : ''}
@@ -1888,20 +1917,22 @@ export function VendorBillCostingPage() {
                               disabled={isAuditLocked}
                               className={cn(
                                 'h-8 w-24 text-xs font-mono font-bold text-right bg-background text-foreground border-border focus:border-primary',
-                                isFloorExceeded ? 'border-rose-500 text-rose-600' : ''
+                                isFloorInvalid ? 'border-rose-500 text-rose-600' : ''
                               )}
                             />
                             <span className="text-xs font-bold font-mono text-muted-foreground">%</span>
                           </div>
                           <div className="mt-1 text-[10px] font-mono text-muted-foreground flex items-center justify-end gap-1">
                             <span>Floor:</span>
-                            <span className={cn('font-semibold font-mono', isFloorExceeded ? 'text-rose-600' : 'text-foreground')}>
+                            <span className={cn('font-semibold font-mono', isFloorInvalid ? 'text-rose-600' : 'text-foreground')}>
                               {formatCurrency(row.computedFloorPrice)}
                             </span>
                           </div>
-                          {isFloorExceeded && (
+                          {isFloorInvalid && (
                             <div className="text-[10px] text-rose-500 font-medium mt-0.5 text-right">
-                              Max: {row.profitMarkupPercent.toFixed(1)}%
+                              {isFloorNegative
+                                ? 'Min: 0.00%'
+                                : `Allowed: 0% – ${row.profitMarkupPercent.toFixed(2)}%`}
                             </div>
                           )}
                         </td>
