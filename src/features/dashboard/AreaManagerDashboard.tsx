@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { buildEntryNavigationState } from '../../utils/navigationContext';
 import { useAuth } from '../../hooks/useAuth';
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
@@ -34,6 +35,7 @@ import {
 export function AreaManagerDashboard() {
   const { currentUser } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   // Determine greeting based on current time
   const hour = new Date().getHours();
@@ -404,7 +406,7 @@ export function AreaManagerDashboard() {
           {recentOrders.map((order) => (
             <div
               key={order.id}
-              onClick={() => navigate(`/orders/${order.id}`)}
+              onClick={() => navigate(`/orders/${order.id}`, { state: buildEntryNavigationState(location, 'Dashboard') })}
               className="p-3.5 hover:bg-slate-50/70 transition-colors cursor-pointer flex items-center justify-between gap-3"
             >
               <div className="min-w-0">

@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useNavigationContext } from '../../hooks/useSmartBack';
 import { useAuth } from '../../hooks/useAuth';
 import { useQuotations } from '../../hooks/useQuotations';
 import { useTax } from '../../hooks/useTax';
@@ -70,6 +71,9 @@ export function QuotationCreateEditPage() {
   const { taxEnabled, taxRate, taxName } = useTax();
 
   const isEdit = Boolean(id);
+  const { goBack, goBackToParent, getParentReturnState } = useNavigationContext(
+    isEdit && id ? `/quotations/${id}` : '/quotations',
+  );
 
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [isCustomerSelectorOpen, setIsCustomerSelectorOpen] = useState(false);
@@ -335,7 +339,7 @@ export function QuotationCreateEditPage() {
           termsAndConditions: terms,
           saveAsDraft,
         });
-        navigate(`/quotations/${id}`);
+        navigate(`/quotations/${id}`, { state: getParentReturnState() });
       } else {
         const created = await createQuotation({
           customerId: selectedCustomer.id,
@@ -368,7 +372,7 @@ export function QuotationCreateEditPage() {
           { label: 'Quotations', href: '/quotations' },
           { label: isEdit ? 'Edit Draft' : 'New Quotation' },
         ]}
-        onBack={() => navigate('/quotations')}
+        onBack={() => (isEdit && id ? goBackToParent(`/quotations/${id}`) : goBack())}
         badge={
           <StatusBadge
             status={isEdit ? 'DRAFT' : 'NEW'}

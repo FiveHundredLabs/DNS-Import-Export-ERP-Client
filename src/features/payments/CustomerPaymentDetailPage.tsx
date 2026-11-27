@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate, Link, useSearchParams } from 'react-router-dom';
+import { useNavigationContext } from '../../hooks/useSmartBack';
 import { Customer } from '../../types/customer';
 import { Invoice } from '../../types/invoice';
 import { Payment, PaymentMethod } from '../../types/payment';
@@ -49,6 +50,7 @@ export function CustomerPaymentDetailPage() {
   const { customerId, id } = useParams<{ customerId?: string; id?: string }>();
   const effectiveCustomerId = customerId || id;
   const navigate = useNavigate();
+  const { goBack } = useNavigationContext('/payments');
   const [searchParams] = useSearchParams();
   const { currentUser, role } = useAuth();
 
@@ -329,7 +331,7 @@ export function CustomerPaymentDetailPage() {
         <AlertCircle className="h-10 w-10 text-rose-500 mx-auto" />
         <h3 className="text-base font-bold text-slate-800">Customer Account Not Found</h3>
         <p className="text-xs text-slate-500">The requested customer could not be found or has been archived.</p>
-        <Button onClick={() => navigate('/payments')} className="text-xs rounded-xl">
+        <Button onClick={goBack} className="text-xs rounded-xl">
           Return to Payments
         </Button>
       </div>
@@ -345,7 +347,7 @@ export function CustomerPaymentDetailPage() {
         <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={() => navigate('/payments/collect')}
+            onClick={goBack}
             className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-700 hover:text-slate-900 bg-white border border-slate-200 px-3 py-1.5 rounded-xl shadow-2xs active:scale-95 transition-all"
           >
             <ArrowLeft className="h-4 w-4" />

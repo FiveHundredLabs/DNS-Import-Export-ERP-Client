@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigationContext } from '../../hooks/useSmartBack';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -81,6 +82,9 @@ export const checkProductRequiresSerial = (item: {
 export function GRNCreateEditPage() {
   const navigate = useNavigate();
   const { id } = useParams<{ id?: string }>();
+  const { goBack, goBackToParent, getParentReturnState } = useNavigationContext(
+    id ? `/inventory/grn/${id}` : '/inventory/grn',
+  );
   const { refetch: refetchGrns } = useGRN();
   const queryClient = useQueryClient();
   const { user, currentUser } = useAuth();
@@ -1202,7 +1206,7 @@ export function GRNCreateEditPage() {
       await queryClient.invalidateQueries({ queryKey: purchaseOrderQueryKeys.all });
       await refetchGrns();
       toast.success(`GRN ${saved.grnNumber} saved as ${saved.status}`);
-      navigate(`/inventory/grn/${saved.id}`);
+      navigate(`/inventory/grn/${saved.id}`, { state: getParentReturnState() });
     } catch (e: any) {
       toast.error(extractErrorMessage(e) || e.message || 'Error saving GRN');
     } finally {
@@ -1425,7 +1429,11 @@ export function GRNCreateEditPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => navigate('/inventory/grn')}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => (id ? goBackToParent(`/inventory/grn/${id}`) : goBack())}
+          >
             Cancel
           </Button>
         </div>

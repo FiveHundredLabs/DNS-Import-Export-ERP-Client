@@ -61,12 +61,26 @@ export interface BatchPricingSummary {
   eligibleForPriceUpdate: number;
 }
 
+export interface ProductPriceHistoryItem {
+  id: string;
+  batchId?: string;
+  batchNumber?: string;
+  oldPrice: number;
+  newPrice: number;
+  strategy: 'STANDARDIZE_UNIFORM' | 'PRESERVE_BATCH';
+  changeReason: string;
+  changedBy: string;
+  changedAt: string;
+  affectedBatchCount?: number;
+}
+
 export interface ProductBatchPricingResponse {
   productId: string;
   productName: string;
   sku: string;
   barcode: string;
   batches: StockBatchItem[];
+  priceHistory?: ProductPriceHistoryItem[];
   summary: BatchPricingSummary;
 }
 

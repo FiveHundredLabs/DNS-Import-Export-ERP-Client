@@ -3,9 +3,17 @@ import React from 'react';
 import '@testing-library/jest-dom';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AreaListPage } from '../features/administration/AreaListPage';
 import { TeamListPage } from '../features/administration/TeamListPage';
 import { areasApi } from '../api/areas/areas.api';
+
+function renderWithQuery(ui: React.ReactElement) {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
+}
 
 const mockAreasData = [
   {
@@ -110,7 +118,7 @@ describe('Area and Team Management Requirements', () => {
 
   describe('1. Area Management (/areas) - Create Area', () => {
     it('displays all area managers in the dropdown and area manager selection is not mandatory', async () => {
-      render(
+      renderWithQuery(
         <MemoryRouter initialEntries={['/areas']}>
           <AreaListPage />
         </MemoryRouter>
@@ -166,7 +174,7 @@ describe('Area and Team Management Requirements', () => {
     });
 
     it('disables already-assigned Area Managers in dropdown with their assigned area name indicated', async () => {
-      render(
+      renderWithQuery(
         <MemoryRouter initialEntries={['/areas']}>
           <AreaListPage />
         </MemoryRouter>
@@ -197,7 +205,7 @@ describe('Area and Team Management Requirements', () => {
     });
 
     it('shows current Area Manager as enabled when editing an existing area', async () => {
-      render(
+      renderWithQuery(
         <MemoryRouter initialEntries={['/areas']}>
           <AreaListPage />
         </MemoryRouter>
@@ -227,7 +235,7 @@ describe('Area and Team Management Requirements', () => {
     });
 
     it('disables already-assigned Sales Representatives in dropdown with their assigned area name indicated', async () => {
-      render(
+      renderWithQuery(
         <MemoryRouter initialEntries={['/areas']}>
           <AreaListPage />
         </MemoryRouter>
@@ -258,7 +266,7 @@ describe('Area and Team Management Requirements', () => {
     });
 
     it('allows selecting and assigning multiple unassigned Sales Representatives to an area', async () => {
-      render(
+      renderWithQuery(
         <MemoryRouter initialEntries={['/areas']}>
           <AreaListPage />
         </MemoryRouter>
@@ -325,7 +333,7 @@ describe('Area and Team Management Requirements', () => {
     });
 
     it('allows removing an added Sales Representative chip before saving', async () => {
-      render(
+      renderWithQuery(
         <MemoryRouter initialEntries={['/areas']}>
           <AreaListPage />
         </MemoryRouter>
@@ -365,7 +373,7 @@ describe('Area and Team Management Requirements', () => {
 
   describe('2. Team Management (/teams) - Areas Dropdown', () => {
     it('displays all areas in the table area filter and add team member modal', async () => {
-      render(
+      renderWithQuery(
         <MemoryRouter initialEntries={['/teams']}>
           <TeamListPage />
         </MemoryRouter>

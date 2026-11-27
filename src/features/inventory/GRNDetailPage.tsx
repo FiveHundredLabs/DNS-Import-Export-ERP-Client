@@ -11,6 +11,8 @@ import { useGRN } from '../../hooks/useGRN';
 import { grnsApi } from '../../api/grns/grns.api';
 import { purchaseOrderQueryKeys } from '../../hooks/usePurchaseOrders';
 import { useAuth } from '../../hooks/useAuth';
+import { getOriginalReturnTo, getReturnLabel } from '../../utils/navigationContext';
+import { useNavigationContext } from '../../hooks/useSmartBack';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 import { UnitBarcodeModal } from '../../components/inventory/UnitBarcodeModal';
 import { unitBarcodeService } from '../../services/UnitBarcodeService';
@@ -218,9 +220,20 @@ export function GRNDetailPage({ backUrl, backTitle }: GRNDetailPageProps = {}) {
   const { user } = useAuth();
 
   const isPurchasingRoute = location.pathname.startsWith('/purchasing/grn');
-  const statFrom = (location.state as { from?: string } | null)?.from;
-  const resolvedBackPath = backUrl || (statFrom && statFrom !== location.pathname ? statFrom : null) || (isPurchasingRoute ? '/purchasing/grn' : '/inventory/grn');
-  const resolvedBackTitle = backTitle || (isPurchasingRoute ? 'Back to Goods Received Notes' : 'Back to Inward GRN Registry');
+  const defaultGrnListPath = isPurchasingRoute ? '/purchasing/grn' : '/inventory/grn';
+  const { getChildState } = useNavigationContext(defaultGrnListPath);
+  const statFrom = getOriginalReturnTo(location.state, location.pathname);
+  const isFromMyApprovals = Boolean(statFrom?.includes('my-approvals'));
+  const resolvedBackPath = statFrom || backUrl || defaultGrnListPath;
+  const resolvedBackTitle =
+    backTitle ||
+    (isFromMyApprovals
+      ? 'Back to My Approvals'
+      : statFrom
+        ? `Back to ${getReturnLabel(location.state, isPurchasingRoute ? 'Goods Received Notes' : 'Inward GRN Registry')}`
+        : isPurchasingRoute
+          ? 'Back to Goods Received Notes'
+          : 'Back to Inward GRN Registry');
 
   const [grn, setGrn] = useState<GRN | null>(null);
   const [loading, setLoading] = useState(true);
@@ -469,10 +482,11 @@ export function GRNDetailPage({ backUrl, backTitle }: GRNDetailPageProps = {}) {
   const isStockKeeper = user?.role === 'STOCK_KEEPER';
   const isStockManager = user?.role === 'STOCK_MANAGER';
   const isFinanceManager = user?.role === 'FINANCE_MANAGER';
+  const isFinanceOfficer = user?.role === 'FINANCE_OFFICER';
   const isManagerOrDirector = user?.role === 'MANAGER' || user?.role === 'DIRECTOR';
   const canVerifyPhysical = isStockManager || isManagerOrDirector;
-  const canApproveCommercial = isFinanceManager || isManagerOrDirector;
-  const isFinanceRole = ['FINANCE_OFFICER', 'FINANCE_MANAGER', 'DIRECTOR', 'ADMIN', 'MANAGER'].includes(user?.role || '');
+  const canApproveCommercial = isFinanceManager; // Strictly Finance side only; Directors and Managers cannot execute Finance approval
+  const isFinanceRole = isFinanceManager || isFinanceOfficer;
   const canEditDraft = ['STOCK_KEEPER', 'STOCK_MANAGER', 'MANAGER', 'DIRECTOR'].includes(user?.role || '');
 
   if (loading) {
@@ -637,7 +651,7 @@ export function GRNDetailPage({ backUrl, backTitle }: GRNDetailPageProps = {}) {
                 const stickersPath = isPurchasingRoute
                   ? `/purchasing/grn/${id}/stickers`
                   : `/inventory/grn/${id}/stickers`;
-                navigate(stickersPath);
+                navigate(stickersPath, { state: getChildState() });
               }}
               className="gap-1.5 text-xs font-semibold text-primary border-primary/30 hover:bg-primary/5 shadow-2xs"
             >
@@ -652,7 +666,7 @@ export function GRNDetailPage({ backUrl, backTitle }: GRNDetailPageProps = {}) {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => navigate(`/inventory/grn/${id}/edit`)}
+                  onClick={() => navigate(`/inventory/grn/${id}/edit`, { state: getChildState() })}
                   className="gap-1.5 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-50 border-slate-300 shadow-2xs"
                 >
                   <FileEdit className="h-3.5 w-3.5 text-slate-600" />
@@ -714,7 +728,15 @@ export function GRNDetailPage({ backUrl, backTitle }: GRNDetailPageProps = {}) {
               </div>
             )}
 
-            {/* 2. FINANCE / MANAGEMENT WORKFLOW: Only Finance Manager / Manager / Director approves and posts to Inventory */}
+            {/* If Director or Manager is viewing a GRN awaiting Finance approval */}
+            {isManagerOrDirector && (grn.status === 'SUBMITTED' || grn.status === 'COSTED') && (
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 border border-blue-300 text-blue-800 text-xs font-semibold select-none">
+                <Clock className="h-3.5 w-3.5 text-blue-600" />
+                <span>Awaiting Finance Manager Commercial Approval</span>
+              </div>
+            )}
+
+            {/* 2. FINANCE SIDE WORKFLOW: Strictly Finance Manager approves and posts to Inventory */}
             {canApproveCommercial && (grn.status === 'SUBMITTED' || grn.status === 'COSTED') && (
               <>
                 <ConfirmButton

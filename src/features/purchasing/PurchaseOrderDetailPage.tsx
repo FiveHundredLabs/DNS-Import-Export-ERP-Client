@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { useSmartBack } from '../../hooks/useSmartBack';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import { useNavigationContext } from '../../hooks/useSmartBack';
 import { useAuth } from '../../hooks/useAuth';
 import { usePurchaseOrder, usePurchaseOrderActions, usePurchaseOrderActivity } from '../../hooks/usePurchaseOrders';
 import type { PurchaseOrderRecord } from '../../api/purchase-orders/purchase-orders.types';
@@ -56,7 +56,12 @@ function toTimelineEntry(record: PurchaseOrderRecord): TimelineEntry {
 export function PurchaseOrderDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const goBack = useSmartBack('/purchasing/orders');
+  const {
+    returnTo,
+    goBack,
+    getChildState,
+    getReturnLabel,
+  } = useNavigationContext('/purchasing/orders');
   const { currentUser } = useAuth();
   const { purchaseOrder: po, loading, error, refetch } = usePurchaseOrder(id);
   const activityQuery = usePurchaseOrderActivity(id);
@@ -119,12 +124,12 @@ export function PurchaseOrderDetailPage() {
       title={<span className="font-mono">{po.poNumber}</span>}
       subtitle={`Order date ${formatDate(po.orderDate)}${po.expectedDeliveryDate ? ` · Expected delivery ${formatDate(po.expectedDeliveryDate)}` : ''}`}
       badge={<PurchaseOrderStatusBadge status={po.status} />}
-      backUrl="/purchasing/orders"
-      backLabel="Orders"
+      backUrl={returnTo}
+      backLabel={getReturnLabel('Orders')}
       breadcrumbs={[{ label: 'Purchasing', href: '/purchasing' }, { label: 'Purchase Orders', href: '/purchasing/orders' }, { label: po.poNumber }]}
       actions={<div className="flex flex-wrap gap-2">
-        <Button variant="outline" onClick={() => navigate(`/purchasing/orders/${po.id}/print`)}><Printer className="mr-2 h-4 w-4" />Print / PDF</Button>
-        {canManageOrders && (po.status === 'DRAFT' || po.status === 'REJECTED') && <Button variant="outline" onClick={() => navigate(`/purchasing/orders/${po.id}/edit`)}><Edit className="mr-2 h-4 w-4" />{po.status === 'REJECTED' ? 'Create revision' : 'Edit draft'}</Button>}
+        <Button variant="outline" onClick={() => navigate(`/purchasing/orders/${po.id}/print`, { state: getChildState() })}><Printer className="mr-2 h-4 w-4" />Print / PDF</Button>
+        {canManageOrders && (po.status === 'DRAFT' || po.status === 'REJECTED') && <Button variant="outline" onClick={() => navigate(`/purchasing/orders/${po.id}/edit`, { state: getChildState() })}><Edit className="mr-2 h-4 w-4" />{po.status === 'REJECTED' ? 'Create revision' : 'Edit draft'}</Button>}
         {canManageOrders && po.status === 'DRAFT' && (
           <ConfirmButton
             variant="default"

@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { buildEntryNavigationState } from '../../utils/navigationContext';
 import { useGRN } from '../../hooks/useGRN';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 import {
@@ -24,6 +25,8 @@ import { PageHeader, StatusBadge } from '../../components';
 
 export function PurchasingGRNListPage() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const entryNavState = buildEntryNavigationState(location, 'Goods Received Notes');
   const { grns, loading } = useGRN();
 
   const [search, setSearch] = useState('');
@@ -191,7 +194,7 @@ export function PurchasingGRNListPage() {
                 return (
                   <div
                     key={grn.id}
-                    onClick={() => navigate(`/purchasing/grn/${grn.id}`)}
+                    onClick={() => navigate(`/purchasing/grn/${grn.id}`, { state: entryNavState })}
                     className="rounded-2xl border border-slate-200/90 bg-white p-3.5 shadow-xs hover:border-primary/50 transition-all cursor-pointer active:scale-[0.99] space-y-3"
                   >
                     <div className="flex items-center justify-between gap-2">
@@ -226,7 +229,7 @@ export function PurchasingGRNListPage() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => navigate(`/purchasing/grn/${grn.id}`)}
+                        onClick={() => navigate(`/purchasing/grn/${grn.id}`, { state: entryNavState })}
                         className="h-8 px-3 text-xs gap-1 text-slate-700"
                       >
                         <Eye className="h-3.5 w-3.5" />
@@ -284,7 +287,7 @@ export function PurchasingGRNListPage() {
                       <tr
                         key={grn.id}
                         className="hover:bg-slate-50/60 transition-colors cursor-pointer"
-                        onClick={() => navigate(`/purchasing/grn/${grn.id}`)}
+                        onClick={() => navigate(`/purchasing/grn/${grn.id}`, { state: entryNavState })}
                       >
                         <td className="py-3 px-4 font-mono font-bold text-slate-900">
                           {grn.grnNumber || grn.id}
@@ -311,7 +314,7 @@ export function PurchasingGRNListPage() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => navigate(`/purchasing/grn/${grn.id}`)}
+                            onClick={() => navigate(`/purchasing/grn/${grn.id}`, { state: entryNavState })}
                             className="h-7 text-xs px-2.5 gap-1 text-slate-600 hover:text-slate-900"
                             title="Inspect Goods Received details"
                           >

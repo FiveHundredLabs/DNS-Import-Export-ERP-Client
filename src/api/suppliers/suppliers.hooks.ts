@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { suppliersApi } from './suppliers.api';
 import type {
   CreateSupplierPayload,
@@ -27,6 +27,7 @@ export function useSuppliers(params: SupplierListParams = {}) {
   return useQuery({
     queryKey: supplierQueryKeys.list(params),
     queryFn: ({ signal }) => suppliersApi.list(params, signal),
+    placeholderData: keepPreviousData,
     staleTime: 30_000,
   });
 }
@@ -36,6 +37,7 @@ export function useSupplier(id: string | undefined) {
     queryKey: supplierQueryKeys.detail(id ?? ''),
     queryFn: ({ signal }) => suppliersApi.getById(id!, signal),
     enabled: Boolean(id),
+    staleTime: 60_000,
   });
 }
 

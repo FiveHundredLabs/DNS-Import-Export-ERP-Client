@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useGRN } from '../../hooks/useGRN';
 import { useAuth } from '../../hooks/useAuth';
+import { useStockBalances } from '../../api/inventory/inventory.hooks';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
@@ -14,8 +15,6 @@ import { useProducts } from '../../hooks/useProducts';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 import { unitBarcodeService } from '../../services/UnitBarcodeService';
 import { serialNumberService } from '../../services/SerialNumberService';
-import { orderService } from '../../services/OrderService';
-import { SalesOrder } from '../../types/order';
 import { UnitBarcodeModal } from '../../components/inventory/UnitBarcodeModal';
 import { PaginationControls } from '../../components/common/PaginationControls';
 import { SerialNumberRecord, UnitBarcodeRecord } from '../../types/inventory';
@@ -80,12 +79,9 @@ export function InventoryDashboardPage() {
   const navigate = useNavigate();
   const { user, role } = useAuth();
   const { grns, loading: grnsLoading } = useGRN();
-  const { products } = useProducts({ page: 1, pageSize: 200 });
-  const [orders, setOrders] = useState<SalesOrder[]>([]);
-
-  useEffect(() => {
-    orderService.getOrders().then(setOrders).catch(console.error);
-  }, []);
+  const { products } = useProducts({ page: 1, pageSize: 100 });
+  const stockBalancesQuery = useStockBalances({ page: 1, pageSize: 100 });
+  const stockBalances = stockBalancesQuery.data?.data ?? [];
 
   const [activeTab, setActiveTab] = useState<'LEDGER' | 'GRN_LIST' | 'QUARANTINE' | 'SERIALS'>('LEDGER');
   const [searchQuery, setSearchQuery] = useState('');
@@ -116,53 +112,45 @@ export function InventoryDashboardPage() {
     serialNumberService.getAll().then((data) => setSerials(data));
   }, []);
 
-// Helper: Strict Power Tools classification filter for Stock Keeper Inventory Hub
-function isPowerToolItem(item: { productId?: string; sku?: string; categoryName?: string; productName?: string }): boolean {
-  // Strictly filter out electrical wiring / inverter test fixtures to preserve storekeeper mock division realism
-  const name = (item.productName || '').toLowerCase();
-  if (
-    name.includes('schneider') ||
-    name.includes('kelani') ||
-    name.includes('growatt') ||
-    name.includes('philips') ||
-    item.productId === 'prod-001' ||
-    item.productId === 'prod-002' ||
-    item.productId === 'prod-003' ||
-    item.productId === 'prod-004'
-  ) {
-    return false;
-  }
-  return true;
-}
-
-  // Compute product-level sales order commitments (Reserved, Dispatched, Delivered)
-  const productOrderStats = useMemo(() => {
-    const map: Record<string, { reserved: number; dispatched: number; delivered: number }> = {};
-    orders.forEach((ord) => {
-      ord.items?.forEach((it) => {
-        if (!map[it.productId]) {
-          map[it.productId] = { reserved: 0, dispatched: 0, delivered: 0 };
-        }
-        const qty = it.approvedQuantity || it.orderedQuantity || 0;
-        if (['APPROVED', 'PICKING', 'PARTIALLY_ISSUED', 'ISSUED', 'INVOICED'].includes(ord.status)) {
-          map[it.productId].reserved += qty;
-        } else if (ord.status === 'DISPATCHED') {
-          map[it.productId].dispatched += qty;
-        } else if (ord.status === 'DELIVERED') {
-          map[it.productId].delivered += qty;
-        }
-      });
-    });
+  // Map real PostgreSQL StockBalance stages by productId
+  const stockBalanceByProduct = useMemo(() => {
+    const map: Record<
+      string,
+      {
+        available: number;
+        reserved: number;
+        dispatched: number;
+        delivered: number;
+        damaged: number;
+        costPrice: number;
+      }
+    > = {};
+    for (const b of stockBalances) {
+      map[b.productId] = {
+        available: b.stages?.available ?? 0,
+        reserved: b.stages?.reserved ?? 0,
+        dispatched: b.stages?.dispatch ?? 0,
+        delivered: b.stages?.delivered ?? 0,
+        damaged: b.stages?.damaged ?? 0,
+        costPrice: b.costPrice ?? 0,
+      };
+    }
     return map;
-  }, [orders]);
+  }, [stockBalances]);
 
-  // Compute flattened stock items directly generated and received from all GRNs
+  // Inventory Hub only displays stock & GRNs after Finance has completed pricing (PRICED / postedToGL)
+  const pricedGrns = useMemo(
+    () => (grns || []).filter((grn) => grn.status === 'PRICED' || grn.costing?.postedToGL),
+    [grns]
+  );
+
+  // Compute flattened stock items from priced GRNs,
+  // plus any active StockBalance records not already covered by a GRN line
   const flatStockItems: FlatGRNStockItem[] = useMemo(() => {
-    if (!grns || grns.length === 0) return [];
-
     const list: FlatGRNStockItem[] = [];
+    const coveredProductIds = new Set<string>();
 
-    grns.forEach((grn) => {
+    pricedGrns.forEach((grn) => {
       // Ensure unit records are fully prepared with barcodes
       const itemsWithBarcodes = unitBarcodeService.generateAllForGRN(
         grn.items || [],
@@ -170,14 +158,22 @@ function isPowerToolItem(item: { productId?: string; sku?: string; categoryName?
       );
 
       itemsWithBarcodes.forEach((item: any, idx: number) => {
+        coveredProductIds.add(item.productId);
         const product = item.product || products.find((p) => p.id === item.productId);
         const damagedQty = item.damagedQuantity || 0;
         const goodQty = Math.max(0, (item.receivedQuantity || 0) - damagedQty);
-        const stats = productOrderStats[item.productId] || { reserved: 0, dispatched: 0, delivered: 0 };
+        const sb = stockBalanceByProduct[item.productId] || {
+          available: 0,
+          reserved: 0,
+          dispatched: 0,
+          delivered: 0,
+          damaged: 0,
+          costPrice: 0,
+        };
 
-        // Available for Sale = Inbound goods become commercially available strictly once GRN is PRICED
-        const isCapitalized = grn.status === 'PRICED';
-        const availableQty = isCapitalized ? Math.max(0, goodQty - stats.reserved) : 0;
+        // Available for Sale = Inbound goods become commercially available once GRN is PRICED or postedToGL
+        const isCapitalized = grn.status === 'PRICED' || Boolean(grn.costing?.postedToGL);
+        const availableQty = isCapitalized ? Math.max(0, goodQty - sb.reserved) : 0;
 
         // Determine primary status for status-wise representation
         let primaryStatus: 'AVAILABLE' | 'RESERVED' | 'DISPATCHED' | 'DELIVERED' | 'REJECTED' | 'PENDING_PRICING' = 'AVAILABLE';
@@ -185,26 +181,22 @@ function isPowerToolItem(item: { productId?: string; sku?: string; categoryName?
           primaryStatus = 'REJECTED';
         } else if (!isCapitalized) {
           primaryStatus = 'PENDING_PRICING';
-        } else if (stats.reserved > 0 && availableQty === 0) {
+        } else if (sb.reserved > 0 && availableQty === 0) {
           primaryStatus = 'RESERVED';
         } else if (availableQty > 0) {
           primaryStatus = 'AVAILABLE';
-        } else if (stats.dispatched > 0) {
+        } else if (sb.dispatched > 0) {
           primaryStatus = 'DISPATCHED';
-        } else if (stats.delivered > 0) {
+        } else if (sb.delivered > 0) {
           primaryStatus = 'DELIVERED';
         }
 
-        const unitCost = item.unitCostSnapshot ?? item.unitCost ?? product?.pricing?.costPrice ?? 0;
+        const unitCost = item.unitCostSnapshot ?? item.unitCost ?? sb.costPrice ?? product?.pricing?.costPrice ?? 0;
         const lineValue = availableQty * unitCost;
         const barcodesCount = item.unitRecords?.length || item.unitBarcodes?.length || goodQty;
         const pName = product?.name || item.productNameSnapshot || item.productId;
         const pSku = product?.sku || item.skuSnapshot || 'N/A';
         const pCategory = product?.categoryName || 'General Stock';
-
-        if (role === 'STOCK_KEEPER' && !isPowerToolItem({ productId: item.productId, sku: pSku, categoryName: pCategory, productName: pName })) {
-          return;
-        }
 
         list.push({
           keyId: `${grn.id}-${item.productId}-${idx}`,
@@ -223,9 +215,9 @@ function isPowerToolItem(item: { productId?: string; sku?: string; categoryName?
           damagedQuantity: damagedQty,
           goodQuantity: goodQty,
           availableQuantity: availableQty,
-          reservedQuantity: stats.reserved,
-          dispatchedQuantity: stats.dispatched,
-          deliveredQuantity: stats.delivered,
+          reservedQuantity: sb.reserved,
+          dispatchedQuantity: sb.dispatched,
+          deliveredQuantity: sb.delivered,
           primaryStatus,
           unitCost,
           lineValue,
@@ -237,11 +229,59 @@ function isPowerToolItem(item: { productId?: string; sku?: string; categoryName?
       });
     });
 
-    return list;
-  }, [grns, products, productOrderStats]);
+    // Include StockBalance records whose products don't appear in the current GRN list
+    for (const b of stockBalances) {
+      if (coveredProductIds.has(b.productId)) continue;
+      const avail = b.stages?.available ?? 0;
+      const resv = b.stages?.reserved ?? 0;
+      const disp = b.stages?.dispatch ?? 0;
+      const deliv = b.stages?.delivered ?? 0;
+      const dmg = b.stages?.damaged ?? 0;
+      if (avail + resv + disp + deliv + dmg <= 0) continue;
 
-  // All GRNs for Storekeeper inventory hub
-  const allGrns = useMemo(() => grns || [], [grns]);
+      let primaryStatus: FlatGRNStockItem['primaryStatus'] = 'AVAILABLE';
+      if (dmg > 0 && avail === 0) primaryStatus = 'REJECTED';
+      else if (resv > 0 && avail === 0) primaryStatus = 'RESERVED';
+      else if (avail > 0) primaryStatus = 'AVAILABLE';
+      else if (disp > 0) primaryStatus = 'DISPATCHED';
+      else if (deliv > 0) primaryStatus = 'DELIVERED';
+
+      const unitCost = b.costPrice ?? 0;
+      list.push({
+        keyId: `sb-${b.id}`,
+        grnId: '',
+        grnNumber: 'STOCK-BAL',
+        supplierName: b.brand || 'Opening / Direct Stock',
+        warehouseId: 'WH-MAIN',
+        grnStatus: 'PRICED',
+        grnDate: b.updatedAt || '',
+        productId: b.productId,
+        productName: b.name || b.productId,
+        sku: b.sku || 'N/A',
+        categoryName: b.category || 'General Stock',
+        expectedQuantity: avail + resv + disp + deliv + dmg,
+        receivedQuantity: avail + resv + disp + deliv + dmg,
+        damagedQuantity: dmg,
+        goodQuantity: avail + resv + disp + deliv,
+        availableQuantity: avail,
+        reservedQuantity: resv,
+        dispatchedQuantity: disp,
+        deliveredQuantity: deliv,
+        primaryStatus,
+        unitCost,
+        lineValue: avail * unitCost,
+        serialNumbers: [],
+        unitRecords: [],
+        barcodesCount: 0,
+        barcodesConfirmed: true,
+      });
+    }
+
+    return list;
+  }, [pricedGrns, products, stockBalanceByProduct, stockBalances]);
+
+  // All priced GRNs for Storekeeper inventory hub
+  const allGrns = pricedGrns;
 
   // All serials for Storekeeper inventory hub
   const allSerials = useMemo(() => {
@@ -271,19 +311,10 @@ function isPowerToolItem(item: { productId?: string; sku?: string; categoryName?
       source = derived;
     }
 
-    if (role === 'STOCK_KEEPER') {
-      return source.filter((sn) =>
-        isPowerToolItem({
-          productId: sn.productId,
-          sku: sn.sku,
-          productName: sn.productName,
-        })
-      );
-    }
     return source;
-  }, [serials, flatStockItems, role]);
+  }, [serials, flatStockItems]);
 
-  // Operational KPIs
+  // Operational KPIs backed by real PostgreSQL StockBalance (authoritative source of truth)
   const kpis = useMemo(() => {
     let totalAvailableUnits = 0;
     let totalReservedUnits = 0;
@@ -291,17 +322,32 @@ function isPowerToolItem(item: { productId?: string; sku?: string; categoryName?
     let totalDeliveredUnits = 0;
     let totalDamagedUnits = 0;
     let totalStockValue = 0;
+
+    if (stockBalances.length > 0) {
+      for (const b of stockBalances) {
+        const avail = b.stages?.available ?? 0;
+        totalAvailableUnits += avail;
+        totalReservedUnits += b.stages?.reserved ?? 0;
+        totalDispatchedUnits += b.stages?.dispatch ?? 0;
+        totalDeliveredUnits += b.stages?.delivered ?? 0;
+        totalDamagedUnits += b.stages?.damaged ?? 0;
+        totalStockValue += avail * (b.costPrice ?? 0);
+      }
+    } else {
+      flatStockItems.forEach((item) => {
+        totalAvailableUnits += item.availableQuantity;
+        totalReservedUnits += item.reservedQuantity;
+        totalDispatchedUnits += item.dispatchedQuantity;
+        totalDeliveredUnits += item.deliveredQuantity;
+        totalDamagedUnits += item.damagedQuantity;
+        totalStockValue += item.lineValue;
+      });
+    }
+
     let totalBarcodes = 0;
     let confirmedBarcodes = 0;
     let serializedUnitsCount = 0;
-
     flatStockItems.forEach((item) => {
-      totalAvailableUnits += item.availableQuantity;
-      totalReservedUnits += item.reservedQuantity;
-      totalDispatchedUnits += item.dispatchedQuantity;
-      totalDeliveredUnits += item.deliveredQuantity;
-      totalDamagedUnits += item.damagedQuantity;
-      totalStockValue += item.lineValue;
       totalBarcodes += item.barcodesCount;
       if (item.barcodesConfirmed) {
         confirmedBarcodes += item.barcodesCount;
@@ -312,9 +358,9 @@ function isPowerToolItem(item: { productId?: string; sku?: string; categoryName?
     });
 
     const pendingGRNs = (grns || []).filter(
-      (g) => g.status === 'SUBMITTED' || g.status === 'DRAFT'
+      (g) => g.status === 'SUBMITTED' || g.status === 'DRAFT' || g.status === 'PENDING_STOCK_MANAGER_APPROVAL'
     ).length;
-    const approvedGRNs = (grns || []).filter((g) => g.status === 'APPROVED').length;
+    const approvedGRNs = (grns || []).filter((g) => g.status === 'APPROVED' || g.status === 'PRICED').length;
 
     return {
       totalAcceptedUnits: totalAvailableUnits,
@@ -330,7 +376,7 @@ function isPowerToolItem(item: { productId?: string; sku?: string; categoryName?
       pendingGRNs,
       approvedGRNs,
     };
-  }, [flatStockItems, grns]);
+  }, [stockBalances, flatStockItems, grns]);
 
   // Filtered stock items based on search, GRN, and status-wise quick filters
   const filteredStockItems = useMemo(() => {
@@ -835,13 +881,19 @@ function isPowerToolItem(item: { productId?: string; sku?: string; categoryName?
 
                               {/* Source GRN */}
                               <TableCell className="py-2.5 px-3 min-w-[140px]">
-                                <Link
-                                  to={`/inventory/grn/${item.grnId}`}
-                                  className="font-mono font-bold text-primary hover:underline flex items-center gap-1 text-[11.5px]"
-                                >
-                                  {item.grnNumber}
-                                  <ExternalLink className="h-2.5 w-2.5 opacity-60" />
-                                </Link>
+                                {item.grnId ? (
+                                  <Link
+                                    to={`/inventory/grn/${item.grnId}`}
+                                    className="font-mono font-bold text-primary hover:underline flex items-center gap-1 text-[11.5px]"
+                                  >
+                                    {item.grnNumber}
+                                    <ExternalLink className="h-2.5 w-2.5 opacity-60" />
+                                  </Link>
+                                ) : (
+                                  <span className="font-mono font-bold text-slate-700 text-[11.5px]">
+                                    {item.grnNumber}
+                                  </span>
+                                )}
                                 <p className="text-[10.5px] text-slate-500 line-clamp-1" title={item.supplierName}>
                                   {item.supplierName}
                                 </p>
@@ -939,11 +991,19 @@ function isPowerToolItem(item: { productId?: string; sku?: string; categoryName?
 
                               {/* Action */}
                               <TableCell className="py-2.5 px-2 text-right">
-                                <Link to={`/inventory/grn/${item.grnId}`}>
-                                  <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-slate-400 hover:text-primary">
-                                    <ArrowRight className="h-3.5 w-3.5" />
-                                  </Button>
-                                </Link>
+                                {item.grnId ? (
+                                  <Link to={`/inventory/grn/${item.grnId}`}>
+                                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-slate-400 hover:text-primary">
+                                      <ArrowRight className="h-3.5 w-3.5" />
+                                    </Button>
+                                  </Link>
+                                ) : (
+                                  <Link to={`/products/${item.productId}`}>
+                                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-slate-400 hover:text-primary">
+                                      <ArrowRight className="h-3.5 w-3.5" />
+                                    </Button>
+                                  </Link>
+                                )}
                               </TableCell>
                             </TableRow>
 

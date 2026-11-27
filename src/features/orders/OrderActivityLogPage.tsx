@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom';
-import { useSmartBack } from '../../hooks/useSmartBack';
+import { useNavigationContext } from '../../hooks/useSmartBack';
 import { useAuth } from '../../hooks/useAuth';
 import { useOrders } from '../../hooks/useOrders';
 import { orderService } from '../../services/OrderService';
@@ -39,7 +39,8 @@ export function OrderActivityLogPage() {
   const { id } = useParams<{ id?: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
-  const goBack = useSmartBack('/orders');
+  const { goBackToParent } = useNavigationContext('/orders');
+  const goBack = () => goBackToParent();
   const { currentUser, role } = useAuth();
 
   // Mode: Default to 'user-activity' (user's comprehensive monthly activity log)

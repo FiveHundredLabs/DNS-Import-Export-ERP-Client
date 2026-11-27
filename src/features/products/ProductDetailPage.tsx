@@ -3,9 +3,8 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useSmartBack } from '../../hooks/useSmartBack';
 import { Product } from '../../types/product';
 import { productService } from '../../services/ProductService';
-import { batchInventoryService } from '../../services/BatchInventoryService';
-import { priceHistoryService } from '../../services/PriceHistoryService';
-import { StockBatch, ProductSellingPriceHistory } from '../../types/inventory';
+import { useProductBatchPricing } from '../../api/products/products.hooks';
+import { extractErrorMessage } from '../../api/client';
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
@@ -41,8 +40,6 @@ export function ProductDetailPage() {
   const { role } = useAuth();
   const goBack = useSmartBack('/products');
   const [product, setProduct] = useState<Product | null>(null);
-  const [batches, setBatches] = useState<StockBatch[]>([]);
-  const [priceHistory, setPriceHistory] = useState<ProductSellingPriceHistory[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDiscountModalOpen, setIsDiscountModalOpen] = useState(false);
   const [editL1, setEditL1] = useState('');
@@ -51,27 +48,45 @@ export function ProductDetailPage() {
   const [isSavingLevels, setIsSavingLevels] = useState(false);
   const [showDiscountInfo, setShowDiscountInfo] = useState(false);
 
+  const batchPricingQuery = useProductBatchPricing(product?.id ?? '', Boolean(product?.id));
+  const batches = batchPricingQuery.data?.batches ?? [];
+  const priceHistory = batchPricingQuery.data?.priceHistory ?? [];
 
   useEffect(() => {
+    let active = true;
     async function load() {
       if (!id) return;
       try {
         setLoading(true);
         const data = await productService.getProduct(id);
-        setProduct(data);
-        if (data) {
-          setBatches(batchInventoryService.getBatchesByProductId(data.id));
-          setPriceHistory(priceHistoryService.getHistoryByProductId(data.id));
+        if (active) {
+          setProduct(data);
         }
       } finally {
-        setLoading(false);
+        if (active) {
+          setLoading(false);
+        }
       }
     }
     load();
+    return () => {
+      active = false;
+    };
   }, [id]);
 
   const priceRange = useMemo(() => {
-    return product ? batchInventoryService.getPriceRange(product.id) : null;
+    if (!product || batches.length === 0) return null;
+    const activeBatches = batches.filter((b) => b.status === 'ACTIVE' && b.availableQuantity > 0);
+    const activePrices = activeBatches.map((b) => b.sellingPrice);
+    if (activePrices.length === 0) return null;
+    const minPrice = Math.min(...activePrices);
+    const maxPrice = Math.max(...activePrices);
+    return {
+      minPrice,
+      maxPrice,
+      hasMultiplePrices: minPrice !== maxPrice,
+      activeBatchCount: activeBatches.length,
+    };
   }, [product, batches]);
 
 
@@ -505,7 +520,20 @@ export function ProductDetailPage() {
               </Badge>
             </CardHeader>
             <CardContent className="p-0">
-              {batches.length === 0 ? (
+              {batchPricingQuery.isLoading ? (
+                <div className="p-8 text-center text-xs text-slate-500">
+                  Loading stock batches...
+                </div>
+              ) : batchPricingQuery.isError ? (
+                <div className="p-8 text-center space-y-2">
+                  <p className="text-xs text-rose-600">
+                    {extractErrorMessage(batchPricingQuery.error, 'Failed to load stock batches.')}
+                  </p>
+                  <Button variant="outline" size="sm" onClick={() => batchPricingQuery.refetch()} className="text-xs">
+                    Retry
+                  </Button>
+                </div>
+              ) : batches.length === 0 ? (
                 <div className="p-8 text-center text-xs text-slate-400 italic">
                   No stock batches recorded yet for this product. Batches are automatically registered upon GRN Vendor Bill Costing.
                 </div>
@@ -515,7 +543,7 @@ export function ProductDetailPage() {
                     <thead className="bg-slate-50 border-y border-slate-200 text-slate-600 font-semibold">
                       <tr>
                         <th className="py-2.5 px-4 text-left">Batch / Lot #</th>
-                        <th className="py-2.5 px-3 text-left">Warehouse</th>
+                        <th className="py-2.5 px-3 text-left">Supplier</th>
                         <th className="py-2.5 px-3 text-left">Received Date</th>
                         <th className="py-2.5 px-3 text-center">Initial Qty</th>
                         <th className="py-2.5 px-3 text-center">Available Qty</th>
@@ -536,7 +564,7 @@ export function ProductDetailPage() {
                             )}
                           </td>
                           <td className="py-3 px-3 text-slate-700">
-                            <span className="font-semibold">{b.warehouseId}</span>
+                            <span className="font-semibold">{b.supplierName || '—'}</span>
                           </td>
                           <td className="py-3 px-3 text-slate-600">
                             {formatDate(b.receivedDate)}
@@ -589,7 +617,20 @@ export function ProductDetailPage() {
               </Badge>
             </CardHeader>
             <CardContent className="p-0">
-              {priceHistory.length === 0 ? (
+              {batchPricingQuery.isLoading ? (
+                <div className="p-8 text-center text-xs text-slate-500">
+                  Loading price history...
+                </div>
+              ) : batchPricingQuery.isError ? (
+                <div className="p-8 text-center space-y-2">
+                  <p className="text-xs text-rose-600">
+                    {extractErrorMessage(batchPricingQuery.error, 'Failed to load price history.')}
+                  </p>
+                  <Button variant="outline" size="sm" onClick={() => batchPricingQuery.refetch()} className="text-xs">
+                    Retry
+                  </Button>
+                </div>
+              ) : priceHistory.length === 0 ? (
                 <div className="p-8 text-center text-xs text-slate-400 italic">
                   No price history events recorded yet for this product.
                 </div>

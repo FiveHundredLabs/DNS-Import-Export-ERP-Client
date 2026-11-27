@@ -54,6 +54,7 @@ import { useEffect } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { useFavorites } from '../../hooks/useFavorites';
 import { cn } from '../../utils/cn';
+import { getOriginalReturnTo } from '../../utils/navigationContext';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -98,10 +99,15 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const [activeCategory, setActiveCategory] = useState<RailCategory>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Automatically activate category when navigating within modules
+  // Preserve original navigation context for sidebar category & active item highlighting
+  const preservedReturnTo = getOriginalReturnTo(location.state, location.pathname);
+  const effectiveFullUrl = preservedReturnTo || `${location.pathname}${location.search}`;
+  const [effectivePath, effectiveSearch = ''] = effectiveFullUrl.split('?');
+
+  // Automatically activate category when navigating within modules (respecting preserved returnTo context)
   useEffect(() => {
+    const p = effectivePath || location.pathname;
     if (isDirector) {
-      const p = location.pathname;
       if (
         p.startsWith('/purchasing/orders') ||
         p.startsWith('/purchasing/grn') ||
@@ -127,29 +133,51 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         setActiveCategory('inventory');
       } else if (p.startsWith('/finance')) {
         setActiveCategory('finance');
-      } else if (p.startsWith('/approvals') || p.startsWith('/warranty')) {
+      } else if (
+        p.startsWith('/approvals') ||
+        p.startsWith('/my-approvals') ||
+        p.startsWith('/admin/approval-engine') ||
+        p.startsWith('/warranty')
+      ) {
         setActiveCategory('approvals');
       } else if (p.startsWith('/reports')) {
         setActiveCategory('reports');
-      } else if (p.startsWith('/commissions') || location.search.includes('tab=settings')) {
+      } else if (p.startsWith('/commissions') || effectiveSearch.includes('tab=settings')) {
         setActiveCategory('admin');
-      } else if (p === '/' && !location.search.includes('tab=settings')) {
+      } else if (p === '/' && !effectiveSearch.includes('tab=settings')) {
         setActiveCategory('all');
       }
     } else {
-      if (location.pathname.startsWith('/purchasing') && (canAccessRoute('/purchasing') || canAccessRoute('/purchasing/orders'))) {
+      if (
+        p.startsWith('/approvals') ||
+        p.startsWith('/my-approvals') ||
+        p.startsWith('/admin/approval-engine') ||
+        p.startsWith('/warranty')
+      ) {
+        setActiveCategory('approvals');
+      } else if (p.startsWith('/purchasing') && (canAccessRoute('/purchasing') || canAccessRoute('/purchasing/orders'))) {
         setActiveCategory('purchasing');
-      } else if (location.pathname.startsWith('/finance') && canAccessRoute('/finance')) {
+      } else if (
+        p.startsWith('/quotations') ||
+        p.startsWith('/orders') ||
+        p.startsWith('/invoices') ||
+        p.startsWith('/payments') ||
+        p.startsWith('/pos')
+      ) {
+        setActiveCategory('sales');
+      } else if (p.startsWith('/finance') && canAccessRoute('/finance')) {
         setActiveCategory('finance');
-      } else if (location.pathname.startsWith('/customers')) {
+      } else if (p.startsWith('/customers')) {
         setActiveCategory('customers');
-      } else if (location.pathname.startsWith('/inventory') || location.pathname.startsWith('/products')) {
+      } else if (p.startsWith('/inventory') || p.startsWith('/products')) {
         setActiveCategory('inventory');
-      } else if (location.pathname.startsWith('/reports')) {
+      } else if (p.startsWith('/reports')) {
         setActiveCategory('reports');
+      } else if (p === '/') {
+        setActiveCategory('all');
       }
     }
-  }, [location.pathname, location.search, canAccessRoute, isDirector]);
+  }, [effectivePath, effectiveSearch, location.pathname, canAccessRoute, isDirector]);
 
   // =========================================================================
   // DIRECTOR SPECIFICATION: 9 DEDICATED SECTIONS (Strict role isolation)
@@ -191,9 +219,9 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const directorFinanceItems: SidebarItem[] = [];
 
   const directorApprovalItems: SidebarItem[] = [
-    { id: 'approvals', name: 'Approval Engine', path: '/approvals', icon: CheckCircle, category: 'approvals' },
-    { id: 'warranty', name: 'Warranty Hub', path: '/warranty', icon: ShieldCheck, category: 'approvals' },
+    { id: 'approvals-engine', name: 'Approval Engine', path: '/admin/approval-engine', icon: ShieldCheck, category: 'approvals', allowedRoles: ['DIRECTOR', 'MANAGER'] },
     { id: 'my-approvals', name: 'My Approvals', path: '/approvals/my-approvals', icon: CheckSquare, category: 'approvals', badge: 'Assigned' },
+    { id: 'warranty', name: 'Warranty Hub', path: '/warranty', icon: ShieldCheck, category: 'approvals' },
   ];
 
   const directorReportItems: SidebarItem[] = [
@@ -243,7 +271,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     { id: 'purchasing-dashboard', name: 'Purchasing Dashboard', path: '/purchasing', icon: LayoutGrid, category: 'purchasing', exact: true, excludedRoles: ['MANAGER', 'PURCHASING_OFFICER', 'PURCHASING_MANAGER'] },
     { id: 'purchasing-suppliers', name: 'Supplier Management', path: '/purchasing/suppliers', icon: Store, category: 'purchasing' },
     { id: 'purchasing-orders', name: 'Purchase Orders', path: '/purchasing/orders', icon: ShoppingCart, category: 'purchasing' },
-    { id: 'purchasing-approvals', name: 'PO Approvals', path: '/approvals', icon: ShieldCheck, category: 'purchasing', excludedRoles: ['PURCHASING_OFFICER'] },
+    { id: 'purchasing-approvals', name: 'PO Approvals', path: '/approvals', icon: ShieldCheck, category: 'purchasing', excludedRoles: ['PURCHASING_OFFICER', 'PURCHASING_MANAGER'] },
     { id: 'purchasing-payments', name: 'Supplier Payments (View Only)', path: '/purchasing/payments', icon: CreditCard, category: 'purchasing' },
     { id: 'purchasing-grn', name: 'Goods Received Notes (View Only)', path: '/purchasing/grn', icon: Boxes, category: 'purchasing' },
     { id: 'purchasing-reports', name: 'Purchase Reports', path: '/purchasing/reports', icon: BarChart3, category: 'purchasing', excludedRoles: ['MANAGER', 'PURCHASING_OFFICER', 'PURCHASING_MANAGER'] },
@@ -255,21 +283,12 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     { id: 'quotations', name: 'Quotations', path: '/quotations', icon: FileSpreadsheet, category: 'sales' },
     { id: 'orders', name: 'Sales Orders', path: '/orders', icon: ShoppingCart, category: 'sales' },
     {
-      id: 'approvals',
-      name:
-        role === 'STOCK_MANAGER'
-          ? 'Stock Manager Approvals'
-          : role === 'PURCHASING_MANAGER'
-          ? 'Purchasing Approvals'
-          : role === 'AREA_MANAGER'
-          ? 'Order Approvals'
-          : role === 'SALES_MANAGER'
-          ? 'My Approvals'
-          : 'Approvals Engine',
-      path: '/approvals',
-      icon: role === 'STOCK_MANAGER' || role === 'PURCHASING_MANAGER' ? ShieldCheck : CheckCircle,
+      id: 'approval-engine',
+      name: 'Approval Engine',
+      path: '/admin/approval-engine',
+      icon: ShieldCheck,
       category: 'approvals',
-      excludedRoles: ['SHOWROOM_MANAGER', 'SALES_REP', 'STOCK_KEEPER', 'CASHIER', 'PURCHASING_OFFICER'],
+      allowedRoles: ['DIRECTOR', 'MANAGER'],
     },
     {
       id: 'my-approvals',
@@ -278,7 +297,17 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       icon: CheckSquare,
       category: 'approvals',
       badge: 'Assigned',
-      allowedRoles: ['DIRECTOR', 'MANAGER'],
+      allowedRoles: [
+        'DIRECTOR',
+        'MANAGER',
+        'FINANCE_MANAGER',
+        'STOCK_MANAGER',
+        'SALES_MANAGER',
+        'PURCHASING_MANAGER',
+        'PURCHASING_OFFICER',
+        'AREA_MANAGER',
+        'ACCOUNTS_EXECUTIVE',
+      ],
     },
     { id: 'warranty', name: 'Warranty Hub', path: '/warranty', icon: ShieldCheck, category: 'approvals' },
     { id: 'warranty-verification', name: 'Warranty Verification', path: '/warranty/verification', icon: Barcode, category: 'sales', allowedRoles: ['SALES_REP', 'AREA_MANAGER'] },
@@ -501,28 +530,28 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     }
   }, [isDirector, activeCategory]);
 
-  const isDashboardActive = location.pathname === '/' && !location.search.includes('tab=settings');
+  const isDashboardActive = effectivePath === '/' && !effectiveSearch.includes('tab=settings');
 
-  // Check if a sidebar item's route is currently active
+  // Check if a sidebar item's route is currently active (respecting preserved returnTo context)
   const isItemActive = (item: SidebarItem) => {
     if (item.path.includes('?')) {
-      return location.pathname + location.search === item.path;
+      return effectiveFullUrl === item.path;
     }
     if (item.exact) {
-      return location.pathname === item.path;
+      return effectivePath === item.path;
     }
     if (item.path === '/') {
-      return location.pathname === '/' && !location.search.includes('tab=settings');
+      return effectivePath === '/' && !effectiveSearch.includes('tab=settings');
     }
     // Prevent Customer Master (/customers) from highlighting when on Customer Onboarding (/customers/onboarding)
-    if (item.path === '/customers' && location.pathname.startsWith('/customers/onboarding')) {
+    if (item.path === '/customers' && effectivePath.startsWith('/customers/onboarding')) {
       return false;
     }
     // Prevent Cash in Hand (/payments) from highlighting when on Customer Collections (/payments/collect) or customer ledger routes
-    if (item.path === '/payments' && (location.pathname.startsWith('/payments/collect') || location.pathname.startsWith('/payments/customer'))) {
+    if (item.path === '/payments' && (effectivePath.startsWith('/payments/collect') || effectivePath.startsWith('/payments/customer'))) {
       return false;
     }
-    return location.pathname === item.path || location.pathname.startsWith(item.path + '/');
+    return effectivePath === item.path || effectivePath.startsWith(item.path + '/');
   };
 
   // Reusable item row renderer with clean neutral content-page styling and enlarged icons

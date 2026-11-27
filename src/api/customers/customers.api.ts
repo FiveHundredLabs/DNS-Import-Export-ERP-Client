@@ -3,9 +3,12 @@ import {
   Customer,
   CreateCustomerStep1Payload,
   CompleteCustomerStep2Payload,
+  UpdateCustomerPayload,
   UpdateCommercialTermsPayload,
   CustomerApprovalActionPayload,
   UpdateCustomerStatusPayload,
+  CustomerFinancialsResponse,
+  CustomerOutstandingItem,
   ListCustomersParams,
   PaginatedCustomersResponse,
 } from './customers.types';
@@ -26,6 +29,7 @@ export const customersApi = {
     if (params?.salesRepId) query.set('salesRepId', params.salesRepId);
     if (params?.areaManagerId) query.set('areaManagerId', params.areaManagerId);
     if (params?.approvalStage) query.set('approvalStage', params.approvalStage);
+    if (params?.approvalStages?.length) query.set('approvalStages', params.approvalStages.join(','));
     if (params?.loyaltyLevel) query.set('loyaltyLevel', params.loyaltyLevel);
     if (params?.sortBy) query.set('sortBy', params.sortBy);
     if (params?.sortOrder) query.set('sortOrder', params.sortOrder);
@@ -43,7 +47,37 @@ export const customersApi = {
   },
 
   getCustomerById: async (id: string, signal?: AbortSignal): Promise<Customer> => {
-    return apiGet<Customer>(`/customers/${id}`, { signal });
+    return apiGet<Customer>(`/customers/${id}`, { signal, suppressErrorToast: true });
+  },
+
+  getCustomerFinancials: async (
+    id: string,
+    signal?: AbortSignal,
+  ): Promise<CustomerFinancialsResponse> => {
+    return apiGet<CustomerFinancialsResponse>(`/customers/${id}/financials`, {
+      signal,
+      suppressErrorToast: true,
+    });
+  },
+
+  getOutstandingsGrouped: async (
+    signal?: AbortSignal,
+  ): Promise<Record<string, CustomerOutstandingItem>> => {
+    return apiGet<Record<string, CustomerOutstandingItem>>('/customers/outstandings/grouped', {
+      signal,
+      suppressErrorToast: true,
+    });
+  },
+
+  updateCustomer: async (
+    id: string,
+    payload: UpdateCustomerPayload,
+    signal?: AbortSignal,
+  ): Promise<Customer> => {
+    return apiPatch<Customer>(`/customers/${id}`, payload, {
+      signal,
+      successMessage: 'Customer updated successfully',
+    });
   },
 
   createCustomerStep1: async (
